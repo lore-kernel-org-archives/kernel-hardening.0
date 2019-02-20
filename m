@@ -1,36 +1,124 @@
-MIME-Version: 1.0
-References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-2-tobin@kernel.org>
- <CAHp75VfP_gyx_+8XKhyJMShooPubpR2KJ7gvzu0Mbv3+TaFTxg@mail.gmail.com> <20190219215526.GC16094@eros.localdomain>
-In-Reply-To: <20190219215526.GC16094@eros.localdomain>
-From: Andy Shevchenko <andy.shevchenko@gmail.com>
-Date: Wed, 20 Feb 2019 12:49:06 +0200
-Message-ID: <CAHp75VeW34Me+pPUgixfhZU036fEmHBkJ6igkeHPr4hN=rhF7g@mail.gmail.com>
-Subject: Re: [PATCH 1/6] lib/string: Enable string selftesting
+Message-ID: <f4fc28e2f6807ef0669d1de8a72fcb5f5b5cfc43.camel@russell.cc>
+Subject: Re: [PATCH v2 2/3] powerpc/lib: Refactor __patch_instruction() to
+ use __put_user_asm()
+From: Russell Currey <ruscur@russell.cc>
+Date: Wed, 20 Feb 2019 22:57:59 +1100
+In-Reply-To: <5ff8b24e-a748-19d3-8651-b626dd676ea4@c-s.fr>
+References: <20181210070044.27503-1-ruscur@russell.cc>
+	 <20181210070044.27503-3-ruscur@russell.cc>
+	 <3b213170-9b93-cb71-b0c2-220ea31dbdea@c-s.fr>
+	 <5ff8b24e-a748-19d3-8651-b626dd676ea4@c-s.fr>
 Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: "Tobin C. Harding" <tobin@kernel.org>, Kees Cook <keescook@chromium.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+To: Christophe Leroy <christophe.leroy@c-s.fr>, linuxppc-dev@lists.ozlabs.org
+Cc: mikey@neuling.org, mpe@ellerman.id.au, benh@kernel.crashing.org, npiggin@gmail.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 19, 2019 at 11:55 PM Tobin C. Harding <me@tobin.cc> wrote:
-> On Tue, Feb 19, 2019 at 12:55:09PM +0200, Andy Shevchenko wrote:
-> > On Tue, Feb 19, 2019 at 4:44 AM Tobin C. Harding <tobin@kernel.org> wrote:
-> > >
-> > > Currently we have a test module but it is not tied into the kselftest
-> > > infrastructure.  In preparation for adding string manipulation functions
-> > > and testing we should enable kselftest to utilize the test module.
+On Fri, 2019-01-25 at 12:45 +0100, Christophe Leroy wrote:
+> Hi Russel,
+> 
+> Le 17/12/2018 à 08:09, Christophe Leroy a écrit :
+> > Hi Russel,
+> > 
+> > Le 10/12/2018 à 08:00, Russell Currey a écrit :
+> > > __patch_instruction() is called in early boot, and uses
+> > > __put_user_size(), which includes the locks and unlocks for KUAP,
+> > > which could either be called too early, or in the Radix case,
+> > > forced to
+> > > use "early_" versions of functions just to safely handle this one
+> > > case.
+> > 
+> > Looking at x86, I see that __put_user_size() doesn't includes the
+> > locks. 
+> > The lock/unlock is do by callers. I'll do the same.
+> > 
+> > 
+> > > __put_user_asm() does not do this, and thus is safe to use both
+> > > in early
+> > > boot, and later on since in this case it should only ever be
+> > > touching
+> > > kernel memory.
+> > > 
+> > > __patch_instruction() was previously refactored to use
+> > > __put_user_size()
+> > > in order to be able to return -EFAULT, which would allow the
+> > > kernel to
+> > > patch instructions in userspace, which should never happen.  This
+> > > has
+> > > the functional change of causing faults on userspace addresses if
+> > > KUAP
+> > > is turned on, which should never happen in practice.
+> > > 
+> > > A future enhancement could be to double check the patch address
+> > > is
+> > > definitely allowed to be tampered with by the kernel.
+> > 
+> > This makes me realise that we are calling lock_user_access() with
+> > kernel 
+> > addresses. That most likely breaks protection on kernel addresses
+> > for 
+> > book3s/32. I'll have to work around it.
+> > 
+> > Another thing I realised also is that get_user() at least is called
+> > in 
+> > some exceptions/trap handlers. Which means it can be called nested
+> > with 
+> > an ongoing user access. It means that get_paca()-
+> > >user_access_allowed 
+> > might be modified during those exceptions/traps.
+> 
+> Any comment about that ? Isn't it a problem ?
 
-> > > +       default n
-> >
-> > Redundant
->
-> Cool, thanks.
+Yes, I think so.  I wonder why I haven't hit this issue, though.  Which
+handlers is this an issue with?
 
-> > > +       If unsure, say N.
->
-> Does that mean that this is redundant too?
+Maybe we could do something like...
 
-It's usual pattern in many help summaries, I don't know what way is better.
+unlock_user_access() checks if user access is already unlocked (== 1),
+if so sets user_access_allowed to 2
 
--- 
-With Best Regards,
-Andy Shevchenko
+lock_user_access() sees that user_access_allowed is 2, and knows it's
+nested and sets user_access_allowed back to 1 instead of its usual 0.
+
+...that's pretty gross, though.  It also means that every
+implementation has to figure out how to cope with that.
+
+I've done a lot of testing where a) user access hasn't been left
+unlocked and b) faults haven't happened where they shouldn't, so I
+wonder how I could try and hit such a case.
+
+Could also have a get_user() without locking that's only allowed to be
+used by exception handlers...
+
+I dunno.  Open to better ideas.
+
+- Russell
+> 
+> Christophe
+> 
+> > Christophe
+> > 
+> > > Signed-off-by: Russell Currey <ruscur@russell.cc>
+> > > ---
+> > >   arch/powerpc/lib/code-patching.c | 4 ++--
+> > >   1 file changed, 2 insertions(+), 2 deletions(-)
+> > > 
+> > > diff --git a/arch/powerpc/lib/code-patching.c 
+> > > b/arch/powerpc/lib/code-patching.c
+> > > index 89502cbccb1b..15e8c6339960 100644
+> > > --- a/arch/powerpc/lib/code-patching.c
+> > > +++ b/arch/powerpc/lib/code-patching.c
+> > > @@ -26,9 +26,9 @@
+> > >   static int __patch_instruction(unsigned int *exec_addr,
+> > > unsigned int 
+> > > instr,
+> > >                      unsigned int *patch_addr)
+> > >   {
+> > > -    int err;
+> > > +    int err = 0;
+> > > -    __put_user_size(instr, patch_addr, 4, err);
+> > > +    __put_user_asm(instr, patch_addr, err, "stw");
+> > >       if (err)
+> > >           return err;
+> > > 
