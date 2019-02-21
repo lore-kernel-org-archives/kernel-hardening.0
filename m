@@ -1,31 +1,28 @@
 MIME-Version: 1.0
-References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-6-tobin@kernel.org>
- <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com>
-In-Reply-To: <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com>
+References: <CALS6=qWHytpevcJqB6TkgzUfUmpoxVeyJtvEKigJH3-cnw7vUQ@mail.gmail.com>
+In-Reply-To: <CALS6=qWHytpevcJqB6TkgzUfUmpoxVeyJtvEKigJH3-cnw7vUQ@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 20 Feb 2019 17:05:10 -0800
-Message-ID: <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com>
-Subject: Re: [PATCH 5/6] lib: Fix function documentation for strncpy_from_user
+Date: Wed, 20 Feb 2019 17:17:07 -0800
+Message-ID: <CAGXu5jKoHfPHadabqo=7FaOD1O-GRE1-GowfmZSs_oB+snWFaQ@mail.gmail.com>
+Subject: Re: classes of methods for gaining access to kernel memory
 Content-Type: text/plain; charset="UTF-8"
-To: Jann Horn <jannh@google.com>
-Cc: "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Micay <danielmicay@gmail.com>
+Content-Transfer-Encoding: quoted-printable
+To: Carter Cheng <cartercheng@gmail.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 18, 2019 at 4:52 PM Jann Horn <jannh@google.com> wrote:
-> AFAICS the byte_at_a_time loop exits when max==0 is reached, and then
-> if `res >= count` (in other words, if we've copied as many bytes as
-> requested, haven't encountered a null byte so far, and haven't reached
-> the end of the address space), we return `res`, which is the same as
-> `count`. Are you sure?
+On Sun, Feb 10, 2019 at 3:13 AM Carter Cheng <cartercheng@gmail.com> wrote:
+> I was reading a paper on kernel data attacks and the paper mentions metho=
+ds for gaining control of kernel memory beyond overflow type attacks. This =
+would seem to suggest that methods exist for this in certain cases beyond w=
+hat can be caught by spatial safety checks. Are there general classes of su=
+ch methods that one needs to be aware of? And what are they?
 
-Oh, whew, there is only 1 arch-specific implementation of this. I
-thought you meant there was multiple implementations.
+If I follow what you're asking, I'd think race conditions would be an
+example of another major class of attacks against the kernel. For
+example, look at the DirtyCOW attack: that was a race condition
+against the kernel's VFS that wouldn't get caught by bounds checking,
+etc, etc.
 
-So, generally speaking, I'd love to split all strncpy* uses into
-strscpy_zero() (when expecting to do str->str copies), and some new
-function, named like mempadstr() or str2mem() that copies a str to a
-__nonstring char array, with trailing padding, if there is space. Then
-there is no more mixing the two cases and botching things.
-
--- 
+--=20
 Kees Cook
