@@ -1,114 +1,71 @@
-Subject: Re: [PATCH 5/6] lib: Fix function documentation for strncpy_from_user
-References: <20190218232308.11241-1-tobin@kernel.org>
- <20190218232308.11241-6-tobin@kernel.org>
- <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com>
- <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com>
- <20190221052435.GF11758@eros.localdomain>
- <CAGXu5j+Mf2D5LgkEmps7VVBhmNGt=49y4caP1y1E0OBURJEeXQ@mail.gmail.com>
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Message-ID: <8f002798-f68b-14cd-d321-f96b653fb51d@rasmusvillemoes.dk>
-Date: Thu, 21 Feb 2019 15:58:27 +0100
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+Mf2D5LgkEmps7VVBhmNGt=49y4caP1y1E0OBURJEeXQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>
-Cc: Jann Horn <jannh@google.com>, "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Stephen Rothwell <sfr@canb.auug.org.au>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (1.0)
+Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon system call
+From: Andy Lutomirski <luto@amacapital.net>
+In-Reply-To: <CAG48ez3sh+qcw9X6u2M0apRdN2TJR5Z-MGQS_UcmDhje+44CSA@mail.gmail.com>
+Date: Thu, 21 Feb 2019 07:49:23 -0800
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <B9C55CFA-74CE-4241-B9D0-F2087A4D35DB@amacapital.net>
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com> <1549628149-11881-2-git-send-email-elena.reshetova@intel.com> <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com> <20190208142642.GJ32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com> <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com> <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net> <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com> <2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com> <CAGXu5jLbR0Tk6XEdCg+27bsc4+SKGwzNsV12imwjHnLmmpV0mA@mail.gmail.com> <CALCETrW84mH-jfKOCKmdODL06Bhzugck+vVt-vDe9byA27V=Jg@mail.gmail.com> <CAG48ez3sh+qcw9X6u2M0apRdN2TJR5Z-MGQS_UcmDhje+44CSA@mail.gmail.com>
+To: Jann Horn <jannh@google.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, "Perla, Enrico" <enrico.perla@intel.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 21/02/2019 07.02, Kees Cook wrote:
-
-> P.S. Here's C string API Rant (I just had to get this out, please feel
-> free to ignore):
-
-I'll bite. First, it's "linux kernel string API", only some of string.h
-interfaces are in std C. Sure, none of those satisfy all use cases, but
-adding Yet Another One also has its costs.
-
-> strcpy returns dest ... which is already known, so it's a meaningless
-> return value.
-> 
-> strncpy returns dest (still meaningless)
-
-Yeah, same for memcpy, memset. Those are classic C interfaces. It does
-allow some micro-optimizations in some cases - since one is likely to
-continue doing other stuff with dest, the compiler might use the fact
-that it has dest in the return register instead of spilling and
-reloading it. But I do wonder what the real rationale was.
-
-> strlcpy returns strlen(src) ... the length we WOULD have copied. Why
-> would we care about that? I'm operating on dest. Were there callers
-> that needed to both copy part of src and learn how long it was at the
-> same time?
-
-The rationale is exactly the same as for snprintf - to allow you to
-optimistically format/copy to a buffer, and know exactly how much to
-realloc() in case it turned out to be too small. Of course, nobody ever
-uses strlcpy like that, since just doing strdup() is much much simpler
-and less error-prone. So yes, strlcpy() is often a silly interface to use.
-
-> strscpy returns -E2BIG or non-NUL bytes copied: yay, a return about
-> what actually happened from the operation!
-
-Well, strictly speaking, strlcpy()'s return value also tells you exactly
-what happened, just not in the kernel "negative errno for error
-condition" style.
-
-> ... snprintf returns what it WOULD have written, much like strlcpy
-> above. At least snprintf has an excuse: it can be used to calculate an
-> allocation size (called with a NULL dest and 0 size) ... but shouldn't
-> "how big is this format string going to be?" be a separate function?
-
-Why? Sure, you can make a wrapper vhowmuch(const char *fmt, va_args ap),
-but its implementation would have to be "return vsnprintf(NULL, 0, fmt,
-ap);", since we really must reuse the exact same logic for computing the
-length as for doing the actual printf'ing (otherwise they'd get out of
-sync).
-
-> I wonder if we can kill all kernel uses of snprintf too (after
-> introducing a "how big would it be?" function and switching all other
-> callers over to scnprintf)...
-
-Please no. snprintf() is standardized, has sane semantics (though one
-sometimes _want_ scnprintf semantics - in which case one can and should
-use that...), and, importantly, gcc understands those semantics. So we
-get optimizations and diagnostics that we'd miss if we kill off explicit
-snprintf and replace with non-standard howmuch+scnprintf.
-
-> So scnprintf() does the right thing (count of non-NUL bytes copied out).
-
-The right thing, when that's the thing you want to know. Which it is in
-the "build a string in a buffer by repeated printf calls, perhaps
-intermixed with a little flow control logic". But not so in a "format
-this stuff to this fixed-size char buffer inside that struct, and let me
-know [i.e., 'give me a way of knowing'] if it all fit".
 
 
-Hello, I'm you super-fantastic-one-size-fits-all string copying API.
-Please carefully fill out the following form, and I'll get back to you ASAP.
+> On Feb 21, 2019, at 5:20 AM, Jann Horn <jannh@google.com> wrote:
+>=20
+> On Thu, Feb 21, 2019 at 7:38 AM Andy Lutomirski <luto@kernel.org> wrote:
+>>> On Feb 20, 2019, at 2:20 PM, Kees Cook <keescook@chromium.org> wrote:
+>>>=20
+>>> On Wed, Feb 13, 2019 at 11:52 PM Reshetova, Elena
+>>> <elena.reshetova@intel.com> wrote:
+>>>> Now back to our proposed countermeasures given that attacker has found a=
+ way to do
+>>>> a crafted overflow and overwrite:
+>>>>=20
+>>>> 1) pt_regs is not predictable, but can be discovered in ptrace-style sc=
+enario or cache-probing.
+>>>>    If discovered, then attack succeeds as of now.
+>>>> 2) relative stack offset is not predictable and randomized, cannot be p=
+robed very easily via
+>>>>     cache or ptrace. So, this is an additional hurdle on the attacker's=
+ way since stack is non-
+>>>>     deterministic now.
+>>>> 3) nothing changed for this type of attack, given that attacker's goal i=
+s not to overwrite CS
+>>>>     in adjusted pt_regs. If it is his goal, then it helps with that.
+>>>>=20
+>>>>=20
+>>>> Now summary:
+>>>>=20
+>>>> It would seem to me that:
+>>>>=20
+>>>> - regs->cs |=3D 3 on exit is a thing worth doing anyway, just because i=
+t is cheap, as Andy said, and it
+>>>> might make a positive difference in two out of three attack scenarios. O=
+bjections?
+>>>=20
+>>> I would agree, let's just do this.
+>>=20
+>> Thinking slightly more about this, it=E2=80=99s an incomplete protection.=
+  It
+>> keeps an attacker from returning to kernel mode, but it does not
+>> protect the privileged flag bits.  I think that IOPL is the only thing
+>> we really care about, and doing anything useful about IOPL would be
+>> rather more complex, unfortunately.  I suppose we could just zero it
+>> and guard that with a static branch that is switched off the first
+>> time anyone uses iopl(3).
+>>=20
+>> I suppose we could also add a config option to straight-up disable
+>> IOPL.  I sincerely hope that no one uses it any more. Even the small
+>> number of semi-legit users really ought to be using ioperm() instead.
+>=20
+> /me raises hand. iopl(3) is useful for making CLI and STI work from
+> userspace, I've used it for that (for testing stuff, not for anything
+> that has been shipped to people). Of course, that's probably a reason
+> to get rid of it, not to keep it. ^^
 
-A1: destination
-A2: max bytes to write
-B1: source
-B2: max bytes to read
-C1: do you want me to nul-terminate the destination?
-C2: if C1, should that be done by truncating the result if necessary?
-C3: how do you want me to handle leftover space in dest, if any?
-C4: should the destination be left entirely untouched in case the result
-does not fit?
-C5: is it an error if I do not encounter a nul byte somewhere in [B1,
-B1+B2-1] ?
-C6: how do you want me to report on the results of my efforts and my
-discoveries?
-C7: are there any special conditions I should take into account?
-(overlapping buffers, allergies, ...)
-
-Put -1 under A2 to mean "assume there's room enough". Put -1 under B2 to
-mean "assume there's a nul byte before walking into lala-land".
-
-Answering yes to C1 and C2 and writing 0 under A2 causes your CapsLock
-to stay permanently on. If there's any ambiguity in your answer to C6,
-the machine reboots.
-
-
-Rasmus
+I was thinking that I don=E2=80=99t even try to make this use case work corr=
+ectly ;)=
