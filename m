@@ -1,70 +1,75 @@
 MIME-Version: 1.0
-References: <20190220180934.GA46255@beast> <20190220184859.GA6429@openwall.com>
- <CAGXu5jLB=so4r169pq1KF3Kyfh2Kw_t6ZXGavpzVO2sg3=D1tw@mail.gmail.com> <20190221130645.GA8281@openwall.com>
-In-Reply-To: <20190221130645.GA8281@openwall.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 21 Feb 2019 08:11:08 -0800
-Message-ID: <CAGXu5jJ46whob0-DE1_dydRtoNAN0Lw7EUsnNvNyQzwt_g9iEg@mail.gmail.com>
-Subject: Re: [PATCH v2] x86/asm: Pin sensitive CR4 bits
-Content-Type: text/plain; charset="UTF-8"
-To: Solar Designer <solar@openwall.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Jann Horn <jannh@google.com>, Dominik Brodowski <linux@dominikbrodowski.net>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>
+References: <CALS6=qWHytpevcJqB6TkgzUfUmpoxVeyJtvEKigJH3-cnw7vUQ@mail.gmail.com>
+ <CAGXu5jKoHfPHadabqo=7FaOD1O-GRE1-GowfmZSs_oB+snWFaQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jKoHfPHadabqo=7FaOD1O-GRE1-GowfmZSs_oB+snWFaQ@mail.gmail.com>
+From: Carter Cheng <cartercheng@gmail.com>
+Date: Fri, 22 Feb 2019 00:20:19 +0800
+Message-ID: <CALS6=qXN_UxEYV-6kG9_r6kv5joYdVpKU6xOhxLsPAkshzN80g@mail.gmail.com>
+Subject: Re: classes of methods for gaining access to kernel memory
+Content-Type: multipart/alternative; boundary="0000000000006673d2058269da97"
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 21, 2019 at 5:06 AM Solar Designer <solar@openwall.com> wrote:
->
-> On Wed, Feb 20, 2019 at 01:20:58PM -0800, Kees Cook wrote:
-> > On Wed, Feb 20, 2019 at 10:49 AM Solar Designer <solar@openwall.com> wrote:
-> > >
-> > > On Wed, Feb 20, 2019 at 10:09:34AM -0800, Kees Cook wrote:
-> > > > +     if (WARN_ONCE((val & cr4_pin) != cr4_pin, "cr4 bypass attempt?!\n"))
-> > > > +             goto again;
-> > >
-> > > I think "goto again" is too mild a response given that it occurs after a
-> > > successful write of a non-pinned value to CR4.  I think it'd allow some
-> > > exploits to eventually win the race: make their desired use of whatever
-> > > functionality SMEP, etc. would have prevented - which may be just a few
-> > > instructions they need to run - before the CR4 value is reverted after
-> > > "goto again".  I think it's one of those cases where a kernel panic
-> > > would be more appropriate.
-> >
-> > It will not land upstream with a BUG() or panic(). Linus has
-> > explicitly stated that none of this work can do that until it has
-> > "baked" in the kernel for a couple years.
->
-> OK.
->
-> > In his defense, anyone sufficiently paranoid can already raise the
-> > priority of a WARN() into a panic via sysctl kernel.panic_on_warn (and
-> > kernel.panic_on_oops).
->
-> I think there are too many uses of WARN() for anyone sane to enable
-> that in production, whereas it'd have made sense to enable it for the
-> few security-related uses.
+--0000000000006673d2058269da97
+Content-Type: text/plain; charset="UTF-8"
 
-Yeah, that's been my thinking too. I've been thinking about this for a
-while trying to decide if we need something between WARN and BUG, but
-I can't make up my mind. ;)
+I was looking over some recent papers for Usenix Security and there are a
+couple on data oriented programming and I have been wondering if there are
+known mitigation techniques for this kind of data corruption attack or
+other attacks that don't involve control flow hijacking.
 
-> > > Also, WARN_ONCE possibly introduces a delay sufficient to realistically
-> > > win this race on the first try.  If we choose to warn, we should do it
-> > > after having reverted the CR4 value, not before.
-> >
-> > Isn't cr4 CPU-local though?
+On Thu, Feb 21, 2019 at 9:17 AM Kees Cook <keescook@chromium.org> wrote:
+
+> On Sun, Feb 10, 2019 at 3:13 AM Carter Cheng <cartercheng@gmail.com>
+> wrote:
+> > I was reading a paper on kernel data attacks and the paper mentions
+> methods for gaining control of kernel memory beyond overflow type attacks.
+> This would seem to suggest that methods exist for this in certain cases
+> beyond what can be caught by spatial safety checks. Are there general
+> classes of such methods that one needs to be aware of? And what are they?
 >
-> Good point.  I don't know.  If CR4 is per hardware thread, then the race
-> would require an interrupt and would be much harder to win.
+> If I follow what you're asking, I'd think race conditions would be an
+> example of another major class of attacks against the kernel. For
+> example, look at the DirtyCOW attack: that was a race condition
+> against the kernel's VFS that wouldn't get caught by bounds checking,
+> etc, etc.
 >
-> > Couldn't we turn off interrupts to stop the race?
+> --
+> Kees Cook
 >
-> This won't help.  An attack would skip the code that disables interrupts
-> and land right on the MOV instruction.
 
-Oh duh, yeah. ;)
+--0000000000006673d2058269da97
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-I think v2 is good enough given the constraints we've got.
+<div dir=3D"ltr">I was looking over some recent papers for Usenix Security =
+and there are a couple on data oriented programming and I have been wonderi=
+ng if there are known mitigation techniques for this kind of data corruptio=
+n attack or other attacks that don&#39;t involve control flow hijacking.=C2=
+=A0</div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_att=
+r">On Thu, Feb 21, 2019 at 9:17 AM Kees Cook &lt;<a href=3D"mailto:keescook=
+@chromium.org">keescook@chromium.org</a>&gt; wrote:<br></div><blockquote cl=
+ass=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1px solid=
+ rgb(204,204,204);padding-left:1ex">On Sun, Feb 10, 2019 at 3:13 AM Carter =
+Cheng &lt;<a href=3D"mailto:cartercheng@gmail.com" target=3D"_blank">carter=
+cheng@gmail.com</a>&gt; wrote:<br>
+&gt; I was reading a paper on kernel data attacks and the paper mentions me=
+thods for gaining control of kernel memory beyond overflow type attacks. Th=
+is would seem to suggest that methods exist for this in certain cases beyon=
+d what can be caught by spatial safety checks. Are there general classes of=
+ such methods that one needs to be aware of? And what are they?<br>
+<br>
+If I follow what you&#39;re asking, I&#39;d think race conditions would be =
+an<br>
+example of another major class of attacks against the kernel. For<br>
+example, look at the DirtyCOW attack: that was a race condition<br>
+against the kernel&#39;s VFS that wouldn&#39;t get caught by bounds checkin=
+g,<br>
+etc, etc.<br>
+<br>
+-- <br>
+Kees Cook<br>
+</blockquote></div>
 
-Thanks for looking at it!
-
--- 
-Kees Cook
+--0000000000006673d2058269da97--
