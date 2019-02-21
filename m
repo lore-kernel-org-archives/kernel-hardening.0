@@ -3,109 +3,128 @@ References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-6-to
  <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com>
  <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com>
  <20190221052435.GF11758@eros.localdomain> <CAGXu5j+Mf2D5LgkEmps7VVBhmNGt=49y4caP1y1E0OBURJEeXQ@mail.gmail.com>
- <8f002798-f68b-14cd-d321-f96b653fb51d@rasmusvillemoes.dk>
-In-Reply-To: <8f002798-f68b-14cd-d321-f96b653fb51d@rasmusvillemoes.dk>
+ <CAG48ez0LjS5piXnx5924VbZQxEOwKeiAFmLEQChDNGAK65yfVg@mail.gmail.com>
+In-Reply-To: <CAG48ez0LjS5piXnx5924VbZQxEOwKeiAFmLEQChDNGAK65yfVg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 21 Feb 2019 15:03:16 -0800
-Message-ID: <CAGXu5j+4ia0OLHop81D8D4eSJV6765hr-m=3LPeL2490ER++Hg@mail.gmail.com>
+Date: Thu, 21 Feb 2019 15:14:12 -0800
+Message-ID: <CAGXu5jJbjqQDH6dMnzHNiBxxBfVNh_p1e=Tu3ZV_qwOJMmvOsw@mail.gmail.com>
 Subject: Re: [PATCH 5/6] lib: Fix function documentation for strncpy_from_user
 Content-Type: text/plain; charset="UTF-8"
-To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Jann Horn <jannh@google.com>, "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Stephen Rothwell <sfr@canb.auug.org.au>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+To: Jann Horn <jannh@google.com>
+Cc: "Tobin C. Harding" <me@tobin.cc>, "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Stephen Rothwell <sfr@canb.auug.org.au>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 21, 2019 at 6:58 AM Rasmus Villemoes
-<linux@rasmusvillemoes.dk> wrote:
+On Thu, Feb 21, 2019 at 8:07 AM Jann Horn <jannh@google.com> wrote:
 >
-> On 21/02/2019 07.02, Kees Cook wrote:
+> On Thu, Feb 21, 2019 at 7:02 AM Kees Cook <keescook@chromium.org> wrote:
+> > The tree-wide changes will likely take a while (and don't need to be
+> > part of this series unless you want to find a couple good examples)
+> > since we have to do them case-by-case: it's not always obvious when
+> > it's actually a non-string, so getting help from maintainers here will
+> > be needed. (And maybe some kind of flow chart added to
+> > Documentation/process/deprecated.rst for how to stop using strncpy()
+> > and strlcpy().)
 >
-> > P.S. Here's C string API Rant (I just had to get this out, please feel
-> > free to ignore):
+> Wild brainstorming ahead...
 >
-> I'll bite. First, it's "linux kernel string API", only some of string.h
-> interfaces are in std C. Sure, none of those satisfy all use cases, but
-> adding Yet Another One also has its costs.
-
-Well, yes, strscpy and scnprintf appear to be only in the kernel (did
-the originate externally somewhere I'm not aware of?)
-
-> > strcpy returns dest ... which is already known, so it's a meaningless
-> > return value.
-> >
-> > strncpy returns dest (still meaningless)
+> Such non-string character arrays are usually fixed-size, right? We
+> could use struct types around such character arrays to hide the actual
+> characters (so that people don't accidentally use them with C string
+> APIs), and enforce that the length is passed around as part of the
+> type... something like:
 >
-> Yeah, same for memcpy, memset. Those are classic C interfaces. It does
-> allow some micro-optimizations in some cases - since one is likely to
+> #define char_array(len) struct { char __ca_data[len]; }
 
-Right, yes, but this level of optimization is best left to the
-compiler. There's much more interesting results a caller should care
-about. :)
+Does this need __packed or will the compiler understand it's
+byte-aligned? And it needs __nonstring :)
 
-> > strlcpy returns strlen(src) ... the length we WOULD have copied. Why
-> > would we care about that? I'm operating on dest. Were there callers
-> > that needed to both copy part of src and learn how long it was at the
-> > same time?
+> #define __CA_UNWRAP(captr) (captr)->__ca_data, sizeof((captr)->__ca_data)
 >
-> The rationale is exactly the same as for snprintf - to allow you to
-
-Okay, but there's as separate function for that: strlen().
-
-> > strscpy returns -E2BIG or non-NUL bytes copied: yay, a return about
-> > what actually happened from the operation!
+> void __str2ca(char *dst, size_t dst_len, char *src) {
+>   size_t src_len = strlen(src);
+>   if (WARN_ON(src_len > dst_len)) {
+>     // or whatever else we think is the safest way to deal with this
+>     // without crashing, if BUG() is not an option.
+>     memset(dst, 0, dst_len);
+>     return;
+>   }
+>   memcpy(dst, src, src_len);
+>   memset(dst + src_len, 0, dst_len - src_len);
+> }
+> #define str2ca(dst, src) __str2ca(__CA_UNWRAP(dst), (src))
 >
-> Well, strictly speaking, strlcpy()'s return value also tells you exactly
-> what happened, just not in the kernel "negative errno for error
-> condition" style.
+> static inline void __ca2ca(char *dst, size_t dst_len, char *src,
+> size_t src_len) {
+>   BUILD_BUG_ON(dst_len < src_len);
+>   memcpy(dst, src, src_len);
+>   if (src_len != dst_len) {
+>     memset(dst + src_len, 0, dst_len - src_len);
+>   }
+> }
+> #define ca2ca(dst, src) __ca2ca(__CA_UNWRAP(dst), __CA_UNWRAP(src))
 
-True, yes, but it's unfriendly: it requires careful math, just like
-snprintf, which depends on rechecking the args, making sure you're not
-doing an off-by-one from the NUL, etc etc.
+Yeah, I was trying to think of ways to do this but I was thinking
+mostly about noticing the __nonstring mark. #define-ing this away
+might work, but it might also just annoy people more. At least GCC
+will yell about __nonstring use in some cases.
 
-> > ... snprintf returns what it WOULD have written, much like strlcpy
-> > above. At least snprintf has an excuse: it can be used to calculate an
-> > allocation size (called with a NULL dest and 0 size) ... but shouldn't
-> > "how big is this format string going to be?" be a separate function?
+> And if you want to do direct assignments instead of using helpers, you
+> make a typedef like this (since just assigning between two equivalent
+> structs doesn't work):
 >
-> Why? Sure, you can make a wrapper vhowmuch(const char *fmt, va_args ap),
-> but its implementation would have to be "return vsnprintf(NULL, 0, fmt,
-> ap);", since we really must reuse the exact same logic for computing the
-> length as for doing the actual printf'ing (otherwise they'd get out of
-> sync).
+> typedef char_array(20) blah_name;
+> blah_name global_name;
+> int main(int argc, char **argv) {
+>   blah_name local_name;
+>   str2ca(&local_name, argv[1]);
+>   global_name = local_name;
+> }
+>
+> You'd also have to use a typedef like this if you want to pass
+> references to other functions.
 
-Well, I'd likely go the opposite directly: make snprintf() a wrapper
-and call vhowmuch(), etc, convert until snprintf could be removed. But
-really the best might be removal of snprintf first, then refactor it
-with vhowmuch() etc. Lots of ways to solve it, I suppose. But dropping
-the unfriendly API would be nice.
+Yeah, it might work. I need to go look through ext4 -- that's one
+place I know there were "legit" strncpy() uses...
 
-> Please no. snprintf() is standardized, has sane semantics (though one
+Converting existing non-string cases to this and see if it's worse
+would be educational.
 
-No, it doesn't -- it has well-defined semantics, but using it
-correctly is too hard. It's a regular source of bugs. (Not *nearly* as
-bad as strncpy, so let's stick to dropping one bad API at a time...)
+> Something like this would also be neat for classic C strings in some
+> situations - if you can put bounds in the types, or (if the string is
+> dynamically-sized) in the struct, you don't need to messily pass
+> around bounds for things like snprint() and so on.
 
-> sometimes _want_ scnprintf semantics - in which case one can and should
-> use that...), and, importantly, gcc understands those semantics. So we
-> get optimizations and diagnostics that we'd miss if we kill off explicit
-> snprintf and replace with non-standard howmuch+scnprintf.
-
-Those diagnostics can be had with the __printf() markings already...
+Yeah, I remain annoyed about string pointers having lost their
+allocation size meta data. The vast majority of str*() functions could
+just be "str, sizeof(str)" like you have for the CA_UNWRAP.
 
 > > So scnprintf() does the right thing (count of non-NUL bytes copied out).
 >
-> The right thing, when that's the thing you want to know. Which it is in
-> the "build a string in a buffer by repeated printf calls, perhaps
-> intermixed with a little flow control logic". But not so in a "format
-> this stuff to this fixed-size char buffer inside that struct, and let me
-> know [i.e., 'give me a way of knowing'] if it all fit".
+> That seems kinda suboptimal. Wouldn't you ideally want to bail out
+> with an error, or at least do a WARN(), if you're trying to format a
+> string that doesn't fit into its destination? Like, for example, if
+> you're assembling a path, and the path doesn't fit into a buffer, and
+> so you just use half of it, you might end up in a very different place
+> from where you intended to go.
 
-Do we need ssprintf() to get the -E2BIG result like strscpy()?
+ssprintf() with -E2BIG? Most correct users of snprintf()'s return
+value do some version of trying to detect if there wasn't enough space
+and then error out:
 
-> Hello, I'm you super-fantastic-one-size-fits-all string copying API.
-> Please carefully fill out the following form, and I'll get back to you ASAP.
+static inline int usb_make_path(struct usb_device *dev, char *buf, size_t size)
+{
+        int actual;
+        actual = snprintf(buf, size, "usb-%s-%s", dev->bus->bus_name,
+                          dev->devpath);
+        return (actual >= (int)size) ? -1 : actual;
+}
 
-I mean, this is kinda what we have already. We just keep exposing too
-many knobs. :)
+a) this could just be "return ssprintf(..."
+b) as far as I see, there are literally 2 callers of usb_make_path()
+that check the return value
+
+Anyway, snprintf() is "next". I'd like to get through
+strcpy/strncpy/strlcpy removal first... :)
 
 -- 
 Kees Cook
