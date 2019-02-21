@@ -1,7 +1,7 @@
 From: Russell Currey <ruscur@russell.cc>
-Subject: [PATCH 4/7] powerpc/64: Setup KUP on secondary CPUs
-Date: Thu, 21 Feb 2019 20:35:58 +1100
-Message-Id: <20190221093601.27920-5-ruscur@russell.cc>
+Subject: [PATCH 5/7] powerpc/mm/radix: Use KUEP API for Radix MMU
+Date: Thu, 21 Feb 2019 20:35:59 +1100
+Message-Id: <20190221093601.27920-6-ruscur@russell.cc>
 In-Reply-To: <20190221093601.27920-1-ruscur@russell.cc>
 References: <20190221093601.27920-1-ruscur@russell.cc>
 MIME-Version: 1.0
@@ -10,32 +10,73 @@ To: linuxppc-dev@lists.ozlabs.org
 Cc: mpe@ellerman.id.au, npiggin@gmail.com, christophe.leroy@c-s.fr, kernel-hardening@lists.openwall.com, Russell Currey <ruscur@russell.cc>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Some platforms (i.e. Radix MMU) need per-CPU initialisation for KUP.
+Execution protection already exists on radix, this just refactors
+the radix init to provide the KUEP setup function instead.
 
-Any platforms that only want to do KUP initialisation once
-globally can just check to see if they're running on the boot CPU, or
-check if whatever setup they need has already been performed.
-
-Note that this is only for 64-bit.
+Thus, the only functional change is that it can now be disabled.
 
 Signed-off-by: Russell Currey <ruscur@russell.cc>
 ---
- arch/powerpc/kernel/setup_64.c | 3 +++
- 1 file changed, 3 insertions(+)
+ arch/powerpc/mm/pgtable-radix.c        | 12 +++++++++---
+ arch/powerpc/platforms/Kconfig.cputype |  1 +
+ 2 files changed, 10 insertions(+), 3 deletions(-)
 
-diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index 771f280a6bf6..17921ee7f3a0 100644
---- a/arch/powerpc/kernel/setup_64.c
-+++ b/arch/powerpc/kernel/setup_64.c
-@@ -390,6 +390,9 @@ void early_setup_secondary(void)
- 	/* Initialize the hash table or TLB handling */
- 	early_init_mmu_secondary();
+diff --git a/arch/powerpc/mm/pgtable-radix.c b/arch/powerpc/mm/pgtable-radix.c
+index 931156069a81..224bcd4be5ae 100644
+--- a/arch/powerpc/mm/pgtable-radix.c
++++ b/arch/powerpc/mm/pgtable-radix.c
+@@ -535,8 +535,15 @@ static void radix_init_amor(void)
+ 	mtspr(SPRN_AMOR, (3ul << 62));
+ }
  
-+	/* Perform any KUP setup that is per-cpu */
-+	setup_kup();
+-static void radix_init_iamr(void)
++#ifdef CONFIG_PPC_KUEP
++void __init setup_kuep(bool disabled)
+ {
++	if (disabled || !early_radix_enabled())
++		return;
++
++	if (smp_processor_id() == boot_cpuid)
++		pr_info("Activating Kernel Userspace Execution Prevention\n");
 +
  	/*
- 	 * At this point, we can let interrupts switch to virtual mode
- 	 * (the MMU has been setup), so adjust the MSR in the PACA to
+ 	 * Radix always uses key0 of the IAMR to determine if an access is
+ 	 * allowed. We set bit 0 (IBM bit 1) of key0, to prevent instruction
+@@ -544,6 +551,7 @@ static void radix_init_iamr(void)
+ 	 */
+ 	mtspr(SPRN_IAMR, (1ul << 62));
+ }
++#endif
+ 
+ void __init radix__early_init_mmu(void)
+ {
+@@ -605,7 +613,6 @@ void __init radix__early_init_mmu(void)
+ 
+ 	memblock_set_current_limit(MEMBLOCK_ALLOC_ANYWHERE);
+ 
+-	radix_init_iamr();
+ 	radix_init_pgtable();
+ 	/* Switch to the guard PID before turning on MMU */
+ 	radix__switch_mmu_context(NULL, &init_mm);
+@@ -627,7 +634,6 @@ void radix__early_init_mmu_secondary(void)
+ 		      __pa(partition_tb) | (PATB_SIZE_SHIFT - 12));
+ 		radix_init_amor();
+ 	}
+-	radix_init_iamr();
+ 
+ 	radix__switch_mmu_context(NULL, &init_mm);
+ 	if (cpu_has_feature(CPU_FTR_HVMODE))
+diff --git a/arch/powerpc/platforms/Kconfig.cputype b/arch/powerpc/platforms/Kconfig.cputype
+index 7fa5ddbdce12..25cc7d36b27d 100644
+--- a/arch/powerpc/platforms/Kconfig.cputype
++++ b/arch/powerpc/platforms/Kconfig.cputype
+@@ -320,6 +320,7 @@ config PPC_RADIX_MMU
+ 	bool "Radix MMU Support"
+ 	depends on PPC_BOOK3S_64
+ 	select ARCH_HAS_GIGANTIC_PAGE if (MEMORY_ISOLATION && COMPACTION) || CMA
++	select PPC_HAVE_KUEP
+ 	default y
+ 	help
+ 	  Enable support for the Power ISA 3.0 Radix style MMU. Currently this
 -- 
 2.20.1
