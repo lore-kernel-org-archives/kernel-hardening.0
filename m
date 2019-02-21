@@ -1,100 +1,95 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v3 12/20] x86/alternative: Remove the return value of text_poke_*()
-Date: Thu, 21 Feb 2019 15:44:43 -0800
-Message-Id: <20190221234451.17632-13-rick.p.edgecombe@intel.com>
+Subject: [PATCH v3 17/20] bpf: Use vmalloc special flag
+Date: Thu, 21 Feb 2019 15:44:48 -0800
+Message-Id: <20190221234451.17632-18-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
 References: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
 To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Nadav Amit <namit@vmware.com>
+Use new flag VM_FLUSH_RESET_PERMS for handling freeing of special
+permissioned memory in vmalloc and remove places where memory was set RW
+before freeing which is no longer needed. Don't track if the memory is RO
+anymore because it is now tracked in vmalloc.
 
-The return value of text_poke_early() and text_poke_bp() is useless.
-Remove it.
-
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Dave Hansen <dave.hansen@intel.com>
-Cc: Masami Hiramatsu <mhiramat@kernel.org>
-Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Signed-off-by: Nadav Amit <namit@vmware.com>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
+Cc: Alexei Starovoitov <ast@kernel.org>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/include/asm/text-patching.h |  4 ++--
- arch/x86/kernel/alternative.c        | 11 ++++-------
- 2 files changed, 6 insertions(+), 9 deletions(-)
+ include/linux/filter.h | 17 +++--------------
+ kernel/bpf/core.c      |  1 -
+ 2 files changed, 3 insertions(+), 15 deletions(-)
 
-diff --git a/arch/x86/include/asm/text-patching.h b/arch/x86/include/asm/text-patching.h
-index a75eed841eed..c90678fd391a 100644
---- a/arch/x86/include/asm/text-patching.h
-+++ b/arch/x86/include/asm/text-patching.h
-@@ -18,7 +18,7 @@ static inline void apply_paravirt(struct paravirt_patch_site *start,
- #define __parainstructions_end	NULL
- #endif
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index b9f93e62db96..f7b6c8a2e591 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -20,6 +20,7 @@
+ #include <linux/set_memory.h>
+ #include <linux/kallsyms.h>
+ #include <linux/if_vlan.h>
++#include <linux/vmalloc.h>
  
--extern void *text_poke_early(void *addr, const void *opcode, size_t len);
-+extern void text_poke_early(void *addr, const void *opcode, size_t len);
+ #include <net/sch_generic.h>
  
- /*
-  * Clear and restore the kernel write-protection flag on the local CPU.
-@@ -37,7 +37,7 @@ extern void *text_poke_early(void *addr, const void *opcode, size_t len);
- extern void *text_poke(void *addr, const void *opcode, size_t len);
- extern void *text_poke_kgdb(void *addr, const void *opcode, size_t len);
- extern int poke_int3_handler(struct pt_regs *regs);
--extern void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
-+extern void text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
- extern int after_bootmem;
- extern __ro_after_init struct mm_struct *poking_mm;
- extern __ro_after_init unsigned long poking_addr;
-diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index b75bfeda021e..c63707e7ed3d 100644
---- a/arch/x86/kernel/alternative.c
-+++ b/arch/x86/kernel/alternative.c
-@@ -264,7 +264,7 @@ static void __init_or_module add_nops(void *insns, unsigned int len)
+@@ -483,7 +484,6 @@ struct bpf_prog {
+ 	u16			pages;		/* Number of allocated pages */
+ 	u16			jited:1,	/* Is our filter JIT'ed? */
+ 				jit_requested:1,/* archs need to JIT the prog */
+-				undo_set_mem:1,	/* Passed set_memory_ro() checkpoint */
+ 				gpl_compatible:1, /* Is filter GPL compatible? */
+ 				cb_access:1,	/* Is control block accessed? */
+ 				dst_needed:1,	/* Do we need dst entry? */
+@@ -681,27 +681,17 @@ bpf_ctx_narrow_access_ok(u32 off, u32 size, u32 size_default)
  
- extern struct alt_instr __alt_instructions[], __alt_instructions_end[];
- extern s32 __smp_locks[], __smp_locks_end[];
--void *text_poke_early(void *addr, const void *opcode, size_t len);
-+void text_poke_early(void *addr, const void *opcode, size_t len);
- 
- /*
-  * Are we looking at a near JMP with a 1 or 4-byte displacement.
-@@ -666,8 +666,8 @@ void __init alternative_instructions(void)
-  * instructions. And on the local CPU you need to be protected again NMI or MCE
-  * handlers seeing an inconsistent instruction while you patch.
-  */
--void *__init_or_module text_poke_early(void *addr, const void *opcode,
--				       size_t len)
-+void __init_or_module text_poke_early(void *addr, const void *opcode,
-+				      size_t len)
+ static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
  {
- 	unsigned long flags;
- 
-@@ -690,7 +690,6 @@ void *__init_or_module text_poke_early(void *addr, const void *opcode,
- 		 * that causes hangs on some VIA CPUs.
- 		 */
- 	}
--	return addr;
+-	fp->undo_set_mem = 1;
++	set_vm_flush_reset_perms(fp);
+ 	set_memory_ro((unsigned long)fp, fp->pages);
  }
  
- __ro_after_init struct mm_struct *poking_mm;
-@@ -892,7 +891,7 @@ int poke_int3_handler(struct pt_regs *regs)
-  *	  replacing opcode
-  *	- sync cores
-  */
--void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
-+void text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
- {
- 	unsigned char int3 = 0xcc;
- 
-@@ -934,7 +933,5 @@ void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
- 	 * the writing of the new instruction.
- 	 */
- 	bp_patching_in_progress = false;
+-static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+-{
+-	if (fp->undo_set_mem)
+-		set_memory_rw((unsigned long)fp, fp->pages);
+-}
 -
--	return addr;
+ static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+ {
++	set_vm_flush_reset_perms(hdr);
+ 	set_memory_ro((unsigned long)hdr, hdr->pages);
+ 	set_memory_x((unsigned long)hdr, hdr->pages);
  }
  
+-static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
+-{
+-	set_memory_rw((unsigned long)hdr, hdr->pages);
+-}
+-
+ static inline struct bpf_binary_header *
+ bpf_jit_binary_hdr(const struct bpf_prog *fp)
+ {
+@@ -736,7 +726,6 @@ void __bpf_prog_free(struct bpf_prog *fp);
+ 
+ static inline void bpf_prog_unlock_free(struct bpf_prog *fp)
+ {
+-	bpf_prog_unlock_ro(fp);
+ 	__bpf_prog_free(fp);
+ }
+ 
+diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c
+index 19c49313c709..465c1c3623e8 100644
+--- a/kernel/bpf/core.c
++++ b/kernel/bpf/core.c
+@@ -804,7 +804,6 @@ void __weak bpf_jit_free(struct bpf_prog *fp)
+ 	if (fp->jited) {
+ 		struct bpf_binary_header *hdr = bpf_jit_binary_hdr(fp);
+ 
+-		bpf_jit_binary_unlock_ro(hdr);
+ 		bpf_jit_binary_free(hdr);
+ 
+ 		WARN_ON_ONCE(!bpf_prog_kallsyms_verify_off(fp));
 -- 
 2.17.1
