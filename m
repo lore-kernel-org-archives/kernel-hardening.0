@@ -1,241 +1,204 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v3 15/20] vmalloc: Add flag for free of special permsissions
-Date: Thu, 21 Feb 2019 15:44:46 -0800
-Message-Id: <20190221234451.17632-16-rick.p.edgecombe@intel.com>
+Subject: [PATCH v3 16/20] modules: Use vmalloc special flag
+Date: Thu, 21 Feb 2019 15:44:47 -0800
+Message-Id: <20190221234451.17632-17-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
 References: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
 To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Jessica Yu <jeyu@kernel.org>, Steven Rostedt <rostedt@goodmis.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a new flag VM_FLUSH_RESET_PERMS, for enabling vfree operations to
-immediately clear executable TLB entries before freeing pages, and handle
-resetting permissions on the directmap. This flag is useful for any kind
-of memory with elevated permissions, or where there can be related
-permissions changes on the directmap. Today this is RO+X and RO memory.
+Use new flag for handling freeing of special permissioned memory in vmalloc
+and remove places where memory was set RW before freeing which is no longer
+needed.
 
-Although this enables directly vfreeing non-writeable memory now,
-non-writable memory cannot be freed in an interrupt because the allocation
-itself is used as a node on deferred free list. So when RO memory needs to
-be freed in an interrupt the code doing the vfree needs to have its own
-work queue, as was the case before the deferred vfree list was added to
-vmalloc.
+Since freeing of VM_FLUSH_RESET_PERMS memory is not supported in an
+interrupt by vmalloc, the freeing of init sections is moved to a work
+queue. Instead of call_rcu it now uses synchronize_rcu() in the work
+queue.
 
-For architectures with set_direct_map_ implementations this whole operation
-can be done with one TLB flush when centralized like this. For others with
-directmap permissions, currently only arm64, a backup method using
-set_memory functions is used to reset the directmap. When arm64 adds
-set_direct_map_ functions, this backup can be removed.
+Lastly, there is now a WARN_ON in module_memfree since it should not be
+called in an interrupt with special memory as is required for
+VM_FLUSH_RESET_PERMS.
 
-When the TLB is flushed to both remove TLB entries for the vmalloc range
-mapping and the direct map permissions, the lazy purge operation could be
-done to try to save a TLB flush later. However today vm_unmap_aliases
-could flush a TLB range that does not include the directmap. So a helper
-is added with extra parameters that can allow both the vmalloc address and
-the direct mapping to be flushed during this operation. The behavior of the
-normal vm_unmap_aliases function is unchanged.
-
-Cc: Borislav Petkov <bp@alien8.de>
-Suggested-by: Dave Hansen <dave.hansen@intel.com>
-Suggested-by: Andy Lutomirski <luto@kernel.org>
-Suggested-by: Will Deacon <will.deacon@arm.com>
+Cc: Jessica Yu <jeyu@kernel.org>
+Cc: Steven Rostedt <rostedt@goodmis.org>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- include/linux/vmalloc.h |  13 +++++
- mm/vmalloc.c            | 113 +++++++++++++++++++++++++++++++++-------
- 2 files changed, 107 insertions(+), 19 deletions(-)
+ kernel/module.c | 77 +++++++++++++++++++++++++------------------------
+ 1 file changed, 39 insertions(+), 38 deletions(-)
 
-diff --git a/include/linux/vmalloc.h b/include/linux/vmalloc.h
-index 398e9c95cd61..345bb9d2f578 100644
---- a/include/linux/vmalloc.h
-+++ b/include/linux/vmalloc.h
-@@ -21,6 +21,11 @@ struct notifier_block;		/* in notifier.h */
- #define VM_UNINITIALIZED	0x00000020	/* vm_struct is not fully initialized */
- #define VM_NO_GUARD		0x00000040      /* don't add guard page */
- #define VM_KASAN		0x00000080      /* has allocated kasan shadow memory */
-+/*
-+ * Memory with VM_FLUSH_RESET_PERMS cannot be freed in an interrupt or with
-+ * vfree_atomic().
-+ */
-+#define VM_FLUSH_RESET_PERMS	0x00000100      /* Reset direct map and flush TLB on unmap */
- /* bits [20..32] reserved for arch specific ioremap internals */
+diff --git a/kernel/module.c b/kernel/module.c
+index ae1b77da6a20..3b97dfb47afb 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -98,6 +98,10 @@ DEFINE_MUTEX(module_mutex);
+ EXPORT_SYMBOL_GPL(module_mutex);
+ static LIST_HEAD(modules);
+ 
++/* Work queue for freeing init sections in success case */
++static struct work_struct init_free_wq;
++static struct llist_head init_free_list;
++
+ #ifdef CONFIG_MODULES_TREE_LOOKUP
  
  /*
-@@ -135,6 +140,14 @@ extern struct vm_struct *__get_vm_area_caller(unsigned long size,
- extern struct vm_struct *remove_vm_area(const void *addr);
- extern struct vm_struct *find_vm_area(const void *addr);
- 
-+static inline void set_vm_flush_reset_perms(void *addr)
-+{
-+	struct vm_struct *vm = find_vm_area(addr);
-+
-+	if (vm)
-+		vm->flags |= VM_FLUSH_RESET_PERMS;
-+}
-+
- extern int map_vm_area(struct vm_struct *area, pgprot_t prot,
- 			struct page **pages);
- #ifdef CONFIG_MMU
-diff --git a/mm/vmalloc.c b/mm/vmalloc.c
-index 871e41c55e23..0e341581832e 100644
---- a/mm/vmalloc.c
-+++ b/mm/vmalloc.c
-@@ -18,6 +18,7 @@
- #include <linux/interrupt.h>
- #include <linux/proc_fs.h>
- #include <linux/seq_file.h>
-+#include <linux/set_memory.h>
- #include <linux/debugobjects.h>
- #include <linux/kallsyms.h>
- #include <linux/list.h>
-@@ -1055,24 +1056,9 @@ static void vb_free(const void *addr, unsigned long size)
- 		spin_unlock(&vb->lock);
- }
- 
--/**
-- * vm_unmap_aliases - unmap outstanding lazy aliases in the vmap layer
-- *
-- * The vmap/vmalloc layer lazily flushes kernel virtual mappings primarily
-- * to amortize TLB flushing overheads. What this means is that any page you
-- * have now, may, in a former life, have been mapped into kernel virtual
-- * address by the vmap layer and so there might be some CPUs with TLB entries
-- * still referencing that page (additional to the regular 1:1 kernel mapping).
-- *
-- * vm_unmap_aliases flushes all such lazy mappings. After it returns, we can
-- * be sure that none of the pages we have control over will have any aliases
-- * from the vmap layer.
-- */
--void vm_unmap_aliases(void)
-+static void _vm_unmap_aliases(unsigned long start, unsigned long end, int flush)
- {
--	unsigned long start = ULONG_MAX, end = 0;
- 	int cpu;
--	int flush = 0;
- 
- 	if (unlikely(!vmap_initialized))
+@@ -1949,6 +1953,8 @@ void module_enable_ro(const struct module *mod, bool after_init)
+ 	if (!rodata_enabled)
  		return;
-@@ -1109,6 +1095,27 @@ void vm_unmap_aliases(void)
- 		flush_tlb_kernel_range(start, end);
- 	mutex_unlock(&vmap_purge_lock);
- }
-+
-+/**
-+ * vm_unmap_aliases - unmap outstanding lazy aliases in the vmap layer
-+ *
-+ * The vmap/vmalloc layer lazily flushes kernel virtual mappings primarily
-+ * to amortize TLB flushing overheads. What this means is that any page you
-+ * have now, may, in a former life, have been mapped into kernel virtual
-+ * address by the vmap layer and so there might be some CPUs with TLB entries
-+ * still referencing that page (additional to the regular 1:1 kernel mapping).
-+ *
-+ * vm_unmap_aliases flushes all such lazy mappings. After it returns, we can
-+ * be sure that none of the pages we have control over will have any aliases
-+ * from the vmap layer.
-+ */
-+void vm_unmap_aliases(void)
-+{
-+	unsigned long start = ULONG_MAX, end = 0;
-+	int flush = 0;
-+
-+	_vm_unmap_aliases(start, end, flush);
-+}
- EXPORT_SYMBOL_GPL(vm_unmap_aliases);
  
- /**
-@@ -1494,6 +1501,72 @@ struct vm_struct *remove_vm_area(const void *addr)
- 	return NULL;
++	set_vm_flush_reset_perms(mod->core_layout.base);
++	set_vm_flush_reset_perms(mod->init_layout.base);
+ 	frob_text(&mod->core_layout, set_memory_ro);
+ 	frob_text(&mod->core_layout, set_memory_x);
+ 
+@@ -1972,15 +1978,6 @@ static void module_enable_nx(const struct module *mod)
+ 	frob_writable_data(&mod->init_layout, set_memory_nx);
  }
  
-+static inline void set_area_direct_map(const struct vm_struct *area,
-+				       int (*set_direct_map)(struct page *page))
-+{
-+	int i;
-+
-+	for (i = 0; i < area->nr_pages; i++)
-+		if (page_address(area->pages[i]))
-+			set_direct_map(area->pages[i]);
-+}
-+
-+/* Handle removing and resetting vm mappings related to the vm_struct. */
-+static void vm_remove_mappings(struct vm_struct *area, int deallocate_pages)
-+{
-+	unsigned long addr = (unsigned long)area->addr;
-+	unsigned long start = ULONG_MAX, end = 0;
-+	int flush_reset = area->flags & VM_FLUSH_RESET_PERMS;
-+	int i;
-+
-+	/*
-+	 * The below block can be removed when all architectures that have
-+	 * direct map permissions also have set_direct_map_() implementations.
-+	 * This is concerned with resetting the direct map any an vm alias with
-+	 * execute permissions, without leaving a RW+X window.
-+	 */
-+	if (flush_reset && !IS_ENABLED(CONFIG_ARCH_HAS_SET_DIRECT_MAP)) {
-+		set_memory_nx(addr, area->nr_pages);
-+		set_memory_rw(addr, area->nr_pages);
-+	}
-+
-+	remove_vm_area(area->addr);
-+
-+	/* If this is not VM_FLUSH_RESET_PERMS memory, no need for the below. */
-+	if (!flush_reset)
-+		return;
-+
-+	/*
-+	 * If not deallocating pages, just do the flush of the VM area and
-+	 * return.
-+	 */
-+	if (!deallocate_pages) {
-+		vm_unmap_aliases();
-+		return;
-+	}
-+
-+	/*
-+	 * If execution gets here, flush the vm mapping and reset the direct
-+	 * map. Find the start and end range of the direct mappings to make sure
-+	 * the vm_unmap_aliases() flush includes the direct map.
-+	 */
-+	for (i = 0; i < area->nr_pages; i++) {
-+		if (page_address(area->pages[i])) {
-+			start = min(addr, start);
-+			end = max(addr, end);
-+		}
-+	}
-+
-+	/*
-+	 * Set direct map to something invalid so that it won't be cached if
-+	 * there are any accesses after the TLB flush, then flush the TLB and
-+	 * reset the direct map permissions to the default.
-+	 */
-+	set_area_direct_map(area, set_direct_map_invalid_noflush);
-+	_vm_unmap_aliases(start, end, 1);
-+	set_area_direct_map(area, set_direct_map_default_noflush);
-+}
-+
- static void __vunmap(const void *addr, int deallocate_pages)
+-static void module_disable_nx(const struct module *mod)
+-{
+-	frob_rodata(&mod->core_layout, set_memory_x);
+-	frob_ro_after_init(&mod->core_layout, set_memory_x);
+-	frob_writable_data(&mod->core_layout, set_memory_x);
+-	frob_rodata(&mod->init_layout, set_memory_x);
+-	frob_writable_data(&mod->init_layout, set_memory_x);
+-}
+-
+ /* Iterate through all modules and set each module's text as RW */
+ void set_all_modules_text_rw(void)
  {
- 	struct vm_struct *area;
-@@ -1515,7 +1588,8 @@ static void __vunmap(const void *addr, int deallocate_pages)
- 	debug_check_no_locks_freed(area->addr, get_vm_area_size(area));
- 	debug_check_no_obj_freed(area->addr, get_vm_area_size(area));
+@@ -2024,23 +2021,8 @@ void set_all_modules_text_ro(void)
+ 	}
+ 	mutex_unlock(&module_mutex);
+ }
+-
+-static void disable_ro_nx(const struct module_layout *layout)
+-{
+-	if (rodata_enabled) {
+-		frob_text(layout, set_memory_rw);
+-		frob_rodata(layout, set_memory_rw);
+-		frob_ro_after_init(layout, set_memory_rw);
+-	}
+-	frob_rodata(layout, set_memory_x);
+-	frob_ro_after_init(layout, set_memory_x);
+-	frob_writable_data(layout, set_memory_x);
+-}
+-
+ #else
+-static void disable_ro_nx(const struct module_layout *layout) { }
+ static void module_enable_nx(const struct module *mod) { }
+-static void module_disable_nx(const struct module *mod) { }
+ #endif
  
--	remove_vm_area(addr);
-+	vm_remove_mappings(area, deallocate_pages);
-+
- 	if (deallocate_pages) {
- 		int i;
+ #ifdef CONFIG_LIVEPATCH
+@@ -2120,6 +2102,11 @@ static void free_module_elf(struct module *mod)
  
-@@ -1925,8 +1999,9 @@ EXPORT_SYMBOL(vzalloc_node);
- 
- void *vmalloc_exec(unsigned long size)
+ void __weak module_memfree(void *module_region)
  {
--	return __vmalloc_node(size, 1, GFP_KERNEL, PAGE_KERNEL_EXEC,
--			      NUMA_NO_NODE, __builtin_return_address(0));
-+	return __vmalloc_node_range(size, 1, VMALLOC_START, VMALLOC_END,
-+			GFP_KERNEL, PAGE_KERNEL_EXEC, VM_FLUSH_RESET_PERMS,
-+			NUMA_NO_NODE, __builtin_return_address(0));
++	/*
++	 * This memory may be RO, and freeing RO memory in an interrupt is not
++	 * supported by vmalloc.
++	 */
++	WARN_ON(in_interrupt());
+ 	vfree(module_region);
  }
  
- #if defined(CONFIG_64BIT) && defined(CONFIG_ZONE_DMA32)
+@@ -2171,7 +2158,6 @@ static void free_module(struct module *mod)
+ 	mutex_unlock(&module_mutex);
+ 
+ 	/* This may be empty, but that's OK */
+-	disable_ro_nx(&mod->init_layout);
+ 	module_arch_freeing_init(mod);
+ 	module_memfree(mod->init_layout.base);
+ 	kfree(mod->args);
+@@ -2181,7 +2167,6 @@ static void free_module(struct module *mod)
+ 	lockdep_free_key_range(mod->core_layout.base, mod->core_layout.size);
+ 
+ 	/* Finally, free the core (containing the module structure) */
+-	disable_ro_nx(&mod->core_layout);
+ 	module_memfree(mod->core_layout.base);
+ }
+ 
+@@ -3424,17 +3409,34 @@ static void do_mod_ctors(struct module *mod)
+ 
+ /* For freeing module_init on success, in case kallsyms traversing */
+ struct mod_initfree {
+-	struct rcu_head rcu;
++	struct llist_node node;
+ 	void *module_init;
+ };
+ 
+-static void do_free_init(struct rcu_head *head)
++static void do_free_init(struct work_struct *w)
+ {
+-	struct mod_initfree *m = container_of(head, struct mod_initfree, rcu);
+-	module_memfree(m->module_init);
+-	kfree(m);
++	struct llist_node *pos, *n, *list;
++	struct mod_initfree *initfree;
++
++	list = llist_del_all(&init_free_list);
++
++	synchronize_rcu();
++
++	llist_for_each_safe(pos, n, list) {
++		initfree = container_of(pos, struct mod_initfree, node);
++		module_memfree(initfree->module_init);
++		kfree(initfree);
++	}
+ }
+ 
++static int __init modules_wq_init(void)
++{
++	INIT_WORK(&init_free_wq, do_free_init);
++	init_llist_head(&init_free_list);
++	return 0;
++}
++module_init(modules_wq_init);
++
+ /*
+  * This is where the real work happens.
+  *
+@@ -3511,7 +3513,6 @@ static noinline int do_init_module(struct module *mod)
+ #endif
+ 	module_enable_ro(mod, true);
+ 	mod_tree_remove_init(mod);
+-	disable_ro_nx(&mod->init_layout);
+ 	module_arch_freeing_init(mod);
+ 	mod->init_layout.base = NULL;
+ 	mod->init_layout.size = 0;
+@@ -3522,14 +3523,18 @@ static noinline int do_init_module(struct module *mod)
+ 	 * We want to free module_init, but be aware that kallsyms may be
+ 	 * walking this with preempt disabled.  In all the failure paths, we
+ 	 * call synchronize_rcu(), but we don't want to slow down the success
+-	 * path, so use actual RCU here.
++	 * path. module_memfree() cannot be called in an interrupt, so do the
++	 * work and call synchronize_rcu() in a work queue.
++	 *
+ 	 * Note that module_alloc() on most architectures creates W+X page
+ 	 * mappings which won't be cleaned up until do_free_init() runs.  Any
+ 	 * code such as mark_rodata_ro() which depends on those mappings to
+ 	 * be cleaned up needs to sync with the queued work - ie
+ 	 * rcu_barrier()
+ 	 */
+-	call_rcu(&freeinit->rcu, do_free_init);
++	if (llist_add(&freeinit->node, &init_free_list))
++		schedule_work(&init_free_wq);
++
+ 	mutex_unlock(&module_mutex);
+ 	wake_up_all(&module_wq);
+ 
+@@ -3826,10 +3831,6 @@ static int load_module(struct load_info *info, const char __user *uargs,
+ 	module_bug_cleanup(mod);
+ 	mutex_unlock(&module_mutex);
+ 
+-	/* we can't deallocate the module until we clear memory protection */
+-	module_disable_ro(mod);
+-	module_disable_nx(mod);
+-
+  ddebug_cleanup:
+ 	ftrace_release_mod(mod);
+ 	dynamic_debug_remove(mod, info->debug);
 -- 
 2.17.1
