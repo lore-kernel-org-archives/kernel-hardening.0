@@ -1,38 +1,33 @@
 MIME-Version: 1.0
-References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-6-tobin@kernel.org>
- <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com>
- <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com>
- <20190221052435.GF11758@eros.localdomain> <CAGXu5j+Mf2D5LgkEmps7VVBhmNGt=49y4caP1y1E0OBURJEeXQ@mail.gmail.com>
- <20190222072652.2441e8a2@canb.auug.org.au>
-In-Reply-To: <20190222072652.2441e8a2@canb.auug.org.au>
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
+ <20190208142642.GJ32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
+ <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
+ <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net> <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
+ <CAGXu5jJSWf=CAij3_dxA9+n6+fWtt1MOT3dWD07vdkhrfC8bpQ@mail.gmail.com> <CAGXu5j+833Rv5dnsNth522WGirAjysipPo2gecSX2HC5y-MkUg@mail.gmail.com>
+In-Reply-To: <CAGXu5j+833Rv5dnsNth522WGirAjysipPo2gecSX2HC5y-MkUg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 21 Feb 2019 15:16:14 -0800
-Message-ID: <CAGXu5jLbcqDJWvn1cES3OvWMvnd3OArFKLOJMqWc=youte5Haw@mail.gmail.com>
-Subject: Re: [PATCH 5/6] lib: Fix function documentation for strncpy_from_user
+Date: Thu, 21 Feb 2019 15:29:39 -0800
+Message-ID: <CAGXu5jL=uPyP=eG296oTixkto83LqVyasvo9qaNEn2P6bAtufQ@mail.gmail.com>
+Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
 Content-Type: text/plain; charset="UTF-8"
-To: Stephen Rothwell <sfr@canb.auug.org.au>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Jann Horn <jannh@google.com>, "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+To: "Perla, Enrico" <enrico.perla@intel.com>
+Cc: Andy Lutomirski <luto@amacapital.net>, "Reshetova, Elena" <elena.reshetova@intel.com>, Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 21, 2019 at 12:27 PM Stephen Rothwell <sfr@canb.auug.org.au> wrote:
->
-> Hi Kees,
->
-> On Wed, 20 Feb 2019 22:02:32 -0800 Kees Cook <keescook@chromium.org> wrote:
-> >
-> > What I can't quite figure out yet is how to find a way for sfr to flag
-> > newly added users of strcpy, strncpy, and strlcpy. We might need to
-> > bring back __deprecated, but hide it behind a W=linux-next flag or
-> > something crazy. Stephen, in your builds you're already injecting
-> > -Wimplicit-fallthrough: do you do W=1 or anything like that? If not, I
-> > think we need some W= setting for your linux-next builds that generate
-> > the maintainer-nag warnings...
->
-> I just have a set of compiler flags that my build scripts explicitly
-> enable by setting KCFLAGS.
+On Wed, Feb 20, 2019 at 2:53 PM Kees Cook <keescook@chromium.org> wrote:
+> BTW, the attack that inspired grsecurity's RANDKSTACK is described in
+> these slides (lots of steps, see slide 79):
+> https://www.slideshare.net/scovetta/stackjacking
 
-Okay, so you could include some -D option to enable it. I'll see if I
-can cook something up.
+Sorry, as PaX Team reminded me, I misremembered this. RANDKSTACK
+already existed. It was STACKLEAK that was created in response to this
+particular attack. I still think this attack is worth understanding to
+see what hoops must be jumped through when dealing with stack
+randomization (and other defenses).
 
 -- 
 Kees Cook
