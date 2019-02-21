@@ -1,72 +1,74 @@
 MIME-Version: 1.0
-References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
- <20190208142642.GJ32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
- <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
- <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net> <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
- <2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jLbR0Tk6XEdCg+27bsc4+SKGwzNsV12imwjHnLmmpV0mA@mail.gmail.com> <CALCETrW84mH-jfKOCKmdODL06Bhzugck+vVt-vDe9byA27V=Jg@mail.gmail.com>
-In-Reply-To: <CALCETrW84mH-jfKOCKmdODL06Bhzugck+vVt-vDe9byA27V=Jg@mail.gmail.com>
+References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-6-tobin@kernel.org>
+ <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com> <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com>
+In-Reply-To: <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com>
 From: Jann Horn <jannh@google.com>
-Date: Thu, 21 Feb 2019 14:20:02 +0100
-Message-ID: <CAG48ez3sh+qcw9X6u2M0apRdN2TJR5Z-MGQS_UcmDhje+44CSA@mail.gmail.com>
-Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- system call
+Date: Thu, 21 Feb 2019 15:28:13 +0100
+Message-ID: <CAG48ez34MMBfTzQFxj2o5brYDrUS89_gvX9=SnpWZ+TjMUV-BQ@mail.gmail.com>
+Subject: Re: [PATCH 5/6] lib: Fix function documentation for strncpy_from_user
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, "Perla, Enrico" <enrico.perla@intel.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
+To: Kees Cook <keescook@chromium.org>
+Cc: "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Micay <danielmicay@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 21, 2019 at 7:38 AM Andy Lutomirski <luto@kernel.org> wrote:
-> > On Feb 20, 2019, at 2:20 PM, Kees Cook <keescook@chromium.org> wrote:
-> >
-> > On Wed, Feb 13, 2019 at 11:52 PM Reshetova, Elena
-> > <elena.reshetova@intel.com> wrote:
-> >> Now back to our proposed countermeasures given that attacker has found=
- a way to do
-> >> a crafted overflow and overwrite:
-> >>
-> >>  1) pt_regs is not predictable, but can be discovered in ptrace-style =
-scenario or cache-probing.
-> >>     If discovered, then attack succeeds as of now.
-> >>  2) relative stack offset is not predictable and randomized, cannot be=
- probed very easily via
-> >>      cache or ptrace. So, this is an additional hurdle on the attacker=
-'s way since stack is non-
-> >>      deterministic now.
-> >>  3) nothing changed for this type of attack, given that attacker's goa=
-l is not to overwrite CS
-> >>      in adjusted pt_regs. If it is his goal, then it helps with that.
-> >>
-> >>
-> >> Now summary:
-> >>
-> >> It would seem to me that:
-> >>
-> >> - regs->cs |=3D 3 on exit is a thing worth doing anyway, just because =
-it is cheap, as Andy said, and it
-> >> might make a positive difference in two out of three attack scenarios.=
- Objections?
-> >
-> > I would agree, let's just do this.
+On Thu, Feb 21, 2019 at 2:05 AM Kees Cook <keescook@chromium.org> wrote:
+> On Mon, Feb 18, 2019 at 4:52 PM Jann Horn <jannh@google.com> wrote:
+> > AFAICS the byte_at_a_time loop exits when max==0 is reached, and then
+> > if `res >= count` (in other words, if we've copied as many bytes as
+> > requested, haven't encountered a null byte so far, and haven't reached
+> > the end of the address space), we return `res`, which is the same as
+> > `count`. Are you sure?
 >
-> Thinking slightly more about this, it=E2=80=99s an incomplete protection.=
-  It
-> keeps an attacker from returning to kernel mode, but it does not
-> protect the privileged flag bits.  I think that IOPL is the only thing
-> we really care about, and doing anything useful about IOPL would be
-> rather more complex, unfortunately.  I suppose we could just zero it
-> and guard that with a static branch that is switched off the first
-> time anyone uses iopl(3).
->
-> I suppose we could also add a config option to straight-up disable
-> IOPL.  I sincerely hope that no one uses it any more. Even the small
-> number of semi-legit users really ought to be using ioperm() instead.
+> Oh, whew, there is only 1 arch-specific implementation of this. I
+> thought you meant there was multiple implementations.
 
-/me raises hand. iopl(3) is useful for making CLI and STI work from
-userspace, I've used it for that (for testing stuff, not for anything
-that has been shipped to people). Of course, that's probably a reason
-to get rid of it, not to keep it. ^^
+Not sure what you're talking about. Are you talking about
+implementations of strncpy_from_user()?
+
+
+csky: custom strncpy_from_user() calls custom __do_strncpy_from_user,
+which is a macro containing a big asm() block.
+
+
+h8300:
+;;; long strncpy_from_user(void *to, void *from, size_t n)
+strncpy_from_user:
+mov.l er2,er2
+bne 1f
+sub.l er0,er0
+rts
+[...]
+
+
+mips:
+static inline long
+strncpy_from_user(char *__to, const char __user *__from, long __len)
+{
+long res;
+
+if (eva_kernel_access()) {
+__asm__ __volatile__(
+"move\t$4, %1\n\t"
+"move\t$5, %2\n\t"
+"move\t$6, %3\n\t"
+[...]
+
+
+unicore32:
+ENTRY(__strncpy_from_user)
+mov ip, r1
+1: sub.a r2, r2, #1
+ldrusr r3, r1, 1, ns
+bfs 2f
+stb.w r3, [r0]+, #1
+cxor.a r3, #0
+[...]
+
+
+and so on.
+
+> So, generally speaking, I'd love to split all strncpy* uses into
+> strscpy_zero() (when expecting to do str->str copies), and some new
+> function, named like mempadstr() or str2mem() that copies a str to a
+> __nonstring char array, with trailing padding, if there is space. Then
+> there is no more mixing the two cases and botching things.
