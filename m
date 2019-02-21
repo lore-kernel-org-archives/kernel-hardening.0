@@ -1,73 +1,67 @@
 MIME-Version: 1.0
-References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
- <20190208142642.GJ32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
- <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
- <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net> <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
- <CAGXu5jJSWf=CAij3_dxA9+n6+fWtt1MOT3dWD07vdkhrfC8bpQ@mail.gmail.com>
- <5E269FBC3009974381A340959F3135C95C8FE7E1@hasmsx108.ger.corp.intel.com>
- <CAGXu5jJoODVOd8Bt+eMRPGvm=ZZNBHVmGE8LBsgMk6K=1Dv-cQ@mail.gmail.com> <5E269FBC3009974381A340959F3135C95C8FE928@hasmsx108.ger.corp.intel.com>
-In-Reply-To: <5E269FBC3009974381A340959F3135C95C8FE928@hasmsx108.ger.corp.intel.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 21 Feb 2019 11:18:32 -0800
-Message-ID: <CAGXu5j+=KSiRgi4HXd=vQLT1YkWcOS3NxwrczBedhcb+CFB+tg@mail.gmail.com>
-Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- system call
-Content-Type: text/plain; charset="UTF-8"
-To: "Perla, Enrico" <enrico.perla@intel.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, "Reshetova, Elena" <elena.reshetova@intel.com>, Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
+References: <CALS6=qWHytpevcJqB6TkgzUfUmpoxVeyJtvEKigJH3-cnw7vUQ@mail.gmail.com>
+ <CAGXu5jKoHfPHadabqo=7FaOD1O-GRE1-GowfmZSs_oB+snWFaQ@mail.gmail.com>
+ <CALS6=qXN_UxEYV-6kG9_r6kv5joYdVpKU6xOhxLsPAkshzN80g@mail.gmail.com> <CAGXu5jJ11jw=RZ1X_KT7+9f_vjrvEpjADxdqedKLxSQjreG8Tw@mail.gmail.com>
+In-Reply-To: <CAGXu5jJ11jw=RZ1X_KT7+9f_vjrvEpjADxdqedKLxSQjreG8Tw@mail.gmail.com>
+From: Carter Cheng <cartercheng@gmail.com>
+Date: Fri, 22 Feb 2019 03:36:21 +0800
+Message-ID: <CALS6=qWmGCy5Q51_pEvY9HWADfSTa_W25cNHSmmCLfmdXG6E4g@mail.gmail.com>
+Subject: Re: classes of methods for gaining access to kernel memory
+Content-Type: multipart/alternative; boundary="00000000000075047505826c971f"
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 21, 2019 at 9:48 AM Perla, Enrico <enrico.perla@intel.com> wrote:
-> In many kernel exploits one needs to emulate structures (or provide some controlled data) to keep things stable, do a second stage, etc.
-> Old school approach was to dereference to userland. Now, with SMAP (or any other dereference protection), that cannot be done anymore.
+--00000000000075047505826c971f
+Content-Type: text/plain; charset="UTF-8"
 
-Oh, I see now: using the pt_regs storage as a place in kernel memory
-to have built the malicious structure. Got it.
+One of the papers I had a brief look at is this one-
 
-> If I have a stack address leak, then I have a pretty nice primitive through pt_regs to load some arbitrary content at a known address.
-> As discussed with Jan, if I have ptrace, randomization is basically moot. I can just PTRACE_SYSCALL and time my way to the correct location.
-> Actually, randomization could even help getting some needed alignment.
+https://ieeexplore.ieee.org/abstract/document/7546545
 
-Okay, I've chatted more with Jann off-list now; he's enlightened me
-with more examples. Thank you both for walking me through my
-denseness. :)
 
-> So the open questions are:
-> 1) are pt_regs considered enough of a vector to add the randomization nuisance?
 
-In most cases, to be able to locate pt_regs at a fixed location, you
-already need a stack address location leak. If you have such a leak,
-and pt_regs location is randomized, a second thread's pt_regs could be
-used, held with ptrace, and have prime+probe with PEEKs to figure out
-where the offset to pt_regs is. And the other thread would just use
-THAT pt_regs for its scratch space.
+On Fri, Feb 22, 2019 at 1:16 AM Kees Cook <keescook@chromium.org> wrote:
 
-So, while it'd be nice to randomize it, it seems that only when there
-are no other threads and no ptrace would it be useful (i.e. the
-sandbox situation, as you've said).
-
-> 2) is it worthwhile to randomize both pt_regs and the stack start location, so that ptrace doesn't leak at least the latter?
-
-Given the pile of prerequisites needed for these attacks, I would say
-"no" currently. In my assessment, I generally think a sandboxed
-environment will already have reduced attack surface, so whatever
-needed flaws may already be unavailable. These stack attacks tend to
-need a lot of pieces working together, so better to optimize this
-defense for the non-sandboxed case, in order to reduce the code's
-complexity.
-
-> I had mostly sandboxed scenarios in mind, I guess you had mostly the stackjacking case.
+> On Thu, Feb 21, 2019 at 8:20 AM Carter Cheng <cartercheng@gmail.com>
+> wrote:
+> > I was looking over some recent papers for Usenix Security and there are
+> a couple on data oriented programming and I have been wondering if there
+> are known mitigation techniques for this kind of data corruption attack or
+> other attacks that don't involve control flow hijacking.
 >
-> Any variation on the above is ok, from not considering any of this worthwhile to doing just some - as long as the tradeoffs are clear (which is basically Elena's email), since randomization ends up being always a stopgap, not really a great defense.
+> Can you share some URLs and/or examples? I'm sure other folks here
+> would be interested to read those too.
 >
-> I don't have a strong opinion on any of this, especially since lots is happening to reduce/remove the leaking of kernel stack contents.
+> --
+> Kees Cook
+>
 
-I'm sufficiently convinced that with all the trade-offs, leaving
-pt_regs unrandomized is fine. If all we see is sandbox escapes using
-fixed-location pt_regs, well, then we can change this later. :)
+--00000000000075047505826c971f
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
---
-Kees Cook
+<div dir=3D"ltr"><div dir=3D"ltr">One of the papers I had a brief look at i=
+s this one-<div><br></div><div><a href=3D"https://ieeexplore.ieee.org/abstr=
+act/document/7546545">https://ieeexplore.ieee.org/abstract/document/7546545=
+</a><br></div><div><br></div><div><br></div></div></div><div dir=3D"ltr"></=
+div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_attr">On=
+ Fri, Feb 22, 2019 at 1:16 AM Kees Cook &lt;<a href=3D"mailto:keescook@chro=
+mium.org" target=3D"_blank">keescook@chromium.org</a>&gt; wrote:<br></div><=
+blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-l=
+eft:1px solid rgb(204,204,204);padding-left:1ex">On Thu, Feb 21, 2019 at 8:=
+20 AM Carter Cheng &lt;<a href=3D"mailto:cartercheng@gmail.com" target=3D"_=
+blank">cartercheng@gmail.com</a>&gt; wrote:<br>
+&gt; I was looking over some recent papers for Usenix Security and there ar=
+e a couple on data oriented programming and I have been wondering if there =
+are known mitigation techniques for this kind of data corruption attack or =
+other attacks that don&#39;t involve control flow hijacking.<br>
+<br>
+Can you share some URLs and/or examples? I&#39;m sure other folks here<br>
+would be interested to read those too.<br>
+<br>
+-- <br>
+Kees Cook<br>
+</blockquote></div>
+
+--00000000000075047505826c971f--
