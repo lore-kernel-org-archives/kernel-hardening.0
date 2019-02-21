@@ -1,92 +1,138 @@
-From: "Perla, Enrico" <enrico.perla@intel.com>
-Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- system call
-Date: Thu, 21 Feb 2019 17:48:32 +0000
-Message-ID: <5E269FBC3009974381A340959F3135C95C8FE928@hasmsx108.ger.corp.intel.com>
-References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <20190208130544.GI32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
- <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
- <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
- <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net>
- <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
- <CAGXu5jJSWf=CAij3_dxA9+n6+fWtt1MOT3dWD07vdkhrfC8bpQ@mail.gmail.com>
- <5E269FBC3009974381A340959F3135C95C8FE7E1@hasmsx108.ger.corp.intel.com>
- <CAGXu5jJoODVOd8Bt+eMRPGvm=ZZNBHVmGE8LBsgMk6K=1Dv-cQ@mail.gmail.com>
-In-Reply-To: <CAGXu5jJoODVOd8Bt+eMRPGvm=ZZNBHVmGE8LBsgMk6K=1Dv-cQ@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
+Date: Thu, 21 Feb 2019 10:09:47 -0800
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH v3] x86/asm: Pin sensitive CR4 bits
+Message-ID: <20190221180947.GA24138@beast>
 MIME-Version: 1.0
-Content-Transfer-Encoding: base64
-To: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, "Reshetova, Elena" <elena.reshetova@intel.com>, Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: Jann Horn <jannh@google.com>, Sean Christopherson <sean.j.christopherson@intel.com>, Dominik Brodowski <linux@dominikbrodowski.net>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SW4gbWFueSBrZXJuZWwgZXhwbG9pdHMgb25lIG5lZWRzIHRvIGVtdWxhdGUgc3RydWN0dXJlcyAo
-b3IgcHJvdmlkZSBzb21lIGNvbnRyb2xsZWQgZGF0YSkgdG8ga2VlcCB0aGluZ3Mgc3RhYmxlLCBk
-byBhIHNlY29uZCBzdGFnZSwgZXRjLg0KT2xkIHNjaG9vbCBhcHByb2FjaCB3YXMgdG8gZGVyZWZl
-cmVuY2UgdG8gdXNlcmxhbmQuIE5vdywgd2l0aCBTTUFQIChvciBhbnkgb3RoZXIgZGVyZWZlcmVu
-Y2UgcHJvdGVjdGlvbiksIHRoYXQgY2Fubm90IGJlIGRvbmUgYW55bW9yZS4NCg0KSWYgSSBoYXZl
-IGEgc3RhY2sgYWRkcmVzcyBsZWFrLCB0aGVuIEkgaGF2ZSBhIHByZXR0eSBuaWNlIHByaW1pdGl2
-ZSB0aHJvdWdoIHB0X3JlZ3MgdG8gbG9hZCBzb21lIGFyYml0cmFyeSBjb250ZW50IGF0IGEga25v
-d24gYWRkcmVzcy4NCkFzIGRpc2N1c3NlZCB3aXRoIEphbiwgaWYgSSBoYXZlIHB0cmFjZSwgcmFu
-ZG9taXphdGlvbiBpcyBiYXNpY2FsbHkgbW9vdC4gSSBjYW4ganVzdCBQVFJBQ0VfU1lTQ0FMTCBh
-bmQgdGltZSBteSB3YXkgdG8gdGhlIGNvcnJlY3QgbG9jYXRpb24uDQpBY3R1YWxseSwgcmFuZG9t
-aXphdGlvbiBjb3VsZCBldmVuIGhlbHAgZ2V0dGluZyBzb21lIG5lZWRlZCBhbGlnbm1lbnQuDQoN
-ClNvIHRoZSBvcGVuIHF1ZXN0aW9ucyBhcmU6DQoxKSBhcmUgcHRfcmVncyBjb25zaWRlcmVkIGVu
-b3VnaCBvZiBhIHZlY3RvciB0byBhZGQgdGhlIHJhbmRvbWl6YXRpb24gbnVpc2FuY2U/IA0KMikg
-aXMgaXQgd29ydGh3aGlsZSB0byByYW5kb21pemUgYm90aCBwdF9yZWdzIGFuZCB0aGUgc3RhY2sg
-c3RhcnQgbG9jYXRpb24sIHNvIHRoYXQgcHRyYWNlIGRvZXNuJ3QgbGVhayBhdCBsZWFzdCB0aGUg
-bGF0dGVyPw0KDQpJIGhhZCBtb3N0bHkgc2FuZGJveGVkIHNjZW5hcmlvcyBpbiBtaW5kLCBJIGd1
-ZXNzIHlvdSBoYWQgbW9zdGx5IHRoZSBzdGFja2phY2tpbmcgY2FzZS4NCg0KQW55IHZhcmlhdGlv
-biBvbiB0aGUgYWJvdmUgaXMgb2ssIGZyb20gbm90IGNvbnNpZGVyaW5nIGFueSBvZiB0aGlzIHdv
-cnRod2hpbGUgdG8gZG9pbmcganVzdCBzb21lIC0gYXMgbG9uZyBhcyB0aGUgdHJhZGVvZmZzIGFy
-ZSBjbGVhciAod2hpY2ggaXMgYmFzaWNhbGx5IEVsZW5hJ3MgZW1haWwpLCBzaW5jZSByYW5kb21p
-emF0aW9uIGVuZHMgdXAgYmVpbmcgYWx3YXlzIGEgc3RvcGdhcCwgbm90IHJlYWxseSBhIGdyZWF0
-IGRlZmVuc2UuDQoNCkkgZG9uJ3QgaGF2ZSBhIHN0cm9uZyBvcGluaW9uIG9uIGFueSBvZiB0aGlz
-LCBlc3BlY2lhbGx5IHNpbmNlIGxvdHMgaXMgaGFwcGVuaW5nIHRvIHJlZHVjZS9yZW1vdmUgdGhl
-IGxlYWtpbmcgb2Yga2VybmVsIHN0YWNrIGNvbnRlbnRzLg0KDQoNCiAgICAgICAgICAgICAtICAg
-RW5yaWNvDQoNCg0KPiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBLZWVzIENv
-b2sgW21haWx0bzprZWVzY29va0BjaHJvbWl1bS5vcmddDQo+IFNlbnQ6IFRodXJzZGF5LCBGZWJy
-dWFyeSAyMSwgMjAxOSA2OjI0IFBNDQo+IFRvOiBQZXJsYSwgRW5yaWNvIDxlbnJpY28ucGVybGFA
-aW50ZWwuY29tPg0KPiBDYzogQW5keSBMdXRvbWlyc2tpIDxsdXRvQGFtYWNhcGl0YWwubmV0Pjsg
-UmVzaGV0b3ZhLCBFbGVuYQ0KPiA8ZWxlbmEucmVzaGV0b3ZhQGludGVsLmNvbT47IEFuZHkgTHV0
-b21pcnNraSA8bHV0b0BrZXJuZWwub3JnPjsgSmFubg0KPiBIb3JuIDxqYW5uaEBnb29nbGUuY29t
-PjsgUGV0ZXIgWmlqbHN0cmEgPHBldGVyekBpbmZyYWRlYWQub3JnPjsga2VybmVsLQ0KPiBoYXJk
-ZW5pbmdAbGlzdHMub3BlbndhbGwuY29tOyB0Z2x4QGxpbnV0cm9uaXguZGU7IG1pbmdvQHJlZGhh
-dC5jb207DQo+IGJwQGFsaWVuOC5kZTsgdHl0c29AbWl0LmVkdQ0KPiBTdWJqZWN0OiBSZTogW1JG
-QyBQQVRDSF0geDg2L2VudHJ5LzY0OiByYW5kb21pemUga2VybmVsIHN0YWNrIG9mZnNldCB1cG9u
-DQo+IHN5c3RlbSBjYWxsDQo+IA0KPiBPbiBUaHUsIEZlYiAyMSwgMjAxOSBhdCAxOjM1IEFNIFBl
-cmxhLCBFbnJpY28gPGVucmljby5wZXJsYUBpbnRlbC5jb20+DQo+IHdyb3RlOg0KPiA+ID4gSXQg
-ZG9lcyBzZWVtIHRoYXQgdXNpbmcgYSBmbGF3IHRvIGF0dGFjayBvbmUncyBvd24gcmVnaXN0ZXJz
-IGlzDQo+ID4gPiByYXRoZXIgcG9pbnRsZXNzLiBNYXliZSB3ZSdsbCBlYXQgb3VyIHdvcmRzLCBi
-dXQgZm9yIG5vdywgSSdkIGFncmVlLg0KPiA+ID4NCj4gPg0KPiA+IFlvdSBkb24ndCBhdHRhY2sg
-eW91ciBvd24gcmVnaXN0ZXJzLCB5b3UgdXNlIHRoZW0gdG8gbG9hZCBjb250cm9sbGVkIGRhdGEN
-Cj4gdG8gdGhlIGtlcm5lbCBhbmQgZW11bGF0ZSBzdHJ1Y3R1cmVzIG9yIHNpbWlsYXIgYXQgYW55
-IHN0YWdlIG9mIGFuIGV4cGxvaXQsDQo+IGJ5cGFzc2luZyBTTUFQIGFuZCBjby4NCj4gDQo+IEdp
-dmVuIGFsbCB0aGUgcmV3cml0aW5nIG9mIHRoZSBzeXNjYWxsIGVudHJ5IGNvZGUgb3ZlciB0aGUg
-bGFzdCBmZXcgeWVhcnMsDQo+IHBlcmhhcHMgSSdtIG1pc3Npbmcgc29tZXRoaW5nLiBNeSB1bmRl
-cnN0YW5kaW5nIHdhcyB0aGF0IGF0IHN5c2NhbGwgZW50cnkNCj4gd2UgZG8gZWZmZWN0aXZlbHkg
-dGhpczoNCj4gDQo+IC0gc2F2ZSBwdF9yZWdzDQo+IC0gY2xlYXIgYWxsIHJlZ2lzdGVycyBub3Qg
-bmVlZGVkIGZvciBhIHN5c2NhbGwNCj4gLSBydW4gc3lzY2FsbA0KPiAtIHJlc3RvcmUgcHRfcmVn
-cyAoZXhjZXB0aW5nIHN5c2NhbGwgcmV0dXJuIHZhbHVlKQ0KPiANCj4gSSBkaWRuJ3QgdGhpbmsg
-cHRfcmVncyBnb3QgdXNlZCBkdXJpbmcgdGhlIHN5c2NhbGw/IEluIGxvb2tpbmcgbW9yZSBjbG9z
-ZWx5LCBJDQo+IHNlZSBzb21lIGN1cnJlbnRfcHRfcmVncygpIGluIHNvbWUgcGF0aHMsIGJ1dCBh
-Z2Fpbjogd2hhdCdzIHRoZSBhdHRhY2sNCj4geW91J3JlIHRoaW5raW5nIG9mIHRoYXQgaXNuJ3Qg
-ZGlyZWN0bHkgb3ZlcmxhcHBlZCB3aXRoIGV4aXN0aW5nIGNvbnRyb2wgb3Zlcg0KPiByZWdpc3Rl
-cnMgYXQgZW50cnkgb3IgdmlhIHB0cmFjZT8NCj4gDQo+IC0tDQo+IEtlZXMgQ29vaw0KLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tCklOVEVMIENPUlBPUkFUSU9OIElUQUxJQSBTLnAuQS4gY29uIHVuaWNvIHNvY2lvClNl
-ZGU6IE1pbGFub2Zpb3JpIFBhbGF6em8gRSA0IApDQVAgMjAwOTQgQXNzYWdvIChNSSkKQ2FwaXRh
-bGUgU29jaWFsZSBFdXJvIDEwNC4wMDAsMDAgaW50ZXJhbWVudGUgdmVyc2F0bwpQYXJ0aXRhIEku
-Vi5BLiBlIENvZGljZSBGaXNjYWxlICAwNDIzNjc2MDE1NQpSZXBlcnRvcmlvIEVjb25vbWljbyBB
-bW1pbmlzdHJhdGl2byBuLiA5OTcxMjQgClJlZ2lzdHJvIGRlbGxlIEltcHJlc2UgZGkgTWlsYW5v
-IG5yLiAxODM5ODMvNTI4MS8zMwpTb2dnZXR0YSBhZCBhdHRpdml0YScgZGkgZGlyZXppb25lIGUg
-Y29vcmRpbmFtZW50byBkaSAKSU5URUwgQ09SUE9SQVRJT04sIFVTQQoKVGhpcyBlLW1haWwgYW5k
-IGFueSBhdHRhY2htZW50cyBtYXkgY29udGFpbiBjb25maWRlbnRpYWwgbWF0ZXJpYWwgZm9yCnRo
-ZSBzb2xlIHVzZSBvZiB0aGUgaW50ZW5kZWQgcmVjaXBpZW50KHMpLiBBbnkgcmV2aWV3IG9yIGRp
-c3RyaWJ1dGlvbgpieSBvdGhlcnMgaXMgc3RyaWN0bHkgcHJvaGliaXRlZC4gSWYgeW91IGFyZSBu
-b3QgdGhlIGludGVuZGVkCnJlY2lwaWVudCwgcGxlYXNlIGNvbnRhY3QgdGhlIHNlbmRlciBhbmQg
-ZGVsZXRlIGFsbCBjb3BpZXMuCg==
+Several recent exploits have used direct calls to the native_write_cr4()
+function to disable SMEP and SMAP before then continuing their exploits
+using userspace memory access. This pins bits of cr4 so that they cannot
+be changed through a common function. This is not intended to be general
+ROP protection (which would require CFI to defend against properly), but
+rather a way to avoid trivial direct function calling (or CFI bypassing
+via a matching function prototype) as seen in:
+
+https://googleprojectzero.blogspot.com/2017/05/exploiting-linux-kernel-via-packet.html
+(https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-7308)
+
+The goals of this change:
+ - pin specific bits (SMEP, SMAP, and UMIP) when writing cr4.
+ - avoid setting the bits too early (they must become pinned only after
+   first being used).
+ - pinning mask needs to be read-only during normal runtime.
+ - pinning needs to be rechecked after set to avoid jumps into the middle
+   of the function.
+
+Using __ro_after_init on the mask is done so it can't be first disabled
+with a malicious write. And since it becomes read-only, we must avoid
+writing to it later (hence the check for bits already having been set
+instead of unconditionally writing to the mask).
+
+The use of volatile is done to force the compiler to perform a full reload
+of the mask after setting cr4 (to protect against just jumping into the
+function past where the masking happens; we must check that the mask was
+applied after we do the set). Due to how this function can be built by the
+compiler (especially due to the removal of frame pointers), jumping into
+the middle of the function frequently doesn't require stack manipulation
+to construct a stack frame (there may only a retq without pops, which is
+sufficient for use with exploits like timer overwrites mentioned above).
+
+For example, without the recheck, the function may appear as:
+
+   native_write_cr4:
+      mov [pin], %rbx
+      or  %rbx, %rdi
+   1: mov %rdi, %cr4
+      retq
+
+The masking "or" could be trivially bypassed by just calling to label "1"
+instead of "native_write_cr4". (CFI will force calls to only be able to
+call into native_write_cr4, but CFI and CET are uncommon currently.)
+
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+v3: improve WARN message (Sean Christopherson)
+v2: fix think-o in cr4_pin recheck (Jann Horn)
+---
+ arch/x86/include/asm/special_insns.h | 13 +++++++++++++
+ arch/x86/kernel/cpu/common.c         | 12 +++++++++++-
+ 2 files changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/arch/x86/include/asm/special_insns.h b/arch/x86/include/asm/special_insns.h
+index 43c029cdc3fe..fabda1400137 100644
+--- a/arch/x86/include/asm/special_insns.h
++++ b/arch/x86/include/asm/special_insns.h
+@@ -72,9 +72,22 @@ static inline unsigned long native_read_cr4(void)
+ 	return val;
+ }
+ 
++extern volatile unsigned long cr4_pin;
++
+ static inline void native_write_cr4(unsigned long val)
+ {
++again:
++	val |= cr4_pin;
+ 	asm volatile("mov %0,%%cr4": : "r" (val), "m" (__force_order));
++	/*
++	 * If the MOV above was used directly as a ROP gadget we can
++	 * notice the lack of pinned bits in "val" and start the function
++	 * from the beginning to gain the cr4_pin bits for sure.
++	 */
++	if (WARN_ONCE((val & cr4_pin) != cr4_pin,
++		      "Attempt to unpin cr4 bits: %lx, cr4 bypass attack?!",
++		      ~val & cr4_pin))
++		goto again;
+ }
+ 
+ #ifdef CONFIG_X86_64
+diff --git a/arch/x86/kernel/cpu/common.c b/arch/x86/kernel/cpu/common.c
+index cb28e98a0659..7e0ea4470f8e 100644
+--- a/arch/x86/kernel/cpu/common.c
++++ b/arch/x86/kernel/cpu/common.c
+@@ -312,10 +312,16 @@ static __init int setup_disable_smep(char *arg)
+ }
+ __setup("nosmep", setup_disable_smep);
+ 
++volatile unsigned long cr4_pin __ro_after_init;
++EXPORT_SYMBOL_GPL(cr4_pin);
++
+ static __always_inline void setup_smep(struct cpuinfo_x86 *c)
+ {
+-	if (cpu_has(c, X86_FEATURE_SMEP))
++	if (cpu_has(c, X86_FEATURE_SMEP)) {
++		if (!(cr4_pin & X86_CR4_SMEP))
++			cr4_pin |= X86_CR4_SMEP;
+ 		cr4_set_bits(X86_CR4_SMEP);
++	}
+ }
+ 
+ static __init int setup_disable_smap(char *arg)
+@@ -334,6 +340,8 @@ static __always_inline void setup_smap(struct cpuinfo_x86 *c)
+ 
+ 	if (cpu_has(c, X86_FEATURE_SMAP)) {
+ #ifdef CONFIG_X86_SMAP
++		if (!(cr4_pin & X86_CR4_SMAP))
++			cr4_pin |= X86_CR4_SMAP;
+ 		cr4_set_bits(X86_CR4_SMAP);
+ #else
+ 		cr4_clear_bits(X86_CR4_SMAP);
+@@ -351,6 +359,8 @@ static __always_inline void setup_umip(struct cpuinfo_x86 *c)
+ 	if (!cpu_has(c, X86_FEATURE_UMIP))
+ 		goto out;
+ 
++	if (!(cr4_pin & X86_CR4_UMIP))
++		cr4_pin |= X86_CR4_UMIP;
+ 	cr4_set_bits(X86_CR4_UMIP);
+ 
+ 	pr_info_once("x86/cpu: User Mode Instruction Prevention (UMIP) activated\n");
+-- 
+2.17.1
+
+
+-- 
+Kees Cook
