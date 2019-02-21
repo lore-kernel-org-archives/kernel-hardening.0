@@ -1,7 +1,7 @@
 From: Russell Currey <ruscur@russell.cc>
-Subject: [PATCH 5/7] powerpc/mm/radix: Use KUEP API for Radix MMU
-Date: Thu, 21 Feb 2019 20:35:59 +1100
-Message-Id: <20190221093601.27920-6-ruscur@russell.cc>
+Subject: [PATCH 6/7] powerpc/lib: Refactor __patch_instruction() to use __put_user_asm()
+Date: Thu, 21 Feb 2019 20:36:00 +1100
+Message-Id: <20190221093601.27920-7-ruscur@russell.cc>
 In-Reply-To: <20190221093601.27920-1-ruscur@russell.cc>
 References: <20190221093601.27920-1-ruscur@russell.cc>
 MIME-Version: 1.0
@@ -10,73 +10,44 @@ To: linuxppc-dev@lists.ozlabs.org
 Cc: mpe@ellerman.id.au, npiggin@gmail.com, christophe.leroy@c-s.fr, kernel-hardening@lists.openwall.com, Russell Currey <ruscur@russell.cc>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Execution protection already exists on radix, this just refactors
-the radix init to provide the KUEP setup function instead.
+__patch_instruction() is called in early boot, and uses
+__put_user_size(), which includes the locks and unlocks for KUAP,
+which could either be called too early, or in the Radix case, forced to
+use "early_" versions of functions just to safely handle this one case.
 
-Thus, the only functional change is that it can now be disabled.
+__put_user_asm() does not do this, and thus is safe to use both in early
+boot, and later on since in this case it should only ever be touching
+kernel memory.
+
+__patch_instruction() was previously refactored to use __put_user_size()
+in order to be able to return -EFAULT, which would allow the kernel to
+patch instructions in userspace, which should never happen.  This has
+the functional change of causing faults on userspace addresses if KUAP
+is turned on, which should never happen in practice.
+
+A future enhancement could be to double check the patch address is
+definitely allowed to be tampered with by the kernel.
 
 Signed-off-by: Russell Currey <ruscur@russell.cc>
 ---
- arch/powerpc/mm/pgtable-radix.c        | 12 +++++++++---
- arch/powerpc/platforms/Kconfig.cputype |  1 +
- 2 files changed, 10 insertions(+), 3 deletions(-)
+ arch/powerpc/lib/code-patching.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/arch/powerpc/mm/pgtable-radix.c b/arch/powerpc/mm/pgtable-radix.c
-index 931156069a81..224bcd4be5ae 100644
---- a/arch/powerpc/mm/pgtable-radix.c
-+++ b/arch/powerpc/mm/pgtable-radix.c
-@@ -535,8 +535,15 @@ static void radix_init_amor(void)
- 	mtspr(SPRN_AMOR, (3ul << 62));
- }
- 
--static void radix_init_iamr(void)
-+#ifdef CONFIG_PPC_KUEP
-+void __init setup_kuep(bool disabled)
+diff --git a/arch/powerpc/lib/code-patching.c b/arch/powerpc/lib/code-patching.c
+index 506413a2c25e..42fdadac6587 100644
+--- a/arch/powerpc/lib/code-patching.c
++++ b/arch/powerpc/lib/code-patching.c
+@@ -26,9 +26,9 @@
+ static int __patch_instruction(unsigned int *exec_addr, unsigned int instr,
+ 			       unsigned int *patch_addr)
  {
-+	if (disabled || !early_radix_enabled())
-+		return;
-+
-+	if (smp_processor_id() == boot_cpuid)
-+		pr_info("Activating Kernel Userspace Execution Prevention\n");
-+
- 	/*
- 	 * Radix always uses key0 of the IAMR to determine if an access is
- 	 * allowed. We set bit 0 (IBM bit 1) of key0, to prevent instruction
-@@ -544,6 +551,7 @@ static void radix_init_iamr(void)
- 	 */
- 	mtspr(SPRN_IAMR, (1ul << 62));
- }
-+#endif
+-	int err;
++	int err = 0;
  
- void __init radix__early_init_mmu(void)
- {
-@@ -605,7 +613,6 @@ void __init radix__early_init_mmu(void)
+-	__put_user_size(instr, patch_addr, 4, err);
++	__put_user_asm(instr, patch_addr, err, "stw");
+ 	if (err)
+ 		return err;
  
- 	memblock_set_current_limit(MEMBLOCK_ALLOC_ANYWHERE);
- 
--	radix_init_iamr();
- 	radix_init_pgtable();
- 	/* Switch to the guard PID before turning on MMU */
- 	radix__switch_mmu_context(NULL, &init_mm);
-@@ -627,7 +634,6 @@ void radix__early_init_mmu_secondary(void)
- 		      __pa(partition_tb) | (PATB_SIZE_SHIFT - 12));
- 		radix_init_amor();
- 	}
--	radix_init_iamr();
- 
- 	radix__switch_mmu_context(NULL, &init_mm);
- 	if (cpu_has_feature(CPU_FTR_HVMODE))
-diff --git a/arch/powerpc/platforms/Kconfig.cputype b/arch/powerpc/platforms/Kconfig.cputype
-index 7fa5ddbdce12..25cc7d36b27d 100644
---- a/arch/powerpc/platforms/Kconfig.cputype
-+++ b/arch/powerpc/platforms/Kconfig.cputype
-@@ -320,6 +320,7 @@ config PPC_RADIX_MMU
- 	bool "Radix MMU Support"
- 	depends on PPC_BOOK3S_64
- 	select ARCH_HAS_GIGANTIC_PAGE if (MEMORY_ISOLATION && COMPACTION) || CMA
-+	select PPC_HAVE_KUEP
- 	default y
- 	help
- 	  Enable support for the Power ISA 3.0 Radix style MMU. Currently this
 -- 
 2.20.1
