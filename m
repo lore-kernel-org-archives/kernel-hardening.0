@@ -1,138 +1,73 @@
-Date: Thu, 21 Feb 2019 10:09:47 -0800
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v3] x86/asm: Pin sensitive CR4 bits
-Message-ID: <20190221180947.GA24138@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Jann Horn <jannh@google.com>, Sean Christopherson <sean.j.christopherson@intel.com>, Dominik Brodowski <linux@dominikbrodowski.net>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
+ <20190208142642.GJ32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
+ <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
+ <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net> <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
+ <CAGXu5jJSWf=CAij3_dxA9+n6+fWtt1MOT3dWD07vdkhrfC8bpQ@mail.gmail.com>
+ <5E269FBC3009974381A340959F3135C95C8FE7E1@hasmsx108.ger.corp.intel.com>
+ <CAGXu5jJoODVOd8Bt+eMRPGvm=ZZNBHVmGE8LBsgMk6K=1Dv-cQ@mail.gmail.com> <5E269FBC3009974381A340959F3135C95C8FE928@hasmsx108.ger.corp.intel.com>
+In-Reply-To: <5E269FBC3009974381A340959F3135C95C8FE928@hasmsx108.ger.corp.intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 21 Feb 2019 11:18:32 -0800
+Message-ID: <CAGXu5j+=KSiRgi4HXd=vQLT1YkWcOS3NxwrczBedhcb+CFB+tg@mail.gmail.com>
+Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
+Content-Type: text/plain; charset="UTF-8"
+To: "Perla, Enrico" <enrico.perla@intel.com>
+Cc: Andy Lutomirski <luto@amacapital.net>, "Reshetova, Elena" <elena.reshetova@intel.com>, Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Several recent exploits have used direct calls to the native_write_cr4()
-function to disable SMEP and SMAP before then continuing their exploits
-using userspace memory access. This pins bits of cr4 so that they cannot
-be changed through a common function. This is not intended to be general
-ROP protection (which would require CFI to defend against properly), but
-rather a way to avoid trivial direct function calling (or CFI bypassing
-via a matching function prototype) as seen in:
+On Thu, Feb 21, 2019 at 9:48 AM Perla, Enrico <enrico.perla@intel.com> wrote:
+> In many kernel exploits one needs to emulate structures (or provide some controlled data) to keep things stable, do a second stage, etc.
+> Old school approach was to dereference to userland. Now, with SMAP (or any other dereference protection), that cannot be done anymore.
 
-https://googleprojectzero.blogspot.com/2017/05/exploiting-linux-kernel-via-packet.html
-(https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-7308)
+Oh, I see now: using the pt_regs storage as a place in kernel memory
+to have built the malicious structure. Got it.
 
-The goals of this change:
- - pin specific bits (SMEP, SMAP, and UMIP) when writing cr4.
- - avoid setting the bits too early (they must become pinned only after
-   first being used).
- - pinning mask needs to be read-only during normal runtime.
- - pinning needs to be rechecked after set to avoid jumps into the middle
-   of the function.
+> If I have a stack address leak, then I have a pretty nice primitive through pt_regs to load some arbitrary content at a known address.
+> As discussed with Jan, if I have ptrace, randomization is basically moot. I can just PTRACE_SYSCALL and time my way to the correct location.
+> Actually, randomization could even help getting some needed alignment.
 
-Using __ro_after_init on the mask is done so it can't be first disabled
-with a malicious write. And since it becomes read-only, we must avoid
-writing to it later (hence the check for bits already having been set
-instead of unconditionally writing to the mask).
+Okay, I've chatted more with Jann off-list now; he's enlightened me
+with more examples. Thank you both for walking me through my
+denseness. :)
 
-The use of volatile is done to force the compiler to perform a full reload
-of the mask after setting cr4 (to protect against just jumping into the
-function past where the masking happens; we must check that the mask was
-applied after we do the set). Due to how this function can be built by the
-compiler (especially due to the removal of frame pointers), jumping into
-the middle of the function frequently doesn't require stack manipulation
-to construct a stack frame (there may only a retq without pops, which is
-sufficient for use with exploits like timer overwrites mentioned above).
+> So the open questions are:
+> 1) are pt_regs considered enough of a vector to add the randomization nuisance?
 
-For example, without the recheck, the function may appear as:
+In most cases, to be able to locate pt_regs at a fixed location, you
+already need a stack address location leak. If you have such a leak,
+and pt_regs location is randomized, a second thread's pt_regs could be
+used, held with ptrace, and have prime+probe with PEEKs to figure out
+where the offset to pt_regs is. And the other thread would just use
+THAT pt_regs for its scratch space.
 
-   native_write_cr4:
-      mov [pin], %rbx
-      or  %rbx, %rdi
-   1: mov %rdi, %cr4
-      retq
+So, while it'd be nice to randomize it, it seems that only when there
+are no other threads and no ptrace would it be useful (i.e. the
+sandbox situation, as you've said).
 
-The masking "or" could be trivially bypassed by just calling to label "1"
-instead of "native_write_cr4". (CFI will force calls to only be able to
-call into native_write_cr4, but CFI and CET are uncommon currently.)
+> 2) is it worthwhile to randomize both pt_regs and the stack start location, so that ptrace doesn't leak at least the latter?
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-v3: improve WARN message (Sean Christopherson)
-v2: fix think-o in cr4_pin recheck (Jann Horn)
----
- arch/x86/include/asm/special_insns.h | 13 +++++++++++++
- arch/x86/kernel/cpu/common.c         | 12 +++++++++++-
- 2 files changed, 24 insertions(+), 1 deletion(-)
+Given the pile of prerequisites needed for these attacks, I would say
+"no" currently. In my assessment, I generally think a sandboxed
+environment will already have reduced attack surface, so whatever
+needed flaws may already be unavailable. These stack attacks tend to
+need a lot of pieces working together, so better to optimize this
+defense for the non-sandboxed case, in order to reduce the code's
+complexity.
 
-diff --git a/arch/x86/include/asm/special_insns.h b/arch/x86/include/asm/special_insns.h
-index 43c029cdc3fe..fabda1400137 100644
---- a/arch/x86/include/asm/special_insns.h
-+++ b/arch/x86/include/asm/special_insns.h
-@@ -72,9 +72,22 @@ static inline unsigned long native_read_cr4(void)
- 	return val;
- }
- 
-+extern volatile unsigned long cr4_pin;
-+
- static inline void native_write_cr4(unsigned long val)
- {
-+again:
-+	val |= cr4_pin;
- 	asm volatile("mov %0,%%cr4": : "r" (val), "m" (__force_order));
-+	/*
-+	 * If the MOV above was used directly as a ROP gadget we can
-+	 * notice the lack of pinned bits in "val" and start the function
-+	 * from the beginning to gain the cr4_pin bits for sure.
-+	 */
-+	if (WARN_ONCE((val & cr4_pin) != cr4_pin,
-+		      "Attempt to unpin cr4 bits: %lx, cr4 bypass attack?!",
-+		      ~val & cr4_pin))
-+		goto again;
- }
- 
- #ifdef CONFIG_X86_64
-diff --git a/arch/x86/kernel/cpu/common.c b/arch/x86/kernel/cpu/common.c
-index cb28e98a0659..7e0ea4470f8e 100644
---- a/arch/x86/kernel/cpu/common.c
-+++ b/arch/x86/kernel/cpu/common.c
-@@ -312,10 +312,16 @@ static __init int setup_disable_smep(char *arg)
- }
- __setup("nosmep", setup_disable_smep);
- 
-+volatile unsigned long cr4_pin __ro_after_init;
-+EXPORT_SYMBOL_GPL(cr4_pin);
-+
- static __always_inline void setup_smep(struct cpuinfo_x86 *c)
- {
--	if (cpu_has(c, X86_FEATURE_SMEP))
-+	if (cpu_has(c, X86_FEATURE_SMEP)) {
-+		if (!(cr4_pin & X86_CR4_SMEP))
-+			cr4_pin |= X86_CR4_SMEP;
- 		cr4_set_bits(X86_CR4_SMEP);
-+	}
- }
- 
- static __init int setup_disable_smap(char *arg)
-@@ -334,6 +340,8 @@ static __always_inline void setup_smap(struct cpuinfo_x86 *c)
- 
- 	if (cpu_has(c, X86_FEATURE_SMAP)) {
- #ifdef CONFIG_X86_SMAP
-+		if (!(cr4_pin & X86_CR4_SMAP))
-+			cr4_pin |= X86_CR4_SMAP;
- 		cr4_set_bits(X86_CR4_SMAP);
- #else
- 		cr4_clear_bits(X86_CR4_SMAP);
-@@ -351,6 +359,8 @@ static __always_inline void setup_umip(struct cpuinfo_x86 *c)
- 	if (!cpu_has(c, X86_FEATURE_UMIP))
- 		goto out;
- 
-+	if (!(cr4_pin & X86_CR4_UMIP))
-+		cr4_pin |= X86_CR4_UMIP;
- 	cr4_set_bits(X86_CR4_UMIP);
- 
- 	pr_info_once("x86/cpu: User Mode Instruction Prevention (UMIP) activated\n");
--- 
-2.17.1
+> I had mostly sandboxed scenarios in mind, I guess you had mostly the stackjacking case.
+>
+> Any variation on the above is ok, from not considering any of this worthwhile to doing just some - as long as the tradeoffs are clear (which is basically Elena's email), since randomization ends up being always a stopgap, not really a great defense.
+>
+> I don't have a strong opinion on any of this, especially since lots is happening to reduce/remove the leaking of kernel stack contents.
 
+I'm sufficiently convinced that with all the trade-offs, leaving
+pt_regs unrandomized is fine. If all we see is sandbox escapes using
+fixed-location pt_regs, well, then we can change this later. :)
 
--- 
+--
 Kees Cook
