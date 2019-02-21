@@ -1,85 +1,103 @@
 MIME-Version: 1.0
-References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-6-tobin@kernel.org>
- <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com>
- <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com> <20190221052435.GF11758@eros.localdomain>
-In-Reply-To: <20190221052435.GF11758@eros.localdomain>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 20 Feb 2019 22:02:32 -0800
-Message-ID: <CAGXu5j+Mf2D5LgkEmps7VVBhmNGt=49y4caP1y1E0OBURJEeXQ@mail.gmail.com>
-Subject: Re: [PATCH 5/6] lib: Fix function documentation for strncpy_from_user
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
+ <20190208142642.GJ32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
+ <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
+ <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net> <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com> <CAGXu5jLbR0Tk6XEdCg+27bsc4+SKGwzNsV12imwjHnLmmpV0mA@mail.gmail.com>
+In-Reply-To: <CAGXu5jLbR0Tk6XEdCg+27bsc4+SKGwzNsV12imwjHnLmmpV0mA@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Wed, 20 Feb 2019 22:37:45 -0800
+Message-ID: <CALCETrW84mH-jfKOCKmdODL06Bhzugck+vVt-vDe9byA27V=Jg@mail.gmail.com>
+Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
 Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Jann Horn <jannh@google.com>, "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Stephen Rothwell <sfr@canb.auug.org.au>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Content-Transfer-Encoding: quoted-printable
+To: Kees Cook <keescook@chromium.org>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "Perla, Enrico" <enrico.perla@intel.com>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 20, 2019 at 9:25 PM Tobin C. Harding <me@tobin.cc> wrote:
+> On Feb 20, 2019, at 2:20 PM, Kees Cook <keescook@chromium.org> wrote:
 >
-> On Wed, Feb 20, 2019 at 05:05:10PM -0800, Kees Cook wrote:
-> > So, generally speaking, I'd love to split all strncpy* uses into
-> > strscpy_zero() (when expecting to do str->str copies), and some new
-> > function, named like mempadstr() or str2mem() that copies a str to a
-> > __nonstring char array, with trailing padding, if there is space. Then
-> > there is no more mixing the two cases and botching things.
+> On Wed, Feb 13, 2019 at 11:52 PM Reshetova, Elena
+> <elena.reshetova@intel.com> wrote:
+>> Now back to our proposed countermeasures given that attacker has found a=
+ way to do
+>> a crafted overflow and overwrite:
+>>
+>>  1) pt_regs is not predictable, but can be discovered in ptrace-style sc=
+enario or cache-probing.
+>>     If discovered, then attack succeeds as of now.
+>>  2) relative stack offset is not predictable and randomized, cannot be p=
+robed very easily via
+>>      cache or ptrace. So, this is an additional hurdle on the attacker's=
+ way since stack is non-
+>>      deterministic now.
+>>  3) nothing changed for this type of attack, given that attacker's goal =
+is not to overwrite CS
+>>      in adjusted pt_regs. If it is his goal, then it helps with that.
+>>
+>>
+>> Now summary:
+>>
+>> It would seem to me that:
+>>
+>> - regs->cs |=3D 3 on exit is a thing worth doing anyway, just because it=
+ is cheap, as Andy said, and it
+>> might make a positive difference in two out of three attack scenarios. O=
+bjections?
+>
+> I would agree, let's just do this.
 
-I should use "converts" instead of "copies" above, just to drive the
-point home. :)
+Thinking slightly more about this, it=E2=80=99s an incomplete protection.  =
+It
+keeps an attacker from returning to kernel mode, but it does not
+protect the privileged flag bits.  I think that IOPL is the only thing
+we really care about, and doing anything useful about IOPL would be
+rather more complex, unfortunately.  I suppose we could just zero it
+and guard that with a static branch that is switched off the first
+time anyone uses iopl(3).
+
+I suppose we could also add a config option to straight-up disable
+IOPL.  I sincerely hope that no one uses it any more. Even the small
+number of semi-legit users really ought to be using ioperm() instead.
 
 >
-> Oh cool, treewide changes, I'm down with that.  So to v2 I'll add
-> str2mem() and then attack the tree as suggested.  What could possibly go
-> wrong :)?
+>> - randomization of stack top is only worth doing in ptrace-blocked scena=
+rio.
+>> Do we have such scenarios left that people care about?
+>> Because if we do, then we know that there is a real attack vector that w=
+e close this way, otherwise not.
+>> This is actually interesting, because we need to remember to take ptrace=
+ into our overall
+>> kernel hardening threat model (smth that at least I haven't quite realiz=
+ed before) and evaluate every new
+>> feature (especially randomization ones) being robust against ptrace prob=
+ing.
+>>
+>> - randomization after pt_regs only would make a difference in attack sce=
+nario "c", for which
+>>  we don't yet have a proof of concept exploit or technique that would wo=
+rk (does not guarantee that
+>> attackers don't have the exploits ready through :( ).
+>> So, if we implement this, the "justification part" for the feature would=
+ be smth like "to make it
+>> harder for future possible stack-based exploits that utilize overflows",=
+ if/when someone find a new
+>> 'ala VLA' way of doing the controlled overflow.
+>> How do people feel about it? Is it worth having? I can work on the POC f=
+or this in direction that Andy
+>> outlined and can provide performance impact/etc., but it is good that we=
+ understand that we cannot
+>> provide a better justification for this feature at the moment unless som=
+eone is ready to share some
+>> new exploit technique with us.
+>
+> I think this make sense. I do think, however, the work should be done
+> at syscall entry, though. Thoughts?
+>
+>
 
-Some clear documentation needs to be written for str2mem() to really
-help people understand what a "non string" character array is
-(especially given that it LOOKS like it has NUL termination -- when in
-fact it's just "padding").
-
-The tree-wide changes will likely take a while (and don't need to be
-part of this series unless you want to find a couple good examples)
-since we have to do them case-by-case: it's not always obvious when
-it's actually a non-string, so getting help from maintainers here will
-be needed. (And maybe some kind of flow chart added to
-Documentation/process/deprecated.rst for how to stop using strncpy()
-and strlcpy().)
-
-What I can't quite figure out yet is how to find a way for sfr to flag
-newly added users of strcpy, strncpy, and strlcpy. We might need to
-bring back __deprecated, but hide it behind a W=linux-next flag or
-something crazy. Stephen, in your builds you're already injecting
--Wimplicit-fallthrough: do you do W=1 or anything like that? If not, I
-think we need some W= setting for your linux-next builds that generate
-the maintainer-nag warnings...
-
--Kees
-
-P.S. Here's C string API Rant (I just had to get this out, please feel
-free to ignore):
-
-strcpy returns dest ... which is already known, so it's a meaningless
-return value.
-
-strncpy returns dest (still meaningless)
-
-strlcpy returns strlen(src) ... the length we WOULD have copied. Why
-would we care about that? I'm operating on dest. Were there callers
-that needed to both copy part of src and learn how long it was at the
-same time?
-
-strscpy returns -E2BIG or non-NUL bytes copied: yay, a return about
-what actually happened from the operation!
-
-... snprintf returns what it WOULD have written, much like strlcpy
-above. At least snprintf has an excuse: it can be used to calculate an
-allocation size (called with a NULL dest and 0 size) ... but shouldn't
-"how big is this format string going to be?" be a separate function? I
-wonder if we can kill all kernel uses of snprintf too (after
-introducing a "how big would it be?" function and switching all other
-callers over to scnprintf)...
-
-So scnprintf() does the right thing (count of non-NUL bytes copied out).
-
-So now our safe(r?) string API versions use different letters to show
-they're safe: "s" in strcpy and "cn" in sprintf. /me cries forever.
-
--- 
-Kees Cook
+Seems reasonable to me.
