@@ -1,37 +1,52 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: Re: [PATCH v3 18/20] x86/ftrace: Use vmalloc special flag
-Date: Fri, 22 Feb 2019 00:55:49 +0000
-Message-ID: <3cd659eb8c7d43cf46bebc6562c1c26bb6c51b51.camel@intel.com>
-References: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
-	 <20190221234451.17632-19-rick.p.edgecombe@intel.com>
-	 <20190221192210.3e038fc3@gandalf.local.home>
-In-Reply-To: <20190221192210.3e038fc3@gandalf.local.home>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <5A4A8CD00D4DF448B0BFB3995685F0A4@intel.com>
-Content-Transfer-Encoding: base64
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: Re: [PATCH 0/7] Kernel Userspace Protection for radix
+In-Reply-To: <CAGXu5jL0ZOzTo2sXiWkgemcwHusX4YuM9b_9y-MZ2THuDoRC+g@mail.gmail.com>
+References: <20190221093601.27920-1-ruscur@russell.cc> <CAGXu5j+P1wh0uf1kfMywSTo4NYtwFPSnKXg6wbfyBRqwVRZVYA@mail.gmail.com> <8ef1669cdfbcc6114eebc30c610c91c191c7cc7a.camel@russell.cc> <CAGXu5jL0ZOzTo2sXiWkgemcwHusX4YuM9b_9y-MZ2THuDoRC+g@mail.gmail.com>
+Date: Fri, 22 Feb 2019 14:46:24 +1100
+Message-ID: <87bm34pjsf.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-To: "rostedt@goodmis.org" <rostedt@goodmis.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "peterz@infradead.org" <peterz@infradead.org>, "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "nadav.amit@gmail.com" <nadav.amit@gmail.com>, "dave.hansen@linux.intel.com" <dave.hansen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "hpa@zytor.com" <hpa@zytor.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "mingo@redhat.com" <mingo@redhat.com>, "linux_dti@icloud.com" <linux_dti@icloud.com>, "luto@kernel.org" <luto@kernel.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "bp@alien8.de" <bp@alien8.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain
+To: Kees Cook <keescook@chromium.org>, Russell Currey <ruscur@russell.cc>
+Cc: PowerPC <linuxppc-dev@lists.ozlabs.org>, Nick Piggin <npiggin@gmail.com>, Christophe Leroy <christophe.leroy@c-s.fr>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVGh1LCAyMDE5LTAyLTIxIGF0IDE5OjIyIC0wNTAwLCBTdGV2ZW4gUm9zdGVkdCB3cm90ZToN
-Cj4gT24gVGh1LCAyMSBGZWIgMjAxOSAxNTo0NDo0OSAtMDgwMA0KPiBSaWNrIEVkZ2Vjb21iZSA8
-cmljay5wLmVkZ2Vjb21iZUBpbnRlbC5jb20+IHdyb3RlOg0KPiANCj4gPiBVc2UgbmV3IGZsYWcg
-Vk1fRkxVU0hfUkVTRVRfUEVSTVMgZm9yIGhhbmRsaW5nIGZyZWVpbmcgb2Ygc3BlY2lhbA0KPiA+
-IHBlcm1pc3Npb25lZCBtZW1vcnkgaW4gdm1hbGxvYyBhbmQgcmVtb3ZlIHBsYWNlcyB3aGVyZSBt
-ZW1vcnkgd2FzIHNldCBOWA0KPiA+IGFuZCBSVyBiZWZvcmUgZnJlZWluZyB3aGljaCBpcyBubyBs
-b25nZXIgbmVlZGVkLg0KPiA+IA0KPiA+IENjOiBTdGV2ZW4gUm9zdGVkdCA8cm9zdGVkdEBnb29k
-bWlzLm9yZz4NCj4gPiBBY2tlZC1ieTogU3RldmVuIFJvc3RlZHQgKFZNd2FyZSkgPHJvc3RlZHRA
-Z29vZG1pcy5vcmc+DQo+ID4gU2lnbmVkLW9mZi1ieTogUmljayBFZGdlY29tYmUgPHJpY2sucC5l
-ZGdlY29tYmVAaW50ZWwuY29tPg0KPiA+IC0tLQ0KPiA+ICBhcmNoL3g4Ni9rZXJuZWwvZnRyYWNl
-LmMgfCA2ICsrLS0tLQ0KPiA+ICAxIGZpbGUgY2hhbmdlZCwgMiBpbnNlcnRpb25zKCspLCA0IGRl
-bGV0aW9ucygtKQ0KPiA+IA0KPiA+IGRpZmYgLS1naXQgYS9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNl
-LmMgYi9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNlLmMNCj4gPiBpbmRleCAxM2M4MjQ5YjE5N2YuLjkz
-ZWZlMzk1NTMzMyAxMDA2NDQNCj4gPiAtLS0gYS9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNlLmMNCj4g
-PiArKysgYi9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNlLmMNCj4gPiBAQCAtNjkyLDEwICs2OTIsNiBA
-QCBzdGF0aWMgaW5saW5lIHZvaWQgKmFsbG9jX3RyYW1wKHVuc2lnbmVkIGxvbmcgc2l6ZSkNCj4g
-PiAgfQ0KPiA+ICBzdGF0aWMgaW5saW5lIHZvaWQgdHJhbXBfZnJlZSh2b2lkICp0cmFtcCwgaW50
-IHNpemUpDQo+IA0KPiBBcyBzaXplIGlzIG5vIGxvbmdlciB1c2VkIHdpdGhpbiB0aGUgZnVuY3Rp
-b24sIGNhbiB5b3UgcmVtb3ZlIHRoYXQgdG9vLg0KPiANCj4gVGhhbmtzLA0KPiANCj4gLS0gU3Rl
-dmUNCj4gDQpHb29kIHBvaW50LCBJJ2xsIHJlbW92ZSBpdC4NCg0KVGhhbmtzLA0KDQpSaWNrDQoN
-CltzbmlwXQ0K
+Kees Cook <keescook@chromium.org> writes:
+> On Thu, Feb 21, 2019 at 4:09 PM Russell Currey <ruscur@russell.cc> wrote:
+>> On Thu, 2019-02-21 at 08:07 -0800, Kees Cook wrote:
+>> > On Thu, Feb 21, 2019 at 1:36 AM Russell Currey <ruscur@russell.cc>
+>> > wrote:
+>> > > The first three patches of these series are from Christophe's work
+>> > > and are
+>> > > the bare minimum framework needed to implement the support for
+>> > > radix.
+>> > >
+>> > > In patch 3, I have removed from Christophe's patch my
+>> > > implementation of
+>> > > the 64-bit exception handling code, since we don't have an answer
+>> > > for
+>> > > making nested exceptions work yet.  This is mentioned in the final
+>> > > KUAP
+>> > > patch.  Regardless, this is still a significant security
+>> > > improvement
+>> > > and greatly narrows the attack surface.
+>> >
+>> > Nice! Am I understanding correctly that with this series powerpc9 and
+>> > later, using radix, will pass the lkdtm tests for KUAP and KUEP (i.e.
+>> > EXEC_USERSPACE and ACCESS_USERSPACE)?
+>>
+>> Yes!  We've had execution prevention for a while on radix (which is
+>> default on POWER9) since 3b10d0095a1e, the only functional thing this
+>> series does is allow disabling it with nosmep.  This series adds access
+>> prevention.
+>
+> Ah-ha; excellent. And CONFIG_PPC_RADIX_MMU is "default y" already. :)
+
+Though on real hardware it doesn't really work yet, at least if there
+are any idle states enabled.
+
+Patch under discussion to fix it:
+
+  https://patchwork.ozlabs.org/patch/1038568/
+
+
+cheers
