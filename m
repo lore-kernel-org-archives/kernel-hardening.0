@@ -1,52 +1,127 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-Subject: Re: [PATCH 0/7] Kernel Userspace Protection for radix
-In-Reply-To: <CAGXu5jL0ZOzTo2sXiWkgemcwHusX4YuM9b_9y-MZ2THuDoRC+g@mail.gmail.com>
-References: <20190221093601.27920-1-ruscur@russell.cc> <CAGXu5j+P1wh0uf1kfMywSTo4NYtwFPSnKXg6wbfyBRqwVRZVYA@mail.gmail.com> <8ef1669cdfbcc6114eebc30c610c91c191c7cc7a.camel@russell.cc> <CAGXu5jL0ZOzTo2sXiWkgemcwHusX4YuM9b_9y-MZ2THuDoRC+g@mail.gmail.com>
-Date: Fri, 22 Feb 2019 14:46:24 +1100
-Message-ID: <87bm34pjsf.fsf@concordia.ellerman.id.au>
+Date: Fri, 22 Feb 2019 15:14:39 +1000
+From: Nicholas Piggin <npiggin@gmail.com>
+Subject: Re: [PATCH 7/7] powerpc/64s: Implement KUAP for Radix MMU
+References: <20190221093601.27920-1-ruscur@russell.cc>
+	<20190221093601.27920-8-ruscur@russell.cc>
+In-Reply-To: <20190221093601.27920-8-ruscur@russell.cc>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: Kees Cook <keescook@chromium.org>, Russell Currey <ruscur@russell.cc>
-Cc: PowerPC <linuxppc-dev@lists.ozlabs.org>, Nick Piggin <npiggin@gmail.com>, Christophe Leroy <christophe.leroy@c-s.fr>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Message-Id: <1550811470.v0q5r976xq.astroid@bobo.none>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+To: linuxppc-dev@lists.ozlabs.org, Russell Currey <ruscur@russell.cc>
+Cc: christophe.leroy@c-s.fr, kernel-hardening@lists.openwall.com, mpe@ellerman.id.au
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
-> On Thu, Feb 21, 2019 at 4:09 PM Russell Currey <ruscur@russell.cc> wrote:
->> On Thu, 2019-02-21 at 08:07 -0800, Kees Cook wrote:
->> > On Thu, Feb 21, 2019 at 1:36 AM Russell Currey <ruscur@russell.cc>
->> > wrote:
->> > > The first three patches of these series are from Christophe's work
->> > > and are
->> > > the bare minimum framework needed to implement the support for
->> > > radix.
->> > >
->> > > In patch 3, I have removed from Christophe's patch my
->> > > implementation of
->> > > the 64-bit exception handling code, since we don't have an answer
->> > > for
->> > > making nested exceptions work yet.  This is mentioned in the final
->> > > KUAP
->> > > patch.  Regardless, this is still a significant security
->> > > improvement
->> > > and greatly narrows the attack surface.
->> >
->> > Nice! Am I understanding correctly that with this series powerpc9 and
->> > later, using radix, will pass the lkdtm tests for KUAP and KUEP (i.e.
->> > EXEC_USERSPACE and ACCESS_USERSPACE)?
->>
->> Yes!  We've had execution prevention for a while on radix (which is
->> default on POWER9) since 3b10d0095a1e, the only functional thing this
->> series does is allow disabling it with nosmep.  This series adds access
->> prevention.
->
-> Ah-ha; excellent. And CONFIG_PPC_RADIX_MMU is "default y" already. :)
+Russell Currey's on February 21, 2019 7:36 pm:
+> Kernel Userspace Access Prevention utilises a feature of the Radix MMU
+> which disallows read and write access to userspace addresses. By
+> utilising this, the kernel is prevented from accessing user data from
+> outside of trusted paths that perform proper safety checks, such as
+> copy_{to/from}_user() and friends.
+>=20
+> Userspace access is disabled from early boot and is only enabled when
+> performing an operation like copy_{to/from}_user().  The register that
+> controls this (AMR) does not prevent userspace from accessing other
+> userspace, so there is no need to save and restore when entering and
+> exiting userspace.
+>=20
+> This feature has a slight performance impact which I roughly measured
+> to be 3% slower in the worst case (performing 1GB of 1 byte
+> read()/write() syscalls), and is gated behind the CONFIG_PPC_KUAP
+> option for performance-critical builds.
+>=20
+> This feature can be tested by using the lkdtm driver (CONFIG_LKDTM=3Dy)
+> and performing the following:
+>=20
+>   # (echo ACCESS_USERSPACE) > [debugfs]/provoke-crash/DIRECT
+>=20
+> If enabled, this should send SIGSEGV to the thread.
+>=20
+> A big limitation of the current implementation is that user access
+> is left unlocked if an exception is taken while user access is unlocked
+> (i.e. if an interrupt is taken during copy_to_user()). This should be
+> resolved in future, and is why the state is tracked in the PACA even
+> though nothing currently uses it.
 
-Though on real hardware it doesn't really work yet, at least if there
-are any idle states enabled.
+Did you have an implementation for this in an earlier series?
+What's happened to that? If the idea is to add things incrementally
+that's fine.
 
-Patch under discussion to fix it:
+> Signed-off-by: Russell Currey <ruscur@russell.cc>
+> ---
+>  .../powerpc/include/asm/book3s/64/kup-radix.h | 36 +++++++++++++++++++
+>  arch/powerpc/include/asm/kup.h                |  4 +++
+>  arch/powerpc/include/asm/mmu.h                |  9 ++++-
+>  arch/powerpc/include/asm/reg.h                |  1 +
+>  arch/powerpc/mm/pgtable-radix.c               | 16 +++++++++
+>  arch/powerpc/mm/pkeys.c                       |  7 ++--
+>  arch/powerpc/platforms/Kconfig.cputype        |  1 +
+>  7 files changed, 71 insertions(+), 3 deletions(-)
+>  create mode 100644 arch/powerpc/include/asm/book3s/64/kup-radix.h
+>=20
+> diff --git a/arch/powerpc/include/asm/book3s/64/kup-radix.h b/arch/powerp=
+c/include/asm/book3s/64/kup-radix.h
+> new file mode 100644
+> index 000000000000..5cfdea954418
+> --- /dev/null
+> +++ b/arch/powerpc/include/asm/book3s/64/kup-radix.h
+> @@ -0,0 +1,36 @@
+> +/* SPDX-License-Identifier: GPL-2.0 */
+> +#ifndef _ASM_POWERPC_KUP_RADIX_H
+> +#define _ASM_POWERPC_KUP_RADIX_H
+> +
+> +#ifndef __ASSEMBLY__
+> +#ifdef CONFIG_PPC_KUAP
+> +#include <asm/reg.h>
+> +/*
+> + * We do have the ability to individually lock/unlock reads and writes r=
+ather
+> + * than both at once, however it's a significant performance hit due to =
+needing
+> + * to do a read-modify-write, which adds a mfspr, which is slow.  As a r=
+esult,
+> + * locking/unlocking both at once is preferred.
+> + */
+> +static inline void unlock_user_access(void __user *to, const void __user=
+ *from,
+> +				      unsigned long size)
+> +{
+> +	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
+> +		return;
+> +
+> +	mtspr(SPRN_AMR, 0);
+> +	isync();
+> +	get_paca()->user_access_allowed =3D 1;
 
-  https://patchwork.ozlabs.org/patch/1038568/
+I think this is going to get corrupted when you context switch isn't
+it? I would have thought a per thread flag would be easier, but maybe=20
+that's difficult in your exception code... If you've got more code to=20
+deal with it in a later patch, might be worth just moving all the
+user_access_allowed stuff there.
 
+Possibly you could add some debug warnings to catch double lock or=20
+unpaired unlock? That could be removed or put under a CONFIG option=20
+after it gets more testing.
 
-cheers
+> +}
+> +
+> +static inline void lock_user_access(void __user *to, const void __user *=
+from,
+> +				    unsigned long size)
+> +{
+> +	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
+> +		return;
+> +
+> +	mtspr(SPRN_AMR, RADIX_AMR_LOCKED);
+> +	get_paca()->user_access_allowed =3D 0;
+
+Without the isync here gives you some small window to execute user=20
+accesses without faulting I think. If that's for performance I won't=20
+complain, but a comment would be good.
+
+Looks good though, no real complaints about the series.
+
+Thanks,
+Nick
+
+=
