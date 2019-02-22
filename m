@@ -1,59 +1,37 @@
-Date: Thu, 21 Feb 2019 19:22:10 -0500
-From: Steven Rostedt <rostedt@goodmis.org>
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
 Subject: Re: [PATCH v3 18/20] x86/ftrace: Use vmalloc special flag
-Message-ID: <20190221192210.3e038fc3@gandalf.local.home>
-In-Reply-To: <20190221234451.17632-19-rick.p.edgecombe@intel.com>
+Date: Fri, 22 Feb 2019 00:55:49 +0000
+Message-ID: <3cd659eb8c7d43cf46bebc6562c1c26bb6c51b51.camel@intel.com>
 References: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
-	<20190221234451.17632-19-rick.p.edgecombe@intel.com>
+	 <20190221234451.17632-19-rick.p.edgecombe@intel.com>
+	 <20190221192210.3e038fc3@gandalf.local.home>
+In-Reply-To: <20190221192210.3e038fc3@gandalf.local.home>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <5A4A8CD00D4DF448B0BFB3995685F0A4@intel.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com
+To: "rostedt@goodmis.org" <rostedt@goodmis.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "peterz@infradead.org" <peterz@infradead.org>, "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "nadav.amit@gmail.com" <nadav.amit@gmail.com>, "dave.hansen@linux.intel.com" <dave.hansen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "hpa@zytor.com" <hpa@zytor.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "mingo@redhat.com" <mingo@redhat.com>, "linux_dti@icloud.com" <linux_dti@icloud.com>, "luto@kernel.org" <luto@kernel.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "bp@alien8.de" <bp@alien8.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 21 Feb 2019 15:44:49 -0800
-Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
-
-> Use new flag VM_FLUSH_RESET_PERMS for handling freeing of special
-> permissioned memory in vmalloc and remove places where memory was set NX
-> and RW before freeing which is no longer needed.
-> 
-> Cc: Steven Rostedt <rostedt@goodmis.org>
-> Acked-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
-> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-> ---
->  arch/x86/kernel/ftrace.c | 6 ++----
->  1 file changed, 2 insertions(+), 4 deletions(-)
-> 
-> diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
-> index 13c8249b197f..93efe3955333 100644
-> --- a/arch/x86/kernel/ftrace.c
-> +++ b/arch/x86/kernel/ftrace.c
-> @@ -692,10 +692,6 @@ static inline void *alloc_tramp(unsigned long size)
->  }
->  static inline void tramp_free(void *tramp, int size)
-
-As size is no longer used within the function, can you remove that too.
-
-Thanks,
-
--- Steve
-
->  {
-> -	int npages = PAGE_ALIGN(size) >> PAGE_SHIFT;
-> -
-> -	set_memory_nx((unsigned long)tramp, npages);
-> -	set_memory_rw((unsigned long)tramp, npages);
->  	module_memfree(tramp);
->  }
->  #else
-> @@ -820,6 +816,8 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
->  	/* ALLOC_TRAMP flags lets us know we created it */
->  	ops->flags |= FTRACE_OPS_FL_ALLOC_TRAMP;
->  
-> +	set_vm_flush_reset_perms(trampoline);
-> +
->  	/*
->  	 * Module allocation needs to be completed by making the page
->  	 * executable. The page is still writable, which is a security hazard,
+T24gVGh1LCAyMDE5LTAyLTIxIGF0IDE5OjIyIC0wNTAwLCBTdGV2ZW4gUm9zdGVkdCB3cm90ZToN
+Cj4gT24gVGh1LCAyMSBGZWIgMjAxOSAxNTo0NDo0OSAtMDgwMA0KPiBSaWNrIEVkZ2Vjb21iZSA8
+cmljay5wLmVkZ2Vjb21iZUBpbnRlbC5jb20+IHdyb3RlOg0KPiANCj4gPiBVc2UgbmV3IGZsYWcg
+Vk1fRkxVU0hfUkVTRVRfUEVSTVMgZm9yIGhhbmRsaW5nIGZyZWVpbmcgb2Ygc3BlY2lhbA0KPiA+
+IHBlcm1pc3Npb25lZCBtZW1vcnkgaW4gdm1hbGxvYyBhbmQgcmVtb3ZlIHBsYWNlcyB3aGVyZSBt
+ZW1vcnkgd2FzIHNldCBOWA0KPiA+IGFuZCBSVyBiZWZvcmUgZnJlZWluZyB3aGljaCBpcyBubyBs
+b25nZXIgbmVlZGVkLg0KPiA+IA0KPiA+IENjOiBTdGV2ZW4gUm9zdGVkdCA8cm9zdGVkdEBnb29k
+bWlzLm9yZz4NCj4gPiBBY2tlZC1ieTogU3RldmVuIFJvc3RlZHQgKFZNd2FyZSkgPHJvc3RlZHRA
+Z29vZG1pcy5vcmc+DQo+ID4gU2lnbmVkLW9mZi1ieTogUmljayBFZGdlY29tYmUgPHJpY2sucC5l
+ZGdlY29tYmVAaW50ZWwuY29tPg0KPiA+IC0tLQ0KPiA+ICBhcmNoL3g4Ni9rZXJuZWwvZnRyYWNl
+LmMgfCA2ICsrLS0tLQ0KPiA+ICAxIGZpbGUgY2hhbmdlZCwgMiBpbnNlcnRpb25zKCspLCA0IGRl
+bGV0aW9ucygtKQ0KPiA+IA0KPiA+IGRpZmYgLS1naXQgYS9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNl
+LmMgYi9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNlLmMNCj4gPiBpbmRleCAxM2M4MjQ5YjE5N2YuLjkz
+ZWZlMzk1NTMzMyAxMDA2NDQNCj4gPiAtLS0gYS9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNlLmMNCj4g
+PiArKysgYi9hcmNoL3g4Ni9rZXJuZWwvZnRyYWNlLmMNCj4gPiBAQCAtNjkyLDEwICs2OTIsNiBA
+QCBzdGF0aWMgaW5saW5lIHZvaWQgKmFsbG9jX3RyYW1wKHVuc2lnbmVkIGxvbmcgc2l6ZSkNCj4g
+PiAgfQ0KPiA+ICBzdGF0aWMgaW5saW5lIHZvaWQgdHJhbXBfZnJlZSh2b2lkICp0cmFtcCwgaW50
+IHNpemUpDQo+IA0KPiBBcyBzaXplIGlzIG5vIGxvbmdlciB1c2VkIHdpdGhpbiB0aGUgZnVuY3Rp
+b24sIGNhbiB5b3UgcmVtb3ZlIHRoYXQgdG9vLg0KPiANCj4gVGhhbmtzLA0KPiANCj4gLS0gU3Rl
+dmUNCj4gDQpHb29kIHBvaW50LCBJJ2xsIHJlbW92ZSBpdC4NCg0KVGhhbmtzLA0KDQpSaWNrDQoN
+CltzbmlwXQ0K
