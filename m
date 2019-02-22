@@ -1,96 +1,40 @@
-Date: Thu, 21 Feb 2019 16:07:31 -0800
-From: Sean Christopherson <sean.j.christopherson@intel.com>
-Subject: Re: [PATCH v3 03/20] x86/mm: Save DRs when loading a temporary mm
-Message-ID: <20190222000731.GE7224@linux.intel.com>
-References: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
- <20190221234451.17632-4-rick.p.edgecombe@intel.com>
+Message-ID: <8ef1669cdfbcc6114eebc30c610c91c191c7cc7a.camel@russell.cc>
+Subject: Re: [PATCH 0/7] Kernel Userspace Protection for radix
+From: Russell Currey <ruscur@russell.cc>
+Date: Fri, 22 Feb 2019 11:09:22 +1100
+In-Reply-To: <CAGXu5j+P1wh0uf1kfMywSTo4NYtwFPSnKXg6wbfyBRqwVRZVYA@mail.gmail.com>
+References: <20190221093601.27920-1-ruscur@russell.cc>
+	 <CAGXu5j+P1wh0uf1kfMywSTo4NYtwFPSnKXg6wbfyBRqwVRZVYA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190221234451.17632-4-rick.p.edgecombe@intel.com>
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>
+Cc: PowerPC <linuxppc-dev@lists.ozlabs.org>, Michael Ellerman <mpe@ellerman.id.au>, Nick Piggin <npiggin@gmail.com>, Christophe Leroy <christophe.leroy@c-s.fr>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 21, 2019 at 03:44:34PM -0800, Rick Edgecombe wrote:
-> From: Nadav Amit <namit@vmware.com>
+On Thu, 2019-02-21 at 08:07 -0800, Kees Cook wrote:
+> On Thu, Feb 21, 2019 at 1:36 AM Russell Currey <ruscur@russell.cc>
+> wrote:
+> > The first three patches of these series are from Christophe's work
+> > and are
+> > the bare minimum framework needed to implement the support for
+> > radix.
+> > 
+> > In patch 3, I have removed from Christophe's patch my
+> > implementation of
+> > the 64-bit exception handling code, since we don't have an answer
+> > for
+> > making nested exceptions work yet.  This is mentioned in the final
+> > KUAP
+> > patch.  Regardless, this is still a significant security
+> > improvement
+> > and greatly narrows the attack surface.
 > 
-> Prevent user watchpoints from mistakenly firing while the temporary mm
-> is being used. As the addresses that of the temporary mm might overlap
-> those of the user-process, this is necessary to prevent wrong signals
-> or worse things from happening.
-> 
-> Cc: Andy Lutomirski <luto@kernel.org>
-> Signed-off-by: Nadav Amit <namit@vmware.com>
-> ---
->  arch/x86/include/asm/mmu_context.h | 25 +++++++++++++++++++++++++
->  1 file changed, 25 insertions(+)
-> 
-> diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
-> index d684b954f3c0..0d6c72ece750 100644
-> --- a/arch/x86/include/asm/mmu_context.h
-> +++ b/arch/x86/include/asm/mmu_context.h
-> @@ -13,6 +13,7 @@
->  #include <asm/tlbflush.h>
->  #include <asm/paravirt.h>
->  #include <asm/mpx.h>
-> +#include <asm/debugreg.h>
->  
->  extern atomic64_t last_mm_ctx_id;
->  
-> @@ -358,6 +359,7 @@ static inline unsigned long __get_current_cr3_fast(void)
->  
->  typedef struct {
->  	struct mm_struct *prev;
-> +	unsigned short bp_enabled : 1;
->  } temp_mm_state_t;
->  
->  /*
-> @@ -380,6 +382,22 @@ static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
->  	lockdep_assert_irqs_disabled();
->  	state.prev = this_cpu_read(cpu_tlbstate.loaded_mm);
->  	switch_mm_irqs_off(NULL, mm, current);
-> +
-> +	/*
-> +	 * If breakpoints are enabled, disable them while the temporary mm is
-> +	 * used. Userspace might set up watchpoints on addresses that are used
-> +	 * in the temporary mm, which would lead to wrong signals being sent or
-> +	 * crashes.
-> +	 *
-> +	 * Note that breakpoints are not disabled selectively, which also causes
-> +	 * kernel breakpoints (e.g., perf's) to be disabled. This might be
-> +	 * undesirable, but still seems reasonable as the code that runs in the
-> +	 * temporary mm should be short.
-> +	 */
-> +	state.bp_enabled = hw_breakpoint_active();
+> Nice! Am I understanding correctly that with this series powerpc9 and
+> later, using radix, will pass the lkdtm tests for KUAP and KUEP (i.e.
+> EXEC_USERSPACE and ACCESS_USERSPACE)?
 
-Pretty sure caching hw_breakpoint_active() is unnecessary.  It queries a
-per-cpu value, not hardware's DR7 register, and that same value is
-consumed by hw_breakpoint_restore().  No idea if breakpoints can be
-disabled while using a temp mm, but even if that can happen, there's no
-need to restore breakpoints if they've all been disabled, i.e. if
-hw_breakpoint_active() returns false in unuse_temporary_mm().
-
-> +	if (state.bp_enabled)
-> +		hw_breakpoint_disable();
-> +
->  	return state;
->  }
->  
-> @@ -387,6 +405,13 @@ static inline void unuse_temporary_mm(temp_mm_state_t prev)
->  {
->  	lockdep_assert_irqs_disabled();
->  	switch_mm_irqs_off(NULL, prev.prev, current);
-> +
-> +	/*
-> +	 * Restore the breakpoints if they were disabled before the temporary mm
-> +	 * was loaded.
-> +	 */
-> +	if (prev.bp_enabled)
-> +		hw_breakpoint_restore();
->  }
->  
->  #endif /* _ASM_X86_MMU_CONTEXT_H */
-> -- 
-> 2.17.1
-> 
+Yes!  We've had execution prevention for a while on radix (which is
+default on POWER9) since 3b10d0095a1e, the only functional thing this
+series does is allow disabling it with nosmep.  This series adds access
+prevention.
