@@ -1,34 +1,39 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: Re: [PATCH v3 00/20] Merge text_poke fixes and executable lockdowns
-Date: Fri, 22 Feb 2019 18:32:22 +0000
-Message-ID: <33968a3c7cc750f3d1cabf062f5fb25fd176e816.camel@intel.com>
-References: <20190221234451.17632-1-rick.p.edgecombe@intel.com>
-	 <20190222161419.GB30766@zn.tnic>
-In-Reply-To: <20190222161419.GB30766@zn.tnic>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <6AFE1C37A3162E43A5884A3972E03B3D@intel.com>
-Content-Transfer-Encoding: base64
+From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
+Subject: [PATCH v2 0/6] RCU fixes for rcu_assign_pointer() usage
+Date: Sat, 23 Feb 2019 01:34:28 -0500
+Message-Id: <20190223063434.6793-1-joel@joelfernandes.org>
 MIME-Version: 1.0
-To: "bp@alien8.de" <bp@alien8.de>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "peterz@infradead.org" <peterz@infradead.org>, "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "dave.hansen@linux.intel.com" <dave.hansen@linux.intel.com>, "nadav.amit@gmail.com" <nadav.amit@gmail.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "hpa@zytor.com" <hpa@zytor.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "mingo@redhat.com" <mingo@redhat.com>, "linux_dti@icloud.com" <linux_dti@icloud.com>, "luto@kernel.org" <luto@kernel.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: 8bit
+To: linux-kernel@vger.kernel.org
+Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>, Alexei Starovoitov <ast@kernel.org>, Christian Brauner <christian@brauner.io>, Daniel Borkmann <daniel@iogearbox.net>, David Ahern <dsahern@gmail.com>, "David S. Miller" <davem@davemloft.net>, Ingo Molnar <mingo@redhat.com>, Jakub Kicinski <jakub.kicinski@netronome.com>, Jeff Kirsher <jeffrey.t.kirsher@intel.com>, Jesper Dangaard Brouer <hawk@kernel.org>, John Fastabend <john.fastabend@gmail.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, Kirill Tkhai <ktkhai@virtuozzo.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Martin KaFai Lau <kafai@fb.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, netdev@vger.kernel.org, "Paul E. McKenney" <paulmck@linux.ibm.com>, Peter Zijlstra <peterz@infradead.org>, Quentin Perret <quentin.perret@arm.com>, rcu@vger.kernel.org, Song Liu <songliubraving@fb.com>, Steven Rostedt <rostedt@goodmis.org>, Vincent Guittot <vincent.guittot@linaro.org>, xdp-newbies@vger.kernel.org, Yonghong Song <yhs@fb.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gRnJpLCAyMDE5LTAyLTIyIGF0IDE3OjE0ICswMTAwLCBCb3Jpc2xhdiBQZXRrb3Ygd3JvdGU6
-DQo+IE9uIFRodSwgRmViIDIxLCAyMDE5IGF0IDAzOjQ0OjMxUE0gLTA4MDAsIFJpY2sgRWRnZWNv
-bWJlIHdyb3RlOg0KPiA+IENoYW5nZXMgdjIgdG8gdjM6DQo+ID4gIC0gRml4IGNvbW1pdCBtZXNz
-YWdlcyBhbmQgY29tbWVudHMgW0JvcmlzXQ0KPiA+ICAtIFJlbmFtZSBWTV9IQVNfU1BFQ0lBTF9Q
-RVJNUyBbQm9yaXNdDQo+ID4gIC0gUmVtb3ZlIHVubmVjZXNzYXJ5IGxvY2FsIHZhcmlhYmxlcyBb
-Qm9yaXNdDQo+ID4gIC0gUmVuYW1lIHNldF9hbGlhc18qKCkgZnVuY3Rpb25zIFtCb3JpcywgQW5k
-eV0NCj4gPiAgLSBTYXZlL3Jlc3RvcmUgRFIgcmVnaXN0ZXJzIHdoZW4gdXNpbmcgdGVtcG9yYXJ5
-IG1tDQo+ID4gIC0gTW92ZSBsaW5lIGRlbGV0aW9uIGZyb20gcGF0Y2ggMTAgdG8gcGF0Y2ggMTcN
-Cj4gDQo+IEluIHlvdXIgcHJldmlvdXMgc3VibWlzc2lvbiB0aGVyZSB3YXMgYSBwYXRjaCBjYWxs
-ZWQNCj4gDQo+IFN1YmplY3Q6IFtQQVRDSCB2MiAwMS8yMF0gRml4ICJ4ODYvYWx0ZXJuYXRpdmVz
-OiBMb2NrZGVwLWVuZm9yY2UgdGV4dF9tdXRleCBpbg0KPiB0ZXh0X3Bva2UqKCkiDQo+IA0KPiBX
-aGF0IGhhcHBlbmVkIHRvIGl0Pw0KPiANCj4gSXQgZGlkIGludHJvZHVjZSBhIGZ1bmN0aW9uIHRl
-eHRfcG9rZV9rZ2RiKCksIGEuby4sIGFuZCBJIHNlZSB0aGlzDQo+IGZ1bmN0aW9uIGluIHRoZSBk
-aWZmIGNvbnRleHRzIGluIHNvbWUgb2YgdGhlIHBhdGNoZXMgaW4gdGhpcyBzdWJtaXNzaW9uDQo+
-IHNvIGl0IGxvb2tzIHRvIG1lIGxpa2UgeW91IG1pc3NlZCB0aGF0IGZpcnN0IHBhdGNoIHdoZW4g
-c3VibWl0dGluZyB2Mz8NCj4gDQo+IE9yIGFtICpJKiBtaXNzaW5nIHNvbWV0aGluZz8NCj4gDQo+
-IFRoeC4NCj4gDQpPaCwgeW91IGFyZSByaWdodCEgU29ycnkgYWJvdXQgdGhhdC4gSSdsbCBqdXN0
-IHNlbmQgYSBuZXcgdmVyc2lvbiB3aXRoIGZpeGVzIGZvcg0Kb3RoZXIgY29tbWVudHMgaW5zdGVh
-ZCBvZiBhIHJlc2VuZCBvZiB0aGlzIG9uZS4NCg0KVGhhbmtzLA0KDQpSaWNrDQo=
+These patches fix various sparse errors found as a result of the recent check
+to add rcu_check_sparse() to rcu_assign_pointer().  The errors in some cases
+seem to either missing API usage, or missing annotations. The annotations added
+in the series can also help avoid future incorrect usages and bugs so it is a
+good idea to do in any case.
+
+RFC v1 -> Patch v2:
+Made changes to various scheduler patches (Peter Zijlstra)
+
+Joel Fernandes (Google) (6):
+net: rtnetlink: Fix incorrect RCU API usage
+ixgbe: Fix incorrect RCU API usage
+sched/cpufreq: Annotate cpufreq_update_util_data pointer with __rcu
+sched_domain: Annotate RCU pointers properly
+rcuwait: Annotate task_struct with __rcu
+sched: Annotate perf_domain pointer with __rcu
+
+drivers/net/ethernet/intel/ixgbe/ixgbe.h      |  4 ++--
+drivers/net/ethernet/intel/ixgbe/ixgbe_main.c | 15 ++++++++++-----
+include/linux/rcuwait.h                       |  2 +-
+include/linux/sched/topology.h                |  4 ++--
+kernel/sched/cpufreq.c                        |  2 +-
+kernel/sched/sched.h                          | 18 +++++++++---------
+kernel/sched/topology.c                       | 10 +++++-----
+net/core/rtnetlink.c                          |  4 ++--
+8 files changed, 32 insertions(+), 27 deletions(-)
+
+--
+2.21.0.rc0.258.g878e2cd30e-goog
