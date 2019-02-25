@@ -1,39 +1,55 @@
-From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
-Subject: [PATCH v2 6/6] sched: Annotate perf_domain pointer with __rcu
-Date: Sat, 23 Feb 2019 01:34:34 -0500
-Message-Id: <20190223063434.6793-7-joel@joelfernandes.org>
-In-Reply-To: <20190223063434.6793-1-joel@joelfernandes.org>
-References: <20190223063434.6793-1-joel@joelfernandes.org>
+From: "Tobin C. Harding" <tobin@kernel.org>
+Subject: [PATCH v2 0/1] lib/string: Add strscpy_pad() function
+Date: Mon, 25 Feb 2019 15:15:33 +1100
+Message-Id: <20190225041534.27186-1-tobin@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-To: linux-kernel@vger.kernel.org
-Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>, Alexei Starovoitov <ast@kernel.org>, Christian Brauner <christian@brauner.io>, Daniel Borkmann <daniel@iogearbox.net>, David Ahern <dsahern@gmail.com>, "David S. Miller" <davem@davemloft.net>, Ingo Molnar <mingo@redhat.com>, Jakub Kicinski <jakub.kicinski@netronome.com>, Jeff Kirsher <jeffrey.t.kirsher@intel.com>, Jesper Dangaard Brouer <hawk@kernel.org>, John Fastabend <john.fastabend@gmail.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, Kirill Tkhai <ktkhai@virtuozzo.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Martin KaFai Lau <kafai@fb.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, netdev@vger.kernel.org, "Paul E. McKenney" <paulmck@linux.ibm.com>, Peter Zijlstra <peterz@infradead.org>, Quentin Perret <quentin.perret@arm.com>, rcu@vger.kernel.org, Song Liu <songliubraving@fb.com>, Steven Rostedt <rostedt@goodmis.org>, Vincent Guittot <vincent.guittot@linaro.org>, xdp-newbies@vger.kernel.org, Yonghong Song <yhs@fb.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: "Tobin C. Harding" <tobin@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Shuah Khan <shuah@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This fixes the following sparse errors in sched/fair.c:
+Hi,
 
-fair.c:6506:14: error: incompatible types in comparison expression
-fair.c:8642:21: error: incompatible types in comparison expression
+This patch set was formerly
 
-Using __rcu will also help sparse catch any future bugs.
+	Subject: [PATCH 0/6] lib: Add safe string funtions[sic]
 
-Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
----
- kernel/sched/sched.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+And FTR can be seen here:
 
-diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index ca6a79f57e7a..c8e6514433a9 100644
---- a/kernel/sched/sched.h
-+++ b/kernel/sched/sched.h
-@@ -780,7 +780,7 @@ struct root_domain {
- 	 * NULL-terminated list of performance domains intersecting with the
- 	 * CPUs of the rd. Protected by RCU.
- 	 */
--	struct perf_domain	*pd;
-+	struct perf_domain __rcu *pd;
- };
- 
- extern struct root_domain def_root_domain;
+	https://lkml.org/lkml/2019/2/18/1428
+
+
+The v1 patch set has been reduced to a single patch by dropping the
+strscpy_from_user() stuff and by rolling all the docs changes into the
+main patch as suggested.
+
+This patch adds the function strscpy_pad() named after consensus was
+reached on the v1 email thread (linked to above).
+
+Thanks to Kees for the extreme test case coverage.  test_basic() is
+probably redundant but is left in for the benefit of any poor sucker who
+has to debug a regression using test_fully().
+
+The test module is _not_ tied into kselftest.  As discussed on v1, there
+are some issues with tools/testing/selftest/lib/ at the moment.  I intend
+on working on those issues as suggested but it does not seem totally
+relevant to this patch so instead of slowing this one down with my poor
+knowledge of how kselftest works it seems better to do this separately. 
+
+thanks for looking at this,
+Tobin.
+
+
+Tobin C. Harding (1):
+  lib/string: Add strscpy_pad() function
+
+ include/linux/string.h |   4 +
+ lib/Kconfig.debug      |   3 +
+ lib/Makefile           |   1 +
+ lib/string.c           |  47 +++++++++--
+ lib/test_strscpy.c     | 175 +++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 223 insertions(+), 7 deletions(-)
+ create mode 100644 lib/test_strscpy.c
+
 -- 
-2.21.0.rc0.258.g878e2cd30e-goog
+2.20.1
