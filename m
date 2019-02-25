@@ -1,103 +1,107 @@
-Subject: Re: [PATCH 5/6] lib: Fix function documentation for strncpy_from_user
+Date: Tue, 26 Feb 2019 07:09:38 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: Re: [PATCH 4/6] lib/string: Add string copy/zero function
+Message-ID: <20190225200938.GA5177@eros.localdomain>
 References: <20190218232308.11241-1-tobin@kernel.org>
- <20190218232308.11241-6-tobin@kernel.org>
- <CAG48ez0utQJjoJW69OwGiuH1EQtcD939-5u71ruD_1nr0eJK0g@mail.gmail.com>
- <CAGXu5jKeS3bkTSXEw2nsjrWoqhbkDZD4C=PdYTHMtM0GNk6tSg@mail.gmail.com>
- <20190221052435.GF11758@eros.localdomain>
- <CAGXu5j+Mf2D5LgkEmps7VVBhmNGt=49y4caP1y1E0OBURJEeXQ@mail.gmail.com>
- <8f002798-f68b-14cd-d321-f96b653fb51d@rasmusvillemoes.dk>
- <CAGXu5j+4ia0OLHop81D8D4eSJV6765hr-m=3LPeL2490ER++Hg@mail.gmail.com>
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Message-ID: <39f5b81f-16b3-19d6-86b5-cc2ab6bc45ea@rasmusvillemoes.dk>
-Date: Mon, 25 Feb 2019 16:41:14 +0100
+ <20190218232308.11241-5-tobin@kernel.org>
+ <CAGXu5jJe7CiQ0aResT4Hnsuhm+grZyLTcVAkdwsBdtbdrnBbuQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+4ia0OLHop81D8D4eSJV6765hr-m=3LPeL2490ER++Hg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Jann Horn <jannh@google.com>, "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Stephen Rothwell <sfr@canb.auug.org.au>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJe7CiQ0aResT4Hnsuhm+grZyLTcVAkdwsBdtbdrnBbuQ@mail.gmail.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Matthew Wilcox <willy@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Micay <danielmicay@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 22/02/2019 00.03, Kees Cook wrote:
-> On Thu, Feb 21, 2019 at 6:58 AM Rasmus Villemoes
-> <linux@rasmusvillemoes.dk> wrote:
->>
->> On 21/02/2019 07.02, Kees Cook wrote:
->>
+On Wed, Feb 20, 2019 at 04:48:18PM -0800, Kees Cook wrote:
+> On Mon, Feb 18, 2019 at 3:24 PM Tobin C. Harding <tobin@kernel.org> wrote:
+> >
+> > We have a function to copy strings safely and we have a function to copy
+> > strings _and_ zero the tail of the destination (if source string is
+> > shorter than destination buffer) but we do not have a function to do
+> > both at once.  This means developers must write this themselves if they
+> > desire this functionality.  This is a chore, and also leaves us open to
+> > off by one errors unnecessarily.
+> >
+> > Add a function that calls strscpy() then memset()s the tail to zero if
+> > the source string is shorter than the destination buffer.
+> >
+> > Add testing via kselftest.
+> >
+> > Signed-off-by: Tobin C. Harding <tobin@kernel.org>
+> > ---
+> >  include/linux/string.h |  4 ++++
+> >  lib/Kconfig.debug      |  2 +-
+> >  lib/string.c           | 30 ++++++++++++++++++++++++++++--
+> >  lib/test_string.c      | 31 +++++++++++++++++++++++++++++++
+> >  4 files changed, 64 insertions(+), 3 deletions(-)
+> >
+> > diff --git a/include/linux/string.h b/include/linux/string.h
+> > index 7927b875f80c..695a5e6a31e3 100644
+> > --- a/include/linux/string.h
+> > +++ b/include/linux/string.h
+> > @@ -31,6 +31,10 @@ size_t strlcpy(char *, const char *, size_t);
+> >  #ifndef __HAVE_ARCH_STRSCPY
+> >  ssize_t strscpy(char *, const char *, size_t);
+> >  #endif
+> > +
+> > +/* Wrapper function, no arch specific code required */
+> > +ssize_t strscpy_zeroed(char *dest, const char *src, size_t count);
 > 
->>> ... snprintf returns what it WOULD have written, much like strlcpy
->>> above. At least snprintf has an excuse: it can be used to calculate an
->>> allocation size (called with a NULL dest and 0 size) ... but shouldn't
->>> "how big is this format string going to be?" be a separate function?
->>
->> Why? Sure, you can make a wrapper vhowmuch(const char *fmt, va_args ap),
->> but its implementation would have to be "return vsnprintf(NULL, 0, fmt,
->> ap);", since we really must reuse the exact same logic for computing the
->> length as for doing the actual printf'ing (otherwise they'd get out of
->> sync).
+> bikeshed: I think "pad" is shorter and more descriptive. How about
+> something like strspad() strscpy_pad() or strscpy_zero()? (just to
+> shorten it slightly)
 > 
-> Well, I'd likely go the opposite directly: make snprintf() a wrapper
-> and call vhowmuch(), etc, convert until snprintf could be removed.But
-> really the best might be removal of snprintf first, then refactor it
-> with vhowmuch() etc. Lots of ways to solve it, I suppose.
-
-I'd really like to see how vsprintf.c would look in a world where the
-workhorse (which is vsnprintf() and its tree of helpers) would not
-format and measure at the same time.
-
-But dropping
-> the unfriendly API would be nice.
+> Not a blocker, just a TODO: we need a wrapper to do
+> CONFIG_FORTIFY_SOURCE checking for strscpy() (and strscpy_zeroed()) to
+> check for __builtin_object_size() vs the "size" argument, as done in
+> strlcpy() in include/linux/string.h
 > 
->> Please no. snprintf() is standardized, has sane semantics (though one
+> > @@ -238,6 +237,33 @@ ssize_t strscpy(char *dest, const char *src, size_t count)
+> >  EXPORT_SYMBOL(strscpy);
+> >  #endif
+> >
+> > +/**
+> > + * strscopy_zeroed() - Copy a C-string into a sized buffer
+> > + * @dest: Where to copy the string to
+> > + * @src: Where to copy the string from
+> > + * @count: Size of destination buffer
+> > + *
+> > + * If the source string is shorter than the destination buffer, zeros
+> > + * the tail of the destination buffer.
+> > + *
+> > + * Return: The number of characters copied (not including the trailing
+> > + *         NUL) or -E2BIG if the destination buffer wasn't big enough.
+> > + */
+> > +ssize_t strscpy_zeroed(char *dest, const char *src, size_t count)
+> > +{
+> > +       ssize_t written;
+> > +
+> > +       written = strscpy(dest, src, count);
+> > +       if (written < 0)
+> > +               return written;
 > 
-> No, it doesn't -- it has well-defined semantics, 
-
-We'll just have to disagree on what sane means.
-
-> but using it
-> correctly is too hard. It's a regular source of bugs. (Not *nearly* as
-> bad as strncpy, so let's stick to dropping one bad API at a time...)
+> If written < 0 we filled everything (i.e. we wrote "count - 1" bytes).
+> If we also exactly wrote "count - 1", then we also don't need the zero
+> padding either, since strscpy wrote the trailing NUL.
 > 
->> sometimes _want_ scnprintf semantics - in which case one can and should
->> use that...), and, importantly, gcc understands those semantics. So we
->> get optimizations and diagnostics that we'd miss if we kill off explicit
->> snprintf and replace with non-standard howmuch+scnprintf.
+> so:
 > 
-> Those diagnostics can be had with the __printf() markings already...
+> if (written < 0 || (count && written == count - 1))
 
-No. You're thinking of the type-checking things. Those are important, of
-course, but have nothing at all to do with the s or n parts of snprintf
-- what I'm thinking of is the fact that gcc knows that buf is a
-char-buffer of length len into which snprintf() may/will write, so we
-have the Wformat-truncation and Warray-bounds kind of warnings. And the
-optimization part is where gcc can replace a snprintf() with a simpler
-string op (e.g. a memcpy), or know that an overflow check can be elided
-because "%d" does fit in the buf[16], or...
+(I meant to reply yesterday before posting v2).  At this stage we know
+count >= 0 otherwise written would be less than 0.  So I removed the
+'count' from the second part of this statement, leaving
 
-One thing I've had on my wishlist for a long time is a
-buffer_size(ptrarg, expr, r/w/rw) attribute that would say that the
-function treats the pointer argument ptrarg as a buffer of size given by
-the expr (in bytes), and accesses it according to the third parameter.
-Then the compiler could automatically check with its builtin_objsize
-machinery for mismatched buffer size computations (e.g., using sizeof()
-when the interface expects ARRAY_SIZE()) violations or uninitialized
-reads, or any number of optional run-time instrumentations in caller or
-callee... So
+  if (written < 0 || written == count - 1)
 
-memcpy(void *dst, const void *src, size_t len) __buffer_size(dst, len,
-"w") __buffer_size(src, len, "r")
+>     return written;
+> 
+> > +
+> > +       if (written < count)
+> > +               memset(dest + written, 0, count - written);
 
-or
+I used this :)
 
-int poll(struct pollfd *fds, nfds_t nfds, int timeout)
-__buffer_size(fds, nfds*sizeof(struct pollfd), "rw")
-
-the latter being an example of where an arbitrary expression in terms of
-the formal parameters is needed - but I don't think gcc's attribute
-machinery supports this syntax at all.
-
-Bonus points if one could attach buffer_size to a struct definition as
-well, saying that the ->foo member points to ->bar*4  of storage.
-
-
-Rasmus
+thanks,
+Tobin.
