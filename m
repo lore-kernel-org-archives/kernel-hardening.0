@@ -1,150 +1,267 @@
-Date: Tue, 26 Feb 2019 15:45:30 -0800
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v2] lkdtm: Check for SMEP clearing protections
-Message-ID: <20190226234530.GA9209@beast>
+Date: Wed, 27 Feb 2019 15:40:49 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: Re: [PATCH v2 1/1] lib/string: Add strscpy_pad() function
+Message-ID: <20190227044049.GA13176@eros.localdomain>
+References: <20190225041534.27186-1-tobin@kernel.org>
+ <20190225041534.27186-2-tobin@kernel.org>
+ <CAGXu5jJ_OACAt8dmb7QiO9tT4i7+VPJnU+RFCCa98vQEvVsOLw@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190226233647.28547-1-keescook@chromium.org>
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Peter Zijlstra <peterz@infradead.org>, Jann Horn <jannh@google.com>, Sean Christopherson <sean.j.christopherson@intel.com>, Dominik Brodowski <linux@dominikbrodowski.net>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <CAGXu5jJ_OACAt8dmb7QiO9tT4i7+VPJnU+RFCCa98vQEvVsOLw@mail.gmail.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: "Tobin C. Harding" <tobin@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Shuah Khan <shuah@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This adds an x86-specific test for pinned cr4 bits. A successful test
-will validate pinning and check the ROP-style call-middle-of-function
-defense, if needed. For example, in the case of native_write_cr4()
-looking like this:
+On Mon, Feb 25, 2019 at 01:38:44PM -0800, Kees Cook wrote:
+> On Sun, Feb 24, 2019 at 8:16 PM Tobin C. Harding <tobin@kernel.org> wrote:
+> >
+> > We have a function to copy strings safely and we have a function to copy
+> > strings and zero the tail of the destination (if source string is
+> > shorter than destination buffer) but we do not have a function to do
+> > both at once.  This means developers must write this themselves if they
+> > desire this functionality.  This is a chore, and also leaves us open to
+> > off by one errors unnecessarily.
+> >
+> > Add a function that calls strscpy() then memset()s the tail to zero if
+> > the source string is shorter than the destination buffer.
+> >
+> > Add test module for the new code.
+> >
+> > Signed-off-by: Tobin C. Harding <tobin@kernel.org>
+> > [...]
+> > +ssize_t strscpy_pad(char *dest, const char *src, size_t count)
+> > +{
+> > +       ssize_t written;
+> > +
+> > +       written = strscpy(dest, src, count);
+> > +       if (written < 0 || written == count - 1)
+> > +               return written;
+> 
+> *thread merge* Yeah, good point. written will be -E2BIG for both count
+> = 0 and count = 1.
+> 
+> > +
+> > +       memset(dest + written + 1, 0, count - written - 1);
+> > +
+> > +       return written;
+> > +}
+> > +EXPORT_SYMBOL(strscpy_pad);
+> > +
+> >  #ifndef __HAVE_ARCH_STRCAT
+> >  /**
+> >   * strcat - Append one %NUL-terminated string to another
+> > diff --git a/lib/test_strscpy.c b/lib/test_strscpy.c
+> > new file mode 100644
+> > index 000000000000..5ec6a196f4e2
+> > --- /dev/null
+> > +++ b/lib/test_strscpy.c
+> > @@ -0,0 +1,175 @@
+> > +// SPDX-License-Identifier: GPL-2.0
+> > +
+> > +#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+> > +
+> > +#include <linux/init.h>
+> > +#include <linux/kernel.h>
+> > +#include <linux/module.h>
+> > +#include <linux/printk.h>
+> > +#include <linux/string.h>
+> > +
+> > +/*
+> > + * Kernel module for testing 'strscpy' family of functions.
+> > + */
+> > +
+> > +static unsigned total_tests __initdata;
+> > +static unsigned failed_tests __initdata;
+> > +
+> > +static void __init do_test(int count, char *src, int expected,
+> > +                          int chars, int terminator, int pad)
+> > +{
+> > +       char buf[6];
+> 
+> I would make this "6" a define, since you use it in more than one
+> place. Actually... no, never mind. The other places can use
+> "sizeof(buf)" instead of "6". Noted below...
+> 
+> But I'd add an explicit check for "expected + 1 < sizeof(buf)" just
+> for future test-addition sanity.
+> 
+> > +       int written;
+> > +       int poison;
+> > +       int index;
+> > +       int i;
+> > +       const char POISON = 'z';
+> > +
+> > +       total_tests++;
+> > +       memset(buf, POISON, sizeof(buf));
+> > +
+> > +       /* Verify the return value */
+> > +
+> 
+> Needless blank line.
+> 
+> > +       written = strscpy_pad(buf, src, count);
+> > +       if ((written) != (expected)) {
+> > +               pr_err("%d != %d (written, expected)\n", written, expected);
+> > +               goto fail;
+> > +       }
+> > +
+> > +       /* Verify the state of the buffer */
+> > +
+> 
+> Same.
+> 
+> > +       if (count && written == -E2BIG) {
+> > +               if (strncmp(buf, src, count - 1) != 0) {
+> > +                       pr_err("buffer state invalid for -E2BIG\n");
+> > +                       goto fail;
+> > +               }
+> > +               if (buf[count - 1] != '\0') {
+> > +                       pr_err("too big string is not null terminated correctly\n");
+> > +                       goto fail;
+> > +               }
+> > +       }
+> > +
+> > +       /* Verify the copied content */
+> > +       for (i = 0; i < chars; i++) {
+> > +               if (buf[i] != src[i]) {
+> > +                       pr_err("buf[i]==%c != src[i]==%c\n", buf[i], src[i]);
+> > +                       goto fail;
+> > +               }
+> > +       }
+> > +
+> > +       /* Verify the null terminator */
+> > +       if (terminator) {
+> > +               if (buf[count - 1] != '\0') {
+> > +                       pr_err("string is not null terminated correctly\n");
+> > +                       goto fail;
+> > +               }
+> > +       }
+> > +
+> > +       /* Verify the padding */
+> > +       for (i = 0; i < pad; i++) {
+> > +               index = chars + terminator + i;
+> > +               if (buf[index] != '\0') {
+> > +                       pr_err("padding missing at index: %d\n", i);
+> > +                       goto fail;
+> > +               }
+> > +       }
+> > +
+> > +       /* Verify the rest is left untouched */
+> > +       poison = 6 - chars - terminator - pad;
+> 
+> instead of "6", use "sizeof(buf)".
+> 
+> > +       for (i = 0; i < poison; i++) {
+> > +               index = 6 - 1 - i; /* Check from the end back */
+> 
+> Same.
+> 
+> > +               if (buf[index] != POISON) {
+> > +                       pr_err("poison value missing at index: %d\n", i);
+> > +                       goto fail;
+> > +               }
+> > +       }
+> > +
+> > +       return;
+> > +fail:
+> > +       pr_info("%s(%d, '%s', %d, %d, %d, %d)\n", __func__,
+> > +               count, src, expected, chars, terminator, pad);
+> > +       failed_tests++;
+> > +}
+> > +
+> > +static void __init test_fully(void)
+> > +{
+> > +       /* do_test(count, src, expected, chars, terminator, pad) */
+> > +
+> > +       do_test(0, "a", -E2BIG, 0, 0, 0);
+> > +       do_test(0, "", -E2BIG, 0, 0, 0);
+> > +
+> > +       do_test(1, "a", -E2BIG, 0, 1, 0);
+> > +       do_test(1, "", 0, 0, 1, 0);
+> > +
+> > +       do_test(2, "ab", -E2BIG, 1, 1, 0);
+> > +       do_test(2, "a", 1, 1, 1, 0);
+> > +       do_test(2, "", 0, 0, 1, 1);
+> > +
+> > +       do_test(3, "abc", -E2BIG, 2, 1, 0);
+> > +       do_test(3, "ab", 2, 2, 1, 0);
+> > +       do_test(3, "a", 1, 1, 1, 1);
+> > +       do_test(3, "", 0, 0, 1, 2);
+> > +
+> > +       do_test(4, "abcd", -E2BIG, 3, 1, 0);
+> > +       do_test(4, "abc", 3, 3, 1, 0);
+> > +       do_test(4, "ab", 2, 2, 1, 1);
+> > +       do_test(4, "a", 1, 1, 1, 2);
+> > +       do_test(4, "", 0, 0, 1, 3);
+> > +}
+> > +
+> > +static void __init test_basic(void)
+> > +{
+> > +       char buf[6];
+> > +       int written;
+> > +
+> > +       memset(buf, 'a', sizeof(buf));
+> > +
+> > +       total_tests++;
+> > +       written = strscpy_pad(buf, "bb", 4);
+> > +       if (written != 2)
+> > +               failed_tests++;
+> > +
+> > +       /* Correctly copied */
+> > +       total_tests++;
+> > +       if (buf[0] != 'b' || buf[1] != 'b')
+> > +               failed_tests++;
+> > +
+> > +       /* Correctly padded */
+> > +       total_tests++;
+> > +       if (buf[2] != '\0' || buf[3] != '\0')
+> > +               failed_tests++;
+> > +
+> > +       /* Only touched what it was supposed to */
+> > +       total_tests++;
+> > +       if (buf[4] != 'a' || buf[5] != 'a')
+> > +               failed_tests++;
+> > +}
+> 
+> I don't think you need to keep "test_basic". Anything it tests can be
+> rewritten in terms of do_test().
+> 
+> > +
+> > +static int __init test_strscpy_init(void)
+> > +{
+> > +       pr_info("loaded.\n");
+> > +
+> > +       test_basic();
+> > +       if (failed_tests)
+> > +               goto out;
+> > +
+> > +       test_fully();
+> > +
+> > +out:
+> > +       if (failed_tests == 0)
+> > +               pr_info("all %u tests passed\n", total_tests);
+> > +       else
+> > +               pr_warn("failed %u out of %u tests\n", failed_tests, total_tests);
+> > +
+> > +       return failed_tests ? -EINVAL : 0;
+> > +}
+> > +module_init(test_strscpy_init);
+> > +
+> > +static void __exit test_strscpy_exit(void)
+> > +{
+> > +       pr_info("unloaded.\n");
+> > +}
+> > +module_exit(test_strscpy_exit);
+> > +
+> > +MODULE_AUTHOR("Tobin C. Harding <tobin@kernel.org>");
+> > +MODULE_LICENSE("GPL");
+> > --
+> > 2.20.1
+> >
+> 
+> Otherwise, yes, looks good!
 
-ffffffff8171bce0 <native_write_cr4>:
-ffffffff8171bce0:       48 8b 35 79 46 f2 00    mov    0xf24679(%rip),%rsi
-ffffffff8171bce7:       48 09 f7                or     %rsi,%rdi
-ffffffff8171bcea:       0f 22 e7                mov    %rdi,%cr4
-...
-ffffffff8171bd5a:       c3                      retq
+Cool, thanks.  Will fix up as suggested and re-spin.
 
-The UNSET_SMEP test will jump to ffffffff8171bcea (the mov to cr4)
-instead of ffffffff8171bce0 (native_write_cr4() entry) to simulate a
-direct-call bypass attempt.
-
-Expected successful results:
-
-  # echo UNSET_SMEP > /sys/kernel/debug/provoke-crash/DIRECT
-  # dmesg
-  [   79.594433] lkdtm: Performing direct entry UNSET_SMEP
-  [   79.596459] lkdtm: trying to clear SMEP normally
-  [   79.598406] lkdtm: ok: SMEP did not get cleared
-  [   79.599981] lkdtm: trying to clear SMEP with call gadget
-  [   79.601810] ------------[ cut here ]------------
-  [   79.603421] Attempt to unpin cr4 bits: 100000; bypass attack?!
-  ...
-  [   79.650170] ---[ end trace 2452ca0f6126242e ]---
-  [   79.650937] lkdtm: ok: SMEP removal was reverted
-
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-v2: fix 64 vs 256 loop-end comparison, use a #define instead
----
- drivers/misc/lkdtm/bugs.c  | 61 ++++++++++++++++++++++++++++++++++++++
- drivers/misc/lkdtm/core.c  |  1 +
- drivers/misc/lkdtm/lkdtm.h |  1 +
- 3 files changed, 63 insertions(+)
-
-diff --git a/drivers/misc/lkdtm/bugs.c b/drivers/misc/lkdtm/bugs.c
-index 7eebbdfbcacd..6176384b4f85 100644
---- a/drivers/misc/lkdtm/bugs.c
-+++ b/drivers/misc/lkdtm/bugs.c
-@@ -255,3 +255,64 @@ void lkdtm_STACK_GUARD_PAGE_TRAILING(void)
- 
- 	pr_err("FAIL: accessed page after stack!\n");
- }
-+
-+void lkdtm_UNSET_SMEP(void)
-+{
-+#ifdef CONFIG_X86_64
-+#define MOV_CR4_DEPTH	64
-+	void (*direct_write_cr4)(unsigned long val);
-+	unsigned char *insn;
-+	unsigned long cr4;
-+	int i;
-+
-+	cr4 = native_read_cr4();
-+
-+	if ((cr4 & X86_CR4_SMEP) != X86_CR4_SMEP) {
-+		pr_err("FAIL: SMEP not in use\n");
-+		return;
-+	}
-+	cr4 &= ~(X86_CR4_SMEP);
-+
-+	pr_info("trying to clear SMEP normally\n");
-+	native_write_cr4(cr4);
-+	if (cr4 == native_read_cr4()) {
-+		pr_err("FAIL: pinning SMEP failed!\n");
-+		cr4 |= X86_CR4_SMEP;
-+		pr_info("restoring SMEP\n");
-+		native_write_cr4(cr4);
-+		return;
-+	}
-+	pr_info("ok: SMEP did not get cleared\n");
-+
-+	/*
-+	 * To test the post-write pinning verification we need to call
-+	 * directly into the the middle of native_write_cr4() where the
-+	 * cr4 write happens, skipping the pinning. This searches for
-+	 * the cr4 writing instruction.
-+	 */
-+	insn = (unsigned char *)native_write_cr4;
-+	for (i = 0; i < MOV_CR4_DEPTH; i++) {
-+		/* mov %rdi, %cr4 */
-+		if (insn[i] == 0x0f && insn[i+1] == 0x22 && insn[i+2] == 0xe7)
-+			break;
-+	}
-+	if (i >= MOV_CR4_DEPTH) {
-+		pr_info("ok: cannot locate cr4 writing call gadget\n");
-+		return;
-+	}
-+	direct_write_cr4 = (void *)(insn + i);
-+
-+	pr_info("trying to clear SMEP with call gadget\n");
-+	direct_write_cr4(cr4);
-+	if (native_read_cr4() & X86_CR4_SMEP) {
-+		pr_info("ok: SMEP removal was reverted\n");
-+	} else {
-+		pr_err("FAIL: cleared SMEP not detected!\n");
-+		cr4 |= X86_CR4_SMEP;
-+		pr_info("restoring SMEP\n");
-+		native_write_cr4(cr4);
-+	}
-+#else
-+	pr_err("FAIL: this test is x86_64-only\n");
-+#endif
-+}
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index 2837dc77478e..fd668776414b 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -132,6 +132,7 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(CORRUPT_LIST_ADD),
- 	CRASHTYPE(CORRUPT_LIST_DEL),
- 	CRASHTYPE(CORRUPT_USER_DS),
-+	CRASHTYPE(UNSET_SMEP),
- 	CRASHTYPE(CORRUPT_STACK),
- 	CRASHTYPE(CORRUPT_STACK_STRONG),
- 	CRASHTYPE(STACK_GUARD_PAGE_LEADING),
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index 3c6fd327e166..9c78d7e21c13 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -26,6 +26,7 @@ void lkdtm_CORRUPT_LIST_DEL(void);
- void lkdtm_CORRUPT_USER_DS(void);
- void lkdtm_STACK_GUARD_PAGE_LEADING(void);
- void lkdtm_STACK_GUARD_PAGE_TRAILING(void);
-+void lkdtm_UNSET_SMEP(void);
- 
- /* lkdtm_heap.c */
- void lkdtm_OVERWRITE_ALLOCATION(void);
--- 
-2.17.1
-
-
--- 
-Kees Cook
+	Tobin
