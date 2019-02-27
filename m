@@ -1,46 +1,53 @@
-Date: Wed, 27 Feb 2019 11:44:07 +0100
-From: Solar Designer <solar@openwall.com>
-Subject: Re: [PATCH 1/3] x86/asm: Pin sensitive CR0 bits
-Message-ID: <20190227104407.GA18804@openwall.com>
-References: <20190226233647.28547-1-keescook@chromium.org> <20190226233647.28547-2-keescook@chromium.org>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190226233647.28547-2-keescook@chromium.org>
-To: Kees Cook <keescook@chromium.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>, Jann Horn <jannh@google.com>, Sean Christopherson <sean.j.christopherson@intel.com>, Dominik Brodowski <linux@dominikbrodowski.net>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-kernel@vger.kernel.org
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
+Date: Wed, 27 Feb 2019 11:03:42 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4BDC35E@IRSMSX102.ger.corp.intel.com>
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <20190208130544.GI32511@hirez.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
+ <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
+ <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
+ <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net>
+ <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
+ <CAGXu5jJSWf=CAij3_dxA9+n6+fWtt1MOT3dWD07vdkhrfC8bpQ@mail.gmail.com>
+ <CAGXu5j+833Rv5dnsNth522WGirAjysipPo2gecSX2HC5y-MkUg@mail.gmail.com>
+ <CAGXu5jL=uPyP=eG296oTixkto83LqVyasvo9qaNEn2P6bAtufQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jL=uPyP=eG296oTixkto83LqVyasvo9qaNEn2P6bAtufQ@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+To: Kees Cook <keescook@chromium.org>, "Perla, Enrico" <enrico.perla@intel.com>
+Cc: Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 26, 2019 at 03:36:45PM -0800, Kees Cook wrote:
->  static inline void native_write_cr0(unsigned long val)
->  {
-> -	asm volatile("mov %0,%%cr0": : "r" (val), "m" (__force_order));
-> +	bool warn = false;
-> +
-> +again:
-> +	val |= X86_CR0_WP;
-> +	/*
-> +	 * In order to have the compiler not optimize away the check
-> +	 * in the WARN_ONCE(), mark "val" as being also an output ("+r")
-
-This comment is now slightly out of date: the check is no longer "in the
-WARN_ONCE()".  Ditto about the comment for CR4.
-
-> +	 * by this asm() block so it will perform an explicit check, as
-> +	 * if it were "volatile".
-> +	 */
-> +	asm volatile("mov %0,%%cr0": "+r" (val) : "m" (__force_order) : );
-> +	/*
-> +	 * If the MOV above was used directly as a ROP gadget we can
-> +	 * notice the lack of pinned bits in "val" and start the function
-> +	 * from the beginning to gain the WP bit for sure. And do it
-> +	 * without first taking the exception for a WARN().
-> +	 */
-> +	if ((val & X86_CR0_WP) != X86_CR0_WP) {
-> +		warn = true;
-> +		goto again;
-> +	}
-> +	WARN_ONCE(warn, "Attempt to unpin X86_CR0_WP, cr0 bypass attack?!\n");
->  }
-
-Alexander
+DQo+IE9uIFdlZCwgRmViIDIwLCAyMDE5IGF0IDI6NTMgUE0gS2VlcyBDb29rIDxrZWVzY29va0Bj
+aHJvbWl1bS5vcmc+IHdyb3RlOg0KPiA+IEJUVywgdGhlIGF0dGFjayB0aGF0IGluc3BpcmVkIGdy
+c2VjdXJpdHkncyBSQU5ES1NUQUNLIGlzIGRlc2NyaWJlZCBpbg0KPiA+IHRoZXNlIHNsaWRlcyAo
+bG90cyBvZiBzdGVwcywgc2VlIHNsaWRlIDc5KToNCj4gPiBodHRwczovL3d3dy5zbGlkZXNoYXJl
+Lm5ldC9zY292ZXR0YS9zdGFja2phY2tpbmcNCj4gDQo+IFNvcnJ5LCBhcyBQYVggVGVhbSByZW1p
+bmRlZCBtZSwgSSBtaXNyZW1lbWJlcmVkIHRoaXMuIFJBTkRLU1RBQ0sNCj4gYWxyZWFkeSBleGlz
+dGVkLiBJdCB3YXMgU1RBQ0tMRUFLIHRoYXQgd2FzIGNyZWF0ZWQgaW4gcmVzcG9uc2UgdG8gdGhp
+cw0KPiBwYXJ0aWN1bGFyIGF0dGFjay4gSSBzdGlsbCB0aGluayB0aGlzIGF0dGFjayBpcyB3b3J0
+aCB1bmRlcnN0YW5kaW5nIHRvDQo+IHNlZSB3aGF0IGhvb3BzIG11c3QgYmUganVtcGVkIHRocm91
+Z2ggd2hlbiBkZWFsaW5nIHdpdGggc3RhY2sNCj4gcmFuZG9taXphdGlvbiAoYW5kIG90aGVyIGRl
+ZmVuc2VzKS4NCg0KWWVzLCBJIGFjdHVhbGx5IHdlbnQgdGhyb3VnaCBhIG51bWJlciBvZiBzdGFj
+ay1iYXNlZCBhdHRhY2tzLCBpbmNsdWRpbmcgYWJvdmUsDQppbiBvcmRlciB0byB1bmRlcnN0YW5k
+IHdoYXQgd2UgYXJlIHRyeWluZyB0byBwcm90ZWN0IGFnYWluc3QuIA0KSWYgeW91IGFyZSBpbnRl
+cmVzdGVkLCBJIHdyb3RlIHNvbWUgbm90ZXMgaGVyZSBtYWlubHkgZm9yIG9yZ2FuaXppbmcgbXkg
+b3duIA0KdGhvdWdodHMgYW5kIHVuZGVyc3RhbmRpbmc6DQoNCmh0dHBzOi8vZG9jcy5nb29nbGUu
+Y29tL2RvY3VtZW50L2QvMWgxZ1J1WnBPalZ4YWFEYWctTXhPckFTa2EwT0VCZUFwUU9sOE9LMkdJ
+VlkvZWRpdD91c3A9c2hhcmluZw0KDQpJdCBhbHNvIGhhcyByZWZlcmVuY2VzIHRvIHNsaWRlZGVj
+a3Mgb2YgcmVsZXZhbnQgYXR0YWNrcy4gDQpJIGFtIGdvaW5nIHRvIHVwZGF0ZSB0aGVtIG5vdyBi
+YXNlZCBvbiBvdXIgZ29vZCBkaXNjdXNzaW9uIGhlcmUuDQoNCkFueWhvdywgSSBhbSBnbGFkIHRo
+YXQgd2UgYXJyaXZlZCB0byBjb25jbHVzaW9uIGhlcmUgYW5kIEkga25vdyBob3cgdG8gcHJvY2Vl
+ZC4gDQpTbywgSSB3aWxsIHN0YXJ0IHdvcmtpbmcgb24gcmFuZG9taXppbmcgYWZ0ZXIgcHRfcmVn
+cyBpbiBkaXJlY3Rpb24gdGhhdCBBbmR5IG91dGxpbmVkLg0KDQpXaXRoIHJlZ2FyZHMgdG8gZGlz
+YWJsaW5nIGlvcGwoKSwgdGhpcyBpcyBwcmV0dHkgc2VwYXJhdGUgdGhpbmcuIElmIGFueW9uZSB3
+YW50cyB0byBydW4NCndpdGggdGhpcyBhbmQgc3VibWl0IGEgcGF0Y2gsIHBsZWFzZSBnbyBhaGVh
+ZCwgSSBjYW4gYWxzbyBkbyBpdCBhIGJpdCBsYXRlciAoYWZ0ZXIgYSBzdHVkeSBvZiBpdCANCnNp
+bmNlIEkgbmV2ZXIgdXNlZCBpdCBiZWZvcmUpIGlmIG5vb25lIGZpbmRzIGJhbmR3aWR0aCBpbiB0
+aGUgbWVhbnRpbWUuICANCg0KQmVzdCBSZWdhcmRzLA0KRWxlbmEuDQo=
