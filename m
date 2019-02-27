@@ -1,53 +1,80 @@
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- system call
-Date: Wed, 27 Feb 2019 11:03:42 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4BDC35E@IRSMSX102.ger.corp.intel.com>
-References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <20190208130544.GI32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
- <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
- <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
- <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net>
- <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
- <CAGXu5jJSWf=CAij3_dxA9+n6+fWtt1MOT3dWD07vdkhrfC8bpQ@mail.gmail.com>
- <CAGXu5j+833Rv5dnsNth522WGirAjysipPo2gecSX2HC5y-MkUg@mail.gmail.com>
- <CAGXu5jL=uPyP=eG296oTixkto83LqVyasvo9qaNEn2P6bAtufQ@mail.gmail.com>
-In-Reply-To: <CAGXu5jL=uPyP=eG296oTixkto83LqVyasvo9qaNEn2P6bAtufQ@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Date: Wed, 27 Feb 2019 10:42:16 -0500
+From: Joel Fernandes <joel@joelfernandes.org>
+Subject: Re: [PATCH v2 3/6] sched/cpufreq: Annotate cpufreq_update_util_data
+ pointer with __rcu
+Message-ID: <20190227154216.GA248723@google.com>
+References: <20190223063434.6793-1-joel@joelfernandes.org>
+ <20190223063434.6793-4-joel@joelfernandes.org>
+ <20190225211026.GX4072@linux.ibm.com>
 MIME-Version: 1.0
-To: Kees Cook <keescook@chromium.org>, "Perla, Enrico" <enrico.perla@intel.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190225211026.GX4072@linux.ibm.com>
+To: "Paul E. McKenney" <paulmck@linux.ibm.com>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Christian Brauner <christian@brauner.io>, Daniel Borkmann <daniel@iogearbox.net>, David Ahern <dsahern@gmail.com>, "David S. Miller" <davem@davemloft.net>, Ingo Molnar <mingo@redhat.com>, Jakub Kicinski <jakub.kicinski@netronome.com>, Jeff Kirsher <jeffrey.t.kirsher@intel.com>, Jesper Dangaard Brouer <hawk@kernel.org>, John Fastabend <john.fastabend@gmail.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, Kirill Tkhai <ktkhai@virtuozzo.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Martin KaFai Lau <kafai@fb.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, netdev@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Quentin Perret <quentin.perret@arm.com>, rcu@vger.kernel.org, Song Liu <songliubraving@fb.com>, Steven Rostedt <rostedt@goodmis.org>, Vincent Guittot <vincent.guittot@linaro.org>, xdp-newbies@vger.kernel.org, Yonghong Song <yhs@fb.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQo+IE9uIFdlZCwgRmViIDIwLCAyMDE5IGF0IDI6NTMgUE0gS2VlcyBDb29rIDxrZWVzY29va0Bj
-aHJvbWl1bS5vcmc+IHdyb3RlOg0KPiA+IEJUVywgdGhlIGF0dGFjayB0aGF0IGluc3BpcmVkIGdy
-c2VjdXJpdHkncyBSQU5ES1NUQUNLIGlzIGRlc2NyaWJlZCBpbg0KPiA+IHRoZXNlIHNsaWRlcyAo
-bG90cyBvZiBzdGVwcywgc2VlIHNsaWRlIDc5KToNCj4gPiBodHRwczovL3d3dy5zbGlkZXNoYXJl
-Lm5ldC9zY292ZXR0YS9zdGFja2phY2tpbmcNCj4gDQo+IFNvcnJ5LCBhcyBQYVggVGVhbSByZW1p
-bmRlZCBtZSwgSSBtaXNyZW1lbWJlcmVkIHRoaXMuIFJBTkRLU1RBQ0sNCj4gYWxyZWFkeSBleGlz
-dGVkLiBJdCB3YXMgU1RBQ0tMRUFLIHRoYXQgd2FzIGNyZWF0ZWQgaW4gcmVzcG9uc2UgdG8gdGhp
-cw0KPiBwYXJ0aWN1bGFyIGF0dGFjay4gSSBzdGlsbCB0aGluayB0aGlzIGF0dGFjayBpcyB3b3J0
-aCB1bmRlcnN0YW5kaW5nIHRvDQo+IHNlZSB3aGF0IGhvb3BzIG11c3QgYmUganVtcGVkIHRocm91
-Z2ggd2hlbiBkZWFsaW5nIHdpdGggc3RhY2sNCj4gcmFuZG9taXphdGlvbiAoYW5kIG90aGVyIGRl
-ZmVuc2VzKS4NCg0KWWVzLCBJIGFjdHVhbGx5IHdlbnQgdGhyb3VnaCBhIG51bWJlciBvZiBzdGFj
-ay1iYXNlZCBhdHRhY2tzLCBpbmNsdWRpbmcgYWJvdmUsDQppbiBvcmRlciB0byB1bmRlcnN0YW5k
-IHdoYXQgd2UgYXJlIHRyeWluZyB0byBwcm90ZWN0IGFnYWluc3QuIA0KSWYgeW91IGFyZSBpbnRl
-cmVzdGVkLCBJIHdyb3RlIHNvbWUgbm90ZXMgaGVyZSBtYWlubHkgZm9yIG9yZ2FuaXppbmcgbXkg
-b3duIA0KdGhvdWdodHMgYW5kIHVuZGVyc3RhbmRpbmc6DQoNCmh0dHBzOi8vZG9jcy5nb29nbGUu
-Y29tL2RvY3VtZW50L2QvMWgxZ1J1WnBPalZ4YWFEYWctTXhPckFTa2EwT0VCZUFwUU9sOE9LMkdJ
-VlkvZWRpdD91c3A9c2hhcmluZw0KDQpJdCBhbHNvIGhhcyByZWZlcmVuY2VzIHRvIHNsaWRlZGVj
-a3Mgb2YgcmVsZXZhbnQgYXR0YWNrcy4gDQpJIGFtIGdvaW5nIHRvIHVwZGF0ZSB0aGVtIG5vdyBi
-YXNlZCBvbiBvdXIgZ29vZCBkaXNjdXNzaW9uIGhlcmUuDQoNCkFueWhvdywgSSBhbSBnbGFkIHRo
-YXQgd2UgYXJyaXZlZCB0byBjb25jbHVzaW9uIGhlcmUgYW5kIEkga25vdyBob3cgdG8gcHJvY2Vl
-ZC4gDQpTbywgSSB3aWxsIHN0YXJ0IHdvcmtpbmcgb24gcmFuZG9taXppbmcgYWZ0ZXIgcHRfcmVn
-cyBpbiBkaXJlY3Rpb24gdGhhdCBBbmR5IG91dGxpbmVkLg0KDQpXaXRoIHJlZ2FyZHMgdG8gZGlz
-YWJsaW5nIGlvcGwoKSwgdGhpcyBpcyBwcmV0dHkgc2VwYXJhdGUgdGhpbmcuIElmIGFueW9uZSB3
-YW50cyB0byBydW4NCndpdGggdGhpcyBhbmQgc3VibWl0IGEgcGF0Y2gsIHBsZWFzZSBnbyBhaGVh
-ZCwgSSBjYW4gYWxzbyBkbyBpdCBhIGJpdCBsYXRlciAoYWZ0ZXIgYSBzdHVkeSBvZiBpdCANCnNp
-bmNlIEkgbmV2ZXIgdXNlZCBpdCBiZWZvcmUpIGlmIG5vb25lIGZpbmRzIGJhbmR3aWR0aCBpbiB0
-aGUgbWVhbnRpbWUuICANCg0KQmVzdCBSZWdhcmRzLA0KRWxlbmEuDQo=
+On Mon, Feb 25, 2019 at 01:10:26PM -0800, Paul E. McKenney wrote:
+> On Sat, Feb 23, 2019 at 01:34:31AM -0500, Joel Fernandes (Google) wrote:
+> > Recently I added an RCU annotation check to rcu_assign_pointer(). All
+> > pointers assigned to RCU protected data are to be annotated with __rcu
+> > inorder to be able to use rcu_assign_pointer() similar to checks in
+> > other RCU APIs.
+> > 
+> > This resulted in a sparse error: kernel//sched/cpufreq.c:41:9: sparse:
+> > error: incompatible types in comparison expression (different address
+> > spaces)
+> > 
+> > Fix this by annotating cpufreq_update_util_data pointer with __rcu. This
+> > will also help sparse catch any future RCU misuage bugs.
+> > 
+> > Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+> 
+> From an RCU perspective:
+> 
+> Reviewed-by: Paul E. McKenney <paulmck@linux.ibm.com>
+
+Thanks a lot Paul.
+
+Peter, Rafael, Steve,
+Are you Ok with the patches 3-6? It will be nice to quiet down sparse.
+
+thanks,
+
+ - Joel
+
+> > ---
+> >  kernel/sched/cpufreq.c | 2 +-
+> >  kernel/sched/sched.h   | 2 +-
+> >  2 files changed, 2 insertions(+), 2 deletions(-)
+> > 
+> > diff --git a/kernel/sched/cpufreq.c b/kernel/sched/cpufreq.c
+> > index 22bd8980f32f..e316ee7bb2e5 100644
+> > --- a/kernel/sched/cpufreq.c
+> > +++ b/kernel/sched/cpufreq.c
+> > @@ -7,7 +7,7 @@
+> >   */
+> >  #include "sched.h"
+> >  
+> > -DEFINE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
+> > +DEFINE_PER_CPU(struct update_util_data __rcu *, cpufreq_update_util_data);
+> >  
+> >  /**
+> >   * cpufreq_add_update_util_hook - Populate the CPU's update_util_data pointer.
+> > diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+> > index d04530bf251f..2ab545d40381 100644
+> > --- a/kernel/sched/sched.h
+> > +++ b/kernel/sched/sched.h
+> > @@ -2166,7 +2166,7 @@ static inline u64 irq_time_read(int cpu)
+> >  #endif /* CONFIG_IRQ_TIME_ACCOUNTING */
+> >  
+> >  #ifdef CONFIG_CPU_FREQ
+> > -DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
+> > +DECLARE_PER_CPU(struct update_util_data __rcu *, cpufreq_update_util_data);
+> >  
+> >  /**
+> >   * cpufreq_update_util - Take a note about CPU utilization changes.
+> > -- 
+> > 2.21.0.rc0.258.g878e2cd30e-goog
+> > 
+> 
