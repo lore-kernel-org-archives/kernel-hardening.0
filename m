@@ -1,69 +1,83 @@
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v2 1/3] x86/asm: Pin sensitive CR0 bits
-Date: Wed, 27 Feb 2019 12:01:30 -0800
-Message-Id: <20190227200132.24707-2-keescook@chromium.org>
-In-Reply-To: <20190227200132.24707-1-keescook@chromium.org>
-References: <20190227200132.24707-1-keescook@chromium.org>
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Solar Designer <solar@openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Jann Horn <jannh@google.com>, Sean Christopherson <sean.j.christopherson@intel.com>, Dominik Brodowski <linux@dominikbrodowski.net>, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+MIME-Version: 1.0
+References: <20190212180441.15340-1-keescook@chromium.org> <20190212180441.15340-2-keescook@chromium.org>
+In-Reply-To: <20190212180441.15340-2-keescook@chromium.org>
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Thu, 28 Feb 2019 21:27:08 +0100
+Message-ID: <CAK8P3a2xC3OVckPnweSjor3AH5LpSzichKxAjkAcgXDtCf0QmQ@mail.gmail.com>
+Subject: Re: [PATCH 1/2] gcc-plugins: structleak: Generalize to all variable types
+Content-Type: text/plain; charset="UTF-8"
+To: Kees Cook <keescook@chromium.org>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, Alexander Popov <alex.popov@linux.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Alexander Potapenko <glider@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-With sensitive CR4 bits pinned now, it's possible that the WP bit for CR0
-might become a target as well. Following the same reasoning for the CR4
-pinning, this pins CR0's WP bit (but this can be done with a static value).
+On Tue, Feb 12, 2019 at 7:08 PM Kees Cook <keescook@chromium.org> wrote:
+>
+> This adjusts structleak to also work with non-struct types when they
+> are passed by reference, since those variables may leak just like
+> anything else. This is exposed via an improved set of Kconfig options.
+> (This does mean structleak is slightly misnamed now.)
+>
+> Building with CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL should give the
+> kernel complete initialization coverage of all stack variables passed
+> by reference, including padding (see lib/test_stackinit.c).
+>
+> Using CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE to count added initializations
+> under defconfig:
+>
+>         ..._BYREF:      5945 added initializations
+>         ..._BYREF_ALL: 16606 added initializations
+>
+> There is virtually no change to text+data size (both have less than 0.05%
+> growth):
 
-As before, to convince the compiler to not optimize away the check for the
-WP bit after the set, this marks "val" as an output from the asm() block.
-This protects against just jumping into the function past where the masking
-happens; we must check that the mask was applied after we do the set). Due
-to how this function can be built by the compiler (especially due to the
-removal of frame pointers), jumping into the middle of the function
-frequently doesn't require stack manipulation to construct a stack frame
-(there may only a retq without pops, which is sufficient for use with
-exploits like timer overwrites).
+I just resumed my randconfig build testing after a longer break, and found
+a regression for stack usage that I bisected to your change. It shows up in a
+variety of files depending on the configuration, so far the worst one is the
+configuration at https://pastebin.com/UK54qbKa that leads to
 
-Additionally, this avoids WARN()ing before resetting the bit, just to
-minimize any race conditions with leaving the bit unset.
-
-Suggested-by: Peter Zijlstra <peterz@infradead.org>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/x86/include/asm/special_insns.h | 23 ++++++++++++++++++++++-
- 1 file changed, 22 insertions(+), 1 deletion(-)
-
-diff --git a/arch/x86/include/asm/special_insns.h b/arch/x86/include/asm/special_insns.h
-index fabda1400137..1f01dc3f6c64 100644
---- a/arch/x86/include/asm/special_insns.h
-+++ b/arch/x86/include/asm/special_insns.h
-@@ -25,7 +25,28 @@ static inline unsigned long native_read_cr0(void)
- 
- static inline void native_write_cr0(unsigned long val)
- {
--	asm volatile("mov %0,%%cr0": : "r" (val), "m" (__force_order));
-+	bool warn = false;
-+
-+again:
-+	val |= X86_CR0_WP;
-+	/*
-+	 * In order to have the compiler not optimize away the check
-+	 * after the cr4 write, mark "val" as being also an output ("+r")
-+	 * by this asm() block so it will perform an explicit check, as
-+	 * if it were "volatile".
-+	 */
-+	asm volatile("mov %0,%%cr0" : "+r" (val) : "m" (__force_order) : );
-+	/*
-+	 * If the MOV above was used directly as a ROP gadget we can
-+	 * notice the lack of pinned bits in "val" and start the function
-+	 * from the beginning to gain the WP bit for sure. And do it
-+	 * without first taking the exception for a WARN().
-+	 */
-+	if ((val & X86_CR0_WP) != X86_CR0_WP) {
-+		warn = true;
-+		goto again;
-+	}
-+	WARN_ONCE(warn, "Attempt to unpin X86_CR0_WP, cr0 bypass attack?!\n");
+../drivers/media/dvb-frontends/stv090x.c: In function 'stv090x_start_search':
+../drivers/media/dvb-frontends/stv090x.c:1595:1: error: the frame size
+of 5320 bytes is larger than 2048 bytes [-Werror=frame-larger-than=]
+../drivers/media/dvb-frontends/stv090x.c: In function 'stv090x_optimize_track':
+../drivers/media/dvb-frontends/stv090x.c:3090:1: error: the frame size
+of 5872 bytes is larger than 2048 bytes [-Werror=frame-larger-than=]
+../drivers/media/dvb-frontends/stv090x.c: In function 'stv090x_algo':
+../drivers/media/dvb-frontends/stv090x.c:3431:1: error: the frame size
+of 5144 bytes is larger than 2048 bytes [-Werror=frame-larger-than=]
  }
- 
- static inline unsigned long native_read_cr2(void)
--- 
-2.17.1
+
+At least for this specific file, I also see a significant (though not alarming)
+increase in code size:
+
+   text       data        bss        dec        hex    filename
+179196       4632        256     184084      2cf14
+obj-x86/drivers/media/dvb-frontends/stv090x-before.o
+ 216740       4632        256     221628      361bc
+obj-x86/drivers/media/dvb-frontends/stv090x-after.o
+
+Part of the problem here is definitely interaction with the asan-stack
+sanitizer. Changing asan-stack=1 to asan-stack=0, it looks a lot
+better:
+
+../drivers/media/dvb-frontends/stv090x.c: In function 'stv090x_start_search':
+../drivers/media/dvb-frontends/stv090x.c:1595:1: warning: the frame
+size of 120 bytes is larger than 20 bytes [-Wframe-larger-than=]
+../drivers/media/dvb-frontends/stv090x.c: In function 'stv090x_optimize_track':
+../drivers/media/dvb-frontends/stv090x.c:3090:1: warning: the frame
+size of 168 bytes is larger than 20 bytes [-Wframe-larger-than=]
+../drivers/media/dvb-frontends/stv090x.c: In function 'stv090x_algo':
+../drivers/media/dvb-frontends/stv090x.c:3431:1: warning: the frame
+size of 192 bytes is larger than 20 bytes [-Wframe-larger-than=]
+
+   text       data        bss        dec        hex    filename
+184061       4632        256     188949      2e215
+obj-x86/drivers/media/dvb-frontends/stv090x.o
+
+I get similar results with asan-stack=1 but without your plugin, only
+the combination of the two has the explosive stack size growth.
+
+I can help analyze this further, but maybe you can have a look first,
+there might be something obvious when you read the input to the
+plugin.
+
+      Arnd
