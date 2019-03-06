@@ -1,7 +1,7 @@
 From: "Tobin C. Harding" <tobin@kernel.org>
-Subject: [PATCH v3 2/7] kselftest: Add test runner creation script
-Date: Thu,  7 Mar 2019 08:42:21 +1100
-Message-Id: <20190306214226.14598-3-tobin@kernel.org>
+Subject: [PATCH v3 3/7] kselftest/lib: Use new shell runner to define tests
+Date: Thu,  7 Mar 2019 08:42:22 +1100
+Message-Id: <20190306214226.14598-4-tobin@kernel.org>
 In-Reply-To: <20190306214226.14598-1-tobin@kernel.org>
 References: <20190306214226.14598-1-tobin@kernel.org>
 MIME-Version: 1.0
@@ -10,105 +10,126 @@ To: Kees Cook <keescook@chromium.org>, Shuah Khan <shuah@kernel.org>
 Cc: "Tobin C. Harding" <tobin@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, kernel-hardening@lists.openwall.com, linux-kselftest@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently if we wish to use kselftest to run tests within a kernel
-module we write a small script to load/unload and do error reporting.
-There are a bunch of these under tools/testing/selftests/lib/ that are
-all identical except for the test name.  We can reduce code duplication
-and improve maintainability if we have one version of this.  However
-kselftest requires an executable for each test.  We can move all the
-script logic to a central script then have each individual test script
-set the module name and call the main script.  There is a little bit of
-boilerplate left in each script to handle building/running tests with
-the O=/path/to/out make option.
+We just added a new script kselftest_module.sh that can be used to
+define kselftest tests that run tests within a kernel module.  We can
+use it to reduce code duplication in all of the test runner scripts in
+tools/testing/selftests/lib/.
 
-Add test runner creation script.
+Use new shell runner tools/testing/selftests/kselftest_module.sh to
+define test runner scripts.
 
 Signed-off-by: Tobin C. Harding <tobin@kernel.org>
 ---
- tools/testing/selftests/kselftest_module.sh | 75 +++++++++++++++++++++
- 1 file changed, 75 insertions(+)
- create mode 100755 tools/testing/selftests/kselftest_module.sh
+ tools/testing/selftests/lib/bitmap.sh        | 25 ++++++++++----------
+ tools/testing/selftests/lib/prime_numbers.sh | 23 +++++++++---------
+ tools/testing/selftests/lib/printf.sh        | 25 ++++++++++----------
+ 3 files changed, 35 insertions(+), 38 deletions(-)
 
-diff --git a/tools/testing/selftests/kselftest_module.sh b/tools/testing/selftests/kselftest_module.sh
-new file mode 100755
-index 000000000000..b5d446738614
---- /dev/null
-+++ b/tools/testing/selftests/kselftest_module.sh
-@@ -0,0 +1,75 @@
-+#!/bin/sh
-+# SPDX-License-Identifier: GPL-2.0+
-+
+diff --git a/tools/testing/selftests/lib/bitmap.sh b/tools/testing/selftests/lib/bitmap.sh
+index 5a90006d1aea..ed4180ea0021 100755
+--- a/tools/testing/selftests/lib/bitmap.sh
++++ b/tools/testing/selftests/lib/bitmap.sh
+@@ -1,19 +1,18 @@
+ #!/bin/sh
+ # SPDX-License-Identifier: GPL-2.0
+ 
+-# Kselftest framework requirement - SKIP code is 4.
+-ksft_skip=4
++module=test_bitmap
++description="bitmap"
+ 
+-# Runs bitmap infrastructure tests using test_bitmap kernel module
+-if ! /sbin/modprobe -q -n test_bitmap; then
+-	echo "bitmap: module test_bitmap is not found [SKIP]"
+-	exit $ksft_skip
+-fi
 +#
-+# Runs an individual test module.  kselftest expects a separate
-+# executable for each test.  So test should each have an individial
-+# script that can call this script.
++# Shouldn't need to edit anything below here.
 +#
+ 
+-if /sbin/modprobe -q test_bitmap; then
+-	/sbin/modprobe -q -r test_bitmap
+-	echo "bitmap: ok"
+-else
+-	echo "bitmap: [FAIL]"
+-	exit 1
++file="kselftest_module.sh"
++path="../$file"
++if [[ ! $KBUILD_SRC == "" ]]; then
++    path="${KBUILD_SRC}/tools/testing/selftests/$file"
+ fi
 +
-+# Individual test scrits should define these:
-+module=""			# filename (without the .ko).
-+desc=""				# Output prefix.
++$path $module $description
 +
-+modprobe="/sbin/modprobe"
-+
-+main() {
-+    parse_args $@
-+    assert_root
-+    assert_have_module
-+    run_module
-+}
-+
-+parse_args() {
-+    script=${0##*/}
-+
-+    if [[ ! $# -eq 2 ]]; then
-+	echo "Usage: $script <module_name> <description> [FAIL]"
-+	exit 1
-+    fi
-+
-+    module=$1
-+    desc=$2
-+}
-+
-+assert_root() {
-+    if [[ $EUID -ne 0 ]]; then
-+	skip "please run as root"
-+    fi
-+}
-+
-+assert_have_module() {
-+    if ! $modprobe -q -n $module; then
-+	skip "module $module is not found"
-+    fi
-+}
-+
-+run_module() {
-+    if $modprobe -q $module; then
-+	$modprobe -q -r $module
-+	say "ok"
-+    else
-+	fail ""
-+    fi
-+}
-+
-+say() {
-+    echo "$desc: $1"
-+}
-+
-+
-+fail() {
-+    say "$1 [FAIL]" >&2
-+    exit 1
-+}
-+
-+skip() {
-+    say "$1 [SKIP]" >&2
-+    # Kselftest framework requirement - SKIP code is 4.
-+    exit 4
-+}
-+
+diff --git a/tools/testing/selftests/lib/prime_numbers.sh b/tools/testing/selftests/lib/prime_numbers.sh
+index 78e7483c8d60..6f782386d897 100755
+--- a/tools/testing/selftests/lib/prime_numbers.sh
++++ b/tools/testing/selftests/lib/prime_numbers.sh
+@@ -2,18 +2,17 @@
+ # SPDX-License-Identifier: GPL-2.0
+ # Checks fast/slow prime_number generation for inconsistencies
+ 
+-# Kselftest framework requirement - SKIP code is 4.
+-ksft_skip=4
++module=prime_numbers
++description="prime_numbers"
+ 
+-if ! /sbin/modprobe -q -n prime_numbers; then
+-	echo "prime_numbers: module prime_numbers is not found [SKIP]"
+-	exit $ksft_skip
+-fi
 +#
-+# Main script
++# Shouldn't need to edit anything below here.
 +#
-+main $@
+ 
+-if /sbin/modprobe -q prime_numbers selftest=65536; then
+-	/sbin/modprobe -q -r prime_numbers
+-	echo "prime_numbers: ok"
+-else
+-	echo "prime_numbers: [FAIL]"
+-	exit 1
++file="kselftest_module.sh"
++path="../$file"
++if [[ ! $KBUILD_SRC == "" ]]; then
++    path="${KBUILD_SRC}/tools/testing/selftests/$file"
+ fi
++
++$path $module $description
+diff --git a/tools/testing/selftests/lib/printf.sh b/tools/testing/selftests/lib/printf.sh
+index 45a23e2d64ad..89717915d028 100755
+--- a/tools/testing/selftests/lib/printf.sh
++++ b/tools/testing/selftests/lib/printf.sh
+@@ -1,19 +1,18 @@
+ #!/bin/sh
+ # SPDX-License-Identifier: GPL-2.0
+-# Runs printf infrastructure using test_printf kernel module
++# Tests the printf infrastructure using test_printf kernel module.
+ 
+-# Kselftest framework requirement - SKIP code is 4.
+-ksft_skip=4
++module=test_printf
++description="printf"
+ 
+-if ! /sbin/modprobe -q -n test_printf; then
+-	echo "printf: module test_printf is not found [SKIP]"
+-	exit $ksft_skip
+-fi
++#
++# Shouldn't need to edit anything below here.
++#
+ 
+-if /sbin/modprobe -q test_printf; then
+-	/sbin/modprobe -q -r test_printf
+-	echo "printf: ok"
+-else
+-	echo "printf: [FAIL]"
+-	exit 1
++file="kselftest_module.sh"
++path="../$file"
++if [[ ! $KBUILD_SRC == "" ]]; then
++    path="${KBUILD_SRC}/tools/testing/selftests/$file"
+ fi
++
++$path $module $description
 -- 
 2.20.1
