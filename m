@@ -1,7 +1,7 @@
 From: "Tobin C. Harding" <tobin@kernel.org>
-Subject: [PATCH v3 4/7] kselftest: Add test module framework header
-Date: Thu,  7 Mar 2019 08:42:23 +1100
-Message-Id: <20190306214226.14598-5-tobin@kernel.org>
+Subject: [PATCH v3 6/7] lib/string: Add strscpy_pad() function
+Date: Thu,  7 Mar 2019 08:42:25 +1100
+Message-Id: <20190306214226.14598-7-tobin@kernel.org>
 In-Reply-To: <20190306214226.14598-1-tobin@kernel.org>
 References: <20190306214226.14598-1-tobin@kernel.org>
 MIME-Version: 1.0
@@ -10,212 +10,108 @@ To: Kees Cook <keescook@chromium.org>, Shuah Khan <shuah@kernel.org>
 Cc: "Tobin C. Harding" <tobin@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, kernel-hardening@lists.openwall.com, linux-kselftest@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-kselftest runs as a userspace process.  Sometimes we need to test things
-from kernel space.  One way of doing this is by creating a test module.
-Currently doing so requires developers to write a bunch of boiler plate
-in the module if kselftest is to be used to run the tests.  This means
-we currently have a load of duplicate code to achieve these ends.  If we
-have a uniform method for implementing test modules then we can reduce
-code duplication, ensure uniformity in the test framework, ease code
-maintenance, and reduce the work required to create tests.  This all
-helps to encourage developers to write and run tests.
+We have a function to copy strings safely and we have a function to copy
+strings and zero the tail of the destination (if source string is
+shorter than destination buffer) but we do not have a function to do
+both at once.  This means developers must write this themselves if they
+desire this functionality.  This is a chore, and also leaves us open to
+off by one errors unnecessarily.
 
-Add a C header file that can be included in test modules.  This provides
-a single point for common test functions/macros.  Implement a few macros
-that make up the start of the test framework.
-
-Add documentation for new kselftest header and script to kselftest
-documentation.
+Add a function that calls strscpy() then memset()s the tail to zero if
+the source string is shorter than the destination buffer.
 
 Signed-off-by: Tobin C. Harding <tobin@kernel.org>
 ---
- Documentation/dev-tools/kselftest.rst      | 108 ++++++++++++++++++++-
- tools/testing/selftests/kselftest_module.h |  48 +++++++++
- 2 files changed, 154 insertions(+), 2 deletions(-)
- create mode 100644 tools/testing/selftests/kselftest_module.h
+ include/linux/string.h |  4 ++++
+ lib/string.c           | 47 +++++++++++++++++++++++++++++++++++-------
+ 2 files changed, 44 insertions(+), 7 deletions(-)
 
-diff --git a/Documentation/dev-tools/kselftest.rst b/Documentation/dev-tools/kselftest.rst
-index 7756f7a7c23b..fb7790d47147 100644
---- a/Documentation/dev-tools/kselftest.rst
-+++ b/Documentation/dev-tools/kselftest.rst
-@@ -14,6 +14,10 @@ in safe mode with a limited scope. In limited mode, cpu-hotplug test is
- run on a single cpu as opposed to all hotplug capable cpus, and memory
- hotplug test is run on 2% of hotplug capable memory instead of 10%.
+diff --git a/include/linux/string.h b/include/linux/string.h
+index 7927b875f80c..bfe95bf5d07e 100644
+--- a/include/linux/string.h
++++ b/include/linux/string.h
+@@ -31,6 +31,10 @@ size_t strlcpy(char *, const char *, size_t);
+ #ifndef __HAVE_ARCH_STRSCPY
+ ssize_t strscpy(char *, const char *, size_t);
+ #endif
++
++/* Wraps calls to strscpy()/memset(), no arch specific code required */
++ssize_t strscpy_pad(char *dest, const char *src, size_t count);
++
+ #ifndef __HAVE_ARCH_STRCAT
+ extern char * strcat(char *, const char *);
+ #endif
+diff --git a/lib/string.c b/lib/string.c
+index 38e4ca08e757..3a3353512184 100644
+--- a/lib/string.c
++++ b/lib/string.c
+@@ -159,11 +159,9 @@ EXPORT_SYMBOL(strlcpy);
+  * @src: Where to copy the string from
+  * @count: Size of destination buffer
+  *
+- * Copy the string, or as much of it as fits, into the dest buffer.
+- * The routine returns the number of characters copied (not including
+- * the trailing NUL) or -E2BIG if the destination buffer wasn't big enough.
+- * The behavior is undefined if the string buffers overlap.
+- * The destination buffer is always NUL terminated, unless it's zero-sized.
++ * Copy the string, or as much of it as fits, into the dest buffer.  The
++ * behavior is undefined if the string buffers overlap.  The destination
++ * buffer is always NUL terminated, unless it's zero-sized.
+  *
+  * Preferred to strlcpy() since the API doesn't require reading memory
+  * from the src string beyond the specified "count" bytes, and since
+@@ -173,8 +171,10 @@ EXPORT_SYMBOL(strlcpy);
+  *
+  * Preferred to strncpy() since it always returns a valid string, and
+  * doesn't unnecessarily force the tail of the destination buffer to be
+- * zeroed.  If the zeroing is desired, it's likely cleaner to use strscpy()
+- * with an overflow test, then just memset() the tail of the dest buffer.
++ * zeroed.  If zeroing is desired please use strscpy_pad().
++ *
++ * Return: The number of characters copied (not including the trailing
++ *         %NUL) or -E2BIG if the destination buffer wasn't big enough.
+  */
+ ssize_t strscpy(char *dest, const char *src, size_t count)
+ {
+@@ -237,6 +237,39 @@ ssize_t strscpy(char *dest, const char *src, size_t count)
+ EXPORT_SYMBOL(strscpy);
+ #endif
  
-+kselftest runs as a userspace process.  Tests that can be written/run in
-+userspace may wish to use the `Test Harness`_.  Tests that need to be
-+run in kernel space may wish to use a `Test Module`_.
-+
- Running the selftests (hotplug tests are run in limited mode)
- =============================================================
- 
-@@ -161,11 +165,111 @@ Contributing new tests (details)
- 
-    e.g: tools/testing/selftests/android/config
- 
-+Test Module
-+===========
-+
-+Kselftest tests the kernel from userspace.  Sometimes things need
-+testing from within the kernel, one method of doing this is to create a
-+test module.  We can tie the module into the kselftest framework by
-+using a shell script test runner.  ``kselftest_module.sh`` is designed
-+to facilitate this process.  There is also a header file provided to
-+assist writing kernel modules that are for use with kselftest:
-+
-+- ``tools/testing/kselftest/kselftest_module.h``
-+- ``tools/testing/kselftest/kselftest_module.sh``
-+
-+How to use
-+----------
-+
-+Here we show the typical steps to create a test module and tie it into
-+kselftest.  We use kselftests for lib/ as an example.
-+
-+1. Create the test module
-+
-+2. Create the test script that will run (load/unload) the module
-+   e.g. ``tools/testing/selftests/lib/printf.sh``
-+
-+3. Add line to config file e.g. ``tools/testing/selftests/lib/config``
-+
-+4. Add test script to makefile  e.g. ``tools/testing/selftests/lib/Makefile``
-+
-+5. Verify it works:
-+
-+.. code-block:: sh
-+
-+   # Assumes you have booted a fresh build of this kernel tree
-+   cd /path/to/linux/tree
-+   make kselftest-merge
-+   make modules
-+   sudo make modules_install
-+   make TARGETS=lib kselftest
-+
-+Example Module
-+--------------
-+
-+A bare bones test module might look like this:
-+
-+.. code-block:: c
-+
-+   // SPDX-License-Identifier: GPL-2.0+
-+
-+   #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-+
-+   #include "../tools/testing/selftests/kselftest_module.h"
-+
-+   KSTM_MODULE_GLOBALS();
-+
-+   /*
-+    * Kernel module for testing the foobinator
-+    */
-+
-+   static int __init test_function()
-+   {
-+           ...
-+   }
-+
-+   static void __init selftest(void)
-+   {
-+           KSTM_CHECK_ZERO(do_test_case("", 0));
-+   }
-+
-+   KSTM_MODULE_LOADERS(test_foo);
-+   MODULE_AUTHOR("John Developer <jd@fooman.org>");
-+   MODULE_LICENSE("GPL");
-+
-+Example test script
-+-------------------
-+
-+.. code-block:: sh
-+
-+    #!/bin/bash
-+    # SPDX-License-Identifier: GPL-2.0+
-+
-+    module_name="test_foo"		# Module name (without the .ko).
-+    description="foo"			# Output prefix.
-+
-+    #
-+    # Shouldn't need to edit anything below here.
-+    #
-+
-+    file="kselftest_module.sh"
-+    path="../$file"
-+    if [[ ! $KBUILD_SRC == "" ]]; then
-+        path="${KBUILD_SRC}/tools/testing/selftests/$file"
-+    fi
-+
-+    $path $module_name $description
-+
-+
- Test Harness
- ============
- 
--The kselftest_harness.h file contains useful helpers to build tests.  The tests
--from tools/testing/selftests/seccomp/seccomp_bpf.c can be used as example.
-+The kselftest_harness.h file contains useful helpers to build tests.  The
-+test harness is for userspace testing, for kernel space testing see `Test
-+Module`_ above.
-+
-+The tests from tools/testing/selftests/seccomp/seccomp_bpf.c can be used as
-+example.
- 
- Example
- -------
-diff --git a/tools/testing/selftests/kselftest_module.h b/tools/testing/selftests/kselftest_module.h
-new file mode 100644
-index 000000000000..e8eafaf0941a
---- /dev/null
-+++ b/tools/testing/selftests/kselftest_module.h
-@@ -0,0 +1,48 @@
-+/* SPDX-License-Identifier: GPL-2.0+ */
-+#ifndef __KSELFTEST_MODULE_H
-+#define __KSELFTEST_MODULE_H
-+
-+#include <linux/module.h>
-+
-+/*
-+ * Test framework for writing test modules to be loaded by kselftest.
-+ * See Documentation/dev-tools/kselftest.rst for an example test module.
++/**
++ * strscpy_pad() - Copy a C-string into a sized buffer
++ * @dest: Where to copy the string to
++ * @src: Where to copy the string from
++ * @count: Size of destination buffer
++ *
++ * Copy the string, or as much of it as fits, into the dest buffer.  The
++ * behavior is undefined if the string buffers overlap.  The destination
++ * buffer is always %NUL terminated, unless it's zero-sized.
++ *
++ * If the source string is shorter than the destination buffer, zeros
++ * the tail of the destination buffer.
++ *
++ * For full explanation of why you may want to consider using the
++ * 'strscpy' functions please see the function docstring for strscpy().
++ *
++ * Return: The number of characters copied (not including the trailing
++ *         %NUL) or -E2BIG if the destination buffer wasn't big enough.
 + */
-+
-+#define KSTM_MODULE_GLOBALS()			\
-+static unsigned int total_tests __initdata;	\
-+static unsigned int failed_tests __initdata
-+
-+#define KSTM_CHECK_ZERO(x) do {						\
-+	total_tests++;							\
-+	if (x) {							\
-+		pr_warn("TC failed at %s:%d\n", __func__, __LINE__);	\
-+		failed_tests++;						\
-+	}								\
-+} while (0)
-+
-+static inline int kstm_report(unsigned int total_tests, unsigned int failed_tests)
++ssize_t strscpy_pad(char *dest, const char *src, size_t count)
 +{
-+	if (failed_tests == 0)
-+		pr_info("all %u tests passed\n", total_tests);
-+	else
-+		pr_warn("failed %u out of %u tests\n", failed_tests, total_tests);
++	ssize_t written;
 +
-+	return failed_tests ? -EINVAL : 0;
++	written = strscpy(dest, src, count);
++	if (written < 0 || written == count - 1)
++		return written;
++
++	memset(dest + written + 1, 0, count - written - 1);
++
++	return written;
 +}
++EXPORT_SYMBOL(strscpy_pad);
 +
-+#define KSTM_MODULE_LOADERS(__module)			\
-+static int __init __module##_init(void)			\
-+{							\
-+	pr_info("loaded.\n");				\
-+	selftest();					\
-+	return kstm_report(total_tests, failed_tests);	\
-+}							\
-+static void __exit __module##_exit(void)		\
-+{							\
-+	pr_info("unloaded.\n");				\
-+}							\
-+module_init(__module##_init);				\
-+module_exit(__module##_exit)
-+
-+#endif	/* __KSELFTEST_MODULE_H */
+ #ifndef __HAVE_ARCH_STRCAT
+ /**
+  * strcat - Append one %NUL-terminated string to another
 -- 
 2.20.1
