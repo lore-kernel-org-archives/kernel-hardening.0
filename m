@@ -1,23 +1,55 @@
-Date: Thu, 7 Mar 2019 08:49:34 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Subject: Re: [PATCH v3 0/7] lib/string: Add strscpy_pad() function
-Message-ID: <20190306214934.GA16461@eros.localdomain>
-References: <20190306214226.14598-1-tobin@kernel.org>
+Date: Thu, 7 Mar 2019 13:25:22 +1100
+From: "Tobin C. Harding" <tobin@kernel.org>
+Subject: [GIT PULL] leaking_addresses: changes for v5.1-rc1
+Message-ID: <20190307022522.GA3942@eros.localdomain>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190306214226.14598-1-tobin@kernel.org>
-To: "Tobin C. Harding" <tobin@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Shuah Khan <shuah@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, kernel-hardening@lists.openwall.com, linux-kselftest@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Tycho Andersen <tycho@tycho.ws>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 07, 2019 at 08:42:19AM +1100, Tobin C. Harding wrote:
-> Hi,
+Hi Linus,
 
-Man, I didn't see the merge window was open, I thought rc8 only came out
-on Sunday.
+Please consider pulling changes to scripts/leaking_addresses.pl
 
-Sorry, please ignore this.  Will re-send again later in the cycle.
+I've started using my kernel.org email address.  I believe its the key
+you care about not the email address this email is sent from, the tag is
+signed as usual.
 
 thanks,
 Tobin.
+
+
+The following changes since commit 1c163f4c7b3f621efff9b28a47abb36f7378d783:
+
+  Linux 5.0 (2019-03-03 15:21:29 -0800)
+
+are available in the Git repository at:
+
+  ssh://git@gitolite.kernel.org/pub/scm/linux/kernel/git/tobin/leaks.git tags/leaks-5.1-rc1
+
+for you to fetch changes up to 9ac060a708e054233265f8febfcef009ac3da826:
+
+  leaking_addresses: Completely remove --version flag (2019-03-07 08:53:18 +1100)
+
+----------------------------------------------------------------
+leaking_addresses patches for 5.1-rc1
+
+Here are two super trivial patches to the leaking addresses script for
+the 5.1-rc1 merge window.  One fixes the debugging output which is
+currently broken in a bunch of places, the other removes the --version
+command line option.
+
+Both patches have been tested and sitting in linux-next tree for a month
+or so.
+
+Signed-off-by: Tobin C. Harding <tobin@kernel.org>
+
+----------------------------------------------------------------
+Tobin C. Harding (2):
+      leaking_addresses: Fix calls to dprint
+      leaking_addresses: Completely remove --version flag
+
+ scripts/leaking_addresses.pl | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
