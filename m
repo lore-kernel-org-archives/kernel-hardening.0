@@ -1,222 +1,45 @@
 MIME-Version: 1.0
-References: <20190307133514.44378-1-glider@google.com> <20190307133514.44378-2-glider@google.com>
-In-Reply-To: <20190307133514.44378-2-glider@google.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 7 Mar 2019 09:11:54 -0800
-Message-ID: <CAGXu5jJM4RNOUUSu5YnT_csdHjra=qJv3kiC6qh1aZTLCKvxdw@mail.gmail.com>
-Subject: Re: [PATCH 1/1] RFC: initmem: introduce CONFIG_INIT_ALL_MEMORY and CONFIG_INIT_ALL_STACK
+References: <20190129003422.9328-11-rick.p.edgecombe@intel.com>
+ <20190211182956.GN19618@zn.tnic> <1533F2BB-2284-499B-9912-6D74D0B87BC1@gmail.com>
+ <20190211190108.GP19618@zn.tnic> <A671F14F-3E03-4A97-9F54-426533077E0C@gmail.com>
+ <20190211191059.GR19618@zn.tnic> <3996E3F9-92D2-4561-84E9-68B43AC60F43@gmail.com>
+ <20190211194251.GS19618@zn.tnic> <20190307072947.GA26566@zn.tnic>
+ <EF5F87D9-EA7B-4F92-81C4-329A89EEADFA@zytor.com> <20190307170629.GG26566@zn.tnic>
+In-Reply-To: <20190307170629.GG26566@zn.tnic>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Thu, 7 Mar 2019 12:02:13 -0800
+Message-ID: <CALCETrUY6L_Fwd9CZzo2eZL8HT2sBSHFiD-Bp-HCPPFBxkzcdA@mail.gmail.com>
+Subject: Re: [PATCH v2 10/20] x86: avoid W^X being broken during modules loading
 Content-Type: text/plain; charset="UTF-8"
-To: Alexander Potapenko <glider@google.com>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Borislav Petkov <bp@alien8.de>
+Cc: "H. Peter Anvin" <hpa@zytor.com>, Nadav Amit <nadav.amit@gmail.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Damian Tometzki <linux_dti@icloud.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 7, 2019 at 5:35 AM Alexander Potapenko <glider@google.com> wrote:
+On Thu, Mar 7, 2019 at 9:06 AM Borislav Petkov <bp@alien8.de> wrote:
 >
-> This patch is a part of a bigger initiative to allow initializing
-> heap/stack memory in the Linux kernels by default.
-> The rationale behind doing so is to reduce the severity of bugs caused
-> by using uninitialized memory.
+> On Thu, Mar 07, 2019 at 08:53:34AM -0800, hpa@zytor.com wrote:
+> > If we *do*, what is the issue here? Although boot_cpu_has() isn't
+> > slow (it should in general be possible to reduce to one testb
+> > instruction followed by a conditional jump) it seems that "avoiding an
+> > alternatives slot" *should* be a *very* weak reason, and seems to me
+> > to look like papering over some other problem.
 >
-> CONFIG_INIT_ALL_MEMORY is going to be an umbrella config for options
-> that force heap and stack initialization.
-
-We have some level of control over the heap portions already with the
-poisoning options, but they currently require command-line enabling.
-
-For the slab allocator:
-CONFIG_SLUB_DEBUG=y
-and boot with "slub_debug=P"
-
-For the page allocator:
-CONFIG_PAGE_POISONING=y
-CONFIG_PAGE_POISONING_NO_SANITY=y
-CONFIG_PAGE_POISONING_ZERO=y
-and boot with "page_poison=1"
-
-So I think it would make sense to wire up the boot defaults and
-continue some of the benchmarking work to improve the performance hit.
-
-> CONFIG_INIT_ALL_STACK turns on stack initialization based on the
-> -ftrivial-auto-var-init Clang flag.
+> Forget the current thread: this is simply trying to document when to use
+> static_cpu_has() and when to use boot_cpu_has(). I get asked about it at
+> least once a month.
 >
-> -ftrivial-auto-var-init is a Clang flag that provides trivial
-> initializers for uninitialized local variables, variable fields and
-> padding.
->
-> It has three possible values:
->   pattern - uninitialized locals are filled with a fixed pattern
->     (mostly 0xAA on 64-bit platforms, see https://reviews.llvm.org/D54604
->     for more details) likely to cause crashes when uninitialized value is
->     used;
->   zero (it's still debated whether this flag makes it to the official
->     Clang release) - uninitialized locals are filled with zeroes;
->   uninitialized (default) - uninitialized locals are left intact.
-
-This should get wired up to CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL in
-the GCC case.
-
-> The proposed config builds the kernel with
-> -ftrivial-auto-var-init=pattern.
->
-> Developers have the possibility to opt-out of this feature on a
-> per-file (by using the INIT_ALL_MEMORY_ Makefile prefix) or per-variable
-> (by using __attribute__((uninitialized))) basis.
-
-I would like a clean way to offer a paranoid "true init all memory"
-config that will ignore the attribute. Also, BYREF_ALL needs to gain
-the attribute knowledge.
-
-> Signed-off-by: Alexander Potapenko <glider@google.com>
-> Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
-> Cc: James Morris <jmorris@namei.org>
-> Cc: "Serge E. Hallyn" <serge@hallyn.com>
-> Cc: Nick Desaulniers <ndesaulniers@google.com>
-> Cc: Kostya Serebryany <kcc@google.com>
-> Cc: Dmitry Vyukov <dvyukov@google.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Sandeep Patil <sspatil@android.com>
-> Cc: linux-security-module@vger.kernel.org
-> Cc: linux-kbuild@vger.kernel.org
->
-> ---
->  Makefile                 |  3 ++-
->  scripts/Makefile.initmem | 17 +++++++++++++++++
->  scripts/Makefile.lib     |  6 ++++++
->  security/Kconfig         |  1 +
->  security/Kconfig.initmem | 22 ++++++++++++++++++++++
->  5 files changed, 48 insertions(+), 1 deletion(-)
->  create mode 100644 scripts/Makefile.initmem
->  create mode 100644 security/Kconfig.initmem
->
-> diff --git a/Makefile b/Makefile
-> index f070e0d65186..028ca37878fd 100644
-> --- a/Makefile
-> +++ b/Makefile
-> @@ -448,7 +448,7 @@ export HOSTCXX KBUILD_HOSTCXXFLAGS LDFLAGS_MODULE CHECK CHECKFLAGS
->
->  export KBUILD_CPPFLAGS NOSTDINC_FLAGS LINUXINCLUDE OBJCOPYFLAGS KBUILD_LDFLAGS
->  export KBUILD_CFLAGS CFLAGS_KERNEL CFLAGS_MODULE
-> -export CFLAGS_KASAN CFLAGS_KASAN_NOSANITIZE CFLAGS_UBSAN
-> +export CFLAGS_KASAN CFLAGS_KASAN_NOSANITIZE CFLAGS_UBSAN CFLAGS_INITMEM
->  export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
->  export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
->  export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
-> @@ -840,6 +840,7 @@ KBUILD_ARFLAGS := $(call ar-option,D)
->  include scripts/Makefile.kasan
->  include scripts/Makefile.extrawarn
->  include scripts/Makefile.ubsan
-> +include scripts/Makefile.initmem
->
->  # Add any arch overrides and user supplied CPPFLAGS, AFLAGS and CFLAGS as the
->  # last assignments
-> diff --git a/scripts/Makefile.initmem b/scripts/Makefile.initmem
-> new file mode 100644
-> index 000000000000..f49be398f2c1
-> --- /dev/null
-> +++ b/scripts/Makefile.initmem
-> @@ -0,0 +1,17 @@
-> +ifdef CONFIG_INIT_ALL_MEMORY
-> +
-> +# Clang's -ftrivial-auto-var-init=pattern flag initializes the
-> +# uninitialized parts of local variables (including fields and padding)
-> +# with a fixed pattern (0xAA in most cases).
-> +ifdef CONFIG_INIT_ALL_STACK
-> + CFLAGS_INITMEM := -ftrivial-auto-var-init=pattern
-> +endif
-> +
-> +ifeq ($(call cc-option, $(CFLAGS_INITMEM) -Werror),)
-> +   ifneq ($(CONFIG_COMPILE_TEST),y)
-> +        $(warning Cannot use CONFIG_INIT_ALL_MEMORY: \
-> +            -ftrivial-auto-var-init is not supported by compiler)
-> +   endif
-> +endif
-
-This should be done in the Kconfig (see how stack protector is
-handled), rather than the Makefile. See below.
-
-> +
-> +endif
-> diff --git a/scripts/Makefile.lib b/scripts/Makefile.lib
-> index 12b88d09c3a4..53d18fd15c79 100644
-> --- a/scripts/Makefile.lib
-> +++ b/scripts/Makefile.lib
-> @@ -131,6 +131,12 @@ _c_flags += $(if $(patsubst n%,, \
->                 $(CFLAGS_UBSAN))
->  endif
->
-> +ifeq ($(CONFIG_INIT_ALL_MEMORY),y)
-> +_c_flags += $(if $(patsubst n%,, \
-> +               $(INIT_ALL_MEMORY_$(basetarget).o)$(INIT_ALL_MEMORY)y), \
-> +               $(CFLAGS_INITMEM))
-> +endif
-> +
->  ifeq ($(CONFIG_KCOV),y)
->  _c_flags += $(if $(patsubst n%,, \
->         $(KCOV_INSTRUMENT_$(basetarget).o)$(KCOV_INSTRUMENT)$(CONFIG_KCOV_INSTRUMENT_ALL)), \
-> diff --git a/security/Kconfig b/security/Kconfig
-> index e4fe2f3c2c65..cc12a39424dd 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -230,6 +230,7 @@ config STATIC_USERMODEHELPER_PATH
->           If you wish for all usermode helper programs to be disabled,
->           specify an empty string here (i.e. "").
->
-> +source "security/Kconfig.initmem"
->  source "security/selinux/Kconfig"
->  source "security/smack/Kconfig"
->  source "security/tomoyo/Kconfig"
-> diff --git a/security/Kconfig.initmem b/security/Kconfig.initmem
-> new file mode 100644
-> index 000000000000..5ac3cf3e7f88
-> --- /dev/null
-> +++ b/security/Kconfig.initmem
-> @@ -0,0 +1,22 @@
-> +menu "Initialize all memory"
-> +
-> +config INIT_ALL_MEMORY
-> +       bool "Initialize all memory"
-> +       default n
-> +       help
-> +         Enforce memory initialization to mitigate infoleaks and make
-> +         the control-flow bugs depending on uninitialized values more
-> +         deterministic.
-
-See my notes about enabling page/slab poisoning via this option (which
-should probably be a separate HEAP option).
-
-> +
-> +if INIT_ALL_MEMORY
-> +
-> +config INIT_ALL_STACK
-> +       bool "Initialize all stack"
-> +       depends on INIT_ALL_MEMORY
-
-For example of doing this in Kconfig:
-
-config CC_HAS_AUTO_VAR_INIT
-        def_bool $(cc-option,-ftrivial-auto-var-init=pattern)
-
-config INIT_ALL_STACK
-        bool "Initialize all stack"
-        depends on CC_HAS_AUTO_VAR_INIT || HAVE_GCC_PLUGINS
-        select GCC_PLUGINS if !CC_HAS_AUTO_VAR_INIT
-        select GCC_PLUGIN_STRUCTLEAK if !CC_HAS_AUTO_VAR_INIT
-        select GCC_PLUGIN_STRUCTLEAK_BYREF_ALL if !CC_HAS_AUTO_VAR_INIT
-
-probably GCC_PLUGINS needs to be "default y" so this select mess is
-less crazy. I already started work on reorganizing the Kconfig there:
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/structleak&id=81a56f6dcd20325607d6008f4bb560c96f4c821a
-
-> +       default y
-> +       help
-> +         Initialize uninitialized stack data with a 0xAA pattern.
-> +         This config option only supports Clang builds at the moment.
-> +
-> +endif # INIT_ALL_MEMORY
-> +endmenu
-> --
-> 2.21.0.352.gf09ad66450-goog
+> And then it is replacing clear slow paths using static_cpu_has() with
+> boot_cpu_has() because there's purely no need to patch there. And having
+> a RIP-relative MOV and a JMP is good enough for slow paths.
 >
 
--- 
-Kees Cook
+Should we maybe rename these functions?  static_cpu_has() is at least
+reasonably obvious.  But cpu_feature_enabled() is different for
+reasons I've never understood, and boot_cpu_has() is IMO terribly
+named.  It's not about the boot cpu -- it's about doing the same thing
+but with less bloat and less performance.
+
+(And can we maybe collapse cpu_feature_enabled() and static_cpu_has()
+into the same function?)
+
+--Andy
