@@ -3,8 +3,8 @@ References: <20190307133514.44378-1-glider@google.com> <20190307133514.44378-2-g
  <CAGXu5jJM4RNOUUSu5YnT_csdHjra=qJv3kiC6qh1aZTLCKvxdw@mail.gmail.com>
 In-Reply-To: <CAGXu5jJM4RNOUUSu5YnT_csdHjra=qJv3kiC6qh1aZTLCKvxdw@mail.gmail.com>
 From: Alexander Potapenko <glider@google.com>
-Date: Fri, 8 Mar 2019 11:09:06 +0100
-Message-ID: <CAG_fn=WmEFOPjPBB86o+7PCwuBD6qOic75D7TvKo+MrGozFtKg@mail.gmail.com>
+Date: Fri, 8 Mar 2019 12:57:38 +0100
+Message-ID: <CAG_fn=Ug7FypD_vLMi9s0zYebC8MfoucNeqkfasa0L=yZp3hEg@mail.gmail.com>
 Subject: Re: [PATCH 1/1] RFC: initmem: introduce CONFIG_INIT_ALL_MEMORY and CONFIG_INIT_ALL_STACK
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
@@ -40,9 +40,7 @@ ote:
 >
 > So I think it would make sense to wire up the boot defaults and
 > continue some of the benchmarking work to improve the performance hit.
-Should we care about the poison values being different for stack and
-heap initialization (probably no)?
-
+>
 > > CONFIG_INIT_ALL_STACK turns on stack initialization based on the
 > > -ftrivial-auto-var-init Clang flag.
 > >
@@ -63,12 +61,7 @@ is
 >
 > This should get wired up to CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL in
 > the GCC case.
-I'm not really familiar with CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL.
-Does it initialize a variable if it's not explicitly address-taken,
-but is used in a computation of another variable's value?
-Also, are we ok with Clang and GCC producing different poison values
-for the stack? (probably yes)
-
+>
 > > The proposed config builds the kernel with
 > > -ftrivial-auto-var-init=3Dpattern.
 > >
@@ -78,28 +71,7 @@ e
 > > (by using __attribute__((uninitialized))) basis.
 >
 > I would like a clean way to offer a paranoid "true init all memory"
-> config that will ignore the attribute.
-How paranoid should it be? E.g. current instrumentation in Clang (nor
-in GCC, I guess) doesn't prevent the following situation:
-
-char local[8];
-int init_later;
-copy_to_user(userp, local, 12);
-init_later =3D 1;
-
-Do we want to true init |init_later| despite there's a write to it later?
-
-Regarding the attribute, right now it only makes sense to use it in
-the cases the compilers fail to apply DSE to the unneeded
-initializers.
-For example, Clang fails to do so for |oldbit| in __test_and_set_bit()
-here: https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/b=
-itops.h#L245
-(We could fix this with a heuristic to not initialize scalars used as
-assembly outputs, but that's walking on thin ice)
-Do you know how GCC handles this situation?
-
-> Also, BYREF_ALL needs to gain
+> config that will ignore the attribute. Also, BYREF_ALL needs to gain
 > the attribute knowledge.
 >
 > > Signed-off-by: Alexander Potapenko <glider@google.com>
@@ -242,6 +214,9 @@ OV_INSTRUMENT_ALL)), \
 > config INIT_ALL_STACK
 >         bool "Initialize all stack"
 >         depends on CC_HAS_AUTO_VAR_INIT || HAVE_GCC_PLUGINS
+Shouldn't we also check for PLUGIN_HOSTCC !=3D "" here?
+Otherwise not having gcc-*-plugin-dev installed results in an unmet depende=
+ncy.
 >         select GCC_PLUGINS if !CC_HAS_AUTO_VAR_INIT
 >         select GCC_PLUGIN_STRUCTLEAK if !CC_HAS_AUTO_VAR_INIT
 >         select GCC_PLUGIN_STRUCTLEAK_BYREF_ALL if !CC_HAS_AUTO_VAR_INIT
