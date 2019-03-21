@@ -1,14 +1,14 @@
-Date: Thu, 21 Mar 2019 18:58:47 +0100
-From: Peter Zijlstra <peterz@infradead.org>
+Date: Thu, 21 Mar 2019 21:12:07 +0100
+From: Luc Van Oostenryck <luc.vanoostenryck@gmail.com>
 Subject: Re: [PATCH v2 0/4] RCU fixes for rcu_assign_pointer() usage
-Message-ID: <20190321175847.GP6058@hirez.programming.kicks-ass.net>
+Message-ID: <20190321201205.pmz2bmq56uqbcvyy@ltop.local>
 References: <20190321003426.160260-1-joel@joelfernandes.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20190321003426.160260-1-joel@joelfernandes.org>
 To: "Joel Fernandes (Google)" <joel@joelfernandes.org>
-Cc: linux-kernel@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, Lai Jiangshan <jiangshanlai@gmail.com>, Luc Van Oostenryck <luc.vanoostenryck@gmail.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Morten Rasmussen <morten.rasmussen@arm.com>, "Paul E. McKenney" <paulmck@linux.ibm.com>, rcu@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>
+Cc: linux-kernel@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, Lai Jiangshan <jiangshanlai@gmail.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Morten Rasmussen <morten.rasmussen@arm.com>, "Paul E. McKenney" <paulmck@linux.ibm.com>, Peter Zijlstra <peterz@infradead.org>, rcu@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Wed, Mar 20, 2019 at 08:34:22PM -0400, Joel Fernandes (Google) wrote:
@@ -36,4 +36,6 @@ On Wed, Mar 20, 2019 at 08:34:22PM -0400, Joel Fernandes (Google) wrote:
 > kernel/sched/topology.c        | 10 +++++-----
 > 5 files changed, 18 insertions(+), 18 deletions(-)
 
-Thanks Joel
+Looks good to me.
+
+-- Luc
