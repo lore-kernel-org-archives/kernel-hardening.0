@@ -1,7 +1,7 @@
 From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
-Subject: [PATCH v2 2/4] sched_domain: Annotate RCU pointers properly
-Date: Wed, 20 Mar 2019 20:34:24 -0400
-Message-Id: <20190321003426.160260-3-joel@joelfernandes.org>
+Subject: [PATCH v2 3/4] rcuwait: Annotate task_struct with __rcu
+Date: Wed, 20 Mar 2019 20:34:25 -0400
+Message-Id: <20190321003426.160260-4-joel@joelfernandes.org>
 In-Reply-To: <20190321003426.160260-1-joel@joelfernandes.org>
 References: <20190321003426.160260-1-joel@joelfernandes.org>
 MIME-Version: 1.0
@@ -10,133 +10,31 @@ To: linux-kernel@vger.kernel.org
 Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>, "Paul E . McKenney" <paulmck@linux.ibm.com>, Ingo Molnar <mingo@redhat.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, Lai Jiangshan <jiangshanlai@gmail.com>, Luc Van Oostenryck <luc.vanoostenryck@gmail.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Morten Rasmussen <morten.rasmussen@arm.com>, Peter Zijlstra <peterz@infradead.org>, rcu@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The scheduler uses RCU API in various places to access sched_domain
-pointers. These cause sparse errors as below.
+This suppresses sparse error generated due to the recently added
+rcu_assign_pointer sparse check.
 
-Many new errors show up because of an annotation check I added to
-rcu_assign_pointer(). Let us annotate the pointers correctly which also
-will help sparse catch any potential future bugs.
-
-This fixes the following sparse errors:
-
-rt.c:1681:9: error: incompatible types in comparison expression
-deadline.c:1904:9: error: incompatible types in comparison expression
-core.c:519:9: error: incompatible types in comparison expression
-core.c:1634:17: error: incompatible types in comparison expression
-fair.c:6193:14: error: incompatible types in comparison expression
-fair.c:9883:22: error: incompatible types in comparison expression
-fair.c:9897:9: error: incompatible types in comparison expression
-sched.h:1287:9: error: incompatible types in comparison expression
-topology.c:612:9: error: incompatible types in comparison expression
-topology.c:615:9: error: incompatible types in comparison expression
-sched.h:1300:9: error: incompatible types in comparison expression
-topology.c:618:9: error: incompatible types in comparison expression
-sched.h:1287:9: error: incompatible types in comparison expression
-topology.c:621:9: error: incompatible types in comparison expression
-sched.h:1300:9: error: incompatible types in comparison expression
-topology.c:624:9: error: incompatible types in comparison expression
-topology.c:671:9: error: incompatible types in comparison expression
-stats.c:45:17: error: incompatible types in comparison expression
-fair.c:5998:15: error: incompatible types in comparison expression
-fair.c:5989:15: error: incompatible types in comparison expression
-fair.c:5998:15: error: incompatible types in comparison expression
-fair.c:5989:15: error: incompatible types in comparison expression
-fair.c:6120:19: error: incompatible types in comparison expression
-fair.c:6506:14: error: incompatible types in comparison expression
-fair.c:6515:14: error: incompatible types in comparison expression
-fair.c:6623:9: error: incompatible types in comparison expression
-fair.c:5970:17: error: incompatible types in comparison expression
-fair.c:8642:21: error: incompatible types in comparison expression
-fair.c:9253:9: error: incompatible types in comparison expression
-fair.c:9331:9: error: incompatible types in comparison expression
-fair.c:9519:15: error: incompatible types in comparison expression
-fair.c:9533:14: error: incompatible types in comparison expression
-fair.c:9542:14: error: incompatible types in comparison expression
-fair.c:9567:14: error: incompatible types in comparison expression
-fair.c:9597:14: error: incompatible types in comparison expression
-fair.c:9421:16: error: incompatible types in comparison expression
-fair.c:9421:16: error: incompatible types in comparison expression
+percpu-rwsem.c:162:9: sparse: error: incompatible types in comparison expression
+exit.c:316:16: sparse: error: incompatible types in comparison expression
 
 [From an RCU perspective]
 Reviewed-by: Paul E. McKenney <paulmck@linux.ibm.com>
 Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
 ---
- include/linux/sched/topology.h |  4 ++--
- kernel/sched/sched.h           | 14 +++++++-------
- kernel/sched/topology.c        | 10 +++++-----
- 3 files changed, 14 insertions(+), 14 deletions(-)
+ include/linux/rcuwait.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/include/linux/sched/topology.h b/include/linux/sched/topology.h
-index 57c7ed3fe465..cfc0a89a7159 100644
---- a/include/linux/sched/topology.h
-+++ b/include/linux/sched/topology.h
-@@ -76,8 +76,8 @@ struct sched_domain_shared {
- 
- struct sched_domain {
- 	/* These fields must be setup */
--	struct sched_domain *parent;	/* top domain must be null terminated */
--	struct sched_domain *child;	/* bottom domain must be null terminated */
-+	struct sched_domain __rcu *parent;	/* top domain must be null terminated */
-+	struct sched_domain __rcu *child;	/* bottom domain must be null terminated */
- 	struct sched_group *groups;	/* the balancing groups of the domain */
- 	unsigned long min_interval;	/* Minimum balance interval ms */
- 	unsigned long max_interval;	/* Maximum balance interval ms */
-diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index 713715dd00cf..2b452d68ab2e 100644
---- a/kernel/sched/sched.h
-+++ b/kernel/sched/sched.h
-@@ -869,8 +869,8 @@ struct rq {
- 	atomic_t		nr_iowait;
- 
- #ifdef CONFIG_SMP
--	struct root_domain	*rd;
--	struct sched_domain	*sd;
-+	struct root_domain		*rd;
-+	struct sched_domain __rcu	*sd;
- 
- 	unsigned long		cpu_capacity;
- 	unsigned long		cpu_capacity_orig;
-@@ -1324,13 +1324,13 @@ static inline struct sched_domain *lowest_flag_domain(int cpu, int flag)
- 	return sd;
- }
- 
--DECLARE_PER_CPU(struct sched_domain *, sd_llc);
-+DECLARE_PER_CPU(struct sched_domain __rcu *, sd_llc);
- DECLARE_PER_CPU(int, sd_llc_size);
- DECLARE_PER_CPU(int, sd_llc_id);
--DECLARE_PER_CPU(struct sched_domain_shared *, sd_llc_shared);
--DECLARE_PER_CPU(struct sched_domain *, sd_numa);
--DECLARE_PER_CPU(struct sched_domain *, sd_asym_packing);
--DECLARE_PER_CPU(struct sched_domain *, sd_asym_cpucapacity);
-+DECLARE_PER_CPU(struct sched_domain_shared __rcu *, sd_llc_shared);
-+DECLARE_PER_CPU(struct sched_domain __rcu *, sd_numa);
-+DECLARE_PER_CPU(struct sched_domain __rcu *, sd_asym_packing);
-+DECLARE_PER_CPU(struct sched_domain __rcu *, sd_asym_cpucapacity);
- extern struct static_key_false sched_asym_cpucapacity;
- 
- struct sched_group_capacity {
-diff --git a/kernel/sched/topology.c b/kernel/sched/topology.c
-index ab7f371a3a17..64bec54ded3e 100644
---- a/kernel/sched/topology.c
-+++ b/kernel/sched/topology.c
-@@ -615,13 +615,13 @@ static void destroy_sched_domains(struct sched_domain *sd)
-  * the cpumask of the domain), this allows us to quickly tell if
-  * two CPUs are in the same cache domain, see cpus_share_cache().
+diff --git a/include/linux/rcuwait.h b/include/linux/rcuwait.h
+index 90bfa3279a01..563290fc194f 100644
+--- a/include/linux/rcuwait.h
++++ b/include/linux/rcuwait.h
+@@ -18,7 +18,7 @@
+  * awoken.
   */
--DEFINE_PER_CPU(struct sched_domain *, sd_llc);
-+DEFINE_PER_CPU(struct sched_domain __rcu *, sd_llc);
- DEFINE_PER_CPU(int, sd_llc_size);
- DEFINE_PER_CPU(int, sd_llc_id);
--DEFINE_PER_CPU(struct sched_domain_shared *, sd_llc_shared);
--DEFINE_PER_CPU(struct sched_domain *, sd_numa);
--DEFINE_PER_CPU(struct sched_domain *, sd_asym_packing);
--DEFINE_PER_CPU(struct sched_domain *, sd_asym_cpucapacity);
-+DEFINE_PER_CPU(struct sched_domain_shared __rcu *, sd_llc_shared);
-+DEFINE_PER_CPU(struct sched_domain __rcu *, sd_numa);
-+DEFINE_PER_CPU(struct sched_domain __rcu *, sd_asym_packing);
-+DEFINE_PER_CPU(struct sched_domain __rcu *, sd_asym_cpucapacity);
- DEFINE_STATIC_KEY_FALSE(sched_asym_cpucapacity);
+ struct rcuwait {
+-	struct task_struct *task;
++	struct task_struct __rcu *task;
+ };
  
- static void update_top_cache_domain(int cpu)
+ #define __RCUWAIT_INITIALIZER(name)		\
 -- 
 2.21.0.225.g810b269d1ac-goog
