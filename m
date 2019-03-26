@@ -1,59 +1,31 @@
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Date: Sat, 23 Mar 2019 00:17:36 +0100
-From: Stefan Agner <stefan@agner.ch>
-Subject: Re: [PATCH net-next v9 05/19] zinc: ChaCha20 ARM and ARM64
- implementations
-In-Reply-To: <20190322071122.6677-6-Jason@zx2c4.com>
+Date: Tue, 26 Mar 2019 18:38:00 +0100
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [PATCH net-next v9 12/19] zinc: BLAKE2s generic C implementation
+ and selftest
+Message-ID: <20190326173759.GA607@zzz.localdomain>
 References: <20190322071122.6677-1-Jason@zx2c4.com>
- <20190322071122.6677-6-Jason@zx2c4.com>
-Message-ID: <f5606eb382ac59178d064bd86de204f1@agner.ch>
+ <20190322071122.6677-13-Jason@zx2c4.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190322071122.6677-13-Jason@zx2c4.com>
 To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, Andy Polyakov <appro@openssl.org>, Eric Biggers <ebiggers@google.com>, Russell King <linux@armlinux.org.uk>, linux-arm-kernel@lists.infradead.org, Samuel Neves <sneves@dei.uc.pt>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Andy Lutomirski <luto@kernel.org>, Greg KH <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-kernel-owner@vger.kernel.org
+Cc: linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, Samuel Neves <sneves@dei.uc.pt>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Andy Lutomirski <luto@kernel.org>, Greg KH <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Jason,
+Hi Jason, a few comments on this patch:
 
-
-I gave this a try with some prelineary patches to enable the integrated
-assembler for ARM32, and caught a small issue:
-
-On 22.03.2019 08:11, Jason A. Donenfeld wrote:
-> These ARM implementations come from Andy Polyakov's implementation, as
-> well as an ultra-fast unrolled scalar version optimized for ARMv7 from
-> Eric Biggers, which performs well on platforms with slow NEON like
-> Cortex A7 and A5.
+On Fri, Mar 22, 2019 at 01:11:15AM -0600, Jason A. Donenfeld wrote:
+> The C implementation was originally based on Samuel Neves' public
+> domain reference implementation but has since been heavily modified
+> for the kernel. We're able to do compile-time optimizations by moving
+> some scaffolding around the final function into the header file.
 > 
-> This commit delivers approximately the same or much better performance than
-> the existing crypto API's code and has been measured to do as such on:
-> 
->   - ARM1176JZF-S [ARMv6]
->   - Cortex-A7    [ARMv7]
->   - Cortex-A8    [ARMv7]
->   - Cortex-A9    [ARMv7]
->   - Cortex-A17   [ARMv7]
->   - Cortex-A53   [ARMv8]
->   - Cortex-A55   [ARMv8]
->   - Cortex-A73   [ARMv8]
->   - Cortex-A75   [ARMv8]
-> 
-> Interestingly, Andy Polyakov's scalar code is slower than Eric Biggers',
-> but is also significantly shorter. This has the advantage that it does
-> not evict other code from L1 cache -- particularly on ARM11 chips -- and
-> so in certain circumstances it can actually be faster. However, it wasn't
-> found that this had an affect on any code existing in the kernel today.
-> 
-> While this is CRYPTOGAMS code, the originating code for this happens to
-> be the same as OpenSSL's commit 9925a82146f2503b4dd11423d0eba649b43450c0
+> Information: https://blake2.net/
 > 
 > Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-> Co-authored-by: Andy Polyakov <appro@openssl.org>
-> Co-authored-by: Eric Biggers <ebiggers@google.com>
-> Cc: Andy Polyakov <appro@openssl.org>
-> Cc: Russell King <linux@armlinux.org.uk>
-> Cc: linux-arm-kernel@lists.infradead.org
-> Cc: Samuel Neves <sneves@dei.uc.pt>
+> Signed-off-by: Samuel Neves <sneves@dei.uc.pt>
+> Co-developed-by: Samuel Neves <sneves@dei.uc.pt>
 > Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 > Cc: Andy Lutomirski <luto@kernel.org>
 > Cc: Greg KH <gregkh@linuxfoundation.org>
@@ -62,524 +34,229 @@ On 22.03.2019 08:11, Jason A. Donenfeld wrote:
 > Cc: kernel-hardening@lists.openwall.com
 > Cc: linux-crypto@vger.kernel.org
 > ---
->  lib/zinc/Makefile                         |    4 +-
->  lib/zinc/chacha20/chacha20-arm-glue.c     |   98 ++
->  lib/zinc/chacha20/chacha20-arm.pl         | 1227 +++++++++++++++++++++
->  lib/zinc/chacha20/chacha20-arm64.pl       | 1163 +++++++++++++++++++
->  lib/zinc/chacha20/chacha20-unrolled-arm.S |  461 ++++++++
->  lib/zinc/chacha20/chacha20.c              |    2 +
->  6 files changed, 2954 insertions(+), 1 deletion(-)
->  create mode 100644 lib/zinc/chacha20/chacha20-arm-glue.c
->  create mode 100644 lib/zinc/chacha20/chacha20-arm.pl
->  create mode 100644 lib/zinc/chacha20/chacha20-arm64.pl
->  create mode 100644 lib/zinc/chacha20/chacha20-unrolled-arm.S
+>  include/zinc/blake2s.h      |   56 +
+>  lib/zinc/Kconfig            |    3 +
+>  lib/zinc/Makefile           |    3 +
+>  lib/zinc/blake2s/blake2s.c  |  295 +++++
+>  lib/zinc/selftest/blake2s.c | 2090 +++++++++++++++++++++++++++++++++++
+>  5 files changed, 2447 insertions(+)
+>  create mode 100644 include/zinc/blake2s.h
+>  create mode 100644 lib/zinc/blake2s/blake2s.c
+>  create mode 100644 lib/zinc/selftest/blake2s.c
 > 
-
-<snip>
-
-> diff --git a/lib/zinc/chacha20/chacha20-unrolled-arm.S
-> b/lib/zinc/chacha20/chacha20-unrolled-arm.S
+> diff --git a/include/zinc/blake2s.h b/include/zinc/blake2s.h
 > new file mode 100644
-> index 000000000000..2140319b64a0
+> index 000000000000..5f1a1aeaf129
 > --- /dev/null
-> +++ b/lib/zinc/chacha20/chacha20-unrolled-arm.S
-> @@ -0,0 +1,461 @@
-> +/* SPDX-License-Identifier: GPL-2.0 */
+> +++ b/include/zinc/blake2s.h
+> @@ -0,0 +1,56 @@
+> +/* SPDX-License-Identifier: GPL-2.0 OR MIT */
 > +/*
-> + * Copyright (C) 2018 Google, Inc.
+> + * Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 > + */
 > +
-> +#include <linux/linkage.h>
-> +#include <asm/assembler.h>
+> +#ifndef _ZINC_BLAKE2S_H
+> +#define _ZINC_BLAKE2S_H
 > +
+> +#include <linux/types.h>
+> +#include <linux/kernel.h>
+> +#include <asm/bug.h>
+> +
+> +enum blake2s_lengths {
+> +	BLAKE2S_BLOCK_SIZE = 64,
+> +	BLAKE2S_HASH_SIZE = 32,
+> +	BLAKE2S_KEY_SIZE = 32
+
+Perhaps call the latter two BLAKE2S_MAX_HASH_SIZE and BLAKE2S_MAX_KEY_SIZE,
+since lower values can be selected too?
+
+> +};
+> +
+> +struct blake2s_state {
+> +	u32 h[8];
+> +	u32 t[2];
+> +	u32 f[2];
+> +	u8 buf[BLAKE2S_BLOCK_SIZE];
+> +	size_t buflen;
+> +	u8 last_node;
+> +};
+
+Since this API doesn't actually support any of BLAKE2's tree hashing modes, I
+think 'last_node' should be removed from this struct for now.  It's never set.
+
+> +
+> +void blake2s_init(struct blake2s_state *state, const size_t outlen);
+> +void blake2s_init_key(struct blake2s_state *state, const size_t outlen,
+> +		      const void *key, const size_t keylen);
+> +void blake2s_update(struct blake2s_state *state, const u8 *in, size_t inlen);
+> +void blake2s_final(struct blake2s_state *state, u8 *out, const size_t outlen);
+
+Since the caller must pass the same 'outlen' into blake2s_init() and
+blake2s_final(), perhaps that should be verified by the DEBUG checks?  It would
+be easy for someone to get this wrong.  Or remove the outlen argument from
+blake2s_final(), instead using the saved length from blake2s_init()?
+
+> diff --git a/lib/zinc/blake2s/blake2s.c b/lib/zinc/blake2s/blake2s.c
+> new file mode 100644
+> index 000000000000..c817954e6bcd
+> --- /dev/null
+> +++ b/lib/zinc/blake2s/blake2s.c
+> @@ -0,0 +1,295 @@
+> +// SPDX-License-Identifier: GPL-2.0 OR MIT
 > +/*
-> + * Design notes:
+> + * Copyright (C) 2012 Samuel Neves <sneves@dei.uc.pt>. All Rights Reserved.
+
+If Samuel's reference implementation is "public domain" as you stated in the
+commit message, why is this copyright statement from 2012 here?
+Public domain == not copyrighted.
+
+> + * Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 > + *
-> + * 16 registers would be needed to hold the state matrix, but only 14 are
-> + * available because 'sp' and 'pc' cannot be used.  So we spill the elements
-> + * (x8, x9) to the stack and swap them out with (x10, x11).  This adds one
-> + * 'ldrd' and one 'strd' instruction per round.
+> + * This is an implementation of the BLAKE2s hash and PRF functions.
 > + *
-> + * All rotates are performed using the implicit rotate operand accepted by the
-> + * 'add' and 'eor' instructions.  This is faster than using explicit rotate
-> + * instructions.  To make this work, we allow the values in the second and last
-> + * rows of the ChaCha state matrix (rows 'b' and 'd') to temporarily have the
-> + * wrong rotation amount.  The rotation amount is then fixed up just in time
-> + * when the values are used.  'brot' is the number of bits the values
-> in row 'b'
-> + * need to be rotated right to arrive at the correct values, and 'drot'
-> + * similarly for row 'd'.  (brot, drot) start out as (0, 0) but we make it such
-> + * that they end up as (25, 24) after every round.
+> + * Information: https://blake2.net/
+> + *
 > + */
 > +
-> +	// ChaCha state registers
-> +	X0	.req	r0
-> +	X1	.req	r1
-> +	X2	.req	r2
-> +	X3	.req	r3
-> +	X4	.req	r4
-> +	X5	.req	r5
-> +	X6	.req	r6
-> +	X7	.req	r7
-> +	X8_X10	.req	r8	// shared by x8 and x10
-> +	X9_X11	.req	r9	// shared by x9 and x11
-> +	X12	.req	r10
-> +	X13	.req	r11
-> +	X14	.req	r12
-> +	X15	.req	r14
+> +#include <zinc/blake2s.h>
+> +#include "../selftest/run.h"
 > +
-> +.Lexpand_32byte_k:
-> +	// "expand 32-byte k"
-> +	.word	0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
+> +#include <linux/types.h>
+> +#include <linux/string.h>
+> +#include <linux/kernel.h>
+> +#include <linux/module.h>
+> +#include <linux/init.h>
+> +#include <linux/bug.h>
+> +#include <asm/unaligned.h>
 > +
-> +#ifdef __thumb2__
-> +#  define adrl adr
-> +#endif
+> +typedef union {
+> +	struct {
+> +		u8 digest_length;
+> +		u8 key_length;
+> +		u8 fanout;
+> +		u8 depth;
+> +		u32 leaf_length;
+> +		u32 node_offset;
+> +		u16 xof_length;
 
-It seems that Clang does not like adrl.
+Technically the leaf_length, node_offset, and xof_length fields should be
+__le32, __le32, and __le16 respectively.
 
-lib/zinc/chacha20/chacha20-unrolled-arm.S:415:2: error: invalid
-instruction, did you mean: adr?
- adrl X3, .Lexpand_32byte_k
- ^
-make[3]: *** [scripts/Makefile.build:369:
-lib/zinc/chacha20/chacha20-unrolled-arm.o] Error 1
-make[2]: *** [scripts/Makefile.build:489: lib/zinc] Error 2
-make[1]: *** [/home/sag/projects/linux/Makefile:1045: lib] Error 2
-make[1]: *** Waiting for unfinished jobs....
+> +void blake2s_update(struct blake2s_state *state, const u8 *in, size_t inlen)
+> +{
+> +	const size_t fill = BLAKE2S_BLOCK_SIZE - state->buflen;
+> +
+> +	if (unlikely(!inlen))
+> +		return;
+> +	if (inlen > fill) {
+> +		memcpy(state->buf + state->buflen, in, fill);
+> +		blake2s_compress(state, state->buf, 1, BLAKE2S_BLOCK_SIZE);
+> +		state->buflen = 0;
+> +		in += fill;
+> +		inlen -= fill;
+> +	}
+> +	if (inlen > BLAKE2S_BLOCK_SIZE) {
+> +		const size_t nblocks =
+> +			(inlen + BLAKE2S_BLOCK_SIZE - 1) / BLAKE2S_BLOCK_SIZE;
 
-We probably should use
-#if defined(__thumb2__) || defined(__clang__)
-here?
+This can be written as:
 
-All other ARM32 assembly assembled fine with the integrated assembler!
-Also nothing really concerning as there are still plenty of other issues
-with using the integrated assembler to build ARM32 Linux.
-
---
-Stefan
+		const size_t nblocks = DIV_ROUND_UP(inlen, BLAKE2S_BLOCK_SIZE);
 
 > +
-> +.macro __rev		out, in,  t0, t1, t2
-> +.if __LINUX_ARM_ARCH__ >= 6
-> +	rev		\out, \in
-> +.else
-> +	lsl		\t0, \in, #24
-> +	and		\t1, \in, #0xff00
-> +	and		\t2, \in, #0xff0000
-> +	orr		\out, \t0, \in, lsr #24
-> +	orr		\out, \out, \t1, lsl #8
-> +	orr		\out, \out, \t2, lsr #8
-> +.endif
-> +.endm
+> +static int __init mod_init(void)
+> +{
+> +	if (!nosimd)
+> +		blake2s_fpu_init();
+> +	if (!selftest_run("blake2s", blake2s_selftest, blake2s_nobs,
+> +			  ARRAY_SIZE(blake2s_nobs)))
+> +		return -ENOTRECOVERABLE;
+> +	return 0;
+> +}
 > +
-> +.macro _le32_bswap	x,  t0, t1, t2
-> +#ifdef __ARMEB__
-> +	__rev		\x, \x,  \t0, \t1, \t2
-> +#endif
-> +.endm
+> +static void __exit mod_exit(void)
+> +{
+> +}
 > +
-> +.macro _le32_bswap_4x	a, b, c, d,  t0, t1, t2
-> +	_le32_bswap	\a,  \t0, \t1, \t2
-> +	_le32_bswap	\b,  \t0, \t1, \t2
-> +	_le32_bswap	\c,  \t0, \t1, \t2
-> +	_le32_bswap	\d,  \t0, \t1, \t2
-> +.endm
-> +
-> +.macro __ldrd		a, b, src, offset
-> +#if __LINUX_ARM_ARCH__ >= 6
-> +	ldrd		\a, \b, [\src, #\offset]
-> +#else
-> +	ldr		\a, [\src, #\offset]
-> +	ldr		\b, [\src, #\offset + 4]
-> +#endif
-> +.endm
-> +
-> +.macro __strd		a, b, dst, offset
-> +#if __LINUX_ARM_ARCH__ >= 6
-> +	strd		\a, \b, [\dst, #\offset]
-> +#else
-> +	str		\a, [\dst, #\offset]
-> +	str		\b, [\dst, #\offset + 4]
-> +#endif
-> +.endm
-> +
-> +.macro _halfround	a1, b1, c1, d1,  a2, b2, c2, d2
-> +
-> +	// a += b; d ^= a; d = rol(d, 16);
-> +	add		\a1, \a1, \b1, ror #brot
-> +	add		\a2, \a2, \b2, ror #brot
-> +	eor		\d1, \a1, \d1, ror #drot
-> +	eor		\d2, \a2, \d2, ror #drot
-> +	// drot == 32 - 16 == 16
-> +
-> +	// c += d; b ^= c; b = rol(b, 12);
-> +	add		\c1, \c1, \d1, ror #16
-> +	add		\c2, \c2, \d2, ror #16
-> +	eor		\b1, \c1, \b1, ror #brot
-> +	eor		\b2, \c2, \b2, ror #brot
-> +	// brot == 32 - 12 == 20
-> +
-> +	// a += b; d ^= a; d = rol(d, 8);
-> +	add		\a1, \a1, \b1, ror #20
-> +	add		\a2, \a2, \b2, ror #20
-> +	eor		\d1, \a1, \d1, ror #16
-> +	eor		\d2, \a2, \d2, ror #16
-> +	// drot == 32 - 8 == 24
-> +
-> +	// c += d; b ^= c; b = rol(b, 7);
-> +	add		\c1, \c1, \d1, ror #24
-> +	add		\c2, \c2, \d2, ror #24
-> +	eor		\b1, \c1, \b1, ror #20
-> +	eor		\b2, \c2, \b2, ror #20
-> +	// brot == 32 - 7 == 25
-> +.endm
-> +
-> +.macro _doubleround
-> +
-> +	// column round
-> +
-> +	// quarterrounds: (x0, x4, x8, x12) and (x1, x5, x9, x13)
-> +	_halfround	X0, X4, X8_X10, X12,  X1, X5, X9_X11, X13
-> +
-> +	// save (x8, x9); restore (x10, x11)
-> +	__strd		X8_X10, X9_X11, sp, 0
-> +	__ldrd		X8_X10, X9_X11, sp, 8
-> +
-> +	// quarterrounds: (x2, x6, x10, x14) and (x3, x7, x11, x15)
-> +	_halfround	X2, X6, X8_X10, X14,  X3, X7, X9_X11, X15
-> +
-> +	.set brot, 25
-> +	.set drot, 24
-> +
-> +	// diagonal round
-> +
-> +	// quarterrounds: (x0, x5, x10, x15) and (x1, x6, x11, x12)
-> +	_halfround	X0, X5, X8_X10, X15,  X1, X6, X9_X11, X12
-> +
-> +	// save (x10, x11); restore (x8, x9)
-> +	__strd		X8_X10, X9_X11, sp, 8
-> +	__ldrd		X8_X10, X9_X11, sp, 0
-> +
-> +	// quarterrounds: (x2, x7, x8, x13) and (x3, x4, x9, x14)
-> +	_halfround	X2, X7, X8_X10, X13,  X3, X4, X9_X11, X14
-> +.endm
-> +
-> +.macro _chacha_permute	nrounds
-> +	.set brot, 0
-> +	.set drot, 0
-> +	.rept \nrounds / 2
-> +	 _doubleround
-> +	.endr
-> +.endm
-> +
-> +.macro _chacha		nrounds
-> +
-> +.Lnext_block\@:
-> +	// Stack: unused0-unused1 x10-x11 x0-x15 OUT IN LEN
-> +	// Registers contain x0-x9,x12-x15.
-> +
-> +	// Do the core ChaCha permutation to update x0-x15.
-> +	_chacha_permute	\nrounds
-> +
-> +	add		sp, #8
-> +	// Stack: x10-x11 orig_x0-orig_x15 OUT IN LEN
-> +	// Registers contain x0-x9,x12-x15.
-> +	// x4-x7 are rotated by 'brot'; x12-x15 are rotated by 'drot'.
-> +
-> +	// Free up some registers (r8-r12,r14) by pushing (x8-x9,x12-x15).
-> +	push		{X8_X10, X9_X11, X12, X13, X14, X15}
-> +
-> +	// Load (OUT, IN, LEN).
-> +	ldr		r14, [sp, #96]
-> +	ldr		r12, [sp, #100]
-> +	ldr		r11, [sp, #104]
-> +
-> +	orr		r10, r14, r12
-> +
-> +	// Use slow path if fewer than 64 bytes remain.
-> +	cmp		r11, #64
-> +	blt		.Lxor_slowpath\@
-> +
-> +	// Use slow path if IN and/or OUT isn't 4-byte aligned.  Needed even on
-> +	// ARMv6+, since ldmia and stmia (used below) still require alignment.
-> +	tst		r10, #3
-> +	bne		.Lxor_slowpath\@
-> +
-> +	// Fast path: XOR 64 bytes of aligned data.
-> +
-> +	// Stack: x8-x9 x12-x15 x10-x11 orig_x0-orig_x15 OUT IN LEN
-> +	// Registers: r0-r7 are x0-x7; r8-r11 are free; r12 is IN; r14 is OUT.
-> +	// x4-x7 are rotated by 'brot'; x12-x15 are rotated by 'drot'.
-> +
-> +	// x0-x3
-> +	__ldrd		r8, r9, sp, 32
-> +	__ldrd		r10, r11, sp, 40
-> +	add		X0, X0, r8
-> +	add		X1, X1, r9
-> +	add		X2, X2, r10
-> +	add		X3, X3, r11
-> +	_le32_bswap_4x	X0, X1, X2, X3,  r8, r9, r10
-> +	ldmia		r12!, {r8-r11}
-> +	eor		X0, X0, r8
-> +	eor		X1, X1, r9
-> +	eor		X2, X2, r10
-> +	eor		X3, X3, r11
-> +	stmia		r14!, {X0-X3}
-> +
-> +	// x4-x7
-> +	__ldrd		r8, r9, sp, 48
-> +	__ldrd		r10, r11, sp, 56
-> +	add		X4, r8, X4, ror #brot
-> +	add		X5, r9, X5, ror #brot
-> +	ldmia		r12!, {X0-X3}
-> +	add		X6, r10, X6, ror #brot
-> +	add		X7, r11, X7, ror #brot
-> +	_le32_bswap_4x	X4, X5, X6, X7,  r8, r9, r10
-> +	eor		X4, X4, X0
-> +	eor		X5, X5, X1
-> +	eor		X6, X6, X2
-> +	eor		X7, X7, X3
-> +	stmia		r14!, {X4-X7}
-> +
-> +	// x8-x15
-> +	pop		{r0-r7}			// (x8-x9,x12-x15,x10-x11)
-> +	__ldrd		r8, r9, sp, 32
-> +	__ldrd		r10, r11, sp, 40
-> +	add		r0, r0, r8		// x8
-> +	add		r1, r1, r9		// x9
-> +	add		r6, r6, r10		// x10
-> +	add		r7, r7, r11		// x11
-> +	_le32_bswap_4x	r0, r1, r6, r7,  r8, r9, r10
-> +	ldmia		r12!, {r8-r11}
-> +	eor		r0, r0, r8		// x8
-> +	eor		r1, r1, r9		// x9
-> +	eor		r6, r6, r10		// x10
-> +	eor		r7, r7, r11		// x11
-> +	stmia		r14!, {r0,r1,r6,r7}
-> +	ldmia		r12!, {r0,r1,r6,r7}
-> +	__ldrd		r8, r9, sp, 48
-> +	__ldrd		r10, r11, sp, 56
-> +	add		r2, r8, r2, ror #drot	// x12
-> +	add		r3, r9, r3, ror #drot	// x13
-> +	add		r4, r10, r4, ror #drot	// x14
-> +	add		r5, r11, r5, ror #drot	// x15
-> +	_le32_bswap_4x	r2, r3, r4, r5,  r9, r10, r11
-> +	  ldr		r9, [sp, #72]		// load LEN
-> +	eor		r2, r2, r0		// x12
-> +	eor		r3, r3, r1		// x13
-> +	eor		r4, r4, r6		// x14
-> +	eor		r5, r5, r7		// x15
-> +	  subs		r9, #64			// decrement and check LEN
-> +	stmia		r14!, {r2-r5}
-> +
-> +	beq		.Ldone\@
-> +
-> +.Lprepare_for_next_block\@:
-> +
-> +	// Stack: x0-x15 OUT IN LEN
-> +
-> +	// Increment block counter (x12)
-> +	add		r8, #1
-> +
-> +	// Store updated (OUT, IN, LEN)
-> +	str		r14, [sp, #64]
-> +	str		r12, [sp, #68]
-> +	str		r9, [sp, #72]
-> +
-> +	  mov		r14, sp
-> +
-> +	// Store updated block counter (x12)
-> +	str		r8, [sp, #48]
-> +
-> +	  sub		sp, #16
-> +
-> +	// Reload state and do next block
-> +	ldmia		r14!, {r0-r11}		// load x0-x11
-> +	__strd		r10, r11, sp, 8		// store x10-x11 before state
-> +	ldmia		r14, {r10-r12,r14}	// load x12-x15
-> +	b		.Lnext_block\@
-> +
-> +.Lxor_slowpath\@:
-> +	// Slow path: < 64 bytes remaining, or unaligned input or output buffer.
-> +	// We handle it by storing the 64 bytes of keystream to the stack, then
-> +	// XOR-ing the needed portion with the data.
-> +
-> +	// Allocate keystream buffer
-> +	sub		sp, #64
-> +	mov		r14, sp
-> +
-> +	// Stack: ks0-ks15 x8-x9 x12-x15 x10-x11 orig_x0-orig_x15 OUT IN LEN
-> +	// Registers: r0-r7 are x0-x7; r8-r11 are free; r12 is IN; r14 is &ks0.
-> +	// x4-x7 are rotated by 'brot'; x12-x15 are rotated by 'drot'.
-> +
-> +	// Save keystream for x0-x3
-> +	__ldrd		r8, r9, sp, 96
-> +	__ldrd		r10, r11, sp, 104
-> +	add		X0, X0, r8
-> +	add		X1, X1, r9
-> +	add		X2, X2, r10
-> +	add		X3, X3, r11
-> +	_le32_bswap_4x	X0, X1, X2, X3,  r8, r9, r10
-> +	stmia		r14!, {X0-X3}
-> +
-> +	// Save keystream for x4-x7
-> +	__ldrd		r8, r9, sp, 112
-> +	__ldrd		r10, r11, sp, 120
-> +	add		X4, r8, X4, ror #brot
-> +	add		X5, r9, X5, ror #brot
-> +	add		X6, r10, X6, ror #brot
-> +	add		X7, r11, X7, ror #brot
-> +	_le32_bswap_4x	X4, X5, X6, X7,  r8, r9, r10
-> +	  add		r8, sp, #64
-> +	stmia		r14!, {X4-X7}
-> +
-> +	// Save keystream for x8-x15
-> +	ldm		r8, {r0-r7}		// (x8-x9,x12-x15,x10-x11)
-> +	__ldrd		r8, r9, sp, 128
-> +	__ldrd		r10, r11, sp, 136
-> +	add		r0, r0, r8		// x8
-> +	add		r1, r1, r9		// x9
-> +	add		r6, r6, r10		// x10
-> +	add		r7, r7, r11		// x11
-> +	_le32_bswap_4x	r0, r1, r6, r7,  r8, r9, r10
-> +	stmia		r14!, {r0,r1,r6,r7}
-> +	__ldrd		r8, r9, sp, 144
-> +	__ldrd		r10, r11, sp, 152
-> +	add		r2, r8, r2, ror #drot	// x12
-> +	add		r3, r9, r3, ror #drot	// x13
-> +	add		r4, r10, r4, ror #drot	// x14
-> +	add		r5, r11, r5, ror #drot	// x15
-> +	_le32_bswap_4x	r2, r3, r4, r5,  r9, r10, r11
-> +	stmia		r14, {r2-r5}
-> +
-> +	// Stack: ks0-ks15 unused0-unused7 x0-x15 OUT IN LEN
-> +	// Registers: r8 is block counter, r12 is IN.
-> +
-> +	ldr		r9, [sp, #168]		// LEN
-> +	ldr		r14, [sp, #160]		// OUT
-> +	cmp		r9, #64
-> +	  mov		r0, sp
-> +	movle		r1, r9
-> +	movgt		r1, #64
-> +	// r1 is number of bytes to XOR, in range [1, 64]
-> +
-> +.if __LINUX_ARM_ARCH__ < 6
-> +	orr		r2, r12, r14
-> +	tst		r2, #3			// IN or OUT misaligned?
-> +	bne		.Lxor_next_byte\@
-> +.endif
-> +
-> +	// XOR a word at a time
-> +.rept 16
-> +	subs		r1, #4
-> +	blt		.Lxor_words_done\@
-> +	ldr		r2, [r12], #4
-> +	ldr		r3, [r0], #4
-> +	eor		r2, r2, r3
-> +	str		r2, [r14], #4
-> +.endr
-> +	b		.Lxor_slowpath_done\@
-> +.Lxor_words_done\@:
-> +	ands		r1, r1, #3
-> +	beq		.Lxor_slowpath_done\@
-> +
-> +	// XOR a byte at a time
-> +.Lxor_next_byte\@:
-> +	ldrb		r2, [r12], #1
-> +	ldrb		r3, [r0], #1
-> +	eor		r2, r2, r3
-> +	strb		r2, [r14], #1
-> +	subs		r1, #1
-> +	bne		.Lxor_next_byte\@
-> +
-> +.Lxor_slowpath_done\@:
-> +	subs		r9, #64
-> +	add		sp, #96
-> +	bgt		.Lprepare_for_next_block\@
-> +
-> +.Ldone\@:
-> +.endm	// _chacha
-> +
+> +module_param(nosimd, bool, 0);
+> +module_init(mod_init);
+> +module_exit(mod_exit);
+> +MODULE_LICENSE("GPL v2");
+
+The MODULE_LICENSE() doesn't match the SPDX license tag.  Intentional?
+
+> +MODULE_DESCRIPTION("BLAKE2s hash function");
+> +MODULE_AUTHOR("Jason A. Donenfeld <Jason@zx2c4.com>");
+> diff --git a/lib/zinc/selftest/blake2s.c b/lib/zinc/selftest/blake2s.c
+> new file mode 100644
+> index 000000000000..1b5c210dc7a8
+> --- /dev/null
+> +++ b/lib/zinc/selftest/blake2s.c
+> @@ -0,0 +1,2090 @@
+> +// SPDX-License-Identifier: GPL-2.0 OR MIT
 > +/*
-> + * void chacha20_arm(u8 *out, const u8 *in, size_t len, const u32 key[8],
-> + *		     const u32 iv[4]);
+> + * Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 > + */
-> +ENTRY(chacha20_arm)
-> +	cmp		r2, #0			// len == 0?
-> +	reteq		lr
 > +
-> +	push		{r0-r2,r4-r11,lr}
+> +static const u8 blake2s_testvecs[][BLAKE2S_HASH_SIZE] __initconst = {
+[snip]
+> +};
 > +
-> +	// Push state x0-x15 onto stack.
-> +	// Also store an extra copy of x10-x11 just before the state.
+> +static const u8 blake2s_keyed_testvecs[][BLAKE2S_HASH_SIZE] __initconst = {
+[snip]
+> +};
+
+There should be a comment mentioning where these test vectors came from.  Are
+they from a published source?  Or did you use a different implementation of
+BLAKE2s to generate them?
+
 > +
-> +	ldr		r4, [sp, #48]		// iv
-> +	mov		r0, sp
-> +	sub		sp, #80
+> +static bool __init blake2s_selftest(void)
+> +{
+> +	u8 key[BLAKE2S_KEY_SIZE];
+> +	u8 buf[ARRAY_SIZE(blake2s_testvecs)];
+> +	u8 hash[BLAKE2S_HASH_SIZE];
+> +	size_t i;
+> +	bool success = true;
 > +
-> +	// iv: x12-x15
-> +	ldm		r4, {X12,X13,X14,X15}
-> +	stmdb		r0!, {X12,X13,X14,X15}
+> +	for (i = 0; i < BLAKE2S_KEY_SIZE; ++i)
+> +		key[i] = (u8)i;
 > +
-> +	// key: x4-x11
-> +	__ldrd		X8_X10, X9_X11, r3, 24
-> +	__strd		X8_X10, X9_X11, sp, 8
-> +	stmdb		r0!, {X8_X10, X9_X11}
-> +	ldm		r3, {X4-X9_X11}
-> +	stmdb		r0!, {X4-X9_X11}
+> +	for (i = 0; i < ARRAY_SIZE(blake2s_testvecs); ++i)
+> +		buf[i] = (u8)i;
 > +
-> +	// constants: x0-x3
-> +	adrl		X3, .Lexpand_32byte_k
-> +	ldm		X3, {X0-X3}
-> +	__strd		X0, X1, sp, 16
-> +	__strd		X2, X3, sp, 24
+> +	for (i = 0; i < ARRAY_SIZE(blake2s_keyed_testvecs); ++i) {
+> +		blake2s(hash, buf, key, BLAKE2S_HASH_SIZE, i, BLAKE2S_KEY_SIZE);
+> +		if (memcmp(hash, blake2s_keyed_testvecs[i], BLAKE2S_HASH_SIZE)) {
+> +			pr_err("blake2s keyed self-test %zu: FAIL\n", i + 1);
+> +			success = false;
+> +		}
+> +	}
 > +
-> +	_chacha		20
-> +
-> +	add		sp, #76
-> +	pop		{r4-r11, pc}
-> +ENDPROC(chacha20_arm)
-> +
-> +/*
-> + * void hchacha20_arm(const u32 state[16], u32 out[8]);
-> + */
-> +ENTRY(hchacha20_arm)
-> +	push		{r1,r4-r11,lr}
-> +
-> +	mov		r14, r0
-> +	ldmia		r14!, {r0-r11}		// load x0-x11
-> +	push		{r10-r11}		// store x10-x11 to stack
-> +	ldm		r14, {r10-r12,r14}	// load x12-x15
-> +	sub		sp, #8
-> +
-> +	_chacha_permute	20
-> +
-> +	// Skip over (unused0-unused1, x10-x11)
-> +	add		sp, #16
-> +
-> +	// Fix up rotations of x12-x15
-> +	ror		X12, X12, #drot
-> +	ror		X13, X13, #drot
-> +	  pop		{r4}			// load 'out'
-> +	ror		X14, X14, #drot
-> +	ror		X15, X15, #drot
-> +
-> +	// Store (x0-x3,x12-x15) to 'out'
-> +	stm		r4, {X0,X1,X2,X3,X12,X13,X14,X15}
-> +
-> +	pop		{r4-r11,pc}
-> +ENDPROC(hchacha20_arm)
-> diff --git a/lib/zinc/chacha20/chacha20.c b/lib/zinc/chacha20/chacha20.c
-> index b47aefd65e80..d4e6316eb5a3 100644
-> --- a/lib/zinc/chacha20/chacha20.c
-> +++ b/lib/zinc/chacha20/chacha20.c
-> @@ -18,6 +18,8 @@
->  
->  #if defined(CONFIG_ZINC_ARCH_X86_64)
->  #include "chacha20-x86_64-glue.c"
-> +#elif defined(CONFIG_ZINC_ARCH_ARM) || defined(CONFIG_ZINC_ARCH_ARM64)
-> +#include "chacha20-arm-glue.c"
->  #else
->  static bool *const chacha20_nobs[] __initconst = { };
->  static void __init chacha20_fpu_init(void)
+> +	for (i = 0; i < ARRAY_SIZE(blake2s_testvecs); ++i) {
+> +		blake2s(hash, buf, NULL, BLAKE2S_HASH_SIZE, i, 0);
+> +		if (memcmp(hash, blake2s_testvecs[i], BLAKE2S_HASH_SIZE)) {
+> +			pr_err("blake2s unkeyed self-test %zu: FAIL\n", i + i);
+> +			success = false;
+> +		}
+> +	}
+> +	return success;
+> +}
+
+This tests here miss a lot of cases.  I can break the implementation in some
+pretty major ways and it still passes the tests.
+
+We'll get better test coverage of this via testmgr once this is exposed via the
+"regular" crypto API.  E.g. the latest testmgr will automatically test multiple
+update() calls, and buffers with various alignments.  If we also make your new
+'simd_get()' function call crypto_simd_usable() rather than may_use_simd()
+directly, then testmgr will also cover the case where some update() are done in
+a SIMD-usable context and some aren't.
+
+However, any functionality that won't be exposed by the regular crypto API still
+needs to be tested here, e.g. the following which aren't currently tested:
+
+	- blake2s_hmac()
+	- Key and digest lengths other than the default
+
+- Eric
