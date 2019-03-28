@@ -1,6 +1,7 @@
-Date: Thu, 28 Mar 2019 10:37:07 -0700
-From: "Paul E. McKenney" <paulmck@linux.ibm.com>
+Date: Thu, 28 Mar 2019 16:00:52 -0400
+From: Joel Fernandes <joel@joelfernandes.org>
 Subject: Re: [PATCH] Convert struct pid count to refcount_t
+Message-ID: <20190328200052.GA105221@google.com>
 References: <20190327145331.215360-1-joel@joelfernandes.org>
  <CAGXu5j+nhsL_s36R0k5APUfP6cNiH-BGEJu6mV6UcsP0i3gtyA@mail.gmail.com>
  <CAG48ez1vZ5cngEKVtWTL9rz_K8K25b1sMKYrNs+jn4Va3KYucw@mail.gmail.com>
@@ -8,216 +9,141 @@ References: <20190327145331.215360-1-joel@joelfernandes.org>
  <CAG48ez2bbSYpNHcC4oucx_AG=5y4K5pZfSOfN3mxGadJGpHuQQ@mail.gmail.com>
  <20190328143738.GA261521@google.com>
  <CAG48ez1-3dLvzQoxxoUzTUq8dc1wwvwPBBxX_X9FWMscWTS-FQ@mail.gmail.com>
- <20190328162641.GC19441@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190328162641.GC19441@redhat.com>
-Message-Id: <20190328173707.GP4102@linux.ibm.com>
-To: Oleg Nesterov <oleg@redhat.com>
-Cc: Jann Horn <jannh@google.com>, Joel Fernandes <joel@joelfernandes.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Android Kernel Team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Michal Hocko <mhocko@suse.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, Alan Stern <stern@rowland.harvard.edu>
+In-Reply-To: <CAG48ez1-3dLvzQoxxoUzTUq8dc1wwvwPBBxX_X9FWMscWTS-FQ@mail.gmail.com>
+To: Jann Horn <jannh@google.com>
+Cc: "Paul E. McKenney" <paulmck@linux.ibm.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Android Kernel Team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Michal Hocko <mhocko@suse.com>, Oleg Nesterov <oleg@redhat.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 28, 2019 at 05:26:42PM +0100, Oleg Nesterov wrote:
-> On 03/28, Jann Horn wrote:
+On Thu, Mar 28, 2019 at 04:17:50PM +0100, Jann Horn wrote:
+> Since we're just talking about RCU stuff now, adding Paul McKenney to
+> the thread.
+> 
+> On Thu, Mar 28, 2019 at 3:37 PM Joel Fernandes <joel@joelfernandes.org> wrote:
+> > On Thu, Mar 28, 2019 at 03:57:44AM +0100, Jann Horn wrote:
+> > > On Thu, Mar 28, 2019 at 3:34 AM Joel Fernandes <joel@joelfernandes.org> wrote:
+> > > > On Thu, Mar 28, 2019 at 01:59:45AM +0100, Jann Horn wrote:
+> > > > > On Thu, Mar 28, 2019 at 1:06 AM Kees Cook <keescook@chromium.org> wrote:
+> > > > > > On Wed, Mar 27, 2019 at 7:53 AM Joel Fernandes (Google)
+> > > > > > <joel@joelfernandes.org> wrote:
+> > > > > > >
+> > > > > > > struct pid's count is an atomic_t field used as a refcount. Use
+> > > > > > > refcount_t for it which is basically atomic_t but does additional
+> > > > > > > checking to prevent use-after-free bugs. No change in behavior if
+> > > > > > > CONFIG_REFCOUNT_FULL=n.
+> > > > > > >
+> > > > > > > Cc: keescook@chromium.org
+> > > > > > > Cc: kernel-team@android.com
+> > > > > > > Cc: kernel-hardening@lists.openwall.com
+> > > > > > > Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+> > > > > > > [...]
+> > > > > > > diff --git a/kernel/pid.c b/kernel/pid.c
+> > > > > > > index 20881598bdfa..2095c7da644d 100644
+> > > > > > > --- a/kernel/pid.c
+> > > > > > > +++ b/kernel/pid.c
+> > > > > > > @@ -37,7 +37,7 @@
+> > > > > > >  #include <linux/init_task.h>
+> > > > > > >  #include <linux/syscalls.h>
+> > > > > > >  #include <linux/proc_ns.h>
+> > > > > > > -#include <linux/proc_fs.h>
+> > > > > > > +#include <linux/refcount.h>
+> > > > > > >  #include <linux/sched/task.h>
+> > > > > > >  #include <linux/idr.h>
+> > > > > > >
+> > > > > > > @@ -106,8 +106,8 @@ void put_pid(struct pid *pid)
+> > > > > > >                 return;
+> > > > > > >
+> > > > > > >         ns = pid->numbers[pid->level].ns;
+> > > > > > > -       if ((atomic_read(&pid->count) == 1) ||
+> > > > > > > -            atomic_dec_and_test(&pid->count)) {
+> > > > > > > +       if ((refcount_read(&pid->count) == 1) ||
+> > > > > > > +            refcount_dec_and_test(&pid->count)) {
+> > > > > >
+> > > > > > Why is this (and the original code) safe in the face of a race against
+> > > > > > get_pid()? i.e. shouldn't this only use refcount_dec_and_test()? I
+> > > > > > don't see this code pattern anywhere else in the kernel.
+> > > > >
+> > > > > Semantically, it doesn't make a difference whether you do this or
+> > > > > leave out the "refcount_read(&pid->count) == 1". If you read a 1 from
+> > > > > refcount_read(), then you have the only reference to "struct pid", and
+> > > > > therefore you want to free it. If you don't get a 1, you have to
+> > > > > atomically drop a reference, which, if someone else is concurrently
+> > > > > also dropping a reference, may leave you with the last reference (in
+> > > > > the case where refcount_dec_and_test() returns true), in which case
+> > > > > you still have to take care of freeing it.
+> > > >
+> > > > Also, based on Kees comment, I think it appears to me that get_pid and
+> > > > put_pid can race in this way in the original code right?
+> > > >
+> > > > get_pid                 put_pid
+> > > >
+> > > >                         atomic_dec_and_test returns 1
+> > >
+> > > This can't happen. get_pid() can only be called on an existing
+> > > reference. If you are calling get_pid() on an existing reference, and
+> > > someone else is dropping another reference with put_pid(), then when
+> > > both functions start running, the refcount must be at least 2.
 > >
-> > Since we're just talking about RCU stuff now, adding Paul McKenney to
-> > the thread.
+> > Sigh, you are right. Ok. I was quite tired last night when I wrote this.
+> > Obviously, I should have waited a bit and thought it through.
+> >
+> > Kees can you describe more the race you had in mind?
+> >
+> > > > atomic_inc
+> > > >                         kfree
+> > > >
+> > > > deref pid /* boom */
+> > > > -------------------------------------------------
+> > > >
+> > > > I think get_pid needs to call atomic_inc_not_zero() and put_pid should
+> > > > not test for pid->count == 1 as condition for freeing, but rather just do
+> > > > atomic_dec_and_test. So something like the following diff. (And I see a
+> > > > similar pattern used in drivers/net/mac.c)
+> > >
+> > > get_pid() can only be called when you already have a refcounted
+> > > reference; in other words, when the reference count is at least one.
+> > > The lifetime management of struct pid differs from the lifetime
+> > > management of most other objects in the kernel; the usual patterns
+> > > don't quite apply here.
+> > >
+> > > Look at put_pid(): When the refcount has reached zero, there is no RCU
+> > > grace period (unlike most other objects with RCU-managed lifetimes).
+> > > Instead, free_pid() has an RCU grace period *before* it invokes
+> > > delayed_put_pid() to drop a reference; and free_pid() is also the
+> > > function that removes a PID from the namespace's IDR, and it is used
+> > > by __change_pid() when a task loses its reference on a PID.
+> > >
+> > > In other words: Most refcounted objects with RCU guarantee that the
+> > > object waits for a grace period after its refcount has reached zero;
+> > > and during the grace period, the refcount is zero and you're not
+> > > allowed to increment it again.
+> >
+> > Can you give an example of this "most refcounted objects with RCU" usecase?
+> > I could not find any good examples of such. I want to document this pattern
+> > and possibly submit to Documentation/RCU.
 > 
-> Since you added Paul let me add more confusion to this thread ;)
+> E.g. struct posix_acl is a relatively straightforward example:
+> posix_acl_release() is a wrapper around refcount_dec_and_test(); if
+> the refcount has dropped to zero, the object is released after an RCU
+> grace period using kfree_rcu().
+> get_cached_acl() takes an RCU read lock, does rcu_dereference() [with
+> a missing __rcu annotation, grmbl], and attempts to take a reference
+> with refcount_inc_not_zero().
 
-Woo-hoo!!!  More confusion!  Bring it on!!!  ;-)
+Ok I get it now. It is quite a subtle difference in usage, I have noted both
+these usecases in my private notes for my own sanity ;-). I wonder if Paul
+thinks this is too silly to document into Documentation/RCU/, or if I should
+write-up something.
 
-> There were some concerns about the lack of barriers in put_pid(), but I can't
-> find that old discussion and I forgot the result of that discussion...
-> 
-> Paul, could you confirm that this code
-> 
-> 	CPU_0		CPU_1
-> 
-> 	X = 1;		if (READ_ONCE(Y))
-> 	mb();			X = 2;
-> 	Y = 1;		BUG_ON(X != 2);
-> 
-> 
-> is correct? I think it is, control dependency pairs with mb(), right?
+One thing I wonder is if one usage pattern is faster than the other.
+Certainly in the {get,put}_pid case, it seems nice to be able to do a
+get_pid even though free_pid's grace period has still not completed. Where as
+in the posix_acl case, once the grace period starts then it is no longer
+possible to get a reference as you pointed and its basically game-over for
+that object.
 
-The BUG_ON() is supposed to happen at the end of time, correct?
-As written, there is (in the strict sense) a data race between the load
-of X in the BUG_ON() and CPU_0's store to X.  In a less strict sense,
-you could of course argue that this data race is harmless, especially
-if X is a single byte.  But the more I talk to compiler writers, the
-less comfortable I become with data races in general.  :-/
+thank you!
 
-So I would also feel better if the "Y = 1" was WRITE_ONCE().
-
-On the other hand, this is a great opportunity to try out Alan Stern's
-prototype plain-accesses patch to the Linux Kernel Memory Model (LKMM)!
-
-https://lkml.kernel.org/r/Pine.LNX.4.44L0.1903191459270.1593-200000@iolanthe.rowland.org
-
-Also adding Alan on CC.
-
-Here is what I believe is the litmus test that your are interested in:
-
-------------------------------------------------------------------------
-C OlegNesterov-put_pid
-
-{}
-
-P0(int *x, int *y)
-{
-	*x = 1;
-	smp_mb();
-	*y = 1;
-}
-
-P1(int *x, int *y)
-{
-	int r1;
-
-	r1 = READ_ONCE(*y);
-	if (r1)
-		*x = 2;
-}
-
-exists (1:r1=1 /\ ~x=2)
-------------------------------------------------------------------------
-
-Running this through herd with Alan's patch detects the data race
-and says that the undesired outcome is allowed:
-
-	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid.litmus 
-	Test OlegNesterov-put_pid Allowed
-	States 3
-	1:r1=0; x=1;
-	1:r1=1; x=1;
-	1:r1=1; x=2;
-	Ok
-	Witnesses
-	Positive: 1 Negative: 2
-	Flag data-race
-	Condition exists (1:r1=1 /\ not (x=2))
-	Observation OlegNesterov-put_pid Sometimes 1 2
-	Time OlegNesterov-put_pid 0.00
-	Hash=a3e0043ad753effa860fea37eeba0a76
-
-Using WRITE_ONCE() for P0()'s store to y still allows this outcome,
-although it does remove the "Flag data-race".
-
-Using WRITE_ONCE() for both P0()'s store to y and P1()'s store to x
-gets rid of both the "Flag data-race" and the undesired outcome:
-
-	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid-WO-WO.litmus 
-	Test OlegNesterov-put_pid-WO-WO Allowed
-	States 2
-	1:r1=0; x=1;
-	1:r1=1; x=2;
-	No
-	Witnesses
-	Positive: 0 Negative: 2
-	Condition exists (1:r1=1 /\ not (x=2))
-	Observation OlegNesterov-put_pid-WO-WO Never 0 2
-	Time OlegNesterov-put_pid-WO-WO 0.01
-	Hash=6e1643e3c5e4739b590bde0a8e8a918e
-
-Here is the corresponding litmus test, in case I messed something up:
-
-------------------------------------------------------------------------
-C OlegNesterov-put_pid-WO-WO
-
-{}
-
-P0(int *x, int *y)
-{
-	*x = 1;
-	smp_mb();
-	WRITE_ONCE(*y, 1);
-}
-
-P1(int *x, int *y)
-{
-	int r1;
-
-	r1 = READ_ONCE(*y);
-	if (r1)
-		WRITE_ONCE(*x, 2);
-}
-
-exists (1:r1=1 /\ ~x=2)
-------------------------------------------------------------------------
-
-> If not, then put_pid() needs atomic_read_acquire() as it was proposed in that
-> discussion.
-
-Good point, let's try with smp_load_acquire() in P1():
-
-	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid-WO-sla.litmus 
-	Test OlegNesterov-put_pid-WO-sla Allowed
-	States 2
-	1:r1=0; x=1;
-	1:r1=1; x=2;
-	No
-	Witnesses
-	Positive: 0 Negative: 2
-	Condition exists (1:r1=1 /\ not (x=2))
-	Observation OlegNesterov-put_pid-WO-sla Never 0 2
-	Time OlegNesterov-put_pid-WO-sla 0.01
-	Hash=4fb0276eabf924793dec1970199db3a6
-
-This also works.  Here is the litmus test:
-
-------------------------------------------------------------------------
-C OlegNesterov-put_pid-WO-sla
-
-{}
-
-P0(int *x, int *y)
-{
-	*x = 1;
-	smp_mb();
-	WRITE_ONCE(*y, 1);
-}
-
-P1(int *x, int *y)
-{
-	int r1;
-
-	r1 = smp_load_acquire(y);
-	if (r1)
-		*x = 2;
-}
-
-exists (1:r1=1 /\ ~x=2)
-------------------------------------------------------------------------
-
-Demoting P0()'s WRITE_ONCE() to a plain write while leaving P1()'s
-smp_load_acquire() gets us a data race and allows the undesired
-outcome:
-
-	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid-sla.litmus 
-	Test OlegNesterov-put_pid-sla Allowed
-	States 3
-	1:r1=0; x=1;
-	1:r1=1; x=1;
-	1:r1=1; x=2;
-	Ok
-	Witnesses
-	Positive: 1 Negative: 2
-	Flag data-race
-	Condition exists (1:r1=1 /\ not (x=2))
-	Observation OlegNesterov-put_pid-sla Sometimes 1 2
-	Time OlegNesterov-put_pid-sla 0.01
-	Hash=ec6f71f3d9f7cd6e45a874c872e3d946
-
-But what if you are certain that the compiler cannot mess up your use
-of plain C-language loads and stores?  Then simply tell LKMM that they
-are READ_ONCE() and WRITE_ONCE(), respectively.  LKMM is admittedly
-somewhat paranoid, but real C compilers really do tear stores of certain
-constants on systems (like x86) that have store-immediate instructions,
-so a bit of paranoia is not misplaced here.  ;-)
-
-Plus please note that this patch to LKMM is prototype and thus subject
-to change.
-
-							Thanx, Paul
+ - Joel
