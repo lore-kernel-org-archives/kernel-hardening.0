@@ -1,76 +1,211 @@
-Date: Thu, 28 Mar 2019 22:34:56 -0400
-From: Joel Fernandes <joel@joelfernandes.org>
-Subject: Re: [PATCH] Convert struct pid count to refcount_t
-Message-ID: <20190329023456.GB194158@google.com>
-References: <20190327145331.215360-1-joel@joelfernandes.org>
- <CAGXu5j+nhsL_s36R0k5APUfP6cNiH-BGEJu6mV6UcsP0i3gtyA@mail.gmail.com>
- <CAG48ez1vZ5cngEKVtWTL9rz_K8K25b1sMKYrNs+jn4Va3KYucw@mail.gmail.com>
- <20190328023432.GA93275@google.com>
- <20190328142619.GA19441@redhat.com>
- <20190328143958.GB261521@google.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190328143958.GB261521@google.com>
-To: Oleg Nesterov <oleg@redhat.com>
-Cc: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Android Kernel Team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Michal Hocko <mhocko@suse.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
+From: Elena Reshetova <elena.reshetova@intel.com>
+Subject: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon syscall
+Date: Fri, 29 Mar 2019 10:13:58 +0200
+Message-Id: <20190329081358.30497-1-elena.reshetova@intel.com>
+To: luto@kernel.org
+Cc: kernel-hardening@lists.openwall.com, luto@amacapital.net, jpoimboe@redhat.com, keescook@chromium.org, jannh@google.com, enrico.perla@intel.com, mingo@redhat.com, bp@alien8.de, tglx@linutronix.de, peterz@infradead.org, gregkh@linuxfoundation.org, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 28, 2019 at 10:39:58AM -0400, Joel Fernandes wrote:
-> On Thu, Mar 28, 2019 at 03:26:19PM +0100, Oleg Nesterov wrote:
-> > On 03/27, Joel Fernandes wrote:
-> > >
-> > > Also, based on Kees comment, I think it appears to me that get_pid and
-> > > put_pid can race in this way in the original code right?
-> > >
-> > > get_pid			put_pid
-> > >
-> > > 			atomic_dec_and_test returns 1
-> > > atomic_inc
-> > > 			kfree
-> > >
-> > > deref pid /* boom */
-> > > -------------------------------------------------
-> > >
-> > > I think get_pid needs to call atomic_inc_not_zero()
-> > 
-> > No.
-> > 
-> > get_pid() should only be used if you already have a reference or you do
-> > something like
-> > 
-> > 	rcu_read_lock();
-> > 	pid = find_vpid();
-> > 	get_pid();
-> > 	rcu_read_lock();
-> > 
-> > in this case we rely on call_rcu(delayed_put_pid) which drops the initial
-> > reference.
-> > 
-> > If put_pid() sees pid->count == 1, then a) nobody else has a reference and
-> > b) nobody else can find this pid on rcu-protected lists, so it is safe to
-> > free it.
-> 
-> I agree. Check my reply to Jann, I already replied to him about this. thanks!
-> 
+If CONFIG_RANDOMIZE_KSTACK_OFFSET is selected,
+the kernel stack offset is randomized upon each
+entry to a system call after fixed location of pt_regs
+struct.
 
-Also Oleg, why not just call refcount_dec_and_test like below? If count is 1,
-then it will decrement to 0 and return true anyway. Is this because we want
-to avoid writes at the cost of more reads? Did I miss something? Thank you.
+This feature is based on the original idea from
+the PaX's RANDKSTACK feature:
+https://pax.grsecurity.net/docs/randkstack.txt
+All the credits for the original idea goes to the PaX team.
+However, the design and implementation of
+RANDOMIZE_KSTACK_OFFSET differs greatly from the RANDKSTACK
+feature (see below).
 
-I don't remember very clearly, but I think Kees also asked about the same thing.
+Reasoning for the feature:
 
-diff --git a/kernel/pid.c b/kernel/pid.c
-index 2095c7da644d..89c4849fab5d 100644
---- a/kernel/pid.c
-+++ b/kernel/pid.c
-@@ -106,8 +106,7 @@ void put_pid(struct pid *pid)
- 		return;
+This feature aims to make considerably harder various
+stack-based attacks that rely on deterministic stack
+structure.
+We have had many of such attacks in past [1],[2],[3]
+(just to name few), and as Linux kernel stack protections
+have been constantly improving (vmap-based stack
+allocation with guard pages, removal of thread_info,
+STACKLEAK), attackers have to find new ways for their
+exploits to work.
+
+It is important to note that we currently cannot show
+a concrete attack that would be stopped by this new
+feature (given that other existing stack protections
+are enabled), so this is an attempt to be on a proactive
+side vs. catching up with existing successful exploits.
+
+The main idea is that since the stack offset is
+randomized upon each system call, it is very hard for
+attacker to reliably land in any particular place on
+the thread stack when attack is performed.
+Also, since randomization is performed *after* pt_regs,
+the ptrace-based approach to discover randomization
+offset during a long-running syscall should not be
+possible.
+
+[1] jon.oberheide.org/files/infiltrate12-thestackisback.pdf
+[2] jon.oberheide.org/files/stackjacking-infiltrate11.pdf
+[3] googleprojectzero.blogspot.com/2016/06/exploiting-
+recursion-in-linux-kernel_20.html
+
+Design description:
+
+During most of the kernel's execution, it runs on the "thread
+stack", which is allocated at fork.c/dup_task_struct() and stored in
+a per-task variable (tsk->stack). Since stack is growing downward,
+the stack top can be always calculated using task_top_of_stack(tsk)
+function, which essentially returns an address of tsk->stack + stack
+size. When VMAP_STACK is enabled, the thread stack is allocated from
+vmalloc space.
+
+Thread stack is pretty deterministic on its structure - fixed in size,
+and upon every entry from a userspace to kernel on a
+syscall the thread stack is started to be constructed from an
+address fetched from a per-cpu cpu_current_top_of_stack variable.
+The first element to be pushed to the thread stack is the pt_regs struct
+that stores all required CPU registers and sys call parameters.
+
+The goal of RANDOMIZE_KSTACK_OFFSET feature is to add a random offset
+after the pt_regs has been pushed to the stack and the rest of thread
+stack (used during the syscall processing) every time a process issues
+a syscall. The source of randomness can be taken either from prandom_u32()
+pseudo random generator (not cryptographically secure). The offset is
+added using alloca() call since it helps avoiding changes in assembly
+syscall entry code and unwinder. I am not that greatly happy about the
+generated assembly code (but I don't know if how to force gcc to produce
+anything better):
+
+...
+	size_t offset = ((size_t)prandom_u32()) % 256;
+	char * ptr = alloca(offset);
+0xffffffff8100426d add    $0x16,%rax
+0xffffffff81004271 and    $0x1f8,%eax
+0xffffffff81004276 sub    %rax,%rsp
+0xffffffff81004279 lea    0xf(%rsp),%rax
+0xffffffff8100427e and    $0xfffffffffffffff0,%rax
+	asm volatile("":"=m"(*ptr));
+...
+
+As a result of the above gcc-produce code this patch introduces 6 bits
+of randomness (bits 3 - 8 are randomized, bits 0-2 are zero due to stack alignment)
+after pt_regs location on the thread stack.
+The amount of randomness can be adjusted based on how much of the
+stack space we wish/can trade for security.
+
+Performance:
+
+1) lmbench: ./lat_syscall -N 1000000 null
+    base:                                        Simple syscall: 0.1774 microseconds
+    random_offset (prandom_u32() every syscall): Simple syscall: 0.1822 microseconds
+
+2)  Andy's tests, misc-tests: ./timing_test_64 10M sys_enosys
+    base:                                        10000000 loops in 1.62224s = 162.22 nsec / loop
+    random_offset (prandom_u32() every syscall): 10000000 loops in 1.64660s = 166.26 nsec / loop
+
+Comparison to grsecurity RANDKSTACK feature:
+
+RANDKSTACK feature randomizes the location of the stack start
+(cpu_current_top_of_stack), i.e. location of pt_regs structure
+itself on the stack. Initially this patch followed the same approach,
+but during the recent discussions [4], it has been determined
+to be of a little value since, if ptrace functionality is available
+for an attacker, he can use PTRACE_PEEKUSR/PTRACE_POKEUSR api to read/write
+different offsets in the pt_regs struct, observe the cache
+behavior of the pt_regs accesses, and figure out the random stack offset.
+
+Another big difference is that randomization is done upon
+syscall entry and not the exit, as with RANDKSTACK.
+
+Also, as a result of the above two differences, the implementation
+of RANDKSTACK and RANDOMIZE_KSTACK_OFFSET has nothing in common.
+
+[4] https://www.openwall.com/lists/kernel-hardening/2019/02/08/6
+
+Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+---
+ arch/Kconfig            | 15 +++++++++++++++
+ arch/x86/Kconfig        |  1 +
+ arch/x86/entry/common.c | 16 ++++++++++++++++
+ 3 files changed, 32 insertions(+)
+
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 4cfb6de48f79..9a2557b0cfce 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -808,6 +808,21 @@ config VMAP_STACK
+ 	  the stack to map directly to the KASAN shadow map using a formula
+ 	  that is incorrect if the stack is in vmalloc space.
  
- 	ns = pid->numbers[pid->level].ns;
--	if ((refcount_read(&pid->count) == 1) ||
--	     refcount_dec_and_test(&pid->count)) {
-+	if (refcount_dec_and_test(&pid->count)) {
- 		kmem_cache_free(ns->pid_cachep, pid);
- 		put_pid_ns(ns);
- 	}
++config HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
++	def_bool n
++	help
++	  An arch should select this symbol if it can support kernel stack
++	  offset randomization.
++
++config RANDOMIZE_KSTACK_OFFSET
++	default n
++	bool "Randomize kernel stack offset on syscall entry"
++	depends on HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
++	help
++	  Enable this if you want the randomize kernel stack offset upon
++	  each syscall entry. This causes kernel stack (after pt_regs) to
++	  have a randomized offset upon executing each system call.
++
+ config ARCH_OPTIONAL_KERNEL_RWX
+ 	def_bool n
+ 
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index ade12ec4224b..5edcae945b73 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -131,6 +131,7 @@ config X86
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE_PUD if X86_64
+ 	select HAVE_ARCH_VMAP_STACK		if X86_64
++	select HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET  if X86_64
+ 	select HAVE_ARCH_WITHIN_STACK_FRAMES
+ 	select HAVE_CMPXCHG_DOUBLE
+ 	select HAVE_CMPXCHG_LOCAL
+diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
+index 7bc105f47d21..28cb3687bf82 100644
+--- a/arch/x86/entry/common.c
++++ b/arch/x86/entry/common.c
+@@ -32,6 +32,10 @@
+ #include <linux/uaccess.h>
+ #include <asm/cpufeature.h>
+ 
++#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
++#include <linux/random.h>
++#endif
++
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/syscalls.h>
+ 
+@@ -269,10 +273,22 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
+ }
+ 
+ #ifdef CONFIG_X86_64
++
++#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
++void *alloca(size_t size);
++#endif
++
+ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
+ {
+ 	struct thread_info *ti;
+ 
++#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
++	size_t offset = ((size_t)prandom_u32()) % 256;
++	char *ptr = alloca(offset);
++
++	asm volatile("":"=m"(*ptr));
++#endif
++
+ 	enter_from_user_mode();
+ 	local_irq_enable();
+ 	ti = current_thread_info();
+-- 
+2.17.1
