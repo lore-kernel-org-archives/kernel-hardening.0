@@ -1,16 +1,26 @@
-Date: Sat, 30 Mar 2019 11:16:01 -0400 (EDT)
-From: Alan Stern <stern@rowland.harvard.edu>
+Date: Sun, 31 Mar 2019 14:55:31 -0700
+From: "Paul E. McKenney" <paulmck@linux.ibm.com>
 Subject: Re: [PATCH] Convert struct pid count to refcount_t
-In-Reply-To: <20190330023639.GA214473@google.com>
-Message-ID: <Pine.LNX.4.44L0.1903301053080.18505-100000@netrider.rowland.org>
+References: <20190327145331.215360-1-joel@joelfernandes.org>
+ <CAGXu5j+nhsL_s36R0k5APUfP6cNiH-BGEJu6mV6UcsP0i3gtyA@mail.gmail.com>
+ <CAG48ez1vZ5cngEKVtWTL9rz_K8K25b1sMKYrNs+jn4Va3KYucw@mail.gmail.com>
+ <20190328023432.GA93275@google.com>
+ <CAG48ez2bbSYpNHcC4oucx_AG=5y4K5pZfSOfN3mxGadJGpHuQQ@mail.gmail.com>
+ <20190328143738.GA261521@google.com>
+ <CAG48ez1-3dLvzQoxxoUzTUq8dc1wwvwPBBxX_X9FWMscWTS-FQ@mail.gmail.com>
+ <20190328162641.GC19441@redhat.com>
+ <20190328173707.GP4102@linux.ibm.com>
+ <20190330023639.GA214473@google.com>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190330023639.GA214473@google.com>
+Message-Id: <20190331215531.GF4102@linux.ibm.com>
 To: Joel Fernandes <joel@joelfernandes.org>
-Cc: "Paul E. McKenney" <paulmck@linux.ibm.com>, Oleg Nesterov <oleg@redhat.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Android Kernel Team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Michal Hocko <mhocko@suse.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: Oleg Nesterov <oleg@redhat.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Android Kernel Team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Michal Hocko <mhocko@suse.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, Alan Stern <stern@rowland.harvard.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 29 Mar 2019, Joel Fernandes wrote:
-
+On Fri, Mar 29, 2019 at 10:36:39PM -0400, Joel Fernandes wrote:
 > On Thu, Mar 28, 2019 at 10:37:07AM -0700, Paul E. McKenney wrote:
 > > On Thu, Mar 28, 2019 at 05:26:42PM +0100, Oleg Nesterov wrote:
 > > > On 03/28, Jann Horn wrote:
@@ -143,12 +153,7 @@ On Fri, 29 Mar 2019, Joel Fernandes wrote:
 > > exists (1:r1=1 /\ ~x=2)
 > 
 > I ran the above examples too. Its a bit confusing to me why the WRITE_ONCE in
-> P0() is required,
-
-If the "WRITE_ONCE(*y, 1)" in P0 were written instead as "*y = 1", it
-would race with P1's "READ_ONCE(*y)".
-
->  and why would the READ_ONCE / WRITE_ONCE in P1() not be
+> P0() is required, and why would the READ_ONCE / WRITE_ONCE in P1() not be
 > sufficient to prevent the exists condition. Shouldn't the compiler know that,
 > in P0(), it should not reorder the store to y=1 before the x=1 because there
 > is an explicit barrier between the 2 stores? Looks me to me like a broken
@@ -175,12 +180,19 @@ would race with P1's "READ_ONCE(*y)".
 > 
 > exists (1:r1=1 /\ ~x=2)
 
-You have to realize that in the presence of a data race, all bets are
-off.  The memory model will still output a prediction, but there is no
-guarantee that the prediction will be correct.
+The problem is that the compiler can turn both of P0()'s writes into reads:
 
-In this case P0's write to y races with P1's READ_ONCE.  Therefore the 
-memory model may very will give an incorrect result.
+P0(int *x, int *y)
+{
+	if (*x != 1)
+		*x = 1;
+	smp_mb();
+	if (*y != 1)
+		*y = 1;
+}
+
+These reads will not be ordered by smp_wmb(), so you have to do WRITE_ONCE()
+to get an iron-clad ordering guarantee.
 
 > > ------------------------------------------------------------------------
 > > 
@@ -236,20 +248,11 @@ memory model may very will give an incorrect result.
 > WRITE_ONCE required in P0() because there's already an smp_mb there. Surely
 > I'm missing something. ;-)
 
-A plain write to *y in P0 races with the smp_load_acquire in P1.  
-That's all -- it's not very deep or subtle.  Remember, the definition
-of a race is two concurrent accesses to the same variable from
-different CPUs, where at least one of the accesses is plain and at
-least one of them is a write.
-
-I've heard that people on the C++ Standards committee have proposed
-that plain writes should not race with marked reads.  That is, when
-such concurrent accesses occur the outcome should be an undefined
-result for the marked read rather than undefined behavior.  If this
-change gets adopted and we put it into the memory model, then your
-expectation would be correct.  But as things stand, it isn't.
-
-Alan
+The first of P0()'s writes can be a plain write, at least assuming
+sufficient synchronization to avoid the data race.  But turning the second
+of P0()'s writes into a plain write is a bit riskier: That is a write of
+a constant, and those really are torn in some cases on some architectures.
+Like x86, for example.
 
 > > 	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid-sla.litmus 
 > > 	Test OlegNesterov-put_pid-sla Allowed
@@ -278,7 +281,8 @@ Alan
 > 
 > Ah I see. Appreciate if Alan can also CC me on future posting of this since
 > I'm quite interested. ;-)
-> 
-> thanks,
-> 
->  - Joel
+
+His last posting should be easy to find.  But please let me know if not,
+as I would be happy to send it along.
+
+							Thanx, Pau
