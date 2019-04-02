@@ -1,34 +1,38 @@
 MIME-Version: 1.0
-References: <20190306214226.14598-1-tobin@kernel.org>
-In-Reply-To: <20190306214226.14598-1-tobin@kernel.org>
+References: <20190306214226.14598-1-tobin@kernel.org> <20190306214226.14598-4-tobin@kernel.org>
+In-Reply-To: <20190306214226.14598-4-tobin@kernel.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 2 Apr 2019 14:37:57 -0700
-Message-ID: <CAGXu5jJeFOBBiofjG6_rqbf+_0fbKC46pzyfoACWt+NBg-bXtg@mail.gmail.com>
-Subject: Re: [PATCH v3 0/7] lib/string: Add strscpy_pad() function
+Date: Tue, 2 Apr 2019 14:45:21 -0700
+Message-ID: <CAGXu5jJHKS=cghJDRwhTAEXg2yEOKjxGxKinDWHv3X4fZ5oxfQ@mail.gmail.com>
+Subject: Re: [PATCH v3 3/7] kselftest/lib: Use new shell runner to define tests
 Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>
-Cc: Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+To: "Tobin C. Harding" <tobin@kernel.org>
+Cc: Shuah Khan <shuah@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Wed, Mar 6, 2019 at 1:43 PM Tobin C. Harding <tobin@kernel.org> wrote:
-> This set makes an attempt at adding a framework to kselftest for writing
-> kernel test modules.  It also adds a script for use in creating script
-> test runners for kselftest.  My macro-foo is not great, all criticism
-> and suggestions very much appreciated.  The design is based on test
-> modules lib/test_printf.c, lib/test_bitmap.c, lib/test_xarray.c.
+> [...]
+> diff --git a/tools/testing/selftests/lib/prime_numbers.sh b/tools/testing/selftests/lib/prime_numbers.sh
+> index 78e7483c8d60..6f782386d897 100755
+> --- a/tools/testing/selftests/lib/prime_numbers.sh
+> +++ b/tools/testing/selftests/lib/prime_numbers.sh
+> @@ -2,18 +2,17 @@
+> [...]
+> -if /sbin/modprobe -q prime_numbers selftest=65536; then
 
-Hi Shuah,
+Here it is! This conversion loses the "selftest=..." argument to modprobe.
 
-The bulk of this series is in the kselftests. Would you be willing to
-carry this series?
+And I think all of these files could be reduced to a single script
+that did something like:
 
-I think it might be able to use a v4 just to clean up the
-script-finding logic, but I might be entirely missing something about
-the best way to do it.
+. $path/kselftest_module.sh
 
-Thanks!
+run "strscpy" test_strscpy
+run "bitmap" test_bitmap
+run "prime numbers" prime_numbers selftest=65536
 
--Kees
+and kselftest_module.sh could define a "trap {...} EXIT" to perform
+the reporting of everything that got run.
 
 -- 
 Kees Cook
