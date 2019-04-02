@@ -1,10 +1,10 @@
 MIME-Version: 1.0
-References: <20190306214226.14598-1-tobin@kernel.org> <20190306214226.14598-8-tobin@kernel.org>
-In-Reply-To: <20190306214226.14598-8-tobin@kernel.org>
+References: <20190306214226.14598-1-tobin@kernel.org> <20190306214226.14598-5-tobin@kernel.org>
+In-Reply-To: <20190306214226.14598-5-tobin@kernel.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 2 Apr 2019 14:36:06 -0700
-Message-ID: <CAGXu5jKs7sTzd==6q1k+wti1eW0Dt7msgvHBupRNJv33CDPYWg@mail.gmail.com>
-Subject: Re: [PATCH v3 7/7] lib: Add test module for strscpy_pad
+Date: Tue, 2 Apr 2019 14:31:09 -0700
+Message-ID: <CAGXu5j+Ux+w5KMYvGV+N_ZC-+tMQ=TpM3i5z-p1kCFnF0Ld9eA@mail.gmail.com>
+Subject: Re: [PATCH v3 4/7] kselftest: Add test module framework header
 Content-Type: text/plain; charset="UTF-8"
 To: "Tobin C. Harding" <tobin@kernel.org>
 Cc: Shuah Khan <shuah@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
@@ -12,254 +12,220 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 On Wed, Mar 6, 2019 at 1:43 PM Tobin C. Harding <tobin@kernel.org> wrote:
 >
-> Add a test module for the new strscpy_pad() function.  Tie it into the
-> kselftest infrastructure for lib/ tests.
+> kselftest runs as a userspace process.  Sometimes we need to test things
+> from kernel space.  One way of doing this is by creating a test module.
+> Currently doing so requires developers to write a bunch of boiler plate
+> in the module if kselftest is to be used to run the tests.  This means
+> we currently have a load of duplicate code to achieve these ends.  If we
+> have a uniform method for implementing test modules then we can reduce
+> code duplication, ensure uniformity in the test framework, ease code
+> maintenance, and reduce the work required to create tests.  This all
+> helps to encourage developers to write and run tests.
+>
+> Add a C header file that can be included in test modules.  This provides
+> a single point for common test functions/macros.  Implement a few macros
+> that make up the start of the test framework.
+>
+> Add documentation for new kselftest header and script to kselftest
+> documentation.
 >
 > Signed-off-by: Tobin C. Harding <tobin@kernel.org>
 
-Yay! :)
+I like this!
 
 Acked-by: Kees Cook <keescook@chromium.org>
 
 -Kees
 
 > ---
->  lib/Kconfig.debug                      |   3 +
->  lib/Makefile                           |   1 +
->  lib/test_strscpy.c                     | 150 +++++++++++++++++++++++++
->  tools/testing/selftests/lib/Makefile   |   2 +-
->  tools/testing/selftests/lib/config     |   1 +
->  tools/testing/selftests/lib/strscpy.sh |  17 +++
->  6 files changed, 173 insertions(+), 1 deletion(-)
->  create mode 100644 lib/test_strscpy.c
->  create mode 100755 tools/testing/selftests/lib/strscpy.sh
+>  Documentation/dev-tools/kselftest.rst      | 108 ++++++++++++++++++++-
+>  tools/testing/selftests/kselftest_module.h |  48 +++++++++
+>  2 files changed, 154 insertions(+), 2 deletions(-)
+>  create mode 100644 tools/testing/selftests/kselftest_module.h
 >
-> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-> index d4df5b24d75e..441c1571495c 100644
-> --- a/lib/Kconfig.debug
-> +++ b/lib/Kconfig.debug
-> @@ -1805,6 +1805,9 @@ config TEST_HEXDUMP
->  config TEST_STRING_HELPERS
->         tristate "Test functions located in the string_helpers module at runtime"
+> diff --git a/Documentation/dev-tools/kselftest.rst b/Documentation/dev-tools/kselftest.rst
+> index 7756f7a7c23b..fb7790d47147 100644
+> --- a/Documentation/dev-tools/kselftest.rst
+> +++ b/Documentation/dev-tools/kselftest.rst
+> @@ -14,6 +14,10 @@ in safe mode with a limited scope. In limited mode, cpu-hotplug test is
+>  run on a single cpu as opposed to all hotplug capable cpus, and memory
+>  hotplug test is run on 2% of hotplug capable memory instead of 10%.
 >
-> +config TEST_STRSCPY
-> +       tristate "Test strscpy*() family of functions at runtime"
+> +kselftest runs as a userspace process.  Tests that can be written/run in
+> +userspace may wish to use the `Test Harness`_.  Tests that need to be
+> +run in kernel space may wish to use a `Test Module`_.
 > +
->  config TEST_KSTRTOX
->         tristate "Test kstrto*() family of functions at runtime"
+>  Running the selftests (hotplug tests are run in limited mode)
+>  =============================================================
 >
-> diff --git a/lib/Makefile b/lib/Makefile
-> index e1b59da71418..82e027f73a3e 100644
-> --- a/lib/Makefile
-> +++ b/lib/Makefile
-> @@ -68,6 +68,7 @@ obj-$(CONFIG_TEST_STATIC_KEYS) += test_static_keys.o
->  obj-$(CONFIG_TEST_STATIC_KEYS) += test_static_key_base.o
->  obj-$(CONFIG_TEST_PRINTF) += test_printf.o
->  obj-$(CONFIG_TEST_BITMAP) += test_bitmap.o
-> +obj-$(CONFIG_TEST_STRSCPY) += test_strscpy.o
->  obj-$(CONFIG_TEST_BITFIELD) += test_bitfield.o
->  obj-$(CONFIG_TEST_UUID) += test_uuid.o
->  obj-$(CONFIG_TEST_XARRAY) += test_xarray.o
-> diff --git a/lib/test_strscpy.c b/lib/test_strscpy.c
+> @@ -161,11 +165,111 @@ Contributing new tests (details)
+>
+>     e.g: tools/testing/selftests/android/config
+>
+> +Test Module
+> +===========
+> +
+> +Kselftest tests the kernel from userspace.  Sometimes things need
+> +testing from within the kernel, one method of doing this is to create a
+> +test module.  We can tie the module into the kselftest framework by
+> +using a shell script test runner.  ``kselftest_module.sh`` is designed
+> +to facilitate this process.  There is also a header file provided to
+> +assist writing kernel modules that are for use with kselftest:
+> +
+> +- ``tools/testing/kselftest/kselftest_module.h``
+> +- ``tools/testing/kselftest/kselftest_module.sh``
+> +
+> +How to use
+> +----------
+> +
+> +Here we show the typical steps to create a test module and tie it into
+> +kselftest.  We use kselftests for lib/ as an example.
+> +
+> +1. Create the test module
+> +
+> +2. Create the test script that will run (load/unload) the module
+> +   e.g. ``tools/testing/selftests/lib/printf.sh``
+> +
+> +3. Add line to config file e.g. ``tools/testing/selftests/lib/config``
+> +
+> +4. Add test script to makefile  e.g. ``tools/testing/selftests/lib/Makefile``
+> +
+> +5. Verify it works:
+> +
+> +.. code-block:: sh
+> +
+> +   # Assumes you have booted a fresh build of this kernel tree
+> +   cd /path/to/linux/tree
+> +   make kselftest-merge
+> +   make modules
+> +   sudo make modules_install
+> +   make TARGETS=lib kselftest
+> +
+> +Example Module
+> +--------------
+> +
+> +A bare bones test module might look like this:
+> +
+> +.. code-block:: c
+> +
+> +   // SPDX-License-Identifier: GPL-2.0+
+> +
+> +   #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+> +
+> +   #include "../tools/testing/selftests/kselftest_module.h"
+> +
+> +   KSTM_MODULE_GLOBALS();
+> +
+> +   /*
+> +    * Kernel module for testing the foobinator
+> +    */
+> +
+> +   static int __init test_function()
+> +   {
+> +           ...
+> +   }
+> +
+> +   static void __init selftest(void)
+> +   {
+> +           KSTM_CHECK_ZERO(do_test_case("", 0));
+> +   }
+> +
+> +   KSTM_MODULE_LOADERS(test_foo);
+> +   MODULE_AUTHOR("John Developer <jd@fooman.org>");
+> +   MODULE_LICENSE("GPL");
+> +
+> +Example test script
+> +-------------------
+> +
+> +.. code-block:: sh
+> +
+> +    #!/bin/bash
+> +    # SPDX-License-Identifier: GPL-2.0+
+> +
+> +    module_name="test_foo"             # Module name (without the .ko).
+> +    description="foo"                  # Output prefix.
+> +
+> +    #
+> +    # Shouldn't need to edit anything below here.
+> +    #
+> +
+> +    file="kselftest_module.sh"
+> +    path="../$file"
+> +    if [[ ! $KBUILD_SRC == "" ]]; then
+> +        path="${KBUILD_SRC}/tools/testing/selftests/$file"
+> +    fi
+> +
+> +    $path $module_name $description
+> +
+> +
+>  Test Harness
+>  ============
+>
+> -The kselftest_harness.h file contains useful helpers to build tests.  The tests
+> -from tools/testing/selftests/seccomp/seccomp_bpf.c can be used as example.
+> +The kselftest_harness.h file contains useful helpers to build tests.  The
+> +test harness is for userspace testing, for kernel space testing see `Test
+> +Module`_ above.
+> +
+> +The tests from tools/testing/selftests/seccomp/seccomp_bpf.c can be used as
+> +example.
+>
+>  Example
+>  -------
+> diff --git a/tools/testing/selftests/kselftest_module.h b/tools/testing/selftests/kselftest_module.h
 > new file mode 100644
-> index 000000000000..95665e8a0f97
+> index 000000000000..e8eafaf0941a
 > --- /dev/null
-> +++ b/lib/test_strscpy.c
-> @@ -0,0 +1,150 @@
-> +// SPDX-License-Identifier: GPL-2.0+
+> +++ b/tools/testing/selftests/kselftest_module.h
+> @@ -0,0 +1,48 @@
+> +/* SPDX-License-Identifier: GPL-2.0+ */
+> +#ifndef __KSELFTEST_MODULE_H
+> +#define __KSELFTEST_MODULE_H
 > +
-> +#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-> +
-> +#include <linux/string.h>
-> +
-> +#include "../tools/testing/selftests/kselftest_module.h"
+> +#include <linux/module.h>
 > +
 > +/*
-> + * Kernel module for testing 'strscpy' family of functions.
+> + * Test framework for writing test modules to be loaded by kselftest.
+> + * See Documentation/dev-tools/kselftest.rst for an example test module.
 > + */
 > +
-> +KSTM_MODULE_GLOBALS();
+> +#define KSTM_MODULE_GLOBALS()                  \
+> +static unsigned int total_tests __initdata;    \
+> +static unsigned int failed_tests __initdata
 > +
-> +/*
-> + * tc() - Run a specific test case.
-> + * @src: Source string, argument to strscpy_pad()
-> + * @count: Size of destination buffer, argument to strscpy_pad()
-> + * @expected: Expected return value from call to strscpy_pad()
-> + * @terminator: 1 if there should be a terminating null byte 0 otherwise.
-> + * @chars: Number of characters from the src string expected to be
-> + *         written to the dst buffer.
-> + * @pad: Number of pad characters expected (in the tail of dst buffer).
-> + *       (@pad does not include the null terminator byte.)
-> + *
-> + * Calls strscpy_pad() and verifies the return value and state of the
-> + * destination buffer after the call returns.
-> + */
-> +static int __init tc(char *src, int count, int expected,
-> +                    int chars, int terminator, int pad)
+> +#define KSTM_CHECK_ZERO(x) do {                                                \
+> +       total_tests++;                                                  \
+> +       if (x) {                                                        \
+> +               pr_warn("TC failed at %s:%d\n", __func__, __LINE__);    \
+> +               failed_tests++;                                         \
+> +       }                                                               \
+> +} while (0)
+> +
+> +static inline int kstm_report(unsigned int total_tests, unsigned int failed_tests)
 > +{
-> +       int nr_bytes_poison;
-> +       int max_expected;
-> +       int max_count;
-> +       int written;
-> +       char buf[6];
-> +       int index, i;
-> +       const char POISON = 'z';
+> +       if (failed_tests == 0)
+> +               pr_info("all %u tests passed\n", total_tests);
+> +       else
+> +               pr_warn("failed %u out of %u tests\n", failed_tests, total_tests);
 > +
-> +       total_tests++;
-> +
-> +       if (!src) {
-> +               pr_err("null source string not supported\n");
-> +               return -1;
-> +       }
-> +
-> +       memset(buf, POISON, sizeof(buf));
-> +       /* Future proofing test suite, validate args */
-> +       max_count = sizeof(buf) - 2; /* Space for null and to verify overflow */
-> +       max_expected = count - 1;     /* Space for the null */
-> +       if (count > max_count) {
-> +               pr_err("count (%d) is too big (%d) ... aborting", count, max_count);
-> +               return -1;
-> +       }
-> +       if (expected > max_expected) {
-> +               pr_warn("expected (%d) is bigger than can possibly be returned (%d)",
-> +                       expected, max_expected);
-> +       }
-> +
-> +       written = strscpy_pad(buf, src, count);
-> +       if ((written) != (expected)) {
-> +               pr_err("%d != %d (written, expected)\n", written, expected);
-> +               goto fail;
-> +       }
-> +
-> +       if (count && written == -E2BIG) {
-> +               if (strncmp(buf, src, count - 1) != 0) {
-> +                       pr_err("buffer state invalid for -E2BIG\n");
-> +                       goto fail;
-> +               }
-> +               if (buf[count - 1] != '\0') {
-> +                       pr_err("too big string is not null terminated correctly\n");
-> +                       goto fail;
-> +               }
-> +       }
-> +
-> +       for (i = 0; i < chars; i++) {
-> +               if (buf[i] != src[i]) {
-> +                       pr_err("buf[i]==%c != src[i]==%c\n", buf[i], src[i]);
-> +                       goto fail;
-> +               }
-> +       }
-> +
-> +       if (terminator) {
-> +               if (buf[count - 1] != '\0') {
-> +                       pr_err("string is not null terminated correctly\n");
-> +                       goto fail;
-> +               }
-> +       }
-> +
-> +       for (i = 0; i < pad; i++) {
-> +               index = chars + terminator + i;
-> +               if (buf[index] != '\0') {
-> +                       pr_err("padding missing at index: %d\n", i);
-> +                       goto fail;
-> +               }
-> +       }
-> +
-> +       nr_bytes_poison = sizeof(buf) - chars - terminator - pad;
-> +       for (i = 0; i < nr_bytes_poison; i++) {
-> +               index = sizeof(buf) - 1 - i; /* Check from the end back */
-> +               if (buf[index] != POISON) {
-> +                       pr_err("poison value missing at index: %d\n", i);
-> +                       goto fail;
-> +               }
-> +       }
-> +
-> +       return 0;
-> +fail:
-> +       failed_tests++;
-> +       return -1;
+> +       return failed_tests ? -EINVAL : 0;
 > +}
 > +
-> +static void __init selftest(void)
-> +{
-> +       /*
-> +        * tc() uses a destination buffer of size 6 and needs at
-> +        * least 2 characters spare (one for null and one to check for
-> +        * overflow).  This means we should only call tc() with
-> +        * strings up to a maximum of 4 characters long and 'count'
-> +        * should not exceed 4.  To test with longer strings increase
-> +        * the buffer size in tc().
-> +        */
+> +#define KSTM_MODULE_LOADERS(__module)                  \
+> +static int __init __module##_init(void)                        \
+> +{                                                      \
+> +       pr_info("loaded.\n");                           \
+> +       selftest();                                     \
+> +       return kstm_report(total_tests, failed_tests);  \
+> +}                                                      \
+> +static void __exit __module##_exit(void)               \
+> +{                                                      \
+> +       pr_info("unloaded.\n");                         \
+> +}                                                      \
+> +module_init(__module##_init);                          \
+> +module_exit(__module##_exit)
 > +
-> +       /* tc(src, count, expected, chars, terminator, pad) */
-> +       KSTM_CHECK_ZERO(tc("a", 0, -E2BIG, 0, 0, 0));
-> +       KSTM_CHECK_ZERO(tc("", 0, -E2BIG, 0, 0, 0));
-> +
-> +       KSTM_CHECK_ZERO(tc("a", 1, -E2BIG, 0, 1, 0));
-> +       KSTM_CHECK_ZERO(tc("", 1, 0, 0, 1, 0));
-> +
-> +       KSTM_CHECK_ZERO(tc("ab", 2, -E2BIG, 1, 1, 0));
-> +       KSTM_CHECK_ZERO(tc("a", 2, 1, 1, 1, 0));
-> +       KSTM_CHECK_ZERO(tc("", 2, 0, 0, 1, 1));
-> +
-> +       KSTM_CHECK_ZERO(tc("abc", 3, -E2BIG, 2, 1, 0));
-> +       KSTM_CHECK_ZERO(tc("ab", 3, 2, 2, 1, 0));
-> +       KSTM_CHECK_ZERO(tc("a", 3, 1, 1, 1, 1));
-> +       KSTM_CHECK_ZERO(tc("", 3, 0, 0, 1, 2));
-> +
-> +       KSTM_CHECK_ZERO(tc("abcd", 4, -E2BIG, 3, 1, 0));
-> +       KSTM_CHECK_ZERO(tc("abc", 4, 3, 3, 1, 0));
-> +       KSTM_CHECK_ZERO(tc("ab", 4, 2, 2, 1, 1));
-> +       KSTM_CHECK_ZERO(tc("a", 4, 1, 1, 1, 2));
-> +       KSTM_CHECK_ZERO(tc("", 4, 0, 0, 1, 3));
-> +}
-> +
-> +KSTM_MODULE_LOADERS(test_strscpy);
-> +MODULE_AUTHOR("Tobin C. Harding <tobin@kernel.org>");
-> +MODULE_LICENSE("GPL");
-> diff --git a/tools/testing/selftests/lib/Makefile b/tools/testing/selftests/lib/Makefile
-> index 70d5711e3ac8..9f26635f3e57 100644
-> --- a/tools/testing/selftests/lib/Makefile
-> +++ b/tools/testing/selftests/lib/Makefile
-> @@ -3,6 +3,6 @@
->  # No binaries, but make sure arg-less "make" doesn't trigger "run_tests"
->  all:
->
-> -TEST_PROGS := printf.sh bitmap.sh prime_numbers.sh
-> +TEST_PROGS := printf.sh bitmap.sh prime_numbers.sh strscpy.sh
->
->  include ../lib.mk
-> diff --git a/tools/testing/selftests/lib/config b/tools/testing/selftests/lib/config
-> index 126933bcc950..14a77ea4a8da 100644
-> --- a/tools/testing/selftests/lib/config
-> +++ b/tools/testing/selftests/lib/config
-> @@ -1,3 +1,4 @@
->  CONFIG_TEST_PRINTF=m
->  CONFIG_TEST_BITMAP=m
->  CONFIG_PRIME_NUMBERS=m
-> +CONFIG_TEST_STRSCPY=m
-> diff --git a/tools/testing/selftests/lib/strscpy.sh b/tools/testing/selftests/lib/strscpy.sh
-> new file mode 100755
-> index 000000000000..f3ba4b90e602
-> --- /dev/null
-> +++ b/tools/testing/selftests/lib/strscpy.sh
-> @@ -0,0 +1,17 @@
-> +#!/bin/sh
-> +# SPDX-License-Identifier: GPL-2.0+
-> +
-> +module=test_strscpy
-> +description="strscpy"
-> +
-> +#
-> +# Shouldn't need to edit anything below here.
-> +#
-> +
-> +file="kselftest_module.sh"
-> +path="../$file"
-> +if [[ ! $KBUILD_SRC == "" ]]; then
-> +    path="${KBUILD_SRC}/tools/testing/selftests/$file"
-> +fi
-> +
-> +$path $module $description
+> +#endif /* __KSELFTEST_MODULE_H */
 > --
 > 2.20.1
 >
