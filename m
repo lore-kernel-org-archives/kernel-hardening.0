@@ -1,139 +1,60 @@
+Subject: Re: [PATCH v3 2/7] kselftest: Add test runner creation script
+References: <20190306214226.14598-1-tobin@kernel.org>
+ <20190306214226.14598-3-tobin@kernel.org>
+ <CAGXu5j+=O3C6z7H5j93Z4mQkpS3f0ea_7T+LRQEnRCZCoKX8zw@mail.gmail.com>
+From: Randy Dunlap <rdunlap@infradead.org>
+Message-ID: <32a2dca5-d3cd-e7d3-e73b-406d897ae174@infradead.org>
+Date: Tue, 2 Apr 2019 14:33:12 -0700
 MIME-Version: 1.0
-References: <20190306214226.14598-1-tobin@kernel.org> <20190306214226.14598-6-tobin@kernel.org>
-In-Reply-To: <20190306214226.14598-6-tobin@kernel.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 2 Apr 2019 14:32:19 -0700
-Message-ID: <CAGXu5jLpC8tGNfa2N3H24eby6j=HMWZKgkQaM=3W8MznLQsAOw@mail.gmail.com>
-Subject: Re: [PATCH v3 5/7] lib: Use new kselftest header
-Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <tobin@kernel.org>
-Cc: Shuah Khan <shuah@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <CAGXu5j+=O3C6z7H5j93Z4mQkpS3f0ea_7T+LRQEnRCZCoKX8zw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <tobin@kernel.org>
+Cc: Shuah Khan <shuah@kernel.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 6, 2019 at 1:43 PM Tobin C. Harding <tobin@kernel.org> wrote:
->
-> We just added a new C header file for use with test modules that are
-> intended to be run with kselftest.  We can reduce code duplication by
-> using this header.
->
-> Use new kselftest header to reduce code duplication in test_printf and
-> test_bitmap test modules.
->
-> Signed-off-by: Tobin C. Harding <tobin@kernel.org>
+Hi,
 
-Nice consolidation.
+nits/typos below:
 
-Acked-by: Kees Cook <keescook@chromium.org>
+On 4/2/19 2:27 PM, Kees Cook wrote:
+> On Wed, Mar 6, 2019 at 1:43 PM Tobin C. Harding <tobin@kernel.org> wrote:
+>>
+>>
+>> Add test runner creation script.
+>>
+>> Signed-off-by: Tobin C. Harding <tobin@kernel.org>
+>> ---
+>>  tools/testing/selftests/kselftest_module.sh | 75 +++++++++++++++++++++
+>>  1 file changed, 75 insertions(+)
+>>  create mode 100755 tools/testing/selftests/kselftest_module.sh
+>>
+>> diff --git a/tools/testing/selftests/kselftest_module.sh b/tools/testing/selftests/kselftest_module.sh
+>> new file mode 100755
+>> index 000000000000..b5d446738614
+>> --- /dev/null
+>> +++ b/tools/testing/selftests/kselftest_module.sh
+>> @@ -0,0 +1,75 @@
+>> +#!/bin/sh
+>> +# SPDX-License-Identifier: GPL-2.0+
+>> +
+>> +#
+>> +# Runs an individual test module.  kselftest expects a separate
+>> +# executable for each test.  So test should each have an individial
 
--Kees
+                                                             individual
 
-> ---
->  lib/test_bitmap.c | 20 ++++----------------
->  lib/test_printf.c | 23 +++++------------------
->  2 files changed, 9 insertions(+), 34 deletions(-)
->
-> diff --git a/lib/test_bitmap.c b/lib/test_bitmap.c
-> index 6cd7d0740005..792d90608052 100644
-> --- a/lib/test_bitmap.c
-> +++ b/lib/test_bitmap.c
-> @@ -12,6 +12,8 @@
->  #include <linux/slab.h>
->  #include <linux/string.h>
->
-> +#include "../tools/testing/selftests/kselftest_module.h"
-> +
->  static unsigned total_tests __initdata;
->  static unsigned failed_tests __initdata;
->
-> @@ -361,7 +363,7 @@ static void noinline __init test_mem_optimisations(void)
->         }
->  }
->
-> -static int __init test_bitmap_init(void)
-> +static void __init selftest(void)
->  {
->         test_zero_clear();
->         test_fill_set();
-> @@ -369,22 +371,8 @@ static int __init test_bitmap_init(void)
->         test_bitmap_arr32();
->         test_bitmap_parselist();
->         test_mem_optimisations();
-> -
-> -       if (failed_tests == 0)
-> -               pr_info("all %u tests passed\n", total_tests);
-> -       else
-> -               pr_warn("failed %u out of %u tests\n",
-> -                       failed_tests, total_tests);
-> -
-> -       return failed_tests ? -EINVAL : 0;
->  }
->
-> -static void __exit test_bitmap_cleanup(void)
-> -{
-> -}
-> -
-> -module_init(test_bitmap_init);
-> -module_exit(test_bitmap_cleanup);
-> -
-> +KSTM_MODULE_LOADERS(test_bitmap);
->  MODULE_AUTHOR("david decotigny <david.decotigny@googlers.com>");
->  MODULE_LICENSE("GPL");
-> diff --git a/lib/test_printf.c b/lib/test_printf.c
-> index 601e8519319a..f4fcc1c43739 100644
-> --- a/lib/test_printf.c
-> +++ b/lib/test_printf.c
-> @@ -21,6 +21,8 @@
->  #include <linux/gfp.h>
->  #include <linux/mm.h>
->
-> +#include "../tools/testing/selftests/kselftest_module.h"
-> +
->  #define BUF_SIZE 256
->  #define PAD_SIZE 16
->  #define FILL_CHAR '$'
-> @@ -590,12 +592,11 @@ test_pointer(void)
->         flags();
->  }
->
-> -static int __init
-> -test_printf_init(void)
-> +static void __init selftest(void)
->  {
->         alloced_buffer = kmalloc(BUF_SIZE + 2*PAD_SIZE, GFP_KERNEL);
->         if (!alloced_buffer)
-> -               return -ENOMEM;
-> +               return;
->         test_buffer = alloced_buffer + PAD_SIZE;
->
->         test_basic();
-> @@ -604,22 +605,8 @@ test_printf_init(void)
->         test_pointer();
->
->         kfree(alloced_buffer);
-> -
-> -       if (failed_tests == 0)
-> -               pr_info("all %u tests passed\n", total_tests);
-> -       else
-> -               pr_warn("failed %u out of %u tests\n", failed_tests, total_tests);
-> -
-> -       return failed_tests ? -EINVAL : 0;
->  }
->
-> -module_init(test_printf_init);
-> -
-> -static void __exit test_printf_exit(void)
-> -{
-> -}
-> -
-> -module_exit(test_printf_exit);
-> -
-> +KSTM_MODULE_LOADERS(test_printf);
->  MODULE_AUTHOR("Rasmus Villemoes <linux@rasmusvillemoes.dk>");
->  MODULE_LICENSE("GPL");
-> --
-> 2.20.1
->
+>> +# script that can call this script.
+>> +#
+>> +
+>> +# Individual test scrits should define these:
+
+                      scripts
+
+>> +module=""                      # filename (without the .ko).
+>> +desc=""                                # Output prefix.
 
 
+cheers.
 -- 
-Kees Cook
+~Randy
