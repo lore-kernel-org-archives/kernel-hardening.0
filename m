@@ -1,83 +1,102 @@
-From: Khalid Aziz <khalid.aziz@oracle.com>
-Subject: [RFC PATCH v9 11/13] xpfo, mm: optimize spinlock usage in xpfo_kunmap
-Date: Wed,  3 Apr 2019 11:34:12 -0600
-Message-Id: <5bab13e12d4215112ad2180106cc6bb9b513754a.1554248002.git.khalid.aziz@oracle.com>
-In-Reply-To: <cover.1554248001.git.khalid.aziz@oracle.com>
-References: <cover.1554248001.git.khalid.aziz@oracle.com>
-In-Reply-To: <cover.1554248001.git.khalid.aziz@oracle.com>
-References: <cover.1554248001.git.khalid.aziz@oracle.com>
-To: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
-Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, peterz@infradead.org, aaron.lu@intel.com, akpm@linux-foundation.org, alexander.h.duyck@linux.intel.com, amir73il@gmail.com, andreyknvl@google.com, aneesh.kumar@linux.ibm.com, anthony.yznaga@oracle.com, ard.biesheuvel@linaro.org, arnd@arndb.de, arunks@codeaurora.org, ben@decadent.org.uk, bigeasy@linutronix.de, bp@alien8.de, brgl@bgdev.pl, catalin.marinas@arm.com, corbet@lwn.net, cpandya@codeaurora.org, daniel.vetter@ffwll.ch, dan.j.williams@intel.com, gregkh@linuxfoundation.org, guro@fb.com, hannes@cmpxchg.org, hpa@zytor.com, iamjoonsoo.kim@lge.com, james.morse@arm.com, jannh@google.com, jgross@suse.com, jkosina@suse.cz, jmorris@namei.org, joe@perches.com, jrdr.linux@gmail.com, jroedel@suse.de, keith.busch@intel.com, khalid.aziz@oracle.com, khlebnikov@yandex-team.ru, logang@deltatee.com, marco.antonio.780@gmail.com, mark.rutland@arm.com, mgorman@techsingularity.net, mhocko@suse.com, mhocko@suse.cz, mike.kravetz@oracle.com, mingo@redhat.com, mst@redhat.com, m.szyprowski@samsung.com, npiggin@gmail.com, osalvador@suse.de, paulmck@linux.vnet.ibm.com, pavel.tatashin@microsoft.com, rdunlap@infradead.org, richard.weiyang@gmail.com, riel@surriel.com, rientjes@google.com, robin.murphy@arm.com, rostedt@goodmis.org, rppt@linux.vnet.ibm.com, sai.praneeth.prakhya@intel.com, serge@hallyn.com, steve.capper@arm.com, thymovanbeers@gmail.com, vbabka@suse.cz, will.deacon@arm.com, willy@infradead.org, yang.shi@linux.alibaba.com, yaojun8558363@gmail.com, ying.huang@intel.com, zhangshaokun@hisilicon.com, iommu@lists.linux-foundation.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-security-module@vger.kernel.org, Khalid Aziz <khalid@gonehiking.org>, kernel-hardening@lists.openwall.com, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>, Juerg Haefliger <juerg.haefliger@canonical.com>, David Woodhouse <dwmw2@infradead.org>
+MIME-Version: 1.0
+References: <20190329081358.30497-1-elena.reshetova@intel.com>
+In-Reply-To: <20190329081358.30497-1-elena.reshetova@intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 3 Apr 2019 14:17:26 -0700
+Message-ID: <CAGXu5jKH3js8pOv726jQ84rycd04OcwosN9-OkJg7UnsMMiuxA@mail.gmail.com>
+Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon syscall
+Content-Type: text/plain; charset="UTF-8"
+To: Elena Reshetova <elena.reshetova@intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@amacapital.net>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>, "Perla, Enrico" <enrico.perla@intel.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Julian Stecklina <jsteckli@amazon.de>
+On Fri, Mar 29, 2019 at 1:14 AM Elena Reshetova
+<elena.reshetova@intel.com> wrote:
+> diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
+> index 7bc105f47d21..28cb3687bf82 100644
+> --- a/arch/x86/entry/common.c
+> +++ b/arch/x86/entry/common.c
+> @@ -32,6 +32,10 @@
+>  #include <linux/uaccess.h>
+>  #include <asm/cpufeature.h>
+>
+> +#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
+> +#include <linux/random.h>
+> +#endif
+> +
+>  #define CREATE_TRACE_POINTS
+>  #include <trace/events/syscalls.h>
+>
+> @@ -269,10 +273,22 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
+>  }
+>
+>  #ifdef CONFIG_X86_64
+> +
+> +#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
+> +void *alloca(size_t size);
+> +#endif
+> +
+>  __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
+>  {
+>         struct thread_info *ti;
+>
+> +#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
+> +       size_t offset = ((size_t)prandom_u32()) % 256;
+> +       char *ptr = alloca(offset);
+> +
+> +       asm volatile("":"=m"(*ptr));
+> +#endif
+> +
+>         enter_from_user_mode();
+>         local_irq_enable();
+>         ti = current_thread_info();
 
-Only the xpfo_kunmap call that needs to actually unmap the page
-needs to be serialized. We need to be careful to handle the case,
-where after the atomic decrement of the mapcount, a xpfo_kmap
-increased the mapcount again. In this case, we can safely skip
-modifying the page table.
+Well this is delightfully short! The alloca() definition could even be
+moved up after the #include of random.h, just to reduce the number of
+#ifdef lines, too. I patched getpid() to report stack locations for a
+given pid, just to get a sense of the entropy. On 10,000 getpid()
+calls I see counts like:
 
-Model-checked with up to 4 concurrent callers with Spin.
+    229  ffffa58240697dbc
+    294  ffffa58240697dc4
+    315  ffffa58240697dcc
+    298  ffffa58240697dd4
+    335  ffffa58240697ddc
+    311  ffffa58240697de4
+    295  ffffa58240697dec
+    303  ffffa58240697df4
+    334  ffffa58240697dfc
+    331  ffffa58240697e04
+    321  ffffa58240697e0c
+    298  ffffa58240697e14
+    290  ffffa58240697e1c
+    306  ffffa58240697e24
+    308  ffffa58240697e2c
+    325  ffffa58240697e34
+    301  ffffa58240697e3c
+    336  ffffa58240697e44
+    328  ffffa58240697e4c
+    326  ffffa58240697e54
+    314  ffffa58240697e5c
+    305  ffffa58240697e64
+    315  ffffa58240697e6c
+    325  ffffa58240697e74
+    287  ffffa58240697e7c
+    319  ffffa58240697e84
+    309  ffffa58240697e8c
+    329  ffffa58240697e94
+    311  ffffa58240697e9c
+    306  ffffa58240697ea4
+    313  ffffa58240697eac
+    289  ffffa58240697eb4
+     94  ffffa58240697ebc
 
-Signed-off-by: Julian Stecklina <jsteckli@amazon.de>
-Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: Khalid Aziz <khalid@gonehiking.org>
-Cc: x86@kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
-Cc: Juerg Haefliger <juerg.haefliger@canonical.com>
-Cc: Tycho Andersen <tycho@tycho.ws>
-Cc: Marco Benatto <marco.antonio.780@gmail.com>
-Cc: David Woodhouse <dwmw2@infradead.org>
----
- include/linux/xpfo.h | 24 +++++++++++++++---------
- 1 file changed, 15 insertions(+), 9 deletions(-)
+So it looks more like 5 bits of entropy in practice (here are 33
+unique stack locations), but that still looks good to me.
 
-diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-index 2318c7eb5fb7..37e7f52fa6ce 100644
---- a/include/linux/xpfo.h
-+++ b/include/linux/xpfo.h
-@@ -61,6 +61,7 @@ static inline void xpfo_kmap(void *kaddr, struct page *page)
- static inline void xpfo_kunmap(void *kaddr, struct page *page)
- {
- 	unsigned long flags;
-+	bool flush_tlb = false;
- 
- 	if (!static_branch_unlikely(&xpfo_inited))
- 		return;
-@@ -72,18 +73,23 @@ static inline void xpfo_kunmap(void *kaddr, struct page *page)
- 	 * The page is to be allocated back to user space, so unmap it from
- 	 * the kernel, flush the TLB and tag it as a user page.
- 	 */
--	spin_lock_irqsave(&page->xpfo_lock, flags);
--
- 	if (atomic_dec_return(&page->xpfo_mapcount) == 0) {
--#ifdef CONFIG_XPFO_DEBUG
--		WARN_ON(PageXpfoUnmapped(page));
--#endif
--		SetPageXpfoUnmapped(page);
--		set_kpte(kaddr, page, __pgprot(0));
--		xpfo_flush_kernel_tlb(page, 0);
-+		spin_lock_irqsave(&page->xpfo_lock, flags);
-+
-+		/*
-+		 * In the case, where we raced with kmap after the
-+		 * atomic_dec_return, we must not nuke the mapping.
-+		 */
-+		if (atomic_read(&page->xpfo_mapcount) == 0) {
-+			SetPageXpfoUnmapped(page);
-+			set_kpte(kaddr, page, __pgprot(0));
-+			flush_tlb = true;
-+		}
-+		spin_unlock_irqrestore(&page->xpfo_lock, flags);
- 	}
- 
--	spin_unlock_irqrestore(&page->xpfo_lock, flags);
-+	if (flush_tlb)
-+		xpfo_flush_kernel_tlb(page, 0);
- }
- 
- void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp, bool will_map);
+Can you send the next version with a CC to lkml too?
+
+Andy, Thomas, how does this look to you?
+
 -- 
-2.17.1
+Kees Cook
