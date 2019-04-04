@@ -1,97 +1,164 @@
-Subject: Re: [RFC PATCH v9 11/13] xpfo, mm: optimize spinlock usage in
- xpfo_kunmap
-References: <cover.1554248001.git.khalid.aziz@oracle.com>
- <5bab13e12d4215112ad2180106cc6bb9b513754a.1554248002.git.khalid.aziz@oracle.com>
- <20190404075648.GQ4038@hirez.programming.kicks-ass.net>
-From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <89dd158f-c341-9dd9-d70c-787b5eb0b410@oracle.com>
-Date: Thu, 4 Apr 2019 10:06:43 -0600
+Date: Thu, 4 Apr 2019 12:01:32 -0400 (EDT)
+From: Alan Stern <stern@rowland.harvard.edu>
+Subject: Re: [PATCH] Convert struct pid count to refcount_t
+In-Reply-To: <20190404152314.GG14111@linux.ibm.com>
+Message-ID: <Pine.LNX.4.44L0.1904041138070.1288-100000@iolanthe.rowland.org>
 MIME-Version: 1.0
-In-Reply-To: <20190404075648.GQ4038@hirez.programming.kicks-ass.net>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, akpm@linux-foundation.org, alexander.h.duyck@linux.intel.com, aneesh.kumar@linux.ibm.com, arnd@arndb.de, bigeasy@linutronix.de, bp@alien8.de, catalin.marinas@arm.com, corbet@lwn.net, dan.j.williams@intel.com, gregkh@linuxfoundation.org, guro@fb.com, hannes@cmpxchg.org, hpa@zytor.com, iamjoonsoo.kim@lge.com, james.morse@arm.com, jannh@google.com, jkosina@suse.cz, jmorris@namei.org, joe@perches.com, jrdr.linux@gmail.com, jroedel@suse.de, keith.busch@intel.com, khlebnikov@yandex-team.ru, mark.rutland@arm.com, mgorman@techsingularity.net, Michal Hocko <mhocko@kernel.org>, mike.kravetz@oracle.com, mingo@redhat.com, mst@redhat.com, npiggin@gmail.com, paulmck@linux.vnet.ibm.com, pavel.tatashin@microsoft.com, rdunlap@infradead.org, richard.weiyang@gmail.com, riel@surriel.com, rientjes@google.com, rostedt@goodmis.org, rppt@linux.vnet.ibm.com, will.deacon@arm.com, willy@infradead.org, yaojun8558363@gmail.com, ying.huang@intel.com, iommu@lists.linux-foundation.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-security-module@vger.kernel.org, Khalid Aziz <khalid@gonehiking.org>, kernel-hardening@lists.openwall.com, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+To: "Paul E. McKenney" <paulmck@linux.ibm.com>
+Cc: Joel Fernandes <joel@joelfernandes.org>, Oleg Nesterov <oleg@redhat.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Android Kernel Team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Michal Hocko <mhocko@suse.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 4/4/19 1:56 AM, Peter Zijlstra wrote:
-> On Wed, Apr 03, 2019 at 11:34:12AM -0600, Khalid Aziz wrote:
->> From: Julian Stecklina <jsteckli@amazon.de>
->>
->> Only the xpfo_kunmap call that needs to actually unmap the page
->> needs to be serialized. We need to be careful to handle the case,
->> where after the atomic decrement of the mapcount, a xpfo_kmap
->> increased the mapcount again. In this case, we can safely skip
->> modifying the page table.
->>
->> Model-checked with up to 4 concurrent callers with Spin.
->>
->> Signed-off-by: Julian Stecklina <jsteckli@amazon.de>
->> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
->> Cc: Khalid Aziz <khalid@gonehiking.org>
->> Cc: x86@kernel.org
->> Cc: kernel-hardening@lists.openwall.com
->> Cc: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
->> Cc: Juerg Haefliger <juerg.haefliger@canonical.com>
->> Cc: Tycho Andersen <tycho@tycho.ws>
->> Cc: Marco Benatto <marco.antonio.780@gmail.com>
->> Cc: David Woodhouse <dwmw2@infradead.org>
->> ---
->>  include/linux/xpfo.h | 24 +++++++++++++++---------
->>  1 file changed, 15 insertions(+), 9 deletions(-)
->>
->> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
->> index 2318c7eb5fb7..37e7f52fa6ce 100644
->> --- a/include/linux/xpfo.h
->> +++ b/include/linux/xpfo.h
->> @@ -61,6 +61,7 @@ static inline void xpfo_kmap(void *kaddr, struct pag=
-e *page)
->>  static inline void xpfo_kunmap(void *kaddr, struct page *page)
->>  {
->>  	unsigned long flags;
->> +	bool flush_tlb =3D false;
->> =20
->>  	if (!static_branch_unlikely(&xpfo_inited))
->>  		return;
->> @@ -72,18 +73,23 @@ static inline void xpfo_kunmap(void *kaddr, struct=
- page *page)
->>  	 * The page is to be allocated back to user space, so unmap it from
->>  	 * the kernel, flush the TLB and tag it as a user page.
->>  	 */
->> -	spin_lock_irqsave(&page->xpfo_lock, flags);
->> -
->>  	if (atomic_dec_return(&page->xpfo_mapcount) =3D=3D 0) {
->> -#ifdef CONFIG_XPFO_DEBUG
->> -		WARN_ON(PageXpfoUnmapped(page));
->> -#endif
->> -		SetPageXpfoUnmapped(page);
->> -		set_kpte(kaddr, page, __pgprot(0));
->> -		xpfo_flush_kernel_tlb(page, 0);
->> +		spin_lock_irqsave(&page->xpfo_lock, flags);
->> +
->> +		/*
->> +		 * In the case, where we raced with kmap after the
->> +		 * atomic_dec_return, we must not nuke the mapping.
->> +		 */
->> +		if (atomic_read(&page->xpfo_mapcount) =3D=3D 0) {
->> +			SetPageXpfoUnmapped(page);
->> +			set_kpte(kaddr, page, __pgprot(0));
->> +			flush_tlb =3D true;
->> +		}
->> +		spin_unlock_irqrestore(&page->xpfo_lock, flags);
->>  	}
->> =20
->> -	spin_unlock_irqrestore(&page->xpfo_lock, flags);
->> +	if (flush_tlb)
->> +		xpfo_flush_kernel_tlb(page, 0);
->>  }
->=20
-> This doesn't help with the TLB invalidation issue, AFAICT this is still=
+On Thu, 4 Apr 2019, Paul E. McKenney wrote:
 
-> completely buggered. kunmap_atomic() can be called from IRQ context.
->=20
+> On Mon, Apr 01, 2019 at 05:11:39PM -0400, Joel Fernandes wrote:
 
-OK. xpfo_kmap/xpfo_kunmap need redesign.
+> > > > So I would have expected the following litmus to result in Never, but it
+> > > > doesn't with Alan's patch:
+> > > > 
+> > > > P0(int *x, int *y)
+> > > > {
+> > > > 	*x = 1;
+> > > > 	smp_mb();
+> > > > 	*y = 1;
+> > > > }
+> > > > 
+> > > > P1(int *x, int *y)
+> > > > {
+> > > > 	int r1;
+> > > > 
+> > > > 	r1 = READ_ONCE(*y);
+> > > > 	if (r1)
+> > > > 		WRITE_ONCE(*x, 2);
+> > > > }
+> > > > 
+> > > > exists (1:r1=1 /\ ~x=2)
+> > > 
+> > > The problem is that the compiler can turn both of P0()'s writes into reads:
+> > > 
+> > > P0(int *x, int *y)
+> > > {
+> > > 	if (*x != 1)
+> > > 		*x = 1;
+> > > 	smp_mb();
+> > > 	if (*y != 1)
+> > > 		*y = 1;
+> > > }
+> > > 
+> > > These reads will not be ordered by smp_wmb(), so you have to do WRITE_ONCE()
+> > > to get an iron-clad ordering guarantee.
+> > 
+> > But the snippet above has smp_mb() which does order writes, even for the
+> > plain accesses.
+> 
+> True, but that code has a data race, namely P0()'s plain write to y
+> races with P1()'s READ_ONCE().  Data races give the compiler absolutely
+> astonishing levels of freedom to rearrange your code.  So, if you
+> as a developer or maintainer choose to have data races, it is your
+> responsibility to ensure that the compiler cannot mess you up.  So what
+> you should do in that case is to list the transformed code the compiler's
+> optimizations can produce and feed the corresponding litmus tests to LKMM,
+> using READ_ONCE() and WRITE_ONCE() for the post-optimization accesses.
 
---
-Khalid
+In this case, I strongly suspect the compiler would not mess up the
+code badly enough to allow the unwanted end result.  But the LKMM tries
+to avoid making strong assumptions about what compilers will or will
+not do.
+
+
+> > I understand. Are we talking about load/store tearing being the issue here?
+> > Even under load/store tearing, I feel the program will produce correct
+> > results because r1 is either 0 or 1 (a single bit cannot be torn).
+> 
+> The compiler can (at least in theory) also transform *y = 1 as follows:
+> 
+> 	*y = r1; /* Use *y as temporary storage. */
+> 	do_something();
+> 	r1 = *y;
+> 	*y = 1;
+> 
+> Here r1 is some register and do_something() is an inline function visible
+> to the compiler (hence not implying barrier() upon call and return).
+> 
+> I don't know of any compilers that actually do this, but for me use
+> of WRITE_ONCE() is a small price to pay to prevent all past, present,
+> and future compiler from ever destroying^W optimizing my code in this way.
+> 
+> In your own code, if you dislike WRITE_ONCE() so much that you are willing
+> to commit to (now and forever!!!) checking all applicable versions of
+> compilers to make sure that they don't do this, well and good, knock
+> yourself out.  But it is your responsibility to do that checking, and you
+> can attest to LKMM that you have done so by giving LKMM litmus tests that
+> substitute WRITE_ONCE() for that plain C-language assignment statement.
+
+Remember that the LKMM does not produce strict bounds.  That is, the
+LKMM will say that some outcomes are allowed even though no existing
+compiler/CPU combination would ever actually produce them.  This litmus
+test is an example.
+
+> > Further, from the herd simulator output (below), according to the "States",
+> > r1==1 means P1() AFAICS would have already finished the the read and set the
+> > r1 register to 1.  Then I am wondering why it couldn't take the branch to set
+> > *x to 2.  According to herd, r1 == 1 AND x == 1 is a perfectly valid state
+> > for the below program. I still couldn't see in my mind how for the below
+> > program, this is possible - in terms of compiler optimizations or other kinds
+> > of ordering. Because there is a smp_mb() between the 2 plain writes in P0()
+> > and P1() did establish that r1 is 1 in the positive case. :-/.  I am surely
+> > missing something :-)
+> > 
+> > ---8<-----------------------
+> > C Joel-put_pid
+> > 
+> > {}
+> > 
+> > P0(int *x, int *y)
+> > {
+> > 	*x = 1;
+> > 	smp_mb();
+> > 	*y = 1;
+> > }
+> > 
+> > P1(int *x, int *y)
+> > {
+> > 	int r1;
+> > 
+> > 	r1 = READ_ONCE(*y);
+> > 	if (r1)
+> > 		WRITE_ONCE(*x, 2);
+> > }
+> > 
+> > exists (1:r1=1 /\ ~x=2)
+> > 
+> > ---8<-----------------------
+> > Output:
+> > 
+> > Test Joel-put_pid Allowed
+> > States 3
+> > 1:r1=0; x=1;
+> > 1:r1=1; x=1;	<-- Can't figure out why r1=1 and x != 2 here.
+> 
+> I must defer to Alan on this, but my guess is that this is due to
+> the fact that there is a data race.
+
+Yes, and because the plain-access/data-race patch for the LKMM was
+intended only to detect data races, not to be aware of all the kinds of
+ordering that plain accesses can induce.  I said as much at the start
+of the patch's cover letter and it bears repeating.
+
+In this case it is certainly true that the "*x = 1" write must be
+complete before the value of *y is changed from 0.  Hence P1's
+WRITE_ONCE will certainly overwrite the 1 with 2, and the final value
+of *x will be 2 if r1=1.
+
+But the notion of "visibility" of a write that I put into the LKMM
+patch only allows for chains of marked accesses.  Since "*y = 1" is a
+plain access, the model does not recognize that it can enforce the
+ordering between the two writes to *x.
+
+Also, you must remember, the LKMM's prediction about whether an outcome
+will or will not occur are meaningless if a data race is present.  
+Therefore the most fundamental the answer to why the "1:r1=1; x=1;"  
+line is there is basically what Paul said: It's there because the
+herd model gets completely messed up by data races.
+
+Alan Stern
