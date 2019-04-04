@@ -1,86 +1,77 @@
-Date: Thu, 4 Apr 2019 09:56:48 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: [RFC PATCH v9 11/13] xpfo, mm: optimize spinlock usage in
- xpfo_kunmap
-Message-ID: <20190404075648.GQ4038@hirez.programming.kicks-ass.net>
-References: <cover.1554248001.git.khalid.aziz@oracle.com>
- <5bab13e12d4215112ad2180106cc6bb9b513754a.1554248002.git.khalid.aziz@oracle.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ syscall
+Date: Thu, 4 Apr 2019 11:41:34 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4C3BA7F@IRSMSX102.ger.corp.intel.com>
+References: <20190329081358.30497-1-elena.reshetova@intel.com>
+ <CAGXu5jKH3js8pOv726jQ84rycd04OcwosN9-OkJg7UnsMMiuxA@mail.gmail.com>
+In-Reply-To: <CAGXu5jKH3js8pOv726jQ84rycd04OcwosN9-OkJg7UnsMMiuxA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <5bab13e12d4215112ad2180106cc6bb9b513754a.1554248002.git.khalid.aziz@oracle.com>
-To: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, aaron.lu@intel.com, akpm@linux-foundation.org, alexander.h.duyck@linux.intel.com, amir73il@gmail.com, andreyknvl@google.com, aneesh.kumar@linux.ibm.com, anthony.yznaga@oracle.com, ard.biesheuvel@linaro.org, arnd@arndb.de, arunks@codeaurora.org, ben@decadent.org.uk, bigeasy@linutronix.de, bp@alien8.de, brgl@bgdev.pl, catalin.marinas@arm.com, corbet@lwn.net, cpandya@codeaurora.org, daniel.vetter@ffwll.ch, dan.j.williams@intel.com, gregkh@linuxfoundation.org, guro@fb.com, hannes@cmpxchg.org, hpa@zytor.com, iamjoonsoo.kim@lge.com, james.morse@arm.com, jannh@google.com, jgross@suse.com, jkosina@suse.cz, jmorris@namei.org, joe@perches.com, jrdr.linux@gmail.com, jroedel@suse.de, keith.busch@intel.com, khlebnikov@yandex-team.ru, logang@deltatee.com, marco.antonio.780@gmail.com, mark.rutland@arm.com, mgorman@techsingularity.net, mhocko@suse.com, mhocko@suse.cz, mike.kravetz@oracle.com, mingo@redhat.com, mst@redhat.com, m.szyprowski@samsung.com, npiggin@gmail.com, osalvador@suse.de, paulmck@linux.vnet.ibm.com, pavel.tatashin@microsoft.com, rdunlap@infradead.org, richard.weiyang@gmail.com, riel@surriel.com, rientjes@google.com, robin.murphy@arm.com, rostedt@goodmis.org, rppt@linux.vnet.ibm.com, sai.praneeth.prakhya@intel.com, serge@hallyn.com, steve.capper@arm.com, thymovanbeers@gmail.com, vbabka@suse.cz, will.deacon@arm.com, willy@infradead.org, yang.shi@linux.alibaba.com, yaojun8558363@gmail.com, ying.huang@intel.com, zhangshaokun@hisilicon.com, iommu@lists.linux-foundation.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-security-module@vger.kernel.org, Khalid Aziz <khalid@gonehiking.org>, kernel-hardening@lists.openwall.com, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>, Juerg Haefliger <juerg.haefliger@canonical.com>, David Woodhouse <dwmw2@infradead.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Andy Lutomirski <luto@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@amacapital.net>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>, "Perla,
+ Enrico" <enrico.perla@intel.com>, Ingo Molnar <mingo@redhat.com>, Borislav
+ Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 03, 2019 at 11:34:12AM -0600, Khalid Aziz wrote:
-> From: Julian Stecklina <jsteckli@amazon.de>
-> 
-> Only the xpfo_kunmap call that needs to actually unmap the page
-> needs to be serialized. We need to be careful to handle the case,
-> where after the atomic decrement of the mapcount, a xpfo_kmap
-> increased the mapcount again. In this case, we can safely skip
-> modifying the page table.
-> 
-> Model-checked with up to 4 concurrent callers with Spin.
-> 
-> Signed-off-by: Julian Stecklina <jsteckli@amazon.de>
-> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
-> Cc: Khalid Aziz <khalid@gonehiking.org>
-> Cc: x86@kernel.org
-> Cc: kernel-hardening@lists.openwall.com
-> Cc: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
-> Cc: Juerg Haefliger <juerg.haefliger@canonical.com>
-> Cc: Tycho Andersen <tycho@tycho.ws>
-> Cc: Marco Benatto <marco.antonio.780@gmail.com>
-> Cc: David Woodhouse <dwmw2@infradead.org>
-> ---
->  include/linux/xpfo.h | 24 +++++++++++++++---------
->  1 file changed, 15 insertions(+), 9 deletions(-)
-> 
-> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-> index 2318c7eb5fb7..37e7f52fa6ce 100644
-> --- a/include/linux/xpfo.h
-> +++ b/include/linux/xpfo.h
-> @@ -61,6 +61,7 @@ static inline void xpfo_kmap(void *kaddr, struct page *page)
->  static inline void xpfo_kunmap(void *kaddr, struct page *page)
->  {
->  	unsigned long flags;
-> +	bool flush_tlb = false;
->  
->  	if (!static_branch_unlikely(&xpfo_inited))
->  		return;
-> @@ -72,18 +73,23 @@ static inline void xpfo_kunmap(void *kaddr, struct page *page)
->  	 * The page is to be allocated back to user space, so unmap it from
->  	 * the kernel, flush the TLB and tag it as a user page.
->  	 */
-> -	spin_lock_irqsave(&page->xpfo_lock, flags);
-> -
->  	if (atomic_dec_return(&page->xpfo_mapcount) == 0) {
-> -#ifdef CONFIG_XPFO_DEBUG
-> -		WARN_ON(PageXpfoUnmapped(page));
-> -#endif
-> -		SetPageXpfoUnmapped(page);
-> -		set_kpte(kaddr, page, __pgprot(0));
-> -		xpfo_flush_kernel_tlb(page, 0);
-> +		spin_lock_irqsave(&page->xpfo_lock, flags);
-> +
-> +		/*
-> +		 * In the case, where we raced with kmap after the
-> +		 * atomic_dec_return, we must not nuke the mapping.
-> +		 */
-> +		if (atomic_read(&page->xpfo_mapcount) == 0) {
-> +			SetPageXpfoUnmapped(page);
-> +			set_kpte(kaddr, page, __pgprot(0));
-> +			flush_tlb = true;
-> +		}
-> +		spin_unlock_irqrestore(&page->xpfo_lock, flags);
->  	}
->  
-> -	spin_unlock_irqrestore(&page->xpfo_lock, flags);
-> +	if (flush_tlb)
-> +		xpfo_flush_kernel_tlb(page, 0);
->  }
-
-This doesn't help with the TLB invalidation issue, AFAICT this is still
-completely buggered. kunmap_atomic() can be called from IRQ context.
+IE9uIEZyaSwgTWFyIDI5LCAyMDE5IGF0IDE6MTQgQU0gRWxlbmEgUmVzaGV0b3ZhDQo+IDxlbGVu
+YS5yZXNoZXRvdmFAaW50ZWwuY29tPiB3cm90ZToNCj4gPiBkaWZmIC0tZ2l0IGEvYXJjaC94ODYv
+ZW50cnkvY29tbW9uLmMgYi9hcmNoL3g4Ni9lbnRyeS9jb21tb24uYw0KPiA+IGluZGV4IDdiYzEw
+NWY0N2QyMS4uMjhjYjM2ODdiZjgyIDEwMDY0NA0KPiA+IC0tLSBhL2FyY2gveDg2L2VudHJ5L2Nv
+bW1vbi5jDQo+ID4gKysrIGIvYXJjaC94ODYvZW50cnkvY29tbW9uLmMNCj4gPiBAQCAtMzIsNiAr
+MzIsMTAgQEANCj4gPiAgI2luY2x1ZGUgPGxpbnV4L3VhY2Nlc3MuaD4NCj4gPiAgI2luY2x1ZGUg
+PGFzbS9jcHVmZWF0dXJlLmg+DQo+ID4NCj4gPiArI2lmZGVmIENPTkZJR19SQU5ET01JWkVfS1NU
+QUNLX09GRlNFVA0KPiA+ICsjaW5jbHVkZSA8bGludXgvcmFuZG9tLmg+DQo+ID4gKyNlbmRpZg0K
+PiA+ICsNCj4gPiAgI2RlZmluZSBDUkVBVEVfVFJBQ0VfUE9JTlRTDQo+ID4gICNpbmNsdWRlIDx0
+cmFjZS9ldmVudHMvc3lzY2FsbHMuaD4NCj4gPg0KPiA+IEBAIC0yNjksMTAgKzI3MywyMiBAQCBf
+X3Zpc2libGUgaW5saW5lIHZvaWQgc3lzY2FsbF9yZXR1cm5fc2xvd3BhdGgoc3RydWN0DQo+IHB0
+X3JlZ3MgKnJlZ3MpDQo+ID4gIH0NCj4gPg0KPiA+ICAjaWZkZWYgQ09ORklHX1g4Nl82NA0KPiA+
+ICsNCj4gPiArI2lmZGVmIENPTkZJR19SQU5ET01JWkVfS1NUQUNLX09GRlNFVA0KPiA+ICt2b2lk
+ICphbGxvY2Eoc2l6ZV90IHNpemUpOw0KPiA+ICsjZW5kaWYNCj4gPiArDQo+ID4gIF9fdmlzaWJs
+ZSB2b2lkIGRvX3N5c2NhbGxfNjQodW5zaWduZWQgbG9uZyBuciwgc3RydWN0IHB0X3JlZ3MgKnJl
+Z3MpDQo+ID4gIHsNCj4gPiAgICAgICAgIHN0cnVjdCB0aHJlYWRfaW5mbyAqdGk7DQo+ID4NCj4g
+PiArI2lmZGVmIENPTkZJR19SQU5ET01JWkVfS1NUQUNLX09GRlNFVA0KPiA+ICsgICAgICAgc2l6
+ZV90IG9mZnNldCA9ICgoc2l6ZV90KXByYW5kb21fdTMyKCkpICUgMjU2Ow0KPiA+ICsgICAgICAg
+Y2hhciAqcHRyID0gYWxsb2NhKG9mZnNldCk7DQo+ID4gKw0KPiA+ICsgICAgICAgYXNtIHZvbGF0
+aWxlKCIiOiI9bSIoKnB0cikpOw0KPiA+ICsjZW5kaWYNCj4gPiArDQo+ID4gICAgICAgICBlbnRl
+cl9mcm9tX3VzZXJfbW9kZSgpOw0KPiA+ICAgICAgICAgbG9jYWxfaXJxX2VuYWJsZSgpOw0KPiA+
+ICAgICAgICAgdGkgPSBjdXJyZW50X3RocmVhZF9pbmZvKCk7DQo+IA0KPiBXZWxsIHRoaXMgaXMg
+ZGVsaWdodGZ1bGx5IHNob3J0ISANCg0KWWVzIDopIExvb2tzIGxpa2Ugd2hlbiB5b3UgYXJlIGFs
+bG93ZWQgdG8gdXNlIGZvcmJpZGRlbiBBUElzLCBsaWZlIG1pZ2h0IGJlIA0Kc3VkZGVubHkgbXVj
+aCBlYXNpZXIgOikgDQoNClRoZSBhbGxvY2EoKSBkZWZpbml0aW9uIGNvdWxkIGV2ZW4gYmUNCj4g
+bW92ZWQgdXAgYWZ0ZXIgdGhlICNpbmNsdWRlIG9mIHJhbmRvbS5oLCBqdXN0IHRvIHJlZHVjZSB0
+aGUgbnVtYmVyIG9mDQo+ICNpZmRlZiBsaW5lcywgdG9vLg0KDQpTdXJlLCBjYW4gZG8gdGhpcy4g
+DQoNCiBJIHBhdGNoZWQgZ2V0cGlkKCkgdG8gcmVwb3J0IHN0YWNrIGxvY2F0aW9ucyBmb3IgYQ0K
+PiBnaXZlbiBwaWQsIGp1c3QgdG8gZ2V0IGEgc2Vuc2Ugb2YgdGhlIGVudHJvcHkuIE9uIDEwLDAw
+MCBnZXRwaWQoKQ0KPiBjYWxscyBJIHNlZSBjb3VudHMgbGlrZToNCj4gDQo+ICAgICAyMjkgIGZm
+ZmZhNTgyNDA2OTdkYmMNCj4gICAgIDI5NCAgZmZmZmE1ODI0MDY5N2RjNA0KPiAgICAgMzE1ICBm
+ZmZmYTU4MjQwNjk3ZGNjDQo+ICAgICAyOTggIGZmZmZhNTgyNDA2OTdkZDQNCj4gICAgIDMzNSAg
+ZmZmZmE1ODI0MDY5N2RkYw0KPiAgICAgMzExICBmZmZmYTU4MjQwNjk3ZGU0DQo+ICAgICAyOTUg
+IGZmZmZhNTgyNDA2OTdkZWMNCj4gICAgIDMwMyAgZmZmZmE1ODI0MDY5N2RmNA0KPiAgICAgMzM0
+ICBmZmZmYTU4MjQwNjk3ZGZjDQo+ICAgICAzMzEgIGZmZmZhNTgyNDA2OTdlMDQNCj4gICAgIDMy
+MSAgZmZmZmE1ODI0MDY5N2UwYw0KPiAgICAgMjk4ICBmZmZmYTU4MjQwNjk3ZTE0DQo+ICAgICAy
+OTAgIGZmZmZhNTgyNDA2OTdlMWMNCj4gICAgIDMwNiAgZmZmZmE1ODI0MDY5N2UyNA0KPiAgICAg
+MzA4ICBmZmZmYTU4MjQwNjk3ZTJjDQo+ICAgICAzMjUgIGZmZmZhNTgyNDA2OTdlMzQNCj4gICAg
+IDMwMSAgZmZmZmE1ODI0MDY5N2UzYw0KPiAgICAgMzM2ICBmZmZmYTU4MjQwNjk3ZTQ0DQo+ICAg
+ICAzMjggIGZmZmZhNTgyNDA2OTdlNGMNCj4gICAgIDMyNiAgZmZmZmE1ODI0MDY5N2U1NA0KPiAg
+ICAgMzE0ICBmZmZmYTU4MjQwNjk3ZTVjDQo+ICAgICAzMDUgIGZmZmZhNTgyNDA2OTdlNjQNCj4g
+ICAgIDMxNSAgZmZmZmE1ODI0MDY5N2U2Yw0KPiAgICAgMzI1ICBmZmZmYTU4MjQwNjk3ZTc0DQo+
+ICAgICAyODcgIGZmZmZhNTgyNDA2OTdlN2MNCj4gICAgIDMxOSAgZmZmZmE1ODI0MDY5N2U4NA0K
+PiAgICAgMzA5ICBmZmZmYTU4MjQwNjk3ZThjDQo+ICAgICAzMjkgIGZmZmZhNTgyNDA2OTdlOTQN
+Cj4gICAgIDMxMSAgZmZmZmE1ODI0MDY5N2U5Yw0KPiAgICAgMzA2ICBmZmZmYTU4MjQwNjk3ZWE0
+DQo+ICAgICAzMTMgIGZmZmZhNTgyNDA2OTdlYWMNCj4gICAgIDI4OSAgZmZmZmE1ODI0MDY5N2Vi
+NA0KPiAgICAgIDk0ICBmZmZmYTU4MjQwNjk3ZWJjDQo+IA0KPiBTbyBpdCBsb29rcyBtb3JlIGxp
+a2UgNSBiaXRzIG9mIGVudHJvcHkgaW4gcHJhY3RpY2UgKGhlcmUgYXJlIDMzDQo+IHVuaXF1ZSBz
+dGFjayBsb2NhdGlvbnMpLCBidXQgdGhhdCBzdGlsbCBsb29rcyBnb29kIHRvIG1lLg0KDQpXaGF0
+IEkgc3RpbGwgZG9uJ3QgZnVsbHkgdW5kZXJzdGFuZCBoZXJlIChkdWUgdG8gbXkgbGl0dGxlIGtu
+b3dsZWRnZSBvZg0KY29tcGlsZXJzKSBhbmQgYWZyYWlkIG9mIGlzIHRoYXQgdGhlIGFzbSBjb2Rl
+IHRoYXQgYWxsb2NhIGdlbmVyYXRlcyAoc2VlIG15IHZlcnNpb24pDQogYW5kIHRoZSBhbGlnbm1l
+bnQgbWlnaHQgZGlmZmVyIG9uIHRoZSBkaWZmZXJlbnQgdGFyZ2V0cywgZXRjLiANCklmIHlvdSB0
+cmllZCBpdCBvbiB5b3VycywgY2FuIHlvdSBzZW5kIG1lIHRoZSBhc20gY29kZSB0aGF0IGl0IHBy
+b2R1Y2VkIGZvciB5b3U/DQpJcyBpdCBkaWZmZXJlbnQgZnJvbSBtaW5lPyANCg0KPiANCj4gQ2Fu
+IHlvdSBzZW5kIHRoZSBuZXh0IHZlcnNpb24gd2l0aCBhIENDIHRvIGxrbWwgdG9vPw0KDQpJIHdh
+cyB0aGlua2luZyBvbiBub3Qgc3BhbW1pbmcgbGttbCBiZWZvcmUgd2UgZ2V0IHNvbWUgYWdyZWVt
+ZW50IGhlcmUsIGJ1dA0KSSBjYW4gZG8gaXQgaWYgcGVvcGxlIGJlbGlldmUgdGhpcyBpcyB0aGUg
+cmlnaHQgd2F5LiANCg0KR2V0dGluZyBBbmR5J3MgZmVlZGJhY2sgb24gdGhpcyB2ZXJzaW9uIGZp
+cnN0IHdvdWxkIGJlIGdyZWF0ISANCg0KQmVzdCBSZWdhcmRzLA0KRWxlbmEuDQo=
