@@ -1,77 +1,388 @@
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- syscall
-Date: Thu, 4 Apr 2019 11:41:34 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4C3BA7F@IRSMSX102.ger.corp.intel.com>
-References: <20190329081358.30497-1-elena.reshetova@intel.com>
- <CAGXu5jKH3js8pOv726jQ84rycd04OcwosN9-OkJg7UnsMMiuxA@mail.gmail.com>
-In-Reply-To: <CAGXu5jKH3js8pOv726jQ84rycd04OcwosN9-OkJg7UnsMMiuxA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Date: Thu, 4 Apr 2019 08:23:14 -0700
+From: "Paul E. McKenney" <paulmck@linux.ibm.com>
+Subject: Re: [PATCH] Convert struct pid count to refcount_t
+References: <CAG48ez1vZ5cngEKVtWTL9rz_K8K25b1sMKYrNs+jn4Va3KYucw@mail.gmail.com>
+ <20190328023432.GA93275@google.com>
+ <CAG48ez2bbSYpNHcC4oucx_AG=5y4K5pZfSOfN3mxGadJGpHuQQ@mail.gmail.com>
+ <20190328143738.GA261521@google.com>
+ <CAG48ez1-3dLvzQoxxoUzTUq8dc1wwvwPBBxX_X9FWMscWTS-FQ@mail.gmail.com>
+ <20190328162641.GC19441@redhat.com>
+ <20190328173707.GP4102@linux.ibm.com>
+ <20190330023639.GA214473@google.com>
+ <20190331215531.GF4102@linux.ibm.com>
+ <20190401211139.GA5087@google.com>
 MIME-Version: 1.0
-To: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@amacapital.net>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>, "Perla,
- Enrico" <enrico.perla@intel.com>, Ingo Molnar <mingo@redhat.com>, Borislav
- Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190401211139.GA5087@google.com>
+Message-Id: <20190404152314.GG14111@linux.ibm.com>
+To: Joel Fernandes <joel@joelfernandes.org>
+Cc: Oleg Nesterov <oleg@redhat.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Android Kernel Team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Michal Hocko <mhocko@suse.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, Alan Stern <stern@rowland.harvard.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-IE9uIEZyaSwgTWFyIDI5LCAyMDE5IGF0IDE6MTQgQU0gRWxlbmEgUmVzaGV0b3ZhDQo+IDxlbGVu
-YS5yZXNoZXRvdmFAaW50ZWwuY29tPiB3cm90ZToNCj4gPiBkaWZmIC0tZ2l0IGEvYXJjaC94ODYv
-ZW50cnkvY29tbW9uLmMgYi9hcmNoL3g4Ni9lbnRyeS9jb21tb24uYw0KPiA+IGluZGV4IDdiYzEw
-NWY0N2QyMS4uMjhjYjM2ODdiZjgyIDEwMDY0NA0KPiA+IC0tLSBhL2FyY2gveDg2L2VudHJ5L2Nv
-bW1vbi5jDQo+ID4gKysrIGIvYXJjaC94ODYvZW50cnkvY29tbW9uLmMNCj4gPiBAQCAtMzIsNiAr
-MzIsMTAgQEANCj4gPiAgI2luY2x1ZGUgPGxpbnV4L3VhY2Nlc3MuaD4NCj4gPiAgI2luY2x1ZGUg
-PGFzbS9jcHVmZWF0dXJlLmg+DQo+ID4NCj4gPiArI2lmZGVmIENPTkZJR19SQU5ET01JWkVfS1NU
-QUNLX09GRlNFVA0KPiA+ICsjaW5jbHVkZSA8bGludXgvcmFuZG9tLmg+DQo+ID4gKyNlbmRpZg0K
-PiA+ICsNCj4gPiAgI2RlZmluZSBDUkVBVEVfVFJBQ0VfUE9JTlRTDQo+ID4gICNpbmNsdWRlIDx0
-cmFjZS9ldmVudHMvc3lzY2FsbHMuaD4NCj4gPg0KPiA+IEBAIC0yNjksMTAgKzI3MywyMiBAQCBf
-X3Zpc2libGUgaW5saW5lIHZvaWQgc3lzY2FsbF9yZXR1cm5fc2xvd3BhdGgoc3RydWN0DQo+IHB0
-X3JlZ3MgKnJlZ3MpDQo+ID4gIH0NCj4gPg0KPiA+ICAjaWZkZWYgQ09ORklHX1g4Nl82NA0KPiA+
-ICsNCj4gPiArI2lmZGVmIENPTkZJR19SQU5ET01JWkVfS1NUQUNLX09GRlNFVA0KPiA+ICt2b2lk
-ICphbGxvY2Eoc2l6ZV90IHNpemUpOw0KPiA+ICsjZW5kaWYNCj4gPiArDQo+ID4gIF9fdmlzaWJs
-ZSB2b2lkIGRvX3N5c2NhbGxfNjQodW5zaWduZWQgbG9uZyBuciwgc3RydWN0IHB0X3JlZ3MgKnJl
-Z3MpDQo+ID4gIHsNCj4gPiAgICAgICAgIHN0cnVjdCB0aHJlYWRfaW5mbyAqdGk7DQo+ID4NCj4g
-PiArI2lmZGVmIENPTkZJR19SQU5ET01JWkVfS1NUQUNLX09GRlNFVA0KPiA+ICsgICAgICAgc2l6
-ZV90IG9mZnNldCA9ICgoc2l6ZV90KXByYW5kb21fdTMyKCkpICUgMjU2Ow0KPiA+ICsgICAgICAg
-Y2hhciAqcHRyID0gYWxsb2NhKG9mZnNldCk7DQo+ID4gKw0KPiA+ICsgICAgICAgYXNtIHZvbGF0
-aWxlKCIiOiI9bSIoKnB0cikpOw0KPiA+ICsjZW5kaWYNCj4gPiArDQo+ID4gICAgICAgICBlbnRl
-cl9mcm9tX3VzZXJfbW9kZSgpOw0KPiA+ICAgICAgICAgbG9jYWxfaXJxX2VuYWJsZSgpOw0KPiA+
-ICAgICAgICAgdGkgPSBjdXJyZW50X3RocmVhZF9pbmZvKCk7DQo+IA0KPiBXZWxsIHRoaXMgaXMg
-ZGVsaWdodGZ1bGx5IHNob3J0ISANCg0KWWVzIDopIExvb2tzIGxpa2Ugd2hlbiB5b3UgYXJlIGFs
-bG93ZWQgdG8gdXNlIGZvcmJpZGRlbiBBUElzLCBsaWZlIG1pZ2h0IGJlIA0Kc3VkZGVubHkgbXVj
-aCBlYXNpZXIgOikgDQoNClRoZSBhbGxvY2EoKSBkZWZpbml0aW9uIGNvdWxkIGV2ZW4gYmUNCj4g
-bW92ZWQgdXAgYWZ0ZXIgdGhlICNpbmNsdWRlIG9mIHJhbmRvbS5oLCBqdXN0IHRvIHJlZHVjZSB0
-aGUgbnVtYmVyIG9mDQo+ICNpZmRlZiBsaW5lcywgdG9vLg0KDQpTdXJlLCBjYW4gZG8gdGhpcy4g
-DQoNCiBJIHBhdGNoZWQgZ2V0cGlkKCkgdG8gcmVwb3J0IHN0YWNrIGxvY2F0aW9ucyBmb3IgYQ0K
-PiBnaXZlbiBwaWQsIGp1c3QgdG8gZ2V0IGEgc2Vuc2Ugb2YgdGhlIGVudHJvcHkuIE9uIDEwLDAw
-MCBnZXRwaWQoKQ0KPiBjYWxscyBJIHNlZSBjb3VudHMgbGlrZToNCj4gDQo+ICAgICAyMjkgIGZm
-ZmZhNTgyNDA2OTdkYmMNCj4gICAgIDI5NCAgZmZmZmE1ODI0MDY5N2RjNA0KPiAgICAgMzE1ICBm
-ZmZmYTU4MjQwNjk3ZGNjDQo+ICAgICAyOTggIGZmZmZhNTgyNDA2OTdkZDQNCj4gICAgIDMzNSAg
-ZmZmZmE1ODI0MDY5N2RkYw0KPiAgICAgMzExICBmZmZmYTU4MjQwNjk3ZGU0DQo+ICAgICAyOTUg
-IGZmZmZhNTgyNDA2OTdkZWMNCj4gICAgIDMwMyAgZmZmZmE1ODI0MDY5N2RmNA0KPiAgICAgMzM0
-ICBmZmZmYTU4MjQwNjk3ZGZjDQo+ICAgICAzMzEgIGZmZmZhNTgyNDA2OTdlMDQNCj4gICAgIDMy
-MSAgZmZmZmE1ODI0MDY5N2UwYw0KPiAgICAgMjk4ICBmZmZmYTU4MjQwNjk3ZTE0DQo+ICAgICAy
-OTAgIGZmZmZhNTgyNDA2OTdlMWMNCj4gICAgIDMwNiAgZmZmZmE1ODI0MDY5N2UyNA0KPiAgICAg
-MzA4ICBmZmZmYTU4MjQwNjk3ZTJjDQo+ICAgICAzMjUgIGZmZmZhNTgyNDA2OTdlMzQNCj4gICAg
-IDMwMSAgZmZmZmE1ODI0MDY5N2UzYw0KPiAgICAgMzM2ICBmZmZmYTU4MjQwNjk3ZTQ0DQo+ICAg
-ICAzMjggIGZmZmZhNTgyNDA2OTdlNGMNCj4gICAgIDMyNiAgZmZmZmE1ODI0MDY5N2U1NA0KPiAg
-ICAgMzE0ICBmZmZmYTU4MjQwNjk3ZTVjDQo+ICAgICAzMDUgIGZmZmZhNTgyNDA2OTdlNjQNCj4g
-ICAgIDMxNSAgZmZmZmE1ODI0MDY5N2U2Yw0KPiAgICAgMzI1ICBmZmZmYTU4MjQwNjk3ZTc0DQo+
-ICAgICAyODcgIGZmZmZhNTgyNDA2OTdlN2MNCj4gICAgIDMxOSAgZmZmZmE1ODI0MDY5N2U4NA0K
-PiAgICAgMzA5ICBmZmZmYTU4MjQwNjk3ZThjDQo+ICAgICAzMjkgIGZmZmZhNTgyNDA2OTdlOTQN
-Cj4gICAgIDMxMSAgZmZmZmE1ODI0MDY5N2U5Yw0KPiAgICAgMzA2ICBmZmZmYTU4MjQwNjk3ZWE0
-DQo+ICAgICAzMTMgIGZmZmZhNTgyNDA2OTdlYWMNCj4gICAgIDI4OSAgZmZmZmE1ODI0MDY5N2Vi
-NA0KPiAgICAgIDk0ICBmZmZmYTU4MjQwNjk3ZWJjDQo+IA0KPiBTbyBpdCBsb29rcyBtb3JlIGxp
-a2UgNSBiaXRzIG9mIGVudHJvcHkgaW4gcHJhY3RpY2UgKGhlcmUgYXJlIDMzDQo+IHVuaXF1ZSBz
-dGFjayBsb2NhdGlvbnMpLCBidXQgdGhhdCBzdGlsbCBsb29rcyBnb29kIHRvIG1lLg0KDQpXaGF0
-IEkgc3RpbGwgZG9uJ3QgZnVsbHkgdW5kZXJzdGFuZCBoZXJlIChkdWUgdG8gbXkgbGl0dGxlIGtu
-b3dsZWRnZSBvZg0KY29tcGlsZXJzKSBhbmQgYWZyYWlkIG9mIGlzIHRoYXQgdGhlIGFzbSBjb2Rl
-IHRoYXQgYWxsb2NhIGdlbmVyYXRlcyAoc2VlIG15IHZlcnNpb24pDQogYW5kIHRoZSBhbGlnbm1l
-bnQgbWlnaHQgZGlmZmVyIG9uIHRoZSBkaWZmZXJlbnQgdGFyZ2V0cywgZXRjLiANCklmIHlvdSB0
-cmllZCBpdCBvbiB5b3VycywgY2FuIHlvdSBzZW5kIG1lIHRoZSBhc20gY29kZSB0aGF0IGl0IHBy
-b2R1Y2VkIGZvciB5b3U/DQpJcyBpdCBkaWZmZXJlbnQgZnJvbSBtaW5lPyANCg0KPiANCj4gQ2Fu
-IHlvdSBzZW5kIHRoZSBuZXh0IHZlcnNpb24gd2l0aCBhIENDIHRvIGxrbWwgdG9vPw0KDQpJIHdh
-cyB0aGlua2luZyBvbiBub3Qgc3BhbW1pbmcgbGttbCBiZWZvcmUgd2UgZ2V0IHNvbWUgYWdyZWVt
-ZW50IGhlcmUsIGJ1dA0KSSBjYW4gZG8gaXQgaWYgcGVvcGxlIGJlbGlldmUgdGhpcyBpcyB0aGUg
-cmlnaHQgd2F5LiANCg0KR2V0dGluZyBBbmR5J3MgZmVlZGJhY2sgb24gdGhpcyB2ZXJzaW9uIGZp
-cnN0IHdvdWxkIGJlIGdyZWF0ISANCg0KQmVzdCBSZWdhcmRzLA0KRWxlbmEuDQo=
+On Mon, Apr 01, 2019 at 05:11:39PM -0400, Joel Fernandes wrote:
+> Thanks a lot Alan and Paul for the replies. I replied inline.
+> 
+> On Sun, Mar 31, 2019 at 02:55:31PM -0700, Paul E. McKenney wrote:
+> > On Fri, Mar 29, 2019 at 10:36:39PM -0400, Joel Fernandes wrote:
+> > > On Thu, Mar 28, 2019 at 10:37:07AM -0700, Paul E. McKenney wrote:
+> > > > On Thu, Mar 28, 2019 at 05:26:42PM +0100, Oleg Nesterov wrote:
+> > > > > On 03/28, Jann Horn wrote:
+> > > > > >
+> > > > > > Since we're just talking about RCU stuff now, adding Paul McKenney to
+> > > > > > the thread.
+> > > > > 
+> > > > > Since you added Paul let me add more confusion to this thread ;)
+> > > > 
+> > > > Woo-hoo!!!  More confusion!  Bring it on!!!  ;-)
+> > > 
+> > > Nice to take part in the confusion fun too!!! ;-)
+> > > 
+> > > > > There were some concerns about the lack of barriers in put_pid(), but I can't
+> > > > > find that old discussion and I forgot the result of that discussion...
+> > > > > 
+> > > > > Paul, could you confirm that this code
+> > > > > 
+> > > > > 	CPU_0		CPU_1
+> > > > > 
+> > > > > 	X = 1;		if (READ_ONCE(Y))
+> > > > > 	mb();			X = 2;
+> > > > > 	Y = 1;		BUG_ON(X != 2);
+> > > > > 
+> > > > > 
+> > > > > is correct? I think it is, control dependency pairs with mb(), right?
+> > > > 
+> > > > The BUG_ON() is supposed to happen at the end of time, correct?
+> > > > As written, there is (in the strict sense) a data race between the load
+> > > > of X in the BUG_ON() and CPU_0's store to X.  In a less strict sense,
+> > > > you could of course argue that this data race is harmless, especially
+> > > > if X is a single byte.  But the more I talk to compiler writers, the
+> > > > less comfortable I become with data races in general.  :-/
+> > > > 
+> > > > So I would also feel better if the "Y = 1" was WRITE_ONCE().
+> > > > 
+> > > > On the other hand, this is a great opportunity to try out Alan Stern's
+> > > > prototype plain-accesses patch to the Linux Kernel Memory Model (LKMM)!
+> > > > 
+> > > > https://lkml.kernel.org/r/Pine.LNX.4.44L0.1903191459270.1593-200000@iolanthe.rowland.org
+> > > > 
+> > > > Also adding Alan on CC.
+> > > > 
+> > > > Here is what I believe is the litmus test that your are interested in:
+> > > > 
+> > > > ------------------------------------------------------------------------
+> > > > C OlegNesterov-put_pid
+> > > > 
+> > > > {}
+> > > > 
+> > > > P0(int *x, int *y)
+> > > > {
+> > > > 	*x = 1;
+> > > > 	smp_mb();
+> > > > 	*y = 1;
+> > > > }
+> > > > 
+> > > > P1(int *x, int *y)
+> > > > {
+> > > > 	int r1;
+> > > > 
+> > > > 	r1 = READ_ONCE(*y);
+> > > > 	if (r1)
+> > > > 		*x = 2;
+> > > > }
+> > > > 
+> > > > exists (1:r1=1 /\ ~x=2)
+> > > > ------------------------------------------------------------------------
+> > > > 
+> > > > Running this through herd with Alan's patch detects the data race
+> > > > and says that the undesired outcome is allowed:
+> > > > 
+> > > > 	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid.litmus 
+> > > > 	Test OlegNesterov-put_pid Allowed
+> > > > 	States 3
+> > > > 	1:r1=0; x=1;
+> > > > 	1:r1=1; x=1;
+> > > > 	1:r1=1; x=2;
+> > > > 	Ok
+> > > > 	Witnesses
+> > > > 	Positive: 1 Negative: 2
+> > > > 	Flag data-race
+> > > > 	Condition exists (1:r1=1 /\ not (x=2))
+> > > > 	Observation OlegNesterov-put_pid Sometimes 1 2
+> > > > 	Time OlegNesterov-put_pid 0.00
+> > > > 	Hash=a3e0043ad753effa860fea37eeba0a76
+> > > > 
+> > > > Using WRITE_ONCE() for P0()'s store to y still allows this outcome,
+> > > > although it does remove the "Flag data-race".
+> > > > 
+> > > > Using WRITE_ONCE() for both P0()'s store to y and P1()'s store to x
+> > > > gets rid of both the "Flag data-race" and the undesired outcome:
+> > > > 
+> > > > 	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid-WO-WO.litmus 
+> > > > 	Test OlegNesterov-put_pid-WO-WO Allowed
+> > > > 	States 2
+> > > > 	1:r1=0; x=1;
+> > > > 	1:r1=1; x=2;
+> > > > 	No
+> > > > 	Witnesses
+> > > > 	Positive: 0 Negative: 2
+> > > > 	Condition exists (1:r1=1 /\ not (x=2))
+> > > > 	Observation OlegNesterov-put_pid-WO-WO Never 0 2
+> > > > 	Time OlegNesterov-put_pid-WO-WO 0.01
+> > > > 	Hash=6e1643e3c5e4739b590bde0a8e8a918e
+> > > > 
+> > > > Here is the corresponding litmus test, in case I messed something up:
+> > > > 
+> > > > ------------------------------------------------------------------------
+> > > > C OlegNesterov-put_pid-WO-WO
+> > > > 
+> > > > {}
+> > > > 
+> > > > P0(int *x, int *y)
+> > > > {
+> > > > 	*x = 1;
+> > > > 	smp_mb();
+> > > > 	WRITE_ONCE(*y, 1);
+> > > > }
+> > > > 
+> > > > P1(int *x, int *y)
+> > > > {
+> > > > 	int r1;
+> > > > 
+> > > > 	r1 = READ_ONCE(*y);
+> > > > 	if (r1)
+> > > > 		WRITE_ONCE(*x, 2);
+> > > > }
+> > > > 
+> > > > exists (1:r1=1 /\ ~x=2)
+> > > 
+> > > I ran the above examples too. Its a bit confusing to me why the WRITE_ONCE in
+> > > P0() is required, and why would the READ_ONCE / WRITE_ONCE in P1() not be
+> > > sufficient to prevent the exists condition. Shouldn't the compiler know that,
+> > > in P0(), it should not reorder the store to y=1 before the x=1 because there
+> > > is an explicit barrier between the 2 stores? Looks me to me like a broken
+> > > compiler :-|. 
+> > > 
+> > > So I would have expected the following litmus to result in Never, but it
+> > > doesn't with Alan's patch:
+> > > 
+> > > P0(int *x, int *y)
+> > > {
+> > > 	*x = 1;
+> > > 	smp_mb();
+> > > 	*y = 1;
+> > > }
+> > > 
+> > > P1(int *x, int *y)
+> > > {
+> > > 	int r1;
+> > > 
+> > > 	r1 = READ_ONCE(*y);
+> > > 	if (r1)
+> > > 		WRITE_ONCE(*x, 2);
+> > > }
+> > > 
+> > > exists (1:r1=1 /\ ~x=2)
+> > 
+> > The problem is that the compiler can turn both of P0()'s writes into reads:
+> > 
+> > P0(int *x, int *y)
+> > {
+> > 	if (*x != 1)
+> > 		*x = 1;
+> > 	smp_mb();
+> > 	if (*y != 1)
+> > 		*y = 1;
+> > }
+> > 
+> > These reads will not be ordered by smp_wmb(), so you have to do WRITE_ONCE()
+> > to get an iron-clad ordering guarantee.
+> 
+> But the snippet above has smp_mb() which does order writes, even for the
+> plain accesses.
+
+True, but that code has a data race, namely P0()'s plain write to y
+races with P1()'s READ_ONCE().  Data races give the compiler absolutely
+astonishing levels of freedom to rearrange your code.  So, if you
+as a developer or maintainer choose to have data races, it is your
+responsibility to ensure that the compiler cannot mess you up.  So what
+you should do in that case is to list the transformed code the compiler's
+optimizations can produce and feed the corresponding litmus tests to LKMM,
+using READ_ONCE() and WRITE_ONCE() for the post-optimization accesses.
+
+> > > > ------------------------------------------------------------------------
+> > > > 
+> > > > > If not, then put_pid() needs atomic_read_acquire() as it was proposed in that
+> > > > > discussion.
+> > > > 
+> > > > Good point, let's try with smp_load_acquire() in P1():
+> > > > 
+> > > > 	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid-WO-sla.litmus 
+> > > > 	Test OlegNesterov-put_pid-WO-sla Allowed
+> > > > 	States 2
+> > > > 	1:r1=0; x=1;
+> > > > 	1:r1=1; x=2;
+> > > > 	No
+> > > > 	Witnesses
+> > > > 	Positive: 0 Negative: 2
+> > > > 	Condition exists (1:r1=1 /\ not (x=2))
+> > > > 	Observation OlegNesterov-put_pid-WO-sla Never 0 2
+> > > > 	Time OlegNesterov-put_pid-WO-sla 0.01
+> > > > 	Hash=4fb0276eabf924793dec1970199db3a6
+> > > > 
+> > > > This also works.  Here is the litmus test:
+> > > > 
+> > > > ------------------------------------------------------------------------
+> > > > C OlegNesterov-put_pid-WO-sla
+> > > > 
+> > > > {}
+> > > > 
+> > > > P0(int *x, int *y)
+> > > > {
+> > > > 	*x = 1;
+> > > > 	smp_mb();
+> > > > 	WRITE_ONCE(*y, 1);
+> > > > }
+> > > > 
+> > > > P1(int *x, int *y)
+> > > > {
+> > > > 	int r1;
+> > > > 
+> > > > 	r1 = smp_load_acquire(y);
+> > > > 	if (r1)
+> > > > 		*x = 2;
+> > > > }
+> > > > 
+> > > > exists (1:r1=1 /\ ~x=2)
+> > > > ------------------------------------------------------------------------
+> > > > 
+> > > > Demoting P0()'s WRITE_ONCE() to a plain write while leaving P1()'s
+> > > > smp_load_acquire() gets us a data race and allows the undesired
+> > > > outcome:
+> > > 
+> > > Yeah, I think this is also what I was confused about above, is why is that
+> > > WRITE_ONCE required in P0() because there's already an smp_mb there. Surely
+> > > I'm missing something. ;-)
+> > 
+> > The first of P0()'s writes can be a plain write, at least assuming
+> > sufficient synchronization to avoid the data race.  But turning the second
+> > of P0()'s writes into a plain write is a bit riskier: That is a write of
+> > a constant, and those really are torn in some cases on some architectures.
+> > Like x86, for example.
+> 
+> I understand. Are we talking about load/store tearing being the issue here?
+> Even under load/store tearing, I feel the program will produce correct
+> results because r1 is either 0 or 1 (a single bit cannot be torn).
+
+The compiler can (at least in theory) also transform *y = 1 as follows:
+
+	*y = r1; /* Use *y as temporary storage. */
+	do_something();
+	r1 = *y;
+	*y = 1;
+
+Here r1 is some register and do_something() is an inline function visible
+to the compiler (hence not implying barrier() upon call and return).
+
+I don't know of any compilers that actually do this, but for me use
+of WRITE_ONCE() is a small price to pay to prevent all past, present,
+and future compiler from ever destroying^W optimizing my code in this way.
+
+In your own code, if you dislike WRITE_ONCE() so much that you are willing
+to commit to (now and forever!!!) checking all applicable versions of
+compilers to make sure that they don't do this, well and good, knock
+yourself out.  But it is your responsibility to do that checking, and you
+can attest to LKMM that you have done so by giving LKMM litmus tests that
+substitute WRITE_ONCE() for that plain C-language assignment statement.
+
+> Further, from the herd simulator output (below), according to the "States",
+> r1==1 means P1() AFAICS would have already finished the the read and set the
+> r1 register to 1.  Then I am wondering why it couldn't take the branch to set
+> *x to 2.  According to herd, r1 == 1 AND x == 1 is a perfectly valid state
+> for the below program. I still couldn't see in my mind how for the below
+> program, this is possible - in terms of compiler optimizations or other kinds
+> of ordering. Because there is a smp_mb() between the 2 plain writes in P0()
+> and P1() did establish that r1 is 1 in the positive case. :-/.  I am surely
+> missing something :-)
+> 
+> ---8<-----------------------
+> C Joel-put_pid
+> 
+> {}
+> 
+> P0(int *x, int *y)
+> {
+> 	*x = 1;
+> 	smp_mb();
+> 	*y = 1;
+> }
+> 
+> P1(int *x, int *y)
+> {
+> 	int r1;
+> 
+> 	r1 = READ_ONCE(*y);
+> 	if (r1)
+> 		WRITE_ONCE(*x, 2);
+> }
+> 
+> exists (1:r1=1 /\ ~x=2)
+> 
+> ---8<-----------------------
+> Output:
+> 
+> Test Joel-put_pid Allowed
+> States 3
+> 1:r1=0; x=1;
+> 1:r1=1; x=1;	<-- Can't figure out why r1=1 and x != 2 here.
+
+I must defer to Alan on this, but my guess is that this is due to
+the fact that there is a data race.
+
+							Thanx, Paul
+
+> 1:r1=1; x=2;
+> Ok
+> Witnesses
+> Positive: 1 Negative: 2
+> Flag data-race
+> Condition exists (1:r1=1 /\ not (x=2))
+> Observation Joel-put_pid Sometimes 1 2
+> Time OlegNesterov-put_pid-WO-WO 0.01
+> Hash=c7bdd50418d42779b7c10ba9128369df
+> 
+> > > > 	$ herd7  -conf linux-kernel.cfg /tmp/OlegNesterov-put_pid-sla.litmus 
+> > > > 	Test OlegNesterov-put_pid-sla Allowed
+> > > > 	States 3
+> > > > 	1:r1=0; x=1;
+> > > > 	1:r1=1; x=1;
+> > > > 	1:r1=1; x=2;
+> > > > 	Ok
+> > > > 	Witnesses
+> > > > 	Positive: 1 Negative: 2
+> > > > 	Flag data-race
+> > > > 	Condition exists (1:r1=1 /\ not (x=2))
+> > > > 	Observation OlegNesterov-put_pid-sla Sometimes 1 2
+> > > > 	Time OlegNesterov-put_pid-sla 0.01
+> > > > 	Hash=ec6f71f3d9f7cd6e45a874c872e3d946
+> > > > 
+> > > > But what if you are certain that the compiler cannot mess up your use
+> > > > of plain C-language loads and stores?  Then simply tell LKMM that they
+> > > > are READ_ONCE() and WRITE_ONCE(), respectively.  LKMM is admittedly
+> > > > somewhat paranoid, but real C compilers really do tear stores of certain
+> > > > constants on systems (like x86) that have store-immediate instructions,
+> > > > so a bit of paranoia is not misplaced here.  ;-)
+> > > > 
+> > > > Plus please note that this patch to LKMM is prototype and thus subject
+> > > > to change.
+> > > 
+> > > Ah I see. Appreciate if Alan can also CC me on future posting of this since
+> > > I'm quite interested. ;-)
+> > 
+> > His last posting should be easy to find.  But please let me know if not,
+> > as I would be happy to send it along.
+> 
+> I found it and I'm going through it. Thanks!
+>  
+>  - Joel
+> 
