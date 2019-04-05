@@ -1,55 +1,80 @@
-Content-Type: text/plain;
-	charset=us-ascii
-Mime-Version: 1.0 (1.0)
-Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon syscall
-From: Andy Lutomirski <luto@amacapital.net>
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612BA4C40185@IRSMSX102.ger.corp.intel.com>
-Date: Fri, 5 Apr 2019 07:14:11 -0600
+MIME-Version: 1.0
+References: <20190308132701.133598-1-glider@google.com> <20190308132701.133598-3-glider@google.com>
+ <CAK7LNARV+_RNE4E5H37e9wH6iPyrzqsLtcWd0wLSt+vsEvncRA@mail.gmail.com>
+In-Reply-To: <CAK7LNARV+_RNE4E5H37e9wH6iPyrzqsLtcWd0wLSt+vsEvncRA@mail.gmail.com>
+From: Alexander Potapenko <glider@google.com>
+Date: Fri, 5 Apr 2019 16:00:05 +0200
+Message-ID: <CAG_fn=X1CJ6+1rHeHLUjJmXYPLbOL8_2sSrFBv+oxpMvw87ACg@mail.gmail.com>
+Subject: Re: [PATCH v2 2/2] initmem: introduce CONFIG_INIT_ALL_HEAP
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
-Message-Id: <C39303A6-7E9F-47FE-9757-0E73F08C07A9@amacapital.net>
-References: <20190329081358.30497-1-elena.reshetova@intel.com> <CAGXu5jKH3js8pOv726jQ84rycd04OcwosN9-OkJg7UnsMMiuxA@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612BA4C3BA7F@IRSMSX102.ger.corp.intel.com> <CAGXu5j+05tZUOuka2YQy+5WPvVwHBrM-YEeto1iLzz2shCnANQ@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612BA4C40185@IRSMSX102.ger.corp.intel.com>
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>, "Perla, Enrico" <enrico.perla@intel.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Fri, Apr 5, 2019 at 1:36 PM Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+>
+> On Fri, Mar 8, 2019 at 10:27 PM Alexander Potapenko <glider@google.com> w=
+rote:
+> >
+> > diff --git a/security/Kconfig.initmem b/security/Kconfig.initmem
+> > index 27aec394365e..5ce49663777a 100644
+> > --- a/security/Kconfig.initmem
+> > +++ b/security/Kconfig.initmem
+> > @@ -13,6 +13,17 @@ config INIT_ALL_MEMORY
+> >
+> >  if INIT_ALL_MEMORY
+> >
+> > +config INIT_ALL_HEAP
+> > +       bool "Initialize all heap"
+> > +       depends on INIT_ALL_MEMORY
+> > +       select CONFIG_PAGE_POISONING
+> > +       select CONFIG_PAGE_POISONING_NO_SANITY
+> > +       select CONFIG_PAGE_POISONING_ZERO
+> > +       select CONFIG_SLUB_DEBUG
+>
+> This should like follows (no CONFIG_ prefix):
+>
+>          select PAGE_POISONING
+>          select PAGE_POISONING_NO_SANITY
+>          select PAGE_POISONING_ZERO
+>          select SLUB_DEBUG
+Thanks!
+> But, again, this causes unmet dependency if SLUB=3Dn
+          select SLUB_DEBUG if SLUB
+seems to help. Guess it's better than making CONFIG_INIT_ALL_HEAP
+depend on SLUB.
+>
+>
+>
+>
+> > +       default y
+> > +       help
+> > +         Enable page poisoning and slub poisoning by default.
+> > +
+> >  config INIT_ALL_STACK
+> >         bool "Initialize all stack"
+> >         depends on INIT_ALL_MEMORY
+> > --
+> > 2.21.0.360.g471c308f928-goog
+> >
+>
+>
+> --
+> Best Regards
+> Masahiro Yamada
 
 
-On Apr 5, 2019, at 4:14 AM, Reshetova, Elena <elena.reshetova@intel.com> wro=
-te:
 
->> On Thu, Apr 4, 2019 at 4:41 AM Reshetova, Elena
->> <elena.reshetova@intel.com> wrote:
->>> What I still don't fully understand here (due to my little knowledge of
->>> compilers) and afraid of is that the asm code that alloca generates (see=
- my version)
->>> and the alignment might differ on the different targets, etc.
->>=20
->> I guess it's possible, but for x86_64, since appears to be consistent.
->=20
-> So, yes, I double checked this now with just printing all possible offsets=
- I get for rsp
-> from do_syscall_64, it is indeed 33 different offsets, so it is indeed mor=
-e like 5 bits of entropy.=20
-> We can increase it, if we want and people are ok with losing a bit more st=
-ack space.=20
->=20
->>=20
->>> If you tried it on yours, can you send me the asm code that it produced f=
-or you?
->>> Is it different from mine?
->>=20
->> You can compare compiler outputs here. Here's gcc vs clang for this code:=
+--=20
+Alexander Potapenko
+Software Engineer
 
->> https://godbolt.org/z/WJSbN8
->> You can adjust compiler versions, etc.
->=20
-> Oh, this is handy! Thank you for the link!=20
->=20
->=20
-> So, should I resend to lkml (with some cosmetic fixes) or how to proceed w=
-ith this?
-> I will also update the randomness bit info.=20
->=20
->=20
+Google Germany GmbH
+Erika-Mann-Stra=C3=9Fe, 33
+80636 M=C3=BCnchen
 
-Go ahead and send a new version, please.=
+Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
+Registergericht und -nummer: Hamburg, HRB 86891
+Sitz der Gesellschaft: Hamburg
