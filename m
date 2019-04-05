@@ -1,7 +1,7 @@
 From: "Tobin C. Harding" <tobin@kernel.org>
-Subject: [PATCH v4 2/6] kselftest: Add test runner creation script
-Date: Fri,  5 Apr 2019 12:58:55 +1100
-Message-Id: <20190405015859.32755-3-tobin@kernel.org>
+Subject: [PATCH v4 3/6] kselftest: Add test module framework header
+Date: Fri,  5 Apr 2019 12:58:56 +1100
+Message-Id: <20190405015859.32755-4-tobin@kernel.org>
 In-Reply-To: <20190405015859.32755-1-tobin@kernel.org>
 References: <20190405015859.32755-1-tobin@kernel.org>
 MIME-Version: 1.0
@@ -10,216 +10,198 @@ To: Shuah Khan <shuah@kernel.org>
 Cc: "Tobin C. Harding" <tobin@kernel.org>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, kernel-hardening@lists.openwall.com, linux-kselftest@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently if we wish to use kselftest to run tests within a kernel
-module we write a small script to load/unload and do error reporting.
-There are a bunch of these under tools/testing/selftests/lib/ that are
-all identical except for the test name.  We can reduce code duplication
-and improve maintainability if we have one version of this.  However
-kselftest requires an executable for each test.  We can move all the
-script logic to a central script then have each individual test script
-call the main script.
+kselftest runs as a userspace process.  Sometimes we need to test things
+from kernel space.  One way of doing this is by creating a test module.
+Currently doing so requires developers to write a bunch of boiler plate
+in the module if kselftest is to be used to run the tests.  This means
+we currently have a load of duplicate code to achieve these ends.  If we
+have a uniform method for implementing test modules then we can reduce
+code duplication, ensure uniformity in the test framework, ease code
+maintenance, and reduce the work required to create tests.  This all
+helps to encourage developers to write and run tests.
 
-Oneliner to call kselftest_module.sh courtesy of Kees, thanks!
+Add a C header file that can be included in test modules.  This provides
+a single point for common test functions/macros.  Implement a few macros
+that make up the start of the test framework.
 
-Add test runner creation script.  Convert
-tools/testing/selftests/lib/*.sh to use new test creation script.
-
-Testing
--------
-
-Configure kselftests for lib/ then build and boot kernel.  Then run
-kselftests as follows:
-
-  $ cd /path/to/kernel/tree
-  $ sudo make O=$output_path -C tools/testing/selftests TARGETS="lib" run_tests
-
-and also
-
-  $ cd /path/to/kernel/tree
-  $ cd tools/testing/selftests
-  $ sudo make O=$output_path TARGETS="lib" run_tests
-
-and also
-
-  $ cd /path/to/kernel/tree
-  $ cd tools/testing/selftests
-  $ sudo make TARGETS="lib" run_tests
+Add documentation for new kselftest header to kselftest documentation.
 
 Acked-by: Kees Cook <keescook@chromium.org>
 Signed-off-by: Tobin C. Harding <tobin@kernel.org>
 ---
- tools/testing/selftests/kselftest_module.sh  | 84 ++++++++++++++++++++
- tools/testing/selftests/lib/bitmap.sh        | 18 +----
- tools/testing/selftests/lib/prime_numbers.sh | 17 +---
- tools/testing/selftests/lib/printf.sh        | 19 +----
- 4 files changed, 88 insertions(+), 50 deletions(-)
- create mode 100755 tools/testing/selftests/kselftest_module.sh
+ Documentation/dev-tools/kselftest.rst      | 94 +++++++++++++++++++++-
+ tools/testing/selftests/kselftest_module.h | 48 +++++++++++
+ 2 files changed, 140 insertions(+), 2 deletions(-)
+ create mode 100644 tools/testing/selftests/kselftest_module.h
 
-diff --git a/tools/testing/selftests/kselftest_module.sh b/tools/testing/selftests/kselftest_module.sh
-new file mode 100755
-index 000000000000..18e1c7992d30
+diff --git a/Documentation/dev-tools/kselftest.rst b/Documentation/dev-tools/kselftest.rst
+index 7756f7a7c23b..c8c03388b9de 100644
+--- a/Documentation/dev-tools/kselftest.rst
++++ b/Documentation/dev-tools/kselftest.rst
+@@ -14,6 +14,10 @@ in safe mode with a limited scope. In limited mode, cpu-hotplug test is
+ run on a single cpu as opposed to all hotplug capable cpus, and memory
+ hotplug test is run on 2% of hotplug capable memory instead of 10%.
+ 
++kselftest runs as a userspace process.  Tests that can be written/run in
++userspace may wish to use the `Test Harness`_.  Tests that need to be
++run in kernel space may wish to use a `Test Module`_.
++
+ Running the selftests (hotplug tests are run in limited mode)
+ =============================================================
+ 
+@@ -161,11 +165,97 @@ Contributing new tests (details)
+ 
+    e.g: tools/testing/selftests/android/config
+ 
++Test Module
++===========
++
++Kselftest tests the kernel from userspace.  Sometimes things need
++testing from within the kernel, one method of doing this is to create a
++test module.  We can tie the module into the kselftest framework by
++using a shell script test runner.  ``kselftest_module.sh`` is designed
++to facilitate this process.  There is also a header file provided to
++assist writing kernel modules that are for use with kselftest:
++
++- ``tools/testing/kselftest/kselftest_module.h``
++- ``tools/testing/kselftest/kselftest_module.sh``
++
++How to use
++----------
++
++Here we show the typical steps to create a test module and tie it into
++kselftest.  We use kselftests for lib/ as an example.
++
++1. Create the test module
++
++2. Create the test script that will run (load/unload) the module
++   e.g. ``tools/testing/selftests/lib/printf.sh``
++
++3. Add line to config file e.g. ``tools/testing/selftests/lib/config``
++
++4. Add test script to makefile  e.g. ``tools/testing/selftests/lib/Makefile``
++
++5. Verify it works:
++
++.. code-block:: sh
++
++   # Assumes you have booted a fresh build of this kernel tree
++   cd /path/to/linux/tree
++   make kselftest-merge
++   make modules
++   sudo make modules_install
++   make TARGETS=lib kselftest
++
++Example Module
++--------------
++
++A bare bones test module might look like this:
++
++.. code-block:: c
++
++   // SPDX-License-Identifier: GPL-2.0+
++
++   #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
++
++   #include "../tools/testing/selftests/kselftest_module.h"
++
++   KSTM_MODULE_GLOBALS();
++
++   /*
++    * Kernel module for testing the foobinator
++    */
++
++   static int __init test_function()
++   {
++           ...
++   }
++
++   static void __init selftest(void)
++   {
++           KSTM_CHECK_ZERO(do_test_case("", 0));
++   }
++
++   KSTM_MODULE_LOADERS(test_foo);
++   MODULE_AUTHOR("John Developer <jd@fooman.org>");
++   MODULE_LICENSE("GPL");
++
++Example test script
++-------------------
++
++.. code-block:: sh
++
++    #!/bin/bash
++    # SPDX-License-Identifier: GPL-2.0+
++    $(dirname $0)/../kselftest_module.sh "foo" test_foo
++
++
+ Test Harness
+ ============
+ 
+-The kselftest_harness.h file contains useful helpers to build tests.  The tests
+-from tools/testing/selftests/seccomp/seccomp_bpf.c can be used as example.
++The kselftest_harness.h file contains useful helpers to build tests.  The
++test harness is for userspace testing, for kernel space testing see `Test
++Module`_ above.
++
++The tests from tools/testing/selftests/seccomp/seccomp_bpf.c can be used as
++example.
+ 
+ Example
+ -------
+diff --git a/tools/testing/selftests/kselftest_module.h b/tools/testing/selftests/kselftest_module.h
+new file mode 100644
+index 000000000000..e8eafaf0941a
 --- /dev/null
-+++ b/tools/testing/selftests/kselftest_module.sh
-@@ -0,0 +1,84 @@
-+#!/bin/sh
-+# SPDX-License-Identifier: GPL-2.0+
++++ b/tools/testing/selftests/kselftest_module.h
+@@ -0,0 +1,48 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++#ifndef __KSELFTEST_MODULE_H
++#define __KSELFTEST_MODULE_H
 +
-+#
-+# Runs an individual test module.
-+#
-+# kselftest expects a separate executable for each test, this can be
-+# created by adding a script like this:
-+#
-+#   #!/bin/sh
-+#   SPDX-License-Identifier: GPL-2.0+
-+#   $(dirname $0)/../kselftest_module.sh "description" module_name
-+#
-+# Example: tools/testing/selftests/lib/printf.sh
++#include <linux/module.h>
 +
-+desc=""				# Output prefix.
-+module=""			# Filename (without the .ko).
-+args=""				# modprobe arguments.
++/*
++ * Test framework for writing test modules to be loaded by kselftest.
++ * See Documentation/dev-tools/kselftest.rst for an example test module.
++ */
 +
-+modprobe="/sbin/modprobe"
++#define KSTM_MODULE_GLOBALS()			\
++static unsigned int total_tests __initdata;	\
++static unsigned int failed_tests __initdata
 +
-+main() {
-+    parse_args "$@"
-+    assert_root
-+    assert_have_module
-+    run_module
++#define KSTM_CHECK_ZERO(x) do {						\
++	total_tests++;							\
++	if (x) {							\
++		pr_warn("TC failed at %s:%d\n", __func__, __LINE__);	\
++		failed_tests++;						\
++	}								\
++} while (0)
++
++static inline int kstm_report(unsigned int total_tests, unsigned int failed_tests)
++{
++	if (failed_tests == 0)
++		pr_info("all %u tests passed\n", total_tests);
++	else
++		pr_warn("failed %u out of %u tests\n", failed_tests, total_tests);
++
++	return failed_tests ? -EINVAL : 0;
 +}
 +
-+parse_args() {
-+    script=${0##*/}
++#define KSTM_MODULE_LOADERS(__module)			\
++static int __init __module##_init(void)			\
++{							\
++	pr_info("loaded.\n");				\
++	selftest();					\
++	return kstm_report(total_tests, failed_tests);	\
++}							\
++static void __exit __module##_exit(void)		\
++{							\
++	pr_info("unloaded.\n");				\
++}							\
++module_init(__module##_init);				\
++module_exit(__module##_exit)
 +
-+    if [ $# -lt 2 ]; then
-+	echo "Usage: $script <description> <module_name> [FAIL]"
-+	exit 1
-+    fi
-+
-+    desc="$1"
-+    shift || true
-+    module="$1"
-+    shift || true
-+    args="$@"
-+}
-+
-+assert_root() {
-+    if [ ! -w /dev ]; then
-+	skip "please run as root"
-+    fi
-+}
-+
-+assert_have_module() {
-+    if ! $modprobe -q -n $module; then
-+	skip "module $module is not found"
-+    fi
-+}
-+
-+run_module() {
-+    if $modprobe -q $module $args; then
-+	$modprobe -q -r $module
-+	say "ok"
-+    else
-+	fail ""
-+    fi
-+}
-+
-+say() {
-+    echo "$desc: $1"
-+}
-+
-+
-+fail() {
-+    say "$1 [FAIL]" >&2
-+    exit 1
-+}
-+
-+skip() {
-+    say "$1 [SKIP]" >&2
-+    # Kselftest framework requirement - SKIP code is 4.
-+    exit 4
-+}
-+
-+#
-+# Main script
-+#
-+main "$@"
-diff --git a/tools/testing/selftests/lib/bitmap.sh b/tools/testing/selftests/lib/bitmap.sh
-index 5a90006d1aea..5511dddc5c2d 100755
---- a/tools/testing/selftests/lib/bitmap.sh
-+++ b/tools/testing/selftests/lib/bitmap.sh
-@@ -1,19 +1,3 @@
- #!/bin/sh
- # SPDX-License-Identifier: GPL-2.0
--
--# Kselftest framework requirement - SKIP code is 4.
--ksft_skip=4
--
--# Runs bitmap infrastructure tests using test_bitmap kernel module
--if ! /sbin/modprobe -q -n test_bitmap; then
--	echo "bitmap: module test_bitmap is not found [SKIP]"
--	exit $ksft_skip
--fi
--
--if /sbin/modprobe -q test_bitmap; then
--	/sbin/modprobe -q -r test_bitmap
--	echo "bitmap: ok"
--else
--	echo "bitmap: [FAIL]"
--	exit 1
--fi
-+$(dirname $0)/../kselftest_module.sh "bitmap" test_bitmap
-diff --git a/tools/testing/selftests/lib/prime_numbers.sh b/tools/testing/selftests/lib/prime_numbers.sh
-index 78e7483c8d60..43b28f24e453 100755
---- a/tools/testing/selftests/lib/prime_numbers.sh
-+++ b/tools/testing/selftests/lib/prime_numbers.sh
-@@ -1,19 +1,4 @@
- #!/bin/sh
- # SPDX-License-Identifier: GPL-2.0
- # Checks fast/slow prime_number generation for inconsistencies
--
--# Kselftest framework requirement - SKIP code is 4.
--ksft_skip=4
--
--if ! /sbin/modprobe -q -n prime_numbers; then
--	echo "prime_numbers: module prime_numbers is not found [SKIP]"
--	exit $ksft_skip
--fi
--
--if /sbin/modprobe -q prime_numbers selftest=65536; then
--	/sbin/modprobe -q -r prime_numbers
--	echo "prime_numbers: ok"
--else
--	echo "prime_numbers: [FAIL]"
--	exit 1
--fi
-+$(dirname $0)/../kselftest_module.sh "prime numbers" prime_numbers selftest=65536
-diff --git a/tools/testing/selftests/lib/printf.sh b/tools/testing/selftests/lib/printf.sh
-index 45a23e2d64ad..2ffa61da0296 100755
---- a/tools/testing/selftests/lib/printf.sh
-+++ b/tools/testing/selftests/lib/printf.sh
-@@ -1,19 +1,4 @@
- #!/bin/sh
- # SPDX-License-Identifier: GPL-2.0
--# Runs printf infrastructure using test_printf kernel module
--
--# Kselftest framework requirement - SKIP code is 4.
--ksft_skip=4
--
--if ! /sbin/modprobe -q -n test_printf; then
--	echo "printf: module test_printf is not found [SKIP]"
--	exit $ksft_skip
--fi
--
--if /sbin/modprobe -q test_printf; then
--	/sbin/modprobe -q -r test_printf
--	echo "printf: ok"
--else
--	echo "printf: [FAIL]"
--	exit 1
--fi
-+# Tests the printf infrastructure using test_printf kernel module.
-+$(dirname $0)/../kselftest_module.sh "printf" test_printf
++#endif	/* __KSELFTEST_MODULE_H */
 -- 
 2.21.0
