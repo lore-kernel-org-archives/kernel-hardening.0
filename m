@@ -1,28 +1,52 @@
-MIME-Version: 1.0
-References: <20190308132701.133598-1-glider@google.com> <20190308132701.133598-3-glider@google.com>
- <497b1201-b2ae-5e0c-d191-ff1830d92fc1@redhat.com>
-In-Reply-To: <497b1201-b2ae-5e0c-d191-ff1830d92fc1@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 8 Apr 2019 10:14:45 -0700
-Message-ID: <CAGXu5jJUWKiyW-_ygHpg9rJc7wQ2XTzjH71CtJfdefLu2zZHEg@mail.gmail.com>
-Subject: Re: [PATCH v2 2/2] initmem: introduce CONFIG_INIT_ALL_HEAP
+Date: Mon,  8 Apr 2019 19:04:16 +0200
+Message-Id: <20190408170418.148554-1-glider@google.com>
+Mime-Version: 1.0
+Subject: [PATCH v3 0/2] RFC: introduce CONFIG_INIT_ALL_MEMORY
+From: Alexander Potapenko <glider@google.com>
 Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Alexander Potapenko <glider@google.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: yamada.masahiro@socionext.com, jmorris@namei.org, serge@hallyn.com
+Cc: linux-security-module@vger.kernel.org, linux-kbuild@vger.kernel.org, ndesaulniers@google.com, kcc@google.com, dvyukov@google.com, keescook@chromium.org, sspatil@android.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 8, 2019 at 9:43 AM Laura Abbott <labbott@redhat.com> wrote:
-> I've looked at doing something similar in the past (failing to find
-> the thread this morning...) and while this will work, it has pretty
-> serious performance issues. It's not actually the poisoning which
-> is expensive but that turning on debugging removes the cpu slab
-> which has significant performance penalties.
->
-> I'd rather go back to the proposal of just poisoning the slab
-> at alloc/free without using SLAB_POISON.
+This patch is a part of a bigger initiative to allow initializing
+heap/stack memory in the Linux kernels by default.
+The rationale behind doing so is to reduce the severity of bugs caused
+by using uninitialized memory.
 
-I still agree this would make the most sense. Fundamentally it's not a
-debugging feature.
+Over the last two years KMSAN (https://github.com/google/kmsan/) has
+found more than a hundred bugs running in a really moderate setup (orders
+of magnitude less CPU/months than KASAN). Some of those bugs led to
+information leaks if uninitialized memory was copied to the userspace,
+other could cause DoS because of subverted control flow.
+A lot more bugs remain uncovered, so we want to provide the distros and OS
+vendors with a last resort measure to mitigate such bugs.
+
+Our plan is to introduce configuration flags to force initialization of
+stack and heap variables with a fixed pattern.
+This is going to render information leaks inefficient (as we'll only leak
+pattern data) and make uses of uninitialized values in conditions more
+deterministic and discoverable.
+
+The stack instrumentation part is based on Clang's -ftrivial-auto-var-init
+(see https://reviews.llvm.org/D54604 ; there's also a GCC feature request
+for a similar flag: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87210)
+or GCC's -fplugin-arg-structleak_plugin-byref-all
+The heap initialization part is compiler-agnostic and is based on the
+existing CONFIG_SLUB_DEBUG and CONFIG_PAGE_POISONING.
+
+Alexander Potapenko (2):
+  initmem: introduce CONFIG_INIT_ALL_MEMORY and CONFIG_INIT_ALL_STACK
+  initmem: introduce CONFIG_INIT_ALL_HEAP
+
+ Makefile                 |  3 ++-
+ mm/page_poison.c         |  5 +++++
+ mm/slub.c                |  2 ++
+ scripts/Makefile.initmem | 10 ++++++++++
+ security/Kconfig         |  1 +
+ security/Kconfig.initmem | 40 ++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 60 insertions(+), 1 deletion(-)
+ create mode 100644 scripts/Makefile.initmem
+ create mode 100644 security/Kconfig.initmem
 
 -- 
-Kees Cook
+2.21.0.392.gf8f6787159e-goog
