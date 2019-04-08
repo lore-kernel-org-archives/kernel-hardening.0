@@ -1,46 +1,108 @@
+Subject: Re: [PATCH v2 2/2] initmem: introduce CONFIG_INIT_ALL_HEAP
+References: <20190308132701.133598-1-glider@google.com>
+ <20190308132701.133598-3-glider@google.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <497b1201-b2ae-5e0c-d191-ff1830d92fc1@redhat.com>
+Date: Mon, 8 Apr 2019 09:43:13 -0700
 MIME-Version: 1.0
-References: <20190131192533.34130-1-thgarnie@chromium.org> <20190131192533.34130-15-thgarnie@chromium.org>
- <01000168a5b35a86-b79bfe67-191e-43bc-a5c7-0e74eac06195-000000@email.amazonses.com>
- <CAJcbSZGKR7dKVqNEDEO7Qzf7tnNqmL=p1uVKvsUefS=Hs-=iNA@mail.gmail.com>
- <01000168a6e5ab88-0deea73f-387f-4941-bd11-d1c161aac88a-000000@email.amazonses.com>
- <CAJcbSZFvafvNX1pS96jaTBGNJad+NszLwSgKnRQgyT70gUGWqQ@mail.gmail.com>
-In-Reply-To: <CAJcbSZFvafvNX1pS96jaTBGNJad+NszLwSgKnRQgyT70gUGWqQ@mail.gmail.com>
-From: Thomas Garnier <thgarnie@chromium.org>
-Date: Mon, 8 Apr 2019 08:58:54 -0700
-Message-ID: <CAJcbSZETNhr=Pv+0daEWUsD2=qnZxT9rbmFaE+y7ag-xKOs89w@mail.gmail.com>
-Subject: Re: [PATCH v6 14/27] x86/percpu: Adapt percpu for PIE support
-Content-Type: text/plain; charset="UTF-8"
-To: Christopher Lameter <cl@linux.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kristen Carlson Accardi <kristen@linux.intel.com>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, Dennis Zhou <dennis@kernel.org>, Tejun Heo <tj@kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Stefano Stabellini <sstabellini@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michal Hocko <mhocko@suse.com>, Mike Rapoport <rppt@linux.vnet.ibm.com>, Stephen Rothwell <sfr@canb.auug.org.au>, Cao jin <caoj.fnst@cn.fujitsu.com>, Brijesh Singh <brijesh.singh@amd.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Joerg Roedel <jroedel@suse.de>, Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, LKML <linux-kernel@vger.kernel.org>, xen-devel <xen-devel@lists.xenproject.org>
+In-Reply-To: <20190308132701.133598-3-glider@google.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Alexander Potapenko <glider@google.com>, yamada.masahiro@socionext.com, jmorris@namei.org, serge@hallyn.com
+Cc: linux-security-module@vger.kernel.org, linux-kbuild@vger.kernel.org, ndesaulniers@google.com, kcc@google.com, dvyukov@google.com, keescook@chromium.org, sspatil@android.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 1, 2019 at 9:13 AM Thomas Garnier <thgarnie@chromium.org> wrote:
->
-> On Thu, Jan 31, 2019 at 6:31 PM Christopher Lameter <cl@linux.com> wrote:
-> >
-> > On Thu, 31 Jan 2019, Thomas Garnier wrote:
-> >
-> > > The per-cpu symbols are in a section that is zero based to create
-> > > offsets. The compiler doesn't see them as offsets but as relative
-> > > symbol and try to relocate them. Given the distance between zero and
-> > > the mapped kernel is much larger than the instruction offset range, it
-> > > fails to do it.
-> >
-> > We switch that off in the linker. If that does not work with your
-> > modifications then you need to figure out how to update the link
-> > configuration.
-> >
->
-> It didn't work originally but I will revisit to see if I missed something.
+On 3/8/19 5:27 AM, Alexander Potapenko wrote:
+> This config option enables CONFIG_SLUB_DEBUG and CONFIG_PAGE_POISONING
+> without the need to pass any boot parameters.
+> 
+> No performance optimizations are done at the moment to reduce double
+> initialization of memory regions.
+> 
+> Signed-off-by: Alexander Potapenko <glider@google.com>
+> Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
+> Cc: James Morris <jmorris@namei.org>
+> Cc: "Serge E. Hallyn" <serge@hallyn.com>
+> Cc: Nick Desaulniers <ndesaulniers@google.com>
+> Cc: Kostya Serebryany <kcc@google.com>
+> Cc: Dmitry Vyukov <dvyukov@google.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Sandeep Patil <sspatil@android.com>
+> Cc: linux-security-module@vger.kernel.org
+> Cc: linux-kbuild@vger.kernel.org
+> Cc: kernel-hardening@lists.openwall.com
+> ---
+>   mm/page_poison.c         |  5 +++++
+>   mm/slub.c                |  2 ++
+>   security/Kconfig.initmem | 11 +++++++++++
+>   3 files changed, 18 insertions(+)
+> 
+> diff --git a/mm/page_poison.c b/mm/page_poison.c
+> index 21d4f97cb49b..a1985f33f635 100644
+> --- a/mm/page_poison.c
+> +++ b/mm/page_poison.c
+> @@ -12,9 +12,14 @@ static bool want_page_poisoning __read_mostly;
+>   
+>   static int __init early_page_poison_param(char *buf)
+>   {
+> +#ifdef CONFIG_INIT_ALL_HEAP
+> +	want_page_poisoning = true;
+> +	return 0;
+> +#else
+>   	if (!buf)
+>   		return -EINVAL;
+>   	return strtobool(buf, &want_page_poisoning);
+> +#endif
+>   }
+>   early_param("page_poison", early_page_poison_param);
+>   
+> diff --git a/mm/slub.c b/mm/slub.c
+> index 1b08fbcb7e61..00e0197d3f35 100644
+> --- a/mm/slub.c
+> +++ b/mm/slub.c
+> @@ -1287,6 +1287,8 @@ static int __init setup_slub_debug(char *str)
+>   	if (*str == ',')
+>   		slub_debug_slabs = str + 1;
+>   out:
+> +	if (IS_ENABLED(CONFIG_INIT_ALL_HEAP))
+> +		slub_debug |= SLAB_POISON;
+>   	return 1;
+>   }
+>   
 
-I revisited and couldn't find a way to prevent relocations to the
-percpu section. Without PIE, you can reference absolute address which
-was convenient for percpu.
+I've looked at doing something similar in the past (failing to find
+the thread this morning...) and while this will work, it has pretty
+serious performance issues. It's not actually the poisoning which
+is expensive but that turning on debugging removes the cpu slab
+which has significant performance penalties.
 
-Christopher: Did you have something specific in mind?
+I'd rather go back to the proposal of just poisoning the slab
+at alloc/free without using SLAB_POISON.
 
-I checked the following:
- - Changing the FLAGS() on the PHDRS.
- - using -z noreloc-overflow which actually doesn't seem to apply to
-PC32 relocations.
- - Look at all linker options and script format for anything around that.
+Thanks,
+Laura
+
+
+> diff --git a/security/Kconfig.initmem b/security/Kconfig.initmem
+> index 27aec394365e..5ce49663777a 100644
+> --- a/security/Kconfig.initmem
+> +++ b/security/Kconfig.initmem
+> @@ -13,6 +13,17 @@ config INIT_ALL_MEMORY
+>   
+>   if INIT_ALL_MEMORY
+>   
+> +config INIT_ALL_HEAP
+> +	bool "Initialize all heap"
+> +	depends on INIT_ALL_MEMORY
+> +	select CONFIG_PAGE_POISONING
+> +	select CONFIG_PAGE_POISONING_NO_SANITY
+> +	select CONFIG_PAGE_POISONING_ZERO
+> +	select CONFIG_SLUB_DEBUG
+> +	default y
+> +	help
+> +	  Enable page poisoning and slub poisoning by default.
+> +
+>   config INIT_ALL_STACK
+>   	bool "Initialize all stack"
+>   	depends on INIT_ALL_MEMORY
+> 
