@@ -1,101 +1,61 @@
 MIME-Version: 1.0
-References: <20190408170418.148554-1-glider@google.com> <20190408170418.148554-3-glider@google.com>
- <20190409093234.GB21979@lakrids.cambridge.arm.com>
-In-Reply-To: <20190409093234.GB21979@lakrids.cambridge.arm.com>
-From: Alexander Potapenko <glider@google.com>
-Date: Tue, 9 Apr 2019 11:53:44 +0200
-Message-ID: <CAG_fn=V3Kvr_0fnzyFuhOMEnUgW+aM792sJ0rHr7Y-Tz0Yqn-A@mail.gmail.com>
-Subject: Re: [PATCH v3 2/2] initmem: introduce CONFIG_INIT_ALL_HEAP
+References: <20190308132701.133598-1-glider@google.com> <20190308132701.133598-3-glider@google.com>
+ <497b1201-b2ae-5e0c-d191-ff1830d92fc1@redhat.com> <CAGXu5jJUWKiyW-_ygHpg9rJc7wQ2XTzjH71CtJfdefLu2zZHEg@mail.gmail.com>
+ <CAG_fn=WGOCsHZ4stECA9nUBUMCL9SA76QKTy3FifLxmTfsQivg@mail.gmail.com>
+In-Reply-To: <CAG_fn=WGOCsHZ4stECA9nUBUMCL9SA76QKTy3FifLxmTfsQivg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 9 Apr 2019 10:01:46 -0700
+Message-ID: <CAGXu5j+uXoJj6DTOrsK78t7tc8g_bfZDpugV+TBJYTsQOfi49Q@mail.gmail.com>
+Subject: Re: [PATCH v2 2/2] initmem: introduce CONFIG_INIT_ALL_HEAP
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Alexander Potapenko <glider@google.com>
+Cc: Laura Abbott <labbott@redhat.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 9, 2019 at 11:32 AM Mark Rutland <mark.rutland@arm.com> wrote:
+On Tue, Apr 9, 2019 at 1:55 AM Alexander Potapenko <glider@google.com> wrote:
 >
-> On Mon, Apr 08, 2019 at 07:04:18PM +0200, Alexander Potapenko wrote:
-> > This config option enables CONFIG_SLUB_DEBUG and CONFIG_PAGE_POISONING
-> > without the need to pass any boot parameters.
+> On Mon, Apr 8, 2019 at 7:14 PM Kees Cook <keescook@chromium.org> wrote:
 > >
-> > No performance optimizations are done at the moment to reduce double
-> > initialization of memory regions.
+> > On Mon, Apr 8, 2019 at 9:43 AM Laura Abbott <labbott@redhat.com> wrote:
+> > > I've looked at doing something similar in the past (failing to find
+> > > the thread this morning...) and while this will work, it has pretty
+> > > serious performance issues. It's not actually the poisoning which
+> > > is expensive but that turning on debugging removes the cpu slab
+> > > which has significant performance penalties.
+> > >
+> > > I'd rather go back to the proposal of just poisoning the slab
+> > > at alloc/free without using SLAB_POISON.
 > >
-> > Signed-off-by: Alexander Potapenko <glider@google.com>
-> > Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
-> > Cc: James Morris <jmorris@namei.org>
-> > Cc: "Serge E. Hallyn" <serge@hallyn.com>
-> > Cc: Nick Desaulniers <ndesaulniers@google.com>
-> > Cc: Kostya Serebryany <kcc@google.com>
-> > Cc: Dmitry Vyukov <dvyukov@google.com>
-> > Cc: Kees Cook <keescook@chromium.org>
-> > Cc: Sandeep Patil <sspatil@android.com>
-> > Cc: linux-security-module@vger.kernel.org
-> > Cc: linux-kbuild@vger.kernel.org
-> > Cc: kernel-hardening@lists.openwall.com
-> > ---
-> >  v3:
-> >   - addressed comments by Masahiro Yamada (Kconfig fixes)
-> > ---
-> >  mm/page_poison.c         |  5 +++++
-> >  mm/slub.c                |  2 ++
-> >  security/Kconfig.initmem | 11 +++++++++++
-> >  3 files changed, 18 insertions(+)
-> >
-> > diff --git a/mm/page_poison.c b/mm/page_poison.c
-> > index 21d4f97cb49b..a1985f33f635 100644
-> > --- a/mm/page_poison.c
-> > +++ b/mm/page_poison.c
-> > @@ -12,9 +12,14 @@ static bool want_page_poisoning __read_mostly;
-> >
-> >  static int __init early_page_poison_param(char *buf)
-> >  {
-> > +#ifdef CONFIG_INIT_ALL_HEAP
-> > +     want_page_poisoning =3D true;
-> > +     return 0;
-> > +#else
-> >       if (!buf)
-> >               return -EINVAL;
-> >       return strtobool(buf, &want_page_poisoning);
-> > +#endif
-> >  }
-> >  early_param("page_poison", early_page_poison_param);
->
-> IIUC this is only called if page_poison is passed on the command line,
-> so want_page_poisoning won't be set automatically unless that's passed.
->
-> Presumably you want to initialize it at definition with:
->
-> static bool want_page_poisoning __read_mostly =3D IS_ENABLED(CONFIG_INIT_=
-ALL_HEAP);
-Yes, I've misunderstood how boot parameters work.
-Thanks for the suggestions!
-We'd better look into wiping allocations without POISON_SLAB though.
-> with:
->
-> #ifndef CONFIG_INIT_ALL_HEAP
-> static int __init early_page_poison_param(char *buf)
-> {
->         ...
-> }
-> early_param("page_poison", early_page_poison_param);
-> #endif
->
-> ... so that it can't be disabled?
->
-> Thanks,
-> Mark.
+> > I still agree this would make the most sense. Fundamentally it's not a
+> > debugging feature.
+> Wasn't it you who suggested using SLAB_POISON in the first round of comments? :)
 
+Sure, if we want to use what we have right now, that's the way to go.
+Optimally, I'd like to see it done the way Laura mentioned, but that's
+a long road to convince the heap maintainers, etc.
 
+> I actually have a working implementation that piggybacks on existing
+> __GFP_ZERO code to initialize page_alloc() and SLUB allocations:
+> https://github.com/google/kmsan/commit/4907af529ad525378a0728435c96d3812f71e594
+> https://github.com/google/kmsan/commit/69618a9668bcf27700cc5da42eebf8ab50d1f56a
+>
+> I'd better cook a patch based on that.
 
---=20
-Alexander Potapenko
-Software Engineer
+I think it's still better to zero at free (this reduces the lifetime
+of the data in memory and should make some use-after-tree bugs stand
+out more), but we'll need to do something like what you have here for
+doing memory tagging anyway, so we likely need both.
 
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
+> There's also some overhead when allocations are initialized twice (in
+> page_alloc() and kmalloc()) or thrice (page_alloc(), kmalloc() and
+> e.g. sock_alloc_send_pskb())
+> We can introduce another GFP flag explicitly telling the allocator to
+> not initialize the memory chunk if we know it'll be initialized by a
+> higher level allocator
+> (something along the lines of
+> https://github.com/google/kmsan/commit/4fc8cff79d868c29688c8a4186e504fda362f6fd)
 
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+Agreed.
+
+-- 
+Kees Cook
