@@ -1,96 +1,48 @@
 From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
-Subject: [PATCH v3 1/3] module: Prepare for addition of new ro_after_init sections
-Date: Wed, 10 Apr 2019 15:57:06 -0400
-Message-Id: <20190410195708.162185-1-joel@joelfernandes.org>
+Subject: [PATCH v3 2/3] module: Make srcu_struct ptr array as read-only post init
+Date: Wed, 10 Apr 2019 15:57:07 -0400
+Message-Id: <20190410195708.162185-2-joel@joelfernandes.org>
+In-Reply-To: <20190410195708.162185-1-joel@joelfernandes.org>
+References: <20190410195708.162185-1-joel@joelfernandes.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: linux-kernel@vger.kernel.org
-Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>, paulmck@linux.vnet.ibm.com, rostedt@goodmis.org, mathieu.desnoyers@efficios.com, rcu@vger.kernel.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, keescook@chromium.org, Jessica Yu <jeyu@kernel.org>
+Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>, paulmck@linux.vnet.ibm.com, keescook@chromium.org, Jessica Yu <jeyu@kernel.org>, kernel-hardening@lists.openwall.com, kernel-team@android.com, mathieu.desnoyers@efficios.com, rcu@vger.kernel.org, rostedt@goodmis.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-For the purposes of hardening modules by adding sections to
-ro_after_init sections, prepare for addition of new ro_after_init
-entries which we do in future patches. Create a table to which new
-entries could be added later. This makes it less error prone and reduce
-code duplication.
+Since commit title ("srcu: Allocate per-CPU data for DEFINE_SRCU() in
+modules"), modules that call DEFINE_{STATIC,}SRCU will have a new array
+of srcu_struct pointers which is used by srcu code to initialize and
+clean up these structures.
 
-Cc: paulmck@linux.vnet.ibm.com
-Cc: rostedt@goodmis.org
-Cc: mathieu.desnoyers@efficios.com
-Cc: rcu@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: kernel-team@android.com
+There is no reason for this array of pointers to be writable, and can
+cause security or other hidden bugs. Mark these are read-only after the
+module init has completed.
+
+Suggested-by: paulmck@linux.vnet.ibm.com
 Suggested-by: keescook@chromium.org
-Reviewed-by: keescook@chromium.org
-Acked-by: rostedt@goodmis.org
+Acked-by: keescook@chromium.org
 Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
-
 ---
- kernel/module.c | 41 +++++++++++++++++++++++------------------
- 1 file changed, 23 insertions(+), 18 deletions(-)
+ kernel/module.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
 diff --git a/kernel/module.c b/kernel/module.c
-index 524da609c884..42e4e289d6c7 100644
+index 42e4e289d6c7..8b9631e789f0 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
-@@ -3300,11 +3300,27 @@ static bool blacklisted(const char *module_name)
- }
- core_param(module_blacklist, module_blacklist, charp, 0400);
- 
-+/*
-+ * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
-+ * layout_sections() can put it in the right place.
-+ * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
-+ */
-+static const char * const ro_after_init_sections[] = {
-+	".data..ro_after_init",
+@@ -3314,6 +3314,12 @@ static const char * const ro_after_init_sections[] = {
+ 	 * annotated as such at module load time.
+ 	 */
+ 	"__jump_table",
 +
 +	/*
-+	 * __jump_table structures are never modified, with the exception of
-+	 * entries that refer to code in the __init section, which are
-+	 * annotated as such at module load time.
++	 * Used for SRCU structures which need to be initialized/cleaned up
++	 * by the SRCU notifiers
 +	 */
-+	"__jump_table",
-+};
-+
++	"___srcu_struct_ptrs",
+ };
+ 
  static struct module *layout_and_allocate(struct load_info *info, int flags)
- {
- 	struct module *mod;
- 	unsigned int ndx;
--	int err;
-+	int err, i;
- 
- 	err = check_modinfo(info->mod, info, flags);
- 	if (err)
-@@ -3319,23 +3335,12 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
- 	/* We will do a special allocation for per-cpu sections later. */
- 	info->sechdrs[info->index.pcpu].sh_flags &= ~(unsigned long)SHF_ALLOC;
- 
--	/*
--	 * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
--	 * layout_sections() can put it in the right place.
--	 * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
--	 */
--	ndx = find_sec(info, ".data..ro_after_init");
--	if (ndx)
--		info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
--	/*
--	 * Mark the __jump_table section as ro_after_init as well: these data
--	 * structures are never modified, with the exception of entries that
--	 * refer to code in the __init section, which are annotated as such
--	 * at module load time.
--	 */
--	ndx = find_sec(info, "__jump_table");
--	if (ndx)
--		info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
-+	/* Set sh_flags for read-only after init sections */
-+	for (i = 0; i < ARRAY_SIZE(ro_after_init_sections); i++) {
-+		ndx = find_sec(info, ro_after_init_sections[i]);
-+		if (ndx)
-+			info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
-+	}
- 
- 	/* Determine total sizes, and put offsets in sh_entsize.  For now
- 	   this is done generically; there doesn't appear to be any
 -- 
 2.21.0.392.gf8f6787159e-goog
