@@ -1,39 +1,26 @@
 MIME-Version: 1.0
-References: <20190410011418.76408-1-joel@joelfernandes.org>
- <20190410011418.76408-2-joel@joelfernandes.org> <20190409223820.511e3671@oasis.local.home>
- <20190410024103.GA104423@google.com> <20190409224826.308b12a4@oasis.local.home>
-In-Reply-To: <20190409224826.308b12a4@oasis.local.home>
-From: Joel Fernandes <joelaf@google.com>
-Date: Tue, 9 Apr 2019 23:38:14 -0400
-Message-ID: <CAJWu+orXgFkJpB8ww9kz_Nzmmj4qXjj2HtN_eDW3x+XPLbH0qw@mail.gmail.com>
-Subject: Re: [PATCH 2/2] module: Make srcu_struct ptr array as read-only post init
+References: <20190410131726.250295-1-glider@google.com> <20190410131726.250295-3-glider@google.com>
+In-Reply-To: <20190410131726.250295-3-glider@google.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 10 Apr 2019 09:09:35 -0700
+Message-ID: <CAGXu5jJt3uNWVXDD=GR6oVwn=g7O=Jcz9sxai5q10X9yyR56XA@mail.gmail.com>
+Subject: Re: [PATCH v4 2/3] initmem: introduce CONFIG_INIT_ALL_HEAP
 Content-Type: text/plain; charset="UTF-8"
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Joel Fernandes <joel@joelfernandes.org>, LKML <linux-kernel@vger.kernel.org>, Paul McKenney <paulmck@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Jessica Yu <jeyu@kernel.org>, kernel-hardening@lists.openwall.com, "Cc: Android Kernel" <kernel-team@android.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, rcu@vger.kernel.org
+To: Alexander Potapenko <glider@google.com>
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 9, 2019 at 10:48 PM Steven Rostedt <rostedt@goodmis.org> wrote:
+On Wed, Apr 10, 2019 at 6:18 AM Alexander Potapenko <glider@google.com> wrote:
 >
-> On Tue, 9 Apr 2019 22:41:03 -0400
-> Joel Fernandes <joel@joelfernandes.org> wrote:
->
-> > > Other than that, the two patches look fine to me.
-> >
-> > Could I add your Reviewed-by in the respin?
->
-> You can add an Acked-by, as I haven't spent enough time to offer a
-> Reviewed-by tag. ;-)
->
-> Maybe I'll get some time to vet it a bit more tomorrow, and then
-> upgrade the ack to a review.
->
-> Acked-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
->
+> This config option adds the possibility to initialize newly allocated
+> pages and heap objects with a 0xAA pattern.
+> There's already a number of places where allocations are initialized
+> based on the presence of __GFP_ZERO flag. We just change this code so
+> that under CONFIG_INIT_ALL_HEAP these allocations are always initialized
+> with either 0x00 or 0xAA depending on the __GFP_ZERO.
 
-Thanks!
+Why not just make __GFP_ZERO unconditional instead? This looks like
+it'd be simpler and not need arch-specific implementation?
 
-Also we could possibly consider adding the tracepoint ptrs array as
-well to the list, which would be useful I think, if one were to over
-write that array by accident (and the bpf tps related array too).
-
- - Joel
+-- 
+Kees Cook
