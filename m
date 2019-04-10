@@ -1,81 +1,65 @@
-Date: Wed, 10 Apr 2019 15:17:26 +0200
-In-Reply-To: <20190410131726.250295-1-glider@google.com>
-Message-Id: <20190410131726.250295-4-glider@google.com>
+Date: Wed, 10 Apr 2019 15:17:23 +0200
+Message-Id: <20190410131726.250295-1-glider@google.com>
 Mime-Version: 1.0
-References: <20190410131726.250295-1-glider@google.com>
-Subject: [PATCH 3/3] net: make sk_prot_alloc() work with CONFIG_INIT_ALL_HEAP
+Subject: [PATCH v4 0/3] RFC: introduce CONFIG_INIT_ALL_MEMORY
 From: Alexander Potapenko <glider@google.com>
 Content-Type: text/plain; charset="UTF-8"
 To: yamada.masahiro@socionext.com, jmorris@namei.org, serge@hallyn.com
 Cc: linux-security-module@vger.kernel.org, linux-kbuild@vger.kernel.org, ndesaulniers@google.com, kcc@google.com, dvyukov@google.com, keescook@chromium.org, sspatil@android.com, labbott@redhat.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Rename sk_prot_clear_nulls() to sk_prot_clear() and introduce an extra
-init_byte parameter to be passed to memset() when initializing struct sock.
-In the case CONFIG_INIT_ALL_HEAP is on, initialize newly created struct
-sock with 0xAA.
+This patch is a part of a bigger initiative to allow initializing
+heap/stack memory in the Linux kernels by default.
+The rationale behind doing so is to reduce the severity of bugs caused
+by using uninitialized memory.
 
-Signed-off-by: Alexander Potapenko <glider@google.com>
-Cc: Eric Dumazet <edumazet@google.com>
-Cc: David S. Miller <davem@davemloft.net>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: James Morris <jmorris@namei.org>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Nick Desaulniers <ndesaulniers@google.com>
-Cc: Kostya Serebryany <kcc@google.com>
-Cc: Dmitry Vyukov <dvyukov@google.com>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Sandeep Patil <sspatil@android.com>
-Cc: Laura Abbott <labbott@redhat.com>
-Cc: Randy Dunlap <rdunlap@infradead.org>
-Cc: Jann Horn <jannh@google.com>
-Cc: Mark Rutland <mark.rutland@arm.com>
-Cc: linux-security-module@vger.kernel.org
-Cc: netdev@vger.kernel.org
-Cc: linux-kbuild@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
----
- include/net/sock.h | 8 ++++----
- net/core/sock.c    | 5 +++--
- 2 files changed, 7 insertions(+), 6 deletions(-)
+Over the last two years KMSAN (https://github.com/google/kmsan/) has
+found more than a hundred bugs running in a really moderate setup (orders
+of magnitude less CPU/months than KASAN). Some of those bugs led to
+information leaks if uninitialized memory was copied to the userspace,
+other could cause DoS because of subverted control flow.
+A lot more bugs remain uncovered, so we want to provide the distros and OS
+vendors with a last resort measure to mitigate such bugs.
 
-diff --git a/include/net/sock.h b/include/net/sock.h
-index 8de5ee258b93..a49c1f1c71c1 100644
---- a/include/net/sock.h
-+++ b/include/net/sock.h
-@@ -1044,13 +1044,13 @@ struct module;
- 
- /*
-  * caches using SLAB_TYPESAFE_BY_RCU should let .next pointer from nulls nodes
-- * un-modified. Special care is taken when initializing object to zero.
-+ * un-modified. Special care is taken when initializing object.
-  */
--static inline void sk_prot_clear_nulls(struct sock *sk, int size)
-+static inline void sk_prot_clear(struct sock *sk, int size, int init_byte)
- {
- 	if (offsetof(struct sock, sk_node.next) != 0)
--		memset(sk, 0, offsetof(struct sock, sk_node.next));
--	memset(&sk->sk_node.pprev, 0,
-+		memset(sk, init_byte, offsetof(struct sock, sk_node.next));
-+	memset(&sk->sk_node.pprev, init_byte,
- 	       size - offsetof(struct sock, sk_node.pprev));
- }
- 
-diff --git a/net/core/sock.c b/net/core/sock.c
-index 782343bb925b..1ad855e99512 100644
---- a/net/core/sock.c
-+++ b/net/core/sock.c
-@@ -1601,8 +1601,9 @@ static struct sock *sk_prot_alloc(struct proto *prot, gfp_t priority,
- 		sk = kmem_cache_alloc(slab, priority & ~__GFP_ZERO);
- 		if (!sk)
- 			return sk;
--		if (priority & __GFP_ZERO)
--			sk_prot_clear_nulls(sk, prot->obj_size);
-+		if (GFP_INIT_ALWAYS_ON || (priority & __GFP_ZERO))
-+			sk_prot_clear(sk, prot->obj_size,
-+				      INITMEM_FILL_BYTE(priority));
- 	} else
- 		sk = kmalloc(prot->obj_size, priority);
- 
+Our plan is to introduce configuration flags to force initialization of
+stack and heap variables with a fixed pattern.
+This is going to render information leaks inefficient (as we'll only leak
+pattern data) and make uses of uninitialized values in conditions more
+deterministic and discoverable.
+
+The stack instrumentation part is based on Clang's -ftrivial-auto-var-init
+(see https://reviews.llvm.org/D54604 ; there's also a GCC feature request
+for a similar flag: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87210)
+or GCC's -fplugin-arg-structleak_plugin-byref-all
+The heap initialization part is compiler-agnostic and is done in the
+places that previously checked for __GFP_ZERO to initialize the newly
+allocated memory.
+
+Alexander Potapenko (3):
+  initmem: introduce CONFIG_INIT_ALL_MEMORY and CONFIG_INIT_ALL_STACK
+  initmem: introduce CONFIG_INIT_ALL_HEAP
+  net: make sk_prot_alloc() work with CONFIG_INIT_ALL_HEAP
+
+ Makefile                               | 10 ++++++
+ arch/arm64/Kconfig                     |  1 +
+ arch/arm64/include/asm/page.h          |  1 +
+ arch/x86/Kconfig                       |  1 +
+ arch/x86/include/asm/page_64.h         | 10 ++++++
+ arch/x86/lib/clear_page_64.S           | 24 ++++++++++++++
+ drivers/infiniband/core/uverbs_ioctl.c |  4 +--
+ include/linux/gfp.h                    | 10 ++++++
+ include/linux/highmem.h                |  8 +++++
+ include/net/sock.h                     |  8 ++---
+ kernel/kexec_core.c                    |  8 +++--
+ mm/dmapool.c                           |  4 +--
+ mm/page_alloc.c                        |  9 ++++--
+ mm/slab.c                              | 19 ++++++++----
+ mm/slub.c                              | 12 ++++---
+ net/core/sock.c                        |  5 +--
+ security/Kconfig                       |  1 +
+ security/Kconfig.initmem               | 43 ++++++++++++++++++++++++++
+ 18 files changed, 154 insertions(+), 24 deletions(-)
+ create mode 100644 security/Kconfig.initmem
+
 -- 
 2.21.0.392.gf8f6787159e-goog
