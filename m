@@ -1,226 +1,114 @@
+MIME-Version: 1.0
+References: <20190410011418.76408-1-joel@joelfernandes.org>
+In-Reply-To: <20190410011418.76408-1-joel@joelfernandes.org>
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH 1/3] Kconfig: Create "kernel hardening" config area
-Date: Wed, 10 Apr 2019 09:16:10 -0700
-Message-Id: <20190410161612.18545-2-keescook@chromium.org>
-In-Reply-To: <20190410161612.18545-1-keescook@chromium.org>
-References: <20190410161612.18545-1-keescook@chromium.org>
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Kees Cook <keescook@chromium.org>, Alexander Potapenko <glider@google.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Alexander Popov <alpopov@ptsecurity.com>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Wed, 10 Apr 2019 09:26:44 -0700
+Message-ID: <CAGXu5jKs6Ag2L+GYEVYAzPky1pLntZt-Tc5ki-pqjVoyCWgxxg@mail.gmail.com>
+Subject: Re: [PATCH 1/2] module: Prepare for addition of new ro_after_init sections
+Content-Type: text/plain; charset="UTF-8"
+To: "Joel Fernandes (Google)" <joel@joelfernandes.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Steven Rostedt <rostedt@goodmis.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, rcu@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Android Kernel Team <kernel-team@android.com>, Kees Cook <keescook@chromium.org>, Jessica Yu <jeyu@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Right now kernel hardening options are scattered around various Kconfig
-files. This can be a central place to collect these kinds of options
-going forward.
+On Tue, Apr 9, 2019 at 6:14 PM Joel Fernandes (Google)
+<joel@joelfernandes.org> wrote:
+>
+> For the purposes of hardening modules by adding sections to
+> ro_after_init sections, prepare for addition of new ro_after_init
+> entries which we do in future patches. Create a table to which new
+> entries could be added later. This makes it less error prone and reduce
+> code duplication.
+>
+> Cc: paulmck@linux.vnet.ibm.com
+> Cc: rostedt@goodmis.org
+> Cc: mathieu.desnoyers@efficios.com
+> Cc: rcu@vger.kernel.org
+> Cc: kernel-hardening@lists.openwall.com
+> Cc: kernel-team@android.com
+> Suggested-by: keescook@chromium.org
+> Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+>
+> ---
+>  kernel/module.c | 42 ++++++++++++++++++++++++------------------
+>  1 file changed, 24 insertions(+), 18 deletions(-)
+>
+> diff --git a/kernel/module.c b/kernel/module.c
+> index 524da609c884..f9221381d076 100644
+> --- a/kernel/module.c
+> +++ b/kernel/module.c
+> @@ -3300,11 +3300,28 @@ static bool blacklisted(const char *module_name)
+>  }
+>  core_param(module_blacklist, module_blacklist, charp, 0400);
+>
+> +/*
+> + * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
+> + * layout_sections() can put it in the right place.
+> + * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
+> + */
+> +static char *ro_after_init_sections[] = {
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- scripts/gcc-plugins/Kconfig | 70 ++-------------------------
- security/Kconfig            |  2 +
- security/Kconfig.hardening  | 94 +++++++++++++++++++++++++++++++++++++
- 3 files changed, 99 insertions(+), 67 deletions(-)
- create mode 100644 security/Kconfig.hardening
+static const char * const ... Need to make sure the table and its
+strings can't be changed. :)
 
-diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-index 74271dba4f94..01874ef0f883 100644
---- a/scripts/gcc-plugins/Kconfig
-+++ b/scripts/gcc-plugins/Kconfig
-@@ -13,10 +13,11 @@ config HAVE_GCC_PLUGINS
- 	  An arch should select this symbol if it supports building with
- 	  GCC plugins.
- 
--menuconfig GCC_PLUGINS
--	bool "GCC plugins"
-+config GCC_PLUGINS
-+	bool
- 	depends on HAVE_GCC_PLUGINS
- 	depends on PLUGIN_HOSTCC != ""
-+	default y
- 	help
- 	  GCC plugins are loadable modules that provide extra features to the
- 	  compiler. They are useful for runtime instrumentation and static analysis.
-@@ -66,71 +67,6 @@ config GCC_PLUGIN_LATENT_ENTROPY
- 	   * https://grsecurity.net/
- 	   * https://pax.grsecurity.net/
- 
--config GCC_PLUGIN_STRUCTLEAK
--	bool "Zero initialize stack variables"
--	help
--	  While the kernel is built with warnings enabled for any missed
--	  stack variable initializations, this warning is silenced for
--	  anything passed by reference to another function, under the
--	  occasionally misguided assumption that the function will do
--	  the initialization. As this regularly leads to exploitable
--	  flaws, this plugin is available to identify and zero-initialize
--	  such variables, depending on the chosen level of coverage.
--
--	  This plugin was originally ported from grsecurity/PaX. More
--	  information at:
--	   * https://grsecurity.net/
--	   * https://pax.grsecurity.net/
--
--choice
--	prompt "Coverage"
--	depends on GCC_PLUGIN_STRUCTLEAK
--	default GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
--	help
--	  This chooses the level of coverage over classes of potentially
--	  uninitialized variables. The selected class will be
--	  zero-initialized before use.
--
--	config GCC_PLUGIN_STRUCTLEAK_USER
--		bool "structs marked for userspace"
--		help
--		  Zero-initialize any structures on the stack containing
--		  a __user attribute. This can prevent some classes of
--		  uninitialized stack variable exploits and information
--		  exposures, like CVE-2013-2141:
--		  https://git.kernel.org/linus/b9e146d8eb3b9eca
--
--	config GCC_PLUGIN_STRUCTLEAK_BYREF
--		bool "structs passed by reference"
--		help
--		  Zero-initialize any structures on the stack that may
--		  be passed by reference and had not already been
--		  explicitly initialized. This can prevent most classes
--		  of uninitialized stack variable exploits and information
--		  exposures, like CVE-2017-1000410:
--		  https://git.kernel.org/linus/06e7e776ca4d3654
--
--	config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
--		bool "anything passed by reference"
--		help
--		  Zero-initialize any stack variables that may be passed
--		  by reference and had not already been explicitly
--		  initialized. This is intended to eliminate all classes
--		  of uninitialized stack variable exploits and information
--		  exposures.
--
--endchoice
--
--config GCC_PLUGIN_STRUCTLEAK_VERBOSE
--	bool "Report forcefully initialized variables"
--	depends on GCC_PLUGIN_STRUCTLEAK
--	depends on !COMPILE_TEST	# too noisy
--	help
--	  This option will cause a warning to be printed each time the
--	  structleak plugin finds a variable it thinks needs to be
--	  initialized. Since not all existing initializers are detected
--	  by the plugin, this can produce false positive warnings.
--
- config GCC_PLUGIN_RANDSTRUCT
- 	bool "Randomize layout of sensitive kernel structures"
- 	select MODVERSIONS if MODULES
-diff --git a/security/Kconfig b/security/Kconfig
-index 1d6463fb1450..7aec8d094ce2 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -249,5 +249,7 @@ config LSM
- 
- 	  If unsure, leave this as the default.
- 
-+source "security/Kconfig.hardening"
-+
- endmenu
- 
-diff --git a/security/Kconfig.hardening b/security/Kconfig.hardening
-new file mode 100644
-index 000000000000..8223a8ab1a12
---- /dev/null
-+++ b/security/Kconfig.hardening
-@@ -0,0 +1,94 @@
-+menu "Kernel hardening options"
-+
-+config GCC_PLUGIN_STRUCTLEAK
-+	bool
-+	depends on GCC_PLUGIN_STRUCTLEAK_USER || GCC_PLUGIN_STRUCTLEAK_BYREF || GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
-+	help
-+	  While the kernel is built with warnings enabled for any missed
-+	  stack variable initializations, this warning is silenced for
-+	  anything passed by reference to another function, under the
-+	  occasionally misguided assumption that the function will do
-+	  the initialization. As this regularly leads to exploitable
-+	  flaws, this plugin is available to identify and zero-initialize
-+	  such variables, depending on the chosen level of coverage.
-+
-+	  This plugin was originally ported from grsecurity/PaX. More
-+	  information at:
-+	   * https://grsecurity.net/
-+	   * https://pax.grsecurity.net/
-+
-+menu "Memory initialization"
-+
-+choice
-+	prompt "Initialize kernel stack variables at function entry"
-+	depends on CC_HAS_AUTO_VAR_INIT || GCC_PLUGINS
-+	default INIT_STACK_NONE
-+	help
-+	  This option enables initialization of stack variables at
-+	  function entry time. This has the possibility to have the
-+	  greatest coverage (since all functions can have their
-+	  variables initialized), but the performance impact depends
-+	  on the function calling complexity of a given workload's
-+	  syscalls.
-+
-+	  This chooses the level of coverage over classes of potentially
-+	  uninitialized variables. The selected class will be
-+	  initialized before use in a function.
-+
-+	config INIT_STACK_NONE
-+		bool "no automatic initialization (weakest)"
-+		help
-+		  Disable automatic stack variable initialization.
-+		  This leaves the kernel vulnerable to the standard
-+		  classes of uninitialized stack variable exploits
-+		  and information exposures.
-+
-+	config GCC_PLUGIN_STRUCTLEAK_USER
-+		bool "zero-init structs marked for userspace (weak)"
-+		depends on GCC_PLUGINS
-+		select GCC_PLUGIN_STRUCTLEAK
-+		help
-+		  Zero-initialize any structures on the stack containing
-+		  a __user attribute. This can prevent some classes of
-+		  uninitialized stack variable exploits and information
-+		  exposures, like CVE-2013-2141:
-+		  https://git.kernel.org/linus/b9e146d8eb3b9eca
-+
-+	config GCC_PLUGIN_STRUCTLEAK_BYREF
-+		bool "zero-init structs passed by reference (strong)"
-+		depends on GCC_PLUGINS
-+		select GCC_PLUGIN_STRUCTLEAK
-+		help
-+		  Zero-initialize any structures on the stack that may
-+		  be passed by reference and had not already been
-+		  explicitly initialized. This can prevent most classes
-+		  of uninitialized stack variable exploits and information
-+		  exposures, like CVE-2017-1000410:
-+		  https://git.kernel.org/linus/06e7e776ca4d3654
-+
-+	config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
-+		bool "zero-init anything passed by reference (very strong)"
-+		depends on GCC_PLUGINS
-+		select GCC_PLUGIN_STRUCTLEAK
-+		help
-+		  Zero-initialize any stack variables that may be passed
-+		  by reference and had not already been explicitly
-+		  initialized. This is intended to eliminate all classes
-+		  of uninitialized stack variable exploits and information
-+		  exposures.
-+
-+endchoice
-+
-+config GCC_PLUGIN_STRUCTLEAK_VERBOSE
-+	bool "Report forcefully initialized variables"
-+	depends on GCC_PLUGIN_STRUCTLEAK
-+	depends on !COMPILE_TEST	# too noisy
-+	help
-+	  This option will cause a warning to be printed each time the
-+	  structleak plugin finds a variable it thinks needs to be
-+	  initialized. Since not all existing initializers are detected
-+	  by the plugin, this can produce false positive warnings.
-+
-+endmenu
-+
-+endmenu
+> +       ".data..ro_after_init",
+> +
+> +       /*
+> +        * __jump_table structures are never modified, with the exception of
+> +        * entries that refer to code in the __init section, which are
+> +        * annotated as such at module load time.
+> +        */
+> +       "__jump_table",
+> +       NULL
+
+Since this table is known at build time, you don't need a NULL
+terminator, you can use ARRAY_SIZE() instead.
+
+> +};
+> +
+>  static struct module *layout_and_allocate(struct load_info *info, int flags)
+>  {
+>         struct module *mod;
+>         unsigned int ndx;
+> -       int err;
+> +       int err, i;
+>
+>         err = check_modinfo(info->mod, info, flags);
+>         if (err)
+> @@ -3319,23 +3336,12 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
+>         /* We will do a special allocation for per-cpu sections later. */
+>         info->sechdrs[info->index.pcpu].sh_flags &= ~(unsigned long)SHF_ALLOC;
+>
+> -       /*
+> -        * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
+> -        * layout_sections() can put it in the right place.
+> -        * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
+> -        */
+> -       ndx = find_sec(info, ".data..ro_after_init");
+> -       if (ndx)
+> -               info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
+> -       /*
+> -        * Mark the __jump_table section as ro_after_init as well: these data
+> -        * structures are never modified, with the exception of entries that
+> -        * refer to code in the __init section, which are annotated as such
+> -        * at module load time.
+> -        */
+> -       ndx = find_sec(info, "__jump_table");
+> -       if (ndx)
+> -               info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
+> +       /* Set sh_flags for read-only after init sections */
+> +       for (i = 0; ro_after_init_sections[i]; i++) {
+
+i.e. for (i = 0; i < ARRAY_SIZE(ro_after_init_sections); i++)
+
+> +               ndx = find_sec(info, ro_after_init_sections[i]);
+> +               if (ndx)
+> +                       info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
+> +       }
+>
+>         /* Determine total sizes, and put offsets in sh_entsize.  For now
+>            this is done generically; there doesn't appear to be any
+
+Otherwise, yeah, looks good to me.
+
 -- 
-2.17.1
+Kees Cook
