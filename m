@@ -1,57 +1,81 @@
-MIME-Version: 1.0
-From: Shyam Saini <mayhs11saini@gmail.com>
-Date: Wed, 10 Apr 2019 18:07:39 +0530
-Message-ID: <CAOfkYf7di0vusjs-woyqgUD3GGLAuP2drir=Td=3+TuE2sKvvA@mail.gmail.com>
-Subject: willing to involve in KSPP
-Content-Type: multipart/alternative; boundary="0000000000006f494905862c5642"
-To: kernel-hardening@lists.openwall.com
+Date: Wed, 10 Apr 2019 15:17:26 +0200
+In-Reply-To: <20190410131726.250295-1-glider@google.com>
+Message-Id: <20190410131726.250295-4-glider@google.com>
+Mime-Version: 1.0
+References: <20190410131726.250295-1-glider@google.com>
+Subject: [PATCH 3/3] net: make sk_prot_alloc() work with CONFIG_INIT_ALL_HEAP
+From: Alexander Potapenko <glider@google.com>
+Content-Type: text/plain; charset="UTF-8"
+To: yamada.masahiro@socionext.com, jmorris@namei.org, serge@hallyn.com
+Cc: linux-security-module@vger.kernel.org, linux-kbuild@vger.kernel.org, ndesaulniers@google.com, kcc@google.com, dvyukov@google.com, keescook@chromium.org, sspatil@android.com, labbott@redhat.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---0000000000006f494905862c5642
-Content-Type: text/plain; charset="UTF-8"
+Rename sk_prot_clear_nulls() to sk_prot_clear() and introduce an extra
+init_byte parameter to be passed to memset() when initializing struct sock.
+In the case CONFIG_INIT_ALL_HEAP is on, initialize newly created struct
+sock with 0xAA.
 
- Hello Everyone,
+Signed-off-by: Alexander Potapenko <glider@google.com>
+Cc: Eric Dumazet <edumazet@google.com>
+Cc: David S. Miller <davem@davemloft.net>
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Nick Desaulniers <ndesaulniers@google.com>
+Cc: Kostya Serebryany <kcc@google.com>
+Cc: Dmitry Vyukov <dvyukov@google.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Sandeep Patil <sspatil@android.com>
+Cc: Laura Abbott <labbott@redhat.com>
+Cc: Randy Dunlap <rdunlap@infradead.org>
+Cc: Jann Horn <jannh@google.com>
+Cc: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-security-module@vger.kernel.org
+Cc: netdev@vger.kernel.org
+Cc: linux-kbuild@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
+---
+ include/net/sock.h | 8 ++++----
+ net/core/sock.c    | 5 +++--
+ 2 files changed, 7 insertions(+), 6 deletions(-)
 
-I'm Shyam, currently working in linux kernel and embedded domain.
-
-I'm interested work in Kernel Self Protection Project.
-
-Would you please suggest which task should i pick ?
-
-I'd like to pick some simple task to get started.
-
-I see a list of todo [1] but this page is not updated since 31st October
-
-I don't have much experience in linux kernel so I'm not sure to pick which
-particular task,  please suggest me  some task.
-
-Looking forward to hearing from you.
-
-[1] https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work
-
-
-Thanks a lot,
-Shyam
-
---0000000000006f494905862c5642
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr"><div dir=3D"ltr">=C2=A0Hello Everyone,<br></div><div dir=
-=3D"ltr"><br></div><div>I&#39;m Shyam, currently working in linux kernel an=
-d embedded domain.</div><div><br></div><div dir=3D"ltr">I&#39;m interested =
-work in Kernel Self Protection Project.</div><div dir=3D"ltr"><br> </div><d=
-iv dir=3D"ltr">Would you please suggest which task should i pick ? <br></di=
-v><div dir=3D"ltr"><br></div><div dir=3D"ltr">I&#39;d like to pick some sim=
-ple task to get started.</div><div dir=3D"ltr"><br></div><div dir=3D"ltr">I=
- see a list of todo [1] but this page is not updated since 31st October</di=
-v><div dir=3D"ltr"><br></div><div dir=3D"ltr">I don&#39;t have much experie=
-nce in linux kernel so I&#39;m not sure to pick which particular task,=C2=
-=A0 please suggest me=C2=A0 some task. <br></div><div dir=3D"ltr"><br></div=
-><div>Looking forward to hearing from you.<br></div><div dir=3D"ltr"><br></=
-div><div dir=3D"ltr">[1] <a href=3D"https://kernsec.org/wiki/index.php/Kern=
-el_Self_Protection_Project/Work">https://kernsec.org/wiki/index.php/Kernel_=
-Self_Protection_Project/Work</a></div><div dir=3D"ltr"><br></div><div dir=
-=3D"ltr"><br></div><div>Thanks a lot,</div><div>Shyam<br></div></div>
-
---0000000000006f494905862c5642--
+diff --git a/include/net/sock.h b/include/net/sock.h
+index 8de5ee258b93..a49c1f1c71c1 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -1044,13 +1044,13 @@ struct module;
+ 
+ /*
+  * caches using SLAB_TYPESAFE_BY_RCU should let .next pointer from nulls nodes
+- * un-modified. Special care is taken when initializing object to zero.
++ * un-modified. Special care is taken when initializing object.
+  */
+-static inline void sk_prot_clear_nulls(struct sock *sk, int size)
++static inline void sk_prot_clear(struct sock *sk, int size, int init_byte)
+ {
+ 	if (offsetof(struct sock, sk_node.next) != 0)
+-		memset(sk, 0, offsetof(struct sock, sk_node.next));
+-	memset(&sk->sk_node.pprev, 0,
++		memset(sk, init_byte, offsetof(struct sock, sk_node.next));
++	memset(&sk->sk_node.pprev, init_byte,
+ 	       size - offsetof(struct sock, sk_node.pprev));
+ }
+ 
+diff --git a/net/core/sock.c b/net/core/sock.c
+index 782343bb925b..1ad855e99512 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -1601,8 +1601,9 @@ static struct sock *sk_prot_alloc(struct proto *prot, gfp_t priority,
+ 		sk = kmem_cache_alloc(slab, priority & ~__GFP_ZERO);
+ 		if (!sk)
+ 			return sk;
+-		if (priority & __GFP_ZERO)
+-			sk_prot_clear_nulls(sk, prot->obj_size);
++		if (GFP_INIT_ALWAYS_ON || (priority & __GFP_ZERO))
++			sk_prot_clear(sk, prot->obj_size,
++				      INITMEM_FILL_BYTE(priority));
+ 	} else
+ 		sk = kmalloc(prot->obj_size, priority);
+ 
+-- 
+2.21.0.392.gf8f6787159e-goog
