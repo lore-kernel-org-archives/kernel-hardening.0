@@ -1,50 +1,57 @@
-Date: Wed, 10 Apr 2019 00:20:49 -0400 (EDT)
-From: Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
-Message-ID: <475423743.2834.1554870049461.JavaMail.zimbra@efficios.com>
-In-Reply-To: <CAJWu+orXgFkJpB8ww9kz_Nzmmj4qXjj2HtN_eDW3x+XPLbH0qw@mail.gmail.com>
-References: <20190410011418.76408-1-joel@joelfernandes.org> <20190410011418.76408-2-joel@joelfernandes.org> <20190409223820.511e3671@oasis.local.home> <20190410024103.GA104423@google.com> <20190409224826.308b12a4@oasis.local.home> <CAJWu+orXgFkJpB8ww9kz_Nzmmj4qXjj2HtN_eDW3x+XPLbH0qw@mail.gmail.com>
-Subject: Re: [PATCH 2/2] module: Make srcu_struct ptr array as read-only
- post init
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Joel Fernandes <joelaf@google.com>
-Cc: rostedt <rostedt@goodmis.org>, "Joel Fernandes, Google" <joel@joelfernandes.org>, linux-kernel <linux-kernel@vger.kernel.org>, Paul McKenney <paulmck@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Jessica Yu <jeyu@kernel.org>, kernel-hardening <kernel-hardening@lists.openwall.com>, kernel-team <kernel-team@android.com>, rcu <rcu@vger.kernel.org>
+From: Shyam Saini <mayhs11saini@gmail.com>
+Date: Wed, 10 Apr 2019 18:07:39 +0530
+Message-ID: <CAOfkYf7di0vusjs-woyqgUD3GGLAuP2drir=Td=3+TuE2sKvvA@mail.gmail.com>
+Subject: willing to involve in KSPP
+Content-Type: multipart/alternative; boundary="0000000000006f494905862c5642"
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
------ On Apr 9, 2019, at 11:38 PM, Joel Fernandes joelaf@google.com wrote:
+--0000000000006f494905862c5642
+Content-Type: text/plain; charset="UTF-8"
 
-> On Tue, Apr 9, 2019 at 10:48 PM Steven Rostedt <rostedt@goodmis.org> wrote:
->>
->> On Tue, 9 Apr 2019 22:41:03 -0400
->> Joel Fernandes <joel@joelfernandes.org> wrote:
->>
->> > > Other than that, the two patches look fine to me.
->> >
->> > Could I add your Reviewed-by in the respin?
->>
->> You can add an Acked-by, as I haven't spent enough time to offer a
->> Reviewed-by tag. ;-)
->>
->> Maybe I'll get some time to vet it a bit more tomorrow, and then
->> upgrade the ack to a review.
->>
->> Acked-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
->>
-> 
-> Thanks!
-> 
-> Also we could possibly consider adding the tracepoint ptrs array as
-> well to the list, which would be useful I think, if one were to over
-> write that array by accident (and the bpf tps related array too).
+ Hello Everyone,
 
-Yes, please!
+I'm Shyam, currently working in linux kernel and embedded domain.
 
-Thanks,
+I'm interested work in Kernel Self Protection Project.
 
-Mathieu
+Would you please suggest which task should i pick ?
 
--- 
-Mathieu Desnoyers
-EfficiOS Inc.
-http://www.efficios.com
+I'd like to pick some simple task to get started.
+
+I see a list of todo [1] but this page is not updated since 31st October
+
+I don't have much experience in linux kernel so I'm not sure to pick which
+particular task,  please suggest me  some task.
+
+Looking forward to hearing from you.
+
+[1] https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work
+
+
+Thanks a lot,
+Shyam
+
+--0000000000006f494905862c5642
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div dir=3D"ltr">=C2=A0Hello Everyone,<br></div><div dir=
+=3D"ltr"><br></div><div>I&#39;m Shyam, currently working in linux kernel an=
+d embedded domain.</div><div><br></div><div dir=3D"ltr">I&#39;m interested =
+work in Kernel Self Protection Project.</div><div dir=3D"ltr"><br> </div><d=
+iv dir=3D"ltr">Would you please suggest which task should i pick ? <br></di=
+v><div dir=3D"ltr"><br></div><div dir=3D"ltr">I&#39;d like to pick some sim=
+ple task to get started.</div><div dir=3D"ltr"><br></div><div dir=3D"ltr">I=
+ see a list of todo [1] but this page is not updated since 31st October</di=
+v><div dir=3D"ltr"><br></div><div dir=3D"ltr">I don&#39;t have much experie=
+nce in linux kernel so I&#39;m not sure to pick which particular task,=C2=
+=A0 please suggest me=C2=A0 some task. <br></div><div dir=3D"ltr"><br></div=
+><div>Looking forward to hearing from you.<br></div><div dir=3D"ltr"><br></=
+div><div dir=3D"ltr">[1] <a href=3D"https://kernsec.org/wiki/index.php/Kern=
+el_Self_Protection_Project/Work">https://kernsec.org/wiki/index.php/Kernel_=
+Self_Protection_Project/Work</a></div><div dir=3D"ltr"><br></div><div dir=
+=3D"ltr"><br></div><div>Thanks a lot,</div><div>Shyam<br></div></div>
+
+--0000000000006f494905862c5642--
