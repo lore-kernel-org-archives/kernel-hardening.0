@@ -1,94 +1,51 @@
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v2 3/3] security: Implement Clang's stack initialization
-Date: Thu, 11 Apr 2019 11:01:17 -0700
-Message-Id: <20190411180117.27704-4-keescook@chromium.org>
-In-Reply-To: <20190411180117.27704-1-keescook@chromium.org>
-References: <20190411180117.27704-1-keescook@chromium.org>
-To: Alexander Potapenko <glider@google.com>
-Cc: Kees Cook <keescook@chromium.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, Alexander Popov <alex.popov@linux.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org
+Date: Thu, 11 Apr 2019 16:06:10 -0400
+From: Joel Fernandes <joel@joelfernandes.org>
+Subject: Re: [PATCH v3 3/3] module: Make __tracepoints_ptrs as read-only
+Message-ID: <20190411200610.GB75190@google.com>
+References: <20190410195708.162185-1-joel@joelfernandes.org>
+ <20190410195708.162185-3-joel@joelfernandes.org>
+ <20190410161112.540017d9@gandalf.local.home>
+ <20190410202902.GA167446@google.com>
+ <20190410204401.62f928ca@gandalf.local.home>
+ <20190411082106.GB167446@google.com>
+ <20190411091955.67cdd9fd@gandalf.local.home>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190411091955.67cdd9fd@gandalf.local.home>
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, keescook@chromium.org, mathieu.desnoyers@efficios.com, Jessica Yu <jeyu@kernel.org>, kernel-hardening@lists.openwall.com, kernel-team@android.com, rcu@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-CONFIG_INIT_STACK_ALL turns on stack initialization based on
--ftrivial-auto-var-init in Clang builds, which has greater coverage
-than CONFIG_GCC_PLUGINS_STRUCTLEAK_BYREF_ALL.
+On Thu, Apr 11, 2019 at 09:19:55AM -0400, Steven Rostedt wrote:
+> On Thu, 11 Apr 2019 04:21:06 -0400
+> Joel Fernandes <joel@joelfernandes.org> wrote:
+> 
+> > Patch 2/3 and 3/3 would not be nececessary if this works out. 1/3 may be a
+> > nice clean up but is not something urgent and we could do that in the future
+> > if needed.
+> 
+> Well, jump_labels is "special" because it requires sorting the RO data
+> and is done via module notify. The only other user that had to modify
+> RO data on module load is ftrace. It had to do the nop conversions in
+> the text area. It use to do it via module notify, but because of the
+> hardening of the kernel, doing it there was no longer possible because
+> everything was RO then. The solution was to call into ftrace directly
+> from the module code instead of a notifier. This was done before
+> sections were made RO.
+> 
+> One option is to do the same with jump_labels and just have a call to
+> the sorting before the notifiers and before the section gets turned
+> into RO. Or I would say just leave it as is. As I stated, jump_labels
+> are "special" and adding a loop of one section where I don't envision
+> any other sections needing to do the same thing for a long time to
+> come. I would save that patch for if there is another section that
+> comes along that needs to be modify at module notify.
 
--ftrivial-auto-var-init Clang option provides trivial initializers for
-uninitialized local variables, variable fields and padding.
+Sounds good, thanks for the detailed history of this. It sounds like you are
+Ok with making of the srcu pointer array as const, which I will test shortly
+and send it out for your review. And we can drop this patch series for now.
 
-It has three possible values:
-  pattern - uninitialized locals are filled with a fixed pattern
-    (mostly 0xAA on 64-bit platforms, see https://reviews.llvm.org/D54604
-    for more details, but 0x000000AA for 32-bit pointers) likely to cause
-    crashes when uninitialized value is used;
-  zero (it's still debated whether this flag makes it to the official
-    Clang release) - uninitialized locals are filled with zeroes;
-  uninitialized (default) - uninitialized locals are left intact.
+thanks,
 
-This patch uses only the "pattern" mode when CONFIG_INIT_STACK_ALL is
-enabled.
-
-Developers have the possibility to opt-out of this feature on a
-per-variable basis by using __attribute__((uninitialized)), but such
-use should be well justified in comments.
-
-Co-developed-by: Alexander Potapenko <glider@google.com>
-Signed-off-by: Alexander Potapenko <glider@google.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- Makefile                   |  5 +++++
- security/Kconfig.hardening | 15 ++++++++++++++-
- 2 files changed, 19 insertions(+), 1 deletion(-)
-
-diff --git a/Makefile b/Makefile
-index c0a34064c574..a7d9c6cd0267 100644
---- a/Makefile
-+++ b/Makefile
-@@ -745,6 +745,11 @@ KBUILD_CFLAGS	+= -fomit-frame-pointer
- endif
- endif
- 
-+# Initialize all stack variables with a pattern, if desired.
-+ifdef CONFIG_INIT_STACK_ALL
-+KBUILD_CFLAGS	+= -ftrivial-auto-var-init=pattern
-+endif
-+
- DEBUG_CFLAGS	:= $(call cc-option, -fno-var-tracking-assignments)
- 
- ifdef CONFIG_DEBUG_INFO
-diff --git a/security/Kconfig.hardening b/security/Kconfig.hardening
-index 3dd7a28c3822..5dd61770d3f0 100644
---- a/security/Kconfig.hardening
-+++ b/security/Kconfig.hardening
-@@ -18,9 +18,12 @@ config GCC_PLUGIN_STRUCTLEAK
- 
- menu "Memory initialization"
- 
-+config CC_HAS_AUTO_VAR_INIT
-+	def_bool $(cc-option,-ftrivial-auto-var-init=pattern)
-+
- choice
- 	prompt "Initialize kernel stack variables at function entry"
--	depends on GCC_PLUGINS
-+	depends on CC_HAS_AUTO_VAR_INIT || GCC_PLUGINS
- 	default INIT_STACK_NONE
- 	help
- 	  This option enables initialization of stack variables at
-@@ -76,6 +79,16 @@ choice
- 		  of uninitialized stack variable exploits and information
- 		  exposures.
- 
-+	config INIT_STACK_ALL
-+		bool "0xAA-init everything on the stack (strongest)"
-+		depends on CC_HAS_AUTO_VAR_INIT
-+		help
-+		  Initializes everything on the stack with a 0xAA
-+		  pattern. This is intended to eliminate all classes
-+		  of uninitialized stack variable exploits and information
-+		  exposures, even variables that were warned to have been
-+		  left uninitialized.
-+
- endchoice
- 
- config GCC_PLUGIN_STRUCTLEAK_VERBOSE
--- 
-2.17.1
+ - Joel
