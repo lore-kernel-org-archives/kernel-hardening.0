@@ -1,43 +1,84 @@
-Date: Thu, 11 Apr 2019 09:19:55 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-Subject: Re: [PATCH v3 3/3] module: Make __tracepoints_ptrs as read-only
-Message-ID: <20190411091955.67cdd9fd@gandalf.local.home>
-In-Reply-To: <20190411082106.GB167446@google.com>
-References: <20190410195708.162185-1-joel@joelfernandes.org>
-	<20190410195708.162185-3-joel@joelfernandes.org>
-	<20190410161112.540017d9@gandalf.local.home>
-	<20190410202902.GA167446@google.com>
-	<20190410204401.62f928ca@gandalf.local.home>
-	<20190411082106.GB167446@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Joel Fernandes <joel@joelfernandes.org>
-Cc: linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, keescook@chromium.org, mathieu.desnoyers@efficios.com, Jessica Yu <jeyu@kernel.org>, kernel-hardening@lists.openwall.com, kernel-team@android.com, rcu@vger.kernel.org
+References: <20190410161612.18545-1-keescook@chromium.org> <20190410161612.18545-2-keescook@chromium.org>
+ <CAK7LNASLdZKNNM-Gft5bfVxKOG=4Ak-LBMnjb2E-QR4q_5GmEQ@mail.gmail.com>
+In-Reply-To: <CAK7LNASLdZKNNM-Gft5bfVxKOG=4Ak-LBMnjb2E-QR4q_5GmEQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 11 Apr 2019 09:59:04 -0700
+Message-ID: <CAGXu5j+S1He+2sR+cvjV=2xAcCHQoRv942+OAEDprMmB=TF4Bw@mail.gmail.com>
+Subject: Re: [PATCH 1/3] Kconfig: Create "kernel hardening" config area
+Content-Type: text/plain; charset="UTF-8"
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Alexander Potapenko <glider@google.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Alexander Popov <alpopov@ptsecurity.com>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 11 Apr 2019 04:21:06 -0400
-Joel Fernandes <joel@joelfernandes.org> wrote:
+On Thu, Apr 11, 2019 at 1:51 AM Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+>
+> On Thu, Apr 11, 2019 at 1:16 AM Kees Cook <keescook@chromium.org> wrote:
+> > diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
+> > index 74271dba4f94..01874ef0f883 100644
+> > --- a/scripts/gcc-plugins/Kconfig
+> > +++ b/scripts/gcc-plugins/Kconfig
+> > @@ -13,10 +13,11 @@ config HAVE_GCC_PLUGINS
+> >           An arch should select this symbol if it supports building with
+> >           GCC plugins.
+> >
+> > -menuconfig GCC_PLUGINS
+> > -       bool "GCC plugins"
+> > +config GCC_PLUGINS
+> > +       bool
+>
+>
+> This will flatten the plugin config options.
+>
+> If you want to keep the current menu structure, you can do:
+>
+> menu "GCC plugins"
+> ...
+> endmenu
 
-> Patch 2/3 and 3/3 would not be nececessary if this works out. 1/3 may be a
-> nice clean up but is not something urgent and we could do that in the future
-> if needed.
+Ah, excellent point. I'll fix this.
 
-Well, jump_labels is "special" because it requires sorting the RO data
-and is done via module notify. The only other user that had to modify
-RO data on module load is ftrace. It had to do the nop conversions in
-the text area. It use to do it via module notify, but because of the
-hardening of the kernel, doing it there was no longer possible because
-everything was RO then. The solution was to call into ftrace directly
-from the module code instead of a notifier. This was done before
-sections were made RO.
+> Another side-effect is Kbuild will descend into scripts/gcc-plugins/
+> even when no plugin is selected.
+> It is not a big build speed regression, though.
 
-One option is to do the same with jump_labels and just have a call to
-the sorting before the notifiers and before the section gets turned
-into RO. Or I would say just leave it as is. As I stated, jump_labels
-are "special" and adding a loop of one section where I don't envision
-any other sections needing to do the same thing for a long time to
-come. I would save that patch for if there is another section that
-comes along that needs to be modify at module notify.
+I suspect the plugins Kconfig may disppear eventually with the options
+spread around other Kconfigs (since now the plugin capability is known
+at config time).
 
--- Steve
+> > diff --git a/security/Kconfig.hardening b/security/Kconfig.hardening
+> > new file mode 100644
+> > index 000000000000..8223a8ab1a12
+> > --- /dev/null
+> > +++ b/security/Kconfig.hardening
+> > @@ -0,0 +1,94 @@
+> > +menu "Kernel hardening options"
+> > +
+> > +config GCC_PLUGIN_STRUCTLEAK
+> > +       bool
+> > +       depends on GCC_PLUGIN_STRUCTLEAK_USER || GCC_PLUGIN_STRUCTLEAK_BYREF || GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
+>
+>
+> I think this 'depends on' is unnecessary.
+
+Okay, I'll drop it.
+
+>
+>
+> > +menu "Memory initialization"
+> > +
+> > +choice
+> > +       prompt "Initialize kernel stack variables at function entry"
+> > +       depends on CC_HAS_AUTO_VAR_INIT || GCC_PLUGINS
+>
+> Nit:
+> CC_HAS_AUTO_VAR_INIT does not exist at this point.
+> I will be added by 3/3.
+
+Oops, yes, I split this chunk in the wrong place. I will fix it.
+
+Thanks!
+
+-- 
+Kees Cook
