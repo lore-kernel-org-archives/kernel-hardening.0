@@ -1,50 +1,62 @@
-Date: Wed, 10 Apr 2019 20:44:01 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-Subject: Re: [PATCH v3 3/3] module: Make __tracepoints_ptrs as read-only
-Message-ID: <20190410204401.62f928ca@gandalf.local.home>
-In-Reply-To: <20190410202902.GA167446@google.com>
-References: <20190410195708.162185-1-joel@joelfernandes.org>
-	<20190410195708.162185-3-joel@joelfernandes.org>
-	<20190410161112.540017d9@gandalf.local.home>
-	<20190410202902.GA167446@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Joel Fernandes <joel@joelfernandes.org>
-Cc: linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, keescook@chromium.org, mathieu.desnoyers@efficios.com, Jessica Yu <jeyu@kernel.org>, kernel-hardening@lists.openwall.com, kernel-team@android.com, rcu@vger.kernel.org
+References: <20190410161612.18545-1-keescook@chromium.org>
+In-Reply-To: <20190410161612.18545-1-keescook@chromium.org>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Date: Thu, 11 Apr 2019 16:59:13 +0900
+Message-ID: <CAK7LNATj3_=4pW6R7ie_EXh_X3U+JNK_6Y6NLT8XjftmezAbFA@mail.gmail.com>
+Subject: Re: [PATCH 0/3] Kconfig: Refactor memory initialization hardening
+Content-Type: text/plain; charset="UTF-8"
+To: Kees Cook <keescook@chromium.org>
+Cc: Alexander Potapenko <glider@google.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Alexander Popov <alpopov@ptsecurity.com>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 10 Apr 2019 16:29:02 -0400
-Joel Fernandes <joel@joelfernandes.org> wrote:
+On Thu, Apr 11, 2019 at 1:16 AM Kees Cook <keescook@chromium.org> wrote:
+>
+> This is a proposed alternative for the memory initialization series,
+> which refactoring the existing gcc plugins into a separate Kconfig
+> file and collects all the related options together with some more
+> language to describe their differences. The last patch adds the
+> Clang auto init option, as done by Alexander Potapenko.
+>
+> Since there isn't really a good way to "select" with dependencies,
+> I've left out CONFIG_INIT_ALL_MEMORY for the moment...
+>
+> -Kees
+>
+> Kees Cook (3):
+>   Kconfig: Create "kernel hardening" config area
 
-> The srcu structure pointer array is modified at module load time because the
-> array is fixed up by the module loader at load-time with the final locations
-> of the tracepoints right?  Basically relocation fixups. At compile time, I
-> believe it is not know what the values in the ptr array are. I believe same
-> is true for the tracepoint ptrs array.
-> 
-> Also it needs to be in a separate __tracepoint_ptrs so that this code works:
-> 
-> 
-> #ifdef CONFIG_TRACEPOINTS
-> 	mod->tracepoints_ptrs = section_objs(info, "__tracepoints_ptrs",
-> 					     sizeof(*mod->tracepoints_ptrs),
-> 					     &mod->num_tracepoints);
-> #endif
-> 
-> Did I  miss some point? Thanks,
+I want to see "kconfig:" prefix in the subject line
+only for changed in scripts/kconfig/.
 
-But there's a lot of others too. Hmm, does this mean that the RO data
-sections that are in modules are not set to RO?
 
-There's a bunch of separate sections that are RO. Just look in
-include/asm-generic/vmlinux.lds.h under the RO_DATA_SECTION() macro.
+>   kbuild: Move stackleak config to Kconfig.hardening
 
-A lot of the sections saved in module.c:find_module_sections() are in
-that RO_DATA when compiled as a builtin. Are they not RO when loaded via
-a module?
+This is not a change in the build system.
 
-If this is the case, there probably is going to be a lot more sections
-added to your list.
+>   kbuild: Implement Clang's stack initialization
 
--- Steve
+
+I think "gcc-plugin:", "security:' or something is better for the
+patch subjects, and this patch series is out of
+my maintenance area.
+
+
+
+
+
+>  Makefile                    |   5 ++
+>  scripts/gcc-plugins/Kconfig | 121 +-------------------------
+>  security/Kconfig            |   2 +
+>  security/Kconfig.hardening  | 165 ++++++++++++++++++++++++++++++++++++
+>  4 files changed, 175 insertions(+), 118 deletions(-)
+>  create mode 100644 security/Kconfig.hardening
+>
+> --
+> 2.17.1
+>
+
+
+--
+Best Regards
+Masahiro Yamada
