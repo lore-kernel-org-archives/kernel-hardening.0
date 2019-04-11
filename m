@@ -1,51 +1,72 @@
-Date: Thu, 11 Apr 2019 16:06:10 -0400
-From: Joel Fernandes <joel@joelfernandes.org>
-Subject: Re: [PATCH v3 3/3] module: Make __tracepoints_ptrs as read-only
-Message-ID: <20190411200610.GB75190@google.com>
-References: <20190410195708.162185-1-joel@joelfernandes.org>
- <20190410195708.162185-3-joel@joelfernandes.org>
- <20190410161112.540017d9@gandalf.local.home>
- <20190410202902.GA167446@google.com>
- <20190410204401.62f928ca@gandalf.local.home>
- <20190411082106.GB167446@google.com>
- <20190411091955.67cdd9fd@gandalf.local.home>
+From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
+Subject: [PATCH] module: Make srcu_struct ptr array as read-only
+Date: Thu, 11 Apr 2019 16:24:21 -0400
+Message-Id: <20190411202421.131779-1-joel@joelfernandes.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190411091955.67cdd9fd@gandalf.local.home>
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, keescook@chromium.org, mathieu.desnoyers@efficios.com, Jessica Yu <jeyu@kernel.org>, kernel-hardening@lists.openwall.com, kernel-team@android.com, rcu@vger.kernel.org
+Content-Transfer-Encoding: 8bit
+To: linux-kernel@vger.kernel.org
+Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, paulmck@linux.vnet.ibm.com, rostedt@goodmis.org, mathieu.desnoyers@efficios.com, rcu@vger.kernel.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, Josh Triplett <josh@joshtriplett.org>, Lai Jiangshan <jiangshanlai@gmail.com>, "Paul E. McKenney" <paulmck@linux.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 11, 2019 at 09:19:55AM -0400, Steven Rostedt wrote:
-> On Thu, 11 Apr 2019 04:21:06 -0400
-> Joel Fernandes <joel@joelfernandes.org> wrote:
-> 
-> > Patch 2/3 and 3/3 would not be nececessary if this works out. 1/3 may be a
-> > nice clean up but is not something urgent and we could do that in the future
-> > if needed.
-> 
-> Well, jump_labels is "special" because it requires sorting the RO data
-> and is done via module notify. The only other user that had to modify
-> RO data on module load is ftrace. It had to do the nop conversions in
-> the text area. It use to do it via module notify, but because of the
-> hardening of the kernel, doing it there was no longer possible because
-> everything was RO then. The solution was to call into ftrace directly
-> from the module code instead of a notifier. This was done before
-> sections were made RO.
-> 
-> One option is to do the same with jump_labels and just have a call to
-> the sorting before the notifiers and before the section gets turned
-> into RO. Or I would say just leave it as is. As I stated, jump_labels
-> are "special" and adding a loop of one section where I don't envision
-> any other sections needing to do the same thing for a long time to
-> come. I would save that patch for if there is another section that
-> comes along that needs to be modify at module notify.
+Since commit title ("srcu: Allocate per-CPU data for DEFINE_SRCU() in
+modules"), modules that call DEFINE_{STATIC,}SRCU will have a new array
+of srcu_struct pointers, which is used by srcu code to initialize and
+clean up these structures and save valuable per-cpu reserved space.
 
-Sounds good, thanks for the detailed history of this. It sounds like you are
-Ok with making of the srcu pointer array as const, which I will test shortly
-and send it out for your review. And we can drop this patch series for now.
+There is no reason for this array of pointers to be writable, and can
+cause security or other hidden bugs. Mark these are read-only after the
+module init has completed.
 
-thanks,
+Tested with the following diff to ensure array not writable:
 
- - Joel
+(diff is a bit reduced to avoid patch command getting confused)
+ a/kernel/module.c
+ b/kernel/module.c
+  -3506,6 +3506,14  static noinline int do_init_module [snip]
+ 	rcu_assign_pointer(mod->kallsyms, &mod->core_kallsyms);
+ #endif
+ 	module_enable_ro(mod, true);
++
++	if (mod->srcu_struct_ptrs) {
++		// Check if srcu_struct_ptrs access is possible
++		char x = *(char *)mod->srcu_struct_ptrs;
++		*(char *)mod->srcu_struct_ptrs = 0;
++		*(char *)mod->srcu_struct_ptrs = x;
++	}
++
+ 	mod_tree_remove_init(mod);
+ 	disable_ro_nx(&mod->init_layout);
+ 	module_arch_freeing_init(mod);
+
+Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: paulmck@linux.vnet.ibm.com
+Cc: rostedt@goodmis.org
+Cc: mathieu.desnoyers@efficios.com
+Cc: rcu@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
+Cc: kernel-team@android.com
+Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+
+---
+This single patch superceded the patches at:
+https://lore.kernel.org/patchwork/patch/1060298/
+https://lore.kernel.org/patchwork/patch/1060298/
+
+ include/linux/srcutree.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/linux/srcutree.h b/include/linux/srcutree.h
+index 8af1824c46a8..9cfcc8a756ae 100644
+--- a/include/linux/srcutree.h
++++ b/include/linux/srcutree.h
+@@ -123,7 +123,7 @@ struct srcu_struct {
+ #ifdef MODULE
+ # define __DEFINE_SRCU(name, is_static)					\
+ 	is_static struct srcu_struct name;				\
+-	struct srcu_struct *__srcu_struct_##name			\
++	struct srcu_struct * const __srcu_struct_##name			\
+ 		__section("___srcu_struct_ptrs") = &name
+ #else
+ # define __DEFINE_SRCU(name, is_static)					\
+-- 
+2.21.0.392.gf8f6787159e-goog
