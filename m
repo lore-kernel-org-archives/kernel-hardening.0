@@ -1,68 +1,56 @@
-Content-Type: text/plain;
-	charset=us-ascii
-Mime-Version: 1.0 (Mac OS X Mail 12.4 \(3445.104.8\))
-Subject: Re: [PATCH 1/2] include: linux: Regularise the use of FIELD_SIZEOF
- macro
-From: William Kucharski <william.kucharski@oracle.com>
-In-Reply-To: <20190414091452.22275-1-shyam.saini@amarulasolutions.com>
-Date: Mon, 15 Apr 2019 04:12:16 -0600
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <C398B8C9-6A54-4590-AA88-58D514BAEB71@oracle.com>
-References: <20190414091452.22275-1-shyam.saini@amarulasolutions.com>
-To: Shyam Saini <shyam.saini@amarulasolutions.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, keescook@chromium.org, linux-arm-kernel@lists.infradead.org, linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, dri-devel@lists.freedesktop.org, netdev@vger.kernel.org, linux-ext4@vger.kernel.org, devel@lists.orangefs.org, linux-mm@kvack.org, linux-sctp@vger.kernel.org, bpf@vger.kernel.org, kvm@vger.kernel.org, mayhs11saini@gmail.com
+Subject: Re: [PATCH v2 1/3] security: Create "kernel hardening" config area
+References: <20190411180117.27704-1-keescook@chromium.org>
+ <20190411180117.27704-2-keescook@chromium.org>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <947dbe9a-3444-6fe4-9f79-f8f210da8960@linux.com>
+Date: Mon, 15 Apr 2019 19:44:09 +0300
+MIME-Version: 1.0
+In-Reply-To: <20190411180117.27704-2-keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, Alexander Potapenko <glider@google.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>
+Cc: Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 11.04.2019 21:01, Kees Cook wrote:
+> Right now kernel hardening options are scattered around various Kconfig
+> files. This can be a central place to collect these kinds of options
+> going forward. This is initially populated with the memory initialization
+> options from the gcc-plugins.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
+Hello Kees, hello everyone!
 
-> On Apr 14, 2019, at 3:14 AM, Shyam Saini =
-<shyam.saini@amarulasolutions.com> wrote:
->=20
-> Currently, there are 3 different macros, namely sizeof_field, =
-SIZEOF_FIELD
-> and FIELD_SIZEOF which are used to calculate the size of a member of
-> structure, so to bring uniformity in entire kernel source tree lets =
-use
-> FIELD_SIZEOF and replace all occurrences of other two macros with =
-this.
->=20
-> For this purpose, redefine FIELD_SIZEOF in include/linux/stddef.h and
-> tools/testing/selftests/bpf/bpf_util.h and remove its defination from
-> include/linux/kernel.h
+After applying this series the kernel config looks like that:
 
+...
+...
+CONFIG_LSM="yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor"
 
-> --- a/include/linux/stddef.h
-> +++ b/include/linux/stddef.h
-> @@ -20,6 +20,15 @@ enum {
-> #endif
->=20
-> /**
-> + * FIELD_SIZEOF - get the size of a struct's field
-> + * @t: the target struct
-> + * @f: the target struct's field
-> + * Return: the size of @f in the struct definition without having a
-> + * declared instance of @t.
-> + */
-> +#define FIELD_SIZEOF(t, f) (sizeof(((t *)0)->f))
-> +
-> +/**
->  * sizeof_field(TYPE, MEMBER)
->  *
->  * @TYPE: The structure containing the field of interest
-> @@ -34,6 +43,6 @@ enum {
->  * @MEMBER: The member within the structure to get the end offset of
->  */
-> #define offsetofend(TYPE, MEMBER) \
-> -	(offsetof(TYPE, MEMBER)	+ sizeof_field(TYPE, MEMBER))
-> +	(offsetof(TYPE, MEMBER)	+ FIELD_SIZEOF(TYPE, MEMBER))
+#
+# Kernel hardening options
+#
 
-If you're doing this, why are you leaving the definition of =
-sizeof_field() in
-stddef.h untouched?
+#
+# Memory initialization
+#
+CONFIG_INIT_STACK_NONE=y
+# CONFIG_GCC_PLUGIN_STRUCTLEAK_USER is not set
+# CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF is not set
+# CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL is not set
+# CONFIG_GCC_PLUGIN_STACKLEAK is not set
+CONFIG_CRYPTO=y
 
-Given the way this has worked historically, if you are leaving it in =
-place for
-source compatibility reasons, shouldn't it be redefined in terms of
-FIELD_SIZEOF(), e.g.:
+#
+# Crypto core or helper
+#
+CONFIG_CRYPTO_ALGAPI=y
+...
+...
 
-#define sizeof_field(TYPE, MEMBER) FIELD_SIZEOF(TYPE, MEMBER)
+What do you think about some separator between memory initialization options and
+CONFIG_CRYPTO?
+
+Best regards,
+Alexander
