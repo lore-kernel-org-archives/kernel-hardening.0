@@ -1,50 +1,64 @@
 MIME-Version: 1.0
-References: <20190414091452.22275-1-shyam.saini@amarulasolutions.com>
-In-Reply-To: <20190414091452.22275-1-shyam.saini@amarulasolutions.com>
-From: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Date: Sun, 14 Apr 2019 22:43:44 -0700
-Message-ID: <CAADnVQKx5WrUYxr_gSc5ai=fJh2cM9e26NZL1mRPkoSVQxAd0Q@mail.gmail.com>
+References: <20190414091452.22275-1-shyam.saini@amarulasolutions.com> <CAADnVQKx5WrUYxr_gSc5ai=fJh2cM9e26NZL1mRPkoSVQxAd0Q@mail.gmail.com>
+In-Reply-To: <CAADnVQKx5WrUYxr_gSc5ai=fJh2cM9e26NZL1mRPkoSVQxAd0Q@mail.gmail.com>
+From: Shyam Saini <mayhs11saini@gmail.com>
+Date: Mon, 15 Apr 2019 12:43:39 +0530
+Message-ID: <CAOfkYf5FZdN3v9pkcdNmyJM5O=789bKwFmFsMTp20RE=gVgwqQ@mail.gmail.com>
 Subject: Re: [PATCH 1/2] include: linux: Regularise the use of FIELD_SIZEOF macro
 Content-Type: text/plain; charset="UTF-8"
-To: Shyam Saini <shyam.saini@amarulasolutions.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, linux-arm-kernel@lists.infradead.org, linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, dri-devel@lists.freedesktop.org, Network Development <netdev@vger.kernel.org>, linux-ext4@vger.kernel.org, devel@lists.orangefs.org, linux-mm <linux-mm@kvack.org>, linux-sctp@vger.kernel.org, bpf <bpf@vger.kernel.org>, kvm@vger.kernel.org, mayhs11saini@gmail.com
+To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
+Cc: Shyam Saini <shyam.saini@amarulasolutions.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, linux-arm-kernel@lists.infradead.org, linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, dri-devel <dri-devel@lists.freedesktop.org>, Network Development <netdev@vger.kernel.org>, linux-ext4@vger.kernel.org, devel@lists.orangefs.org, linux-mm <linux-mm@kvack.org>, linux-sctp@vger.kernel.org, bpf <bpf@vger.kernel.org>, kvm@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Apr 14, 2019 at 2:15 AM Shyam Saini
-<shyam.saini@amarulasolutions.com> wrote:
->
-> Currently, there are 3 different macros, namely sizeof_field, SIZEOF_FIELD
-> and FIELD_SIZEOF which are used to calculate the size of a member of
-> structure, so to bring uniformity in entire kernel source tree lets use
-> FIELD_SIZEOF and replace all occurrences of other two macros with this.
->
-> For this purpose, redefine FIELD_SIZEOF in include/linux/stddef.h and
-> tools/testing/selftests/bpf/bpf_util.h and remove its defination from
-> include/linux/kernel.h
->
-> Signed-off-by: Shyam Saini <shyam.saini@amarulasolutions.com>
-> ---
->  arch/arm64/include/asm/processor.h                 | 10 +++++-----
->  arch/mips/cavium-octeon/executive/cvmx-bootmem.c   |  2 +-
->  drivers/gpu/drm/i915/gvt/scheduler.c               |  2 +-
->  drivers/net/ethernet/mellanox/mlxsw/spectrum_fid.c |  4 ++--
->  fs/befs/linuxvfs.c                                 |  2 +-
->  fs/ext2/super.c                                    |  2 +-
->  fs/ext4/super.c                                    |  2 +-
->  fs/freevxfs/vxfs_super.c                           |  2 +-
->  fs/orangefs/super.c                                |  2 +-
->  fs/ufs/super.c                                     |  2 +-
->  include/linux/kernel.h                             |  9 ---------
->  include/linux/slab.h                               |  2 +-
->  include/linux/stddef.h                             | 11 ++++++++++-
->  kernel/fork.c                                      |  2 +-
->  kernel/utsname.c                                   |  2 +-
->  net/caif/caif_socket.c                             |  2 +-
->  net/core/skbuff.c                                  |  2 +-
->  net/ipv4/raw.c                                     |  2 +-
->  net/ipv6/raw.c                                     |  2 +-
->  net/sctp/socket.c                                  |  4 ++--
->  tools/testing/selftests/bpf/bpf_util.h             | 11 ++++++++++-
+Hi,
 
-tools/ directory is for user space pieces that don't include kernel's include.
-I bet your pathes break the user space builds.
+On Mon, Apr 15, 2019 at 11:13 AM Alexei Starovoitov
+<alexei.starovoitov@gmail.com> wrote:
+>
+> On Sun, Apr 14, 2019 at 2:15 AM Shyam Saini
+> <shyam.saini@amarulasolutions.com> wrote:
+> >
+> > Currently, there are 3 different macros, namely sizeof_field, SIZEOF_FIELD
+> > and FIELD_SIZEOF which are used to calculate the size of a member of
+> > structure, so to bring uniformity in entire kernel source tree lets use
+> > FIELD_SIZEOF and replace all occurrences of other two macros with this.
+> >
+> > For this purpose, redefine FIELD_SIZEOF in include/linux/stddef.h and
+> > tools/testing/selftests/bpf/bpf_util.h and remove its defination from
+> > include/linux/kernel.h
+> >
+> > Signed-off-by: Shyam Saini <shyam.saini@amarulasolutions.com>
+> > ---
+> >  arch/arm64/include/asm/processor.h                 | 10 +++++-----
+> >  arch/mips/cavium-octeon/executive/cvmx-bootmem.c   |  2 +-
+> >  drivers/gpu/drm/i915/gvt/scheduler.c               |  2 +-
+> >  drivers/net/ethernet/mellanox/mlxsw/spectrum_fid.c |  4 ++--
+> >  fs/befs/linuxvfs.c                                 |  2 +-
+> >  fs/ext2/super.c                                    |  2 +-
+> >  fs/ext4/super.c                                    |  2 +-
+> >  fs/freevxfs/vxfs_super.c                           |  2 +-
+> >  fs/orangefs/super.c                                |  2 +-
+> >  fs/ufs/super.c                                     |  2 +-
+> >  include/linux/kernel.h                             |  9 ---------
+> >  include/linux/slab.h                               |  2 +-
+> >  include/linux/stddef.h                             | 11 ++++++++++-
+> >  kernel/fork.c                                      |  2 +-
+> >  kernel/utsname.c                                   |  2 +-
+> >  net/caif/caif_socket.c                             |  2 +-
+> >  net/core/skbuff.c                                  |  2 +-
+> >  net/ipv4/raw.c                                     |  2 +-
+> >  net/ipv6/raw.c                                     |  2 +-
+> >  net/sctp/socket.c                                  |  4 ++--
+> >  tools/testing/selftests/bpf/bpf_util.h             | 11 ++++++++++-
+>
+> tools/ directory is for user space pieces that don't include kernel's include.
+> I bet your pathes break the user space builds.
+
+I think it shouldn't because I haven't included any kernel header in
+tool/ files, instead
+I have introduced definition of macro in tool/ , so this patch doesn't
+create any dependency
+on kernel headers.
+
+Thanks a lot,
+Shyam
