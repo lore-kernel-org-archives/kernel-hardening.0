@@ -1,32 +1,24 @@
 Subject: Re: [PATCH] mm: security: introduce CONFIG_INIT_HEAP_ALL
 References: <20190412124501.132678-1-glider@google.com>
+ <20190415190213.5831bbc17e5073690713b001@linux-foundation.org>
 From: Vlastimil Babka <vbabka@suse.cz>
-Message-ID: <35935775-1c0d-6016-5bb3-0abee65a7492@suse.cz>
-Date: Tue, 16 Apr 2019 10:30:20 +0200
+Message-ID: <f4071ce4-3744-35c9-df22-cb0a9d8db8ba@suse.cz>
+Date: Tue, 16 Apr 2019 10:33:32 +0200
 MIME-Version: 1.0
-In-Reply-To: <20190412124501.132678-1-glider@google.com>
+In-Reply-To: <20190415190213.5831bbc17e5073690713b001@linux-foundation.org>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Alexander Potapenko <glider@google.com>, akpm@linux-foundation.org
+To: Andrew Morton <akpm@linux-foundation.org>, Alexander Potapenko <glider@google.com>
 Cc: linux-security-module@vger.kernel.org, linux-mm@kvack.org, ndesaulniers@google.com, kcc@google.com, dvyukov@google.com, keescook@chromium.org, sspatil@android.com, labbott@redhat.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 4/12/19 2:45 PM, Alexander Potapenko wrote:
-> +config INIT_HEAP_ALL
-> +	bool "Initialize kernel heap allocations"
+On 4/16/19 4:02 AM, Andrew Morton wrote:
+> Requiring a kernel rebuild is rather user-hostile.  A boot option
+> (early_param()) would be much more useful and I expect that the loss in
+> coverage would be small and acceptable?  Could possibly use the
+> static_branch infrastructure.
 
-Calling slab and page allocations together as "heap" is rather uncommon
-in the kernel I think. But I don't have a better word right now.
-
-> +	default n
-> +	help
-> +	  Enforce initialization of pages allocated from page allocator
-> +	  and objects returned by kmalloc and friends.
-> +	  Allocated memory is initialized with zeroes, preventing possible
-> +	  information leaks and making the control-flow bugs that depend
-> +	  on uninitialized values more deterministic.
-> +
->  config GCC_PLUGIN_STRUCTLEAK_VERBOSE
->  	bool "Report forcefully initialized variables"
->  	depends on GCC_PLUGIN_STRUCTLEAK
-> 
+Agreed. There could be a config option to make it default on if no param
+given. Then a config option to (not) compile this in at all would be
+probably superfluous, although small systems/architectures without
+effective static keys might care.
