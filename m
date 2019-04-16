@@ -1,99 +1,63 @@
+Subject: Re: [PATCH v2 1/3] security: Create "kernel hardening" config area
+References: <20190411180117.27704-1-keescook@chromium.org>
+ <20190411180117.27704-2-keescook@chromium.org>
+ <947dbe9a-3444-6fe4-9f79-f8f210da8960@linux.com>
+ <CAGXu5jJTM=pdAjsC63Z6T=HaztTqSqUQQ8=GN=tqv2n6CKc3nw@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <450e21b0-606a-f19a-a4fe-f7508d6a215c@linux.com>
+Date: Tue, 16 Apr 2019 16:55:30 +0300
 MIME-Version: 1.0
-References: <20190412124501.132678-1-glider@google.com> <20190415190213.5831bbc17e5073690713b001@linux-foundation.org>
-In-Reply-To: <20190415190213.5831bbc17e5073690713b001@linux-foundation.org>
-From: Alexander Potapenko <glider@google.com>
-Date: Tue, 16 Apr 2019 14:21:59 +0200
-Message-ID: <CAG_fn=W1rELLO4mx1RoM01shFVkyQjT3eU5wyqMRjprzVD5oMQ@mail.gmail.com>
-Subject: Re: [PATCH] mm: security: introduce CONFIG_INIT_HEAP_ALL
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-security-module <linux-security-module@vger.kernel.org>, Linux Memory Management List <linux-mm@kvack.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAGXu5jJTM=pdAjsC63Z6T=HaztTqSqUQQ8=GN=tqv2n6CKc3nw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Alexander Potapenko <glider@google.com>, James Morris <jmorris@namei.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 16, 2019 at 4:02 AM Andrew Morton <akpm@linux-foundation.org> w=
-rote:
->
-> On Fri, 12 Apr 2019 14:45:01 +0200 Alexander Potapenko <glider@google.com=
-> wrote:
->
-> > This config option adds the possibility to initialize newly allocated
-> > pages and heap objects with zeroes.
->
-> At what cost?  Some performance test results would help this along.
-I'll make more measurements for the new implementation, but the
-preliminary results are:
-~0.17% sys time slowdown (~0% wall time slowdown) on hackbench (1 CPU);
-1.3% sys time slowdown (0.2% wall time slowdown) when building Linux with -=
-j12;
-4% sys time slowdown (2.6% wall time slowdown) on af_inet_loopback benchmar=
-k;
-up to 100% slowdown on netperf (caused by sk buffers being initialized
-multiple times; also netperf is too fast to perform any precise
-measurements)
+On 16.04.2019 7:02, Kees Cook wrote:
+> On Mon, Apr 15, 2019 at 11:44 AM Alexander Popov <alex.popov@linux.com> wrote:
+>>
+>> What do you think about some separator between memory initialization options and
+>> CONFIG_CRYPTO?
+> 
+> This was true before too
 
-Are there any benchmarks you can recommend?
-> > This is needed to prevent possible
-> > information leaks and make the control-flow bugs that depend on
-> > uninitialized values more deterministic.
-> >
-> > Initialization is done at allocation time at the places where checks fo=
-r
-> > __GFP_ZERO are performed. We don't initialize slab caches with
-> > constructors or SLAB_TYPESAFE_BY_RCU to preserve their semantics.
-> >
-> > For kernel testing purposes filling allocations with a nonzero pattern
-> > would be more suitable, but may require platform-specific code. To have
-> > a simple baseline we've decided to start with zero-initialization.
-> >
-> > No performance optimizations are done at the moment to reduce double
-> > initialization of memory regions.
->
-> Requiring a kernel rebuild is rather user-hostile.
-This is intended to be used together with other hardening measures,
-like CONFIG_INIT_STACK_ALL (see a patchset by Kees).
-All of those require a kernel rebuild, but we assume users don't push
-and pull that lever back and forth often.
+Hm, yes, it's a generic behavior - there is no any separator at 'endmenu' and
+config options stick together.
 
-> A boot option
-> (early_param()) would be much more useful and I expect that the loss in
-> coverage would be small and acceptable?  Could possibly use the
-> static_branch infrastructure.
-I'll try that out and see if there's a notable performance difference.
-
-> > --- a/mm/slab.h
-> > +++ b/mm/slab.h
-> > @@ -167,6 +167,16 @@ static inline slab_flags_t kmem_cache_flags(unsign=
-ed int object_size,
-> >                             SLAB_TEMPORARY | \
-> >                             SLAB_ACCOUNT)
-> >
-> > +/*
-> > + * Do we need to initialize this allocation?
-> > + * Always true for __GFP_ZERO, CONFIG_INIT_HEAP_ALL enforces initializ=
-ation
-> > + * of caches without constructors and RCU.
-> > + */
-> > +#define SLAB_WANT_INIT(cache, gfp_flags) \
-> > +     ((GFP_INIT_ALWAYS_ON && !(cache)->ctor && \
-> > +       !((cache)->flags & SLAB_TYPESAFE_BY_RCU)) || \
-> > +      (gfp_flags & __GFP_ZERO))
->
-> Is there any reason why this *must* be implemented as a macro?  If not,
-> it should be written in C please.
-Agreed. Even in the case we want GFP_INIT_ALWAYS_ON to be known at
-compile time there's no reason for this to be a macro.
->
+I've created a patch to fix that. What do you think about it?
+I can send it to LKML separately.
 
 
---=20
-Alexander Potapenko
-Software Engineer
+>From 50bf59d30fafcdebb3393fb742e1bd51e7d2f2da Mon Sep 17 00:00:00 2001
+From: Alexander Popov <alex.popov@linux.com>
+Date: Tue, 16 Apr 2019 16:09:40 +0300
+Subject: [PATCH 1/1] kconfig: Terminate menu blocks with a newline in the
+ generated config
 
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
+Currently menu blocks start with a pretty header but end with nothing in
+the generated config. So next config options stick together with the
+options from the menu block.
 
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+Let's terminate menu blocks with a newline in the generated config.
+
+Signed-off-by: Alexander Popov <alex.popov@linux.com>
+---
+ scripts/kconfig/confdata.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/scripts/kconfig/confdata.c b/scripts/kconfig/confdata.c
+index 08ba146..1459153 100644
+--- a/scripts/kconfig/confdata.c
++++ b/scripts/kconfig/confdata.c
+@@ -888,6 +888,8 @@ int conf_write(const char *name)
+ 		if (menu->next)
+ 			menu = menu->next;
+ 		else while ((menu = menu->parent)) {
++			if (!menu->sym && menu_is_visible(menu))
++				fprintf(out, "\n");
+ 			if (menu->next) {
+ 				menu = menu->next;
+ 				break;
+-- 
+2.7.4
