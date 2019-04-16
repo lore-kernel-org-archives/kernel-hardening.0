@@ -1,29 +1,52 @@
-From: Florian Weimer <fweimer@redhat.com>
-Subject: Re: [RFC PATCH v1 1/5] fs: Add support for an O_MAYEXEC flag on sys_open()
-References: <20181212081712.32347-1-mic@digikod.net>
-	<20181212081712.32347-2-mic@digikod.net>
-	<20181212144306.GA19945@quack2.suse.cz> <3452959.b6JmBh7Lnt@x2>
-Date: Tue, 16 Apr 2019 13:49:39 +0200
-In-Reply-To: <3452959.b6JmBh7Lnt@x2> (Steve Grubb's message of "Mon, 15 Apr
-	2019 14:47:49 -0400")
-Message-ID: <87wojuxj8s.fsf@oldenburg2.str.redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: Steve Grubb <sgrubb@redhat.com>
-Cc: Jan Kara <jack@suse.cz>, =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>, linux-kernel@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>, Mimi Zohar <zohar@linux.ibm.com>, Philippe =?utf-8?Q?Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Matthew Bobrowski <mbobrowski@mbobrowski.org>
+References: <20190412124501.132678-1-glider@google.com> <35935775-1c0d-6016-5bb3-0abee65a7492@suse.cz>
+In-Reply-To: <35935775-1c0d-6016-5bb3-0abee65a7492@suse.cz>
+From: Alexander Potapenko <glider@google.com>
+Date: Tue, 16 Apr 2019 14:04:49 +0200
+Message-ID: <CAG_fn=VYa0CtxDeXOV0Mpj3q_i150NJioyJWGLA3OEij3iSH1A@mail.gmail.com>
+Subject: Re: [PATCH] mm: security: introduce CONFIG_INIT_HEAP_ALL
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Vlastimil Babka <vbabka@suse.cz>
+Cc: Andrew Morton <akpm@linux-foundation.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Memory Management List <linux-mm@kvack.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-* Steve Grubb:
+On Tue, Apr 16, 2019 at 10:33 AM Vlastimil Babka <vbabka@suse.cz> wrote:
+>
+> On 4/12/19 2:45 PM, Alexander Potapenko wrote:
+> > +config INIT_HEAP_ALL
+> > +     bool "Initialize kernel heap allocations"
+>
+> Calling slab and page allocations together as "heap" is rather uncommon
+> in the kernel I think. But I don't have a better word right now.
+We can provide two separate flags for slab and page allocator to avoid this=
+.
+I cannot think of a situation where this level of control is necessary
+though (apart from benchmarking).
+> > +     default n
+> > +     help
+> > +       Enforce initialization of pages allocated from page allocator
+> > +       and objects returned by kmalloc and friends.
+> > +       Allocated memory is initialized with zeroes, preventing possibl=
+e
+> > +       information leaks and making the control-flow bugs that depend
+> > +       on uninitialized values more deterministic.
+> > +
+> >  config GCC_PLUGIN_STRUCTLEAK_VERBOSE
+> >       bool "Report forcefully initialized variables"
+> >       depends on GCC_PLUGIN_STRUCTLEAK
+> >
+>
 
-> This flag that is being proposed means that you would have to patch all 
-> interpreters to use it. If you are sure that upstreams will accept that, why 
-> not just change the policy to interpreters shouldn't execute anything unless 
-> the execute bit is set? That is simpler and doesn't need a kernel change. And 
-> setting the execute bit is an auditable event.
 
-I think we need something like O_MAYEXEC so that security policies can
-be enforced and noexec mounts can be detected.  I don't think it's a
-good idea to do this in userspace, especially the latter.
+--=20
+Alexander Potapenko
+Software Engineer
 
-Thanks,
-Florian
+Google Germany GmbH
+Erika-Mann-Stra=C3=9Fe, 33
+80636 M=C3=BCnchen
+
+Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
+Registergericht und -nummer: Hamburg, HRB 86891
+Sitz der Gesellschaft: Hamburg
