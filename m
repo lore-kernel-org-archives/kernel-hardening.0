@@ -1,58 +1,73 @@
-Date: Mon, 15 Apr 2019 19:02:13 -0700
-From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH] mm: security: introduce CONFIG_INIT_HEAP_ALL
-Message-Id: <20190415190213.5831bbc17e5073690713b001@linux-foundation.org>
-In-Reply-To: <20190412124501.132678-1-glider@google.com>
-References: <20190412124501.132678-1-glider@google.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Alexander Potapenko <glider@google.com>
-Cc: linux-security-module@vger.kernel.org, linux-mm@kvack.org, ndesaulniers@google.com, kcc@google.com, dvyukov@google.com, keescook@chromium.org, sspatil@android.com, labbott@redhat.com, kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+References: <CAOfkYf7di0vusjs-woyqgUD3GGLAuP2drir=Td=3+TuE2sKvvA@mail.gmail.com>
+ <CAGXu5jLSW==S9TL28Z7x-=3PCRVXXkxi4ce5YDu+X8nHfb71eQ@mail.gmail.com>
+ <CAOfkYf4G_zV9v+GT4i=W+Zkkq32oPKFXH3E8kmMuDVS84r+AAQ@mail.gmail.com> <CAGXu5jJJbnhUMovTaG_U=vJijEWuWkM1dMoh6Mm4gUmN4Ua_Dg@mail.gmail.com>
+In-Reply-To: <CAGXu5jJJbnhUMovTaG_U=vJijEWuWkM1dMoh6Mm4gUmN4Ua_Dg@mail.gmail.com>
+From: Shyam Saini <mayhs11saini@gmail.com>
+Date: Tue, 16 Apr 2019 09:14:12 +0530
+Message-ID: <CAOfkYf4SiLvReac4H0-w1nZLwXQqZD8xAbN_dffzppcmH3S2Gg@mail.gmail.com>
+Subject: Re: willing to involve in KSPP
+Content-Type: text/plain; charset="UTF-8"
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 12 Apr 2019 14:45:01 +0200 Alexander Potapenko <glider@google.com> wrote:
+Hi Kees,
 
-> This config option adds the possibility to initialize newly allocated
-> pages and heap objects with zeroes.
 
-At what cost?  Some performance test results would help this along.
+> > Hi Kees,
+> >
+> > > > I'm Shyam, currently working in linux kernel and embedded domain.
+> > > >
+> > > > I'm interested work in Kernel Self Protection Project.
+> > > >
+> > > > Would you please suggest which task should i pick ?
+> > > >
+> > > > I'd like to pick some simple task to get started.
+> > > > I see a list of todo [1] but this page is not updated since 31st October
+> > >
+> > > I've updated this list now. Sorry for the delay!
+> >
+> > Thanks for this update.
+> >
+> > > > I don't have much experience in linux kernel so I'm not sure to pick which particular task,  please suggest me  some task.
+> > >
+> > > One item on there that looks pretty simple and would get you started
+> > > would be to regularized the use of three different macros that all do
+> > > the same thing: replace sizeof_field() and SIZEOF_FIELD() with the
+> > > more common FIELD_SIZEOF()
+> > >
+> > > $ git grep '\bsizeof_field\b' | wc -l
+> > > 30
+> >
+> > These are spreaded all over kernel source tree.
+> >
+> > > $ git grep '\bSIZEOF_FIELD\b' | wc -l
+> > > 2
+> >
+> > This was added recently and I think we will need a checkpatch entry to
+> > warn developers about this.
+> >
+> > > $ git grep '\bFIELD_SIZEOF\b' | wc -l
+> > > 291
+> > >
+> > > Which likely means moving the FIELD_SIZEOF macro into
+> > > include/linux/stddef.h for reuse in offsetofend().
+> >
+> > My only concern is, if it picked by different maintainers then it may
+> > break some other trees.
+> > I think it should be picked by single maintainer so which tree should
+> > I submit these changes ?
+>
+> I would just make this a pair of patches: one that does the treewide
+> changes in all files, and then one that removes the unused macros. I
+> would CC Andrew Morton on the patch; he would likely be willing to
+> take it.
 
-> This is needed to prevent possible
-> information leaks and make the control-flow bugs that depend on
-> uninitialized values more deterministic.
-> 
-> Initialization is done at allocation time at the places where checks for
-> __GFP_ZERO are performed. We don't initialize slab caches with
-> constructors or SLAB_TYPESAFE_BY_RCU to preserve their semantics.
-> 
-> For kernel testing purposes filling allocations with a nonzero pattern
-> would be more suitable, but may require platform-specific code. To have
-> a simple baseline we've decided to start with zero-initialization.
-> 
-> No performance optimizations are done at the moment to reduce double
-> initialization of memory regions.
+Thanks a lot for your suggestion.
 
-Requiring a kernel rebuild is rather user-hostile.  A boot option
-(early_param()) would be much more useful and I expect that the loss in
-coverage would be small and acceptable?  Could possibly use the
-static_branch infrastructure.
-
-> --- a/mm/slab.h
-> +++ b/mm/slab.h
-> @@ -167,6 +167,16 @@ static inline slab_flags_t kmem_cache_flags(unsigned int object_size,
->  			      SLAB_TEMPORARY | \
->  			      SLAB_ACCOUNT)
->  
-> +/*
-> + * Do we need to initialize this allocation?
-> + * Always true for __GFP_ZERO, CONFIG_INIT_HEAP_ALL enforces initialization
-> + * of caches without constructors and RCU.
-> + */
-> +#define SLAB_WANT_INIT(cache, gfp_flags) \
-> +	((GFP_INIT_ALWAYS_ON && !(cache)->ctor && \
-> +	  !((cache)->flags & SLAB_TYPESAFE_BY_RCU)) || \
-> +	 (gfp_flags & __GFP_ZERO))
-
-Is there any reason why this *must* be implemented as a macro?  If not,
-it should be written in C please.
+As you may already know that I've submitted the patch as per your
+suggestion but I'm still not
+sure how this FIELD macro uniformity in kernel is related to security.
+Is there any future plans
+based on this cleanup ?  Please excuse my lack of knowledge on the subject.
