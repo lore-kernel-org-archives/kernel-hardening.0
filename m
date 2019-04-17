@@ -1,63 +1,116 @@
+Date: Wed, 17 Apr 2019 15:29:29 +0200
+From: Jessica Yu <jeyu@kernel.org>
+Subject: Re: [PATCH v3 1/3] module: Prepare for addition of new ro_after_init
+ sections
+Message-ID: <20190417132929.GC17099@linux-8ccs>
+References: <20190410195708.162185-1-joel@joelfernandes.org>
 MIME-Version: 1.0
-References: <20190412124501.132678-1-glider@google.com> <0100016a26c711be-b99971ca-49f5-482c-9028-962ee471f733-000000@email.amazonses.com>
- <CAG_fn=U6aWfBXdkcWs0_1pqggAC16Yg8Q6rxLiVeiO83q1hOCw@mail.gmail.com> <0100016a26fc7605-a9c76ac4-387c-47a3-8c53-a8d208eb0925-000000@email.amazonses.com>
-In-Reply-To: <0100016a26fc7605-a9c76ac4-387c-47a3-8c53-a8d208eb0925-000000@email.amazonses.com>
-From: Alexander Potapenko <glider@google.com>
-Date: Wed, 17 Apr 2019 13:03:47 +0200
-Message-ID: <CAG_fn=XW=-=SiAjToBNGDBdr1iZFA-9Ri_a4tF40448yPTbU4w@mail.gmail.com>
-Subject: Re: [PATCH] mm: security: introduce CONFIG_INIT_HEAP_ALL
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Christopher Lameter <cl@linux.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Memory Management List <linux-mm@kvack.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <20190410195708.162185-1-joel@joelfernandes.org>
+To: "Joel Fernandes (Google)" <joel@joelfernandes.org>
+Cc: linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, rostedt@goodmis.org, mathieu.desnoyers@efficios.com, rcu@vger.kernel.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 16, 2019 at 6:30 PM Christopher Lameter <cl@linux.com> wrote:
++++ Joel Fernandes (Google) [10/04/19 15:57 -0400]:
+>For the purposes of hardening modules by adding sections to
+>ro_after_init sections, prepare for addition of new ro_after_init
+>entries which we do in future patches. Create a table to which new
+>entries could be added later. This makes it less error prone and reduce
+>code duplication.
 >
-> On Tue, 16 Apr 2019, Alexander Potapenko wrote:
+>Cc: paulmck@linux.vnet.ibm.com
+>Cc: rostedt@goodmis.org
+>Cc: mathieu.desnoyers@efficios.com
+>Cc: rcu@vger.kernel.org
+>Cc: kernel-hardening@lists.openwall.com
+>Cc: kernel-team@android.com
+>Suggested-by: keescook@chromium.org
+>Reviewed-by: keescook@chromium.org
+>Acked-by: rostedt@goodmis.org
+>Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+
+Hi Joel!
+
+Thanks for the patchset! Apologies for the late reply, I've returned
+from vacation this week and am catching up on the previous threads..
+
+And if I'm all caught up now, it looks like the plan now is to drop
+this patchset in favor of just marking the srcu pointer array const,
+is that correct? That should put it in a rodata section (ie., a
+section without SHF_WRITE) and the module loader will mark it RO
+appropriately after relocations are applied, so it really doesn't have
+to be a ro_after_init section then if I'm understanding correctly.
+
+Jessica
+
+>---
+> kernel/module.c | 41 +++++++++++++++++++++++------------------
+> 1 file changed, 23 insertions(+), 18 deletions(-)
 >
-> > > Hmmm... But we already have debugging options that poison objects and
-> > > pages?
-> > Laura Abbott mentioned in one of the previous threads
-> > (https://marc.info/?l=3Dkernel-hardening&m=3D155474181528491&w=3D2) tha=
-t:
-> >
-> > """
-> > I've looked at doing something similar in the past (failing to find
-> > the thread this morning...) and while this will work, it has pretty
-> > serious performance issues. It's not actually the poisoning which
-> > is expensive but that turning on debugging removes the cpu slab
-> > which has significant performance penalties.
+>diff --git a/kernel/module.c b/kernel/module.c
+>index 524da609c884..42e4e289d6c7 100644
+>--- a/kernel/module.c
+>+++ b/kernel/module.c
+>@@ -3300,11 +3300,27 @@ static bool blacklisted(const char *module_name)
+> }
+> core_param(module_blacklist, module_blacklist, charp, 0400);
 >
-> Ok you could rework that logic to be able to keep the per cpu slabs?
-I'll look into that. There's a lot going on with checking those
-poisoned bytes, although we don't need that for hardening.
-
-What do you think about the proposed approach to page initialization?
-We could separate that part from slab poisoning.
-
-> Also if you do the zeroing then you need to do it in the hotpath. And thi=
-s
-> patch introduces new instructions to that hotpath for checking and
-> executing the zeroing.
-Right now the patch doesn't slow down the default case when
-CONFIG_INIT_HEAP_ALL=3Dn, as GFP_INIT_ALWAYS_ON is 0.
-In the case heap initialization is enabled we could probably omit the
-gfp_flags check, as it'll be always zero in the case there's a
-constructor or RCU flag is set.
-So we'll have two branches instead of one in the case CONFIG_INIT_HEAP_ALL=
-=3Dy.
-
-
-
---=20
-Alexander Potapenko
-Software Engineer
-
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
-
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+>+/*
+>+ * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
+>+ * layout_sections() can put it in the right place.
+>+ * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
+>+ */
+>+static const char * const ro_after_init_sections[] = {
+>+	".data..ro_after_init",
+>+
+>+	/*
+>+	 * __jump_table structures are never modified, with the exception of
+>+	 * entries that refer to code in the __init section, which are
+>+	 * annotated as such at module load time.
+>+	 */
+>+	"__jump_table",
+>+};
+>+
+> static struct module *layout_and_allocate(struct load_info *info, int flags)
+> {
+> 	struct module *mod;
+> 	unsigned int ndx;
+>-	int err;
+>+	int err, i;
+>
+> 	err = check_modinfo(info->mod, info, flags);
+> 	if (err)
+>@@ -3319,23 +3335,12 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
+> 	/* We will do a special allocation for per-cpu sections later. */
+> 	info->sechdrs[info->index.pcpu].sh_flags &= ~(unsigned long)SHF_ALLOC;
+>
+>-	/*
+>-	 * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
+>-	 * layout_sections() can put it in the right place.
+>-	 * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
+>-	 */
+>-	ndx = find_sec(info, ".data..ro_after_init");
+>-	if (ndx)
+>-		info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
+>-	/*
+>-	 * Mark the __jump_table section as ro_after_init as well: these data
+>-	 * structures are never modified, with the exception of entries that
+>-	 * refer to code in the __init section, which are annotated as such
+>-	 * at module load time.
+>-	 */
+>-	ndx = find_sec(info, "__jump_table");
+>-	if (ndx)
+>-		info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
+>+	/* Set sh_flags for read-only after init sections */
+>+	for (i = 0; i < ARRAY_SIZE(ro_after_init_sections); i++) {
+>+		ndx = find_sec(info, ro_after_init_sections[i]);
+>+		if (ndx)
+>+			info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
+>+	}
+>
+> 	/* Determine total sizes, and put offsets in sh_entsize.  For now
+> 	   this is done generically; there doesn't appear to be any
+>-- 
+>2.21.0.392.gf8f6787159e-goog
+>
