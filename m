@@ -1,65 +1,109 @@
-Date: Wed, 17 Apr 2019 08:36:24 -0700
-From: "Paul E. McKenney" <paulmck@linux.ibm.com>
-Subject: Re: [PATCH v3 3/3] module: Make __tracepoints_ptrs as read-only
-References: <20190410195708.162185-1-joel@joelfernandes.org>
- <20190410195708.162185-3-joel@joelfernandes.org>
- <20190410161112.540017d9@gandalf.local.home>
- <20190410202902.GA167446@google.com>
- <20190410204401.62f928ca@gandalf.local.home>
- <20190417151618.GD17099@linux-8ccs>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190417151618.GD17099@linux-8ccs>
-Message-Id: <20190417153624.GI14111@linux.ibm.com>
-To: Jessica Yu <jeyu@kernel.org>
-Cc: Steven Rostedt <rostedt@goodmis.org>, Joel Fernandes <joel@joelfernandes.org>, linux-kernel@vger.kernel.org, keescook@chromium.org, mathieu.desnoyers@efficios.com, kernel-hardening@lists.openwall.com, kernel-team@android.com, rcu@vger.kernel.org
+References: <20190412124501.132678-1-glider@google.com> <0100016a26c711be-b99971ca-49f5-482c-9028-962ee471f733-000000@email.amazonses.com>
+ <CAG_fn=U6aWfBXdkcWs0_1pqggAC16Yg8Q6rxLiVeiO83q1hOCw@mail.gmail.com>
+ <0100016a26fc7605-a9c76ac4-387c-47a3-8c53-a8d208eb0925-000000@email.amazonses.com>
+ <CAG_fn=XW=-=SiAjToBNGDBdr1iZFA-9Ri_a4tF40448yPTbU4w@mail.gmail.com>
+In-Reply-To: <CAG_fn=XW=-=SiAjToBNGDBdr1iZFA-9Ri_a4tF40448yPTbU4w@mail.gmail.com>
+From: Alexander Potapenko <glider@google.com>
+Date: Wed, 17 Apr 2019 19:04:33 +0200
+Message-ID: <CAG_fn=UMww4b8+NuBZ82pq4DS19tQx=h_3E6C2s3fkLLGD7fMg@mail.gmail.com>
+Subject: Re: [PATCH] mm: security: introduce CONFIG_INIT_HEAP_ALL
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Christopher Lameter <cl@linux.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Memory Management List <linux-mm@kvack.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 17, 2019 at 05:16:18PM +0200, Jessica Yu wrote:
-> +++ Steven Rostedt [10/04/19 20:44 -0400]:
-> >On Wed, 10 Apr 2019 16:29:02 -0400
-> >Joel Fernandes <joel@joelfernandes.org> wrote:
+On Wed, Apr 17, 2019 at 1:03 PM Alexander Potapenko <glider@google.com> wro=
+te:
+>
+> On Tue, Apr 16, 2019 at 6:30 PM Christopher Lameter <cl@linux.com> wrote:
 > >
-> >>The srcu structure pointer array is modified at module load time because the
-> >>array is fixed up by the module loader at load-time with the final locations
-> >>of the tracepoints right?  Basically relocation fixups. At compile time, I
-> >>believe it is not know what the values in the ptr array are. I believe same
-> >>is true for the tracepoint ptrs array.
-> >>
-> >>Also it needs to be in a separate __tracepoint_ptrs so that this code works:
-> >>
-> >>
-> >>#ifdef CONFIG_TRACEPOINTS
-> >>	mod->tracepoints_ptrs = section_objs(info, "__tracepoints_ptrs",
-> >>					     sizeof(*mod->tracepoints_ptrs),
-> >>					     &mod->num_tracepoints);
-> >>#endif
-> >>
-> >>Did I  miss some point? Thanks,
+> > On Tue, 16 Apr 2019, Alexander Potapenko wrote:
 > >
-> >But there's a lot of others too. Hmm, does this mean that the RO data
-> >sections that are in modules are not set to RO?
+> > > > Hmmm... But we already have debugging options that poison objects a=
+nd
+> > > > pages?
+> > > Laura Abbott mentioned in one of the previous threads
+> > > (https://marc.info/?l=3Dkernel-hardening&m=3D155474181528491&w=3D2) t=
+hat:
+> > >
+> > > """
+> > > I've looked at doing something similar in the past (failing to find
+> > > the thread this morning...) and while this will work, it has pretty
+> > > serious performance issues. It's not actually the poisoning which
+> > > is expensive but that turning on debugging removes the cpu slab
+> > > which has significant performance penalties.
 > >
-> >There's a bunch of separate sections that are RO. Just look in
-> >include/asm-generic/vmlinux.lds.h under the RO_DATA_SECTION() macro.
-> >
-> >A lot of the sections saved in module.c:find_module_sections() are in
-> >that RO_DATA when compiled as a builtin. Are they not RO when loaded via
-> >a module?
-> 
-> Unlike the kernel, the module loader does not rely on a linker script
-> to determine which sections get what protections. On module load, all
-> sections in a module are looped through and those sections without the
-> SHF_WRITE flag will be set to RO. For example, when there is a section
-> filled with structs declared as const or if the section was explicitly
-> given only the SHF_ALLOC attribute, those will be read-only. As long
-> as the sections were given the correct section attributes for
-> read-only, it'll have read-only protection. I see this is already the
-> case for __param and  __ksymtab*/__kcrctab* sections, but I agree that
-> a full audit would be useful to be consistent with builtin RO
-> protections.
+> > Ok you could rework that logic to be able to keep the per cpu slabs?
+> I'll look into that. There's a lot going on with checking those
+> poisoned bytes, although we don't need that for hardening.
+>
+> What do you think about the proposed approach to page initialization?
+> We could separate that part from slab poisoning.
+>
+> > Also if you do the zeroing then you need to do it in the hotpath. And t=
+his
+> > patch introduces new instructions to that hotpath for checking and
+> > executing the zeroing.
+> Right now the patch doesn't slow down the default case when
+> CONFIG_INIT_HEAP_ALL=3Dn, as GFP_INIT_ALWAYS_ON is 0.
+> In the case heap initialization is enabled we could probably omit the
+> gfp_flags check, as it'll be always zero in the case there's a
+> constructor or RCU flag is set.
+> So we'll have two branches instead of one in the case CONFIG_INIT_HEAP_AL=
+L=3Dy.
+>
+Ok, I think we could do the same without extra branches.
+Right now I'm working on a patch that uses static branches in the
+function that checks GFP flags:
 
-Thank you very much for the explanation!
+static inline bool want_init_memory(gfp_t flags)
+{
+        if (static_branch_unlikely(&init_allocations))
+                return true;
+        return flags & __GFP_ZERO;
+}
 
-							Thanx, Paul
+and does the following in slab_alloc_node():
+
+        if (unlikely(want_init_memory(gfpflags)) && object)
+                s->poison_fn(s, object);
+, where s->poison_fn is either memset(object, 0, s->object_size) for
+normal SLAB caches or a no-op for SLAB caches that have ctors
+(I _think_ I don't have to special-case SLAB_TYPESAFE_BY_RCU).
+
+With init_allocations disabled this doesn't affect the kernel
+performance (hackbench shows negative slowdown within the standard
+deviation). Most certainly the indirect call is performed not too
+often.
+With init_allocations enabled this yields ~7% slowdown on hackbench. I
+believe most of that is caused by double initialization, which we can
+eliminate by passing an extra GFP flag to the page allocator.
+
+>
+> --
+> Alexander Potapenko
+> Software Engineer
+>
+> Google Germany GmbH
+> Erika-Mann-Stra=C3=9Fe, 33
+> 80636 M=C3=BCnchen
+>
+> Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
+> Registergericht und -nummer: Hamburg, HRB 86891
+> Sitz der Gesellschaft: Hamburg
+
+
+
+--=20
+Alexander Potapenko
+Software Engineer
+
+Google Germany GmbH
+Erika-Mann-Stra=C3=9Fe, 33
+80636 M=C3=BCnchen
+
+Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
+Registergericht und -nummer: Hamburg, HRB 86891
+Sitz der Gesellschaft: Hamburg
