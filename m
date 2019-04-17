@@ -1,105 +1,63 @@
-Subject: Re: [RFC PATCH v1 1/5] fs: Add support for an O_MAYEXEC flag on
- sys_open()
-References: <20181212081712.32347-1-mic@digikod.net> <3452959.b6JmBh7Lnt@x2>
- <87wojuxj8s.fsf@oldenburg2.str.redhat.com> <2361288.r9sZr2NHLB@x2>
- <875zrd7xy8.fsf@oldenburg2.str.redhat.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
-Message-ID: <7da3a491-232a-5a02-63a2-65aa9df413ea@ssi.gouv.fr>
-Date: Wed, 17 Apr 2019 17:04:41 +0200
+Date: Wed, 17 Apr 2019 17:16:18 +0200
+From: Jessica Yu <jeyu@kernel.org>
+Subject: Re: [PATCH v3 3/3] module: Make __tracepoints_ptrs as read-only
+Message-ID: <20190417151618.GD17099@linux-8ccs>
+References: <20190410195708.162185-1-joel@joelfernandes.org>
+ <20190410195708.162185-3-joel@joelfernandes.org>
+ <20190410161112.540017d9@gandalf.local.home>
+ <20190410202902.GA167446@google.com>
+ <20190410204401.62f928ca@gandalf.local.home>
 MIME-Version: 1.0
-In-Reply-To: <875zrd7xy8.fsf@oldenburg2.str.redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: quoted-printable
-To: Florian Weimer <fweimer@redhat.com>, Steve Grubb <sgrubb@redhat.com>
-Cc: Jan Kara <jack@suse.cz>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, linux-kernel@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>, =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Matthew Bobrowski <mbobrowski@mbobrowski.org>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <20190410204401.62f928ca@gandalf.local.home>
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: Joel Fernandes <joel@joelfernandes.org>, linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, keescook@chromium.org, mathieu.desnoyers@efficios.com, kernel-hardening@lists.openwall.com, kernel-team@android.com, rcu@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-On 17/04/2019 12:01, Florian Weimer wrote:
-> * Steve Grubb:
++++ Steven Rostedt [10/04/19 20:44 -0400]:
+>On Wed, 10 Apr 2019 16:29:02 -0400
+>Joel Fernandes <joel@joelfernandes.org> wrote:
 >
->> On Tuesday, April 16, 2019 7:49:39 AM EDT Florian Weimer wrote:
->>> * Steve Grubb:
->>>> This flag that is being proposed means that you would have to patch al=
-l
->>>> interpreters to use it. If you are sure that upstreams will accept tha=
-t,
->>>> why not just change the policy to interpreters shouldn't execute
->>>> anything unless the execute bit is set? That is simpler and doesn't ne=
-ed
->>>> a kernel change. And setting the execute bit is an auditable event.
->>>
->>> I think we need something like O_MAYEXEC so that security policies can
->>> be enforced and noexec mounts can be detected.
+>> The srcu structure pointer array is modified at module load time because the
+>> array is fixed up by the module loader at load-time with the final locations
+>> of the tracepoints right?  Basically relocation fixups. At compile time, I
+>> believe it is not know what the values in the ptr array are. I believe same
+>> is true for the tracepoint ptrs array.
 >>
->> Application whitelisting can already today stop unknown software without
->> needing O_MAYEXEC.
-
-Whitelisting may be a lot of thing (path/TPE, signed binaries=E2=80=A6), bu=
-t
-being able to handle this with a global system configuration (instead of
-app-specific hardcoded configuration) is a good idea. ;)
-
+>> Also it needs to be in a separate __tracepoint_ptrs so that this code works:
+>>
+>>
+>> #ifdef CONFIG_TRACEPOINTS
+>> 	mod->tracepoints_ptrs = section_objs(info, "__tracepoints_ptrs",
+>> 					     sizeof(*mod->tracepoints_ptrs),
+>> 					     &mod->num_tracepoints);
+>> #endif
+>>
+>> Did I  miss some point? Thanks,
 >
-> I'm somewhat interested in using this to add a proper check for
-> executability to explicit dynamic loader invocations.  In other words,
-> this
+>But there's a lot of others too. Hmm, does this mean that the RO data
+>sections that are in modules are not set to RO?
 >
->   /lib64/ld-linux-x86-64.so.2 /path/to/noexec/fs/program
+>There's a bunch of separate sections that are RO. Just look in
+>include/asm-generic/vmlinux.lds.h under the RO_DATA_SECTION() macro.
 >
-> should refuse to run the program if the program is located on a file
-> system mounted with the noexec attribute.
+>A lot of the sections saved in module.c:find_module_sections() are in
+>that RO_DATA when compiled as a builtin. Are they not RO when loaded via
+>a module?
 
-What if a sysadmin need to do this on an executable mount point? Being
-able to enforce a security policy according to a configuration may fit
-to much more use cases.
+Unlike the kernel, the module loader does not rely on a linker script
+to determine which sections get what protections. On module load, all
+sections in a module are looped through and those sections without the
+SHF_WRITE flag will be set to RO. For example, when there is a section
+filled with structs declared as const or if the section was explicitly
+given only the SHF_ALLOC attribute, those will be read-only. As long
+as the sections were given the correct section attributes for
+read-only, it'll have read-only protection. I see this is already the
+case for __param and  __ksymtab*/__kcrctab* sections, but I agree that
+a full audit would be useful to be consistent with builtin RO
+protections.
 
->
->> The problem is that passing O_MAYEXEC is opt-in. You can use ptrace/secc=
-omp/
->> bpf/LD_PRELOAD/LD_AUDIT to remove that bit from an otherwise normal prog=
-ram.
->> This does not require privs to do so.
->
-> That doesn't really help with the above.
+Hope that helps,
 
-Right, ptrace/LD_PRELOAD and so on must be addressed by something else
-than only O_MAYEXEC.
-
->
->> But let's consider that this comes to pass and every interpreter is
->> updated and IMA can see the O_MAYEXEC flag. Attackers now simply pivot
->> to running programs via stdin. It never touches disk and therefore
->> nothing enforces security policy. This already is among the most
->> common ways that malware runs today to evade detection.
-
-As my previous reply, use cases like stdin may be restricted as well.
-
->
-> Are you referring to Windows malware using Powershell?
->
-> I'm not sure this is applicable to Linux.  We do not have much
-> behavioral monitoring anyway.
->
-> Thanks,
-> Florian
->
-
---
-Micka=C3=ABl Sala=C3=BCn
-ANSSI/SDE/ST/LAM
-
-Les donn=C3=A9es =C3=A0 caract=C3=A8re personnel recueillies et trait=C3=A9=
-es dans le cadre de cet =C3=A9change, le sont =C3=A0 seule fin d=E2=80=99ex=
-=C3=A9cution d=E2=80=99une relation professionnelle et s=E2=80=99op=C3=A8re=
-nt dans cette seule finalit=C3=A9 et pour la dur=C3=A9e n=C3=A9cessaire =C3=
-=A0 cette relation. Si vous souhaitez faire usage de vos droits de consulta=
-tion, de rectification et de suppression de vos donn=C3=A9es, veuillez cont=
-acter contact.rgpd@sgdsn.gouv.fr. Si vous avez re=C3=A7u ce message par err=
-eur, nous vous remercions d=E2=80=99en informer l=E2=80=99exp=C3=A9diteur e=
-t de d=C3=A9truire le message. The personal data collected and processed du=
-ring this exchange aims solely at completing a business relationship and is=
- limited to the necessary duration of that relationship. If you wish to use=
- your rights of consultation, rectification and deletion of your data, plea=
-se contact: contact.rgpd@sgdsn.gouv.fr. If you have received this message i=
-n error, we thank you for informing the sender and destroying the message.
+Jessica
