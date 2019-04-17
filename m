@@ -1,116 +1,86 @@
-Date: Wed, 17 Apr 2019 15:29:29 +0200
-From: Jessica Yu <jeyu@kernel.org>
-Subject: Re: [PATCH v3 1/3] module: Prepare for addition of new ro_after_init
- sections
-Message-ID: <20190417132929.GC17099@linux-8ccs>
-References: <20190410195708.162185-1-joel@joelfernandes.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii; format=flowed
-Content-Disposition: inline
-In-Reply-To: <20190410195708.162185-1-joel@joelfernandes.org>
-To: "Joel Fernandes (Google)" <joel@joelfernandes.org>
-Cc: linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, rostedt@goodmis.org, mathieu.desnoyers@efficios.com, rcu@vger.kernel.org, kernel-hardening@lists.openwall.com, kernel-team@android.com, keescook@chromium.org
+References: <CAOfkYf7di0vusjs-woyqgUD3GGLAuP2drir=Td=3+TuE2sKvvA@mail.gmail.com>
+ <CAGXu5jLSW==S9TL28Z7x-=3PCRVXXkxi4ce5YDu+X8nHfb71eQ@mail.gmail.com>
+ <CAOfkYf4G_zV9v+GT4i=W+Zkkq32oPKFXH3E8kmMuDVS84r+AAQ@mail.gmail.com>
+ <CAGXu5jJJbnhUMovTaG_U=vJijEWuWkM1dMoh6Mm4gUmN4Ua_Dg@mail.gmail.com>
+ <CAOfkYf4SiLvReac4H0-w1nZLwXQqZD8xAbN_dffzppcmH3S2Gg@mail.gmail.com> <CAGXu5jLSLFNypH-JxmdWXKXawC74oTjzzfX_Qn5Gix2oNawQSA@mail.gmail.com>
+In-Reply-To: <CAGXu5jLSLFNypH-JxmdWXKXawC74oTjzzfX_Qn5Gix2oNawQSA@mail.gmail.com>
+From: Shyam Saini <mayhs11saini@gmail.com>
+Date: Wed, 17 Apr 2019 19:51:51 +0530
+Message-ID: <CAOfkYf4O7QROpwpyQ7Pyoe7+TtOQFzQhF5b3uhvSd2xDTYVGJg@mail.gmail.com>
+Subject: Re: willing to involve in KSPP
+Content-Type: multipart/alternative; boundary="0000000000001d569a0586ba9c54"
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-+++ Joel Fernandes (Google) [10/04/19 15:57 -0400]:
->For the purposes of hardening modules by adding sections to
->ro_after_init sections, prepare for addition of new ro_after_init
->entries which we do in future patches. Create a table to which new
->entries could be added later. This makes it less error prone and reduce
->code duplication.
->
->Cc: paulmck@linux.vnet.ibm.com
->Cc: rostedt@goodmis.org
->Cc: mathieu.desnoyers@efficios.com
->Cc: rcu@vger.kernel.org
->Cc: kernel-hardening@lists.openwall.com
->Cc: kernel-team@android.com
->Suggested-by: keescook@chromium.org
->Reviewed-by: keescook@chromium.org
->Acked-by: rostedt@goodmis.org
->Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+--0000000000001d569a0586ba9c54
+Content-Type: text/plain; charset="UTF-8"
 
-Hi Joel!
+> On Mon, Apr 15, 2019 at 10:44 PM Shyam Saini <mayhs11saini@gmail.com>
+wrote:
+> > As you may already know that I've submitted the patch as per your
+> > suggestion but I'm still not
+>
+> Thanks, i saw that! I'm hoping akpm will take it.
 
-Thanks for the patchset! Apologies for the late reply, I've returned
-from vacation this week and am catching up on the previous threads..
+Would you please acknowledge these patches ?
 
-And if I'm all caught up now, it looks like the plan now is to drop
-this patchset in favor of just marking the srcu pointer array const,
-is that correct? That should put it in a rodata section (ie., a
-section without SHF_WRITE) and the module loader will mark it RO
-appropriately after relocations are applied, so it really doesn't have
-to be a ro_after_init section then if I'm understanding correctly.
 
-Jessica
+> > sure how this FIELD macro uniformity in kernel is related to security.
+> > Is there any future plans
+> > based on this cleanup ?  Please excuse my lack of knowledge on the
+subject.
+>
+> It was noticed while doing the HARDENED_USERCOPY work, and was a small
+> task that I wrote down at the time. It's more "related" to security
+> than actually making a security change.
 
->---
-> kernel/module.c | 41 +++++++++++++++++++++++------------------
-> 1 file changed, 23 insertions(+), 18 deletions(-)
->
->diff --git a/kernel/module.c b/kernel/module.c
->index 524da609c884..42e4e289d6c7 100644
->--- a/kernel/module.c
->+++ b/kernel/module.c
->@@ -3300,11 +3300,27 @@ static bool blacklisted(const char *module_name)
-> }
-> core_param(module_blacklist, module_blacklist, charp, 0400);
->
->+/*
->+ * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
->+ * layout_sections() can put it in the right place.
->+ * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
->+ */
->+static const char * const ro_after_init_sections[] = {
->+	".data..ro_after_init",
->+
->+	/*
->+	 * __jump_table structures are never modified, with the exception of
->+	 * entries that refer to code in the __init section, which are
->+	 * annotated as such at module load time.
->+	 */
->+	"__jump_table",
->+};
->+
-> static struct module *layout_and_allocate(struct load_info *info, int flags)
-> {
-> 	struct module *mod;
-> 	unsigned int ndx;
->-	int err;
->+	int err, i;
->
-> 	err = check_modinfo(info->mod, info, flags);
-> 	if (err)
->@@ -3319,23 +3335,12 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
-> 	/* We will do a special allocation for per-cpu sections later. */
-> 	info->sechdrs[info->index.pcpu].sh_flags &= ~(unsigned long)SHF_ALLOC;
->
->-	/*
->-	 * Mark ro_after_init section with SHF_RO_AFTER_INIT so that
->-	 * layout_sections() can put it in the right place.
->-	 * Note: ro_after_init sections also have SHF_{WRITE,ALLOC} set.
->-	 */
->-	ndx = find_sec(info, ".data..ro_after_init");
->-	if (ndx)
->-		info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
->-	/*
->-	 * Mark the __jump_table section as ro_after_init as well: these data
->-	 * structures are never modified, with the exception of entries that
->-	 * refer to code in the __init section, which are annotated as such
->-	 * at module load time.
->-	 */
->-	ndx = find_sec(info, "__jump_table");
->-	if (ndx)
->-		info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
->+	/* Set sh_flags for read-only after init sections */
->+	for (i = 0; i < ARRAY_SIZE(ro_after_init_sections); i++) {
->+		ndx = find_sec(info, ro_after_init_sections[i]);
->+		if (ndx)
->+			info->sechdrs[ndx].sh_flags |= SHF_RO_AFTER_INIT;
->+	}
->
-> 	/* Determine total sizes, and put offsets in sh_entsize.  For now
-> 	   this is done generically; there doesn't appear to be any
->-- 
->2.21.0.392.gf8f6787159e-goog
->
+Thanks for this info.
+
+Could you please suggest me series of more tasks so that I don't have to
+bother you
+each and every time for new task. :-)
+
+
+Thanks a lot,
+Shyam
+
+--0000000000001d569a0586ba9c54
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div dir=3D"auto"><br>
+&gt; On Mon, Apr 15, 2019 at 10:44 PM Shyam Saini &lt;<a href=3D"mailto:may=
+hs11saini@gmail.com" rel=3D"noreferrer" target=3D"_blank">mayhs11saini@gmai=
+l.com</a>&gt; wrote:<br>
+&gt; &gt; As you may already know that I&#39;ve submitted the patch as per =
+your<br>
+&gt; &gt; suggestion but I&#39;m still not<br>
+&gt;<br>
+&gt; Thanks, i saw that! I&#39;m hoping akpm will take it.<br>
+<br>
+Would you please acknowledge these patches ?<div dir=3D"auto"><br></div><di=
+v dir=3D"auto">
+<br>
+&gt; &gt; sure how this FIELD macro uniformity in kernel is related to secu=
+rity.<br>
+&gt; &gt; Is there any future plans<br>
+&gt; &gt; based on this cleanup ?=C2=A0 Please excuse my lack of knowledge =
+on the subject.<br>
+&gt;<br>
+&gt; It was noticed while doing the HARDENED_USERCOPY work, and was a small=
+<br>
+&gt; task that I wrote down at the time. It&#39;s more &quot;related&quot; =
+to security<br>
+&gt; than actually making a security change.<br>
+<br>Thanks for this info.<br><div dir=3D"auto"><br></div><div dir=3D"auto">=
+Could you please suggest me series of more tasks so that I don&#39;t have t=
+o bother you</div><div dir=3D"auto">each and every time for new task. :-)</=
+div><div dir=3D"auto"><br></div><div dir=3D"auto"><br></div><div dir=3D"aut=
+o">Thanks a lot,</div><div dir=3D"auto">Shyam</div><div dir=3D"auto"><br></=
+div><div dir=3D"auto"><div dir=3D"auto"><br></div><div dir=3D"auto"><br></d=
+iv></div></div></div>
+</div>
+
+--0000000000001d569a0586ba9c54--
