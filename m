@@ -1,129 +1,73 @@
 MIME-Version: 1.0
-References: <20190308132701.133598-1-glider@google.com> <20190308132701.133598-3-glider@google.com>
- <497b1201-b2ae-5e0c-d191-ff1830d92fc1@redhat.com>
-In-Reply-To: <497b1201-b2ae-5e0c-d191-ff1830d92fc1@redhat.com>
-From: Alexander Potapenko <glider@google.com>
-Date: Thu, 18 Apr 2019 15:02:46 +0200
-Message-ID: <CAG_fn=WhBxSLkD3BdTP3Z72B7mGkegezwkjyMjmY7oVjb+kVWw@mail.gmail.com>
-Subject: Re: [PATCH v2 2/2] initmem: introduce CONFIG_INIT_ALL_HEAP
+References: <1462963502-11636-1-git-send-email-hecmargi@upv.es>
+ <CAGXu5jLZ-DgTfokLTqUHOUphO4C1FwHgYDLTA1oB9HBHnH-a1Q@mail.gmail.com> <alpine.DEB.2.21.1904181015270.3174@nanos.tec.linutronix.de>
+In-Reply-To: <alpine.DEB.2.21.1904181015270.3174@nanos.tec.linutronix.de>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 18 Apr 2019 09:11:15 -0500
+Message-ID: <CAGXu5jK+-eVzhxTB418b1BCqFw5oVpdDhmCqE2Gn2_rFTf2E1A@mail.gmail.com>
+Subject: Re: [PATCH] x86_64: Disabling read-implies-exec when the stack is executable
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Laura Abbott <labbott@redhat.com>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: Hector Marco-Gisbert <hecmargi@upv.es>, LKML <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, X86 ML <x86@kernel.org>, Brian Gerst <brgerst@gmail.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Huaitong Han <huaitong.han@intel.com>, Ismael Ripoll Ripoll <iripoll@upv.es>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Jason Gunthorpe <jgg@mellanox.com>, Andi Kleen <ak@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 8, 2019 at 6:43 PM Laura Abbott <labbott@redhat.com> wrote:
+On Thu, Apr 18, 2019 at 3:17 AM Thomas Gleixner <tglx@linutronix.de> wrote:
 >
-> On 3/8/19 5:27 AM, Alexander Potapenko wrote:
-> > This config option enables CONFIG_SLUB_DEBUG and CONFIG_PAGE_POISONING
-> > without the need to pass any boot parameters.
+> On Thu, 18 Apr 2019, Kees Cook wrote:
+> > On Wed, May 11, 2016 at 5:45 AM Hector Marco-Gisbert <hecmargi@upv.es> wrote:
+> > *thread necromancy*
 > >
-> > No performance optimizations are done at the moment to reduce double
-> > initialization of memory regions.
+> > I'd still like to see this get landed. READ_IMPLIES_EXEC is way too
+> > powerful (it impacts, for example, mmap() regions of device driver
+> > memory, forcing drivers to not be able to disallow VM_EXEC[1]).
 > >
-> > Signed-off-by: Alexander Potapenko <glider@google.com>
-> > Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
-> > Cc: James Morris <jmorris@namei.org>
-> > Cc: "Serge E. Hallyn" <serge@hallyn.com>
-> > Cc: Nick Desaulniers <ndesaulniers@google.com>
-> > Cc: Kostya Serebryany <kcc@google.com>
-> > Cc: Dmitry Vyukov <dvyukov@google.com>
-> > Cc: Kees Cook <keescook@chromium.org>
-> > Cc: Sandeep Patil <sspatil@android.com>
-> > Cc: linux-security-module@vger.kernel.org
-> > Cc: linux-kbuild@vger.kernel.org
-> > Cc: kernel-hardening@lists.openwall.com
-> > ---
-> >   mm/page_poison.c         |  5 +++++
-> >   mm/slub.c                |  2 ++
-> >   security/Kconfig.initmem | 11 +++++++++++
-> >   3 files changed, 18 insertions(+)
+> > The only case it could break is on an AMD K8 (Athlon only, I assume?),
+> > which seems unlikely to have a modern kernel run on it. If there is
+> > still concern, then we could just test against the NX CPU feature:
 > >
-> > diff --git a/mm/page_poison.c b/mm/page_poison.c
-> > index 21d4f97cb49b..a1985f33f635 100644
-> > --- a/mm/page_poison.c
-> > +++ b/mm/page_poison.c
-> > @@ -12,9 +12,14 @@ static bool want_page_poisoning __read_mostly;
+> > diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
+> > index 69c0f892e310..367cd36259a4 100644
+> > --- a/arch/x86/include/asm/elf.h
+> > +++ b/arch/x86/include/asm/elf.h
+> > @@ -280,10 +280,12 @@ extern u32 elf_hwcap2;
 > >
-> >   static int __init early_page_poison_param(char *buf)
-> >   {
-> > +#ifdef CONFIG_INIT_ALL_HEAP
-> > +     want_page_poisoning =3D true;
-> > +     return 0;
-> > +#else
-> >       if (!buf)
-> >               return -EINVAL;
-> >       return strtobool(buf, &want_page_poisoning);
-> > +#endif
-> >   }
-> >   early_param("page_poison", early_page_poison_param);
-> >
-> > diff --git a/mm/slub.c b/mm/slub.c
-> > index 1b08fbcb7e61..00e0197d3f35 100644
-> > --- a/mm/slub.c
-> > +++ b/mm/slub.c
-> > @@ -1287,6 +1287,8 @@ static int __init setup_slub_debug(char *str)
-> >       if (*str =3D=3D ',')
-> >               slub_debug_slabs =3D str + 1;
-> >   out:
-> > +     if (IS_ENABLED(CONFIG_INIT_ALL_HEAP))
-> > +             slub_debug |=3D SLAB_POISON;
-> >       return 1;
-> >   }
-> >
+> >  /*
+> >   * An executable for which elf_read_implies_exec() returns TRUE will
+> > - * have the READ_IMPLIES_EXEC personality flag set automatically.
+> > + * have the READ_IMPLIES_EXEC personality flag set automatically when
+> > + * a CPU did not support NX or is using a 32-bit memory layout.
+> >   */
+> > -#define elf_read_implies_exec(ex, executable_stack)    \
+> > -       (executable_stack != EXSTACK_DISABLE_X)
+> > +#define elf_read_implies_exec(ex, executable_stack)            \
+> > +       (mmap_is_ia32() || !(__supported_pte_mask & _PAGE_NX) ? \
 >
-> I've looked at doing something similar in the past (failing to find
-> the thread this morning...) and while this will work, it has pretty
-> serious performance issues. It's not actually the poisoning which
-> is expensive but that turning on debugging removes the cpu slab
-> which has significant performance penalties.
->
-> I'd rather go back to the proposal of just poisoning the slab
-> at alloc/free without using SLAB_POISON.
-Hi Laura,
+> What's special about ia32? All what matters is whether PAGE_NX is supported
+> or not. That has nothing to do with 32/64bit unless I'm missing something
+> (as usual).
 
-May I wonder what were the performance numbers you were seeing?
-I've found this patch:
-https://www.openwall.com/lists/kernel-hardening/2016/01/26/1, but
-that's around 100% slowdown.
-> Thanks,
-> Laura
->
->
-> > diff --git a/security/Kconfig.initmem b/security/Kconfig.initmem
-> > index 27aec394365e..5ce49663777a 100644
-> > --- a/security/Kconfig.initmem
-> > +++ b/security/Kconfig.initmem
-> > @@ -13,6 +13,17 @@ config INIT_ALL_MEMORY
-> >
-> >   if INIT_ALL_MEMORY
-> >
-> > +config INIT_ALL_HEAP
-> > +     bool "Initialize all heap"
-> > +     depends on INIT_ALL_MEMORY
-> > +     select CONFIG_PAGE_POISONING
-> > +     select CONFIG_PAGE_POISONING_NO_SANITY
-> > +     select CONFIG_PAGE_POISONING_ZERO
-> > +     select CONFIG_SLUB_DEBUG
-> > +     default y
-> > +     help
-> > +       Enable page poisoning and slub poisoning by default.
-> > +
-> >   config INIT_ALL_STACK
-> >       bool "Initialize all stack"
-> >       depends on INIT_ALL_MEMORY
-> >
->
+I think the reasoning was that older toolchains from ia32 wouldn't
+provide any permissions marking at all, and this was a signal that it
+might need executable heaps as well as stack. So, since ia32 gained NX
+along the way, lacking the gnu-stack marking was a reasonable
+indicator that the ELF needed this crazy setting to effectively
+disable NX for the ELF.
+
+But yes, just looking at the NX feature should cover this.
+
+One thing I'd also like to adjust is the logic about the gnu-stack
+existing and requesting an executable stack should apply only to the
+stack, and not trigger READ_IMPLIES_EXEC. i.e. if the ELF has
+gnu-stack marking of any kind, it should never flag READ_IMPLIES_EXEC.
+It would, of course, continue to control the stack perms.
+
+And if this is wrong ... well, we'll find out how and we can more
+correctly document this. So how about:
+
+#define elf_read_implies_exec(ex, executable_stack)            \
+       (!(__supported_pte_mask & _PAGE_NX) &&  \
+        (executable_stack == EXSTACK_DEFAULT))
 
 
---=20
-Alexander Potapenko
-Software Engineer
-
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
-
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+-- 
+Kees Cook
