@@ -1,10 +1,12 @@
-Subject: Re: [PATCH 0/3] RFC: add init_allocations=1 boot option
+Subject: Re: [PATCH 1/3] mm: security: introduce the init_allocations=1 boot
+ option
 References: <20190418154208.131118-1-glider@google.com>
+ <20190418154208.131118-2-glider@google.com>
 From: Randy Dunlap <rdunlap@infradead.org>
-Message-ID: <79967fc5-fd7b-b16d-8ff7-0847396ff4f5@infradead.org>
-Date: Thu, 18 Apr 2019 15:07:36 -0700
+Message-ID: <ff1f408b-cf37-7df0-2393-7bc2078f6c63@infradead.org>
+Date: Thu, 18 Apr 2019 15:08:37 -0700
 MIME-Version: 1.0
-In-Reply-To: <20190418154208.131118-1-glider@google.com>
+In-Reply-To: <20190418154208.131118-2-glider@google.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
 To: Alexander Potapenko <glider@google.com>, akpm@linux-foundation.org, cl@linux.com, dvyukov@google.com, keescook@chromium.org, labbott@redhat.com
@@ -12,58 +14,63 @@ Cc: linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 4/18/19 8:42 AM, Alexander Potapenko wrote:
-> Following the recent discussions here's another take at initializing
-> pages and heap objects with zeroes. This is needed to prevent possible
-> information leaks and make the control-flow bugs that depend on
-> uninitialized values more deterministic.
+> This option adds the possibility to initialize newly allocated pages and
+> heap objects with zeroes. This is needed to prevent possible information
+> leaks and make the control-flow bugs that depend on uninitialized values
+> more deterministic.
 > 
-> The patchset introduces a new boot option, init_allocations, which
-> makes page allocator and SL[AOU]B initialize newly allocated memory.
-> init_allocations=0 doesn't (hopefully) add any overhead to the
-> allocation fast path (no noticeable slowdown on hackbench).
+> Initialization is done at allocation time at the places where checks for
+> __GFP_ZERO are performed. We don't initialize slab caches with
+> constructors to preserve their semantics. To reduce runtime costs of
+> checking cachep->ctor we replace a call to memset with a call to
+> cachep->poison_fn, which is only executed if the memory block needs to
+> be initialized.
 > 
-> With only the the first of the proposed patches the slowdown numbers are:
->  - 1.1% (stdev 0.2%) sys time slowdown building Linux kernel
->  - 3.1% (stdev 0.3%) sys time slowdown on af_inet_loopback benchmark
->  - 9.4% (stdev 0.5%) sys time slowdown on hackbench
+> For kernel testing purposes filling allocations with a nonzero pattern
+> would be more suitable, but may require platform-specific code. To have
+> a simple baseline we've decided to start with zero-initialization.
 > 
-> The second patch introduces a GFP flag that allows to disable
-> initialization for certain allocations. The third page is an example of
-
-                                              third patch
-
-> applying it to af_unix.c, which helps hackbench greatly.
+> No performance optimizations are done at the moment to reduce double
+> initialization of memory regions.
 > 
-> Slowdown numbers for the whole patchset are:
->  - 1.8% (stdev 0.8%) on kernel build
->  - 6.5% (stdev 0.2%) on af_inet_loopback
->  - 0.12% (stdev 0.6%) on hackbench
-> 
-> 
-> Alexander Potapenko (3):
->   mm: security: introduce the init_allocations=1 boot option
->   gfp: mm: introduce __GFP_NOINIT
->   net: apply __GFP_NOINIT to AF_UNIX sk_buff allocations
-> 
+> Signed-off-by: Alexander Potapenko <glider@google.com>
+> Cc: Andrew Morton <akpm@linux-foundation.org>
+> Cc: James Morris <jmorris@namei.org>
+> Cc: "Serge E. Hallyn" <serge@hallyn.com>
+> Cc: Nick Desaulniers <ndesaulniers@google.com>
+> Cc: Kostya Serebryany <kcc@google.com>
+> Cc: Dmitry Vyukov <dvyukov@google.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Sandeep Patil <sspatil@android.com>
+> Cc: Laura Abbott <labbott@redhat.com>
+> Cc: Randy Dunlap <rdunlap@infradead.org>
+> Cc: Jann Horn <jannh@google.com>
+> Cc: Mark Rutland <mark.rutland@arm.com>
+> Cc: Qian Cai <cai@lca.pw>
+> Cc: Vlastimil Babka <vbabka@suse.cz>
+> Cc: linux-mm@kvack.org
+> Cc: linux-security-module@vger.kernel.org
+> Cc: kernel-hardening@lists.openwall.com
+> ---
 >  drivers/infiniband/core/uverbs_ioctl.c |  2 +-
->  include/linux/gfp.h                    |  6 ++++-
->  include/linux/mm.h                     |  8 +++++++
+>  include/linux/mm.h                     |  8 ++++++++
 >  include/linux/slab_def.h               |  1 +
 >  include/linux/slub_def.h               |  1 +
->  include/net/sock.h                     |  5 +++++
->  kernel/kexec_core.c                    |  4 ++--
+>  kernel/kexec_core.c                    |  2 +-
 >  mm/dmapool.c                           |  2 +-
->  mm/page_alloc.c                        | 18 ++++++++++++++-
->  mm/slab.c                              | 14 ++++++------
+>  mm/page_alloc.c                        | 18 +++++++++++++++++-
+>  mm/slab.c                              | 12 ++++++------
 >  mm/slab.h                              |  1 +
->  mm/slab_common.c                       | 15 +++++++++++++
->  mm/slob.c                              |  3 ++-
->  mm/slub.c                              |  9 ++++----
->  net/core/sock.c                        | 31 +++++++++++++++++++++-----
->  net/unix/af_unix.c                     | 13 ++++++-----
->  16 files changed, 104 insertions(+), 29 deletions(-)
+>  mm/slab_common.c                       | 15 +++++++++++++++
+>  mm/slob.c                              |  2 +-
+>  mm/slub.c                              |  8 ++++----
+>  net/core/sock.c                        |  2 +-
+>  13 files changed, 58 insertions(+), 16 deletions(-)
 > 
 
+Hi,
+Please document init_allocations=N in Documentation/admin-guide/kernel-parameters.txt.
 
+thanks.
 -- 
 ~Randy
