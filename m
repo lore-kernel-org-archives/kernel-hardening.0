@@ -1,109 +1,124 @@
 MIME-Version: 1.0
-References: <20190412124501.132678-1-glider@google.com> <0100016a26c711be-b99971ca-49f5-482c-9028-962ee471f733-000000@email.amazonses.com>
- <CAG_fn=U6aWfBXdkcWs0_1pqggAC16Yg8Q6rxLiVeiO83q1hOCw@mail.gmail.com>
- <0100016a26fc7605-a9c76ac4-387c-47a3-8c53-a8d208eb0925-000000@email.amazonses.com>
- <CAG_fn=XW=-=SiAjToBNGDBdr1iZFA-9Ri_a4tF40448yPTbU4w@mail.gmail.com>
-In-Reply-To: <CAG_fn=XW=-=SiAjToBNGDBdr1iZFA-9Ri_a4tF40448yPTbU4w@mail.gmail.com>
-From: Alexander Potapenko <glider@google.com>
-Date: Wed, 17 Apr 2019 19:04:33 +0200
-Message-ID: <CAG_fn=UMww4b8+NuBZ82pq4DS19tQx=h_3E6C2s3fkLLGD7fMg@mail.gmail.com>
-Subject: Re: [PATCH] mm: security: introduce CONFIG_INIT_HEAP_ALL
+References: <1462963502-11636-1-git-send-email-hecmargi@upv.es>
+In-Reply-To: <1462963502-11636-1-git-send-email-hecmargi@upv.es>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 18 Apr 2019 02:45:22 -0500
+Message-ID: <CAGXu5jLZ-DgTfokLTqUHOUphO4C1FwHgYDLTA1oB9HBHnH-a1Q@mail.gmail.com>
+Subject: Re: [PATCH] x86_64: Disabling read-implies-exec when the stack is executable
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Christopher Lameter <cl@linux.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Memory Management List <linux-mm@kvack.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Hector Marco-Gisbert <hecmargi@upv.es>
+Cc: LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, X86 ML <x86@kernel.org>, Brian Gerst <brgerst@gmail.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Huaitong Han <huaitong.han@intel.com>, Ismael Ripoll Ripoll <iripoll@upv.es>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Jason Gunthorpe <jgg@mellanox.com>, Andi Kleen <ak@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 17, 2019 at 1:03 PM Alexander Potapenko <glider@google.com> wro=
-te:
+On Wed, May 11, 2016 at 5:45 AM Hector Marco-Gisbert <hecmargi@upv.es> wrote:
 >
-> On Tue, Apr 16, 2019 at 6:30 PM Christopher Lameter <cl@linux.com> wrote:
-> >
-> > On Tue, 16 Apr 2019, Alexander Potapenko wrote:
-> >
-> > > > Hmmm... But we already have debugging options that poison objects a=
-nd
-> > > > pages?
-> > > Laura Abbott mentioned in one of the previous threads
-> > > (https://marc.info/?l=3Dkernel-hardening&m=3D155474181528491&w=3D2) t=
-hat:
-> > >
-> > > """
-> > > I've looked at doing something similar in the past (failing to find
-> > > the thread this morning...) and while this will work, it has pretty
-> > > serious performance issues. It's not actually the poisoning which
-> > > is expensive but that turning on debugging removes the cpu slab
-> > > which has significant performance penalties.
-> >
-> > Ok you could rework that logic to be able to keep the per cpu slabs?
-> I'll look into that. There's a lot going on with checking those
-> poisoned bytes, although we don't need that for hardening.
+> The READ_IMPLIES_EXEC personality was removed in 2005 for 64-bit processes,
+> (commit a3cc2546a54361b86b73557df5b85c4fc3fc27c3 form history.git).
 >
-> What do you think about the proposed approach to page initialization?
-> We could separate that part from slab poisoning.
+> But it's still possible to have all readable areas with EXEC permissions by
+> setting the stack as executable in 64-bit ELF executables (also in 32-bit).
 >
-> > Also if you do the zeroing then you need to do it in the hotpath. And t=
-his
-> > patch introduces new instructions to that hotpath for checking and
-> > executing the zeroing.
-> Right now the patch doesn't slow down the default case when
-> CONFIG_INIT_HEAP_ALL=3Dn, as GFP_INIT_ALWAYS_ON is 0.
-> In the case heap initialization is enabled we could probably omit the
-> gfp_flags check, as it'll be always zero in the case there's a
-> constructor or RCU flag is set.
-> So we'll have two branches instead of one in the case CONFIG_INIT_HEAP_AL=
-L=3Dy.
+> This is because the macro elf_read_implies_exec() does not distinguish
+> between 32 and 64-bit executables: when the stack is executable then the
+> read-implies-exec personality is set (enabled) to the process.
 >
-Ok, I think we could do the same without extra branches.
-Right now I'm working on a patch that uses static branches in the
-function that checks GFP flags:
-
-static inline bool want_init_memory(gfp_t flags)
-{
-        if (static_branch_unlikely(&init_allocations))
-                return true;
-        return flags & __GFP_ZERO;
-}
-
-and does the following in slab_alloc_node():
-
-        if (unlikely(want_init_memory(gfpflags)) && object)
-                s->poison_fn(s, object);
-, where s->poison_fn is either memset(object, 0, s->object_size) for
-normal SLAB caches or a no-op for SLAB caches that have ctors
-(I _think_ I don't have to special-case SLAB_TYPESAFE_BY_RCU).
-
-With init_allocations disabled this doesn't affect the kernel
-performance (hackbench shows negative slowdown within the standard
-deviation). Most certainly the indirect call is performed not too
-often.
-With init_allocations enabled this yields ~7% slowdown on hackbench. I
-believe most of that is caused by double initialization, which we can
-eliminate by passing an extra GFP flag to the page allocator.
-
+> We think that this is not a desirable behaviour, maybe read-implies-exec
+> could be used via personality but not by setting the stack as executable in
+> the ELF.
+>
+> For x86_64 processes, is there any reason to disable read-implies-exec
+> personality and at the same time enable it when the stack is executable ?
+>
+> With this patch it's no longer possible to enable the read-implies-exec on
+> the process by setting the stack as executable in the PT_GNU_STACK on
+> x86_64 executables.
+>
+> Regarding 32-bits processes, is there any reason to enable
+> read-implies-exec by setting the stack as executable instead of using the
+> personality on X86_32 or when emulating IA32 on X86_64 ?
+>
+> If not, I could re-send the patch which removes this possibility.
+>
+>
+> Signed-off-by: Hector Marco-Gisbert <hecmargi@upv.es>
+> Acked-by: Ismael Ripoll Ripoll <iripoll@upv.es>
+> ---
+>  arch/x86/include/asm/elf.h | 4 ++--
+>  1 file changed, 2 insertions(+), 2 deletions(-)
+>
+> diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
+> index 15340e3..87fd15e 100644
+> --- a/arch/x86/include/asm/elf.h
+> +++ b/arch/x86/include/asm/elf.h
+> @@ -271,8 +271,8 @@ extern int force_personality32;
+>   * An executable for which elf_read_implies_exec() returns TRUE will
+>   * have the READ_IMPLIES_EXEC personality flag set automatically.
+>   */
+> -#define elf_read_implies_exec(ex, executable_stack)    \
+> -       (executable_stack != EXSTACK_DISABLE_X)
+> +#define elf_read_implies_exec(ex, executable_stack) \
+> +       (mmap_is_ia32() ? (executable_stack != EXSTACK_DISABLE_X) : 0)
+>
+>  struct task_struct;
 >
 > --
-> Alexander Potapenko
-> Software Engineer
+> 1.9.1
 >
-> Google Germany GmbH
-> Erika-Mann-Stra=C3=9Fe, 33
-> 80636 M=C3=BCnchen
->
-> Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-> Registergericht und -nummer: Hamburg, HRB 86891
-> Sitz der Gesellschaft: Hamburg
+
+*thread necromancy*
+
+I'd still like to see this get landed. READ_IMPLIES_EXEC is way too
+powerful (it impacts, for example, mmap() regions of device driver
+memory, forcing drivers to not be able to disallow VM_EXEC[1]).
+
+The only case it could break is on an AMD K8 (Athlon only, I assume?),
+which seems unlikely to have a modern kernel run on it. If there is
+still concern, then we could just test against the NX CPU feature:
+
+diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
+index 69c0f892e310..367cd36259a4 100644
+--- a/arch/x86/include/asm/elf.h
++++ b/arch/x86/include/asm/elf.h
+@@ -280,10 +280,12 @@ extern u32 elf_hwcap2;
+
+ /*
+  * An executable for which elf_read_implies_exec() returns TRUE will
+- * have the READ_IMPLIES_EXEC personality flag set automatically.
++ * have the READ_IMPLIES_EXEC personality flag set automatically when
++ * a CPU did not support NX or is using a 32-bit memory layout.
+  */
+-#define elf_read_implies_exec(ex, executable_stack)    \
+-       (executable_stack != EXSTACK_DISABLE_X)
++#define elf_read_implies_exec(ex, executable_stack)            \
++       (mmap_is_ia32() || !(__supported_pte_mask & _PAGE_NX) ? \
++               (executable_stack != EXSTACK_DISABLE_X) : 0)
+
+ struct task_struct;
 
 
+Additionally, I think architectures that always had NX (arm64) should
+entirely remove their elf_read_implies_exec() macro (defaulting to the
+removal of the stack-marking-based READ_IMPLIES_EXEC enabling):
 
---=20
-Alexander Potapenko
-Software Engineer
+diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
+index 6adc1a90e7e6..87c2dd468eea 100644
+--- a/arch/arm64/include/asm/elf.h
++++ b/arch/arm64/include/asm/elf.h
+@@ -107,8 +107,6 @@
+  */
+ #define elf_check_arch(x)              ((x)->e_machine == EM_AARCH64)
 
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
+-#define elf_read_implies_exec(ex,stk)  (stk != EXSTACK_DISABLE_X)
+-
+ #define CORE_DUMP_USE_REGSET
+ #define ELF_EXEC_PAGESIZE      PAGE_SIZE
 
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+
+Thoughts?
+
+-Kees
+
+[1] https://lkml.kernel.org/r/20190418055759.GA3155@mellanox.com
+
+--
+Kees Cook
