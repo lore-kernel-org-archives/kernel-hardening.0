@@ -1,65 +1,70 @@
+Date: Sat, 20 Apr 2019 11:38:58 +0000
+From: Joel Fernandes <joel@joelfernandes.org>
+Subject: Re: [PATCH v3 3/3] module: Make __tracepoints_ptrs as read-only
+Message-ID: <20190420113858.GA1058@localhost>
+References: <20190410195708.162185-1-joel@joelfernandes.org>
+ <20190410195708.162185-3-joel@joelfernandes.org>
+ <20190410161112.540017d9@gandalf.local.home>
+ <20190410202902.GA167446@google.com>
+ <20190410204401.62f928ca@gandalf.local.home>
+ <20190417151618.GD17099@linux-8ccs>
 MIME-Version: 1.0
-References: <20190414091452.22275-1-shyam.saini@amarulasolutions.com> <C398B8C9-6A54-4590-AA88-58D514BAEB71@oracle.com>
-In-Reply-To: <C398B8C9-6A54-4590-AA88-58D514BAEB71@oracle.com>
-From: Shyam Saini <mayhs11saini@gmail.com>
-Date: Sat, 20 Apr 2019 16:21:00 +0530
-Message-ID: <CAOfkYf7vn7UnYzZDh9==agVu61sYyFWzvo6hQBt3KfaKrWC-6Q@mail.gmail.com>
-Subject: Re: [PATCH 1/2] include: linux: Regularise the use of FIELD_SIZEOF macro
-Content-Type: text/plain; charset="UTF-8"
-To: William Kucharski <william.kucharski@oracle.com>
-Cc: Shyam Saini <shyam.saini@amarulasolutions.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, linux-arm-kernel@lists.infradead.org, linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, dri-devel <dri-devel@lists.freedesktop.org>, Network Development <netdev@vger.kernel.org>, linux-ext4@vger.kernel.org, devel@lists.orangefs.org, linux-mm <linux-mm@kvack.org>, linux-sctp@vger.kernel.org, bpf <bpf@vger.kernel.org>, kvm@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190417151618.GD17099@linux-8ccs>
+To: Jessica Yu <jeyu@kernel.org>
+Cc: Steven Rostedt <rostedt@goodmis.org>, linux-kernel@vger.kernel.org, paulmck@linux.vnet.ibm.com, keescook@chromium.org, mathieu.desnoyers@efficios.com, kernel-hardening@lists.openwall.com, kernel-team@android.com, rcu@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi William,
+On Wed, Apr 17, 2019 at 05:16:18PM +0200, Jessica Yu wrote:
+> +++ Steven Rostedt [10/04/19 20:44 -0400]:
+> > On Wed, 10 Apr 2019 16:29:02 -0400
+> > Joel Fernandes <joel@joelfernandes.org> wrote:
+> > 
+> > > The srcu structure pointer array is modified at module load time because the
+> > > array is fixed up by the module loader at load-time with the final locations
+> > > of the tracepoints right?  Basically relocation fixups. At compile time, I
+> > > believe it is not know what the values in the ptr array are. I believe same
+> > > is true for the tracepoint ptrs array.
+> > > 
+> > > Also it needs to be in a separate __tracepoint_ptrs so that this code works:
+> > > 
+> > > 
+> > > #ifdef CONFIG_TRACEPOINTS
+> > > 	mod->tracepoints_ptrs = section_objs(info, "__tracepoints_ptrs",
+> > > 					     sizeof(*mod->tracepoints_ptrs),
+> > > 					     &mod->num_tracepoints);
+> > > #endif
+> > > 
+> > > Did I  miss some point? Thanks,
+> > 
+> > But there's a lot of others too. Hmm, does this mean that the RO data
+> > sections that are in modules are not set to RO?
+> > 
+> > There's a bunch of separate sections that are RO. Just look in
+> > include/asm-generic/vmlinux.lds.h under the RO_DATA_SECTION() macro.
+> > 
+> > A lot of the sections saved in module.c:find_module_sections() are in
+> > that RO_DATA when compiled as a builtin. Are they not RO when loaded via
+> > a module?
+> 
+> Unlike the kernel, the module loader does not rely on a linker script
+> to determine which sections get what protections. On module load, all
+> sections in a module are looped through and those sections without the
+> SHF_WRITE flag will be set to RO. For example, when there is a section
+> filled with structs declared as const or if the section was explicitly
+> given only the SHF_ALLOC attribute, those will be read-only. As long
+> as the sections were given the correct section attributes for
+> read-only, it'll have read-only protection. I see this is already the
+> case for __param and  __ksymtab*/__kcrctab* sections, but I agree that
+> a full audit would be useful to be consistent with builtin RO
+> protections.
 
-Sorry for the late reply.
+Thanks a lot for the explanations. Yes we dropped the patches because const
+worked. This is good to know for future such ventures as well ;-)
 
-> > Currently, there are 3 different macros, namely sizeof_field, SIZEOF_FIELD
-> > and FIELD_SIZEOF which are used to calculate the size of a member of
-> > structure, so to bring uniformity in entire kernel source tree lets use
-> > FIELD_SIZEOF and replace all occurrences of other two macros with this.
-> >
-> > For this purpose, redefine FIELD_SIZEOF in include/linux/stddef.h and
-> > tools/testing/selftests/bpf/bpf_util.h and remove its defination from
-> > include/linux/kernel.h
->
->
-> > --- a/include/linux/stddef.h
-> > +++ b/include/linux/stddef.h
-> > @@ -20,6 +20,15 @@ enum {
-> > #endif
-> >
-> > /**
-> > + * FIELD_SIZEOF - get the size of a struct's field
-> > + * @t: the target struct
-> > + * @f: the target struct's field
-> > + * Return: the size of @f in the struct definition without having a
-> > + * declared instance of @t.
-> > + */
-> > +#define FIELD_SIZEOF(t, f) (sizeof(((t *)0)->f))
-> > +
-> > +/**
-> >  * sizeof_field(TYPE, MEMBER)
-> >  *
-> >  * @TYPE: The structure containing the field of interest
-> > @@ -34,6 +43,6 @@ enum {
-> >  * @MEMBER: The member within the structure to get the end offset of
-> >  */
-> > #define offsetofend(TYPE, MEMBER) \
-> > -     (offsetof(TYPE, MEMBER) + sizeof_field(TYPE, MEMBER))
-> > +     (offsetof(TYPE, MEMBER) + FIELD_SIZEOF(TYPE, MEMBER))
->
-> If you're doing this, why are you leaving the definition of sizeof_field() in
-> stddef.h untouched?
+Best,
 
-I have removed definition of sizeof_field in [1/2] patch.
+- Joel
 
-> Given the way this has worked historically, if you are leaving it in place for
-> source compatibility reasons, shouldn't it be redefined in terms of
-> FIELD_SIZEOF(), e.g.:
->
-> #define sizeof_field(TYPE, MEMBER) FIELD_SIZEOF(TYPE, MEMBER)
-
-Actually, never thought this way. So,Thanks a lot for this valuable feedback.
-
-I'll re-spin and post again.
+> Jessica
