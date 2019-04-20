@@ -1,102 +1,65 @@
 MIME-Version: 1.0
-References: <CAOfkYf7di0vusjs-woyqgUD3GGLAuP2drir=Td=3+TuE2sKvvA@mail.gmail.com>
- <CAGXu5jLSW==S9TL28Z7x-=3PCRVXXkxi4ce5YDu+X8nHfb71eQ@mail.gmail.com>
- <CAOfkYf4G_zV9v+GT4i=W+Zkkq32oPKFXH3E8kmMuDVS84r+AAQ@mail.gmail.com>
- <CAGXu5jJJbnhUMovTaG_U=vJijEWuWkM1dMoh6Mm4gUmN4Ua_Dg@mail.gmail.com>
- <CAOfkYf4SiLvReac4H0-w1nZLwXQqZD8xAbN_dffzppcmH3S2Gg@mail.gmail.com>
- <CAGXu5jLSLFNypH-JxmdWXKXawC74oTjzzfX_Qn5Gix2oNawQSA@mail.gmail.com>
- <CAOfkYf4O7QROpwpyQ7Pyoe7+TtOQFzQhF5b3uhvSd2xDTYVGJg@mail.gmail.com> <CAGXu5jJ9_mNhsZr_ozj3P_BAYcy9LHbHZeDbPMX_rBmX-9uQ-g@mail.gmail.com>
-In-Reply-To: <CAGXu5jJ9_mNhsZr_ozj3P_BAYcy9LHbHZeDbPMX_rBmX-9uQ-g@mail.gmail.com>
+References: <20190414091452.22275-1-shyam.saini@amarulasolutions.com> <C398B8C9-6A54-4590-AA88-58D514BAEB71@oracle.com>
+In-Reply-To: <C398B8C9-6A54-4590-AA88-58D514BAEB71@oracle.com>
 From: Shyam Saini <mayhs11saini@gmail.com>
-Date: Sat, 20 Apr 2019 16:17:13 +0530
-Message-ID: <CAOfkYf6T_h57VLYccqqfprP2ykg0e0rGt2V8LTRMpF21dn2_Hg@mail.gmail.com>
-Subject: Re: willing to involve in KSPP
+Date: Sat, 20 Apr 2019 16:21:00 +0530
+Message-ID: <CAOfkYf7vn7UnYzZDh9==agVu61sYyFWzvo6hQBt3KfaKrWC-6Q@mail.gmail.com>
+Subject: Re: [PATCH 1/2] include: linux: Regularise the use of FIELD_SIZEOF macro
 Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: William Kucharski <william.kucharski@oracle.com>
+Cc: Shyam Saini <shyam.saini@amarulasolutions.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, linux-arm-kernel@lists.infradead.org, linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, dri-devel <dri-devel@lists.freedesktop.org>, Network Development <netdev@vger.kernel.org>, linux-ext4@vger.kernel.org, devel@lists.orangefs.org, linux-mm <linux-mm@kvack.org>, linux-sctp@vger.kernel.org, bpf <bpf@vger.kernel.org>, kvm@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
->
-> On Wed, Apr 17, 2019 at 9:22 AM Shyam Saini <mayhs11saini@gmail.com> wrote:
+Hi William,
+
+Sorry for the late reply.
+
+> > Currently, there are 3 different macros, namely sizeof_field, SIZEOF_FIELD
+> > and FIELD_SIZEOF which are used to calculate the size of a member of
+> > structure, so to bring uniformity in entire kernel source tree lets use
+> > FIELD_SIZEOF and replace all occurrences of other two macros with this.
 > >
+> > For this purpose, redefine FIELD_SIZEOF in include/linux/stddef.h and
+> > tools/testing/selftests/bpf/bpf_util.h and remove its defination from
+> > include/linux/kernel.h
+>
+>
+> > --- a/include/linux/stddef.h
+> > +++ b/include/linux/stddef.h
+> > @@ -20,6 +20,15 @@ enum {
+> > #endif
 > >
-> > > On Mon, Apr 15, 2019 at 10:44 PM Shyam Saini <mayhs11saini@gmail.com> wrote:
-> > > > As you may already know that I've submitted the patch as per your
-> > > > suggestion but I'm still not
-> > >
-> > > Thanks, i saw that! I'm hoping akpm will take it.
-> >
-> > Would you please acknowledge these patches ?
+> > /**
+> > + * FIELD_SIZEOF - get the size of a struct's field
+> > + * @t: the target struct
+> > + * @f: the target struct's field
+> > + * Return: the size of @f in the struct definition without having a
+> > + * declared instance of @t.
+> > + */
+> > +#define FIELD_SIZEOF(t, f) (sizeof(((t *)0)->f))
+> > +
+> > +/**
+> >  * sizeof_field(TYPE, MEMBER)
+> >  *
+> >  * @TYPE: The structure containing the field of interest
+> > @@ -34,6 +43,6 @@ enum {
+> >  * @MEMBER: The member within the structure to get the end offset of
+> >  */
+> > #define offsetofend(TYPE, MEMBER) \
+> > -     (offsetof(TYPE, MEMBER) + sizeof_field(TYPE, MEMBER))
+> > +     (offsetof(TYPE, MEMBER) + FIELD_SIZEOF(TYPE, MEMBER))
 >
-> Other folks had questions about them -- I was assuming you would
+> If you're doing this, why are you leaving the definition of sizeof_field() in
+> stddef.h untouched?
 
-yes, I'll respond to the thread. Sorry for the delay.
+I have removed definition of sizeof_field in [1/2] patch.
 
-> answer those questions, etc. It sounded like people wanted to see the
-> series reduced to a single patch to do everything at once, so a v2
-> might be a good idea.
+> Given the way this has worked historically, if you are leaving it in place for
+> source compatibility reasons, shouldn't it be redefined in terms of
+> FIELD_SIZEOF(), e.g.:
+>
+> #define sizeof_field(TYPE, MEMBER) FIELD_SIZEOF(TYPE, MEMBER)
 
-There is one suggestion to  retain sizeof_field as alias of FIELD_SIZEOF
-for the code compatibility reason.
+Actually, never thought this way. So,Thanks a lot for this valuable feedback.
 
-Seems like it created confusion because of two separate patches.
-Anyway, I'll post one single patch
-
-> > Could you please suggest me series of more tasks so that I don't have to bother you
-> > each and every time for new task. :-)
->
-> Sure! Here are two:
-> - WARN on kfree() of ERR_PTR range
-> (or ignore them, as if it were NULL)
->
-> Right now kfree() only checks for NULL and zero sized allocations.
-> It'd be nice if it would WARN() (and skip) freeing the ERR_PTR range
-> (the -1 through -4095 addresses). The clever thing grsecurity did was
-> redefine the ZERO_SIZE allocation pointer to be -4096, and update the
-> ZERO_OR_NULL_PTR check[1]:
->
-> -#define ZERO_SIZE_PTR ((void *)16)
-> +#define ZERO_SIZE_PTR              \
-> +({                     \
-> +   BUILD_BUG_ON(!(MAX_ERRNO & ~PAGE_MASK));\
-> +   (void *)(-MAX_ERRNO-1L);        \
-> +})
->
-> -#define ZERO_OR_NULL_PTR(x) ((unsigned long)(x) <= \
-> -               (unsigned long)ZERO_SIZE_PTR)
-> +#define ZERO_OR_NULL_PTR(x) ((unsigned long)(x) - 1 >= (unsigned
-> long)ZERO_SIZE_PTR - 1)
->
-> So while the change is small (and be sure to give them credit[2]), it
-> might take some convincing various memory allocation folks that this
-> change makes sense. (I like it because it moves the ZERO_SIZE_PTR out
-> of userspace -- technically it was still in the NULL page, but better
-> to collect it up in unmapped memory at the top of the address space.)
-> This change should make a bunch of bugs around mishandling of ERR_PTRs
-> stand out better. People I would Cc:
->
-> Matthew Wilcox <willy@infradead.org>
-> Christoph Lameter <cl@linux.com>
->
->
-> Another one that needs some checking is:
->
-> - audit and fix all misuse of NLA_STRING
->
-> This is a following up on noticing the misuse of NLA_STRING (no NUL
-> terminator), getting used with regular string functions (that expect a
-> NUL termination):
-> https://lore.kernel.org/lkml/1519329289.2637.12.camel@sipsolutions.net/T/#u
->
-> It'd be nice if someone could inspect all the NLA_STRING
-> representations and find if there are any other problems like this
-> (and see if there was a good way to systemically fix the problem).
->
->
-> -Kees
->
-> [1] https://github.com/linux-scraping/linux-grsecurity/blame/grsec-test/include/linux/slab.h#L127
-> [2] https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Get_Involved
-
-Thanks for sharing these details. I'll proceed with this once
-FIELD_SIZEOF clean up is done.
+I'll re-spin and post again.
