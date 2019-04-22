@@ -1,157 +1,40 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v4 15/23] mm: Make hibernate handle unmapped pages
-Date: Mon, 22 Apr 2019 11:57:57 -0700
-Message-Id: <20190422185805.1169-16-rick.p.edgecombe@intel.com>
+Subject: [PATCH v4 21/23] x86/alternative: Comment about module removal races
+Date: Mon, 22 Apr 2019 11:58:03 -0700
+Message-Id: <20190422185805.1169-22-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190422185805.1169-1-rick.p.edgecombe@intel.com>
 References: <20190422185805.1169-1-rick.p.edgecombe@intel.com>
 To: Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Pavel Machek <pavel@ucw.cz>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Masami Hiramatsu <mhiramat@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Make hibernate handle unmapped pages on the direct map when
-CONFIG_ARCH_HAS_SET_ALIAS is set. These functions allow for setting pages
-to invalid configurations, so now hibernate should check if the pages have
-valid mappings and handle if they are unmapped when doing a hibernate
-save operation.
+From: Nadav Amit <namit@vmware.com>
 
-Previously this checking was already done when CONFIG_DEBUG_PAGEALLOC
-was configured. It does not appear to have a big hibernating performance
-impact. The speed of the saving operation before this change was measured
-as 819.02 MB/s, and after was measured at 813.32 MB/s.
+Add a comment to clarify that users of text_poke() must ensure that
+no races with module removal take place.
 
-Before:
-[    4.670938] PM: Wrote 171996 kbytes in 0.21 seconds (819.02 MB/s)
-
-After:
-[    4.504714] PM: Wrote 178932 kbytes in 0.22 seconds (813.32 MB/s)
-
-Cc: Dave Hansen <dave.hansen@linux.intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: "Rafael J. Wysocki" <rjw@rjwysocki.net>
-Cc: Pavel Machek <pavel@ucw.cz>
-Cc: Borislav Petkov <bp@alien8.de>
-Acked-by: Pavel Machek <pavel@ucw.cz>
+Cc: Masami Hiramatsu <mhiramat@kernel.org>
+Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/mm/pageattr.c  |  4 ----
- include/linux/mm.h      | 18 ++++++------------
- kernel/power/snapshot.c |  5 +++--
- mm/page_alloc.c         |  7 +++++--
- 4 files changed, 14 insertions(+), 20 deletions(-)
+ arch/x86/kernel/alternative.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
-diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
-index 3574550192c6..daf4d645e537 100644
---- a/arch/x86/mm/pageattr.c
-+++ b/arch/x86/mm/pageattr.c
-@@ -2257,7 +2257,6 @@ int set_direct_map_default_noflush(struct page *page)
- 	return __set_pages_p(page, 1);
- }
- 
--#ifdef CONFIG_DEBUG_PAGEALLOC
- void __kernel_map_pages(struct page *page, int numpages, int enable)
- {
- 	if (PageHighMem(page))
-@@ -2302,11 +2301,8 @@ bool kernel_page_present(struct page *page)
- 	pte = lookup_address((unsigned long)page_address(page), &level);
- 	return (pte_val(*pte) & _PAGE_PRESENT);
- }
--
- #endif /* CONFIG_HIBERNATION */
- 
--#endif /* CONFIG_DEBUG_PAGEALLOC */
--
- int __init kernel_map_pages_in_pgd(pgd_t *pgd, u64 pfn, unsigned long address,
- 				   unsigned numpages, unsigned long page_flags)
- {
-diff --git a/include/linux/mm.h b/include/linux/mm.h
-index 6b10c21630f5..083d7b4863ed 100644
---- a/include/linux/mm.h
-+++ b/include/linux/mm.h
-@@ -2610,37 +2610,31 @@ static inline void kernel_poison_pages(struct page *page, int numpages,
- 					int enable) { }
- #endif
- 
--#ifdef CONFIG_DEBUG_PAGEALLOC
- extern bool _debug_pagealloc_enabled;
--extern void __kernel_map_pages(struct page *page, int numpages, int enable);
- 
- static inline bool debug_pagealloc_enabled(void)
- {
--	return _debug_pagealloc_enabled;
-+	return IS_ENABLED(CONFIG_DEBUG_PAGEALLOC) && _debug_pagealloc_enabled;
- }
- 
-+#if defined(CONFIG_DEBUG_PAGEALLOC) || defined(CONFIG_ARCH_HAS_SET_DIRECT_MAP)
-+extern void __kernel_map_pages(struct page *page, int numpages, int enable);
-+
- static inline void
- kernel_map_pages(struct page *page, int numpages, int enable)
- {
--	if (!debug_pagealloc_enabled())
--		return;
--
- 	__kernel_map_pages(page, numpages, enable);
- }
- #ifdef CONFIG_HIBERNATION
- extern bool kernel_page_present(struct page *page);
- #endif	/* CONFIG_HIBERNATION */
--#else	/* CONFIG_DEBUG_PAGEALLOC */
-+#else	/* CONFIG_DEBUG_PAGEALLOC || CONFIG_ARCH_HAS_SET_DIRECT_MAP */
- static inline void
- kernel_map_pages(struct page *page, int numpages, int enable) {}
- #ifdef CONFIG_HIBERNATION
- static inline bool kernel_page_present(struct page *page) { return true; }
- #endif	/* CONFIG_HIBERNATION */
--static inline bool debug_pagealloc_enabled(void)
--{
--	return false;
--}
--#endif	/* CONFIG_DEBUG_PAGEALLOC */
-+#endif	/* CONFIG_DEBUG_PAGEALLOC || CONFIG_ARCH_HAS_SET_DIRECT_MAP */
- 
- #ifdef __HAVE_ARCH_GATE_AREA
- extern struct vm_area_struct *get_gate_vma(struct mm_struct *mm);
-diff --git a/kernel/power/snapshot.c b/kernel/power/snapshot.c
-index f08a1e4ee1d4..bc9558ab1e5b 100644
---- a/kernel/power/snapshot.c
-+++ b/kernel/power/snapshot.c
-@@ -1342,8 +1342,9 @@ static inline void do_copy_page(long *dst, long *src)
-  * safe_copy_page - Copy a page in a safe way.
-  *
-  * Check if the page we are going to copy is marked as present in the kernel
-- * page tables (this always is the case if CONFIG_DEBUG_PAGEALLOC is not set
-- * and in that case kernel_page_present() always returns 'true').
-+ * page tables. This always is the case if CONFIG_DEBUG_PAGEALLOC or
-+ * CONFIG_ARCH_HAS_SET_DIRECT_MAP is not set. In that case kernel_page_present()
-+ * always returns 'true'.
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 18f959975ea0..7b9b49dfc05a 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -810,6 +810,11 @@ static void *__text_poke(void *addr, const void *opcode, size_t len)
+  * It means the size must be writable atomically and the address must be aligned
+  * in a way that permits an atomic write. It also makes sure we fit on a single
+  * page.
++ *
++ * Note that the caller must ensure that if the modified code is part of a
++ * module, the module would not be removed during poking. This can be achieved
++ * by registering a module notifier, and ordering module removal and patching
++ * trough a mutex.
   */
- static void safe_copy_page(void *dst, struct page *s_page)
+ void *text_poke(void *addr, const void *opcode, size_t len)
  {
-diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index d96ca5bc555b..34a70681a4af 100644
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
-@@ -1131,7 +1131,9 @@ static __always_inline bool free_pages_prepare(struct page *page,
- 	}
- 	arch_free_page(page, order);
- 	kernel_poison_pages(page, 1 << order, 0);
--	kernel_map_pages(page, 1 << order, 0);
-+	if (debug_pagealloc_enabled())
-+		kernel_map_pages(page, 1 << order, 0);
-+
- 	kasan_free_nondeferred_pages(page, order);
- 
- 	return true;
-@@ -2001,7 +2003,8 @@ inline void post_alloc_hook(struct page *page, unsigned int order,
- 	set_page_refcounted(page);
- 
- 	arch_alloc_page(page, order);
--	kernel_map_pages(page, 1 << order, 1);
-+	if (debug_pagealloc_enabled())
-+		kernel_map_pages(page, 1 << order, 1);
- 	kasan_alloc_pages(page, order);
- 	kernel_poison_pages(page, 1 << order, 1);
- 	set_page_owner(page, order, gfp_flags);
 -- 
 2.17.1
