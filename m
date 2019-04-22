@@ -1,63 +1,77 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v4 22/23] tlb: provide default nmi_uaccess_okay()
-Date: Mon, 22 Apr 2019 11:58:04 -0700
-Message-Id: <20190422185805.1169-23-rick.p.edgecombe@intel.com>
+Subject: [PATCH v4 19/23] x86/ftrace: Use vmalloc special flag
+Date: Mon, 22 Apr 2019 11:58:01 -0700
+Message-Id: <20190422185805.1169-20-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190422185805.1169-1-rick.p.edgecombe@intel.com>
 References: <20190422185805.1169-1-rick.p.edgecombe@intel.com>
 To: Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Steven Rostedt <rostedt@goodmis.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Nadav Amit <namit@vmware.com>
+Use new flag VM_FLUSH_RESET_PERMS for handling freeing of special
+permissioned memory in vmalloc and remove places where memory was set NX
+and RW before freeing which is no longer needed.
 
-x86 has an nmi_uaccess_okay(), but other architectures do not.
-Arch-independent code might need to know whether access to user
-addresses is ok in an NMI context or in other code whose execution
-context is unknown.  Specifically, this function is needed for
-bpf_probe_write_user().
-
-Add a default implementation of nmi_uaccess_okay() for architectures
-that do not have such a function.
-
-Signed-off-by: Nadav Amit <namit@vmware.com>
+Cc: Steven Rostedt <rostedt@goodmis.org>
+Acked-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/include/asm/tlbflush.h | 2 ++
- include/asm-generic/tlb.h       | 9 +++++++++
- 2 files changed, 11 insertions(+)
+ arch/x86/kernel/ftrace.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
 
-diff --git a/arch/x86/include/asm/tlbflush.h b/arch/x86/include/asm/tlbflush.h
-index 90926e8dd1f8..dee375831962 100644
---- a/arch/x86/include/asm/tlbflush.h
-+++ b/arch/x86/include/asm/tlbflush.h
-@@ -274,6 +274,8 @@ static inline bool nmi_uaccess_okay(void)
- 	return true;
+diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
+index 53ba1aa3a01f..0caf8122d680 100644
+--- a/arch/x86/kernel/ftrace.c
++++ b/arch/x86/kernel/ftrace.c
+@@ -678,12 +678,8 @@ static inline void *alloc_tramp(unsigned long size)
+ {
+ 	return module_alloc(size);
+ }
+-static inline void tramp_free(void *tramp, int size)
++static inline void tramp_free(void *tramp)
+ {
+-	int npages = PAGE_ALIGN(size) >> PAGE_SHIFT;
+-
+-	set_memory_nx((unsigned long)tramp, npages);
+-	set_memory_rw((unsigned long)tramp, npages);
+ 	module_memfree(tramp);
+ }
+ #else
+@@ -692,7 +688,7 @@ static inline void *alloc_tramp(unsigned long size)
+ {
+ 	return NULL;
+ }
+-static inline void tramp_free(void *tramp, int size) { }
++static inline void tramp_free(void *tramp) { }
+ #endif
+ 
+ /* Defined as markers to the end of the ftrace default trampolines */
+@@ -808,6 +804,8 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
+ 	/* ALLOC_TRAMP flags lets us know we created it */
+ 	ops->flags |= FTRACE_OPS_FL_ALLOC_TRAMP;
+ 
++	set_vm_flush_reset_perms(trampoline);
++
+ 	/*
+ 	 * Module allocation needs to be completed by making the page
+ 	 * executable. The page is still writable, which is a security hazard,
+@@ -816,7 +814,7 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
+ 	set_memory_x((unsigned long)trampoline, npages);
+ 	return (unsigned long)trampoline;
+ fail:
+-	tramp_free(trampoline, *tramp_size);
++	tramp_free(trampoline);
+ 	return 0;
  }
  
-+#define nmi_uaccess_okay nmi_uaccess_okay
-+
- /* Initialize cr4 shadow for this CPU. */
- static inline void cr4_init_shadow(void)
- {
-diff --git a/include/asm-generic/tlb.h b/include/asm-generic/tlb.h
-index b9edc7608d90..480e5b2a5748 100644
---- a/include/asm-generic/tlb.h
-+++ b/include/asm-generic/tlb.h
-@@ -21,6 +21,15 @@
- #include <asm/tlbflush.h>
- #include <asm/cacheflush.h>
+@@ -947,7 +945,7 @@ void arch_ftrace_trampoline_free(struct ftrace_ops *ops)
+ 	if (!ops || !(ops->flags & FTRACE_OPS_FL_ALLOC_TRAMP))
+ 		return;
  
-+/*
-+ * Blindly accessing user memory from NMI context can be dangerous
-+ * if we're in the middle of switching the current user task or switching
-+ * the loaded mm.
-+ */
-+#ifndef nmi_uaccess_okay
-+# define nmi_uaccess_okay() true
-+#endif
-+
- #ifdef CONFIG_MMU
+-	tramp_free((void *)ops->trampoline, ops->trampoline_size);
++	tramp_free((void *)ops->trampoline);
+ 	ops->trampoline = 0;
+ }
  
- /*
 -- 
 2.17.1
