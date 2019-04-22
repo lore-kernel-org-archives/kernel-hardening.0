@@ -1,71 +1,157 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v4 08/23] x86/kgdb: Avoid redundant comparison of patched code
-Date: Mon, 22 Apr 2019 11:57:50 -0700
-Message-Id: <20190422185805.1169-9-rick.p.edgecombe@intel.com>
+Subject: [PATCH v4 06/23] x86/alternative: Initialize temporary mm for patching
+Date: Mon, 22 Apr 2019 11:57:48 -0700
+Message-Id: <20190422185805.1169-7-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190422185805.1169-1-rick.p.edgecombe@intel.com>
 References: <20190422185805.1169-1-rick.p.edgecombe@intel.com>
 To: Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Nadav Amit <namit@vmware.com>
 
-text_poke() already ensures that the written value is the correct one
-and fails if that is not the case. There is no need for an additional
-comparison. Remove it.
+To prevent improper use of the PTEs that are used for text patching, the
+next patches will use a temporary mm struct. Initailize it by copying
+the init mm.
 
+The address that will be used for patching is taken from the lower area
+that is usually used for the task memory. Doing so prevents the need to
+frequently synchronize the temporary-mm (e.g., when BPF programs are
+installed), since different PGDs are used for the task memory.
+
+Finally, randomize the address of the PTEs to harden against exploits
+that use these PTEs.
+
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Dave Hansen <dave.hansen@intel.com>
 Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
+Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
+Suggested-by: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/kernel/kgdb.c | 14 +-------------
- 1 file changed, 1 insertion(+), 13 deletions(-)
+ arch/x86/include/asm/pgtable.h       |  3 +++
+ arch/x86/include/asm/text-patching.h |  2 ++
+ arch/x86/kernel/alternative.c        |  3 +++
+ arch/x86/mm/init_64.c                | 36 ++++++++++++++++++++++++++++
+ init/main.c                          |  3 +++
+ 5 files changed, 47 insertions(+)
 
-diff --git a/arch/x86/kernel/kgdb.c b/arch/x86/kernel/kgdb.c
-index 2b203ee5b879..13b13311b792 100644
---- a/arch/x86/kernel/kgdb.c
-+++ b/arch/x86/kernel/kgdb.c
-@@ -747,7 +747,6 @@ void kgdb_arch_set_pc(struct pt_regs *regs, unsigned long ip)
- int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
+diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
+index 5cfbbb6d458d..6b6bfdfe83aa 100644
+--- a/arch/x86/include/asm/pgtable.h
++++ b/arch/x86/include/asm/pgtable.h
+@@ -1038,6 +1038,9 @@ static inline void __meminit init_trampoline_default(void)
+ 	/* Default trampoline pgd value */
+ 	trampoline_pgd_entry = init_top_pgt[pgd_index(__PAGE_OFFSET)];
+ }
++
++void __init poking_init(void);
++
+ # ifdef CONFIG_RANDOMIZE_MEMORY
+ void __meminit init_trampoline(void);
+ # else
+diff --git a/arch/x86/include/asm/text-patching.h b/arch/x86/include/asm/text-patching.h
+index f8fc8e86cf01..a75eed841eed 100644
+--- a/arch/x86/include/asm/text-patching.h
++++ b/arch/x86/include/asm/text-patching.h
+@@ -39,5 +39,7 @@ extern void *text_poke_kgdb(void *addr, const void *opcode, size_t len);
+ extern int poke_int3_handler(struct pt_regs *regs);
+ extern void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
+ extern int after_bootmem;
++extern __ro_after_init struct mm_struct *poking_mm;
++extern __ro_after_init unsigned long poking_addr;
+ 
+ #endif /* _ASM_X86_TEXT_PATCHING_H */
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 0a814d73547a..11d5c710a94f 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -679,6 +679,9 @@ void *__init_or_module text_poke_early(void *addr, const void *opcode,
+ 	return addr;
+ }
+ 
++__ro_after_init struct mm_struct *poking_mm;
++__ro_after_init unsigned long poking_addr;
++
+ static void *__text_poke(void *addr, const void *opcode, size_t len)
  {
- 	int err;
--	char opc[BREAK_INSTR_SIZE];
+ 	unsigned long flags;
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index bccff68e3267..125c8c48aa24 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -53,6 +53,7 @@
+ #include <asm/init.h>
+ #include <asm/uv/uv.h>
+ #include <asm/setup.h>
++#include <asm/text-patching.h>
  
- 	bpt->type = BP_BREAKPOINT;
- 	err = probe_kernel_read(bpt->saved_instr, (char *)bpt->bpt_addr,
-@@ -766,11 +765,6 @@ int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
- 		return -EBUSY;
- 	text_poke_kgdb((void *)bpt->bpt_addr, arch_kgdb_ops.gdb_bpt_instr,
- 		       BREAK_INSTR_SIZE);
--	err = probe_kernel_read(opc, (char *)bpt->bpt_addr, BREAK_INSTR_SIZE);
--	if (err)
--		return err;
--	if (memcmp(opc, arch_kgdb_ops.gdb_bpt_instr, BREAK_INSTR_SIZE))
--		return -EINVAL;
- 	bpt->type = BP_POKE_BREAKPOINT;
+ #include "mm_internal.h"
  
- 	return err;
-@@ -778,9 +772,6 @@ int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
+@@ -1383,6 +1384,41 @@ unsigned long memory_block_size_bytes(void)
+ 	return memory_block_size_probed;
+ }
  
- int kgdb_arch_remove_breakpoint(struct kgdb_bkpt *bpt)
- {
--	int err;
--	char opc[BREAK_INSTR_SIZE];
--
- 	if (bpt->type != BP_POKE_BREAKPOINT)
- 		goto knl_write;
- 	/*
-@@ -791,10 +782,7 @@ int kgdb_arch_remove_breakpoint(struct kgdb_bkpt *bpt)
- 		goto knl_write;
- 	text_poke_kgdb((void *)bpt->bpt_addr, bpt->saved_instr,
- 		       BREAK_INSTR_SIZE);
--	err = probe_kernel_read(opc, (char *)bpt->bpt_addr, BREAK_INSTR_SIZE);
--	if (err || memcmp(opc, bpt->saved_instr, BREAK_INSTR_SIZE))
--		goto knl_write;
--	return err;
-+	return 0;
++/*
++ * Initialize an mm_struct to be used during poking and a pointer to be used
++ * during patching.
++ */
++void __init poking_init(void)
++{
++	spinlock_t *ptl;
++	pte_t *ptep;
++
++	poking_mm = copy_init_mm();
++	BUG_ON(!poking_mm);
++
++	/*
++	 * Randomize the poking address, but make sure that the following page
++	 * will be mapped at the same PMD. We need 2 pages, so find space for 3,
++	 * and adjust the address if the PMD ends after the first one.
++	 */
++	poking_addr = TASK_UNMAPPED_BASE;
++	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE))
++		poking_addr += (kaslr_get_random_long("Poking") & PAGE_MASK) %
++			(TASK_SIZE - TASK_UNMAPPED_BASE - 3 * PAGE_SIZE);
++
++	if (((poking_addr + PAGE_SIZE) & ~PMD_MASK) == 0)
++		poking_addr += PAGE_SIZE;
++
++	/*
++	 * We need to trigger the allocation of the page-tables that will be
++	 * needed for poking now. Later, poking may be performed in an atomic
++	 * section, which might cause allocation to fail.
++	 */
++	ptep = get_locked_pte(poking_mm, poking_addr, &ptl);
++	BUG_ON(!ptep);
++	pte_unmap_unlock(ptep, ptl);
++}
++
+ #ifdef CONFIG_SPARSEMEM_VMEMMAP
+ /*
+  * Initialise the sparsemem vmemmap using huge-pages at the PMD level.
+diff --git a/init/main.c b/init/main.c
+index 598e278b46f7..949eed8015ec 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -504,6 +504,8 @@ void __init __weak thread_stack_cache_init(void)
  
- knl_write:
- 	return probe_kernel_write((char *)bpt->bpt_addr,
+ void __init __weak mem_encrypt_init(void) { }
+ 
++void __init __weak poking_init(void) { }
++
+ bool initcall_debug;
+ core_param(initcall_debug, initcall_debug, bool, 0644);
+ 
+@@ -737,6 +739,7 @@ asmlinkage __visible void __init start_kernel(void)
+ 	taskstats_init_early();
+ 	delayacct_init();
+ 
++	poking_init();
+ 	check_bugs();
+ 
+ 	acpi_subsystem_init();
 -- 
 2.17.1
