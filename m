@@ -1,72 +1,105 @@
-Date: Tue, 23 Apr 2019 15:25:34 -0400
-From: Rich Felker <dalias@libc.org>
-Subject: Re: [musl] Re: [PATCH] binfmt_elf: Update READ_IMPLIES_EXEC logic
- for modern CPUs
-Message-ID: <20190423192534.GN23599@brightrain.aerifal.cx>
-References: <20190423181210.GA2443@beast>
- <CAG48ez0CeTEGDuwr+qAGBwsqm+Drj0dkFfr6_UDc+g-xM4BpiA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAG48ez0CeTEGDuwr+qAGBwsqm+Drj0dkFfr6_UDc+g-xM4BpiA@mail.gmail.com>
-Sender: Rich Felker <dalias@aerifal.cx>
-To: Jann Horn <jannh@google.com>
-Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Hector Marco-Gisbert <hecmargi@upv.es>, Jason Gunthorpe <jgg@mellanox.com>, kernel list <linux-kernel@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, linux-arm-kernel@lists.infradead.org, musl@lists.openwall.com, Linux API <linux-api@vger.kernel.org>
+References: <20190411180117.27704-1-keescook@chromium.org> <20190411180117.27704-2-keescook@chromium.org>
+ <CAK7LNATvNJprA94Qypfub2rpbEEJkAeV3yqVyuk2aNEraDKZ6w@mail.gmail.com>
+In-Reply-To: <CAK7LNATvNJprA94Qypfub2rpbEEJkAeV3yqVyuk2aNEraDKZ6w@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 23 Apr 2019 12:36:43 -0700
+Message-ID: <CAGXu5jLNwFfG-x-_Q6nTdU21t5B9z7dCgBekRiJ+MnUE14J12A@mail.gmail.com>
+Subject: Re: [PATCH v2 1/3] security: Create "kernel hardening" config area
+Content-Type: text/plain; charset="UTF-8"
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Alexander Potapenko <glider@google.com>, James Morris <jmorris@namei.org>, Alexander Popov <alex.popov@linux.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 23, 2019 at 09:02:03PM +0200, Jann Horn wrote:
-> +linux-api, +musl
-> 
-> On Tue, Apr 23, 2019 at 8:12 PM Kees Cook <keescook@chromium.org> wrote:
-> > The READ_IMPLIES_EXEC work-around was designed for old CPUs lacking NX
-> > (to have the visible permission flags on memory regions reflect reality:
-> > they are all executable), and for old toolchains that lacked the ELF
-> > PT_GNU_STACK marking (under the assumption than toolchains that couldn't
-> > even specify memory protection flags may have it wrong for all memory
-> > regions).
+On Thu, Apr 11, 2019 at 6:39 PM Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+>
+> On Fri, Apr 12, 2019 at 3:01 AM Kees Cook <keescook@chromium.org> wrote:
 > >
-> > This logic is sensible, but was implemented in a way that equated having
-> > a PT_GNU_STACK marked executable as being as "broken" as lacking the
-> > PT_GNU_STACK marking entirely. This is not a reasonable assumption
-> > for CPUs that have had NX support from the start (or very close to
-> > the start). This confusion has led to situations where modern 64-bit
-> > programs with explicitly marked executable stack are forced into the
-> > READ_IMPLIES_EXEC state when no such thing is needed. (And leads to
-> > unexpected failures when mmap()ing regions of device driver memory that
-> > wish to disallow VM_EXEC[1].)
+> > Right now kernel hardening options are scattered around various Kconfig
+> > files. This can be a central place to collect these kinds of options
+> > going forward. This is initially populated with the memory initialization
+> > options from the gcc-plugins.
 > >
-> > To fix this, elf_read_implies_exec() is adjusted on arm64 (where NX has
-> > always existed and all toolchains include PT_GNU_STACK), and x86 is
-> > adjusted to handle this combination of possible outcomes:
+> > Signed-off-by: Kees Cook <keescook@chromium.org>
+> > ---
+> >  scripts/gcc-plugins/Kconfig | 74 +++--------------------------
+> >  security/Kconfig            |  2 +
+> >  security/Kconfig.hardening  | 93 +++++++++++++++++++++++++++++++++++++
+> >  3 files changed, 102 insertions(+), 67 deletions(-)
+> >  create mode 100644 security/Kconfig.hardening
 > >
-> >               CPU: | lacks NX  | has NX, ia32     | has NX, x86_64   |
-> >  ELF:              |           |                  |                  |
-> >  ------------------------------|------------------|------------------|
-> >  missing GNU_STACK | needs RIE | needs RIE        | no RIE           |
-> >  GNU_STACK == RWX  | needs RIE | no RIE: stack X  | no RIE: stack X  |
-> >  GNU_STACK == RW   | needs RIE | no RIE: stack NX | no RIE: stack NX |
+> > diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
+> > index 74271dba4f94..84d471dea2b7 100644
+> > --- a/scripts/gcc-plugins/Kconfig
+> > +++ b/scripts/gcc-plugins/Kconfig
+> > @@ -13,10 +13,11 @@ config HAVE_GCC_PLUGINS
+> >           An arch should select this symbol if it supports building with
+> >           GCC plugins.
 > >
-> > This has the effect of making binfmt_elf's EXSTACK_DEFAULT actually take
-> > on the correct architecture default of being non-executable on arm64 and
-> > x86_64, and being executable on ia32.
-> 
-> It's probably worth going a bit more into detail in this description
-> on how libraries typically allocate thread stacks.
-> 
-> It looks like glibc will be fine; before commit 54ee14b3882
-> (https://sourceware.org/git/?p=glibc.git;a=blobdiff;f=nptl/allocatestack.c;h=dc501650b8629eda4502f2016016f09106cfb526;hp=6ada1fe1381de104153c0627e27f09fe5ad02caa;hb=54ee14b3882;hpb=16a76cd23ce9d3924fa192395e730423e3dc8b36),
-> thread stacks were always RWX, and since then, from what I can tell,
-> thread stacks were executable depending on the executable's ELF
-> headers (as parsed by glibc).
-> 
-> But e.g. musl's __pthread_create() seems to hardcode
-> PROT_READ|PROT_WRITE, which I think would mean that if someone built a
-> multithreaded program with nested functions and linked with musl, that
-> program would stop working? Or maybe I'm just reading the code wrong.
+> > -menuconfig GCC_PLUGINS
+> > -       bool "GCC plugins"
+> > +config GCC_PLUGINS
+> > +       bool
+> >         depends on HAVE_GCC_PLUGINS
+> >         depends on PLUGIN_HOSTCC != ""
+> > +       default y
+> >         help
+> >           GCC plugins are loadable modules that provide extra features to the
+> >           compiler. They are useful for runtime instrumentation and static analysis.
+> > @@ -25,6 +26,8 @@ menuconfig GCC_PLUGINS
+> >
+> >  if GCC_PLUGINS
+> >
+> > +menu "GCC plugins"
+> > +
+>
+>
+>
+> Just a tip to save "if" ... "endif" block.
+>
+>
+> If you like, you can write like follows:
+>
+>
+> menu "GCC plugins"
+>           depends on GCC_PLUGINS
+>
+>   <menu body>
+>
+> endmenu
 
-musl intentionally/explicitly does not support executable stacks. If
-you happen to get one from the kernel for the main thread, things
-might happen to work, but it's unintended and unsupported
-functionality.
+Ah yes, thanks! Adjusted.
 
-Rich
+> > +menu "Memory initialization"
+> > +
+> > +choice
+> > +       prompt "Initialize kernel stack variables at function entry"
+> > +       depends on GCC_PLUGINS
+>
+> On second thought,
+> this 'depends on' is unnecessary
+> because INIT_STACK_NONE should be always visible.
+
+Oh yes, excellent point. Adjusted.
+
+> Another behavior change is
+> GCC_PLUGIN_STRUCTLEAK was previously enabled by all{yes,mod}config,
+> and in the compile-test coverage.
+
+I could set the defaults based on CONFIG_COMPILE_TEST, though? I.e.:
+
+        prompt "Initialize kernel stack variables at function entry"
+        default GCC_PLUGIN_STRUCTLEAK_BYREF_ALL if COMPILE_TEST && GCC_PLUGINS
+        default INIT_STACK_ALL if COMPILE_TEST && CC_HAS_AUTO_VAR_INIT
+        default INIT_STACK_NONE
+
+>
+> It will be disabled for all{yes,mod}config with this patch.
+>
+> This is up to you. Just FYI.
+
+Thanks for looking this over!
+
+-- 
+Kees Cook
