@@ -1,39 +1,40 @@
-Date: Tue, 23 Apr 2019 10:31:48 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Subject: Re: [PATCH 1/3] mm: security: introduce the init_allocations=1 boot
- option
-Message-ID: <20190423083148.GF25106@dhcp22.suse.cz>
-References: <20190418154208.131118-1-glider@google.com>
- <20190418154208.131118-2-glider@google.com>
- <981d439a-1107-2730-f27e-17635ee4a125@intel.com>
+Date: Tue, 23 Apr 2019 15:01:32 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: [PATCH v2 56/79] docs: Documentation/*.txt: rename all ReST
+ files to *.rst
+Message-ID: <20190423130132.GT4038@hirez.programming.kicks-ass.net>
+References: <cover.1555938375.git.mchehab+samsung@kernel.org>
+ <cda57849a6462ccc72dcd360b30068ab6a1021c4.1555938376.git.mchehab+samsung@kernel.org>
+ <20190423083135.GA11158@hirez.programming.kicks-ass.net>
+ <20190423125519.GA7104@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <981d439a-1107-2730-f27e-17635ee4a125@intel.com>
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: Alexander Potapenko <glider@google.com>, akpm@linux-foundation.org, cl@linux.com, dvyukov@google.com, keescook@chromium.org, labbott@redhat.com, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20190423125519.GA7104@redhat.com>
+To: Mike Snitzer <snitzer@redhat.com>
+Cc: Mauro Carvalho Chehab <mchehab+samsung@kernel.org>, Linux Doc Mailing List <linux-doc@vger.kernel.org>, Mauro Carvalho Chehab <mchehab@infradead.org>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, Johannes Berg <johannes@sipsolutions.net>, Kurt Schwemmer <kurt.schwemmer@microsemi.com>, Logan Gunthorpe <logang@deltatee.com>, Bjorn Helgaas <bhelgaas@google.com>, Alasdair Kergon <agk@redhat.com>, dm-devel@redhat.com, Kishon Vijay Abraham I <kishon@ti.com>, Rob Herring <robh+dt@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, David Airlie <airlied@linux.ie>, Daniel Vetter <daniel@ffwll.ch>, Maarten Lankhorst <maarten.lankhorst@linux.intel.com>, Maxime Ripard <maxime.ripard@bootlin.com>, Sean Paul <sean@poorly.run>, Ning Sun <ning.sun@intel.com>, Ingo Molnar <mingo@redhat.com>, Will Deacon <will.deacon@arm.com>, Alan Stern <stern@rowland.harvard.edu>, Andrea Parri <andrea.parri@amarulasolutions.com>, Boqun Feng <boqun.feng@gmail.com>, Nicholas Piggin <npiggin@gmail.com>, David Howells <dhowells@redhat.com>, Jade Alglave <j.alglave@ucl.ac.uk>, Luc Maranget <luc.maranget@inria.fr>, "Paul E. McKenney" <paulmck@linux.ibm.com>, Akira Yokosawa <akiyks@gmail.com>, Daniel Lustig <dlustig@nvidia.com>, "David S. Miller" <davem@davemloft.net>, Andreas =?iso-8859-1?Q?F=E4rber?= <afaerber@suse.de>, Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>, Cornelia Huck <cohuck@redhat.com>, Farhan Ali <alifm@linux.ibm.com>, Eric Farman <farman@linux.ibm.com>, Halil Pasic <pasic@linux.ibm.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Harry Wei <harryxiyou@gmail.com>, Alex Shi <alex.shi@linux.alibaba.com>, Jerry Hoemann <jerry.hoemann@hpe.com>, Wim Van Sebroeck <wim@linux-watchdog.org>, Guenter Roeck <linux@roeck-us.net>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Russell King <linux@armlinux.org.uk>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "James E.J. Bottomley" <James.Bottomley@HansenPartnership.com>, Helge Deller <deller@gmx.de>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, Guan Xuetao <gxt@pku.edu.cn>, Jens Axboe <axboe@kernel.dk>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Rafael J. Wysocki" <rafael@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Matt Mackall <mpm@selenic.com>, Herbert Xu <herbert@gondor.apana.org.au>, Corey Minyard <minyard@acm.org>, Sumit Semwal <sumit.semwal@linaro.org>, Linus Walleij <linus.walleij@linaro.org>, Bartosz Golaszewski <bgolaszewski@baylibre.com>, Darren Hart <dvhart@infradead.org>, Andy Shevchenko <andy@infradead.org>, Stuart Hayes <stuart.w.hayes@gmail.com>, Jaroslav Kysela <perex@perex.cz>, Alex Williamson <alex.williamson@redhat.com>, Kirti Wankhede <kwankhede@nvidia.com>, Christoph Hellwig <hch@lst.de>, Marek Szyprowski <m.szyprowski@samsung.com>, Robin Murphy <robin.murphy@arm.com>, Steffen Klassert <steffen.klassert@secunet.com>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, linux-wireless@vger.kernel.org, linux-pci@vger.kernel.org, devicetree@vger.kernel.org, dri-devel@lists.freedesktop.org, linux-fbdev@vger.kernel.org, tboot-devel@lists.sourceforge.net, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-s390@vger.kernel.org, kvm@vger.kernel.org, linux-watchdog@vger.kernel.org, linux-ia64@vger.kernel.org, linux-parisc@vger.kernel.org, linux-sh@vger.kernel.org, sparclinux@vger.kernel.org, linux-block@vger.kernel.org, linux-crypto@vger.kernel.org, openipmi-developer@lists.sourceforge.net, linaro-mm-sig@lists.linaro.org, linux-gpio@vger.kernel.org, platform-driver-x86@vger.kernel.org, iommu@lists.linux-foundation.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu 18-04-19 09:35:32, Dave Hansen wrote:
-> On 4/18/19 8:42 AM, Alexander Potapenko wrote:
-> > This option adds the possibility to initialize newly allocated pages and
-> > heap objects with zeroes. This is needed to prevent possible information
-> > leaks and make the control-flow bugs that depend on uninitialized values
-> > more deterministic.
+On Tue, Apr 23, 2019 at 08:55:19AM -0400, Mike Snitzer wrote:
+> On Tue, Apr 23 2019 at  4:31am -0400,
+> Peter Zijlstra <peterz@infradead.org> wrote:
 > 
-> Isn't it better to do this at free time rather than allocation time?  If
-> doing it at free, you can't even have information leaks for pages that
-> are in the allocator.
+> > On Mon, Apr 22, 2019 at 10:27:45AM -0300, Mauro Carvalho Chehab wrote:
+> > 
+> > >  .../{atomic_bitops.txt => atomic_bitops.rst}  |  2 +
+> > 
+> > What's happend to atomic_t.txt, also NAK, I still occationally touch
+> > these files.
+> 
+> Seems Mauro's point is in the future we need to touch these .rst files
+> in terms of ReST compatible changes.
+> 
+> I'm dreading DM documentation changes in the future.. despite Mauro and
+> Jon Corbet informing me that ReST is simple, etc.
 
-I would tend to agree here. Free path is usually less performance sensitive
-than the allocation. Those really hot paths tend to defer the work.
+Well, it _can_ be simple, I've seen examples of rst that were not far
+from generated HTML contents. And I must give Jon credit for not
+accepting that atrocious crap.
 
-I am also worried that an opt-out gfp flag would tend to be used
-incorrectly as the history has shown for others - e.g. __GFP_TEMPORARY.
-So I would rather see this robust without a fine tuning unless there is
-real use case that would suffer from this and we can think of a
-background scrubbing or something similar.
-
--- 
-Michal Hocko
-SUSE Labs
+But yes, I have 0 motivation to learn or abide by rst. It simply doesn't
+give me anything in return. There is no upside, only worse text files :/
