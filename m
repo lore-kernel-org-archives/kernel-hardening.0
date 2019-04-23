@@ -1,25 +1,43 @@
 MIME-Version: 1.0
-References: <20190418154208.131118-1-glider@google.com> <20190418154208.131118-4-glider@google.com>
-In-Reply-To: <20190418154208.131118-4-glider@google.com>
+References: <20190423181210.GA2443@beast> <CAG48ez0CeTEGDuwr+qAGBwsqm+Drj0dkFfr6_UDc+g-xM4BpiA@mail.gmail.com>
+In-Reply-To: <CAG48ez0CeTEGDuwr+qAGBwsqm+Drj0dkFfr6_UDc+g-xM4BpiA@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 23 Apr 2019 12:17:33 -0700
-Message-ID: <CAGXu5jKcBU43YGooE0NSk5BF9NhdHu6vuFOr8Zq6Fq-Dk4jNPA@mail.gmail.com>
-Subject: Re: [PATCH 3/3] RFC: net: apply __GFP_NOINIT to AF_UNIX sk_buff allocations
+Date: Tue, 23 Apr 2019 12:25:17 -0700
+Message-ID: <CAGXu5j+H_f6NO8VB3JkJZCBbSosY-oqnkEcA8nnTokZGN2QdRw@mail.gmail.com>
+Subject: Re: [PATCH] binfmt_elf: Update READ_IMPLIES_EXEC logic for modern CPUs
 Content-Type: text/plain; charset="UTF-8"
-To: Alexander Potapenko <glider@google.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@redhat.com>, Linux-MM <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Jann Horn <jannh@google.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Hector Marco-Gisbert <hecmargi@upv.es>, Jason Gunthorpe <jgg@mellanox.com>, kernel list <linux-kernel@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, musl@lists.openwall.com, Linux API <linux-api@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 18, 2019 at 8:42 AM Alexander Potapenko <glider@google.com> wrote:
+On Tue, Apr 23, 2019 at 12:02 PM Jann Horn <jannh@google.com> wrote:
+> It's probably worth going a bit more into detail in this description
+> on how libraries typically allocate thread stacks.
 >
-> Add sock_alloc_send_pskb_noinit(), which is similar to
-> sock_alloc_send_pskb(), but allocates with __GFP_NOINIT.
-> This helps reduce the slowdown on hackbench from 9% to 0.1%.
+> It looks like glibc will be fine; before commit 54ee14b3882
+> (https://sourceware.org/git/?p=glibc.git;a=blobdiff;f=nptl/allocatestack.c;h=dc501650b8629eda4502f2016016f09106cfb526;hp=6ada1fe1381de104153c0627e27f09fe5ad02caa;hb=54ee14b3882;hpb=16a76cd23ce9d3924fa192395e730423e3dc8b36),
+> thread stacks were always RWX, and since then, from what I can tell,
+> thread stacks were executable depending on the executable's ELF
+> headers (as parsed by glibc).
 
-I would include a detailed justification about why this is safe to do.
-I imagine (but haven't looked) that the skb is immediately written to
-after allocation, so this is basically avoiding a "double init". Is
-that correct?
+2003, which seems safely (?) in the past. :)
+
+> But e.g. musl's __pthread_create() seems to hardcode
+> PROT_READ|PROT_WRITE, which I think would mean that if someone built a
+> multithreaded program with nested functions and linked with musl, that
+> program would stop working? Or maybe I'm just reading the code wrong.
+
+Rephrasing for myself: this could break multithread binaries linked
+with musl and marked with PT_GNU_STACK to RWE since musl doesn't check
+ELF headers to determine stack executable-ness when allocating stack
+space in __pthread_create().
+
+> Then again, I'm not sure whether anyone actually uses nested functions...
+
+It is blissfully rare, but it seems common (?) for Fortran binaries.
+Are there multithreaded fortran binaries linked with musl that will
+break because of this? I guess it's possible. If that happens, we can
+adjust the logic with notes of an actual case. :)
 
 -- 
 Kees Cook
