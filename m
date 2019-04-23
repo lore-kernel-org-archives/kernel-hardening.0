@@ -1,68 +1,107 @@
-Date: Tue, 23 Apr 2019 16:06:40 -0600
-From: Jonathan Corbet <corbet@lwn.net>
-Subject: Re: [PATCH v2 56/79] docs: Documentation/*.txt: rename all ReST
- files to *.rst
-Message-ID: <20190423160640.70c9703f@lwn.net>
-In-Reply-To: <20190423213816.GE16353@zn.tnic>
-References: <cover.1555938375.git.mchehab+samsung@kernel.org>
-	<cda57849a6462ccc72dcd360b30068ab6a1021c4.1555938376.git.mchehab+samsung@kernel.org>
-	<20190423083135.GA11158@hirez.programming.kicks-ass.net>
-	<20190423125519.GA7104@redhat.com>
-	<20190423130132.GT4038@hirez.programming.kicks-ass.net>
-	<20190423103053.07cf2149@lwn.net>
-	<20190423171158.GG12232@hirez.programming.kicks-ass.net>
-	<20190423172006.GD16353@zn.tnic>
-	<20190423170409.7b1370ac@coco.lan>
-	<20190423213816.GE16353@zn.tnic>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 8bit
-To: Borislav Petkov <bp@alien8.de>
-Cc: Mauro Carvalho Chehab <mchehab+samsung@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Mike Snitzer <snitzer@redhat.com>, Linux Doc Mailing List <linux-doc@vger.kernel.org>, Mauro Carvalho Chehab <mchehab@infradead.org>, linux-kernel@vger.kernel.org, Johannes Berg <johannes@sipsolutions.net>, Kurt Schwemmer <kurt.schwemmer@microsemi.com>, Logan Gunthorpe <logang@deltatee.com>, Bjorn Helgaas <bhelgaas@google.com>, Alasdair Kergon <agk@redhat.com>, dm-devel@redhat.com, Kishon Vijay Abraham I <kishon@ti.com>, Rob Herring <robh+dt@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, David Airlie <airlied@linux.ie>, Daniel Vetter <daniel@ffwll.ch>, Maarten Lankhorst <maarten.lankhorst@linux.intel.com>, Maxime Ripard <maxime.ripard@bootlin.com>, Sean Paul <sean@poorly.run>, Ning Sun <ning.sun@intel.com>, Ingo Molnar <mingo@redhat.com>, Will Deacon <will.deacon@arm.com>, Alan Stern <stern@rowland.harvard.edu>, Andrea Parri <andrea.parri@amarulasolutions.com>, Boqun Feng <boqun.feng@gmail.com>, Nicholas Piggin <npiggin@gmail.com>, David Howells <dhowells@redhat.com>, Jade Alglave <j.alglave@ucl.ac.uk>, Luc Maranget <luc.maranget@inria.fr>, "Paul E. McKenney" <paulmck@linux.ibm.com>, Akira Yokosawa <akiyks@gmail.com>, Daniel Lustig <dlustig@nvidia.com>, "David S. Miller" <davem@davemloft.net>, Andreas =?UTF-8?B?RsOkcmJlcg==?= <afaerber@suse.de>, Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>, Cornelia Huck <cohuck@redhat.com>, Farhan Ali <alifm@linux.ibm.com>, Eric Farman <farman@linux.ibm.com>, Halil Pasic <pasic@linux.ibm.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Harry Wei <harryxiyou@gmail.com>, Alex Shi <alex.shi@linux.alibaba.com>, Jerry Hoemann <jerry.hoemann@hpe.com>, Wim Van Sebroeck <wim@linux-watchdog.org>, Guenter Roeck <linux@roeck-us.net>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Russell King <linux@armlinux.org.uk>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "James E.J.
- Bottomley" <James.Bottomley@HansenPartnership.com>, Helge Deller <deller@gmx.de>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, Guan Xuetao <gxt@pku.edu.cn>, Jens Axboe <axboe@kernel.dk>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Rafael
- J. Wysocki" <rafael@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Matt Mackall <mpm@selenic.com>, Herbert Xu <herbert@gondor.apana.org.au>, Corey Minyard <minyard@acm.org>, Sumit Semwal <sumit.semwal@linaro.org>, Linus Walleij <linus.walleij@linaro.org>, Bartosz Golaszewski <bgolaszewski@baylibre.com>, Darren Hart <dvhart@infradead.org>, Andy Shevchenko <andy@infradead.org>, Stuart Hayes <stuart.w.hayes@gmail.com>, Jaroslav Kysela <perex@perex.cz>, Alex Williamson <alex.williamson@redhat.com>, Kirti Wankhede <kwankhede@nvidia.com>, Christoph Hellwig <hch@lst.de>, Marek Szyprowski <m.szyprowski@samsung.com>, Robin Murphy <robin.murphy@arm.com>, Steffen Klassert <steffen.klassert@secunet.com>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, James Morris <jmorris@namei.org>, "Serge
- E. Hallyn" <serge@hallyn.com>, linux-wireless@vger.kernel.org, linux-pci@vger.kernel.org, devicetree@vger.kernel.org, dri-devel@lists.freedesktop.org, linux-fbdev@vger.kernel.org, tboot-devel@lists.sourceforge.net, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-s390@vger.kernel.org, kvm@vger.kernel.org, linux-watchdog@vger.kernel.org, linux-ia64@vger.kernel.org, linux-parisc@vger.kernel.org, linux-sh@vger.kernel.org, sparclinux@vger.kernel.org, linux-block@vger.kernel.org, linux-crypto@vger.kernel.org, openipmi-developer@lists.sourceforge.net, linaro-mm-sig@lists.linaro.org, linux-gpio@vger.kernel.org, platform-driver-x86@vger.kernel.org, iommu@lists.linux-foundation.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, Changbin Du <changbin.du@gmail.com>
+References: <20190212180441.15340-1-keescook@chromium.org> <20190212180441.15340-3-keescook@chromium.org>
+ <CAMuHMdW6N40+0gGQ+LSrN64Mo4A0-ELAm0pR3gWQ0mNanyBuUQ@mail.gmail.com>
+In-Reply-To: <CAMuHMdW6N40+0gGQ+LSrN64Mo4A0-ELAm0pR3gWQ0mNanyBuUQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 23 Apr 2019 15:42:46 -0700
+Message-ID: <CAGXu5jL-J=VTmG4SnnXxFod4G=AxNL5mdeshEKs4yNWb4aYsFw@mail.gmail.com>
+Subject: Re: [PATCH 2/2] lib: Introduce test_stackinit module
+Content-Type: text/plain; charset="UTF-8"
+To: Geert Uytterhoeven <geert@linux-m68k.org>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, Alexander Popov <alex.popov@linux.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Alexander Potapenko <glider@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux/m68k <linux-m68k@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 23 Apr 2019 23:38:16 +0200
-Borislav Petkov <bp@alien8.de> wrote:
+On Mon, Mar 11, 2019 at 3:52 AM Geert Uytterhoeven <geert@linux-m68k.org> wrote:
+>
+> Hi Kees,
+>
+> On Tue, Feb 12, 2019 at 7:08 PM Kees Cook <keescook@chromium.org> wrote:
+> > Adds test for stack initialization coverage. We have several build options
+> > that control the level of stack variable initialization. This test lets us
+> > visualize which options cover which cases, and provide tests for some of
+> > the pathological padding conditions the compiler will sometimes fail to
+> > initialize.
+>
+> With current upstream, using gcc Ubuntu 8.2.0-1ubuntu2~18.04, I get
+> on m68k:
 
-> But exactly this - *having* to do rst formatting would mean a lot of
-> getting used to and people writing something which is not necessarily
-> correct rst and someone else fixing up after them.
+Thanks for testing this on other architectures!
 
-Remember that most of our docs are 99% RST even though they were written
-by people who had never even heard of RST.  I really don't think it's a
-big deal - a far smaller cognitive load than trying to keep up with any
-given subsystem's variable-declaration-ordering rules, for example :)
+> test_stackinit: u8_zero: stack fill missed target!?
 
-> Another pain point is changing the file paths. Without cscope I would've
-> been cursing each time I'm looking for kernel-parameters.txt, for
-> example. First of all, it is in Documentation/admin-guide/ now and then
-> there's Documentation/admin-guide/kernel-parameters.rst too.
+Hmpf. That's frustrating. That implies that the leaf function is
+assembled in such a way that the "leaking" memory address and the
+"controlled" memory address on the stack end up in different
+locations. I had a lot of problems with this before I unified my leaf
+function. I wonder if some inlining is happening with the m68k
+compiler that I haven't accounted for?
 
-Moving of files has nothing to do with RST, of course.  That you can
-blame entirely on me trying to bring some order to Documentation/.  As a
-predecessor of mine once put it (https://lkml.org/lkml/2007/7/3/422):
+> Any idea what is wrong? I find the test code a bit hard to understand...
 
-	Documentation/* is a gigantic mess, currently organized based on
-	where random passers-by put things down last.
+Yeah, there was a lot of repetition, so I tried to save my sanity and
+build macros. The particular problem above is with the "test_..."'s
+call of the "leaf_..." functions:
 
-When other parts of the kernel tree turn out to be organized in
-less-than-useful ways, we move things around.  I'm trying to do the same
-in Documentation/, with an attempt to be sympathetic toward our readers,
-sort things by intended audience, and create (someday) a coherent whole.
-I agree that moving docs is a short-term annoyance, but I'm hoping that
-it brings a long-term benefit.
+        /* Fill stack with 0xFF. */                             \
+        ignored = leaf_ ##name((unsigned long)&ignored, 1,      \
+                                FETCH_ARG_ ## which(zero));     \
+        /* Clear entire check buffer for later bit tests. */    \
+        memset(check_buf, 0x00, sizeof(check_buf));             \
+        /* Extract stack-defined variable contents. */          \
+        ignored = leaf_ ##name((unsigned long)&ignored, 0,      \
+                                FETCH_ARG_ ## which(zero));     \
 
-> So* I'd suggest having as less markup in those files as possible and if
-> it is needed, automate adding the needed markup, as Jon suggested.
+those two leaf_* invocations should produce stack variables at the
+same location on the stack:
 
-Minimal markup is the policy (it's even documented :).  Automating stuff
-that can be automated is an area that has definitely not received
-enough attention; hopefully some things can be done there in the very
-near future.
+        var_type var INIT_ ## which ## _ ## init_level;         \
+                                                                \
+        target_start = &var;                                    \
+        target_size = sizeof(var);                              \
+        /*                                                      \
+         * Keep this buffer around to make sure we've got a     \
+         * stack frame of SOME kind...                          \
+         */                                                     \
+        memset(buf, (char)(sp && 0xff), sizeof(buf));           \
+        /* Fill variable with 0xFF. */                          \
+        if (fill) {                                             \
+                fill_start = &var;                              \
+                fill_size = sizeof(var);                        \
 
-Thanks,
+(note "target_start" and "fill_start" being assigned the location of
+(in theory) the same stack location)
 
-jon
+This gets checked later:
+
+        /* Validate that compiler lined up fill and target. */  \
+        if (!range_contains(fill_start, fill_size,              \
+                            target_start, target_size)) {       \
+                pr_err(#name ": stack fill missed target!?\n"); \
+                pr_err(#name ": fill %zu wide\n", fill_size);   \
+                pr_err(#name ": target offset by %d\n", \
+                        (int)((ssize_t)(uintptr_t)fill_start -  \
+                        (ssize_t)(uintptr_t)target_start));     \
+                return 1;                                       \
+
+which is where you're seeing the report.
+
+> Also, I see comments making assumptions that are not true:
+>
+>     struct test_small_hole {
+>             size_t one;
+>             char two;
+>             /* 3 byte padding hole here. */
+>             int three;
+>             unsigned long four;
+>     };
+>
+> On m68k (and a few other architectures), integrals of 16-bit and larger
+> are aligned to a 2-byte address, so the padding may be only a single byte.
+
+Ah! Good point. I can update the comments, but the test should still
+be valid (it just has a smaller hole).
+
+Thanks again!
+
+-- 
+Kees Cook
