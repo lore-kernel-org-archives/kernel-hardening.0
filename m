@@ -1,44 +1,25 @@
-Subject: Re: [PATCH 1/3] mm: security: introduce the init_allocations=1 boot
- option
+Subject: Re: [PATCH 2/3] gfp: mm: introduce __GFP_NOINIT
 References: <20190418154208.131118-1-glider@google.com>
- <20190418154208.131118-2-glider@google.com>
+ <20190418154208.131118-3-glider@google.com>
+ <7bf6bd62-c8e0-df3d-8e98-70063f2d175a@intel.com>
+ <CAGXu5j+Lm0ba4ZQ91vZ8nZFvpJSxu_j_bEKMaa0NMsurmyZjjA@mail.gmail.com>
 From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <a0b69045-f6c4-0290-1c59-4dd75b05ee25@intel.com>
-Date: Tue, 23 Apr 2019 13:36:28 -0700
+Message-ID: <2c66e43f-81d5-ebeb-495a-f3f3b65d315c@intel.com>
+Date: Tue, 23 Apr 2019 13:40:19 -0700
 MIME-Version: 1.0
-In-Reply-To: <20190418154208.131118-2-glider@google.com>
+In-Reply-To: <CAGXu5j+Lm0ba4ZQ91vZ8nZFvpJSxu_j_bEKMaa0NMsurmyZjjA@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 8bit
-To: Alexander Potapenko <glider@google.com>, akpm@linux-foundation.org, cl@linux.com, dvyukov@google.com, keescook@chromium.org, labbott@redhat.com
-Cc: linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: Kees Cook <keescook@chromium.org>
+Cc: Alexander Potapenko <glider@google.com>, Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@redhat.com>, Linux-MM <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 4/18/19 8:42 AM, Alexander Potapenko wrote:
-> +static void poison_dont(struct kmem_cache *c, void *object)
-> +{
-> +	/* Do nothing. Use for caches with constructors. */
-> +}
-> +
->  static struct kmem_cache *create_cache(const char *name,
->  		unsigned int object_size, unsigned int align,
->  		slab_flags_t flags, unsigned int useroffset,
-> @@ -381,6 +391,10 @@ static struct kmem_cache *create_cache(const char *name,
->  	s->size = s->object_size = object_size;
->  	s->align = align;
->  	s->ctor = ctor;
-> +	if (ctor)
-> +		s->poison_fn = poison_dont;
-> +	else
-> +		s->poison_fn = poison_zero;
->  	s->useroffset = useroffset;
->  	s->usersize = usersize;
->  
-> @@ -974,6 +988,7 @@ void __init create_boot_cache(struct kmem_cache *s, const char *name,
->  	s->align = calculate_alignment(flags, ARCH_KMALLOC_MINALIGN, size);
->  	s->useroffset = useroffset;
->  	s->usersize = usersize;
-> +	s->poison_fn = poison_zero;
+On 4/23/19 12:14 PM, Kees Cook wrote:
+>> These sl*b ones seem like a bad idea.  We already have rules that sl*b
+>> allocations must be initialized by callers, and we have reasonably
+>> frequent bugs where the rules are broken.
+> 
+> Hm? No, this is saying that the page allocator can skip the auto-init
+> because the slab internals will be doing it later.
 
-An empty indirect call is probably a pretty bad idea on systems with
-retpoline.  Isn't this just a bool anyway for either calling poison_dont
-or poison_zero?  Can it call anything else?
+Ahhh, got it.  I missed all the fun in patch 1.
