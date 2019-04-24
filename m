@@ -1,107 +1,107 @@
 MIME-Version: 1.0
-References: <20190212180441.15340-1-keescook@chromium.org> <20190212180441.15340-3-keescook@chromium.org>
- <CAMuHMdW6N40+0gGQ+LSrN64Mo4A0-ELAm0pR3gWQ0mNanyBuUQ@mail.gmail.com>
-In-Reply-To: <CAMuHMdW6N40+0gGQ+LSrN64Mo4A0-ELAm0pR3gWQ0mNanyBuUQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 23 Apr 2019 15:42:46 -0700
-Message-ID: <CAGXu5jL-J=VTmG4SnnXxFod4G=AxNL5mdeshEKs4yNWb4aYsFw@mail.gmail.com>
-Subject: Re: [PATCH 2/2] lib: Introduce test_stackinit module
+References: <20190411180117.27704-1-keescook@chromium.org> <20190411180117.27704-2-keescook@chromium.org>
+ <CAK7LNATvNJprA94Qypfub2rpbEEJkAeV3yqVyuk2aNEraDKZ6w@mail.gmail.com> <CAGXu5jLNwFfG-x-_Q6nTdU21t5B9z7dCgBekRiJ+MnUE14J12A@mail.gmail.com>
+In-Reply-To: <CAGXu5jLNwFfG-x-_Q6nTdU21t5B9z7dCgBekRiJ+MnUE14J12A@mail.gmail.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Date: Wed, 24 Apr 2019 13:05:44 +0900
+Message-ID: <CAK7LNASwf6Q_q-wtqxCuz7-HOYiBdQ-5QbhOCkhX8Ujh01oLNA@mail.gmail.com>
+Subject: Re: [PATCH v2 1/3] security: Create "kernel hardening" config area
 Content-Type: text/plain; charset="UTF-8"
-To: Geert Uytterhoeven <geert@linux-m68k.org>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, Alexander Popov <alex.popov@linux.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Alexander Potapenko <glider@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux/m68k <linux-m68k@vger.kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Alexander Potapenko <glider@google.com>, James Morris <jmorris@namei.org>, Alexander Popov <alex.popov@linux.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 11, 2019 at 3:52 AM Geert Uytterhoeven <geert@linux-m68k.org> wrote:
+On Wed, Apr 24, 2019 at 4:36 AM Kees Cook <keescook@chromium.org> wrote:
 >
-> Hi Kees,
+> On Thu, Apr 11, 2019 at 6:39 PM Masahiro Yamada
+> <yamada.masahiro@socionext.com> wrote:
+> >
+> > On Fri, Apr 12, 2019 at 3:01 AM Kees Cook <keescook@chromium.org> wrote:
+> > >
+> > > Right now kernel hardening options are scattered around various Kconfig
+> > > files. This can be a central place to collect these kinds of options
+> > > going forward. This is initially populated with the memory initialization
+> > > options from the gcc-plugins.
+> > >
+> > > Signed-off-by: Kees Cook <keescook@chromium.org>
+> > > ---
+> > >  scripts/gcc-plugins/Kconfig | 74 +++--------------------------
+> > >  security/Kconfig            |  2 +
+> > >  security/Kconfig.hardening  | 93 +++++++++++++++++++++++++++++++++++++
+> > >  3 files changed, 102 insertions(+), 67 deletions(-)
+> > >  create mode 100644 security/Kconfig.hardening
+> > >
+> > > diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
+> > > index 74271dba4f94..84d471dea2b7 100644
+> > > --- a/scripts/gcc-plugins/Kconfig
+> > > +++ b/scripts/gcc-plugins/Kconfig
+> > > @@ -13,10 +13,11 @@ config HAVE_GCC_PLUGINS
+> > >           An arch should select this symbol if it supports building with
+> > >           GCC plugins.
+> > >
+> > > -menuconfig GCC_PLUGINS
+> > > -       bool "GCC plugins"
+> > > +config GCC_PLUGINS
+> > > +       bool
+> > >         depends on HAVE_GCC_PLUGINS
+> > >         depends on PLUGIN_HOSTCC != ""
+> > > +       default y
+> > >         help
+> > >           GCC plugins are loadable modules that provide extra features to the
+> > >           compiler. They are useful for runtime instrumentation and static analysis.
+> > > @@ -25,6 +26,8 @@ menuconfig GCC_PLUGINS
+> > >
+> > >  if GCC_PLUGINS
+> > >
+> > > +menu "GCC plugins"
+> > > +
+> >
+> >
+> >
+> > Just a tip to save "if" ... "endif" block.
+> >
+> >
+> > If you like, you can write like follows:
+> >
+> >
+> > menu "GCC plugins"
+> >           depends on GCC_PLUGINS
+> >
+> >   <menu body>
+> >
+> > endmenu
 >
-> On Tue, Feb 12, 2019 at 7:08 PM Kees Cook <keescook@chromium.org> wrote:
-> > Adds test for stack initialization coverage. We have several build options
-> > that control the level of stack variable initialization. This test lets us
-> > visualize which options cover which cases, and provide tests for some of
-> > the pathological padding conditions the compiler will sometimes fail to
-> > initialize.
+> Ah yes, thanks! Adjusted.
 >
-> With current upstream, using gcc Ubuntu 8.2.0-1ubuntu2~18.04, I get
-> on m68k:
-
-Thanks for testing this on other architectures!
-
-> test_stackinit: u8_zero: stack fill missed target!?
-
-Hmpf. That's frustrating. That implies that the leaf function is
-assembled in such a way that the "leaking" memory address and the
-"controlled" memory address on the stack end up in different
-locations. I had a lot of problems with this before I unified my leaf
-function. I wonder if some inlining is happening with the m68k
-compiler that I haven't accounted for?
-
-> Any idea what is wrong? I find the test code a bit hard to understand...
-
-Yeah, there was a lot of repetition, so I tried to save my sanity and
-build macros. The particular problem above is with the "test_..."'s
-call of the "leaf_..." functions:
-
-        /* Fill stack with 0xFF. */                             \
-        ignored = leaf_ ##name((unsigned long)&ignored, 1,      \
-                                FETCH_ARG_ ## which(zero));     \
-        /* Clear entire check buffer for later bit tests. */    \
-        memset(check_buf, 0x00, sizeof(check_buf));             \
-        /* Extract stack-defined variable contents. */          \
-        ignored = leaf_ ##name((unsigned long)&ignored, 0,      \
-                                FETCH_ARG_ ## which(zero));     \
-
-those two leaf_* invocations should produce stack variables at the
-same location on the stack:
-
-        var_type var INIT_ ## which ## _ ## init_level;         \
-                                                                \
-        target_start = &var;                                    \
-        target_size = sizeof(var);                              \
-        /*                                                      \
-         * Keep this buffer around to make sure we've got a     \
-         * stack frame of SOME kind...                          \
-         */                                                     \
-        memset(buf, (char)(sp && 0xff), sizeof(buf));           \
-        /* Fill variable with 0xFF. */                          \
-        if (fill) {                                             \
-                fill_start = &var;                              \
-                fill_size = sizeof(var);                        \
-
-(note "target_start" and "fill_start" being assigned the location of
-(in theory) the same stack location)
-
-This gets checked later:
-
-        /* Validate that compiler lined up fill and target. */  \
-        if (!range_contains(fill_start, fill_size,              \
-                            target_start, target_size)) {       \
-                pr_err(#name ": stack fill missed target!?\n"); \
-                pr_err(#name ": fill %zu wide\n", fill_size);   \
-                pr_err(#name ": target offset by %d\n", \
-                        (int)((ssize_t)(uintptr_t)fill_start -  \
-                        (ssize_t)(uintptr_t)target_start));     \
-                return 1;                                       \
-
-which is where you're seeing the report.
-
-> Also, I see comments making assumptions that are not true:
+> > > +menu "Memory initialization"
+> > > +
+> > > +choice
+> > > +       prompt "Initialize kernel stack variables at function entry"
+> > > +       depends on GCC_PLUGINS
+> >
+> > On second thought,
+> > this 'depends on' is unnecessary
+> > because INIT_STACK_NONE should be always visible.
 >
->     struct test_small_hole {
->             size_t one;
->             char two;
->             /* 3 byte padding hole here. */
->             int three;
->             unsigned long four;
->     };
+> Oh yes, excellent point. Adjusted.
 >
-> On m68k (and a few other architectures), integrals of 16-bit and larger
-> are aligned to a 2-byte address, so the padding may be only a single byte.
+> > Another behavior change is
+> > GCC_PLUGIN_STRUCTLEAK was previously enabled by all{yes,mod}config,
+> > and in the compile-test coverage.
+>
+> I could set the defaults based on CONFIG_COMPILE_TEST, though? I.e.:
+>
+>         prompt "Initialize kernel stack variables at function entry"
+>         default GCC_PLUGIN_STRUCTLEAK_BYREF_ALL if COMPILE_TEST && GCC_PLUGINS
+>         default INIT_STACK_ALL if COMPILE_TEST && CC_HAS_AUTO_VAR_INIT
+>         default INIT_STACK_NONE
 
-Ah! Good point. I can update the comments, but the test should still
-be valid (it just has a smaller hole).
+Looks a good idea to me.
 
-Thanks again!
+Thanks.
+
+
 
 -- 
-Kees Cook
+Best Regards
+Masahiro Yamada
