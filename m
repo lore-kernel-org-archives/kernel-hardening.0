@@ -1,98 +1,32 @@
-Date: Wed, 24 Apr 2019 21:51:17 +0100
-From: Will Deacon <will.deacon@arm.com>
-Subject: Re: [PATCH v2] binfmt_elf: Update READ_IMPLIES_EXEC logic for modern
- CPUs
-Message-ID: <20190424205117.GA5291@brain-police>
-References: <20190424203408.GA11386@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190424203408.GA11386@beast>
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Hector Marco-Gisbert <hecmargi@upv.es>, Marc Gonzalez <marc.w.gonzalez@free.fr>, Jason Gunthorpe <jgg@mellanox.com>, x86@kernel.org, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Arnd Bergmann <arnd@arndb.de>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-kernel@vger.kernel.org
+References: <20190423194925.32151-1-keescook@chromium.org> <CAK7LNARuX8XfO=YRX9dYpipyBTCtMbQqLJfuk6iMLfLdZe1-KQ@mail.gmail.com>
+In-Reply-To: <CAK7LNARuX8XfO=YRX9dYpipyBTCtMbQqLJfuk6iMLfLdZe1-KQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 24 Apr 2019 13:46:45 -0700
+Message-ID: <CAGXu5jJfYBTt836K7-SNdwZcHf9RhXKxRj+xefn_hhogt2UEnA@mail.gmail.com>
+Subject: Re: [PATCH v3 0/3] Refactor memory initialization hardening
+Content-Type: text/plain; charset="UTF-8"
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Alexander Potapenko <glider@google.com>, James Morris <jmorris@namei.org>, Alexander Popov <alex.popov@linux.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 24, 2019 at 01:34:08PM -0700, Kees Cook wrote:
-> The READ_IMPLIES_EXEC work-around was designed for old CPUs lacking NX
-> (to have the visible permission flags on memory regions reflect reality:
-> they are all executable), and for old toolchains that lacked the ELF
-> PT_GNU_STACK marking (under the assumption that toolchains that couldn't
-> even specify memory protection flags may have it wrong for all memory
-> regions).
-> 
-> This logic is sensible, but was implemented in a way that equated having
-> a PT_GNU_STACK marked executable as being as "broken" as lacking the
-> PT_GNU_STACK marking entirely. This is not a reasonable assumption
-> for CPUs that have had NX support from the start (or very close to
-> the start). This confusion has led to situations where modern 64-bit
-> programs with explicitly marked executable stack are forced into the
-> READ_IMPLIES_EXEC state when no such thing is needed. (And leads to
-> unexpected failures when mmap()ing regions of device driver memory that
-> wish to disallow VM_EXEC[1].)
-> 
-> To fix this, elf_read_implies_exec() is adjusted on arm64 (where NX has
-> always existed and toolchains have implemented PT_GNU_STACK for a while),
-> and x86 is adjusted to handle this combination of possible outcomes:
-> 
->               CPU: | lacks NX  | has NX, ia32     | has NX, x86_64   |
->  ELF:              |           |                  |                  |
->  ------------------------------|------------------|------------------|
->  missing GNU_STACK | needs RIE | needs RIE        | no RIE           |
->  GNU_STACK == RWX  | needs RIE | no RIE: stack X  | no RIE: stack X  |
->  GNU_STACK == RW   | needs RIE | no RIE: stack NX | no RIE: stack NX |
-> 
-> This has the effect of making binfmt_elf's EXSTACK_DEFAULT actually take
-> on the correct architecture default of being non-executable on arm64 and
-> x86_64, and being executable on ia32.
-> 
-> [1] https://lkml.kernel.org/r/20190418055759.GA3155@mellanox.com
-> 
-> Suggested-by: Hector Marco-Gisbert <hecmargi@upv.es>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
-> v2: adjust arm64 to avoid is_compat_task() (marc.w.gonzalez)
-> ---
->  arch/arm64/include/asm/elf.h |  8 +++++++-
->  arch/x86/include/asm/elf.h   | 24 +++++++++++++++++++++---
->  2 files changed, 28 insertions(+), 4 deletions(-)
-> 
-> diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
-> index 6adc1a90e7e6..f1bb4b388b8f 100644
-> --- a/arch/arm64/include/asm/elf.h
-> +++ b/arch/arm64/include/asm/elf.h
-> @@ -107,7 +107,13 @@
->   */
->  #define elf_check_arch(x)		((x)->e_machine == EM_AARCH64)
->  
-> -#define elf_read_implies_exec(ex,stk)	(stk != EXSTACK_DISABLE_X)
-> +/*
-> + * 64-bit processes should not automatically gain READ_IMPLIES_EXEC. Only
-> + * 32-bit processes without PT_GNU_STACK should trigger READ_IMPLIES_EXEC
-> + * out of an abundance of caution against ancient toolchains not knowing
-> + * how to mark memory protection flags correctly.
-> + */
-> +#define compat_elf_read_implies_exec(ex, stk)	(stk == EXSTACK_DEFAULT)
+On Tue, Apr 23, 2019 at 9:07 PM Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+>
+> On Wed, Apr 24, 2019 at 4:49 AM Kees Cook <keescook@chromium.org> wrote:
+> >
+> > This refactors the stack memory initialization configs in order to
+> > keep things together when adding Clang stack initialization, and in
+> > preparation for future heap memory initialization configs.
+> >
+> > I intend to carry this in the gcc-plugins tree, but I'd really like
+> > to get Acks from Masahiro (Kconfig changes, Makefile change), and
+> > from James (adding the new Kconfig.hardening to security/Kconfig).
+>
+> If needed,
+> Acked-by: Masahiro Yamada <yamada.masahiro@socionext.com>
 
-Don't you need to hack fs/compat_binfmt_elf.c to pick this up, or am I
-missing some trick? Should just be something like below.
+Great; thanks! :)
 
-Will
-
---->8
-
-diff --git a/fs/compat_binfmt_elf.c b/fs/compat_binfmt_elf.c
-index 15f6e96b3bd9..694bc3ee77eb 100644
---- a/fs/compat_binfmt_elf.c
-+++ b/fs/compat_binfmt_elf.c
-@@ -116,6 +116,11 @@
- #define	arch_setup_additional_pages compat_arch_setup_additional_pages
- #endif
- 
-+#ifdef compat_elf_read_implies_exec
-+#undef elf_read_implies_exec
-+#define elf_read_implies_exec compat_elf_read_implies_exec
-+#endif
-+
- /*
-  * Rename a few of the symbols that binfmt_elf.c will define.
-  * These are all local so the names don't really matter, but it
+-- 
+Kees Cook
