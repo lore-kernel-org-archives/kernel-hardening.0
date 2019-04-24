@@ -1,171 +1,76 @@
-Subject: Re: [PATCH v3 2/3] security: Move stackleak config to
- Kconfig.hardening
-References: <20190423194925.32151-1-keescook@chromium.org>
- <20190423194925.32151-3-keescook@chromium.org>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <84ed0a4b-b1e5-ae86-56c1-40a212734667@linux.com>
-Date: Wed, 24 Apr 2019 18:25:45 +0300
+Date: Wed, 24 Apr 2019 13:36:27 -0300
+From: Mauro Carvalho Chehab <mchehab+samsung@kernel.org>
+Subject: Re: [PATCH v2 56/79] docs: Documentation/*.txt: rename all ReST
+ files to *.rst
+Message-ID: <20190424133627.63d7beed@coco.lan>
+In-Reply-To: <20190424145410.GE30142@zn.tnic>
+References: <cda57849a6462ccc72dcd360b30068ab6a1021c4.1555938376.git.mchehab+samsung@kernel.org>
+	<20190423083135.GA11158@hirez.programming.kicks-ass.net>
+	<20190423125519.GA7104@redhat.com>
+	<20190423130132.GT4038@hirez.programming.kicks-ass.net>
+	<20190423103053.07cf2149@lwn.net>
+	<20190423171158.GG12232@hirez.programming.kicks-ass.net>
+	<20190423172006.GD16353@zn.tnic>
+	<20190423170409.7b1370ac@coco.lan>
+	<20190423213816.GE16353@zn.tnic>
+	<20190423232325.679c100b@coco.lan>
+	<20190424145410.GE30142@zn.tnic>
 MIME-Version: 1.0
-In-Reply-To: <20190423194925.32151-3-keescook@chromium.org>
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, Alexander Potapenko <glider@google.com>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+To: Borislav Petkov <bp@alien8.de>
+Cc: Peter Zijlstra <peterz@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Mike Snitzer <snitzer@redhat.com>, Linux Doc Mailing List <linux-doc@vger.kernel.org>, Mauro Carvalho Chehab <mchehab@infradead.org>, linux-kernel@vger.kernel.org, Johannes Berg <johannes@sipsolutions.net>, Kurt Schwemmer <kurt.schwemmer@microsemi.com>, Logan Gunthorpe <logang@deltatee.com>, Bjorn Helgaas <bhelgaas@google.com>, Alasdair Kergon <agk@redhat.com>, dm-devel@redhat.com, Kishon Vijay Abraham I <kishon@ti.com>, Rob Herring <robh+dt@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, David Airlie <airlied@linux.ie>, Daniel Vetter <daniel@ffwll.ch>, Maarten Lankhorst <maarten.lankhorst@linux.intel.com>, Maxime Ripard <maxime.ripard@bootlin.com>, Sean Paul <sean@poorly.run>, Ning Sun <ning.sun@intel.com>, Ingo Molnar <mingo@redhat.com>, Will Deacon <will.deacon@arm.com>, Alan Stern <stern@rowland.harvard.edu>, Andrea Parri <andrea.parri@amarulasolutions.com>, Boqun Feng <boqun.feng@gmail.com>, Nicholas Piggin <npiggin@gmail.com>, David Howells <dhowells@redhat.com>, Jade Alglave <j.alglave@ucl.ac.uk>, Luc Maranget <luc.maranget@inria.fr>, "Paul E. McKenney" <paulmck@linux.ibm.com>, Akira Yokosawa <akiyks@gmail.com>, Daniel Lustig <dlustig@nvidia.com>, "David S. Miller" <davem@davemloft.net>, Andreas =?UTF-8?B?RsOkcmJlcg==?= <afaerber@suse.de>, Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>, Cornelia Huck <cohuck@redhat.com>, Farhan Ali <alifm@linux.ibm.com>, Eric Farman <farman@linux.ibm.com>, Halil Pasic <pasic@linux.ibm.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Harry Wei <harryxiyou@gmail.com>, Alex Shi <alex.shi@linux.alibaba.com>, Jerry Hoemann <jerry.hoemann@hpe.com>, Wim Van Sebroeck <wim@linux-watchdog.org>, Guenter Roeck <linux@roeck-us.net>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Russell King <linux@armlinux.org.uk>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "James E.J.
+ Bottomley" <James.Bottomley@HansenPartnership.com>, Helge Deller <deller@gmx.de>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, Guan Xuetao <gxt@pku.edu.cn>, Jens Axboe <axboe@kernel.dk>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Rafael
+ J. Wysocki" <rafael@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Matt Mackall <mpm@selenic.com>, Herbert Xu <herbert@gondor.apana.org.au>, Corey Minyard <minyard@acm.org>, Sumit Semwal <sumit.semwal@linaro.org>, Linus Walleij <linus.walleij@linaro.org>, Bartosz Golaszewski <bgolaszewski@baylibre.com>, Darren Hart <dvhart@infradead.org>, Andy Shevchenko <andy@infradead.org>, Stuart Hayes <stuart.w.hayes@gmail.com>, Jaroslav Kysela <perex@perex.cz>, Alex Williamson <alex.williamson@redhat.com>, Kirti Wankhede <kwankhede@nvidia.com>, Christoph Hellwig <hch@lst.de>, Marek Szyprowski <m.szyprowski@samsung.com>, Robin Murphy <robin.murphy@arm.com>, Steffen Klassert <steffen.klassert@secunet.com>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, James Morris <jmorris@namei.org>, "Serge
+ E. Hallyn" <serge@hallyn.com>, linux-wireless@vger.kernel.org, linux-pci@vger.kernel.org, devicetree@vger.kernel.org, dri-devel@lists.freedesktop.org, linux-fbdev@vger.kernel.org, tboot-devel@lists.sourceforge.net, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-s390@vger.kernel.org, kvm@vger.kernel.org, linux-watchdog@vger.kernel.org, linux-ia64@vger.kernel.org, linux-parisc@vger.kernel.org, linux-sh@vger.kernel.org, sparclinux@vger.kernel.org, linux-block@vger.kernel.org, linux-crypto@vger.kernel.org, openipmi-developer@lists.sourceforge.net, linaro-mm-sig@lists.linaro.org, linux-gpio@vger.kernel.org, platform-driver-x86@vger.kernel.org, iommu@lists.linux-foundation.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, Changbin Du <changbin.du@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 23.04.2019 22:49, Kees Cook wrote:
-> This moves the stackleak plugin options to Kconfig.hardening's memory
-> initialization menu.
+Em Wed, 24 Apr 2019 16:54:10 +0200
+Borislav Petkov <bp@alien8.de> escreveu:
+
+> On Wed, Apr 24, 2019 at 07:40:07AM -0300, Mauro Carvalho Chehab wrote:
+> > Personally, I don't care much with monospaced fonts on this table. After
+> > all, if I want to see it monospaced, I can simply click at the
+> > "View page source" at the browser, and it will display the file as a
+> > plain old monospaced text file.  
 > 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+> Goes to show why kernel people wouldn't want to look at that in
+> the browser. Long hex numbers are hard to read as it is - that's
+> why there's even the 4-digit separator in some docs, for example:
+> 0xffff_ffff_8100_0000.
 
-Hello Kees,
+IMHO, even the 0x and _ would make it harder to read. This is a way
+more easy for my eyes:
 
-I see the changes in STACKLEAK help, looks good to me.
-For this patch -
-  Reviewed-by: Alexander Popov <alex.popov@linux.com>
+	ffff ffff 8100 0000
+
+> Not having it monospaced makes the whole thing even less readable.
+
+Yeah, I see your point and agree with it.
+
+Just saying that, if all I want is to check if addresses that start
+with ffff80 belongs to the guard hole, or just to copy a value from 
+a table into some C code, the font doesn't matter much, and, if
+I care, a simple click would show it in monospaced fonts.
+
+Looking from your PoV, something like:
 
 
-By the way, for your information, GCC_PLUGIN_STRUCTLEAK help is now unreachable
-from 'make menuconfig'.
-
-Best regards,
-Alexander
+|ffffffff80000000 |   -2    GB | ffffffff9fffffff |  512 MB | kernel text mapping, mapped to physical address 0         |
 
 
-> ---
->  scripts/gcc-plugins/Kconfig | 51 ---------------------------------
->  security/Kconfig.hardening  | 57 +++++++++++++++++++++++++++++++++++++
->  2 files changed, 57 insertions(+), 51 deletions(-)
+is very hard to be parsed by a human eye, even with monospaced fonts.
+In order to make it easier, I would replace it by:
+
+|ffff ffff 8000 0000 |   -2    GB | ffff ffff 9fff ffff |  512 MB | kernel text mapping, mapped to physical address 0         |
+
+
 > 
-> diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-> index 352f03878a1e..80220ed26a35 100644
-> --- a/scripts/gcc-plugins/Kconfig
-> +++ b/scripts/gcc-plugins/Kconfig
-> @@ -108,57 +108,6 @@ config GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
->  	  in structures.  This reduces the performance hit of RANDSTRUCT
->  	  at the cost of weakened randomization.
->  
-> -config GCC_PLUGIN_STACKLEAK
-> -	bool "Erase the kernel stack before returning from syscalls"
-> -	depends on GCC_PLUGINS
-> -	depends on HAVE_ARCH_STACKLEAK
-> -	help
-> -	  This option makes the kernel erase the kernel stack before
-> -	  returning from system calls. That reduces the information which
-> -	  kernel stack leak bugs can reveal and blocks some uninitialized
-> -	  stack variable attacks.
-> -
-> -	  The tradeoff is the performance impact: on a single CPU system kernel
-> -	  compilation sees a 1% slowdown, other systems and workloads may vary
-> -	  and you are advised to test this feature on your expected workload
-> -	  before deploying it.
-> -
-> -	  This plugin was ported from grsecurity/PaX. More information at:
-> -	   * https://grsecurity.net/
-> -	   * https://pax.grsecurity.net/
-> -
-> -config STACKLEAK_TRACK_MIN_SIZE
-> -	int "Minimum stack frame size of functions tracked by STACKLEAK"
-> -	default 100
-> -	range 0 4096
-> -	depends on GCC_PLUGIN_STACKLEAK
-> -	help
-> -	  The STACKLEAK gcc plugin instruments the kernel code for tracking
-> -	  the lowest border of the kernel stack (and for some other purposes).
-> -	  It inserts the stackleak_track_stack() call for the functions with
-> -	  a stack frame size greater than or equal to this parameter.
-> -	  If unsure, leave the default value 100.
-> -
-> -config STACKLEAK_METRICS
-> -	bool "Show STACKLEAK metrics in the /proc file system"
-> -	depends on GCC_PLUGIN_STACKLEAK
-> -	depends on PROC_FS
-> -	help
-> -	  If this is set, STACKLEAK metrics for every task are available in
-> -	  the /proc file system. In particular, /proc/<pid>/stack_depth
-> -	  shows the maximum kernel stack consumption for the current and
-> -	  previous syscalls. Although this information is not precise, it
-> -	  can be useful for estimating the STACKLEAK performance impact for
-> -	  your workloads.
-> -
-> -config STACKLEAK_RUNTIME_DISABLE
-> -	bool "Allow runtime disabling of kernel stack erasing"
-> -	depends on GCC_PLUGIN_STACKLEAK
-> -	help
-> -	  This option provides 'stack_erasing' sysctl, which can be used in
-> -	  runtime to control kernel stack erasing for kernels built with
-> -	  CONFIG_GCC_PLUGIN_STACKLEAK.
-> -
->  config GCC_PLUGIN_ARM_SSP_PER_TASK
->  	bool
->  	depends on GCC_PLUGINS && ARM
-> diff --git a/security/Kconfig.hardening b/security/Kconfig.hardening
-> index 19881341f1c2..a96d4a43ca65 100644
-> --- a/security/Kconfig.hardening
-> +++ b/security/Kconfig.hardening
-> @@ -88,6 +88,63 @@ config GCC_PLUGIN_STRUCTLEAK_VERBOSE
->  	  initialized. Since not all existing initializers are detected
->  	  by the plugin, this can produce false positive warnings.
->  
-> +config GCC_PLUGIN_STACKLEAK
-> +	bool "Poison kernel stack before returning from syscalls"
-> +	depends on GCC_PLUGINS
-> +	depends on HAVE_ARCH_STACKLEAK
-> +	help
-> +	  This option makes the kernel erase the kernel stack before
-> +	  returning from system calls. This has the effect of leaving
-> +	  the stack initialized to the poison value, which both reduces
-> +	  the lifetime of any sensitive stack contents and reduces
-> +	  potential for uninitialized stack variable exploits or information
-> +	  exposures (it does not cover functions reaching the same stack
-> +	  depth as prior functions during the same syscall). This blocks
-> +	  most uninitialized stack variable attacks, with the performance
-> +	  impact being driven by the depth of the stack usage, rather than
-> +	  the function calling complexity.
-> +
-> +	  The performance impact on a single CPU system kernel compilation
-> +	  sees a 1% slowdown, other systems and workloads may vary and you
-> +	  are advised to test this feature on your expected workload before
-> +	  deploying it.
-> +
-> +	  This plugin was ported from grsecurity/PaX. More information at:
-> +	   * https://grsecurity.net/
-> +	   * https://pax.grsecurity.net/
-> +
-> +config STACKLEAK_TRACK_MIN_SIZE
-> +	int "Minimum stack frame size of functions tracked by STACKLEAK"
-> +	default 100
-> +	range 0 4096
-> +	depends on GCC_PLUGIN_STACKLEAK
-> +	help
-> +	  The STACKLEAK gcc plugin instruments the kernel code for tracking
-> +	  the lowest border of the kernel stack (and for some other purposes).
-> +	  It inserts the stackleak_track_stack() call for the functions with
-> +	  a stack frame size greater than or equal to this parameter.
-> +	  If unsure, leave the default value 100.
-> +
-> +config STACKLEAK_METRICS
-> +	bool "Show STACKLEAK metrics in the /proc file system"
-> +	depends on GCC_PLUGIN_STACKLEAK
-> +	depends on PROC_FS
-> +	help
-> +	  If this is set, STACKLEAK metrics for every task are available in
-> +	  the /proc file system. In particular, /proc/<pid>/stack_depth
-> +	  shows the maximum kernel stack consumption for the current and
-> +	  previous syscalls. Although this information is not precise, it
-> +	  can be useful for estimating the STACKLEAK performance impact for
-> +	  your workloads.
-> +
-> +config STACKLEAK_RUNTIME_DISABLE
-> +	bool "Allow runtime disabling of kernel stack erasing"
-> +	depends on GCC_PLUGIN_STACKLEAK
-> +	help
-> +	  This option provides 'stack_erasing' sysctl, which can be used in
-> +	  runtime to control kernel stack erasing for kernels built with
-> +	  CONFIG_GCC_PLUGIN_STACKLEAK.
-> +
->  endmenu
->  
->  endmenu
-> 
+> That's why it is important for the markup not to get in the way of
+> people looking at those files in an editor.
+
+Fully agreed. the markups should make things easier and not
+harder for people to read its contents.
+
+Thanks,
+Mauro
