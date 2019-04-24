@@ -1,32 +1,43 @@
 MIME-Version: 1.0
-References: <20190423194925.32151-1-keescook@chromium.org> <CAK7LNARuX8XfO=YRX9dYpipyBTCtMbQqLJfuk6iMLfLdZe1-KQ@mail.gmail.com>
-In-Reply-To: <CAK7LNARuX8XfO=YRX9dYpipyBTCtMbQqLJfuk6iMLfLdZe1-KQ@mail.gmail.com>
+References: <20190424203408.GA11386@beast> <20190424205117.GA5291@brain-police>
+In-Reply-To: <20190424205117.GA5291@brain-police>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 24 Apr 2019 13:46:45 -0700
-Message-ID: <CAGXu5jJfYBTt836K7-SNdwZcHf9RhXKxRj+xefn_hhogt2UEnA@mail.gmail.com>
-Subject: Re: [PATCH v3 0/3] Refactor memory initialization hardening
+Date: Wed, 24 Apr 2019 13:54:24 -0700
+Message-ID: <CAGXu5jJzzku0xjJAyD3T5SDeeoxVtA51wfHPGPrejjn_tNfJ4w@mail.gmail.com>
+Subject: Re: [PATCH v2] binfmt_elf: Update READ_IMPLIES_EXEC logic for modern CPUs
 Content-Type: text/plain; charset="UTF-8"
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Alexander Potapenko <glider@google.com>, James Morris <jmorris@namei.org>, Alexander Popov <alex.popov@linux.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+To: Will Deacon <will.deacon@arm.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Hector Marco-Gisbert <hecmargi@upv.es>, Marc Gonzalez <marc.w.gonzalez@free.fr>, Jason Gunthorpe <jgg@mellanox.com>, X86 ML <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Arnd Bergmann <arnd@arndb.de>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 23, 2019 at 9:07 PM Masahiro Yamada
-<yamada.masahiro@socionext.com> wrote:
+On Wed, Apr 24, 2019 at 1:51 PM Will Deacon <will.deacon@arm.com> wrote:
+> Don't you need to hack fs/compat_binfmt_elf.c to pick this up, or am I
+> missing some trick? Should just be something like below.
 >
-> On Wed, Apr 24, 2019 at 4:49 AM Kees Cook <keescook@chromium.org> wrote:
-> >
-> > This refactors the stack memory initialization configs in order to
-> > keep things together when adding Clang stack initialization, and in
-> > preparation for future heap memory initialization configs.
-> >
-> > I intend to carry this in the gcc-plugins tree, but I'd really like
-> > to get Acks from Masahiro (Kconfig changes, Makefile change), and
-> > from James (adding the new Kconfig.hardening to security/Kconfig).
+> Will
 >
-> If needed,
-> Acked-by: Masahiro Yamada <yamada.masahiro@socionext.com>
+> --->8
+>
+> diff --git a/fs/compat_binfmt_elf.c b/fs/compat_binfmt_elf.c
+> index 15f6e96b3bd9..694bc3ee77eb 100644
+> --- a/fs/compat_binfmt_elf.c
+> +++ b/fs/compat_binfmt_elf.c
+> @@ -116,6 +116,11 @@
+>  #define        arch_setup_additional_pages compat_arch_setup_additional_pages
+>  #endif
+>
+> +#ifdef compat_elf_read_implies_exec
+> +#undef elf_read_implies_exec
+> +#define elf_read_implies_exec compat_elf_read_implies_exec
+> +#endif
+> +
+>  /*
+>   * Rename a few of the symbols that binfmt_elf.c will define.
+>   * These are all local so the names don't really matter, but it
 
-Great; thanks! :)
+Argh. I thought I already saw stuff like this somewhere, but I think I
+must have been looking at some other compat silliness. I'll fix this
+and split up the series...
 
 -- 
 Kees Cook
