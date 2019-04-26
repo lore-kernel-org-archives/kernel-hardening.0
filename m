@@ -1,51 +1,131 @@
 From: Nadav Amit <namit@vmware.com>
-Subject: [PATCH v5 02/23] x86/jump_label: Use text_poke_early() during early init
-Date: Thu, 25 Apr 2019 17:11:22 -0700
-Message-ID: <20190426001143.4983-3-namit@vmware.com>
+Subject: [PATCH v5 11/23] x86/module: Avoid breaking W^X while loading modules
+Date: Thu, 25 Apr 2019 17:11:31 -0700
+Message-ID: <20190426001143.4983-12-namit@vmware.com>
 In-Reply-To: <20190426001143.4983-1-namit@vmware.com>
 References: <20190426001143.4983-1-namit@vmware.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 To: Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>, Jessica Yu <jeyu@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-There is no apparent reason not to use text_poke_early() during
-early-init, since no patching of code that might be on the stack is done
-and only a single core is running.
+When modules and BPF filters are loaded, there is a time window in
+which some memory is both writable and executable. An attacker that has
+already found another vulnerability (e.g., a dangling pointer) might be
+able to exploit this behavior to overwrite kernel code. Prevent having
+writable executable PTEs in this stage.
 
-This is required for the next patches that would set a temporary mm for
-text poking, and this mm is only initialized after some static-keys are
-enabled/disabled.
+In addition, avoiding having W+X mappings can also slightly simplify the
+patching of modules code on initialization (e.g., by alternatives and
+static-key), as would be done in the next patch. This was actually the
+main motivation for this patch.
 
-Cc: Andy Lutomirski <luto@kernel.org>
+To avoid having W+X mappings, set them initially as RW (NX) and after
+they are set as RO set them as X as well. Setting them as executable is
+done as a separate step to avoid one core in which the old PTE is cached
+(hence writable), and another which sees the updated PTE (executable),
+which would break the W^X protection.
+
 Cc: Kees Cook <keescook@chromium.org>
+Cc: Peter Zijlstra <peterz@infradead.org>
 Cc: Dave Hansen <dave.hansen@intel.com>
 Cc: Masami Hiramatsu <mhiramat@kernel.org>
-Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Cc: Jessica Yu <jeyu@kernel.org>
+Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+Suggested-by: Andy Lutomirski <luto@amacapital.net>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/kernel/jump_label.c | 7 ++++++-
- 1 file changed, 6 insertions(+), 1 deletion(-)
+ arch/x86/kernel/alternative.c | 28 +++++++++++++++++++++-------
+ arch/x86/kernel/module.c      |  2 +-
+ include/linux/filter.h        |  1 +
+ kernel/module.c               |  5 +++++
+ 4 files changed, 28 insertions(+), 8 deletions(-)
 
-diff --git a/arch/x86/kernel/jump_label.c b/arch/x86/kernel/jump_label.c
-index f99bd26bd3f1..e7d8c636b228 100644
---- a/arch/x86/kernel/jump_label.c
-+++ b/arch/x86/kernel/jump_label.c
-@@ -50,7 +50,12 @@ static void __ref __jump_label_transform(struct jump_entry *entry,
- 	jmp.offset = jump_entry_target(entry) -
- 		     (jump_entry_code(entry) + JUMP_LABEL_NOP_SIZE);
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 599203876c32..3d2b6b6fb20c 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -668,15 +668,29 @@ void __init alternative_instructions(void)
+  * handlers seeing an inconsistent instruction while you patch.
+  */
+ void *__init_or_module text_poke_early(void *addr, const void *opcode,
+-					      size_t len)
++				       size_t len)
+ {
+ 	unsigned long flags;
+-	local_irq_save(flags);
+-	memcpy(addr, opcode, len);
+-	local_irq_restore(flags);
+-	sync_core();
+-	/* Could also do a CLFLUSH here to speed up CPU recovery; but
+-	   that causes hangs on some VIA CPUs. */
++
++	if (boot_cpu_has(X86_FEATURE_NX) &&
++	    is_module_text_address((unsigned long)addr)) {
++		/*
++		 * Modules text is marked initially as non-executable, so the
++		 * code cannot be running and speculative code-fetches are
++		 * prevented. Just change the code.
++		 */
++		memcpy(addr, opcode, len);
++	} else {
++		local_irq_save(flags);
++		memcpy(addr, opcode, len);
++		local_irq_restore(flags);
++		sync_core();
++
++		/*
++		 * Could also do a CLFLUSH here to speed up CPU recovery; but
++		 * that causes hangs on some VIA CPUs.
++		 */
++	}
+ 	return addr;
+ }
  
--	if (early_boot_irqs_disabled)
-+	/*
-+	 * As long as only a single processor is running and the code is still
-+	 * not marked as RO, text_poke_early() can be used; Checking that
-+	 * system_state is SYSTEM_BOOTING guarantees it.
-+	 */
-+	if (system_state == SYSTEM_BOOTING)
- 		poker = text_poke_early;
+diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
+index b052e883dd8c..cfa3106faee4 100644
+--- a/arch/x86/kernel/module.c
++++ b/arch/x86/kernel/module.c
+@@ -87,7 +87,7 @@ void *module_alloc(unsigned long size)
+ 	p = __vmalloc_node_range(size, MODULE_ALIGN,
+ 				    MODULES_VADDR + get_module_load_offset(),
+ 				    MODULES_END, GFP_KERNEL,
+-				    PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
++				    PAGE_KERNEL, 0, NUMA_NO_NODE,
+ 				    __builtin_return_address(0));
+ 	if (p && (kasan_module_alloc(p, size) < 0)) {
+ 		vfree(p);
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index 6074aa064b54..14ec3bdad9a9 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -746,6 +746,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+ static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+ {
+ 	set_memory_ro((unsigned long)hdr, hdr->pages);
++	set_memory_x((unsigned long)hdr, hdr->pages);
+ }
  
- 	if (type == JUMP_LABEL_JMP) {
+ static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
+diff --git a/kernel/module.c b/kernel/module.c
+index 0b9aa8ab89f0..2b2845ae983e 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -1950,8 +1950,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
+ 		return;
+ 
+ 	frob_text(&mod->core_layout, set_memory_ro);
++	frob_text(&mod->core_layout, set_memory_x);
++
+ 	frob_rodata(&mod->core_layout, set_memory_ro);
++
+ 	frob_text(&mod->init_layout, set_memory_ro);
++	frob_text(&mod->init_layout, set_memory_x);
++
+ 	frob_rodata(&mod->init_layout, set_memory_ro);
+ 
+ 	if (after_init)
 -- 
 2.17.1
