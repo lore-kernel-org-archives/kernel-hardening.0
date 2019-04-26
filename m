@@ -1,17 +1,36 @@
-Date: Fri, 26 Apr 2019 15:24:24 +0000
-From: Christopher Lameter <cl@linux.com>
-Subject: Re: [PATCH 1/3] mm: security: introduce the init_allocations=1 boot
- option
-In-Reply-To: <alpine.DEB.2.21.1904260911570.8340@nuc-kabylake>
-Message-ID: <0100016a5a3f6121-e7ed483e-bc29-4d75-bd0a-8e3b973529f5-000000@email.amazonses.com>
-References: <20190418154208.131118-1-glider@google.com> <20190418154208.131118-2-glider@google.com> <alpine.DEB.2.21.1904260911570.8340@nuc-kabylake>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Alexander Potapenko <glider@google.com>
-Cc: akpm@linux-foundation.org, dvyukov@google.com, keescook@chromium.org, labbott@redhat.com, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+References: <20190426001143.4983-1-namit@vmware.com> <20190426001143.4983-15-namit@vmware.com>
+In-Reply-To: <20190426001143.4983-15-namit@vmware.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Fri, 26 Apr 2019 09:40:29 -0700
+Message-ID: <CAADWXX8yZJ9Z4yfqG9wQcb2r+0O7VCk2uQLcOU1=-BOnYhjnow@mail.gmail.com>
+Subject: Re: [PATCH v5 14/23] x86/mm/cpa: Add set_direct_map_ functions
+Content-Type: text/plain; charset="UTF-8"
+To: Nadav Amit <namit@vmware.com>
+Cc: Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, lkml <linux-kernel@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hmmmm.... Maybe its better to zero on free? That way you dont need to
-initialize the allocations. You could even check if someone mucked with
-the object during allocation. This is a replication of some of the
-inherent debugging facilities in the allocator though.
+Nadav,
+
+I get
+
+       dmarc=fail (p=QUARANTINE sp=NONE dis=QUARANTINE) header.from=vmware.com
+
+for these emails, because they lack the vmware DKIM signature.
+
+It clearly did go through some vmware mail servers, but apparently not
+the *right* external vmware SMTP gateway.
+
+Please check with vmware MIS what the right SMTP setup for git-send-email is.
+
+                 Linus
+
+On Fri, Apr 26, 2019 at 12:32 AM Nadav Amit <namit@vmware.com> wrote:
+>
+> From: Rick Edgecombe <rick.p.edgecombe@intel.com>
+>
+> Add two new functions set_direct_map_default_noflush() and
+> set_direct_map_invalid_noflush() for setting the direct map alias for the
+> page to its default valid permissions and to an invalid state that cannot
+> be cached in a TLB, respectively. These functions do not flush the TLB.
+...
