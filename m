@@ -1,96 +1,93 @@
 From: nadav.amit@gmail.com
-Subject: [PATCH v6 05/24] uprobes: Initialize uprobes earlier
-Date: Fri, 26 Apr 2019 16:22:44 -0700
-Message-Id: <20190426232303.28381-6-nadav.amit@gmail.com>
+Subject: [PATCH v6 06/24] fork: Provide a function for copying init_mm
+Date: Fri, 26 Apr 2019 16:22:45 -0700
+Message-Id: <20190426232303.28381-7-nadav.amit@gmail.com>
 In-Reply-To: <20190426232303.28381-1-nadav.amit@gmail.com>
 References: <20190426232303.28381-1-nadav.amit@gmail.com>
 To: Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>, Arnaldo Carvalho de Melo <acme@kernel.org>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Nadav Amit <namit@vmware.com>
 
-In order to have a separate address space for text poking, we need to
-duplicate init_mm early during start_kernel(). This, however, introduces
-a problem since uprobes functions are called from dup_mmap(), but
-uprobes is still not initialized in this early stage.
+Provide a function for copying init_mm. This function will be later used
+for setting a temporary mm.
 
-Since uprobes initialization is necassary for fork, and since all the
-dependant initialization has been done when fork is initialized (percpu
-and vmalloc), move uprobes initialization to fork_init(). It does not
-seem uprobes introduces any security problem for the poking_mm.
-
-Crash and burn if uprobes initialization fails, similarly to other early
-initializations. Change the init_probes() name to probes_init() to match
-other early initialization functions name convention.
-
-Cc: Arnaldo Carvalho de Melo <acme@kernel.org>
-Reported-by: kernel test robot <lkp@intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Dave Hansen <dave.hansen@intel.com>
+Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
+Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
 Signed-off-by: Nadav Amit <namit@vmware.com>
+Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- include/linux/uprobes.h | 5 +++++
- kernel/events/uprobes.c | 8 +++-----
- kernel/fork.c           | 1 +
- 3 files changed, 9 insertions(+), 5 deletions(-)
+ include/linux/sched/task.h |  1 +
+ kernel/fork.c              | 24 ++++++++++++++++++------
+ 2 files changed, 19 insertions(+), 6 deletions(-)
 
-diff --git a/include/linux/uprobes.h b/include/linux/uprobes.h
-index 103a48a48872..12bf0b68ed92 100644
---- a/include/linux/uprobes.h
-+++ b/include/linux/uprobes.h
-@@ -115,6 +115,7 @@ struct uprobes_state {
- 	struct xol_area		*xol_area;
- };
+diff --git a/include/linux/sched/task.h b/include/linux/sched/task.h
+index 2e97a2227045..f1227f2c38a4 100644
+--- a/include/linux/sched/task.h
++++ b/include/linux/sched/task.h
+@@ -76,6 +76,7 @@ extern void exit_itimers(struct signal_struct *);
+ extern long _do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *, unsigned long);
+ extern long do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *);
+ struct task_struct *fork_idle(int);
++struct mm_struct *copy_init_mm(void);
+ extern pid_t kernel_thread(int (*fn)(void *), void *arg, unsigned long flags);
+ extern long kernel_wait4(pid_t, int __user *, int, struct rusage *);
  
-+extern void __init uprobes_init(void);
- extern int set_swbp(struct arch_uprobe *aup, struct mm_struct *mm, unsigned long vaddr);
- extern int set_orig_insn(struct arch_uprobe *aup, struct mm_struct *mm, unsigned long vaddr);
- extern bool is_swbp_insn(uprobe_opcode_t *insn);
-@@ -154,6 +155,10 @@ extern void arch_uprobe_copy_ixol(struct page *page, unsigned long vaddr,
- struct uprobes_state {
- };
- 
-+static inline void uprobes_init(void)
-+{
-+}
-+
- #define uprobe_get_trap_addr(regs)	instruction_pointer(regs)
- 
- static inline int
-diff --git a/kernel/events/uprobes.c b/kernel/events/uprobes.c
-index c5cde87329c7..e6a0d6be87e3 100644
---- a/kernel/events/uprobes.c
-+++ b/kernel/events/uprobes.c
-@@ -2294,16 +2294,14 @@ static struct notifier_block uprobe_exception_nb = {
- 	.priority		= INT_MAX-1,	/* notified after kprobes, kgdb */
- };
- 
--static int __init init_uprobes(void)
-+void __init uprobes_init(void)
- {
- 	int i;
- 
- 	for (i = 0; i < UPROBES_HASH_SZ; i++)
- 		mutex_init(&uprobes_mmap_mutex[i]);
- 
--	if (percpu_init_rwsem(&dup_mmap_sem))
--		return -ENOMEM;
-+	BUG_ON(percpu_init_rwsem(&dup_mmap_sem));
- 
--	return register_die_notifier(&uprobe_exception_nb);
-+	BUG_ON(register_die_notifier(&uprobe_exception_nb));
- }
--__initcall(init_uprobes);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 9dcd18aa210b..44fba5e5e916 100644
+index 44fba5e5e916..fbe9dfcd8680 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -815,6 +815,7 @@ void __init fork_init(void)
- #endif
- 
- 	lockdep_init_task(&init_task);
-+	uprobes_init();
+@@ -1299,13 +1299,20 @@ void mm_release(struct task_struct *tsk, struct mm_struct *mm)
+ 		complete_vfork_done(tsk);
  }
  
- int __weak arch_dup_task_struct(struct task_struct *dst,
+-/*
+- * Allocate a new mm structure and copy contents from the
+- * mm structure of the passed in task structure.
++/**
++ * dup_mm() - duplicates an existing mm structure
++ * @tsk: the task_struct with which the new mm will be associated.
++ * @oldmm: the mm to duplicate.
++ *
++ * Allocates a new mm structure and duplicates the provided @oldmm structure
++ * content into it.
++ *
++ * Return: the duplicated mm or NULL on failure.
+  */
+-static struct mm_struct *dup_mm(struct task_struct *tsk)
++static struct mm_struct *dup_mm(struct task_struct *tsk,
++				struct mm_struct *oldmm)
+ {
+-	struct mm_struct *mm, *oldmm = current->mm;
++	struct mm_struct *mm;
+ 	int err;
+ 
+ 	mm = allocate_mm();
+@@ -1372,7 +1379,7 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
+ 	}
+ 
+ 	retval = -ENOMEM;
+-	mm = dup_mm(tsk);
++	mm = dup_mm(tsk, current->mm);
+ 	if (!mm)
+ 		goto fail_nomem;
+ 
+@@ -2187,6 +2194,11 @@ struct task_struct *fork_idle(int cpu)
+ 	return task;
+ }
+ 
++struct mm_struct *copy_init_mm(void)
++{
++	return dup_mm(NULL, &init_mm);
++}
++
+ /*
+  *  Ok, this is the main fork-routine.
+  *
 -- 
 2.17.1
