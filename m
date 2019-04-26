@@ -1,69 +1,99 @@
 From: Nadav Amit <namit@vmware.com>
-Subject: [PATCH v5 10/23] x86/kprobes: Set instruction page as executable
-Date: Thu, 25 Apr 2019 17:11:30 -0700
-Message-ID: <20190426001143.4983-11-namit@vmware.com>
+Subject: [PATCH v5 13/23] x86/alternative: Remove the return value of text_poke_*()
+Date: Thu, 25 Apr 2019 17:11:33 -0700
+Message-ID: <20190426001143.4983-14-namit@vmware.com>
 In-Reply-To: <20190426001143.4983-1-namit@vmware.com>
 References: <20190426001143.4983-1-namit@vmware.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 To: Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Set the page as executable after allocation.  This patch is a
-preparatory patch for a following patch that makes module allocated
-pages non-executable.
+The return value of text_poke_early() and text_poke_bp() is useless.
+Remove it.
 
-While at it, do some small cleanup of what appears to be unnecessary
-masking.
-
-Acked-by: Masami Hiramatsu <mhiramat@kernel.org>
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Dave Hansen <dave.hansen@intel.com>
+Cc: Masami Hiramatsu <mhiramat@kernel.org>
+Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/kernel/kprobes/core.c | 24 ++++++++++++++++++++----
- 1 file changed, 20 insertions(+), 4 deletions(-)
+ arch/x86/include/asm/text-patching.h |  4 ++--
+ arch/x86/kernel/alternative.c        | 11 ++++-------
+ 2 files changed, 6 insertions(+), 9 deletions(-)
 
-diff --git a/arch/x86/kernel/kprobes/core.c b/arch/x86/kernel/kprobes/core.c
-index a034cb808e7e..1591852d3ac4 100644
---- a/arch/x86/kernel/kprobes/core.c
-+++ b/arch/x86/kernel/kprobes/core.c
-@@ -431,8 +431,20 @@ void *alloc_insn_page(void)
- 	void *page;
+diff --git a/arch/x86/include/asm/text-patching.h b/arch/x86/include/asm/text-patching.h
+index a75eed841eed..c90678fd391a 100644
+--- a/arch/x86/include/asm/text-patching.h
++++ b/arch/x86/include/asm/text-patching.h
+@@ -18,7 +18,7 @@ static inline void apply_paravirt(struct paravirt_patch_site *start,
+ #define __parainstructions_end	NULL
+ #endif
  
- 	page = module_alloc(PAGE_SIZE);
--	if (page)
--		set_memory_ro((unsigned long)page & PAGE_MASK, 1);
-+	if (!page)
-+		return NULL;
-+
-+	/*
-+	 * First make the page read-only, and only then make it executable to
-+	 * prevent it from being W+X in between.
-+	 */
-+	set_memory_ro((unsigned long)page, 1);
-+
-+	/*
-+	 * TODO: Once additional kernel code protection mechanisms are set, ensure
-+	 * that the page was not maliciously altered and it is still zeroed.
-+	 */
-+	set_memory_x((unsigned long)page, 1);
+-extern void *text_poke_early(void *addr, const void *opcode, size_t len);
++extern void text_poke_early(void *addr, const void *opcode, size_t len);
  
- 	return page;
- }
-@@ -440,8 +452,12 @@ void *alloc_insn_page(void)
- /* Recover page to RW mode before releasing it */
- void free_insn_page(void *page)
+ /*
+  * Clear and restore the kernel write-protection flag on the local CPU.
+@@ -37,7 +37,7 @@ extern void *text_poke_early(void *addr, const void *opcode, size_t len);
+ extern void *text_poke(void *addr, const void *opcode, size_t len);
+ extern void *text_poke_kgdb(void *addr, const void *opcode, size_t len);
+ extern int poke_int3_handler(struct pt_regs *regs);
+-extern void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
++extern void text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
+ extern int after_bootmem;
+ extern __ro_after_init struct mm_struct *poking_mm;
+ extern __ro_after_init unsigned long poking_addr;
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 3d2b6b6fb20c..18f959975ea0 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -265,7 +265,7 @@ static void __init_or_module add_nops(void *insns, unsigned int len)
+ 
+ extern struct alt_instr __alt_instructions[], __alt_instructions_end[];
+ extern s32 __smp_locks[], __smp_locks_end[];
+-void *text_poke_early(void *addr, const void *opcode, size_t len);
++void text_poke_early(void *addr, const void *opcode, size_t len);
+ 
+ /*
+  * Are we looking at a near JMP with a 1 or 4-byte displacement.
+@@ -667,8 +667,8 @@ void __init alternative_instructions(void)
+  * instructions. And on the local CPU you need to be protected again NMI or MCE
+  * handlers seeing an inconsistent instruction while you patch.
+  */
+-void *__init_or_module text_poke_early(void *addr, const void *opcode,
+-				       size_t len)
++void __init_or_module text_poke_early(void *addr, const void *opcode,
++				      size_t len)
  {
--	set_memory_nx((unsigned long)page & PAGE_MASK, 1);
--	set_memory_rw((unsigned long)page & PAGE_MASK, 1);
-+	/*
-+	 * First make the page non-executable, and only then make it writable to
-+	 * prevent it from being W+X in between.
-+	 */
-+	set_memory_nx((unsigned long)page, 1);
-+	set_memory_rw((unsigned long)page, 1);
- 	module_memfree(page);
+ 	unsigned long flags;
+ 
+@@ -691,7 +691,6 @@ void *__init_or_module text_poke_early(void *addr, const void *opcode,
+ 		 * that causes hangs on some VIA CPUs.
+ 		 */
+ 	}
+-	return addr;
+ }
+ 
+ __ro_after_init struct mm_struct *poking_mm;
+@@ -893,7 +892,7 @@ NOKPROBE_SYMBOL(poke_int3_handler);
+  *	  replacing opcode
+  *	- sync cores
+  */
+-void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
++void text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
+ {
+ 	unsigned char int3 = 0xcc;
+ 
+@@ -935,7 +934,5 @@ void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
+ 	 * the writing of the new instruction.
+ 	 */
+ 	bp_patching_in_progress = false;
+-
+-	return addr;
  }
  
 -- 
