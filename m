@@ -1,90 +1,151 @@
 From: Nadav Amit <namit@vmware.com>
-Subject: [PATCH v5 03/23] x86/mm: Introduce temporary mm structs
-Date: Thu, 25 Apr 2019 17:11:23 -0700
-Message-ID: <20190426001143.4983-4-namit@vmware.com>
-In-Reply-To: <20190426001143.4983-1-namit@vmware.com>
-References: <20190426001143.4983-1-namit@vmware.com>
+Subject: [PATCH v5 00/23] x86: text_poke() fixes and executable lockdowns
+Date: Thu, 25 Apr 2019 17:11:20 -0700
+Message-ID: <20190426001143.4983-1-namit@vmware.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 To: Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Nadav Amit <namit@vmware.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Andy Lutomirski <luto@kernel.org>
+Yet another version, per PeterZ request, addressing the latest feedback.
 
-Using a dedicated page-table for temporary PTEs prevents other cores
-from using - even speculatively - these PTEs, thereby providing two
-benefits:
+This patchset improves several overlapping issues around stale TLB
+entries and W^X violations. It is combined from "x86/alternative:
+text_poke() enhancements v7" [1] and "Don't leave executable TLB entries
+to freed pages v2" [2] patchsets that were conflicting.
 
-(1) Security hardening: an attacker that gains kernel memory writing
-abilities cannot easily overwrite sensitive data.
+The related issues that this fixes:
+1. Fixmap PTEs that are used for patching are available for access from
+  other cores and might be exploited. They are not even flushed from
+  the TLB in remote cores, so the risk is even higher. Address this
+  issue by introducing a temporary mm that is only used during
+  patching. Unfortunately, due to init ordering, fixmap is still used
+  during boot-time patching. Future patches can eliminate the need for
+  it.
+2. Missing lockdep assertion to ensure text_mutex is taken. It is
+  actually not always taken, so fix the instances that were found not
+  to take the lock (although they should be safe even without taking
+  the lock).
+3. Module_alloc returning memory that is RWX until a module is finished
+  loading.
+4. Sometimes when memory is freed via the module subsystem, an
+  executable permissioned TLB entry can remain to a freed page. If the
+  page is re-used to back an address that will receive data from
+  userspace, it can result in user data being mapped as executable in
+  the kernel. The root of this behavior is vfree lazily flushing the
+  TLB, but not lazily freeing the underlying pages.
 
-(2) Avoiding TLB shootdowns: the PTEs do not need to be flushed in
-remote page-tables.
 
-To do so a temporary mm_struct can be used. Mappings which are private
-for this mm can be set in the userspace part of the address-space.
-During the whole time in which the temporary mm is loaded, interrupts
-must be disabled.
+Changes v4 to v5:
+- Change temporary state variable name [Borislav]
+- Commit log and comment fixes [Borislav]
 
-The first use-case for temporary mm struct, which will follow, is for
-poking the kernel text.
+Changes v3 to v4:
+- Remove the size parameter from tramp_free() [Steven]
+- Remove caching of hw_breakpoint_active() [Sean]
+- Prevent the use of bpf_probe_write_user() while using temporary mm [Jann]
+- Fix build issues on other archs
 
-[ Commit message was written by Nadav Amit ]
+Changes v2 to v3:
+- Fix commit messages and comments [Boris]
+- Rename VM_HAS_SPECIAL_PERMS [Boris]
+- Remove unnecessary local variables [Boris]
+- Rename set_alias_*() functions [Boris, Andy]
+- Save/restore DR registers when using temporary mm
+- Move line deletion from patch 10 to patch 17
 
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Dave Hansen <dave.hansen@intel.com>
-Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
-Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
-Signed-off-by: Nadav Amit <namit@vmware.com>
-Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
----
- arch/x86/include/asm/mmu_context.h | 33 ++++++++++++++++++++++++++++++
- 1 file changed, 33 insertions(+)
+Changes v1 to v2:
+- Adding "Reviewed-by tag" [Masami]
+- Comment instead of code to warn against module removal while
+  patching [Masami]
+- Avoiding open-coded TLB flush [Andy]
+- Remove "This patch" [Borislav Petkov]
+- Not set global bit during text poking [Andy, hpa]
+- Add Ack from [Pavel Machek]
+- Split patch 16 "Plug in new special vfree flag" into 4 patches (16-19)
+  to make it easier to review. There were no code changes.
 
-diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
-index 19d18fae6ec6..24dc3b810970 100644
---- a/arch/x86/include/asm/mmu_context.h
-+++ b/arch/x86/include/asm/mmu_context.h
-@@ -356,4 +356,37 @@ static inline unsigned long __get_current_cr3_fast(void)
- 	return cr3;
- }
- 
-+typedef struct {
-+	struct mm_struct *mm;
-+} temp_mm_state_t;
-+
-+/*
-+ * Using a temporary mm allows to set temporary mappings that are not accessible
-+ * by other CPUs. Such mappings are needed to perform sensitive memory writes
-+ * that override the kernel memory protections (e.g., W^X), without exposing the
-+ * temporary page-table mappings that are required for these write operations to
-+ * other CPUs. Using a temporary mm also allows to avoid TLB shootdowns when the
-+ * mapping is torn down.
-+ *
-+ * Context: The temporary mm needs to be used exclusively by a single core. To
-+ *          harden security IRQs must be disabled while the temporary mm is
-+ *          loaded, thereby preventing interrupt handler bugs from overriding
-+ *          the kernel memory protection.
-+ */
-+static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
-+{
-+	temp_mm_state_t temp_state;
-+
-+	lockdep_assert_irqs_disabled();
-+	temp_state.mm = this_cpu_read(cpu_tlbstate.loaded_mm);
-+	switch_mm_irqs_off(NULL, mm, current);
-+	return temp_state;
-+}
-+
-+static inline void unuse_temporary_mm(temp_mm_state_t prev_state)
-+{
-+	lockdep_assert_irqs_disabled();
-+	switch_mm_irqs_off(NULL, prev_state.mm, current);
-+}
-+
- #endif /* _ASM_X86_MMU_CONTEXT_H */
+The changes from "Don't leave executable TLB entries to freed pages
+v2" to v1:
+- Add support for case of hibernate trying to save an unmapped page
+  on the directmap. (Ard Biesheuvel)
+- No week arch breakout for vfree-ing special memory (Andy Lutomirski)
+- Avoid changing deferred free code by moving modules init free to work
+  queue (Andy Lutomirski)
+- Plug in new flag for kprobes and ftrace
+- More arch generic names for set_pages functions (Ard Biesheuvel)
+- Fix for TLB not always flushing the directmap (Nadav Amit)
+
+Changes from "x86/alternative: text_poke() enhancements v7" to v1
+- Fix build failure on CONFIG_RANDOMIZE_BASE=n (Rick)
+- Remove text_poke usage from ftrace (Nadav)
+
+[1] https://lkml.org/lkml/2018/12/5/200
+[2] https://lkml.org/lkml/2018/12/11/1571
+
+
+Andy Lutomirski (1):
+  x86/mm: Introduce temporary mm structs
+
+Nadav Amit (15):
+  Fix "x86/alternatives: Lockdep-enforce text_mutex in text_poke*()"
+  x86/jump_label: Use text_poke_early() during early init
+  x86/mm: Save debug registers when loading a temporary mm
+  fork: Provide a function for copying init_mm
+  x86/alternative: Initialize temporary mm for patching
+  x86/alternative: Use temporary mm for text poking
+  x86/kgdb: Avoid redundant comparison of patched code
+  x86/ftrace: Set trampoline pages as executable
+  x86/kprobes: Set instruction page as executable
+  x86/module: Avoid breaking W^X while loading modules
+  x86/jump-label: Remove support for custom poker
+  x86/alternative: Remove the return value of text_poke_*()
+  x86/alternative: Comment about module removal races
+  mm/tlb: Provide default nmi_uaccess_okay()
+  bpf: Fail bpf_probe_write_user() while mm is switched
+
+Rick Edgecombe (7):
+  x86/mm/cpa: Add set_direct_map_ functions
+  mm: Make hibernate handle unmapped pages
+  vmalloc: Add flag for free of special permsissions
+  modules: Use vmalloc special flag
+  bpf: Use vmalloc special flag
+  x86/ftrace: Use vmalloc special flag
+  x86/kprobes: Use vmalloc special flag
+
+ arch/Kconfig                         |   4 +
+ arch/x86/Kconfig                     |   1 +
+ arch/x86/include/asm/fixmap.h        |   2 -
+ arch/x86/include/asm/mmu_context.h   |  56 ++++++++
+ arch/x86/include/asm/pgtable.h       |   3 +
+ arch/x86/include/asm/set_memory.h    |   3 +
+ arch/x86/include/asm/text-patching.h |   7 +-
+ arch/x86/include/asm/tlbflush.h      |   2 +
+ arch/x86/kernel/alternative.c        | 201 ++++++++++++++++++++-------
+ arch/x86/kernel/ftrace.c             |  22 +--
+ arch/x86/kernel/jump_label.c         |  21 ++-
+ arch/x86/kernel/kgdb.c               |  25 +---
+ arch/x86/kernel/kprobes/core.c       |  19 ++-
+ arch/x86/kernel/module.c             |   2 +-
+ arch/x86/mm/init_64.c                |  36 +++++
+ arch/x86/mm/pageattr.c               |  16 ++-
+ arch/x86/xen/mmu_pv.c                |   2 -
+ include/asm-generic/tlb.h            |   9 ++
+ include/linux/filter.h               |  18 +--
+ include/linux/mm.h                   |  18 +--
+ include/linux/sched/task.h           |   1 +
+ include/linux/set_memory.h           |  11 ++
+ include/linux/vmalloc.h              |  15 ++
+ init/main.c                          |   3 +
+ kernel/bpf/core.c                    |   1 -
+ kernel/fork.c                        |  24 +++-
+ kernel/module.c                      |  82 ++++++-----
+ kernel/power/snapshot.c              |   5 +-
+ kernel/trace/bpf_trace.c             |   8 ++
+ mm/page_alloc.c                      |   7 +-
+ mm/vmalloc.c                         | 113 ++++++++++++---
+ 31 files changed, 542 insertions(+), 195 deletions(-)
+
 -- 
 2.17.1
