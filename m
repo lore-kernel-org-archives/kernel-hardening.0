@@ -1,75 +1,96 @@
 From: nadav.amit@gmail.com
-Subject: [PATCH v6 04/24] x86/mm: Save debug registers when loading a temporary mm
-Date: Fri, 26 Apr 2019 16:22:43 -0700
-Message-Id: <20190426232303.28381-5-nadav.amit@gmail.com>
+Subject: [PATCH v6 05/24] uprobes: Initialize uprobes earlier
+Date: Fri, 26 Apr 2019 16:22:44 -0700
+Message-Id: <20190426232303.28381-6-nadav.amit@gmail.com>
 In-Reply-To: <20190426232303.28381-1-nadav.amit@gmail.com>
 References: <20190426232303.28381-1-nadav.amit@gmail.com>
 To: Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <namit@vmware.com>, Arnaldo Carvalho de Melo <acme@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Nadav Amit <namit@vmware.com>
 
-Prevent user watchpoints from mistakenly firing while the temporary mm
-is being used. As the addresses of the temporary mm might overlap those
-of the user-process, this is necessary to prevent wrong signals or worse
-things from happening.
+In order to have a separate address space for text poking, we need to
+duplicate init_mm early during start_kernel(). This, however, introduces
+a problem since uprobes functions are called from dup_mmap(), but
+uprobes is still not initialized in this early stage.
 
-Cc: Andy Lutomirski <luto@kernel.org>
-Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Since uprobes initialization is necassary for fork, and since all the
+dependant initialization has been done when fork is initialized (percpu
+and vmalloc), move uprobes initialization to fork_init(). It does not
+seem uprobes introduces any security problem for the poking_mm.
+
+Crash and burn if uprobes initialization fails, similarly to other early
+initializations. Change the init_probes() name to probes_init() to match
+other early initialization functions name convention.
+
+Cc: Arnaldo Carvalho de Melo <acme@kernel.org>
+Reported-by: kernel test robot <lkp@intel.com>
 Signed-off-by: Nadav Amit <namit@vmware.com>
-Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/include/asm/mmu_context.h | 23 +++++++++++++++++++++++
- 1 file changed, 23 insertions(+)
+ include/linux/uprobes.h | 5 +++++
+ kernel/events/uprobes.c | 8 +++-----
+ kernel/fork.c           | 1 +
+ 3 files changed, 9 insertions(+), 5 deletions(-)
 
-diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
-index 24dc3b810970..93dff1963337 100644
---- a/arch/x86/include/asm/mmu_context.h
-+++ b/arch/x86/include/asm/mmu_context.h
-@@ -13,6 +13,7 @@
- #include <asm/tlbflush.h>
- #include <asm/paravirt.h>
- #include <asm/mpx.h>
-+#include <asm/debugreg.h>
+diff --git a/include/linux/uprobes.h b/include/linux/uprobes.h
+index 103a48a48872..12bf0b68ed92 100644
+--- a/include/linux/uprobes.h
++++ b/include/linux/uprobes.h
+@@ -115,6 +115,7 @@ struct uprobes_state {
+ 	struct xol_area		*xol_area;
+ };
  
- extern atomic64_t last_mm_ctx_id;
++extern void __init uprobes_init(void);
+ extern int set_swbp(struct arch_uprobe *aup, struct mm_struct *mm, unsigned long vaddr);
+ extern int set_orig_insn(struct arch_uprobe *aup, struct mm_struct *mm, unsigned long vaddr);
+ extern bool is_swbp_insn(uprobe_opcode_t *insn);
+@@ -154,6 +155,10 @@ extern void arch_uprobe_copy_ixol(struct page *page, unsigned long vaddr,
+ struct uprobes_state {
+ };
  
-@@ -380,6 +381,21 @@ static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
- 	lockdep_assert_irqs_disabled();
- 	temp_state.mm = this_cpu_read(cpu_tlbstate.loaded_mm);
- 	switch_mm_irqs_off(NULL, mm, current);
++static inline void uprobes_init(void)
++{
++}
 +
-+	/*
-+	 * If breakpoints are enabled, disable them while the temporary mm is
-+	 * used. Userspace might set up watchpoints on addresses that are used
-+	 * in the temporary mm, which would lead to wrong signals being sent or
-+	 * crashes.
-+	 *
-+	 * Note that breakpoints are not disabled selectively, which also causes
-+	 * kernel breakpoints (e.g., perf's) to be disabled. This might be
-+	 * undesirable, but still seems reasonable as the code that runs in the
-+	 * temporary mm should be short.
-+	 */
-+	if (hw_breakpoint_active())
-+		hw_breakpoint_disable();
-+
- 	return temp_state;
- }
+ #define uprobe_get_trap_addr(regs)	instruction_pointer(regs)
  
-@@ -387,6 +403,13 @@ static inline void unuse_temporary_mm(temp_mm_state_t prev_state)
+ static inline int
+diff --git a/kernel/events/uprobes.c b/kernel/events/uprobes.c
+index c5cde87329c7..e6a0d6be87e3 100644
+--- a/kernel/events/uprobes.c
++++ b/kernel/events/uprobes.c
+@@ -2294,16 +2294,14 @@ static struct notifier_block uprobe_exception_nb = {
+ 	.priority		= INT_MAX-1,	/* notified after kprobes, kgdb */
+ };
+ 
+-static int __init init_uprobes(void)
++void __init uprobes_init(void)
  {
- 	lockdep_assert_irqs_disabled();
- 	switch_mm_irqs_off(NULL, prev_state.mm, current);
-+
-+	/*
-+	 * Restore the breakpoints if they were disabled before the temporary mm
-+	 * was loaded.
-+	 */
-+	if (hw_breakpoint_active())
-+		hw_breakpoint_restore();
+ 	int i;
+ 
+ 	for (i = 0; i < UPROBES_HASH_SZ; i++)
+ 		mutex_init(&uprobes_mmap_mutex[i]);
+ 
+-	if (percpu_init_rwsem(&dup_mmap_sem))
+-		return -ENOMEM;
++	BUG_ON(percpu_init_rwsem(&dup_mmap_sem));
+ 
+-	return register_die_notifier(&uprobe_exception_nb);
++	BUG_ON(register_die_notifier(&uprobe_exception_nb));
+ }
+-__initcall(init_uprobes);
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 9dcd18aa210b..44fba5e5e916 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -815,6 +815,7 @@ void __init fork_init(void)
+ #endif
+ 
+ 	lockdep_init_task(&init_task);
++	uprobes_init();
  }
  
- #endif /* _ASM_X86_MMU_CONTEXT_H */
+ int __weak arch_dup_task_struct(struct task_struct *dst,
 -- 
 2.17.1
