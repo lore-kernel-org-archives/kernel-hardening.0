@@ -1,68 +1,90 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: Re: [PATCH v4 16/23] vmalloc: Add flag for free of special
- permsissions
-Date: Thu, 25 Apr 2019 21:22:37 +0000
-Message-ID: <c6b37ed1b616386acfab4d4a8cbe972d9346a5fe.camel@intel.com>
-References: <20190422185805.1169-1-rick.p.edgecombe@intel.com>
-	 <20190422185805.1169-17-rick.p.edgecombe@intel.com>
-	 <20190425203845.GA12232@hirez.programming.kicks-ass.net>
-In-Reply-To: <20190425203845.GA12232@hirez.programming.kicks-ass.net>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <0E199F7050ED404B9991A495937A8F97@intel.com>
-Content-Transfer-Encoding: base64
+From: Nadav Amit <namit@vmware.com>
+Subject: [PATCH v5 03/23] x86/mm: Introduce temporary mm structs
+Date: Thu, 25 Apr 2019 17:11:23 -0700
+Message-ID: <20190426001143.4983-4-namit@vmware.com>
+In-Reply-To: <20190426001143.4983-1-namit@vmware.com>
+References: <20190426001143.4983-1-namit@vmware.com>
 MIME-Version: 1.0
-To: "peterz@infradead.org" <peterz@infradead.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "nadav.amit@gmail.com" <nadav.amit@gmail.com>, "dave.hansen@linux.intel.com" <dave.hansen@linux.intel.com>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "hpa@zytor.com" <hpa@zytor.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "mingo@redhat.com" <mingo@redhat.com>, "linux_dti@icloud.com" <linux_dti@icloud.com>, "luto@kernel.org" <luto@kernel.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "bp@alien8.de" <bp@alien8.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain
+To: Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Nadav Amit <namit@vmware.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVGh1LCAyMDE5LTA0LTI1IGF0IDIyOjM4ICswMjAwLCBQZXRlciBaaWpsc3RyYSB3cm90ZToN
-Cj4gT24gTW9uLCBBcHIgMjIsIDIwMTkgYXQgMTE6NTc6NThBTSAtMDcwMCwgUmljayBFZGdlY29t
-YmUgd3JvdGU6DQo+ID4gQWRkIGEgbmV3IGZsYWcgVk1fRkxVU0hfUkVTRVRfUEVSTVMsIGZvciBl
-bmFibGluZyB2ZnJlZSBvcGVyYXRpb25zIHRvDQo+ID4gaW1tZWRpYXRlbHkgY2xlYXIgZXhlY3V0
-YWJsZSBUTEIgZW50cmllcyBiZWZvcmUgZnJlZWluZyBwYWdlcywgYW5kIGhhbmRsZQ0KPiA+IHJl
-c2V0dGluZyBwZXJtaXNzaW9ucyBvbiB0aGUgZGlyZWN0bWFwLiBUaGlzIGZsYWcgaXMgdXNlZnVs
-IGZvciBhbnkga2luZA0KPiA+IG9mIG1lbW9yeSB3aXRoIGVsZXZhdGVkIHBlcm1pc3Npb25zLCBv
-ciB3aGVyZSB0aGVyZSBjYW4gYmUgcmVsYXRlZA0KPiA+IHBlcm1pc3Npb25zIGNoYW5nZXMgb24g
-dGhlIGRpcmVjdG1hcC4gVG9kYXkgdGhpcyBpcyBSTytYIGFuZCBSTyBtZW1vcnkuDQo+ID4gDQo+
-ID4gQWx0aG91Z2ggdGhpcyBlbmFibGVzIGRpcmVjdGx5IHZmcmVlaW5nIG5vbi13cml0ZWFibGUg
-bWVtb3J5IG5vdywNCj4gPiBub24td3JpdGFibGUgbWVtb3J5IGNhbm5vdCBiZSBmcmVlZCBpbiBh
-biBpbnRlcnJ1cHQgYmVjYXVzZSB0aGUgYWxsb2NhdGlvbg0KPiA+IGl0c2VsZiBpcyB1c2VkIGFz
-IGEgbm9kZSBvbiBkZWZlcnJlZCBmcmVlIGxpc3QuIFNvIHdoZW4gUk8gbWVtb3J5IG5lZWRzIHRv
-DQo+ID4gYmUgZnJlZWQgaW4gYW4gaW50ZXJydXB0IHRoZSBjb2RlIGRvaW5nIHRoZSB2ZnJlZSBu
-ZWVkcyB0byBoYXZlIGl0cyBvd24NCj4gPiB3b3JrIHF1ZXVlLCBhcyB3YXMgdGhlIGNhc2UgYmVm
-b3JlIHRoZSBkZWZlcnJlZCB2ZnJlZSBsaXN0IHdhcyBhZGRlZCB0bw0KPiA+IHZtYWxsb2MuDQo+
-ID4gDQo+ID4gRm9yIGFyY2hpdGVjdHVyZXMgd2l0aCBzZXRfZGlyZWN0X21hcF8gaW1wbGVtZW50
-YXRpb25zIHRoaXMgd2hvbGUgb3BlcmF0aW9uDQo+ID4gY2FuIGJlIGRvbmUgd2l0aCBvbmUgVExC
-IGZsdXNoIHdoZW4gY2VudHJhbGl6ZWQgbGlrZSB0aGlzLiBGb3Igb3RoZXJzIHdpdGgNCj4gPiBk
-aXJlY3RtYXAgcGVybWlzc2lvbnMsIGN1cnJlbnRseSBvbmx5IGFybTY0LCBhIGJhY2t1cCBtZXRo
-b2QgdXNpbmcNCj4gPiBzZXRfbWVtb3J5IGZ1bmN0aW9ucyBpcyB1c2VkIHRvIHJlc2V0IHRoZSBk
-aXJlY3RtYXAuIFdoZW4gYXJtNjQgYWRkcw0KPiA+IHNldF9kaXJlY3RfbWFwXyBmdW5jdGlvbnMs
-IHRoaXMgYmFja3VwIGNhbiBiZSByZW1vdmVkLg0KPiA+IA0KPiA+IFdoZW4gdGhlIFRMQiBpcyBm
-bHVzaGVkIHRvIGJvdGggcmVtb3ZlIFRMQiBlbnRyaWVzIGZvciB0aGUgdm1hbGxvYyByYW5nZQ0K
-PiA+IG1hcHBpbmcgYW5kIHRoZSBkaXJlY3QgbWFwIHBlcm1pc3Npb25zLCB0aGUgbGF6eSBwdXJn
-ZSBvcGVyYXRpb24gY291bGQgYmUNCj4gPiBkb25lIHRvIHRyeSB0byBzYXZlIGEgVExCIGZsdXNo
-IGxhdGVyLiBIb3dldmVyIHRvZGF5IHZtX3VubWFwX2FsaWFzZXMNCj4gPiBjb3VsZCBmbHVzaCBh
-IFRMQiByYW5nZSB0aGF0IGRvZXMgbm90IGluY2x1ZGUgdGhlIGRpcmVjdG1hcC4gU28gYSBoZWxw
-ZXINCj4gPiBpcyBhZGRlZCB3aXRoIGV4dHJhIHBhcmFtZXRlcnMgdGhhdCBjYW4gYWxsb3cgYm90
-aCB0aGUgdm1hbGxvYyBhZGRyZXNzIGFuZA0KPiA+IHRoZSBkaXJlY3QgbWFwcGluZyB0byBiZSBm
-bHVzaGVkIGR1cmluZyB0aGlzIG9wZXJhdGlvbi4gVGhlIGJlaGF2aW9yIG9mIHRoZQ0KPiA+IG5v
-cm1hbCB2bV91bm1hcF9hbGlhc2VzIGZ1bmN0aW9uIGlzIHVuY2hhbmdlZC4NCj4gPiArc3RhdGlj
-IGlubGluZSB2b2lkIHNldF92bV9mbHVzaF9yZXNldF9wZXJtcyh2b2lkICphZGRyKQ0KPiA+ICt7
-DQo+ID4gKwlzdHJ1Y3Qgdm1fc3RydWN0ICp2bSA9IGZpbmRfdm1fYXJlYShhZGRyKTsNCj4gPiAr
-DQo+ID4gKwlpZiAodm0pDQo+ID4gKwkJdm0tPmZsYWdzIHw9IFZNX0ZMVVNIX1JFU0VUX1BFUk1T
-Ow0KPiA+ICt9DQo+IA0KPiBTbywgcHJldmlvdXNseSBpbiB0aGUgc2VyaWVzIHdlIGFkZGVkIE5Y
-IHRvIG1vZHVsZV9hbGxvYygpIGFuZCBmaXhlZCB1cA0KPiBhbGwgdGhlIHVzYWdlIHNpdGUuIEFu
-ZCBub3cgd2UncmUgZ29pbmcgdGhyb3VnaCB0aG9zZSB2ZXJ5IHNhbWUgc2l0ZXMgdG8NCj4gYWRk
-IHNldF92bV9mbHVzaF9yZXNldF9wZXJtcygpLg0KPiANCj4gV2h5IGlzbid0IG1vZHVsZV9hbGxv
-YygpIGNhbGxpbmcgdGhlIGFib3ZlIGZ1bmN0aW9uIGFuZCBhdm9pZCBzcHJpbmtsaW5nDQo+IGl0
-IGFsbCBvdmVyIHRoZSBwbGFjZSBhZ2Fpbj8NCg0KWWVhLCB0aGF0IGNvdWxkIG1ha2UgaXQgbW9y
-ZSBhdXRvbWF0aWMsIGJ1dCB0aGVyZSBhcmUgc29tZSBhZHZhbnRhZ2VzIHRvIGhvdyBpdA0KaXMg
-Y3VycmVudGx5Lg0KDQpPbmUgaXMgdGhhdCBtb3N0IGFyY2gncyBoYXZlIHRoZWlyIG93biBtb2R1
-bGVfYWxsb2MoKSwgYW5kIHNvIGNhbGxpbmcNCnNldF92bV9mbHVzaF9yZXNldF9wZXJtcygpIGlu
-IGtlcm5lbC9tb2R1bGUuYyBjYXRjaGVzIGFsbCBhcmNoaXRlY3R1cmVzLg0KT3RoZXJ3aXNlIGl0
-IHdvdWxkIGJlIGFkZGVkIGluIGVhY2ggYXJjaCB3aGljaCB3b3VsZCBiZSBtb3JlIHNpdGVzLg0K
-DQpUaGUgb3RoZXIgcmVhc29uIGlzIHRoYXQgdGhlIGZsdXNoIGlzbid0IGFjdHVhbGx5IG5lZWRl
-ZCB1bnRpbCBhZnRlciB0aGUgbWVtb3J5DQppcyBtYWRlIGV4ZWN1dGFibGUsIHNvIHdlIGRvbid0
-IGJvdGhlciBmbHVzaGluZyBpZiB0aGUgYWxsb2NhdGlvbiBuZXZlciBnZXRzIHNldA0KZXhlY3V0
-YWJsZS4gV2hlbiB0aGF0IGhhcHBlbnMgaXMgb25seSBrbm93biBieSB0aGUgY2FsbGVycyBvZiBt
-b2R1bGVfYWxsb2MoKS4NCg0KVGhhbmtzLA0KDQpSaWNrDQo=
+From: Andy Lutomirski <luto@kernel.org>
+
+Using a dedicated page-table for temporary PTEs prevents other cores
+from using - even speculatively - these PTEs, thereby providing two
+benefits:
+
+(1) Security hardening: an attacker that gains kernel memory writing
+abilities cannot easily overwrite sensitive data.
+
+(2) Avoiding TLB shootdowns: the PTEs do not need to be flushed in
+remote page-tables.
+
+To do so a temporary mm_struct can be used. Mappings which are private
+for this mm can be set in the userspace part of the address-space.
+During the whole time in which the temporary mm is loaded, interrupts
+must be disabled.
+
+The first use-case for temporary mm struct, which will follow, is for
+poking the kernel text.
+
+[ Commit message was written by Nadav Amit ]
+
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Dave Hansen <dave.hansen@intel.com>
+Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
+Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
+Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Nadav Amit <namit@vmware.com>
+Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
+---
+ arch/x86/include/asm/mmu_context.h | 33 ++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
+index 19d18fae6ec6..24dc3b810970 100644
+--- a/arch/x86/include/asm/mmu_context.h
++++ b/arch/x86/include/asm/mmu_context.h
+@@ -356,4 +356,37 @@ static inline unsigned long __get_current_cr3_fast(void)
+ 	return cr3;
+ }
+ 
++typedef struct {
++	struct mm_struct *mm;
++} temp_mm_state_t;
++
++/*
++ * Using a temporary mm allows to set temporary mappings that are not accessible
++ * by other CPUs. Such mappings are needed to perform sensitive memory writes
++ * that override the kernel memory protections (e.g., W^X), without exposing the
++ * temporary page-table mappings that are required for these write operations to
++ * other CPUs. Using a temporary mm also allows to avoid TLB shootdowns when the
++ * mapping is torn down.
++ *
++ * Context: The temporary mm needs to be used exclusively by a single core. To
++ *          harden security IRQs must be disabled while the temporary mm is
++ *          loaded, thereby preventing interrupt handler bugs from overriding
++ *          the kernel memory protection.
++ */
++static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
++{
++	temp_mm_state_t temp_state;
++
++	lockdep_assert_irqs_disabled();
++	temp_state.mm = this_cpu_read(cpu_tlbstate.loaded_mm);
++	switch_mm_irqs_off(NULL, mm, current);
++	return temp_state;
++}
++
++static inline void unuse_temporary_mm(temp_mm_state_t prev_state)
++{
++	lockdep_assert_irqs_disabled();
++	switch_mm_irqs_off(NULL, prev_state.mm, current);
++}
++
+ #endif /* _ASM_X86_MMU_CONTEXT_H */
+-- 
+2.17.1
