@@ -1,61 +1,44 @@
-From: Jason Gunthorpe <jgg@mellanox.com>
-Subject: Re: [PATCH v2] binfmt_elf: Update READ_IMPLIES_EXEC logic for modern
- CPUs
-Date: Fri, 26 Apr 2019 15:02:43 +0000
-Message-ID: <20190426150237.GD2303@mellanox.com>
-References: <20190424203408.GA11386@beast> <20190425054242.GA7816@gmail.com>
- <CAGXu5jKWQtmt+tN9rwdCWP=7pL6GYU4DmDW4R7ViQV8r1m1J=g@mail.gmail.com>
- <20190425200725.GC58719@gmail.com>
-In-Reply-To: <20190425200725.GC58719@gmail.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <B789B7DDBE5CBF4D84311195D93448DB@eurprd05.prod.outlook.com>
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Hector Marco-Gisbert <hecmargi@upv.es>, Marc Gonzalez <marc.w.gonzalez@free.fr>, Will Deacon <will.deacon@arm.com>, X86 ML <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Arnd Bergmann <arnd@arndb.de>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Borislav Petkov <bp@alien8.de>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+References: <20190418154208.131118-1-glider@google.com> <20190418154208.131118-2-glider@google.com>
+ <alpine.DEB.2.21.1904260911570.8340@nuc-kabylake> <0100016a5a3f6121-e7ed483e-bc29-4d75-bd0a-8e3b973529f5-000000@email.amazonses.com>
+In-Reply-To: <0100016a5a3f6121-e7ed483e-bc29-4d75-bd0a-8e3b973529f5-000000@email.amazonses.com>
+From: Alexander Potapenko <glider@google.com>
+Date: Fri, 26 Apr 2019 17:48:10 +0200
+Message-ID: <CAG_fn=Uj226XJqh_wErBLW6dLvp_eP_KaEJDuqxBhvag1Q=Jwg@mail.gmail.com>
+Subject: Re: [PATCH 1/3] mm: security: introduce the init_allocations=1 boot option
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Christopher Lameter <cl@linux.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Dmitriy Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 25, 2019 at 10:07:25PM +0200, Ingo Molnar wrote:
+On Fri, Apr 26, 2019 at 5:24 PM Christopher Lameter <cl@linux.com> wrote:
+>
+> Hmmmm.... Maybe its better to zero on free? That way you dont need to
+> initialize the allocations. You could even check if someone mucked with
+> the object during allocation.
+As mentioned somewhere in the neighboring threads, Kees requested the
+options to initialize on both allocation and free, because we'll need
+this functionality for memory tagging someday.
+> This is a replication of some of the
+> inherent debugging facilities in the allocator though.
+I'm curious, how often do people use SL[AU]B poisoning and redzones these d=
+ays?
+Guess those should be superseded by KASAN already?
+I agree it makes sense to reuse the existing debugging code, but on
+the other hand we probably want to keep the initialization fast enough
+to be used in production.
+>
+Re: poison_fn, it wasn't a good idea, so I'll be dropping it.
 
-> > But yes, your above diff for "has NX" is roughly correct. I'll walk
-> > through each piece I'm thinking about. Here is the current state:
-> >=20
-> >                CPU: | lacks NX*  | has NX, ia32     | has NX, x86_64 |
-> >   ELF:              |            |                  |                |
-> >   missing GNU_STACK | exec-all   | exec-all         | exec-all       |
-> >   GNU_STACK =3D=3D RWX  | exec-all   | exec-all         | exec-all     =
-  |
-> >   GNU_STACK =3D=3D RW   | exec-none  | exec-none        | exec-none    =
-  |
-> >=20
-> > *this column has no architecture effect: NX markings are ignored by
-> > hardware, but may have behavioral effects when "wants X" collides with
-> > "cannot be X" constraints in memory permission flags, as in [1].
->=20
-> So [1] appears to be device driver mapping a BAR that isn't intended to=20
-> be excutable:
->=20
->    https://lore.kernel.org/netdev/20190418055759.GA3155@mellanox.com/
->=20
-> and the question is, do we reject this at the device driver mmap() level=
-=20
-> already, right?
+--=20
+Alexander Potapenko
+Software Engineer
 
-No, we wanted to reject it at the driver mmap() level, but if an
-executable is marked with GNU_STACK=3DRWX then the core mm code always
-calls the driver with VM_EXEC (even though the mmap isn't a stack) and
-the driver becomes incompatible with userspace using GNU_STACK=3DRWX (ie
-some Fortran programs, apparently)
+Google Germany GmbH
+Erika-Mann-Stra=C3=9Fe, 33
+80636 M=C3=BCnchen
 
-> I suspect the best behavior is to reject as early as possible, so I agree=
-=20
-> with your change here - even though !NX systems tend to become less and=20
-> less relevant these days.
-
-I suggested the idea of adding a flag in either the struct file or the
-file_operations flag that says mmap is never to be executable for this
-file with the idea that most/all cdev users would set it.
-
-Does that seem reasonable?
-
-Jason
+Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
+Registergericht und -nummer: Hamburg, HRB 86891
+Sitz der Gesellschaft: Hamburg
