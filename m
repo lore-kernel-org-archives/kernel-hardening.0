@@ -1,34 +1,33 @@
-Date: Tue, 30 Apr 2019 04:15:13 -0700
+Date: Tue, 30 Apr 2019 04:17:18 -0700
 Sender: tip tree robot <tipbot@zytor.com>
 From: tip-bot for Nadav Amit <tipbot@zytor.com>
-Message-ID: <tip-c7b6f29b6257532792fc722b68fcc0e00b5a856c@git.kernel.org>
-In-Reply-To: <20190426001143.4983-24-namit@vmware.com>
-References: <20190426001143.4983-24-namit@vmware.com>
-Subject: [tip:x86/mm] bpf: Fail bpf_probe_write_user() while mm is switched
+Message-ID: <tip-d97080ebed7811a53c931032a284166ee46b9565@git.kernel.org>
+In-Reply-To: <20190426001143.4983-5-namit@vmware.com>
+References: <20190426001143.4983-5-namit@vmware.com>
+Subject: [tip:x86/mm] x86/mm: Save debug registers when loading a temporary
+ mm
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: luto@kernel.org, namit@vmware.com, linux_dti@icloud.com, ard.biesheuvel@linaro.org, will.deacon@arm.com, jannh@google.com, riel@surriel.com, rick.p.edgecombe@intel.com, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, linux-kernel@vger.kernel.org, daniel@iogearbox.net, deneen.t.dock@intel.com, tglx@linutronix.de, ast@kernel.org, akpm@linux-foundation.org, mingo@kernel.org, kristen@linux.intel.com, peterz@infradead.org, bp@alien8.de, hpa@zytor.com, dave.hansen@linux.intel.com
+Cc: bp@alien8.de, tglx@linutronix.de, hpa@zytor.com, rick.p.edgecombe@intel.com, peterz@infradead.org, mingo@kernel.org, akpm@linux-foundation.org, will.deacon@arm.com, luto@kernel.org, ard.biesheuvel@linaro.org, deneen.t.dock@intel.com, linux-kernel@vger.kernel.org, namit@vmware.com, riel@surriel.com, kristen@linux.intel.com, linux_dti@icloud.com, torvalds@linux-foundation.org, dave.hansen@linux.intel.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  c7b6f29b6257532792fc722b68fcc0e00b5a856c
-Gitweb:     https://git.kernel.org/tip/c7b6f29b6257532792fc722b68fcc0e00b5a856c
+Commit-ID:  d97080ebed7811a53c931032a284166ee46b9565
+Gitweb:     https://git.kernel.org/tip/d97080ebed7811a53c931032a284166ee46b9565
 Author:     Nadav Amit <namit@vmware.com>
-AuthorDate: Thu, 25 Apr 2019 17:11:43 -0700
+AuthorDate: Thu, 25 Apr 2019 17:11:24 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:48 +0200
+CommitDate: Tue, 30 Apr 2019 12:37:50 +0200
 
-bpf: Fail bpf_probe_write_user() while mm is switched
+x86/mm: Save debug registers when loading a temporary mm
 
-When using a temporary mm, bpf_probe_write_user() should not be able to
-write to user memory, since user memory addresses may be used to map
-kernel memory.  Detect these cases and fail bpf_probe_write_user() in
-such cases.
+Prevent user watchpoints from mistakenly firing while the temporary mm
+is being used. As the addresses of the temporary mm might overlap those
+of the user-process, this is necessary to prevent wrong signals or worse
+things from happening.
 
-Suggested-by: Jann Horn <jannh@google.com>
-Reported-by: Jann Horn <jannh@google.com>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
@@ -39,51 +38,64 @@ Cc: <kernel-hardening@lists.openwall.com>
 Cc: <kristen@linux.intel.com>
 Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
-Cc: Alexei Starovoitov <ast@kernel.org>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
-Cc: Daniel Borkmann <daniel@iogearbox.net>
 Cc: Dave Hansen <dave.hansen@linux.intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Rik van Riel <riel@surriel.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-24-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-5-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- kernel/trace/bpf_trace.c | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ arch/x86/include/asm/mmu_context.h | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
 
-diff --git a/kernel/trace/bpf_trace.c b/kernel/trace/bpf_trace.c
-index d64c00afceb5..94b0e37d90ef 100644
---- a/kernel/trace/bpf_trace.c
-+++ b/kernel/trace/bpf_trace.c
-@@ -14,6 +14,8 @@
- #include <linux/syscalls.h>
- #include <linux/error-injection.h>
+diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
+index 24dc3b810970..93dff1963337 100644
+--- a/arch/x86/include/asm/mmu_context.h
++++ b/arch/x86/include/asm/mmu_context.h
+@@ -13,6 +13,7 @@
+ #include <asm/tlbflush.h>
+ #include <asm/paravirt.h>
+ #include <asm/mpx.h>
++#include <asm/debugreg.h>
  
-+#include <asm/tlb.h>
+ extern atomic64_t last_mm_ctx_id;
+ 
+@@ -380,6 +381,21 @@ static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
+ 	lockdep_assert_irqs_disabled();
+ 	temp_state.mm = this_cpu_read(cpu_tlbstate.loaded_mm);
+ 	switch_mm_irqs_off(NULL, mm, current);
 +
- #include "trace_probe.h"
- #include "trace.h"
- 
-@@ -163,6 +165,10 @@ BPF_CALL_3(bpf_probe_write_user, void *, unsafe_ptr, const void *, src,
- 	 * access_ok() should prevent writing to non-user memory, but in
- 	 * some situations (nommu, temporary switch, etc) access_ok() does
- 	 * not provide enough validation, hence the check on KERNEL_DS.
++	/*
++	 * If breakpoints are enabled, disable them while the temporary mm is
++	 * used. Userspace might set up watchpoints on addresses that are used
++	 * in the temporary mm, which would lead to wrong signals being sent or
++	 * crashes.
 +	 *
-+	 * nmi_uaccess_okay() ensures the probe is not run in an interim
-+	 * state, when the task or mm are switched. This is specifically
-+	 * required to prevent the use of temporary mm.
- 	 */
++	 * Note that breakpoints are not disabled selectively, which also causes
++	 * kernel breakpoints (e.g., perf's) to be disabled. This might be
++	 * undesirable, but still seems reasonable as the code that runs in the
++	 * temporary mm should be short.
++	 */
++	if (hw_breakpoint_active())
++		hw_breakpoint_disable();
++
+ 	return temp_state;
+ }
  
- 	if (unlikely(in_interrupt() ||
-@@ -170,6 +176,8 @@ BPF_CALL_3(bpf_probe_write_user, void *, unsafe_ptr, const void *, src,
- 		return -EPERM;
- 	if (unlikely(uaccess_kernel()))
- 		return -EPERM;
-+	if (unlikely(!nmi_uaccess_okay()))
-+		return -EPERM;
- 	if (!access_ok(unsafe_ptr, size))
- 		return -EPERM;
+@@ -387,6 +403,13 @@ static inline void unuse_temporary_mm(temp_mm_state_t prev_state)
+ {
+ 	lockdep_assert_irqs_disabled();
+ 	switch_mm_irqs_off(NULL, prev_state.mm, current);
++
++	/*
++	 * Restore the breakpoints if they were disabled before the temporary mm
++	 * was loaded.
++	 */
++	if (hw_breakpoint_active())
++		hw_breakpoint_restore();
+ }
  
+ #endif /* _ASM_X86_MMU_CONTEXT_H */
