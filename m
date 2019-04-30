@@ -1,35 +1,47 @@
-Date: Tue, 30 Apr 2019 04:18:40 -0700
+Date: Tue, 30 Apr 2019 04:25:33 -0700
 Sender: tip tree robot <tipbot@zytor.com>
-From: tip-bot for Nadav Amit <tipbot@zytor.com>
-Message-ID: <tip-13585fa0668c724efab9635aaeef6ec390217415@git.kernel.org>
-In-Reply-To: <20190426001143.4983-6-namit@vmware.com>
-References: <20190426001143.4983-6-namit@vmware.com>
-Subject: [tip:x86/mm] fork: Provide a function for copying init_mm
+From: tip-bot for Rick Edgecombe <tipbot@zytor.com>
+Message-ID: <tip-d63326928611600ad65baff54a70f53b02b3cdfe@git.kernel.org>
+In-Reply-To: <20190426001143.4983-16-namit@vmware.com>
+References: <20190426001143.4983-16-namit@vmware.com>
+Subject: [tip:x86/mm] mm/hibernation: Make hibernation handle unmapped pages
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: peterz@infradead.org, luto@kernel.org, mhiramat@kernel.org, kristen@linux.intel.com, linux-kernel@vger.kernel.org, hpa@zytor.com, deneen.t.dock@intel.com, namit@vmware.com, tglx@linutronix.de, torvalds@linux-foundation.org, dave.hansen@intel.com, mingo@kernel.org, linux_dti@icloud.com, kernel-hardening@lists.openwall.com, will.deacon@arm.com, rick.p.edgecombe@intel.com, riel@surriel.com, keescook@chromium.org, akpm@linux-foundation.org, bp@alien8.de, ard.biesheuvel@linaro.org
+Cc: hpa@zytor.com, tglx@linutronix.de, linux_dti@icloud.com, peterz@infradead.org, rick.p.edgecombe@intel.com, kristen@linux.intel.com, luto@kernel.org, mingo@kernel.org, dave.hansen@linux.intel.com, rjw@rjwysocki.net, ard.biesheuvel@linaro.org, nadav.amit@gmail.com, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, bp@alien8.de, riel@surriel.com, deneen.t.dock@intel.com, pavel@ucw.cz, torvalds@linux-foundation.org, linux-kernel@vger.kernel.org, will.deacon@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  13585fa0668c724efab9635aaeef6ec390217415
-Gitweb:     https://git.kernel.org/tip/13585fa0668c724efab9635aaeef6ec390217415
-Author:     Nadav Amit <namit@vmware.com>
-AuthorDate: Thu, 25 Apr 2019 17:11:25 -0700
+Commit-ID:  d63326928611600ad65baff54a70f53b02b3cdfe
+Gitweb:     https://git.kernel.org/tip/d63326928611600ad65baff54a70f53b02b3cdfe
+Author:     Rick Edgecombe <rick.p.edgecombe@intel.com>
+AuthorDate: Thu, 25 Apr 2019 17:11:35 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:51 +0200
+CommitDate: Tue, 30 Apr 2019 12:37:57 +0200
 
-fork: Provide a function for copying init_mm
+mm/hibernation: Make hibernation handle unmapped pages
 
-Provide a function for copying init_mm. This function will be later used
-for setting a temporary mm.
+Make hibernate handle unmapped pages on the direct map when
+CONFIG_ARCH_HAS_SET_ALIAS=y is set. These functions allow for setting pages
+to invalid configurations, so now hibernate should check if the pages have
+valid mappings and handle if they are unmapped when doing a hibernate
+save operation.
 
-Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
-Signed-off-by: Nadav Amit <namit@vmware.com>
+Previously this checking was already done when CONFIG_DEBUG_PAGEALLOC=y
+was configured. It does not appear to have a big hibernating performance
+impact. The speed of the saving operation before this change was measured
+as 819.02 MB/s, and after was measured at 813.32 MB/s.
+
+Before:
+[    4.670938] PM: Wrote 171996 kbytes in 0.21 seconds (819.02 MB/s)
+
+After:
+[    4.504714] PM: Wrote 178932 kbytes in 0.22 seconds (813.32 MB/s)
+
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
+Acked-by: Pavel Machek <pavel@ucw.cz>
 Cc: <akpm@linux-foundation.org>
 Cc: <ard.biesheuvel@linaro.org>
 Cc: <deneen.t.dock@intel.com>
@@ -39,79 +51,132 @@ Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
-Cc: Dave Hansen <dave.hansen@intel.com>
+Cc: Dave Hansen <dave.hansen@linux.intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Nadav Amit <nadav.amit@gmail.com>
+Cc: Rafael J. Wysocki <rjw@rjwysocki.net>
 Cc: Rik van Riel <riel@surriel.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-6-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-16-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- include/linux/sched/task.h |  1 +
- kernel/fork.c              | 24 ++++++++++++++++++------
- 2 files changed, 19 insertions(+), 6 deletions(-)
+ arch/x86/mm/pageattr.c  |  4 ----
+ include/linux/mm.h      | 18 ++++++------------
+ kernel/power/snapshot.c |  5 +++--
+ mm/page_alloc.c         |  7 +++++--
+ 4 files changed, 14 insertions(+), 20 deletions(-)
 
-diff --git a/include/linux/sched/task.h b/include/linux/sched/task.h
-index 2e97a2227045..f1227f2c38a4 100644
---- a/include/linux/sched/task.h
-+++ b/include/linux/sched/task.h
-@@ -76,6 +76,7 @@ extern void exit_itimers(struct signal_struct *);
- extern long _do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *, unsigned long);
- extern long do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *);
- struct task_struct *fork_idle(int);
-+struct mm_struct *copy_init_mm(void);
- extern pid_t kernel_thread(int (*fn)(void *), void *arg, unsigned long flags);
- extern long kernel_wait4(pid_t, int __user *, int, struct rusage *);
- 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 44fba5e5e916..fbe9dfcd8680 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -1299,13 +1299,20 @@ void mm_release(struct task_struct *tsk, struct mm_struct *mm)
- 		complete_vfork_done(tsk);
+diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
+index 3574550192c6..daf4d645e537 100644
+--- a/arch/x86/mm/pageattr.c
++++ b/arch/x86/mm/pageattr.c
+@@ -2257,7 +2257,6 @@ int set_direct_map_default_noflush(struct page *page)
+ 	return __set_pages_p(page, 1);
  }
  
--/*
-- * Allocate a new mm structure and copy contents from the
-- * mm structure of the passed in task structure.
-+/**
-+ * dup_mm() - duplicates an existing mm structure
-+ * @tsk: the task_struct with which the new mm will be associated.
-+ * @oldmm: the mm to duplicate.
-+ *
-+ * Allocates a new mm structure and duplicates the provided @oldmm structure
-+ * content into it.
-+ *
-+ * Return: the duplicated mm or NULL on failure.
-  */
--static struct mm_struct *dup_mm(struct task_struct *tsk)
-+static struct mm_struct *dup_mm(struct task_struct *tsk,
-+				struct mm_struct *oldmm)
+-#ifdef CONFIG_DEBUG_PAGEALLOC
+ void __kernel_map_pages(struct page *page, int numpages, int enable)
  {
--	struct mm_struct *mm, *oldmm = current->mm;
-+	struct mm_struct *mm;
- 	int err;
+ 	if (PageHighMem(page))
+@@ -2302,11 +2301,8 @@ bool kernel_page_present(struct page *page)
+ 	pte = lookup_address((unsigned long)page_address(page), &level);
+ 	return (pte_val(*pte) & _PAGE_PRESENT);
+ }
+-
+ #endif /* CONFIG_HIBERNATION */
  
- 	mm = allocate_mm();
-@@ -1372,7 +1379,7 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
- 	}
+-#endif /* CONFIG_DEBUG_PAGEALLOC */
+-
+ int __init kernel_map_pages_in_pgd(pgd_t *pgd, u64 pfn, unsigned long address,
+ 				   unsigned numpages, unsigned long page_flags)
+ {
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 6b10c21630f5..083d7b4863ed 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -2610,37 +2610,31 @@ static inline void kernel_poison_pages(struct page *page, int numpages,
+ 					int enable) { }
+ #endif
  
- 	retval = -ENOMEM;
--	mm = dup_mm(tsk);
-+	mm = dup_mm(tsk, current->mm);
- 	if (!mm)
- 		goto fail_nomem;
+-#ifdef CONFIG_DEBUG_PAGEALLOC
+ extern bool _debug_pagealloc_enabled;
+-extern void __kernel_map_pages(struct page *page, int numpages, int enable);
  
-@@ -2187,6 +2194,11 @@ struct task_struct *fork_idle(int cpu)
- 	return task;
+ static inline bool debug_pagealloc_enabled(void)
+ {
+-	return _debug_pagealloc_enabled;
++	return IS_ENABLED(CONFIG_DEBUG_PAGEALLOC) && _debug_pagealloc_enabled;
  }
  
-+struct mm_struct *copy_init_mm(void)
-+{
-+	return dup_mm(NULL, &init_mm);
-+}
++#if defined(CONFIG_DEBUG_PAGEALLOC) || defined(CONFIG_ARCH_HAS_SET_DIRECT_MAP)
++extern void __kernel_map_pages(struct page *page, int numpages, int enable);
 +
- /*
-  *  Ok, this is the main fork-routine.
+ static inline void
+ kernel_map_pages(struct page *page, int numpages, int enable)
+ {
+-	if (!debug_pagealloc_enabled())
+-		return;
+-
+ 	__kernel_map_pages(page, numpages, enable);
+ }
+ #ifdef CONFIG_HIBERNATION
+ extern bool kernel_page_present(struct page *page);
+ #endif	/* CONFIG_HIBERNATION */
+-#else	/* CONFIG_DEBUG_PAGEALLOC */
++#else	/* CONFIG_DEBUG_PAGEALLOC || CONFIG_ARCH_HAS_SET_DIRECT_MAP */
+ static inline void
+ kernel_map_pages(struct page *page, int numpages, int enable) {}
+ #ifdef CONFIG_HIBERNATION
+ static inline bool kernel_page_present(struct page *page) { return true; }
+ #endif	/* CONFIG_HIBERNATION */
+-static inline bool debug_pagealloc_enabled(void)
+-{
+-	return false;
+-}
+-#endif	/* CONFIG_DEBUG_PAGEALLOC */
++#endif	/* CONFIG_DEBUG_PAGEALLOC || CONFIG_ARCH_HAS_SET_DIRECT_MAP */
+ 
+ #ifdef __HAVE_ARCH_GATE_AREA
+ extern struct vm_area_struct *get_gate_vma(struct mm_struct *mm);
+diff --git a/kernel/power/snapshot.c b/kernel/power/snapshot.c
+index f08a1e4ee1d4..bc9558ab1e5b 100644
+--- a/kernel/power/snapshot.c
++++ b/kernel/power/snapshot.c
+@@ -1342,8 +1342,9 @@ static inline void do_copy_page(long *dst, long *src)
+  * safe_copy_page - Copy a page in a safe way.
   *
+  * Check if the page we are going to copy is marked as present in the kernel
+- * page tables (this always is the case if CONFIG_DEBUG_PAGEALLOC is not set
+- * and in that case kernel_page_present() always returns 'true').
++ * page tables. This always is the case if CONFIG_DEBUG_PAGEALLOC or
++ * CONFIG_ARCH_HAS_SET_DIRECT_MAP is not set. In that case kernel_page_present()
++ * always returns 'true'.
+  */
+ static void safe_copy_page(void *dst, struct page *s_page)
+ {
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index c02cff1ed56e..59661106da16 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -1144,7 +1144,9 @@ static __always_inline bool free_pages_prepare(struct page *page,
+ 	}
+ 	arch_free_page(page, order);
+ 	kernel_poison_pages(page, 1 << order, 0);
+-	kernel_map_pages(page, 1 << order, 0);
++	if (debug_pagealloc_enabled())
++		kernel_map_pages(page, 1 << order, 0);
++
+ 	kasan_free_nondeferred_pages(page, order);
+ 
+ 	return true;
+@@ -2014,7 +2016,8 @@ inline void post_alloc_hook(struct page *page, unsigned int order,
+ 	set_page_refcounted(page);
+ 
+ 	arch_alloc_page(page, order);
+-	kernel_map_pages(page, 1 << order, 1);
++	if (debug_pagealloc_enabled())
++		kernel_map_pages(page, 1 << order, 1);
+ 	kasan_alloc_pages(page, order);
+ 	kernel_poison_pages(page, 1 << order, 1);
+ 	set_page_owner(page, order, gfp_flags);
