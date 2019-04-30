@@ -1,34 +1,32 @@
-Date: Tue, 30 Apr 2019 04:17:18 -0700
+Date: Tue, 30 Apr 2019 04:27:33 -0700
 Sender: tip tree robot <tipbot@zytor.com>
-From: tip-bot for Nadav Amit <tipbot@zytor.com>
-Message-ID: <tip-d97080ebed7811a53c931032a284166ee46b9565@git.kernel.org>
-In-Reply-To: <20190426001143.4983-5-namit@vmware.com>
-References: <20190426001143.4983-5-namit@vmware.com>
-Subject: [tip:x86/mm] x86/mm: Save debug registers when loading a temporary
- mm
+From: tip-bot for Rick Edgecombe <tipbot@zytor.com>
+Message-ID: <tip-d53d2f78ceadba081fc7785570798c3c8d50a718@git.kernel.org>
+In-Reply-To: <20190426001143.4983-19-namit@vmware.com>
+References: <20190426001143.4983-19-namit@vmware.com>
+Subject: [tip:x86/mm] bpf: Use vmalloc special flag
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: bp@alien8.de, tglx@linutronix.de, hpa@zytor.com, rick.p.edgecombe@intel.com, peterz@infradead.org, mingo@kernel.org, akpm@linux-foundation.org, will.deacon@arm.com, luto@kernel.org, ard.biesheuvel@linaro.org, deneen.t.dock@intel.com, linux-kernel@vger.kernel.org, namit@vmware.com, riel@surriel.com, kristen@linux.intel.com, linux_dti@icloud.com, torvalds@linux-foundation.org, dave.hansen@linux.intel.com, kernel-hardening@lists.openwall.com
+Cc: peterz@infradead.org, daniel@iogearbox.net, will.deacon@arm.com, torvalds@linux-foundation.org, akpm@linux-foundation.org, dave.hansen@linux.intel.com, bp@alien8.de, deneen.t.dock@intel.com, rick.p.edgecombe@intel.com, tglx@linutronix.de, kernel-hardening@lists.openwall.com, linux_dti@icloud.com, ard.biesheuvel@linaro.org, luto@kernel.org, mingo@kernel.org, hpa@zytor.com, riel@surriel.com, nadav.amit@gmail.com, ast@kernel.org, kristen@linux.intel.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  d97080ebed7811a53c931032a284166ee46b9565
-Gitweb:     https://git.kernel.org/tip/d97080ebed7811a53c931032a284166ee46b9565
-Author:     Nadav Amit <namit@vmware.com>
-AuthorDate: Thu, 25 Apr 2019 17:11:24 -0700
+Commit-ID:  d53d2f78ceadba081fc7785570798c3c8d50a718
+Gitweb:     https://git.kernel.org/tip/d53d2f78ceadba081fc7785570798c3c8d50a718
+Author:     Rick Edgecombe <rick.p.edgecombe@intel.com>
+AuthorDate: Thu, 25 Apr 2019 17:11:38 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:50 +0200
+CommitDate: Tue, 30 Apr 2019 12:37:59 +0200
 
-x86/mm: Save debug registers when loading a temporary mm
+bpf: Use vmalloc special flag
 
-Prevent user watchpoints from mistakenly firing while the temporary mm
-is being used. As the addresses of the temporary mm might overlap those
-of the user-process, this is necessary to prevent wrong signals or worse
-things from happening.
+Use new flag VM_FLUSH_RESET_PERMS for handling freeing of special
+permissioned memory in vmalloc and remove places where memory was set RW
+before freeing which is no longer needed. Don't track if the memory is RO
+anymore because it is now tracked in vmalloc.
 
-Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Cc: <akpm@linux-foundation.org>
@@ -38,64 +36,90 @@ Cc: <kernel-hardening@lists.openwall.com>
 Cc: <kristen@linux.intel.com>
 Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
+Cc: Alexei Starovoitov <ast@kernel.org>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
 Cc: Dave Hansen <dave.hansen@linux.intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Nadav Amit <nadav.amit@gmail.com>
 Cc: Rik van Riel <riel@surriel.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-5-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-19-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- arch/x86/include/asm/mmu_context.h | 23 +++++++++++++++++++++++
- 1 file changed, 23 insertions(+)
+ include/linux/filter.h | 17 +++--------------
+ kernel/bpf/core.c      |  1 -
+ 2 files changed, 3 insertions(+), 15 deletions(-)
 
-diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
-index 24dc3b810970..93dff1963337 100644
---- a/arch/x86/include/asm/mmu_context.h
-+++ b/arch/x86/include/asm/mmu_context.h
-@@ -13,6 +13,7 @@
- #include <asm/tlbflush.h>
- #include <asm/paravirt.h>
- #include <asm/mpx.h>
-+#include <asm/debugreg.h>
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index 14ec3bdad9a9..7d3abde3f183 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -20,6 +20,7 @@
+ #include <linux/set_memory.h>
+ #include <linux/kallsyms.h>
+ #include <linux/if_vlan.h>
++#include <linux/vmalloc.h>
  
- extern atomic64_t last_mm_ctx_id;
+ #include <net/sch_generic.h>
  
-@@ -380,6 +381,21 @@ static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
- 	lockdep_assert_irqs_disabled();
- 	temp_state.mm = this_cpu_read(cpu_tlbstate.loaded_mm);
- 	switch_mm_irqs_off(NULL, mm, current);
-+
-+	/*
-+	 * If breakpoints are enabled, disable them while the temporary mm is
-+	 * used. Userspace might set up watchpoints on addresses that are used
-+	 * in the temporary mm, which would lead to wrong signals being sent or
-+	 * crashes.
-+	 *
-+	 * Note that breakpoints are not disabled selectively, which also causes
-+	 * kernel breakpoints (e.g., perf's) to be disabled. This might be
-+	 * undesirable, but still seems reasonable as the code that runs in the
-+	 * temporary mm should be short.
-+	 */
-+	if (hw_breakpoint_active())
-+		hw_breakpoint_disable();
-+
- 	return temp_state;
- }
+@@ -503,7 +504,6 @@ struct bpf_prog {
+ 	u16			pages;		/* Number of allocated pages */
+ 	u16			jited:1,	/* Is our filter JIT'ed? */
+ 				jit_requested:1,/* archs need to JIT the prog */
+-				undo_set_mem:1,	/* Passed set_memory_ro() checkpoint */
+ 				gpl_compatible:1, /* Is filter GPL compatible? */
+ 				cb_access:1,	/* Is control block accessed? */
+ 				dst_needed:1,	/* Do we need dst entry? */
+@@ -733,27 +733,17 @@ bpf_ctx_narrow_access_ok(u32 off, u32 size, u32 size_default)
  
-@@ -387,6 +403,13 @@ static inline void unuse_temporary_mm(temp_mm_state_t prev_state)
+ static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
  {
- 	lockdep_assert_irqs_disabled();
- 	switch_mm_irqs_off(NULL, prev_state.mm, current);
-+
-+	/*
-+	 * Restore the breakpoints if they were disabled before the temporary mm
-+	 * was loaded.
-+	 */
-+	if (hw_breakpoint_active())
-+		hw_breakpoint_restore();
+-	fp->undo_set_mem = 1;
++	set_vm_flush_reset_perms(fp);
+ 	set_memory_ro((unsigned long)fp, fp->pages);
  }
  
- #endif /* _ASM_X86_MMU_CONTEXT_H */
+-static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+-{
+-	if (fp->undo_set_mem)
+-		set_memory_rw((unsigned long)fp, fp->pages);
+-}
+-
+ static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+ {
++	set_vm_flush_reset_perms(hdr);
+ 	set_memory_ro((unsigned long)hdr, hdr->pages);
+ 	set_memory_x((unsigned long)hdr, hdr->pages);
+ }
+ 
+-static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
+-{
+-	set_memory_rw((unsigned long)hdr, hdr->pages);
+-}
+-
+ static inline struct bpf_binary_header *
+ bpf_jit_binary_hdr(const struct bpf_prog *fp)
+ {
+@@ -789,7 +779,6 @@ void __bpf_prog_free(struct bpf_prog *fp);
+ 
+ static inline void bpf_prog_unlock_free(struct bpf_prog *fp)
+ {
+-	bpf_prog_unlock_ro(fp);
+ 	__bpf_prog_free(fp);
+ }
+ 
+diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c
+index ff09d32a8a1b..c605397c79f0 100644
+--- a/kernel/bpf/core.c
++++ b/kernel/bpf/core.c
+@@ -848,7 +848,6 @@ void __weak bpf_jit_free(struct bpf_prog *fp)
+ 	if (fp->jited) {
+ 		struct bpf_binary_header *hdr = bpf_jit_binary_hdr(fp);
+ 
+-		bpf_jit_binary_unlock_ro(hdr);
+ 		bpf_jit_binary_free(hdr);
+ 
+ 		WARN_ON_ONCE(!bpf_prog_kallsyms_verify_off(fp));
