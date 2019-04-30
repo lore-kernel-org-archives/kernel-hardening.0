@@ -1,37 +1,34 @@
-Date: Tue, 30 Apr 2019 04:21:23 -0700
+Date: Tue, 30 Apr 2019 04:23:28 -0700
 Sender: tip tree robot <tipbot@zytor.com>
 From: tip-bot for Nadav Amit <tipbot@zytor.com>
-Message-ID: <tip-3c0dab44e22782359a0a706cbce72de99a22aa75@git.kernel.org>
-In-Reply-To: <20190426001143.4983-10-namit@vmware.com>
-References: <20190426001143.4983-10-namit@vmware.com>
-Subject: [tip:x86/mm] x86/ftrace: Set trampoline pages as executable
+Message-ID: <tip-bb0a008d6a2c543efc11313b448d2f26f91dc4f8@git.kernel.org>
+In-Reply-To: <20190426001143.4983-13-namit@vmware.com>
+References: <20190426001143.4983-13-namit@vmware.com>
+Subject: [tip:x86/mm] x86/jump-label: Remove support for custom text poker
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: bp@alien8.de, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, luto@kernel.org, ard.biesheuvel@linaro.org, akpm@linux-foundation.org, linux_dti@icloud.com, dave.hansen@linux.intel.com, tglx@linutronix.de, torvalds@linux-foundation.org, rick.p.edgecombe@intel.com, will.deacon@arm.com, rostedt@goodmis.org, namit@vmware.com, deneen.t.dock@intel.com, kristen@linux.intel.com, peterz@infradead.org, mingo@kernel.org, hpa@zytor.com, riel@surriel.com
+Cc: luto@kernel.org, bp@alien8.de, dave.hansen@intel.com, linux-kernel@vger.kernel.org, akpm@linux-foundation.org, tglx@linutronix.de, mhiramat@kernel.org, kernel-hardening@lists.openwall.com, deneen.t.dock@intel.com, linux_dti@icloud.com, hpa@zytor.com, riel@surriel.com, mingo@kernel.org, kristen@linux.intel.com, keescook@chromium.org, namit@vmware.com, peterz@infradead.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, rick.p.edgecombe@intel.com, torvalds@linux-foundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  3c0dab44e22782359a0a706cbce72de99a22aa75
-Gitweb:     https://git.kernel.org/tip/3c0dab44e22782359a0a706cbce72de99a22aa75
+Commit-ID:  bb0a008d6a2c543efc11313b448d2f26f91dc4f8
+Gitweb:     https://git.kernel.org/tip/bb0a008d6a2c543efc11313b448d2f26f91dc4f8
 Author:     Nadav Amit <namit@vmware.com>
-AuthorDate: Thu, 25 Apr 2019 17:11:29 -0700
+AuthorDate: Thu, 25 Apr 2019 17:11:32 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:53 +0200
+CommitDate: Tue, 30 Apr 2019 12:37:55 +0200
 
-x86/ftrace: Set trampoline pages as executable
+x86/jump-label: Remove support for custom text poker
 
-Since alloc_module() will not set the pages as executable soon, set
-ftrace trampoline pages as executable after they are allocated.
-
-For the time being, do not change ftrace to use the text_poke()
-interface. As a result, ftrace still breaks W^X.
+There are only two types of text poking: early and breakpoint based. The use
+of a function pointer to perform text poking complicates the code and is
+probably inefficient due to the use of indirect branches.
 
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Reviewed-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
 Cc: <akpm@linux-foundation.org>
 Cc: <ard.biesheuvel@linaro.org>
 Cc: <deneen.t.dock@intel.com>
@@ -41,47 +38,84 @@ Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
-Cc: Dave Hansen <dave.hansen@linux.intel.com>
+Cc: Dave Hansen <dave.hansen@intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
+Cc: Kees Cook <keescook@chromium.org>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Masami Hiramatsu <mhiramat@kernel.org>
 Cc: Rik van Riel <riel@surriel.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-10-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-13-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- arch/x86/kernel/ftrace.c | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ arch/x86/kernel/jump_label.c | 26 ++++++++++----------------
+ 1 file changed, 10 insertions(+), 16 deletions(-)
 
-diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
-index ef49517f6bb2..53ba1aa3a01f 100644
---- a/arch/x86/kernel/ftrace.c
-+++ b/arch/x86/kernel/ftrace.c
-@@ -730,6 +730,7 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
- 	unsigned long end_offset;
- 	unsigned long op_offset;
- 	unsigned long offset;
-+	unsigned long npages;
- 	unsigned long size;
- 	unsigned long retq;
- 	unsigned long *ptr;
-@@ -762,6 +763,7 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
- 		return 0;
+diff --git a/arch/x86/kernel/jump_label.c b/arch/x86/kernel/jump_label.c
+index e7d8c636b228..e631c358f7f4 100644
+--- a/arch/x86/kernel/jump_label.c
++++ b/arch/x86/kernel/jump_label.c
+@@ -37,7 +37,6 @@ static void bug_at(unsigned char *ip, int line)
  
- 	*tramp_size = size + RET_SIZE + sizeof(void *);
-+	npages = DIV_ROUND_UP(*tramp_size, PAGE_SIZE);
+ static void __ref __jump_label_transform(struct jump_entry *entry,
+ 					 enum jump_label_type type,
+-					 void *(*poker)(void *, const void *, size_t),
+ 					 int init)
+ {
+ 	union jump_code_union jmp;
+@@ -50,14 +49,6 @@ static void __ref __jump_label_transform(struct jump_entry *entry,
+ 	jmp.offset = jump_entry_target(entry) -
+ 		     (jump_entry_code(entry) + JUMP_LABEL_NOP_SIZE);
  
- 	/* Copy ftrace_caller onto the trampoline memory */
- 	ret = probe_kernel_read(trampoline, (void *)start_offset, size);
-@@ -806,6 +808,12 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
- 	/* ALLOC_TRAMP flags lets us know we created it */
- 	ops->flags |= FTRACE_OPS_FL_ALLOC_TRAMP;
+-	/*
+-	 * As long as only a single processor is running and the code is still
+-	 * not marked as RO, text_poke_early() can be used; Checking that
+-	 * system_state is SYSTEM_BOOTING guarantees it.
+-	 */
+-	if (system_state == SYSTEM_BOOTING)
+-		poker = text_poke_early;
+-
+ 	if (type == JUMP_LABEL_JMP) {
+ 		if (init) {
+ 			expect = default_nop; line = __LINE__;
+@@ -80,16 +71,19 @@ static void __ref __jump_label_transform(struct jump_entry *entry,
+ 		bug_at((void *)jump_entry_code(entry), line);
  
-+	/*
-+	 * Module allocation needs to be completed by making the page
-+	 * executable. The page is still writable, which is a security hazard,
-+	 * but anyhow ftrace breaks W^X completely.
-+	 */
-+	set_memory_x((unsigned long)trampoline, npages);
- 	return (unsigned long)trampoline;
- fail:
- 	tramp_free(trampoline, *tramp_size);
+ 	/*
+-	 * Make text_poke_bp() a default fallback poker.
++	 * As long as only a single processor is running and the code is still
++	 * not marked as RO, text_poke_early() can be used; Checking that
++	 * system_state is SYSTEM_BOOTING guarantees it. It will be set to
++	 * SYSTEM_SCHEDULING before other cores are awaken and before the
++	 * code is write-protected.
+ 	 *
+ 	 * At the time the change is being done, just ignore whether we
+ 	 * are doing nop -> jump or jump -> nop transition, and assume
+ 	 * always nop being the 'currently valid' instruction
+-	 *
+ 	 */
+-	if (poker) {
+-		(*poker)((void *)jump_entry_code(entry), code,
+-			 JUMP_LABEL_NOP_SIZE);
++	if (init || system_state == SYSTEM_BOOTING) {
++		text_poke_early((void *)jump_entry_code(entry), code,
++				JUMP_LABEL_NOP_SIZE);
+ 		return;
+ 	}
+ 
+@@ -101,7 +95,7 @@ void arch_jump_label_transform(struct jump_entry *entry,
+ 			       enum jump_label_type type)
+ {
+ 	mutex_lock(&text_mutex);
+-	__jump_label_transform(entry, type, NULL, 0);
++	__jump_label_transform(entry, type, 0);
+ 	mutex_unlock(&text_mutex);
+ }
+ 
+@@ -131,5 +125,5 @@ __init_or_module void arch_jump_label_transform_static(struct jump_entry *entry,
+ 			jlstate = JL_STATE_NO_UPDATE;
+ 	}
+ 	if (jlstate == JL_STATE_UPDATE)
+-		__jump_label_transform(entry, type, text_poke_early, 1);
++		__jump_label_transform(entry, type, 1);
+ }
