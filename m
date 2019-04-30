@@ -1,53 +1,37 @@
-Date: Tue, 30 Apr 2019 04:16:36 -0700
+Date: Tue, 30 Apr 2019 04:15:13 -0700
 Sender: tip tree robot <tipbot@zytor.com>
-From: tip-bot for Andy Lutomirski <tipbot@zytor.com>
-Message-ID: <tip-cefa929c034eb5d9c15c50088235a0093a219687@git.kernel.org>
-In-Reply-To: <20190426001143.4983-4-namit@vmware.com>
-References: <20190426001143.4983-4-namit@vmware.com>
-Subject: [tip:x86/mm] x86/mm: Introduce temporary mm structs
+From: tip-bot for Nadav Amit <tipbot@zytor.com>
+Message-ID: <tip-c7b6f29b6257532792fc722b68fcc0e00b5a856c@git.kernel.org>
+In-Reply-To: <20190426001143.4983-24-namit@vmware.com>
+References: <20190426001143.4983-24-namit@vmware.com>
+Subject: [tip:x86/mm] bpf: Fail bpf_probe_write_user() while mm is switched
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: tglx@linutronix.de, linux-kernel@vger.kernel.org, will.deacon@arm.com, mhiramat@kernel.org, hpa@zytor.com, torvalds@linux-foundation.org, peterz@infradead.org, mingo@kernel.org, kernel-hardening@lists.openwall.com, dave.hansen@intel.com, kristen@linux.intel.com, riel@surriel.com, linux_dti@icloud.com, namit@vmware.com, ard.biesheuvel@linaro.org, luto@kernel.org, keescook@chromium.org, rick.p.edgecombe@intel.com, bp@alien8.de, akpm@linux-foundation.org, deneen.t.dock@intel.com
+Cc: luto@kernel.org, namit@vmware.com, linux_dti@icloud.com, ard.biesheuvel@linaro.org, will.deacon@arm.com, jannh@google.com, riel@surriel.com, rick.p.edgecombe@intel.com, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, linux-kernel@vger.kernel.org, daniel@iogearbox.net, deneen.t.dock@intel.com, tglx@linutronix.de, ast@kernel.org, akpm@linux-foundation.org, mingo@kernel.org, kristen@linux.intel.com, peterz@infradead.org, bp@alien8.de, hpa@zytor.com, dave.hansen@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  cefa929c034eb5d9c15c50088235a0093a219687
-Gitweb:     https://git.kernel.org/tip/cefa929c034eb5d9c15c50088235a0093a219687
-Author:     Andy Lutomirski <luto@kernel.org>
-AuthorDate: Thu, 25 Apr 2019 17:11:23 -0700
+Commit-ID:  c7b6f29b6257532792fc722b68fcc0e00b5a856c
+Gitweb:     https://git.kernel.org/tip/c7b6f29b6257532792fc722b68fcc0e00b5a856c
+Author:     Nadav Amit <namit@vmware.com>
+AuthorDate: Thu, 25 Apr 2019 17:11:43 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:50 +0200
+CommitDate: Tue, 30 Apr 2019 12:37:48 +0200
 
-x86/mm: Introduce temporary mm structs
+bpf: Fail bpf_probe_write_user() while mm is switched
 
-Using a dedicated page-table for temporary PTEs prevents other cores
-from using - even speculatively - these PTEs, thereby providing two
-benefits:
+When using a temporary mm, bpf_probe_write_user() should not be able to
+write to user memory, since user memory addresses may be used to map
+kernel memory.  Detect these cases and fail bpf_probe_write_user() in
+such cases.
 
-(1) Security hardening: an attacker that gains kernel memory writing
-    abilities cannot easily overwrite sensitive data.
-
-(2) Avoiding TLB shootdowns: the PTEs do not need to be flushed in
-    remote page-tables.
-
-To do so a temporary mm_struct can be used. Mappings which are private
-for this mm can be set in the userspace part of the address-space.
-During the whole time in which the temporary mm is loaded, interrupts
-must be disabled.
-
-The first use-case for temporary mm struct, which will follow, is for
-poking the kernel text.
-
-[ Commit message was written by Nadav Amit ]
-
-Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Suggested-by: Jann Horn <jannh@google.com>
+Reported-by: Jann Horn <jannh@google.com>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
 Cc: <akpm@linux-foundation.org>
 Cc: <ard.biesheuvel@linaro.org>
 Cc: <deneen.t.dock@intel.com>
@@ -55,58 +39,51 @@ Cc: <kernel-hardening@lists.openwall.com>
 Cc: <kristen@linux.intel.com>
 Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
+Cc: Alexei Starovoitov <ast@kernel.org>
+Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
-Cc: Dave Hansen <dave.hansen@intel.com>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
+Cc: Dave Hansen <dave.hansen@linux.intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Rik van Riel <riel@surriel.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-4-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-24-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- arch/x86/include/asm/mmu_context.h | 33 +++++++++++++++++++++++++++++++++
- 1 file changed, 33 insertions(+)
+ kernel/trace/bpf_trace.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
 
-diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
-index 19d18fae6ec6..24dc3b810970 100644
---- a/arch/x86/include/asm/mmu_context.h
-+++ b/arch/x86/include/asm/mmu_context.h
-@@ -356,4 +356,37 @@ static inline unsigned long __get_current_cr3_fast(void)
- 	return cr3;
- }
+diff --git a/kernel/trace/bpf_trace.c b/kernel/trace/bpf_trace.c
+index d64c00afceb5..94b0e37d90ef 100644
+--- a/kernel/trace/bpf_trace.c
++++ b/kernel/trace/bpf_trace.c
+@@ -14,6 +14,8 @@
+ #include <linux/syscalls.h>
+ #include <linux/error-injection.h>
  
-+typedef struct {
-+	struct mm_struct *mm;
-+} temp_mm_state_t;
++#include <asm/tlb.h>
 +
-+/*
-+ * Using a temporary mm allows to set temporary mappings that are not accessible
-+ * by other CPUs. Such mappings are needed to perform sensitive memory writes
-+ * that override the kernel memory protections (e.g., W^X), without exposing the
-+ * temporary page-table mappings that are required for these write operations to
-+ * other CPUs. Using a temporary mm also allows to avoid TLB shootdowns when the
-+ * mapping is torn down.
-+ *
-+ * Context: The temporary mm needs to be used exclusively by a single core. To
-+ *          harden security IRQs must be disabled while the temporary mm is
-+ *          loaded, thereby preventing interrupt handler bugs from overriding
-+ *          the kernel memory protection.
-+ */
-+static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
-+{
-+	temp_mm_state_t temp_state;
-+
-+	lockdep_assert_irqs_disabled();
-+	temp_state.mm = this_cpu_read(cpu_tlbstate.loaded_mm);
-+	switch_mm_irqs_off(NULL, mm, current);
-+	return temp_state;
-+}
-+
-+static inline void unuse_temporary_mm(temp_mm_state_t prev_state)
-+{
-+	lockdep_assert_irqs_disabled();
-+	switch_mm_irqs_off(NULL, prev_state.mm, current);
-+}
-+
- #endif /* _ASM_X86_MMU_CONTEXT_H */
+ #include "trace_probe.h"
+ #include "trace.h"
+ 
+@@ -163,6 +165,10 @@ BPF_CALL_3(bpf_probe_write_user, void *, unsafe_ptr, const void *, src,
+ 	 * access_ok() should prevent writing to non-user memory, but in
+ 	 * some situations (nommu, temporary switch, etc) access_ok() does
+ 	 * not provide enough validation, hence the check on KERNEL_DS.
++	 *
++	 * nmi_uaccess_okay() ensures the probe is not run in an interim
++	 * state, when the task or mm are switched. This is specifically
++	 * required to prevent the use of temporary mm.
+ 	 */
+ 
+ 	if (unlikely(in_interrupt() ||
+@@ -170,6 +176,8 @@ BPF_CALL_3(bpf_probe_write_user, void *, unsafe_ptr, const void *, src,
+ 		return -EPERM;
+ 	if (unlikely(uaccess_kernel()))
+ 		return -EPERM;
++	if (unlikely(!nmi_uaccess_okay()))
++		return -EPERM;
+ 	if (!access_ok(unsafe_ptr, size))
+ 		return -EPERM;
+ 
