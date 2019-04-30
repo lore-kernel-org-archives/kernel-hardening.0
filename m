@@ -1,45 +1,35 @@
-Date: Tue, 30 Apr 2019 04:20:02 -0700
+Date: Tue, 30 Apr 2019 04:28:13 -0700
 Sender: tip tree robot <tipbot@zytor.com>
-From: tip-bot for Nadav Amit <tipbot@zytor.com>
-Message-ID: <tip-b3fd8e83ada0d51b71a84297480187e2d40e5ded@git.kernel.org>
-In-Reply-To: <20190426001143.4983-8-namit@vmware.com>
-References: <20190426001143.4983-8-namit@vmware.com>
-Subject: [tip:x86/mm] x86/alternatives: Use temporary mm for text poking
+From: tip-bot for Rick Edgecombe <tipbot@zytor.com>
+Message-ID: <tip-7fdfe1e40b225b1d163f9afed2fa3f04442dbaad@git.kernel.org>
+In-Reply-To: <20190426001143.4983-20-namit@vmware.com>
+References: <20190426001143.4983-20-namit@vmware.com>
+Subject: [tip:x86/mm] x86/ftrace: Use vmalloc special flag
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, torvalds@linux-foundation.org, akpm@linux-foundation.org, mingo@kernel.org, linux-kernel@vger.kernel.org, riel@surriel.com, namit@vmware.com, linux_dti@icloud.com, keescook@chromium.org, bp@alien8.de, hpa@zytor.com, mhiramat@kernel.org, kristen@linux.intel.com, dave.hansen@intel.com, luto@kernel.org, deneen.t.dock@intel.com, peterz@infradead.org, tglx@linutronix.de, rick.p.edgecombe@intel.com, will.deacon@arm.com
+Cc: hpa@zytor.com, bp@alien8.de, torvalds@linux-foundation.org, tglx@linutronix.de, mingo@kernel.org, akpm@linux-foundation.org, nadav.amit@gmail.com, will.deacon@arm.com, peterz@infradead.org, rostedt@goodmis.org, linux_dti@icloud.com, dave.hansen@linux.intel.com, linux-kernel@vger.kernel.org, rick.p.edgecombe@intel.com, ard.biesheuvel@linaro.org, kernel-hardening@lists.openwall.com, kristen@linux.intel.com, riel@surriel.com, deneen.t.dock@intel.com, luto@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  b3fd8e83ada0d51b71a84297480187e2d40e5ded
-Gitweb:     https://git.kernel.org/tip/b3fd8e83ada0d51b71a84297480187e2d40e5ded
-Author:     Nadav Amit <namit@vmware.com>
-AuthorDate: Thu, 25 Apr 2019 17:11:27 -0700
+Commit-ID:  7fdfe1e40b225b1d163f9afed2fa3f04442dbaad
+Gitweb:     https://git.kernel.org/tip/7fdfe1e40b225b1d163f9afed2fa3f04442dbaad
+Author:     Rick Edgecombe <rick.p.edgecombe@intel.com>
+AuthorDate: Thu, 25 Apr 2019 17:11:39 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:52 +0200
+CommitDate: Tue, 30 Apr 2019 12:38:00 +0200
 
-x86/alternatives: Use temporary mm for text poking
+x86/ftrace: Use vmalloc special flag
 
-text_poke() can potentially compromise security as it sets temporary
-PTEs in the fixmap. These PTEs might be used to rewrite the kernel code
-from other cores accidentally or maliciously, if an attacker gains the
-ability to write onto kernel memory.
+Use new flag VM_FLUSH_RESET_PERMS for handling freeing of special
+permissioned memory in vmalloc and remove places where memory was set NX
+and RW before freeing which is no longer needed.
 
-Moreover, since remote TLBs are not flushed after the temporary PTEs are
-removed, the time-window in which the code is writable is not limited if
-the fixmap PTEs - maliciously or accidentally - are cached in the TLB.
-To address these potential security hazards, use a temporary mm for
-patching the code.
-
-Finally, text_poke() is also not conservative enough when mapping pages,
-as it always tries to map 2 pages, even when a single one is sufficient.
-So try to be more conservative, and do not map more than needed.
-
-Signed-off-by: Nadav Amit <namit@vmware.com>
+Tested-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Acked-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
 Cc: <akpm@linux-foundation.org>
 Cc: <ard.biesheuvel@linaro.org>
 Cc: <deneen.t.dock@intel.com>
@@ -49,183 +39,69 @@ Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
-Cc: Dave Hansen <dave.hansen@intel.com>
+Cc: Dave Hansen <dave.hansen@linux.intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Masami Hiramatsu <mhiramat@kernel.org>
+Cc: Nadav Amit <nadav.amit@gmail.com>
 Cc: Rik van Riel <riel@surriel.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-8-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-20-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- arch/x86/include/asm/fixmap.h |   2 -
- arch/x86/kernel/alternative.c | 108 +++++++++++++++++++++++++++++++++---------
- arch/x86/xen/mmu_pv.c         |   2 -
- 3 files changed, 86 insertions(+), 26 deletions(-)
+ arch/x86/kernel/ftrace.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
 
-diff --git a/arch/x86/include/asm/fixmap.h b/arch/x86/include/asm/fixmap.h
-index 50ba74a34a37..9da8cccdf3fb 100644
---- a/arch/x86/include/asm/fixmap.h
-+++ b/arch/x86/include/asm/fixmap.h
-@@ -103,8 +103,6 @@ enum fixed_addresses {
- #ifdef CONFIG_PARAVIRT
- 	FIX_PARAVIRT_BOOTMAP,
- #endif
--	FIX_TEXT_POKE1,	/* reserve 2 pages for text_poke() */
--	FIX_TEXT_POKE0, /* first page is last, because allocation is backward */
- #ifdef	CONFIG_X86_INTEL_MID
- 	FIX_LNW_VRTC,
- #endif
-diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index 11d5c710a94f..599203876c32 100644
---- a/arch/x86/kernel/alternative.c
-+++ b/arch/x86/kernel/alternative.c
-@@ -12,6 +12,7 @@
- #include <linux/slab.h>
- #include <linux/kdebug.h>
- #include <linux/kprobes.h>
-+#include <linux/mmu_context.h>
- #include <asm/text-patching.h>
- #include <asm/alternative.h>
- #include <asm/sections.h>
-@@ -684,41 +685,104 @@ __ro_after_init unsigned long poking_addr;
- 
- static void *__text_poke(void *addr, const void *opcode, size_t len)
+diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
+index 53ba1aa3a01f..0caf8122d680 100644
+--- a/arch/x86/kernel/ftrace.c
++++ b/arch/x86/kernel/ftrace.c
+@@ -678,12 +678,8 @@ static inline void *alloc_tramp(unsigned long size)
  {
-+	bool cross_page_boundary = offset_in_page(addr) + len > PAGE_SIZE;
-+	struct page *pages[2] = {NULL};
-+	temp_mm_state_t prev;
- 	unsigned long flags;
--	char *vaddr;
--	struct page *pages[2];
--	int i;
-+	pte_t pte, *ptep;
-+	spinlock_t *ptl;
-+	pgprot_t pgprot;
- 
- 	/*
--	 * While boot memory allocator is runnig we cannot use struct
--	 * pages as they are not yet initialized.
-+	 * While boot memory allocator is running we cannot use struct pages as
-+	 * they are not yet initialized. There is no way to recover.
- 	 */
- 	BUG_ON(!after_bootmem);
- 
- 	if (!core_kernel_text((unsigned long)addr)) {
- 		pages[0] = vmalloc_to_page(addr);
--		pages[1] = vmalloc_to_page(addr + PAGE_SIZE);
-+		if (cross_page_boundary)
-+			pages[1] = vmalloc_to_page(addr + PAGE_SIZE);
- 	} else {
- 		pages[0] = virt_to_page(addr);
- 		WARN_ON(!PageReserved(pages[0]));
--		pages[1] = virt_to_page(addr + PAGE_SIZE);
-+		if (cross_page_boundary)
-+			pages[1] = virt_to_page(addr + PAGE_SIZE);
- 	}
--	BUG_ON(!pages[0]);
-+	/*
-+	 * If something went wrong, crash and burn since recovery paths are not
-+	 * implemented.
-+	 */
-+	BUG_ON(!pages[0] || (cross_page_boundary && !pages[1]));
-+
- 	local_irq_save(flags);
--	set_fixmap(FIX_TEXT_POKE0, page_to_phys(pages[0]));
--	if (pages[1])
--		set_fixmap(FIX_TEXT_POKE1, page_to_phys(pages[1]));
--	vaddr = (char *)fix_to_virt(FIX_TEXT_POKE0);
--	memcpy(&vaddr[(unsigned long)addr & ~PAGE_MASK], opcode, len);
--	clear_fixmap(FIX_TEXT_POKE0);
--	if (pages[1])
--		clear_fixmap(FIX_TEXT_POKE1);
--	local_flush_tlb();
--	sync_core();
--	/* Could also do a CLFLUSH here to speed up CPU recovery; but
--	   that causes hangs on some VIA CPUs. */
--	for (i = 0; i < len; i++)
--		BUG_ON(((char *)addr)[i] != ((char *)opcode)[i]);
-+
-+	/*
-+	 * Map the page without the global bit, as TLB flushing is done with
-+	 * flush_tlb_mm_range(), which is intended for non-global PTEs.
-+	 */
-+	pgprot = __pgprot(pgprot_val(PAGE_KERNEL) & ~_PAGE_GLOBAL);
-+
-+	/*
-+	 * The lock is not really needed, but this allows to avoid open-coding.
-+	 */
-+	ptep = get_locked_pte(poking_mm, poking_addr, &ptl);
-+
-+	/*
-+	 * This must not fail; preallocated in poking_init().
-+	 */
-+	VM_BUG_ON(!ptep);
-+
-+	pte = mk_pte(pages[0], pgprot);
-+	set_pte_at(poking_mm, poking_addr, ptep, pte);
-+
-+	if (cross_page_boundary) {
-+		pte = mk_pte(pages[1], pgprot);
-+		set_pte_at(poking_mm, poking_addr + PAGE_SIZE, ptep + 1, pte);
-+	}
-+
-+	/*
-+	 * Loading the temporary mm behaves as a compiler barrier, which
-+	 * guarantees that the PTE will be set at the time memcpy() is done.
-+	 */
-+	prev = use_temporary_mm(poking_mm);
-+
-+	kasan_disable_current();
-+	memcpy((u8 *)poking_addr + offset_in_page(addr), opcode, len);
-+	kasan_enable_current();
-+
-+	/*
-+	 * Ensure that the PTE is only cleared after the instructions of memcpy
-+	 * were issued by using a compiler barrier.
-+	 */
-+	barrier();
-+
-+	pte_clear(poking_mm, poking_addr, ptep);
-+	if (cross_page_boundary)
-+		pte_clear(poking_mm, poking_addr + PAGE_SIZE, ptep + 1);
-+
-+	/*
-+	 * Loading the previous page-table hierarchy requires a serializing
-+	 * instruction that already allows the core to see the updated version.
-+	 * Xen-PV is assumed to serialize execution in a similar manner.
-+	 */
-+	unuse_temporary_mm(prev);
-+
-+	/*
-+	 * Flushing the TLB might involve IPIs, which would require enabled
-+	 * IRQs, but not if the mm is not used, as it is in this point.
-+	 */
-+	flush_tlb_mm_range(poking_mm, poking_addr, poking_addr +
-+			   (cross_page_boundary ? 2 : 1) * PAGE_SIZE,
-+			   PAGE_SHIFT, false);
-+
-+	/*
-+	 * If the text does not match what we just wrote then something is
-+	 * fundamentally screwy; there's nothing we can really do about that.
-+	 */
-+	BUG_ON(memcmp(addr, opcode, len));
-+
-+	pte_unmap_unlock(ptep, ptl);
- 	local_irq_restore(flags);
- 	return addr;
+ 	return module_alloc(size);
  }
-diff --git a/arch/x86/xen/mmu_pv.c b/arch/x86/xen/mmu_pv.c
-index a21e1734fc1f..beb44e22afdf 100644
---- a/arch/x86/xen/mmu_pv.c
-+++ b/arch/x86/xen/mmu_pv.c
-@@ -2318,8 +2318,6 @@ static void xen_set_fixmap(unsigned idx, phys_addr_t phys, pgprot_t prot)
- #elif defined(CONFIG_X86_VSYSCALL_EMULATION)
- 	case VSYSCALL_PAGE:
+-static inline void tramp_free(void *tramp, int size)
++static inline void tramp_free(void *tramp)
+ {
+-	int npages = PAGE_ALIGN(size) >> PAGE_SHIFT;
+-
+-	set_memory_nx((unsigned long)tramp, npages);
+-	set_memory_rw((unsigned long)tramp, npages);
+ 	module_memfree(tramp);
+ }
+ #else
+@@ -692,7 +688,7 @@ static inline void *alloc_tramp(unsigned long size)
+ {
+ 	return NULL;
+ }
+-static inline void tramp_free(void *tramp, int size) { }
++static inline void tramp_free(void *tramp) { }
  #endif
--	case FIX_TEXT_POKE0:
--	case FIX_TEXT_POKE1:
- 		/* All local page mappings */
- 		pte = pfn_pte(phys, prot);
- 		break;
+ 
+ /* Defined as markers to the end of the ftrace default trampolines */
+@@ -808,6 +804,8 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
+ 	/* ALLOC_TRAMP flags lets us know we created it */
+ 	ops->flags |= FTRACE_OPS_FL_ALLOC_TRAMP;
+ 
++	set_vm_flush_reset_perms(trampoline);
++
+ 	/*
+ 	 * Module allocation needs to be completed by making the page
+ 	 * executable. The page is still writable, which is a security hazard,
+@@ -816,7 +814,7 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
+ 	set_memory_x((unsigned long)trampoline, npages);
+ 	return (unsigned long)trampoline;
+ fail:
+-	tramp_free(trampoline, *tramp_size);
++	tramp_free(trampoline);
+ 	return 0;
+ }
+ 
+@@ -947,7 +945,7 @@ void arch_ftrace_trampoline_free(struct ftrace_ops *ops)
+ 	if (!ops || !(ops->flags & FTRACE_OPS_FL_ALLOC_TRAMP))
+ 		return;
+ 
+-	tramp_free((void *)ops->trampoline, ops->trampoline_size);
++	tramp_free((void *)ops->trampoline);
+ 	ops->trampoline = 0;
+ }
+ 
