@@ -1,34 +1,46 @@
-Date: Tue, 30 Apr 2019 04:22:06 -0700
+Date: Tue, 30 Apr 2019 04:22:47 -0700
 Sender: tip tree robot <tipbot@zytor.com>
 From: tip-bot for Nadav Amit <tipbot@zytor.com>
-Message-ID: <tip-7298e24f904224fa79eb8fd7e0fbd78950ccf2db@git.kernel.org>
-In-Reply-To: <20190426001143.4983-11-namit@vmware.com>
-References: <20190426001143.4983-11-namit@vmware.com>
-Subject: [tip:x86/mm] x86/kprobes: Set instruction page as executable
+Message-ID: <tip-f2c65fb3221adc6b73b0549fc7ba892022db9797@git.kernel.org>
+In-Reply-To: <20190426001143.4983-12-namit@vmware.com>
+References: <20190426001143.4983-12-namit@vmware.com>
+Subject: [tip:x86/mm] x86/modules: Avoid breaking W^X while loading modules
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: peterz@infradead.org, namit@vmware.com, mingo@kernel.org, akpm@linux-foundation.org, tglx@linutronix.de, rick.p.edgecombe@intel.com, hpa@zytor.com, ard.biesheuvel@linaro.org, dave.hansen@linux.intel.com, torvalds@linux-foundation.org, kristen@linux.intel.com, linux_dti@icloud.com, bp@alien8.de, deneen.t.dock@intel.com, riel@surriel.com, luto@kernel.org, will.deacon@arm.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Cc: bp@alien8.de, ard.biesheuvel@linaro.org, deneen.t.dock@intel.com, jeyu@kernel.org, torvalds@linux-foundation.org, linux_dti@icloud.com, rick.p.edgecombe@intel.com, kernel-hardening@lists.openwall.com, keescook@chromium.org, mhiramat@kernel.org, dave.hansen@intel.com, luto@amacapital.net, peterz@infradead.org, namit@vmware.com, luto@kernel.org, kristen@linux.intel.com, mingo@kernel.org, tglx@linutronix.de, riel@surriel.com, linux-kernel@vger.kernel.org, will.deacon@arm.com, akpm@linux-foundation.org, hpa@zytor.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  7298e24f904224fa79eb8fd7e0fbd78950ccf2db
-Gitweb:     https://git.kernel.org/tip/7298e24f904224fa79eb8fd7e0fbd78950ccf2db
+Commit-ID:  f2c65fb3221adc6b73b0549fc7ba892022db9797
+Gitweb:     https://git.kernel.org/tip/f2c65fb3221adc6b73b0549fc7ba892022db9797
 Author:     Nadav Amit <namit@vmware.com>
-AuthorDate: Thu, 25 Apr 2019 17:11:30 -0700
+AuthorDate: Thu, 25 Apr 2019 17:11:31 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:54 +0200
+CommitDate: Tue, 30 Apr 2019 12:37:55 +0200
 
-x86/kprobes: Set instruction page as executable
+x86/modules: Avoid breaking W^X while loading modules
 
-Set the page as executable after allocation.  This patch is a
-preparatory patch for a following patch that makes module allocated
-pages non-executable.
+When modules and BPF filters are loaded, there is a time window in
+which some memory is both writable and executable. An attacker that has
+already found another vulnerability (e.g., a dangling pointer) might be
+able to exploit this behavior to overwrite kernel code. Prevent having
+writable executable PTEs in this stage.
 
-While at it, do some small cleanup of what appears to be unnecessary
-masking.
+In addition, avoiding having W+X mappings can also slightly simplify the
+patching of modules code on initialization (e.g., by alternatives and
+static-key), as would be done in the next patch. This was actually the
+main motivation for this patch.
 
+To avoid having W+X mappings, set them initially as RW (NX) and after
+they are set as RO set them as X as well. Setting them as executable is
+done as a separate step to avoid one core in which the old PTE is cached
+(hence writable), and another which sees the updated PTE (executable),
+which would break the W^X protection.
+
+Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+Suggested-by: Andy Lutomirski <luto@amacapital.net>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
@@ -41,56 +53,103 @@ Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
-Cc: Dave Hansen <dave.hansen@linux.intel.com>
+Cc: Dave Hansen <dave.hansen@intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
+Cc: Jessica Yu <jeyu@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Masami Hiramatsu <mhiramat@kernel.org>
 Cc: Rik van Riel <riel@surriel.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-11-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-12-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- arch/x86/kernel/kprobes/core.c | 24 ++++++++++++++++++++----
- 1 file changed, 20 insertions(+), 4 deletions(-)
+ arch/x86/kernel/alternative.c | 28 +++++++++++++++++++++-------
+ arch/x86/kernel/module.c      |  2 +-
+ include/linux/filter.h        |  1 +
+ kernel/module.c               |  5 +++++
+ 4 files changed, 28 insertions(+), 8 deletions(-)
 
-diff --git a/arch/x86/kernel/kprobes/core.c b/arch/x86/kernel/kprobes/core.c
-index fed46ddb1eef..06058c44ab57 100644
---- a/arch/x86/kernel/kprobes/core.c
-+++ b/arch/x86/kernel/kprobes/core.c
-@@ -431,8 +431,20 @@ void *alloc_insn_page(void)
- 	void *page;
- 
- 	page = module_alloc(PAGE_SIZE);
--	if (page)
--		set_memory_ro((unsigned long)page & PAGE_MASK, 1);
-+	if (!page)
-+		return NULL;
-+
-+	/*
-+	 * First make the page read-only, and only then make it executable to
-+	 * prevent it from being W+X in between.
-+	 */
-+	set_memory_ro((unsigned long)page, 1);
-+
-+	/*
-+	 * TODO: Once additional kernel code protection mechanisms are set, ensure
-+	 * that the page was not maliciously altered and it is still zeroed.
-+	 */
-+	set_memory_x((unsigned long)page, 1);
- 
- 	return page;
- }
-@@ -440,8 +452,12 @@ void *alloc_insn_page(void)
- /* Recover page to RW mode before releasing it */
- void free_insn_page(void *page)
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 599203876c32..3d2b6b6fb20c 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -668,15 +668,29 @@ void __init alternative_instructions(void)
+  * handlers seeing an inconsistent instruction while you patch.
+  */
+ void *__init_or_module text_poke_early(void *addr, const void *opcode,
+-					      size_t len)
++				       size_t len)
  {
--	set_memory_nx((unsigned long)page & PAGE_MASK, 1);
--	set_memory_rw((unsigned long)page & PAGE_MASK, 1);
-+	/*
-+	 * First make the page non-executable, and only then make it writable to
-+	 * prevent it from being W+X in between.
-+	 */
-+	set_memory_nx((unsigned long)page, 1);
-+	set_memory_rw((unsigned long)page, 1);
- 	module_memfree(page);
+ 	unsigned long flags;
+-	local_irq_save(flags);
+-	memcpy(addr, opcode, len);
+-	local_irq_restore(flags);
+-	sync_core();
+-	/* Could also do a CLFLUSH here to speed up CPU recovery; but
+-	   that causes hangs on some VIA CPUs. */
++
++	if (boot_cpu_has(X86_FEATURE_NX) &&
++	    is_module_text_address((unsigned long)addr)) {
++		/*
++		 * Modules text is marked initially as non-executable, so the
++		 * code cannot be running and speculative code-fetches are
++		 * prevented. Just change the code.
++		 */
++		memcpy(addr, opcode, len);
++	} else {
++		local_irq_save(flags);
++		memcpy(addr, opcode, len);
++		local_irq_restore(flags);
++		sync_core();
++
++		/*
++		 * Could also do a CLFLUSH here to speed up CPU recovery; but
++		 * that causes hangs on some VIA CPUs.
++		 */
++	}
+ 	return addr;
  }
  
+diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
+index b052e883dd8c..cfa3106faee4 100644
+--- a/arch/x86/kernel/module.c
++++ b/arch/x86/kernel/module.c
+@@ -87,7 +87,7 @@ void *module_alloc(unsigned long size)
+ 	p = __vmalloc_node_range(size, MODULE_ALIGN,
+ 				    MODULES_VADDR + get_module_load_offset(),
+ 				    MODULES_END, GFP_KERNEL,
+-				    PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
++				    PAGE_KERNEL, 0, NUMA_NO_NODE,
+ 				    __builtin_return_address(0));
+ 	if (p && (kasan_module_alloc(p, size) < 0)) {
+ 		vfree(p);
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index 6074aa064b54..14ec3bdad9a9 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -746,6 +746,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+ static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+ {
+ 	set_memory_ro((unsigned long)hdr, hdr->pages);
++	set_memory_x((unsigned long)hdr, hdr->pages);
+ }
+ 
+ static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
+diff --git a/kernel/module.c b/kernel/module.c
+index 0b9aa8ab89f0..2b2845ae983e 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -1950,8 +1950,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
+ 		return;
+ 
+ 	frob_text(&mod->core_layout, set_memory_ro);
++	frob_text(&mod->core_layout, set_memory_x);
++
+ 	frob_rodata(&mod->core_layout, set_memory_ro);
++
+ 	frob_text(&mod->init_layout, set_memory_ro);
++	frob_text(&mod->init_layout, set_memory_x);
++
+ 	frob_rodata(&mod->init_layout, set_memory_ro);
+ 
+ 	if (after_init)
