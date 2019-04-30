@@ -1,40 +1,43 @@
-Date: Tue, 30 Apr 2019 04:26:53 -0700
+Date: Tue, 30 Apr 2019 04:20:02 -0700
 Sender: tip tree robot <tipbot@zytor.com>
-From: tip-bot for Rick Edgecombe <tipbot@zytor.com>
-Message-ID: <tip-1a7b7d9220819afe79d1ec5d759fe4349bd2453e@git.kernel.org>
-In-Reply-To: <20190426001143.4983-18-namit@vmware.com>
-References: <20190426001143.4983-18-namit@vmware.com>
-Subject: [tip:x86/mm] modules: Use vmalloc special flag
+From: tip-bot for Nadav Amit <tipbot@zytor.com>
+Message-ID: <tip-b3fd8e83ada0d51b71a84297480187e2d40e5ded@git.kernel.org>
+In-Reply-To: <20190426001143.4983-8-namit@vmware.com>
+References: <20190426001143.4983-8-namit@vmware.com>
+Subject: [tip:x86/mm] x86/alternatives: Use temporary mm for text poking
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline
 To: linux-tip-commits@vger.kernel.org
-Cc: tglx@linutronix.de, bp@alien8.de, mingo@kernel.org, deneen.t.dock@intel.com, peterz@infradead.org, will.deacon@arm.com, linux_dti@icloud.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kristen@linux.intel.com, rostedt@goodmis.org, akpm@linux-foundation.org, dave.hansen@linux.intel.com, rick.p.edgecombe@intel.com, nadav.amit@gmail.com, ard.biesheuvel@linaro.org, luto@kernel.org, hpa@zytor.com, jeyu@kernel.org, torvalds@linux-foundation.org, riel@surriel.com
+Cc: kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, torvalds@linux-foundation.org, akpm@linux-foundation.org, mingo@kernel.org, linux-kernel@vger.kernel.org, riel@surriel.com, namit@vmware.com, linux_dti@icloud.com, keescook@chromium.org, bp@alien8.de, hpa@zytor.com, mhiramat@kernel.org, kristen@linux.intel.com, dave.hansen@intel.com, luto@kernel.org, deneen.t.dock@intel.com, peterz@infradead.org, tglx@linutronix.de, rick.p.edgecombe@intel.com, will.deacon@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit-ID:  1a7b7d9220819afe79d1ec5d759fe4349bd2453e
-Gitweb:     https://git.kernel.org/tip/1a7b7d9220819afe79d1ec5d759fe4349bd2453e
-Author:     Rick Edgecombe <rick.p.edgecombe@intel.com>
-AuthorDate: Thu, 25 Apr 2019 17:11:37 -0700
+Commit-ID:  b3fd8e83ada0d51b71a84297480187e2d40e5ded
+Gitweb:     https://git.kernel.org/tip/b3fd8e83ada0d51b71a84297480187e2d40e5ded
+Author:     Nadav Amit <namit@vmware.com>
+AuthorDate: Thu, 25 Apr 2019 17:11:27 -0700
 Committer:  Ingo Molnar <mingo@kernel.org>
-CommitDate: Tue, 30 Apr 2019 12:37:58 +0200
+CommitDate: Tue, 30 Apr 2019 12:37:52 +0200
 
-modules: Use vmalloc special flag
+x86/alternatives: Use temporary mm for text poking
 
-Use new flag for handling freeing of special permissioned memory in vmalloc
-and remove places where memory was set RW before freeing which is no longer
-needed.
+text_poke() can potentially compromise security as it sets temporary
+PTEs in the fixmap. These PTEs might be used to rewrite the kernel code
+from other cores accidentally or maliciously, if an attacker gains the
+ability to write onto kernel memory.
 
-Since freeing of VM_FLUSH_RESET_PERMS memory is not supported in an
-interrupt by vmalloc, the freeing of init sections is moved to a work
-queue. Instead of call_rcu it now uses synchronize_rcu() in the work
-queue.
+Moreover, since remote TLBs are not flushed after the temporary PTEs are
+removed, the time-window in which the code is writable is not limited if
+the fixmap PTEs - maliciously or accidentally - are cached in the TLB.
+To address these potential security hazards, use a temporary mm for
+patching the code.
 
-Lastly, there is now a WARN_ON in module_memfree since it should not be
-called in an interrupt with special memory as is required for
-VM_FLUSH_RESET_PERMS.
+Finally, text_poke() is also not conservative enough when mapping pages,
+as it always tries to map 2 pages, even when a single one is sufficient.
+So try to be more conservative, and do not map more than needed.
 
+Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Cc: <akpm@linux-foundation.org>
@@ -46,189 +49,183 @@ Cc: <linux_dti@icloud.com>
 Cc: <will.deacon@arm.com>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
-Cc: Dave Hansen <dave.hansen@linux.intel.com>
+Cc: Dave Hansen <dave.hansen@intel.com>
 Cc: H. Peter Anvin <hpa@zytor.com>
-Cc: Jessica Yu <jeyu@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Nadav Amit <nadav.amit@gmail.com>
+Cc: Masami Hiramatsu <mhiramat@kernel.org>
 Cc: Rik van Riel <riel@surriel.com>
-Cc: Steven Rostedt <rostedt@goodmis.org>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Link: https://lkml.kernel.org/r/20190426001143.4983-18-namit@vmware.com
+Link: https://lkml.kernel.org/r/20190426001143.4983-8-namit@vmware.com
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- kernel/module.c | 77 +++++++++++++++++++++++++++++----------------------------
- 1 file changed, 39 insertions(+), 38 deletions(-)
+ arch/x86/include/asm/fixmap.h |   2 -
+ arch/x86/kernel/alternative.c | 108 +++++++++++++++++++++++++++++++++---------
+ arch/x86/xen/mmu_pv.c         |   2 -
+ 3 files changed, 86 insertions(+), 26 deletions(-)
 
-diff --git a/kernel/module.c b/kernel/module.c
-index 2b2845ae983e..a9020bdd4cf6 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -98,6 +98,10 @@ DEFINE_MUTEX(module_mutex);
- EXPORT_SYMBOL_GPL(module_mutex);
- static LIST_HEAD(modules);
- 
-+/* Work queue for freeing init sections in success case */
-+static struct work_struct init_free_wq;
-+static struct llist_head init_free_list;
-+
- #ifdef CONFIG_MODULES_TREE_LOOKUP
- 
- /*
-@@ -1949,6 +1953,8 @@ void module_enable_ro(const struct module *mod, bool after_init)
- 	if (!rodata_enabled)
- 		return;
- 
-+	set_vm_flush_reset_perms(mod->core_layout.base);
-+	set_vm_flush_reset_perms(mod->init_layout.base);
- 	frob_text(&mod->core_layout, set_memory_ro);
- 	frob_text(&mod->core_layout, set_memory_x);
- 
-@@ -1972,15 +1978,6 @@ static void module_enable_nx(const struct module *mod)
- 	frob_writable_data(&mod->init_layout, set_memory_nx);
- }
- 
--static void module_disable_nx(const struct module *mod)
--{
--	frob_rodata(&mod->core_layout, set_memory_x);
--	frob_ro_after_init(&mod->core_layout, set_memory_x);
--	frob_writable_data(&mod->core_layout, set_memory_x);
--	frob_rodata(&mod->init_layout, set_memory_x);
--	frob_writable_data(&mod->init_layout, set_memory_x);
--}
--
- /* Iterate through all modules and set each module's text as RW */
- void set_all_modules_text_rw(void)
- {
-@@ -2024,23 +2021,8 @@ void set_all_modules_text_ro(void)
- 	}
- 	mutex_unlock(&module_mutex);
- }
--
--static void disable_ro_nx(const struct module_layout *layout)
--{
--	if (rodata_enabled) {
--		frob_text(layout, set_memory_rw);
--		frob_rodata(layout, set_memory_rw);
--		frob_ro_after_init(layout, set_memory_rw);
--	}
--	frob_rodata(layout, set_memory_x);
--	frob_ro_after_init(layout, set_memory_x);
--	frob_writable_data(layout, set_memory_x);
--}
--
- #else
--static void disable_ro_nx(const struct module_layout *layout) { }
- static void module_enable_nx(const struct module *mod) { }
--static void module_disable_nx(const struct module *mod) { }
+diff --git a/arch/x86/include/asm/fixmap.h b/arch/x86/include/asm/fixmap.h
+index 50ba74a34a37..9da8cccdf3fb 100644
+--- a/arch/x86/include/asm/fixmap.h
++++ b/arch/x86/include/asm/fixmap.h
+@@ -103,8 +103,6 @@ enum fixed_addresses {
+ #ifdef CONFIG_PARAVIRT
+ 	FIX_PARAVIRT_BOOTMAP,
  #endif
- 
- #ifdef CONFIG_LIVEPATCH
-@@ -2120,6 +2102,11 @@ static void free_module_elf(struct module *mod)
- 
- void __weak module_memfree(void *module_region)
- {
-+	/*
-+	 * This memory may be RO, and freeing RO memory in an interrupt is not
-+	 * supported by vmalloc.
-+	 */
-+	WARN_ON(in_interrupt());
- 	vfree(module_region);
- }
- 
-@@ -2171,7 +2158,6 @@ static void free_module(struct module *mod)
- 	mutex_unlock(&module_mutex);
- 
- 	/* This may be empty, but that's OK */
--	disable_ro_nx(&mod->init_layout);
- 	module_arch_freeing_init(mod);
- 	module_memfree(mod->init_layout.base);
- 	kfree(mod->args);
-@@ -2181,7 +2167,6 @@ static void free_module(struct module *mod)
- 	lockdep_free_key_range(mod->core_layout.base, mod->core_layout.size);
- 
- 	/* Finally, free the core (containing the module structure) */
--	disable_ro_nx(&mod->core_layout);
- 	module_memfree(mod->core_layout.base);
- }
- 
-@@ -3420,17 +3405,34 @@ static void do_mod_ctors(struct module *mod)
- 
- /* For freeing module_init on success, in case kallsyms traversing */
- struct mod_initfree {
--	struct rcu_head rcu;
-+	struct llist_node node;
- 	void *module_init;
- };
- 
--static void do_free_init(struct rcu_head *head)
-+static void do_free_init(struct work_struct *w)
- {
--	struct mod_initfree *m = container_of(head, struct mod_initfree, rcu);
--	module_memfree(m->module_init);
--	kfree(m);
-+	struct llist_node *pos, *n, *list;
-+	struct mod_initfree *initfree;
-+
-+	list = llist_del_all(&init_free_list);
-+
-+	synchronize_rcu();
-+
-+	llist_for_each_safe(pos, n, list) {
-+		initfree = container_of(pos, struct mod_initfree, node);
-+		module_memfree(initfree->module_init);
-+		kfree(initfree);
-+	}
- }
- 
-+static int __init modules_wq_init(void)
-+{
-+	INIT_WORK(&init_free_wq, do_free_init);
-+	init_llist_head(&init_free_list);
-+	return 0;
-+}
-+module_init(modules_wq_init);
-+
- /*
-  * This is where the real work happens.
-  *
-@@ -3507,7 +3509,6 @@ static noinline int do_init_module(struct module *mod)
+-	FIX_TEXT_POKE1,	/* reserve 2 pages for text_poke() */
+-	FIX_TEXT_POKE0, /* first page is last, because allocation is backward */
+ #ifdef	CONFIG_X86_INTEL_MID
+ 	FIX_LNW_VRTC,
  #endif
- 	module_enable_ro(mod, true);
- 	mod_tree_remove_init(mod);
--	disable_ro_nx(&mod->init_layout);
- 	module_arch_freeing_init(mod);
- 	mod->init_layout.base = NULL;
- 	mod->init_layout.size = 0;
-@@ -3518,14 +3519,18 @@ static noinline int do_init_module(struct module *mod)
- 	 * We want to free module_init, but be aware that kallsyms may be
- 	 * walking this with preempt disabled.  In all the failure paths, we
- 	 * call synchronize_rcu(), but we don't want to slow down the success
--	 * path, so use actual RCU here.
-+	 * path. module_memfree() cannot be called in an interrupt, so do the
-+	 * work and call synchronize_rcu() in a work queue.
-+	 *
- 	 * Note that module_alloc() on most architectures creates W+X page
- 	 * mappings which won't be cleaned up until do_free_init() runs.  Any
- 	 * code such as mark_rodata_ro() which depends on those mappings to
- 	 * be cleaned up needs to sync with the queued work - ie
- 	 * rcu_barrier()
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 11d5c710a94f..599203876c32 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -12,6 +12,7 @@
+ #include <linux/slab.h>
+ #include <linux/kdebug.h>
+ #include <linux/kprobes.h>
++#include <linux/mmu_context.h>
+ #include <asm/text-patching.h>
+ #include <asm/alternative.h>
+ #include <asm/sections.h>
+@@ -684,41 +685,104 @@ __ro_after_init unsigned long poking_addr;
+ 
+ static void *__text_poke(void *addr, const void *opcode, size_t len)
+ {
++	bool cross_page_boundary = offset_in_page(addr) + len > PAGE_SIZE;
++	struct page *pages[2] = {NULL};
++	temp_mm_state_t prev;
+ 	unsigned long flags;
+-	char *vaddr;
+-	struct page *pages[2];
+-	int i;
++	pte_t pte, *ptep;
++	spinlock_t *ptl;
++	pgprot_t pgprot;
+ 
+ 	/*
+-	 * While boot memory allocator is runnig we cannot use struct
+-	 * pages as they are not yet initialized.
++	 * While boot memory allocator is running we cannot use struct pages as
++	 * they are not yet initialized. There is no way to recover.
  	 */
--	call_rcu(&freeinit->rcu, do_free_init);
-+	if (llist_add(&freeinit->node, &init_free_list))
-+		schedule_work(&init_free_wq);
+ 	BUG_ON(!after_bootmem);
+ 
+ 	if (!core_kernel_text((unsigned long)addr)) {
+ 		pages[0] = vmalloc_to_page(addr);
+-		pages[1] = vmalloc_to_page(addr + PAGE_SIZE);
++		if (cross_page_boundary)
++			pages[1] = vmalloc_to_page(addr + PAGE_SIZE);
+ 	} else {
+ 		pages[0] = virt_to_page(addr);
+ 		WARN_ON(!PageReserved(pages[0]));
+-		pages[1] = virt_to_page(addr + PAGE_SIZE);
++		if (cross_page_boundary)
++			pages[1] = virt_to_page(addr + PAGE_SIZE);
+ 	}
+-	BUG_ON(!pages[0]);
++	/*
++	 * If something went wrong, crash and burn since recovery paths are not
++	 * implemented.
++	 */
++	BUG_ON(!pages[0] || (cross_page_boundary && !pages[1]));
 +
- 	mutex_unlock(&module_mutex);
- 	wake_up_all(&module_wq);
- 
-@@ -3822,10 +3827,6 @@ static int load_module(struct load_info *info, const char __user *uargs,
- 	module_bug_cleanup(mod);
- 	mutex_unlock(&module_mutex);
- 
--	/* we can't deallocate the module until we clear memory protection */
--	module_disable_ro(mod);
--	module_disable_nx(mod);
--
-  ddebug_cleanup:
- 	ftrace_release_mod(mod);
- 	dynamic_debug_remove(mod, info->debug);
+ 	local_irq_save(flags);
+-	set_fixmap(FIX_TEXT_POKE0, page_to_phys(pages[0]));
+-	if (pages[1])
+-		set_fixmap(FIX_TEXT_POKE1, page_to_phys(pages[1]));
+-	vaddr = (char *)fix_to_virt(FIX_TEXT_POKE0);
+-	memcpy(&vaddr[(unsigned long)addr & ~PAGE_MASK], opcode, len);
+-	clear_fixmap(FIX_TEXT_POKE0);
+-	if (pages[1])
+-		clear_fixmap(FIX_TEXT_POKE1);
+-	local_flush_tlb();
+-	sync_core();
+-	/* Could also do a CLFLUSH here to speed up CPU recovery; but
+-	   that causes hangs on some VIA CPUs. */
+-	for (i = 0; i < len; i++)
+-		BUG_ON(((char *)addr)[i] != ((char *)opcode)[i]);
++
++	/*
++	 * Map the page without the global bit, as TLB flushing is done with
++	 * flush_tlb_mm_range(), which is intended for non-global PTEs.
++	 */
++	pgprot = __pgprot(pgprot_val(PAGE_KERNEL) & ~_PAGE_GLOBAL);
++
++	/*
++	 * The lock is not really needed, but this allows to avoid open-coding.
++	 */
++	ptep = get_locked_pte(poking_mm, poking_addr, &ptl);
++
++	/*
++	 * This must not fail; preallocated in poking_init().
++	 */
++	VM_BUG_ON(!ptep);
++
++	pte = mk_pte(pages[0], pgprot);
++	set_pte_at(poking_mm, poking_addr, ptep, pte);
++
++	if (cross_page_boundary) {
++		pte = mk_pte(pages[1], pgprot);
++		set_pte_at(poking_mm, poking_addr + PAGE_SIZE, ptep + 1, pte);
++	}
++
++	/*
++	 * Loading the temporary mm behaves as a compiler barrier, which
++	 * guarantees that the PTE will be set at the time memcpy() is done.
++	 */
++	prev = use_temporary_mm(poking_mm);
++
++	kasan_disable_current();
++	memcpy((u8 *)poking_addr + offset_in_page(addr), opcode, len);
++	kasan_enable_current();
++
++	/*
++	 * Ensure that the PTE is only cleared after the instructions of memcpy
++	 * were issued by using a compiler barrier.
++	 */
++	barrier();
++
++	pte_clear(poking_mm, poking_addr, ptep);
++	if (cross_page_boundary)
++		pte_clear(poking_mm, poking_addr + PAGE_SIZE, ptep + 1);
++
++	/*
++	 * Loading the previous page-table hierarchy requires a serializing
++	 * instruction that already allows the core to see the updated version.
++	 * Xen-PV is assumed to serialize execution in a similar manner.
++	 */
++	unuse_temporary_mm(prev);
++
++	/*
++	 * Flushing the TLB might involve IPIs, which would require enabled
++	 * IRQs, but not if the mm is not used, as it is in this point.
++	 */
++	flush_tlb_mm_range(poking_mm, poking_addr, poking_addr +
++			   (cross_page_boundary ? 2 : 1) * PAGE_SIZE,
++			   PAGE_SHIFT, false);
++
++	/*
++	 * If the text does not match what we just wrote then something is
++	 * fundamentally screwy; there's nothing we can really do about that.
++	 */
++	BUG_ON(memcmp(addr, opcode, len));
++
++	pte_unmap_unlock(ptep, ptl);
+ 	local_irq_restore(flags);
+ 	return addr;
+ }
+diff --git a/arch/x86/xen/mmu_pv.c b/arch/x86/xen/mmu_pv.c
+index a21e1734fc1f..beb44e22afdf 100644
+--- a/arch/x86/xen/mmu_pv.c
++++ b/arch/x86/xen/mmu_pv.c
+@@ -2318,8 +2318,6 @@ static void xen_set_fixmap(unsigned idx, phys_addr_t phys, pgprot_t prot)
+ #elif defined(CONFIG_X86_VSYSCALL_EMULATION)
+ 	case VSYSCALL_PAGE:
+ #endif
+-	case FIX_TEXT_POKE0:
+-	case FIX_TEXT_POKE1:
+ 		/* All local page mappings */
+ 		pte = pfn_pte(phys, prot);
+ 		break;
