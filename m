@@ -1,40 +1,73 @@
-MIME-Version: 1.0
-References: <CAOMdWSLNUEMux1hXfWP+oxZ3YG=uycDmAomGA1iTxjfyOYA0WQ@mail.gmail.com>
- <CAGXu5j+Eo-ewWL2_RtBaVN9msAdA3Pgu8H7uBxVcc=b5DMBy5g@mail.gmail.com>
-In-Reply-To: <CAGXu5j+Eo-ewWL2_RtBaVN9msAdA3Pgu8H7uBxVcc=b5DMBy5g@mail.gmail.com>
-From: Allen <allen.lkml@gmail.com>
-Date: Tue, 7 May 2019 11:25:21 +0530
-Message-ID: <CAOMdWSJPHks4GkzDFk1_M5HLZUoT9G_P=MiEAwGSp2zJ6-NM=A@mail.gmail.com>
-Subject: Re: [RFC] refactor tasklets to avoid unsigned long argument
-Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, tglx@linuxtronix.de
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH v3 0/7] crypto: x86: Fix indirect function call casts
+Date: Tue,  7 May 2019 09:13:14 -0700
+Message-Id: <20190507161321.34611-1-keescook@chromium.org>
+To: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: Kees Cook <keescook@chromium.org>, Joao Moreira <jmoreira@suse.de>, Eric Biggers <ebiggers@google.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> >   My only concern with the implementation is, in the kernel the combination
-> > of tasklet_init/DECLARE_TAKSLET is seen in over ~400 plus files.
-> > With the change(dropping unsigned long argument) there will be huge list
-> > of patches migrating to the new api.
->
-> Yeah, this is the main part of the work for making this change. When
-> the timer API got changed, I had to do a two-stage change so we could
-> convert the users incrementally, and then finalize the API change to
-> drop the old style.
->
-> Beyond that, yeah, everything you sent looks good. It's just the
-> matter of building a series of patches to do it without breaking the
-> world. (Though if it's small enough, maybe it could be a single patch?
-> But I doubt that would be doable...)
+It is possible to indirectly invoke functions with prototypes that do
+not match those of the respectively used function pointers by using void
+types or casts. This feature is frequently used as a way of relaxing
+function invocation, making it possible that different data structures
+are passed to different functions through the same pointer.
 
- Thank you.
+Despite the benefits, this can lead to a situation where functions with a
+given prototype are invoked by pointers with a different prototype. This
+is undesirable as it may prevent the use of heuristics such as prototype
+matching-based Control-Flow Integrity, which can be used to prevent
+ROP-based attacks.
 
- I like the idea of two-stage approach. For first stage, I was thinking of all
-the architectures with their default configs(Nothing gets broken when
-defconf's are tried) and for second stage the rest of drivers etc..
+One way of fixing this situation is through the use of inline helper
+functions with prototypes that match the one in the respective invoking
+pointer.
 
-Thoughts?
+Given the above, the current efforts to improve the Linux security,
+and the upcoming kernel support to compilers with CFI features, this
+creates macros to be used to build the needed function definitions,
+to be used in camellia, cast6, serpent, twofish, and aesni.
 
-Either ways, I will convert and get them pushed to github, we could see how
-best it could be taken to upstream once it's done.
+-Kees (and Joao)
 
-       - Allen
+v3:
+- no longer RFC
+- consolidate macros into glue_helper.h
+- include aesni which was using casts as well
+- remove XTS_TWEAK_CAST while we're at it
+
+v2:
+- update cast macros for clarity
+
+v1:
+- initial prototype
+
+Joao Moreira (4):
+  crypto: x86/crypto: Use new glue function macros
+  crypto: x86/camellia: Use new glue function macros
+  crypto: x86/twofish: Use new glue function macros
+  crypto: x86/cast6: Use new glue function macros
+
+Kees Cook (3):
+  crypto: x86/glue_helper: Add static inline function glue macros
+  crypto: x86/aesni: Use new glue function macros
+  crypto: x86/glue_helper: Remove function prototype cast helpers
+
+ arch/x86/crypto/aesni-intel_glue.c         | 31 ++++-----
+ arch/x86/crypto/camellia_aesni_avx2_glue.c | 73 +++++++++-------------
+ arch/x86/crypto/camellia_aesni_avx_glue.c  | 63 +++++++------------
+ arch/x86/crypto/camellia_glue.c            | 21 +++----
+ arch/x86/crypto/cast6_avx_glue.c           | 65 +++++++++----------
+ arch/x86/crypto/serpent_avx2_glue.c        | 65 +++++++++----------
+ arch/x86/crypto/serpent_avx_glue.c         | 58 ++++++-----------
+ arch/x86/crypto/serpent_sse2_glue.c        | 27 +++++---
+ arch/x86/crypto/twofish_avx_glue.c         | 71 ++++++++-------------
+ arch/x86/crypto/twofish_glue_3way.c        | 28 ++++-----
+ arch/x86/include/asm/crypto/camellia.h     | 64 ++++++-------------
+ arch/x86/include/asm/crypto/glue_helper.h  | 34 ++++++++--
+ arch/x86/include/asm/crypto/serpent-avx.h  | 28 ++++-----
+ arch/x86/include/asm/crypto/twofish.h      | 22 ++++---
+ include/crypto/xts.h                       |  2 -
+ 15 files changed, 283 insertions(+), 369 deletions(-)
+
+-- 
+2.17.1
