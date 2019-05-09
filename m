@@ -1,78 +1,54 @@
+Subject: Re: [PATCH 1/4] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+References: <20190508153736.256401-1-glider@google.com>
+ <20190508153736.256401-2-glider@google.com>
+From: Randy Dunlap <rdunlap@infradead.org>
+Message-ID: <6e5ccf92-cc58-ab2b-d025-0f5642d5f4a6@infradead.org>
+Date: Wed, 8 May 2019 18:04:55 -0700
 MIME-Version: 1.0
-References: <20190507161321.34611-1-keescook@chromium.org> <20190507170039.GB1399@sol.localdomain>
- <CAGXu5jL7pWWXuJMinghn+3GjQLLBYguEtwNdZSQy++XGpGtsHQ@mail.gmail.com>
- <20190507215045.GA7528@sol.localdomain> <20190508133606.nsrzthbad5kynavp@gondor.apana.org.au>
-In-Reply-To: <20190508133606.nsrzthbad5kynavp@gondor.apana.org.au>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 8 May 2019 14:08:25 -0700
-Message-ID: <CAGXu5jKdsuzX6KF74zAYw3PpEf8DExS9P0Y_iJrJVS+goHFbcA@mail.gmail.com>
-Subject: Re: [PATCH v3 0/7] crypto: x86: Fix indirect function call casts
-Content-Type: text/plain; charset="UTF-8"
-To: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: Eric Biggers <ebiggers@kernel.org>, Kees Cook <keescook@chromium.org>, Joao Moreira <jmoreira@suse.de>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, X86 ML <x86@kernel.org>, linux-crypto <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20190508153736.256401-2-glider@google.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Alexander Potapenko <glider@google.com>, akpm@linux-foundation.org, cl@linux.com, keescook@chromium.org, labbott@redhat.com
+Cc: linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, yamada.masahiro@socionext.com, jmorris@namei.org, serge@hallyn.com, ndesaulniers@google.com, kcc@google.com, dvyukov@google.com, sspatil@android.com, jannh@google.com, mark.rutland@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 8, 2019 at 6:36 AM Herbert Xu <herbert@gondor.apana.org.au> wrote:
-> On Tue, May 07, 2019 at 02:50:46PM -0700, Eric Biggers wrote:
-> >
-> > I don't know yet.  It's difficult to read the code with 2 layers of macros.
-> >
-> > Hence why I asked why you didn't just change the prototypes to be compatible.
->
-> I agree.  Kees, since you're changing this anyway please make it
-> look better not worse.
+On 5/8/19 8:37 AM, Alexander Potapenko wrote:
+> diff --git a/security/Kconfig.hardening b/security/Kconfig.hardening
+> index 0a1d4ca314f4..4a4001f5ad25 100644
+> --- a/security/Kconfig.hardening
+> +++ b/security/Kconfig.hardening
+> @@ -159,6 +159,22 @@ config STACKLEAK_RUNTIME_DISABLE
+>  	  runtime to control kernel stack erasing for kernels built with
+>  	  CONFIG_GCC_PLUGIN_STACKLEAK.
+>  
+> +config INIT_ON_ALLOC_DEFAULT_ON
+> +	bool "Set init_on_alloc=1 by default"
+> +	default false
 
-Do you mean I should use the typedefs in the new macros? I'm not aware
-of a way to use a typedef to declare a function body, so I had to
-repeat them. I'm open to suggestions!
+That should be spelled "default n" but since that is already the default,
+just omit the line completely.
 
-As far as "fixing the prototypes", the API is agnostic of the context
-type, and uses void *. And also it provides a way to call the same
-function with different pointer types on the other arguments:
+> +	help
+> +	  Enable init_on_alloc=1 by default, making the kernel initialize every
+> +	  page and heap allocation with zeroes.
+> +	  init_on_alloc can be overridden via command line.
+> +
+> +config INIT_ON_FREE_DEFAULT_ON
+> +	bool "Set init_on_free=1 by default"
+> +	default false
 
-For example, quoting the existing code:
+ditto.
 
-asmlinkage void twofish_dec_blk(struct twofish_ctx *ctx, u8 *dst,
-                                const u8 *src);
+> +	help
+> +	  Enable init_on_free=1 by default, making the kernel initialize freed
+> +	  pages and slab memory with zeroes.
+> +	  init_on_free can be overridden via command line.
+> +
+>  endmenu
+>  
+>  endmenu
 
-Which is used for ecb and cbc:
-
-#define GLUE_FUNC_CAST(fn) ((common_glue_func_t)(fn))
-#define GLUE_CBC_FUNC_CAST(fn) ((common_glue_cbc_func_t)(fn))
-...
-static const struct common_glue_ctx twofish_dec = {
-...
-                .fn_u = { .ecb = GLUE_FUNC_CAST(twofish_dec_blk) }
-
-static const struct common_glue_ctx twofish_dec_cbc = {
-...
-                .fn_u = { .cbc = GLUE_CBC_FUNC_CAST(twofish_dec_blk) }
-
-which have different prototypes:
-
-typedef void (*common_glue_func_t)(void *ctx, u8 *dst, const u8 *src);
-typedef void (*common_glue_cbc_func_t)(void *ctx, u128 *dst, const u128 *src);
-...
-struct common_glue_func_entry {
-        unsigned int num_blocks; /* number of blocks that @fn will process */
-        union {
-                common_glue_func_t ecb;
-                common_glue_cbc_func_t cbc;
-                common_glue_ctr_func_t ctr;
-                common_glue_xts_func_t xts;
-        } fn_u;
-};
-
-What CFI dislikes is calling a func(void *ctx, ...) when the actual
-function is, for example, func(struct twofish_ctx *ctx, ...).
-
-This needs to be fixed at the call site, not the static initializers,
-and since the call site is void, there needs to be a static inline
-that will satisfy the types.
-
-I'm open to suggestions! :)
-
-Thanks,
 
 -- 
-Kees Cook
+~Randy
