@@ -1,47 +1,94 @@
+Date: Thu, 16 May 2019 09:19:56 -0700
+From: Kees Cook <keescook@chromium.org>
+Subject: Re: [PATCH v2 1/4] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+Message-ID: <201905160907.92FAC880@keescook>
+References: <20190514143537.10435-1-glider@google.com>
+ <20190514143537.10435-2-glider@google.com>
 MIME-Version: 1.0
-References: <20190510090025.4680-1-chris.packham@alliedtelesis.co.nz> <CAD=FV=UN8rm_40eVz4YVVJ57d_BWkzxs1E4nYhX_mKWe2pwX0Q@mail.gmail.com>
-In-Reply-To: <CAD=FV=UN8rm_40eVz4YVVJ57d_BWkzxs1E4nYhX_mKWe2pwX0Q@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu, 16 May 2019 10:47:08 +0200
-Message-ID: <CAKv+Gu98jQA7XARghVNXq8qEBm4DG77q3K0j-zw-WX_w-4_Q-Q@mail.gmail.com>
-Subject: Re: [PATCH] gcc-plugins: arm_ssp_per_task_plugin: Fix for older GCC < 6
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Doug Anderson <dianders@chromium.org>
-Cc: Chris Packham <chris.packham@alliedtelesis.co.nz>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190514143537.10435-2-glider@google.com>
+To: Alexander Potapenko <glider@google.com>
+Cc: akpm@linux-foundation.org, cl@linux.com, kernel-hardening@lists.openwall.com, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 11 May 2019 at 00:42, Doug Anderson <dianders@chromium.org> wrote:
->
-> Hi,
->
-> > Use gen_rtx_set instead of gen_rtx_SET. The former is a wrapper macro
-> > that handles the difference between GCC versions implementing
-> > the latter.
-> >
-> > This fixes the following error on my system with g++ 5.4.0 as the host
-> > compiler
-> >
-> >    HOSTCXX -fPIC scripts/gcc-plugins/arm_ssp_per_task_plugin.o
-> >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c:42:14: error: macro "gen=
-_rtx_SET" requires 3 arguments, but only 2 given
-> >           mask)),
-> >                ^
-> >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c: In function =E2=80=98un=
-signed int arm_pertask_ssp_rtl_execute()=E2=80=99:
-> >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c:39:20: error: =E2=80=98g=
-en_rtx_SET=E2=80=99 was not declared in this scope
-> >     emit_insn_before(gen_rtx_SET
-> >
-> > Signed-off-by: Chris Packham <chris.packham@alliedtelesis.co.nz>
-> > ---
-> >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 2 +-
-> >  1 file changed, 1 insertion(+), 1 deletion(-)
->
-> I can confirm that I was getting compile errors before this patch and
-> applying it allowed me to compile and boot.  Thanks!  :-)
->
-> Tested-by: Douglas Anderson <dianders@chromium.org>
->
+On Tue, May 14, 2019 at 04:35:34PM +0200, Alexander Potapenko wrote:
+> Slowdown for the new features compared to init_on_free=0,
+> init_on_alloc=0:
+> 
+> hackbench, init_on_free=1:  +7.62% sys time (st.err 0.74%)
+> hackbench, init_on_alloc=1: +7.75% sys time (st.err 2.14%)
 
-Reviewed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+I wonder if the patch series should be reorganized to introduce
+__GFP_NO_AUTOINIT first, so that when the commit with benchmarks appears,
+we get the "final" numbers...
+
+> Linux build with -j12, init_on_free=1:  +8.38% wall time (st.err 0.39%)
+> Linux build with -j12, init_on_free=1:  +24.42% sys time (st.err 0.52%)
+> Linux build with -j12, init_on_alloc=1: -0.13% wall time (st.err 0.42%)
+> Linux build with -j12, init_on_alloc=1: +0.57% sys time (st.err 0.40%)
+
+I'm working on reproducing these benchmarks. I'd really like to narrow
+down the +24% number here. But it does 
+
+> The slowdown for init_on_free=0, init_on_alloc=0 compared to the
+> baseline is within the standard error.
+
+I think the use of static keys here is really great: this is available
+by default for anyone that wants to turn it on.
+
+I'm thinking, given the configuable nature of this, it'd be worth adding
+a little more detail at boot time. I think maybe a separate patch could
+be added to describe the kernel's memory auto-initialization features,
+and add something like this to mm_init():
+
++void __init report_meminit(void)
++{
++	const char *stack;
++
++	if (IS_ENABLED(CONFIG_INIT_STACK_ALL))
++		stack = "all";
++	else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL))
++		stack = "byref_all";
++	else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF))
++		stack = "byref";
++	else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_USER))
++		stack = "__user";
++	else
++		stack = "off";
++
++	/* Report memory auto-initialization states for this boot. */
++	pr_info("mem auto-init: stack:%s, heap alloc:%s, heap free:%s\n",
++		stack, want_init_on_alloc(GFP_KERNEL) ? "on" : "off",
++		want_init_on_free() ? "on" : "off");
++}
+
+To get a boot line like:
+
+	mem auto-init: stack:off, heap alloc:off, heap free:on
+
+And one other thought I had was that in the init_on_free=1 case, there is
+a large pause at boot while memory is being cleared. I think it'd be handy
+to include a comment about that, just to keep people from being surprised:
+
+diff --git a/init/main.c b/init/main.c
+index cf0c3948ce0e..aea278392338 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -529,6 +529,8 @@ static void __init mm_init(void)
+ 	 * bigger than MAX_ORDER unless SPARSEMEM.
+ 	 */
+ 	page_ext_init_flatmem();
++	if (want_init_on_free())
++		pr_info("Clearing system memory ...\n");
+ 	mem_init();
+ 	kmem_cache_init();
+ 	pgtable_init();
+
+Beyond these thoughts, I think this series is in good shape.
+
+Andrew (or anyone else) do you have any concerns about this?
+
+-- 
+Kees Cook
