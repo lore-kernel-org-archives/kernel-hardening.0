@@ -1,76 +1,73 @@
-Date: Thu, 16 May 2019 09:53:01 -0700
+Date: Thu, 16 May 2019 10:03:11 -0700
 From: Kees Cook <keescook@chromium.org>
-Subject: Re: [PATCH v2 4/4] net: apply __GFP_NO_AUTOINIT to AF_UNIX sk_buff
- allocations
-Message-ID: <201905160923.BD3E530EFC@keescook>
+Subject: Re: [PATCH v2 1/4] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+Message-ID: <201905160953.903FD364BC@keescook>
 References: <20190514143537.10435-1-glider@google.com>
- <20190514143537.10435-5-glider@google.com>
+ <20190514143537.10435-2-glider@google.com>
+ <201905160907.92FAC880@keescook>
+ <CAG_fn=VsJmyuEUYy16R_M5Hu2CX-PJkz9Kw4rdy9XUCAYHwV5g@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190514143537.10435-5-glider@google.com>
+In-Reply-To: <CAG_fn=VsJmyuEUYy16R_M5Hu2CX-PJkz9Kw4rdy9XUCAYHwV5g@mail.gmail.com>
 To: Alexander Potapenko <glider@google.com>
-Cc: akpm@linux-foundation.org, cl@linux.com, kernel-hardening@lists.openwall.com, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org
+Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 14, 2019 at 04:35:37PM +0200, Alexander Potapenko wrote:
-> Add sock_alloc_send_pskb_noinit(), which is similar to
-> sock_alloc_send_pskb(), but allocates with __GFP_NO_AUTOINIT.
-> This helps reduce the slowdown on hackbench in the init_on_alloc mode
-> from 6.84% to 3.45%.
+On Thu, May 16, 2019 at 06:42:37PM +0200, Alexander Potapenko wrote:
+> I suspect the slowdown of init_on_free is bigger than that of
+> PAX_SANITIZE_MEMORY, as we've set the goal to have fully zeroed memory
+> at alloc time.
+> If we want a mode that only wipes the user data upon free() but
+> doesn't eliminate all uninit memory, then we can make it faster.
 
-Out of curiosity, why the creation of the new function over adding a
-gfp flag argument to sock_alloc_send_pskb() and updating callers? (There
-are only 6 callers, and this change already updates 2 of those.)
+Yeah, I sent a separate email that discusses this a bit more.
 
-> Slowdown for the initialization features compared to init_on_free=0,
-> init_on_alloc=0:
-> 
-> hackbench, init_on_free=1:  +7.71% sys time (st.err 0.45%)
-> hackbench, init_on_alloc=1: +3.45% sys time (st.err 0.86%)
+I think the goals of init_on_alloc and init_on_free are likely a bit
+different. Given init_on_alloc's much more cache-friendly performance,
+I think that it's likely the right way forward for getting to fully zeroed
+memory at alloc time. (Though I note that it already includes exclusions:
+such tradeoffs won't be unique to init_on_free.)
 
-In the commit log it might be worth mentioning that this is only
-changing the init_on_alloc case (in case it's not already obvious to
-folks). Perhaps there needs to be a split of __GFP_NO_AUTOINIT into
-__GFP_NO_AUTO_ALLOC_INIT and __GFP_NO_AUTO_FREE_INIT? Right now __GFP_NO_AUTOINIT is only checked for init_on_alloc:
+init_on_free appears to give us similar coverage (but also reduces the
+lifetime of unused data), but isn't cache-friendly so it looks to need
+a lot more tuning/trade-offs. (Not that we shouldn't include it! It'll
+just need a bit more care to be reasonable.)
 
-static inline bool want_init_on_alloc(gfp_t flags)
-{
-        if (static_branch_unlikely(&init_on_alloc))
-                return !(flags & __GFP_NO_AUTOINIT);
-        return flags & __GFP_ZERO;
-}
-...
-static inline bool want_init_on_free(void)
-{
-        return static_branch_unlikely(&init_on_free);
-}
+> > +void __init report_meminit(void)
+> > +{
+> > +       const char *stack;
+> > +
+> > +       if (IS_ENABLED(CONFIG_INIT_STACK_ALL))
+> > +               stack = "all";
+> > +       else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL))
+> > +               stack = "byref_all";
+> > +       else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF))
+> > +               stack = "byref";
+> > +       else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_USER))
+> > +               stack = "__user";
+> > +       else
+> > +               stack = "off";
+> > +
+> > +       /* Report memory auto-initialization states for this boot. */
+> > +       pr_info("mem auto-init: stack:%s, heap alloc:%s, heap free:%s\n",
+> > +               stack, want_init_on_alloc(GFP_KERNEL) ? "on" : "off",
+> > +               want_init_on_free() ? "on" : "off");
+> > +}
+> >
+> > To get a boot line like:
+> >
+> >         mem auto-init: stack:off, heap alloc:off, heap free:on
+> For stack there's no binary on/off, as you can potentially build half
+> of the kernel with stack instrumentation and another half without it.
+> We could make the instrumentation insert a static global flag into
+> each translation unit, but this won't give us any interesting info.
 
-On a related note, it might be nice to add an exclusion list to
-the kmem_cache_create() cases, since it seems likely that further
-tuning will be needed there. For example, with the init_on_free-similar
-PAX_MEMORY_SANITIZE changes in the last public release of PaX/grsecurity,
-the following were excluded from wipe-on-free:
-
-	buffer_head
-	names_cache
-	mm_struct
-	vm_area_struct
-	anon_vma
-	anon_vma_chain
-	skbuff_head_cache
-	skbuff_fclone_cache
-
-Adding these and others (with details on why they were selected),
-might improve init_on_free performance further without trading too
-much coverage.
-
-Having a kernel param with a comma-separated list of cache names and
-the logic to add __GFP_NO_AUTOINIT at creation time would be a nice
-(and cheap!) debug feature to let folks tune things for their specific
-workloads, if they choose to. (And it could maybe also know what "none"
-meant, to actually remove the built-in exclusions, similar to what
-PaX's "pax_sanitize_slab=full" does.)
+Well, yes, that's technically true, but I think reporting the kernel
+config here would make sense. If someone intentionally bypasses the
+stack auto-init for portions of the kernel, we can't meaningfully report
+it here. There will be exceptions for stack auto-init and heap auto-init.
 
 -- 
 Kees Cook
