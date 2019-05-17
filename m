@@ -1,95 +1,69 @@
-Date: Fri, 17 May 2019 19:11:05 +0200
+Date: Fri, 17 May 2019 19:11:15 +0200
 From: Michal Hocko <mhocko@kernel.org>
-Subject: Re: [PATCH v2 3/4] gfp: mm: introduce __GFP_NO_AUTOINIT
-Message-ID: <20190517171105.GT6836@dhcp22.suse.cz>
+Subject: Re: [PATCH v2 1/4] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+Message-ID: <20190517170805.GS6836@dhcp22.suse.cz>
 References: <20190514143537.10435-1-glider@google.com>
- <20190514143537.10435-4-glider@google.com>
- <20190517125916.GF1825@dhcp22.suse.cz>
- <CAG_fn=VG6vrCdpEv0g73M-Au4wW07w8g0uydEiHA96QOfcCVhA@mail.gmail.com>
- <20190517132542.GJ6836@dhcp22.suse.cz>
- <CAG_fn=Ve88z2ezFjV6CthufMUhJ-ePNMT2=3m6J3nHWh9iSgsg@mail.gmail.com>
- <20190517140108.GK6836@dhcp22.suse.cz>
- <201905170925.6FD47DDFFF@keescook>
+ <20190514143537.10435-2-glider@google.com>
+ <20190517140446.GA8846@dhcp22.suse.cz>
+ <CAG_fn=W4k=mijnUpF98Hu6P8bFMHU81FHs4Swm+xv1k0wOGFFQ@mail.gmail.com>
+ <20190517142048.GM6836@dhcp22.suse.cz>
+ <201905170928.A8F3BEC1B1@keescook>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <201905170925.6FD47DDFFF@keescook>
+In-Reply-To: <201905170928.A8F3BEC1B1@keescook>
 To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Potapenko <glider@google.com>, Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Souptick Joarder <jrdr.linux@gmail.com>, Matthew Wilcox <willy@infradead.org>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>
+Cc: Alexander Potapenko <glider@google.com>, Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri 17-05-19 09:27:54, Kees Cook wrote:
-> On Fri, May 17, 2019 at 04:01:08PM +0200, Michal Hocko wrote:
-> > On Fri 17-05-19 15:37:14, Alexander Potapenko wrote:
-> > > > > > Freeing a memory is an opt-in feature and the slab allocator can already
-> > > > > > tell many (with constructor or GFP_ZERO) do not need it.
-> > > > > Sorry, I didn't understand this piece. Could you please elaborate?
+On Fri 17-05-19 09:36:36, Kees Cook wrote:
+> On Fri, May 17, 2019 at 04:20:48PM +0200, Michal Hocko wrote:
+> > On Fri 17-05-19 16:11:32, Alexander Potapenko wrote:
+> > > On Fri, May 17, 2019 at 4:04 PM Michal Hocko <mhocko@kernel.org> wrote:
 > > > >
-> > > > The allocator can assume that caches with a constructor will initialize
-> > > > the object so additional zeroying is not needed. GFP_ZERO should be self
-> > > > explanatory.
-> > > Ah, I see. We already do that, see the want_init_on_alloc()
-> > > implementation here: https://patchwork.kernel.org/patch/10943087/
-> > > > > > So can we go without this gfp thing and see whether somebody actually
-> > > > > > finds a performance problem with the feature enabled and think about
-> > > > > > what can we do about it rather than add this maint. nightmare from the
-> > > > > > very beginning?
+> > > > On Tue 14-05-19 16:35:34, Alexander Potapenko wrote:
+> > > > > The new options are needed to prevent possible information leaks and
+> > > > > make control-flow bugs that depend on uninitialized values more
+> > > > > deterministic.
 > > > > >
-> > > > > There were two reasons to introduce this flag initially.
-> > > > > The first was double initialization of pages allocated for SLUB.
+> > > > > init_on_alloc=1 makes the kernel initialize newly allocated pages and heap
+> > > > > objects with zeroes. Initialization is done at allocation time at the
+> > > > > places where checks for __GFP_ZERO are performed.
+> > > > >
+> > > > > init_on_free=1 makes the kernel initialize freed pages and heap objects
+> > > > > with zeroes upon their deletion. This helps to ensure sensitive data
+> > > > > doesn't leak via use-after-free accesses.
 > > > >
-> > > > Could you elaborate please?
-> > > When the kernel allocates an object from SLUB, and SLUB happens to be
-> > > short on free pages, it requests some from the page allocator.
-> > > Those pages are initialized by the page allocator
+> > > > Why do we need both? The later is more robust because even free memory
+> > > > cannot be sniffed and the overhead might be shifted from the allocation
+> > > > context (e.g. to RCU) but why cannot we stick to a single model?
+> > > init_on_free appears to be slower because of cache effects. It's
+> > > several % in the best case vs. <1% for init_on_alloc.
 > > 
-> > ... when the feature is enabled ...
-> > 
-> > > and split into objects. Finally SLUB initializes one of the available
-> > > objects and returns it back to the kernel.
-> > > Therefore the object is initialized twice for the first time (when it
-> > > comes directly from the page allocator).
-> > > This cost is however amortized by SLUB reusing the object after it's been freed.
-> > 
-> > OK, I see what you mean now. Is there any way to special case the page
-> > allocation for this feature? E.g. your implementation tries to make this
-> > zeroying special but why cannot you simply do this
-> > 
-> > 
-> > struct page *
-> > ____alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order, int preferred_nid,
-> > 							nodemask_t *nodemask)
-> > {
-> > 	//current implementation
-> > }
-> > 
-> > struct page *
-> > __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order, int preferred_nid,
-> > 							nodemask_t *nodemask)
-> > {
-> > 	if (your_feature_enabled)
-> > 		gfp_mask |= __GFP_ZERO;
-> > 	return ____alloc_pages_nodemask(gfp_mask, order, preferred_nid,
-> > 					nodemask);
-> > }
-> > 
-> > and use ____alloc_pages_nodemask from the slab or other internal
-> > allocators?
+> > This doesn't really explain why we need both.
 > 
-> If an additional allocator function is preferred over a new GFP flag, then
-> I don't see any reason not to do this. (Though adding more "__"s seems
-> a bit unfriendly to code-documentation.) What might be better naming?
+> There are a couple reasons. The first is that once we have hardware with
+> memory tagging (e.g. arm64's MTE) we'll need both on_alloc and on_free
+> hooks to do change the tags. With MTE, zeroing comes for "free" with
+> tagging (though tagging is as slow as zeroing, so it's really the tagging
+> that is free...), so we'll need to re-use the init_on_free infrastructure.
 
-The naminig is the last thing I would be worried about. Let's focus on
-the most simplistic implementation first. And means, can we really make
-it as simple as above? At least on the page allocator level.
+I am not sure I follow, but ...
+> 
+> The second reason is for very paranoid use-cases where in-memory
+> data lifetime is desired to be minimized. There are various arguments
+> for/against the realism of the associated threat models, but given that
+> we'll need the infrastructre for MTE anyway, and there are people who
+> want wipe-on-free behavior no matter what the performance cost, it seems
+> reasonable to include it in this series.
+> 
+> All that said, init_on_alloc looks desirable enough that distros will
+> likely build with it enabled by default (I hope), and the very paranoid
+> users will switch to (or additionally enable) init_on_free for their
+> systems.
 
-> This would mean that the skb changes later in the series would use the
-> "no auto init" version of the allocator too, then.
-
-No, this would be an internal function to MM. I would really like to
-optimize once there are numbers from _real_ workloads to base those
-optimizations.
+... this should all be part of the changelog.
 -- 
 Michal Hocko
 SUSE Labs
