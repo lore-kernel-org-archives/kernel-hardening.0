@@ -1,83 +1,30 @@
+Date: Fri, 17 May 2019 08:59:39 -0700
+From: Kees Cook <keescook@chromium.org>
+Subject: Re: [PATCH 5/4] mm: Introduce SLAB_NO_FREE_INIT and mark excluded
+ caches
+Message-ID: <201905170858.CE4109E77@keescook>
+References: <20190514143537.10435-5-glider@google.com>
+ <201905161746.16E885F@keescook>
+ <CAG_fn=W41zDac9DN9qVB_EwJG89f2cNBQYNyove4oO3dwe6d5Q@mail.gmail.com>
 MIME-Version: 1.0
-References: <20190514143537.10435-1-glider@google.com> <20190514143537.10435-3-glider@google.com>
- <201905151752.2BD430A@keescook>
-In-Reply-To: <201905151752.2BD430A@keescook>
-From: Alexander Potapenko <glider@google.com>
-Date: Fri, 17 May 2019 17:51:17 +0200
-Message-ID: <CAG_fn=VVZ1FBygbAeTbdo2U2d2Zga6Z7wVitkqZB0YffCKYzag@mail.gmail.com>
-Subject: Re: [PATCH v2 2/4] lib: introduce test_meminit module
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAG_fn=W41zDac9DN9qVB_EwJG89f2cNBQYNyove4oO3dwe6d5Q@mail.gmail.com>
+To: Alexander Potapenko <glider@google.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 16, 2019 at 3:02 AM Kees Cook <keescook@chromium.org> wrote:
->
-> On Tue, May 14, 2019 at 04:35:35PM +0200, Alexander Potapenko wrote:
-> > Add tests for heap and pagealloc initialization.
-> > These can be used to check init_on_alloc and init_on_free implementatio=
-ns
-> > as well as other approaches to initialization.
->
-> This is nice! Easy way to test the results. It might be helpful to show
-> here what to expect when loading this module:
-Do you want me to add the expected output to the patch description?
-> with either init_on_alloc=3D1 or init_on_free=3D1, I happily see:
->
->         test_meminit: all 10 tests in test_pages passed
->         test_meminit: all 40 tests in test_kvmalloc passed
->         test_meminit: all 20 tests in test_kmemcache passed
->         test_meminit: all 70 tests passed!
->
-> and without:
->
->         test_meminit: test_pages failed 10 out of 10 times
->         test_meminit: test_kvmalloc failed 40 out of 40 times
->         test_meminit: test_kmemcache failed 10 out of 20 times
->         test_meminit: failures: 60 out of 70
->
->
+On Fri, May 17, 2019 at 10:34:26AM +0200, Alexander Potapenko wrote:
+> On Fri, May 17, 2019 at 2:50 AM Kees Cook <keescook@chromium.org> wrote:
 > >
-> > Signed-off-by: Alexander Potapenko <glider@google.com>
->
-> Reviewed-by: Kees Cook <keescook@chromium.org>
-> Tested-by: Kees Cook <keescook@chromium.org>
->
-> note below...
->
-> > [...]
-> > diff --git a/lib/test_meminit.c b/lib/test_meminit.c
-> > new file mode 100644
-> > index 000000000000..67d759498030
-> > --- /dev/null
-> > +++ b/lib/test_meminit.c
-> > @@ -0,0 +1,205 @@
-> > +// SPDX-License-Identifier: GPL-2.0
-> > [...]
-> > +module_init(test_meminit_init);
->
-> I get a warning at build about missing the license:
->
-> WARNING: modpost: missing MODULE_LICENSE() in lib/test_meminit.o
->
-> So, following the SPDX line, just add:
->
-> MODULE_LICENSE("GPL");
-Will do, thanks!
-> --
-> Kees Cook
+> > In order to improve the init_on_free performance, some frequently
+> > freed caches with less sensitive contents can be excluded from the
+> > init_on_free behavior.
+> Did you see any notable performance improvement with this patch?
+> A similar one gave me only 1-2% on the parallel Linux build.
 
+Yup, that's in the other thread. I saw similar. But 1-2% on a 5% hit is
+a lot. ;)
 
-
---=20
-Alexander Potapenko
-Software Engineer
-
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
-
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+-- 
+Kees Cook
