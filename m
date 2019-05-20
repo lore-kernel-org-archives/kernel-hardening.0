@@ -1,109 +1,103 @@
+From: Thomas Garnier <thgarnie@chromium.org>
+Subject: [PATCH v7 00/12] x86: PIE support to extend KASLR randomization
+Date: Mon, 20 May 2019 16:19:25 -0700
+Message-Id: <20190520231948.49693-1-thgarnie@chromium.org>
 MIME-Version: 1.0
-References: <20190520164214.GA14656@himanshu-Vostro-3559>
-In-Reply-To: <20190520164214.GA14656@himanshu-Vostro-3559>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 20 May 2019 21:01:26 +0200
-Message-ID: <CAG48ez2+NoQ4mtm=PCyz005O4Efmszxo3Z7wgaF_5xx1nYO8dQ@mail.gmail.com>
-Subject: Re: Sparse context checking Vs Clang Thread Safety analysis
-Content-Type: text/plain; charset="UTF-8"
-To: Himanshu Jha <himanshujha199640@gmail.com>
-Cc: linux-sparse@vger.kernel.org, Johannes Berg <johannes@sipsolutions.net>, Philipp Reisner <philipp.reisner@linbit.com>, Lukas Bulwahn <lukas.bulwahn@gmail.com>, clang-built-linux <clang-built-linux@googlegroups.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: 8bit
+To: kernel-hardening@lists.openwall.com
+Cc: kristen@linux.intel.com, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Andy Lutomirski <luto@kernel.org>, Juergen Gross <jgross@suse.com>, Alok Kataria <akataria@vmware.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Peter Zijlstra <peterz@infradead.org>, Thomas Garnier <thgarnie@google.com>, Nadav Amit <namit@vmware.com>, Jann Horn <jannh@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Andi Kleen <ak@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Feng Tang <feng.tang@intel.com>, Jan Beulich <JBeulich@suse.com>, Maran Wilson <maran.wilson@oracle.com>, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, virtualization@lists.linux-foundation.org, linux-pm@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-+kernel-hardening
+Splitting the previous serie in two. This part contains assembly code
+changes required for PIE but without any direct dependencies with the
+rest of the patchset.
 
-On Mon, May 20, 2019 at 6:42 PM Himanshu Jha
-<himanshujha199640@gmail.com> wrote:
-> I'm an undergrad student working on Google Summer of Code'19 Project[1]
-> to apply clang thread safety analysis feature on linux kernel to find bugs
-> related to concurrency/race condtions with Lukas & clangbuiltlinux
-> community.
->
-> Since sparse has similar context checking feature, I started
-> investigating by looking the source and some other resources such as
-> LWN[2] about the internals.
->
-> `-Wcontext` is my prime focus for now and currently we have:
->
-> himanshu@himanshu-Vostro-3559:~/linux-next$ make C=2 CF="-Wcontext" 2>&1 >/dev/null | grep -w 'context' | wc -l
-> 772
->
-> o Why do we have so many open warnings for context imbalance ? Or
->   Why did we stop at some point annotating the codebase ?
+Changes:
+ - patch v7 (assembly):
+   - Split patchset and reorder changes.
+ - patch v6:
+   - Rebase on latest changes in jump tables and crypto.
+   - Fix wording on couple commits.
+   - Revisit checkpatch warnings.
+   - Moving to @chromium.org.
+ - patch v5:
+   - Adapt new crypto modules for PIE.
+   - Improve per-cpu commit message.
+   - Fix xen 32-bit build error with .quad.
+   - Remove extra code for ftrace.
+ - patch v4:
+   - Simplify early boot by removing global variables.
+   - Modify the mcount location script for __mcount_loc intead of the address
+     read in the ftrace implementation.
+   - Edit commit description to explain better where the kernel can be located.
+   - Streamlined the testing done on each patch proposal. Always testing
+     hibernation, suspend, ftrace and kprobe to ensure no regressions.
+ - patch v3:
+   - Update on message to describe longer term PIE goal.
+   - Minor change on ftrace if condition.
+   - Changed code using xchgq.
+ - patch v2:
+   - Adapt patch to work post KPTI and compiler changes
+   - Redo all performance testing with latest configs and compilers
+   - Simplify mov macro on PIE (MOVABS now)
+   - Reduce GOT footprint
+ - patch v1:
+   - Simplify ftrace implementation.
+   - Use gcc mstack-protector-guard-reg=%gs with PIE when possible.
+ - rfc v3:
+   - Use --emit-relocs instead of -pie to reduce dynamic relocation space on
+     mapped memory. It also simplifies the relocation process.
+   - Move the start the module section next to the kernel. Remove the need for
+     -mcmodel=large on modules. Extends module space from 1 to 2G maximum.
+   - Support for XEN PVH as 32-bit relocations can be ignored with
+     --emit-relocs.
+   - Support for GOT relocations previously done automatically with -pie.
+   - Remove need for dynamic PLT in modules.
+   - Support dymamic GOT for modules.
+ - rfc v2:
+   - Add support for global stack cookie while compiler default to fs without
+     mcmodel=kernel
+   - Change patch 7 to correctly jump out of the identity mapping on kexec load
+     preserve.
 
-Many developers don't use sparse, and sparse doesn't support some
-locking patterns that the kernel uses.
+These patches make some of the changes necessary to build the kernel as
+Position Independent Executable (PIE) on x86_64. Another patchset will
+add the PIE option and larger architecture changes.
 
-> o Does sparse stores some sort of context counter since we didn't get
-> any warnings for `bad_difflocks` which locks 'lock1' and unlocks 'lock2'
-> ?
+The patches:
+ - 1-2, 4-12: Change in assembly code to be PIE compliant.
+ - 3: Add a new _ASM_MOVABS macro to fetch a symbol address generically.
 
-Yes. Sparse currently ignores the context and only has a simple
-counter shared by all locks.
+diffstat:
+ crypto/aegis128-aesni-asm.S         |    6 +-
+ crypto/aegis128l-aesni-asm.S        |    8 +--
+ crypto/aegis256-aesni-asm.S         |    6 +-
+ crypto/aes-x86_64-asm_64.S          |   45 ++++++++++------
+ crypto/aesni-intel_asm.S            |    8 +--
+ crypto/camellia-aesni-avx-asm_64.S  |   42 +++++++--------
+ crypto/camellia-aesni-avx2-asm_64.S |   44 ++++++++--------
+ crypto/camellia-x86_64-asm_64.S     |    8 +--
+ crypto/cast5-avx-x86_64-asm_64.S    |   50 ++++++++++--------
+ crypto/cast6-avx-x86_64-asm_64.S    |   44 +++++++++-------
+ crypto/des3_ede-asm_64.S            |   96 ++++++++++++++++++++++++------------
+ crypto/ghash-clmulni-intel_asm.S    |    4 -
+ crypto/glue_helper-asm-avx.S        |    4 -
+ crypto/glue_helper-asm-avx2.S       |    6 +-
+ crypto/morus1280-avx2-asm.S         |    4 -
+ crypto/morus1280-sse2-asm.S         |    8 +--
+ crypto/morus640-sse2-asm.S          |    6 +-
+ crypto/sha256-avx2-asm.S            |   23 +++++---
+ entry/entry_64.S                    |   16 ++++--
+ include/asm/alternative.h           |    6 +-
+ include/asm/asm.h                   |    1 
+ include/asm/jump_label.h            |    8 +--
+ include/asm/paravirt_types.h        |   12 +++-
+ include/asm/pm-trace.h              |    2 
+ include/asm/processor.h             |    6 +-
+ kernel/acpi/wakeup_64.S             |   31 ++++++-----
+ kernel/head_64.S                    |   16 +++---
+ kernel/relocate_kernel_64.S         |    2 
+ power/hibernate_asm_64.S            |    4 -
+ 29 files changed, 299 insertions(+), 217 deletions(-)
 
-> o What exactly the usage of `__acquire/__release` ?
-> I have used it to shut up the warning for lockfn & unlockfn above.
-
-You use those to inform sparse where you're taking a lock or releasing
-a lock; and some parts of the kernel also use it to inform sparse of
-places where a lock is effectively taken, even though there is no
-actual locking call (e.g. when two pointers point to the same object,
-and therefore you only need to actually call the locking function once
-instead of twice).
-
-[...]
-> So, clang thread safety analysis[3] follows a different mechanism
-> to overcome what we have observed above.
->
-> I did small analysis on a C program[4] and a device driver[5].
->
-> Clang analysis has many annotations available to suitable annotate the
-> codebase which can be found in the documentation[3].
->
-> Quite surprisingly, Philipp proposed[6] `__protected_by` feature which is
-> very similar to `guarded_by`[7] feature implemented in Clang.
->
-> Similarly, Johannes proposed[8] the same with a different implementation.
->
-> Questions from both you:
->
-> o Why was it not deployed in sparse ?
->
-> o Does the lock protecting the data should be a global variable ?
->
-> ie.,
->
-> struct foo {
->         struct mutex lock;
->         int balance __protected_by(lock);
-> }
->
-> Can this be done ? Or lock should be global ?
->
-> Because clang analysis wants it to be global!
->
-> There are other attribute restrictions as well for clang analysis:
-> https://github.com/llvm-mirror/clang/blob/master/test/Sema/attr-capabilities.c
->
->
-> *Most Important*
-> Could you please point me some critical data examples that you know in
-> the kernel source which should be protected. This would help us a lot!
-
-The complicated thing in the kernel is that almost any structure
-member can be accessed without locking under some circumstances - for
-example, when a structure is initialized, or when the structure is
-being freed and all other references to the object have gone away. On
-top of that, many fields can be accessed under multiple locking
-mechanisms - e.g. many fields can be read under either a
-spinlock/mutex or in an RCU read-critical section. And there are
-functions that conditionally acquire a lock and signal the state of
-the lock through their return value - for example,
-mutex_lock_killable() and mutex_lock_interruptible().
-
-I think that static analysis of locking is a great thing, but the
-kernel doesn't exactly make it easy. In particular, I think it is
-going to require annotations that you can use to tell the compiler
-which state of its lifecycle an object is in (since that can influence
-locking rules), and annotations that tell the compiler what the
-semantics of functions like mutex_lock_killable() are.
+Patchset is based on next-20190515.
