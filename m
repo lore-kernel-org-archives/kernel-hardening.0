@@ -1,69 +1,177 @@
-Date: Fri, 17 May 2019 19:11:15 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Subject: Re: [PATCH v2 1/4] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
-Message-ID: <20190517170805.GS6836@dhcp22.suse.cz>
-References: <20190514143537.10435-1-glider@google.com>
- <20190514143537.10435-2-glider@google.com>
- <20190517140446.GA8846@dhcp22.suse.cz>
- <CAG_fn=W4k=mijnUpF98Hu6P8bFMHU81FHs4Swm+xv1k0wOGFFQ@mail.gmail.com>
- <20190517142048.GM6836@dhcp22.suse.cz>
- <201905170928.A8F3BEC1B1@keescook>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <201905170928.A8F3BEC1B1@keescook>
+References: <20190514143537.10435-5-glider@google.com> <201905161746.16E885F@keescook>
+In-Reply-To: <201905161746.16E885F@keescook>
+From: Mathias Krause <minipli@googlemail.com>
+Date: Mon, 20 May 2019 08:10:19 +0200
+Message-ID: <CA+rthh9bLiohU78PBMonji_LPjj756rhTy22v9nL8LpL0cTb5g@mail.gmail.com>
+Subject: Re: [PATCH 5/4] mm: Introduce SLAB_NO_FREE_INIT and mark excluded caches
+Content-Type: text/plain; charset="UTF-8"
 To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Potapenko <glider@google.com>, Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>
+Cc: Alexander Potapenko <glider@google.com>, Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, kernel-hardening@lists.openwall.com, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri 17-05-19 09:36:36, Kees Cook wrote:
-> On Fri, May 17, 2019 at 04:20:48PM +0200, Michal Hocko wrote:
-> > On Fri 17-05-19 16:11:32, Alexander Potapenko wrote:
-> > > On Fri, May 17, 2019 at 4:04 PM Michal Hocko <mhocko@kernel.org> wrote:
-> > > >
-> > > > On Tue 14-05-19 16:35:34, Alexander Potapenko wrote:
-> > > > > The new options are needed to prevent possible information leaks and
-> > > > > make control-flow bugs that depend on uninitialized values more
-> > > > > deterministic.
-> > > > >
-> > > > > init_on_alloc=1 makes the kernel initialize newly allocated pages and heap
-> > > > > objects with zeroes. Initialization is done at allocation time at the
-> > > > > places where checks for __GFP_ZERO are performed.
-> > > > >
-> > > > > init_on_free=1 makes the kernel initialize freed pages and heap objects
-> > > > > with zeroes upon their deletion. This helps to ensure sensitive data
-> > > > > doesn't leak via use-after-free accesses.
-> > > >
-> > > > Why do we need both? The later is more robust because even free memory
-> > > > cannot be sniffed and the overhead might be shifted from the allocation
-> > > > context (e.g. to RCU) but why cannot we stick to a single model?
-> > > init_on_free appears to be slower because of cache effects. It's
-> > > several % in the best case vs. <1% for init_on_alloc.
-> > 
-> > This doesn't really explain why we need both.
-> 
-> There are a couple reasons. The first is that once we have hardware with
-> memory tagging (e.g. arm64's MTE) we'll need both on_alloc and on_free
-> hooks to do change the tags. With MTE, zeroing comes for "free" with
-> tagging (though tagging is as slow as zeroing, so it's really the tagging
-> that is free...), so we'll need to re-use the init_on_free infrastructure.
+Hi Kees,
 
-I am not sure I follow, but ...
-> 
-> The second reason is for very paranoid use-cases where in-memory
-> data lifetime is desired to be minimized. There are various arguments
-> for/against the realism of the associated threat models, but given that
-> we'll need the infrastructre for MTE anyway, and there are people who
-> want wipe-on-free behavior no matter what the performance cost, it seems
-> reasonable to include it in this series.
-> 
-> All that said, init_on_alloc looks desirable enough that distros will
-> likely build with it enabled by default (I hope), and the very paranoid
-> users will switch to (or additionally enable) init_on_free for their
-> systems.
+On Fri, 17 May 2019 at 02:50, Kees Cook <keescook@chromium.org> wrote:
+> In order to improve the init_on_free performance, some frequently
+> freed caches with less sensitive contents can be excluded from the
+> init_on_free behavior.
+>
+> This patch is modified from Brad Spengler/PaX Team's code in the
+> last public patch of grsecurity/PaX based on my understanding of the
+> code. Changes or omissions from the original code are mine and don't
+> reflect the original grsecurity/PaX code.
 
-... this should all be part of the changelog.
--- 
-Michal Hocko
-SUSE Labs
+you might want to give secunet credit for this one, as can be seen here:
+
+  https://github.com/minipli/linux-grsec/commit/309d494e7a3f6533ca68fc8b3bd89fa76fd2c2df
+
+However, please keep the "Changes or omissions from the original
+code..." part as your version slightly differs.
+
+Thanks,
+Mathias
+
+>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  fs/buffer.c          | 2 +-
+>  fs/dcache.c          | 3 ++-
+>  include/linux/slab.h | 3 +++
+>  kernel/fork.c        | 6 ++++--
+>  mm/rmap.c            | 5 +++--
+>  mm/slab.h            | 5 +++--
+>  net/core/skbuff.c    | 6 ++++--
+>  7 files changed, 20 insertions(+), 10 deletions(-)
+>
+> diff --git a/fs/buffer.c b/fs/buffer.c
+> index 0faa41fb4c88..04a85bd4cf2e 100644
+> --- a/fs/buffer.c
+> +++ b/fs/buffer.c
+> @@ -3457,7 +3457,7 @@ void __init buffer_init(void)
+>         bh_cachep = kmem_cache_create("buffer_head",
+>                         sizeof(struct buffer_head), 0,
+>                                 (SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|
+> -                               SLAB_MEM_SPREAD),
+> +                               SLAB_MEM_SPREAD|SLAB_NO_FREE_INIT),
+>                                 NULL);
+>
+>         /*
+> diff --git a/fs/dcache.c b/fs/dcache.c
+> index 8136bda27a1f..323b039accba 100644
+> --- a/fs/dcache.c
+> +++ b/fs/dcache.c
+> @@ -3139,7 +3139,8 @@ void __init vfs_caches_init_early(void)
+>  void __init vfs_caches_init(void)
+>  {
+>         names_cachep = kmem_cache_create_usercopy("names_cache", PATH_MAX, 0,
+> -                       SLAB_HWCACHE_ALIGN|SLAB_PANIC, 0, PATH_MAX, NULL);
+> +                       SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NO_FREE_INIT, 0,
+> +                       PATH_MAX, NULL);
+>
+>         dcache_init();
+>         inode_init();
+> diff --git a/include/linux/slab.h b/include/linux/slab.h
+> index 9449b19c5f10..7eba9ad8830d 100644
+> --- a/include/linux/slab.h
+> +++ b/include/linux/slab.h
+> @@ -92,6 +92,9 @@
+>  /* Avoid kmemleak tracing */
+>  #define SLAB_NOLEAKTRACE       ((slab_flags_t __force)0x00800000U)
+>
+> +/* Exclude slab from zero-on-free when init_on_free is enabled */
+> +#define SLAB_NO_FREE_INIT      ((slab_flags_t __force)0x01000000U)
+> +
+>  /* Fault injection mark */
+>  #ifdef CONFIG_FAILSLAB
+>  # define SLAB_FAILSLAB         ((slab_flags_t __force)0x02000000U)
+> diff --git a/kernel/fork.c b/kernel/fork.c
+> index b4cba953040a..9868585f5520 100644
+> --- a/kernel/fork.c
+> +++ b/kernel/fork.c
+> @@ -2550,11 +2550,13 @@ void __init proc_caches_init(void)
+>
+>         mm_cachep = kmem_cache_create_usercopy("mm_struct",
+>                         mm_size, ARCH_MIN_MMSTRUCT_ALIGN,
+> -                       SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_ACCOUNT,
+> +                       SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_ACCOUNT|
+> +                       SLAB_NO_FREE_INIT,
+>                         offsetof(struct mm_struct, saved_auxv),
+>                         sizeof_field(struct mm_struct, saved_auxv),
+>                         NULL);
+> -       vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
+> +       vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT|
+> +                                                   SLAB_NO_FREE_INIT);
+>         mmap_init();
+>         nsproxy_cache_init();
+>  }
+> diff --git a/mm/rmap.c b/mm/rmap.c
+> index e5dfe2ae6b0d..b7b8013eeb0a 100644
+> --- a/mm/rmap.c
+> +++ b/mm/rmap.c
+> @@ -432,10 +432,11 @@ static void anon_vma_ctor(void *data)
+>  void __init anon_vma_init(void)
+>  {
+>         anon_vma_cachep = kmem_cache_create("anon_vma", sizeof(struct anon_vma),
+> -                       0, SLAB_TYPESAFE_BY_RCU|SLAB_PANIC|SLAB_ACCOUNT,
+> +                       0, SLAB_TYPESAFE_BY_RCU|SLAB_PANIC|SLAB_ACCOUNT|
+> +                       SLAB_NO_FREE_INIT,
+>                         anon_vma_ctor);
+>         anon_vma_chain_cachep = KMEM_CACHE(anon_vma_chain,
+> -                       SLAB_PANIC|SLAB_ACCOUNT);
+> +                       SLAB_PANIC|SLAB_ACCOUNT|SLAB_NO_FREE_INIT);
+>  }
+>
+>  /*
+> diff --git a/mm/slab.h b/mm/slab.h
+> index 24ae887359b8..f95b4f03c57b 100644
+> --- a/mm/slab.h
+> +++ b/mm/slab.h
+> @@ -129,7 +129,8 @@ static inline slab_flags_t kmem_cache_flags(unsigned int object_size,
+>  /* Legal flag mask for kmem_cache_create(), for various configurations */
+>  #define SLAB_CORE_FLAGS (SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA | \
+>                          SLAB_CACHE_DMA32 | SLAB_PANIC | \
+> -                        SLAB_TYPESAFE_BY_RCU | SLAB_DEBUG_OBJECTS )
+> +                        SLAB_TYPESAFE_BY_RCU | SLAB_DEBUG_OBJECTS | \
+> +                        SLAB_NO_FREE_INIT)
+>
+>  #if defined(CONFIG_DEBUG_SLAB)
+>  #define SLAB_DEBUG_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER)
+> @@ -535,7 +536,7 @@ static inline bool slab_want_init_on_alloc(gfp_t flags, struct kmem_cache *c)
+>  static inline bool slab_want_init_on_free(struct kmem_cache *c)
+>  {
+>         if (static_branch_unlikely(&init_on_free))
+> -               return !(c->ctor);
+> +               return !(c->ctor) && ((c->flags & SLAB_NO_FREE_INIT) == 0);
+>         else
+>                 return false;
+>  }
+> diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+> index e89be6282693..b65902d2c042 100644
+> --- a/net/core/skbuff.c
+> +++ b/net/core/skbuff.c
+> @@ -3981,14 +3981,16 @@ void __init skb_init(void)
+>         skbuff_head_cache = kmem_cache_create_usercopy("skbuff_head_cache",
+>                                               sizeof(struct sk_buff),
+>                                               0,
+> -                                             SLAB_HWCACHE_ALIGN|SLAB_PANIC,
+> +                                             SLAB_HWCACHE_ALIGN|SLAB_PANIC|
+> +                                             SLAB_NO_FREE_INIT,
+>                                               offsetof(struct sk_buff, cb),
+>                                               sizeof_field(struct sk_buff, cb),
+>                                               NULL);
+>         skbuff_fclone_cache = kmem_cache_create("skbuff_fclone_cache",
+>                                                 sizeof(struct sk_buff_fclones),
+>                                                 0,
+> -                                               SLAB_HWCACHE_ALIGN|SLAB_PANIC,
+> +                                               SLAB_HWCACHE_ALIGN|SLAB_PANIC|
+> +                                               SLAB_NO_FREE_INIT,
+>                                                 NULL);
+>         skb_extensions_init();
+>  }
+> --
+> 2.17.1
+>
+>
+> --
+> Kees Cook
