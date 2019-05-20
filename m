@@ -1,57 +1,37 @@
 From: Thomas Garnier <thgarnie@chromium.org>
-Subject: [PATCH v7 02/12] x86: Use symbol name in jump table for PIE support
-Date: Mon, 20 May 2019 16:19:27 -0700
-Message-Id: <20190520231948.49693-3-thgarnie@chromium.org>
+Subject: [PATCH v7 03/12] x86: Add macro to get symbol address for PIE support
+Date: Mon, 20 May 2019 16:19:28 -0700
+Message-Id: <20190520231948.49693-4-thgarnie@chromium.org>
 In-Reply-To: <20190520231948.49693-1-thgarnie@chromium.org>
 References: <20190520231948.49693-1-thgarnie@chromium.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: kernel-hardening@lists.openwall.com
-Cc: kristen@linux.intel.com, Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Nadav Amit <namit@vmware.com>, Michael Ellerman <mpe@ellerman.id.au>, Masahiro Yamada <yamada.masahiro@socionext.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-kernel@vger.kernel.org
+Cc: kristen@linux.intel.com, Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Peter Zijlstra <peterz@infradead.org>, Nadav Amit <namit@vmware.com>, Jann Horn <jannh@google.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Thomas Garnier <thgarnie@google.com>
 
-Replace the %c constraint with %P. The %c is incompatible with PIE
-because it implies an immediate value whereas %P reference a symbol.
-Change the _ASM_PTR reference to .long for expected relocation size and
-add a long padding to ensure entry alignment.
-
-Position Independent Executable (PIE) support will allow to extend the
-KASLR randomization range below 0xffffffff80000000.
+Add a new _ASM_MOVABS macro to fetch a symbol address. It will be used
+to replace "_ASM_MOV $<symbol>, %dst" code construct that are not
+compatible with PIE.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- arch/x86/include/asm/jump_label.h | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+ arch/x86/include/asm/asm.h | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/arch/x86/include/asm/jump_label.h b/arch/x86/include/asm/jump_label.h
-index 65191ce8e1cf..e47fad8ee632 100644
---- a/arch/x86/include/asm/jump_label.h
-+++ b/arch/x86/include/asm/jump_label.h
-@@ -25,9 +25,9 @@ static __always_inline bool arch_static_branch(struct static_key *key, bool bran
- 		".pushsection __jump_table,  \"aw\" \n\t"
- 		_ASM_ALIGN "\n\t"
- 		".long 1b - ., %l[l_yes] - . \n\t"
--		_ASM_PTR "%c0 + %c1 - .\n\t"
-+		_ASM_PTR "%P0 - .\n\t"
- 		".popsection \n\t"
--		: :  "i" (key), "i" (branch) : : l_yes);
-+		: :  "X" (&((char *)key)[branch]) : : l_yes);
+diff --git a/arch/x86/include/asm/asm.h b/arch/x86/include/asm/asm.h
+index 3ff577c0b102..3a686057e882 100644
+--- a/arch/x86/include/asm/asm.h
++++ b/arch/x86/include/asm/asm.h
+@@ -30,6 +30,7 @@
+ #define _ASM_ALIGN	__ASM_SEL(.balign 4, .balign 8)
  
- 	return false;
- l_yes:
-@@ -42,9 +42,9 @@ static __always_inline bool arch_static_branch_jump(struct static_key *key, bool
- 		".pushsection __jump_table,  \"aw\" \n\t"
- 		_ASM_ALIGN "\n\t"
- 		".long 1b - ., %l[l_yes] - . \n\t"
--		_ASM_PTR "%c0 + %c1 - .\n\t"
-+		_ASM_PTR "%P0 - .\n\t"
- 		".popsection \n\t"
--		: :  "i" (key), "i" (branch) : : l_yes);
-+		: : "X" (&((char *)key)[branch]) : : l_yes);
- 
- 	return false;
- l_yes:
+ #define _ASM_MOV	__ASM_SIZE(mov)
++#define _ASM_MOVABS	__ASM_SEL(movl, movabsq)
+ #define _ASM_INC	__ASM_SIZE(inc)
+ #define _ASM_DEC	__ASM_SIZE(dec)
+ #define _ASM_ADD	__ASM_SIZE(add)
 -- 
 2.21.0.1020.gf2820cf01a-goog
