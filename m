@@ -1,9 +1,9 @@
 From: Sasha Levin <sashal@kernel.org>
-Subject: [PATCH AUTOSEL 5.1 055/375] x86/modules: Avoid breaking W^X while loading modules
-Date: Wed, 22 May 2019 15:15:55 -0400
-Message-Id: <20190522192115.22666-55-sashal@kernel.org>
-In-Reply-To: <20190522192115.22666-1-sashal@kernel.org>
-References: <20190522192115.22666-1-sashal@kernel.org>
+Subject: [PATCH AUTOSEL 4.19 039/244] x86/modules: Avoid breaking W^X while loading modules
+Date: Wed, 22 May 2019 15:23:05 -0400
+Message-Id: <20190522192630.24917-39-sashal@kernel.org>
+In-Reply-To: <20190522192630.24917-1-sashal@kernel.org>
+References: <20190522192630.24917-1-sashal@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
@@ -63,10 +63,10 @@ Signed-off-by: Sasha Levin <sashal@kernel.org>
  4 files changed, 28 insertions(+), 8 deletions(-)
 
 diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index 9a79c7808f9cc..d7df79fc448cd 100644
+index b9d5e7c9ef43e..918a23704c0c5 100644
 --- a/arch/x86/kernel/alternative.c
 +++ b/arch/x86/kernel/alternative.c
-@@ -667,15 +667,29 @@ void __init alternative_instructions(void)
+@@ -662,15 +662,29 @@ void __init alternative_instructions(void)
   * handlers seeing an inconsistent instruction while you patch.
   */
  void *__init_or_module text_poke_early(void *addr, const void *opcode,
@@ -104,7 +104,7 @@ index 9a79c7808f9cc..d7df79fc448cd 100644
  }
  
 diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
-index b052e883dd8cc..cfa3106faee42 100644
+index f58336af095c9..6645f123419c6 100644
 --- a/arch/x86/kernel/module.c
 +++ b/arch/x86/kernel/module.c
 @@ -87,7 +87,7 @@ void *module_alloc(unsigned long size)
@@ -117,10 +117,10 @@ index b052e883dd8cc..cfa3106faee42 100644
  	if (p && (kasan_module_alloc(p, size) < 0)) {
  		vfree(p);
 diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 6074aa064b540..14ec3bdad9a90 100644
+index 037610845892b..6afc2e2d5aeda 100644
 --- a/include/linux/filter.h
 +++ b/include/linux/filter.h
-@@ -746,6 +746,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+@@ -684,6 +684,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
  static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
  {
  	set_memory_ro((unsigned long)hdr, hdr->pages);
@@ -129,10 +129,10 @@ index 6074aa064b540..14ec3bdad9a90 100644
  
  static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
 diff --git a/kernel/module.c b/kernel/module.c
-index 0b9aa8ab89f08..2b2845ae983ed 100644
+index 38bf28b5cc202..f797c6ace7121 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
-@@ -1950,8 +1950,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
+@@ -1949,8 +1949,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
  		return;
  
  	frob_text(&mod->core_layout, set_memory_ro);
