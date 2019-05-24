@@ -1,298 +1,101 @@
-Date: Thu, 23 May 2019 16:08:44 +0200
-In-Reply-To: <20190523140844.132150-1-glider@google.com>
-Message-Id: <20190523140844.132150-4-glider@google.com>
-Mime-Version: 1.0
+Date: Thu, 23 May 2019 17:04:48 -0700
+From: Kees Cook <keescook@chromium.org>
+Subject: Re: [PATCH v4 1/3] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+Message-ID: <201905231647.ED31A5FE30@keescook>
 References: <20190523140844.132150-1-glider@google.com>
-Subject: [PATCH v4 3/3] lib: introduce test_meminit module
-From: Alexander Potapenko <glider@google.com>
-Content-Type: text/plain; charset="UTF-8"
-To: akpm@linux-foundation.org, cl@linux.com, keescook@chromium.org
-Cc: kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-security-module@vger.kernel.org, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>
+ <20190523140844.132150-2-glider@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190523140844.132150-2-glider@google.com>
+To: Alexander Potapenko <glider@google.com>
+Cc: akpm@linux-foundation.org, cl@linux.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-security-module@vger.kernel.org, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add tests for heap and pagealloc initialization.
-These can be used to check init_on_alloc and init_on_free implementations
-as well as other approaches to initialization.
+On Thu, May 23, 2019 at 04:08:42PM +0200, Alexander Potapenko wrote:
+> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+> index 52e6fbb042cc..68fb6fa41cc1 100644
+> --- a/Documentation/admin-guide/kernel-parameters.txt
+> +++ b/Documentation/admin-guide/kernel-parameters.txt
+> @@ -1673,6 +1673,14 @@
+>  
+>  	initrd=		[BOOT] Specify the location of the initial ramdisk
+>  
+> +	init_on_alloc=	[MM] Fill newly allocated pages and heap objects with
+> +			zeroes.
+> +			Format: 0 | 1
+> +			Default set by CONFIG_INIT_ON_ALLOC_DEFAULT_ON.
+> +	init_on_free=	[MM] Fill freed pages and heap objects with zeroes.
+> +			Format: 0 | 1
+> +			Default set by CONFIG_INIT_ON_FREE_DEFAULT_ON.
+> +
+>  	init_pkru=	[x86] Specify the default memory protection keys rights
+>  			register contents for all processes.  0x55555554 by
+>  			default (disallow access to all but pkey 0).  Can
 
-Expected test output in the case the kernel provides heap initialization
-(e.g. when running with either init_on_alloc=1 or init_on_free=1):
+Nit: add a blank line between these new options' documentation to match
+the others.
 
-  test_meminit: all 10 tests in test_pages passed
-  test_meminit: all 40 tests in test_kvmalloc passed
-  test_meminit: all 20 tests in test_kmemcache passed
-  test_meminit: all 70 tests passed!
+> diff --git a/security/Kconfig.hardening b/security/Kconfig.hardening
+> index 0a1d4ca314f4..87883e3e3c2a 100644
+> --- a/security/Kconfig.hardening
+> +++ b/security/Kconfig.hardening
+> @@ -159,6 +159,20 @@ config STACKLEAK_RUNTIME_DISABLE
+>  	  runtime to control kernel stack erasing for kernels built with
+>  	  CONFIG_GCC_PLUGIN_STACKLEAK.
+>  
+> +config INIT_ON_ALLOC_DEFAULT_ON
+> +	bool "Set init_on_alloc=1 by default"
+> +	help
+> +	  Enable init_on_alloc=1 by default, making the kernel initialize every
+> +	  page and heap allocation with zeroes.
+> +	  init_on_alloc can be overridden via command line.
+> +
+> +config INIT_ON_FREE_DEFAULT_ON
+> +	bool "Set init_on_free=1 by default"
+> +	help
+> +	  Enable init_on_free=1 by default, making the kernel initialize freed
+> +	  pages and slab memory with zeroes.
+> +	  init_on_free can be overridden via command line.
+> +
 
-Signed-off-by: Alexander Potapenko <glider@google.com>
-To: Kees Cook <keescook@chromium.org>
-To: Andrew Morton <akpm@linux-foundation.org>
-To: Christoph Lameter <cl@linux.com>
-Cc: Nick Desaulniers <ndesaulniers@google.com>
-Cc: Kostya Serebryany <kcc@google.com>
-Cc: Dmitry Vyukov <dvyukov@google.com>
-Cc: Sandeep Patil <sspatil@android.com>
-Cc: Laura Abbott <labbott@redhat.com>
-Cc: Jann Horn <jannh@google.com>
-Cc: linux-mm@kvack.org
-Cc: linux-security-module@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
----
- v3:
-  - added example test output to the description
-  - fixed a missing include spotted by kbuild test robot <lkp@intel.com>
-  - added a missing MODULE_LICENSE
-  - call do_kmem_cache_size() with size >= sizeof(void*) to unbreak
-  debug builds
----
- lib/Kconfig.debug  |   8 ++
- lib/Makefile       |   1 +
- lib/test_meminit.c | 208 +++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 217 insertions(+)
- create mode 100644 lib/test_meminit.c
+I think these could use a lot more detail. How about something like
+these, with more details and performance notes:
 
-diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-index fdfa173651eb..036e8ef03831 100644
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -2043,6 +2043,14 @@ config TEST_STACKINIT
- 
- 	  If unsure, say N.
- 
-+config TEST_MEMINIT
-+	tristate "Test level of heap/page initialization"
-+	help
-+	  Test if the kernel is zero-initializing heap and page allocations.
-+	  This can be useful to test init_on_alloc and init_on_free features.
-+
-+	  If unsure, say N.
-+
- endif # RUNTIME_TESTING_MENU
- 
- config MEMTEST
-diff --git a/lib/Makefile b/lib/Makefile
-index fb7697031a79..05980c802500 100644
---- a/lib/Makefile
-+++ b/lib/Makefile
-@@ -91,6 +91,7 @@ obj-$(CONFIG_TEST_DEBUG_VIRTUAL) += test_debug_virtual.o
- obj-$(CONFIG_TEST_MEMCAT_P) += test_memcat_p.o
- obj-$(CONFIG_TEST_OBJAGG) += test_objagg.o
- obj-$(CONFIG_TEST_STACKINIT) += test_stackinit.o
-+obj-$(CONFIG_TEST_MEMINIT) += test_meminit.o
- 
- obj-$(CONFIG_TEST_LIVEPATCH) += livepatch/
- 
-diff --git a/lib/test_meminit.c b/lib/test_meminit.c
-new file mode 100644
-index 000000000000..d46e2b8c8e8e
---- /dev/null
-+++ b/lib/test_meminit.c
-@@ -0,0 +1,208 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Test cases for SL[AOU]B/page initialization at alloc/free time.
-+ */
-+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-+
-+#include <linux/init.h>
-+#include <linux/kernel.h>
-+#include <linux/mm.h>
-+#include <linux/module.h>
-+#include <linux/slab.h>
-+#include <linux/string.h>
-+#include <linux/vmalloc.h>
-+
-+#define GARBAGE_INT (0x09A7BA9E)
-+#define GARBAGE_BYTE (0x9E)
-+
-+#define REPORT_FAILURES_IN_FN() \
-+	do {	\
-+		if (failures)	\
-+			pr_info("%s failed %d out of %d times\n",	\
-+				__func__, failures, num_tests);		\
-+		else		\
-+			pr_info("all %d tests in %s passed\n",		\
-+				num_tests, __func__);			\
-+	} while (0)
-+
-+/* Calculate the number of uninitialized bytes in the buffer. */
-+static int count_nonzero_bytes(void *ptr, size_t size)
-+{
-+	int i, ret = 0;
-+	unsigned char *p = (unsigned char *)ptr;
-+
-+	for (i = 0; i < size; i++)
-+		if (p[i])
-+			ret++;
-+	return ret;
-+}
-+
-+static void fill_with_garbage(void *ptr, size_t size)
-+{
-+	unsigned int *p = (unsigned int *)ptr;
-+	int i = 0;
-+
-+	while (size >= sizeof(*p)) {
-+		p[i] = GARBAGE_INT;
-+		i++;
-+		size -= sizeof(*p);
-+	}
-+	if (size)
-+		memset(&p[i], GARBAGE_BYTE, size);
-+}
-+
-+static int __init do_alloc_pages_order(int order, int *total_failures)
-+{
-+	struct page *page;
-+	void *buf;
-+	size_t size = PAGE_SIZE << order;
-+
-+	page = alloc_pages(GFP_KERNEL, order);
-+	buf = page_address(page);
-+	fill_with_garbage(buf, size);
-+	__free_pages(page, order);
-+
-+	page = alloc_pages(GFP_KERNEL, order);
-+	buf = page_address(page);
-+	if (count_nonzero_bytes(buf, size))
-+		(*total_failures)++;
-+	fill_with_garbage(buf, size);
-+	__free_pages(page, order);
-+	return 1;
-+}
-+
-+static int __init test_pages(int *total_failures)
-+{
-+	int failures = 0, num_tests = 0;
-+	int i;
-+
-+	for (i = 0; i < 10; i++)
-+		num_tests += do_alloc_pages_order(i, &failures);
-+
-+	REPORT_FAILURES_IN_FN();
-+	*total_failures += failures;
-+	return num_tests;
-+}
-+
-+static int __init do_kmalloc_size(size_t size, int *total_failures)
-+{
-+	void *buf;
-+
-+	buf = kmalloc(size, GFP_KERNEL);
-+	fill_with_garbage(buf, size);
-+	kfree(buf);
-+
-+	buf = kmalloc(size, GFP_KERNEL);
-+	if (count_nonzero_bytes(buf, size))
-+		(*total_failures)++;
-+	fill_with_garbage(buf, size);
-+	kfree(buf);
-+	return 1;
-+}
-+
-+static int __init do_vmalloc_size(size_t size, int *total_failures)
-+{
-+	void *buf;
-+
-+	buf = vmalloc(size);
-+	fill_with_garbage(buf, size);
-+	vfree(buf);
-+
-+	buf = vmalloc(size);
-+	if (count_nonzero_bytes(buf, size))
-+		(*total_failures)++;
-+	fill_with_garbage(buf, size);
-+	vfree(buf);
-+	return 1;
-+}
-+
-+static int __init test_kvmalloc(int *total_failures)
-+{
-+	int failures = 0, num_tests = 0;
-+	int i, size;
-+
-+	for (i = 0; i < 20; i++) {
-+		size = 1 << i;
-+		num_tests += do_kmalloc_size(size, &failures);
-+		num_tests += do_vmalloc_size(size, &failures);
-+	}
-+
-+	REPORT_FAILURES_IN_FN();
-+	*total_failures += failures;
-+	return num_tests;
-+}
-+
-+#define CTOR_BYTES 4
-+/* Initialize the first 4 bytes of the object. */
-+void some_ctor(void *obj)
-+{
-+	memset(obj, 'A', CTOR_BYTES);
-+}
-+
-+static int __init do_kmem_cache_size(size_t size, bool want_ctor,
-+				     int *total_failures)
-+{
-+	struct kmem_cache *c;
-+	void *buf;
-+	int iter, bytes = 0;
-+	int fail = 0;
-+
-+	c = kmem_cache_create("test_cache", size, 1, 0,
-+			      want_ctor ? some_ctor : NULL);
-+	for (iter = 0; iter < 10; iter++) {
-+		buf = kmem_cache_alloc(c, GFP_KERNEL);
-+		if (!want_ctor || iter == 0)
-+			bytes = count_nonzero_bytes(buf, size);
-+		if (want_ctor) {
-+			/*
-+			 * Newly initialized memory must be initialized using
-+			 * the constructor.
-+			 */
-+			if (iter == 0 && bytes < CTOR_BYTES)
-+				fail = 1;
-+		} else {
-+			if (bytes)
-+				fail = 1;
-+		}
-+		fill_with_garbage(buf, size);
-+		kmem_cache_free(c, buf);
-+	}
-+	kmem_cache_destroy(c);
-+
-+	*total_failures += fail;
-+	return 1;
-+}
-+
-+static int __init test_kmemcache(int *total_failures)
-+{
-+	int failures = 0, num_tests = 0;
-+	int i, size;
-+
-+	for (i = 0; i < 10; i++) {
-+		size = 8 << i;
-+		num_tests += do_kmem_cache_size(size, false, &failures);
-+		num_tests += do_kmem_cache_size(size, true, &failures);
-+	}
-+	REPORT_FAILURES_IN_FN();
-+	*total_failures += failures;
-+	return num_tests;
-+}
-+
-+static int __init test_meminit_init(void)
-+{
-+	int failures = 0, num_tests = 0;
-+
-+	num_tests += test_pages(&failures);
-+	num_tests += test_kvmalloc(&failures);
-+	num_tests += test_kmemcache(&failures);
-+
-+	if (failures == 0)
-+		pr_info("all %d tests passed!\n", num_tests);
-+	else
-+		pr_info("failures: %d out of %d\n", failures, num_tests);
-+
-+	return failures ? -EINVAL : 0;
-+}
-+module_init(test_meminit_init);
-+
-+MODULE_LICENSE("GPL");
+config INIT_ON_ALLOC_DEFAULT_ON
+	bool "Enable heap memory zeroing on allocation by default"
+	help
+	  This has the effect of setting "init_on_alloc=1" on the kernel
+	  command line. This can be disabled with "init_on_alloc=0".
+	  When "init_on_alloc" is enabled, all page allocator and slab
+	  allocator memory will be zeroed when allocated, eliminating
+	  many kinds of "uninitialized heap memory" flaws, especially
+	  heap content exposures. The performance impact varies by
+	  workload, but most cases see <1% impact. Some synthetic
+	  workloads have measured as high as 7%.
+
+config INIT_ON_FREE_DEFAULT_ON
+	bool "Enable heap memory zeroing on free by default"
+	help
+	  This has the effect of setting "init_on_free=1" on the kernel
+	  command line. This can be disabled with "init_on_free=0".
+	  Similar to "init_on_alloc", when "init_on_free" is enabled,
+	  all page allocator and slab allocator memory will be zeroed
+	  when freed, eliminating many kinds of "uninitialized heap memory"
+	  flaws, especially heap content exposures. The primary difference
+	  with "init_on_free" is that data lifetime in memory is reduced,
+	  as anything freed is wiped immediately, making live forensics or
+	  cold boot memory attacks unable to recover freed memory contents.
+	  The performance impact varies by workload, but is more expensive
+	  than "init_on_alloc" due to the negative cache effects of
+	  touching "cold" memory areas. Most cases see 3-5% impact. Some
+	  synthetic workloads have measured as high as 8%.
+
+
 -- 
-2.21.0.1020.gf2820cf01a-goog
+Kees Cook
+
+
+-- 
+Kees Cook
