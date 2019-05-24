@@ -1,101 +1,180 @@
-Date: Thu, 23 May 2019 17:04:48 -0700
-From: Kees Cook <keescook@chromium.org>
-Subject: Re: [PATCH v4 1/3] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
-Message-ID: <201905231647.ED31A5FE30@keescook>
-References: <20190523140844.132150-1-glider@google.com>
- <20190523140844.132150-2-glider@google.com>
+From: "Christopher M. Riedl" <cmr@informatik.wtf>
+Subject: [RFC PATCH v2] powerpc/xmon: restrict when kernel is locked down
+Date: Fri, 24 May 2019 07:38:18 -0500
+Message-Id: <20190524123816.1773-1-cmr@informatik.wtf>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190523140844.132150-2-glider@google.com>
-To: Alexander Potapenko <glider@google.com>
-Cc: akpm@linux-foundation.org, cl@linux.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-security-module@vger.kernel.org, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>
+Content-Transfer-Encoding: 8bit
+To: linuxppc-dev@ozlabs.org, kernel-hardening@lists.openwall.com
+Cc: ajd@linux.ibm.com, mjg59@google.com, dja@axtens.net, "Christopher M. Riedl" <cmr@informatik.wtf>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 23, 2019 at 04:08:42PM +0200, Alexander Potapenko wrote:
-> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-> index 52e6fbb042cc..68fb6fa41cc1 100644
-> --- a/Documentation/admin-guide/kernel-parameters.txt
-> +++ b/Documentation/admin-guide/kernel-parameters.txt
-> @@ -1673,6 +1673,14 @@
->  
->  	initrd=		[BOOT] Specify the location of the initial ramdisk
->  
-> +	init_on_alloc=	[MM] Fill newly allocated pages and heap objects with
-> +			zeroes.
-> +			Format: 0 | 1
-> +			Default set by CONFIG_INIT_ON_ALLOC_DEFAULT_ON.
-> +	init_on_free=	[MM] Fill freed pages and heap objects with zeroes.
-> +			Format: 0 | 1
-> +			Default set by CONFIG_INIT_ON_FREE_DEFAULT_ON.
-> +
->  	init_pkru=	[x86] Specify the default memory protection keys rights
->  			register contents for all processes.  0x55555554 by
->  			default (disallow access to all but pkey 0).  Can
+Xmon should be either fully or partially disabled depending on the
+kernel lockdown state.
 
-Nit: add a blank line between these new options' documentation to match
-the others.
+Put xmon into read-only mode for lockdown=integrity and completely
+disable xmon when lockdown=confidentiality. Xmon checks the lockdown
+state and takes appropriate action:
 
-> diff --git a/security/Kconfig.hardening b/security/Kconfig.hardening
-> index 0a1d4ca314f4..87883e3e3c2a 100644
-> --- a/security/Kconfig.hardening
-> +++ b/security/Kconfig.hardening
-> @@ -159,6 +159,20 @@ config STACKLEAK_RUNTIME_DISABLE
->  	  runtime to control kernel stack erasing for kernels built with
->  	  CONFIG_GCC_PLUGIN_STACKLEAK.
->  
-> +config INIT_ON_ALLOC_DEFAULT_ON
-> +	bool "Set init_on_alloc=1 by default"
-> +	help
-> +	  Enable init_on_alloc=1 by default, making the kernel initialize every
-> +	  page and heap allocation with zeroes.
-> +	  init_on_alloc can be overridden via command line.
-> +
-> +config INIT_ON_FREE_DEFAULT_ON
-> +	bool "Set init_on_free=1 by default"
-> +	help
-> +	  Enable init_on_free=1 by default, making the kernel initialize freed
-> +	  pages and slab memory with zeroes.
-> +	  init_on_free can be overridden via command line.
-> +
+ (1) during xmon_setup to prevent early xmon'ing
 
-I think these could use a lot more detail. How about something like
-these, with more details and performance notes:
+ (2) when triggered via sysrq
 
-config INIT_ON_ALLOC_DEFAULT_ON
-	bool "Enable heap memory zeroing on allocation by default"
-	help
-	  This has the effect of setting "init_on_alloc=1" on the kernel
-	  command line. This can be disabled with "init_on_alloc=0".
-	  When "init_on_alloc" is enabled, all page allocator and slab
-	  allocator memory will be zeroed when allocated, eliminating
-	  many kinds of "uninitialized heap memory" flaws, especially
-	  heap content exposures. The performance impact varies by
-	  workload, but most cases see <1% impact. Some synthetic
-	  workloads have measured as high as 7%.
+ (3) when toggled via debugfs
 
-config INIT_ON_FREE_DEFAULT_ON
-	bool "Enable heap memory zeroing on free by default"
-	help
-	  This has the effect of setting "init_on_free=1" on the kernel
-	  command line. This can be disabled with "init_on_free=0".
-	  Similar to "init_on_alloc", when "init_on_free" is enabled,
-	  all page allocator and slab allocator memory will be zeroed
-	  when freed, eliminating many kinds of "uninitialized heap memory"
-	  flaws, especially heap content exposures. The primary difference
-	  with "init_on_free" is that data lifetime in memory is reduced,
-	  as anything freed is wiped immediately, making live forensics or
-	  cold boot memory attacks unable to recover freed memory contents.
-	  The performance impact varies by workload, but is more expensive
-	  than "init_on_alloc" due to the negative cache effects of
-	  touching "cold" memory areas. Most cases see 3-5% impact. Some
-	  synthetic workloads have measured as high as 8%.
+ (4) when triggered via a previously enabled breakpoint
 
+The following lockdown state transitions are handled:
 
+ (1) lockdown=none -> lockdown=integrity
+     clear all breakpoints, set xmon read-only mode
+
+ (2) lockdown=none -> lockdown=confidentiality
+     clear all breakpoints, prevent re-entry into xmon
+
+ (3) lockdown=integrity -> lockdown=confidentiality
+     prevent re-entry into xmon
+
+Suggested-by: Andrew Donnellan <ajd@linux.ibm.com>
+Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
+---
+
+Applies on top of this series:
+	https://patchwork.kernel.org/cover/10884631/
+
+I've done some limited testing of the scenarios mentioned in the commit
+message on a single CPU QEMU config.
+
+v1->v2:
+	Fix subject line
+	Submit to linuxppc-dev and kernel-hardening
+
+ arch/powerpc/xmon/xmon.c | 56 +++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 55 insertions(+), 1 deletion(-)
+
+diff --git a/arch/powerpc/xmon/xmon.c b/arch/powerpc/xmon/xmon.c
+index 3e7be19aa208..8c4a5a0c28f0 100644
+--- a/arch/powerpc/xmon/xmon.c
++++ b/arch/powerpc/xmon/xmon.c
+@@ -191,6 +191,9 @@ static void dump_tlb_44x(void);
+ static void dump_tlb_book3e(void);
+ #endif
+ 
++static void clear_all_bpt(void);
++static void xmon_init(int);
++
+ #ifdef CONFIG_PPC64
+ #define REG		"%.16lx"
+ #else
+@@ -291,6 +294,39 @@ Commands:\n\
+   zh	halt\n"
+ ;
+ 
++#ifdef CONFIG_LOCK_DOWN_KERNEL
++static bool xmon_check_lockdown(void)
++{
++	static bool lockdown = false;
++
++	if (!lockdown) {
++		lockdown = kernel_is_locked_down("Using xmon",
++						 LOCKDOWN_CONFIDENTIALITY);
++		if (lockdown) {
++			printf("xmon: Disabled by strict kernel lockdown\n");
++			xmon_on = 0;
++			xmon_init(0);
++		}
++	}
++
++	if (!xmon_is_ro) {
++		xmon_is_ro = kernel_is_locked_down("Using xmon write-access",
++						   LOCKDOWN_INTEGRITY);
++		if (xmon_is_ro) {
++			printf("xmon: Read-only due to kernel lockdown\n");
++			clear_all_bpt();
++		}
++	}
++
++	return lockdown;
++}
++#else
++inline static bool xmon_check_lockdown(void)
++{
++	return false;
++}
++#endif /* CONFIG_LOCK_DOWN_KERNEL */
++
+ static struct pt_regs *xmon_regs;
+ 
+ static inline void sync(void)
+@@ -708,6 +744,9 @@ static int xmon_bpt(struct pt_regs *regs)
+ 	struct bpt *bp;
+ 	unsigned long offset;
+ 
++	if (xmon_check_lockdown())
++		return 0;
++
+ 	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+ 		return 0;
+ 
+@@ -739,6 +778,9 @@ static int xmon_sstep(struct pt_regs *regs)
+ 
+ static int xmon_break_match(struct pt_regs *regs)
+ {
++	if (xmon_check_lockdown())
++		return 0;
++
+ 	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+ 		return 0;
+ 	if (dabr.enabled == 0)
+@@ -749,6 +791,9 @@ static int xmon_break_match(struct pt_regs *regs)
+ 
+ static int xmon_iabr_match(struct pt_regs *regs)
+ {
++	if (xmon_check_lockdown())
++		return 0;
++
+ 	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+ 		return 0;
+ 	if (iabr == NULL)
+@@ -3742,6 +3787,9 @@ static void xmon_init(int enable)
+ #ifdef CONFIG_MAGIC_SYSRQ
+ static void sysrq_handle_xmon(int key)
+ {
++	if (xmon_check_lockdown())
++		return;
++
+ 	/* ensure xmon is enabled */
+ 	xmon_init(1);
+ 	debugger(get_irq_regs());
+@@ -3763,7 +3811,6 @@ static int __init setup_xmon_sysrq(void)
+ device_initcall(setup_xmon_sysrq);
+ #endif /* CONFIG_MAGIC_SYSRQ */
+ 
+-#ifdef CONFIG_DEBUG_FS
+ static void clear_all_bpt(void)
+ {
+ 	int i;
+@@ -3785,8 +3832,12 @@ static void clear_all_bpt(void)
+ 	printf("xmon: All breakpoints cleared\n");
+ }
+ 
++#ifdef CONFIG_DEBUG_FS
+ static int xmon_dbgfs_set(void *data, u64 val)
+ {
++	if (xmon_check_lockdown())
++		return 0;
++
+ 	xmon_on = !!val;
+ 	xmon_init(xmon_on);
+ 
+@@ -3845,6 +3896,9 @@ early_param("xmon", early_parse_xmon);
+ 
+ void __init xmon_setup(void)
+ {
++	if (xmon_check_lockdown())
++		return;
++
+ 	if (xmon_on)
+ 		xmon_init(1);
+ 	if (xmon_early)
 -- 
-Kees Cook
-
-
--- 
-Kees Cook
+2.21.0
