@@ -1,34 +1,41 @@
 MIME-Version: 1.0
-References: <20190520231948.49693-1-thgarnie@chromium.org> <20190520231948.49693-12-thgarnie@chromium.org>
- <1b53b8eb-5dd3-fb57-d8db-06eedd0ce49f@suse.com>
-In-Reply-To: <1b53b8eb-5dd3-fb57-d8db-06eedd0ce49f@suse.com>
-From: Thomas Garnier <thgarnie@chromium.org>
-Date: Wed, 29 May 2019 08:48:32 -0700
-Message-ID: <CAJcbSZF1xcMpLDrOLkh493+ciVUqrku9WkWdb5xxAqWuXMjGZw@mail.gmail.com>
-Subject: Re: [PATCH v7 11/12] x86/paravirt: Adapt assembly for PIE support
+References: <20190528162603.GA24097@kroah.com> <155905930702.7587.7100265859075976147.stgit@warthog.procyon.org.uk>
+ <155905931502.7587.11705449537368497489.stgit@warthog.procyon.org.uk>
+ <4031.1559064620@warthog.procyon.org.uk> <20190528231218.GA28384@kroah.com> <31936.1559146000@warthog.procyon.org.uk>
+In-Reply-To: <31936.1559146000@warthog.procyon.org.uk>
+From: Jann Horn <jannh@google.com>
+Date: Wed, 29 May 2019 19:46:54 +0200
+Message-ID: <CAG48ez0R-R3Xs+3Xg9T9qcV3Xv6r4pnx1Z2y=Ltx7RGOayte_w@mail.gmail.com>
+Subject: Re: [PATCH 1/7] General notification queue with user mmap()'able ring buffer
 Content-Type: text/plain; charset="UTF-8"
-To: Juergen Gross <jgross@suse.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kristen Carlson Accardi <kristen@linux.intel.com>, Alok Kataria <akataria@vmware.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, virtualization@lists.linux-foundation.org, LKML <linux-kernel@vger.kernel.org>
+To: David Howells <dhowells@redhat.com>
+Cc: Greg KH <gregkh@linuxfoundation.org>, Al Viro <viro@zeniv.linux.org.uk>, raven@themaw.net, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, linux-block@vger.kernel.org, keyrings@vger.kernel.org, linux-security-module <linux-security-module@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, May 26, 2019 at 10:47 PM Juergen Gross <jgross@suse.com> wrote:
+On Wed, May 29, 2019 at 6:07 PM David Howells <dhowells@redhat.com> wrote:
+> Greg KH <gregkh@linuxfoundation.org> wrote:
+> > everyone should use
+> > it.  It saves us having to audit the same pattern over and over again.
+> > And, even nicer, it uses a refcount now, and as you are trying to
+> > reference count an object, it is exactly what this was written for.
+> >
+> > So yes, I do think it should be used here, unless it is deemed to not
+> > fit the pattern/usage model.
 >
-> On 21/05/2019 01:19, Thomas Garnier wrote:
-> > From: Thomas Garnier <thgarnie@google.com>
-> >
-> > if PIE is enabled, switch the paravirt assembly constraints to be
-> > compatible. The %c/i constrains generate smaller code so is kept by
-> > default.
-> >
-> > Position Independent Executable (PIE) support will allow to extend the
-> > KASLR randomization range below 0xffffffff80000000.
-> >
-> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> kref_put() enforces a very specific destructor signature.  I know of places
+> where that doesn't work because the destructor takes more than one argument
+> (granted that this is not the case here).  So why does kref_put() exist at
+> all?  Why not kref_dec_and_test()?
 >
-> Acked-by: Juergen Gross <jgross@suse.com>
+> Why doesn't refcount_t get merged into kref, or vice versa?  Having both would
+> seem redundant.
+>
+> Mind you, I've been gradually reverting atomic_t-to-refcount_t conversions
+> because it seems I'm not allowed refcount_inc/dec_return() and I want to get
+> at the point refcount for tracing purposes.
 
-Thanks Juergen.
+Yeeech, that's horrible, please don't do that.
 
->
->
-> Juergen
+Does this mean that refcount_read() isn't sufficient for what you want
+to do with tracing (because for some reason you actually need to know
+the values atomically at the time of increment/decrement)?
