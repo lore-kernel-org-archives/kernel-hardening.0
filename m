@@ -1,149 +1,70 @@
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.19 079/276] x86/modules: Avoid breaking W^X while loading modules
-Date: Wed, 29 May 2019 20:03:57 -0700
-Message-Id: <20190530030531.331779845@linuxfoundation.org>
-In-Reply-To: <20190530030523.133519668@linuxfoundation.org>
-References: <20190530030523.133519668@linuxfoundation.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>, Nadav Amit <namit@vmware.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, akpm@linux-foundation.org, ard.biesheuvel@linaro.org, deneen.t.dock@intel.com, kernel-hardening@lists.openwall.com, kristen@linux.intel.com, linux_dti@icloud.com, will.deacon@arm.com, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@intel.com>, "H. Peter Anvin" <hpa@zytor.com>, Jessica Yu <jeyu@kernel.org>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Masami Hiramatsu <mhiramat@kernel.org>, Rik van Riel <riel@surriel.com>, Ingo Molnar <mingo@kernel.org>, Sasha Levin <sashal@kernel.org>
+From: "Paul E. McKenney" <paulmck@linux.ibm.com>
+Subject: [PATCH tip/core/rcu 3/4] module: Make srcu_struct ptr array as read-only
+Date: Thu, 30 May 2019 08:04:48 -0700
+In-Reply-To: <20190530150347.GA31311@linux.ibm.com>
+References: <20190530150347.GA31311@linux.ibm.com>
+Message-Id: <20190530150449.31885-3-paulmck@linux.ibm.com>
+To: rcu@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org, mingo@kernel.org, jiangshanlai@gmail.com, dipankar@in.ibm.com, akpm@linux-foundation.org, mathieu.desnoyers@efficios.com, josh@joshtriplett.org, tglx@linutronix.de, peterz@infradead.org, rostedt@goodmis.org, dhowells@redhat.com, edumazet@google.com, fweisbec@gmail.com, oleg@redhat.com, joel@joelfernandes.org, Rasmus Villemoes <linux@rasmusvillemoes.dk>, paulmck@linux.vnet.ibm.com, kernel-hardening@lists.openwall.com, kernel-team@android.com, "Paul E . McKenney" <paulmck@linux.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-[ Upstream commit f2c65fb3221adc6b73b0549fc7ba892022db9797 ]
+From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
 
-When modules and BPF filters are loaded, there is a time window in
-which some memory is both writable and executable. An attacker that has
-already found another vulnerability (e.g., a dangling pointer) might be
-able to exploit this behavior to overwrite kernel code. Prevent having
-writable executable PTEs in this stage.
+Since commit title ("srcu: Allocate per-CPU data for DEFINE_SRCU() in
+modules"), modules that call DEFINE_{STATIC,}SRCU will have a new array
+of srcu_struct pointers, which is used by srcu code to initialize and
+clean up these structures and save valuable per-cpu reserved space.
 
-In addition, avoiding having W+X mappings can also slightly simplify the
-patching of modules code on initialization (e.g., by alternatives and
-static-key), as would be done in the next patch. This was actually the
-main motivation for this patch.
+There is no reason for this array of pointers to be writable, and can
+cause security or other hidden bugs. Mark these are read-only after the
+module init has completed.
 
-To avoid having W+X mappings, set them initially as RW (NX) and after
-they are set as RO set them as X as well. Setting them as executable is
-done as a separate step to avoid one core in which the old PTE is cached
-(hence writable), and another which sees the updated PTE (executable),
-which would break the W^X protection.
+Tested with the following diff to ensure array not writable:
 
-Suggested-by: Thomas Gleixner <tglx@linutronix.de>
-Suggested-by: Andy Lutomirski <luto@amacapital.net>
-Signed-off-by: Nadav Amit <namit@vmware.com>
-Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Cc: <akpm@linux-foundation.org>
-Cc: <ard.biesheuvel@linaro.org>
-Cc: <deneen.t.dock@intel.com>
-Cc: <kernel-hardening@lists.openwall.com>
-Cc: <kristen@linux.intel.com>
-Cc: <linux_dti@icloud.com>
-Cc: <will.deacon@arm.com>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Borislav Petkov <bp@alien8.de>
-Cc: Dave Hansen <dave.hansen@intel.com>
-Cc: H. Peter Anvin <hpa@zytor.com>
-Cc: Jessica Yu <jeyu@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Masami Hiramatsu <mhiramat@kernel.org>
-Cc: Rik van Riel <riel@surriel.com>
-Link: https://lkml.kernel.org/r/20190426001143.4983-12-namit@vmware.com
-Signed-off-by: Ingo Molnar <mingo@kernel.org>
-Signed-off-by: Sasha Levin <sashal@kernel.org>
----
- arch/x86/kernel/alternative.c | 28 +++++++++++++++++++++-------
- arch/x86/kernel/module.c      |  2 +-
- include/linux/filter.h        |  1 +
- kernel/module.c               |  5 +++++
- 4 files changed, 28 insertions(+), 8 deletions(-)
-
-diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index b9d5e7c9ef43e..918a23704c0c5 100644
---- a/arch/x86/kernel/alternative.c
-+++ b/arch/x86/kernel/alternative.c
-@@ -662,15 +662,29 @@ void __init alternative_instructions(void)
-  * handlers seeing an inconsistent instruction while you patch.
-  */
- void *__init_or_module text_poke_early(void *addr, const void *opcode,
--					      size_t len)
-+				       size_t len)
- {
- 	unsigned long flags;
--	local_irq_save(flags);
--	memcpy(addr, opcode, len);
--	local_irq_restore(flags);
--	sync_core();
--	/* Could also do a CLFLUSH here to speed up CPU recovery; but
--	   that causes hangs on some VIA CPUs. */
+(diff is a bit reduced to avoid patch command getting confused)
+ a/kernel/module.c
+ b/kernel/module.c
+  -3506,6 +3506,14  static noinline int do_init_module [snip]
+ 	rcu_assign_pointer(mod->kallsyms, &mod->core_kallsyms);
+ #endif
+ 	module_enable_ro(mod, true);
 +
-+	if (boot_cpu_has(X86_FEATURE_NX) &&
-+	    is_module_text_address((unsigned long)addr)) {
-+		/*
-+		 * Modules text is marked initially as non-executable, so the
-+		 * code cannot be running and speculative code-fetches are
-+		 * prevented. Just change the code.
-+		 */
-+		memcpy(addr, opcode, len);
-+	} else {
-+		local_irq_save(flags);
-+		memcpy(addr, opcode, len);
-+		local_irq_restore(flags);
-+		sync_core();
-+
-+		/*
-+		 * Could also do a CLFLUSH here to speed up CPU recovery; but
-+		 * that causes hangs on some VIA CPUs.
-+		 */
++	if (mod->srcu_struct_ptrs) {
++		// Check if srcu_struct_ptrs access is possible
++		char x = *(char *)mod->srcu_struct_ptrs;
++		*(char *)mod->srcu_struct_ptrs = 0;
++		*(char *)mod->srcu_struct_ptrs = x;
 +	}
- 	return addr;
- }
- 
-diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
-index f58336af095c9..6645f123419c6 100644
---- a/arch/x86/kernel/module.c
-+++ b/arch/x86/kernel/module.c
-@@ -87,7 +87,7 @@ void *module_alloc(unsigned long size)
- 	p = __vmalloc_node_range(size, MODULE_ALIGN,
- 				    MODULES_VADDR + get_module_load_offset(),
- 				    MODULES_END, GFP_KERNEL,
--				    PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
-+				    PAGE_KERNEL, 0, NUMA_NO_NODE,
- 				    __builtin_return_address(0));
- 	if (p && (kasan_module_alloc(p, size) < 0)) {
- 		vfree(p);
-diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 6ecef32fd8bcd..d52a7484aeb2d 100644
---- a/include/linux/filter.h
-+++ b/include/linux/filter.h
-@@ -684,6 +684,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
- static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
- {
- 	set_memory_ro((unsigned long)hdr, hdr->pages);
-+	set_memory_x((unsigned long)hdr, hdr->pages);
- }
- 
- static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
-diff --git a/kernel/module.c b/kernel/module.c
-index 38bf28b5cc202..f797c6ace7121 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -1949,8 +1949,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
- 		return;
- 
- 	frob_text(&mod->core_layout, set_memory_ro);
-+	frob_text(&mod->core_layout, set_memory_x);
 +
- 	frob_rodata(&mod->core_layout, set_memory_ro);
-+
- 	frob_text(&mod->init_layout, set_memory_ro);
-+	frob_text(&mod->init_layout, set_memory_x);
-+
- 	frob_rodata(&mod->init_layout, set_memory_ro);
- 
- 	if (after_init)
+ 	mod_tree_remove_init(mod);
+ 	disable_ro_nx(&mod->init_layout);
+ 	module_arch_freeing_init(mod);
+
+Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: paulmck@linux.vnet.ibm.com
+Cc: rostedt@goodmis.org
+Cc: mathieu.desnoyers@efficios.com
+Cc: rcu@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
+Cc: kernel-team@android.com
+Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+Signed-off-by: Paul E. McKenney <paulmck@linux.ibm.com>
+---
+ include/linux/srcutree.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/linux/srcutree.h b/include/linux/srcutree.h
+index 8af1824c46a8..9cfcc8a756ae 100644
+--- a/include/linux/srcutree.h
++++ b/include/linux/srcutree.h
+@@ -123,7 +123,7 @@ struct srcu_struct {
+ #ifdef MODULE
+ # define __DEFINE_SRCU(name, is_static)					\
+ 	is_static struct srcu_struct name;				\
+-	struct srcu_struct *__srcu_struct_##name			\
++	struct srcu_struct * const __srcu_struct_##name			\
+ 		__section("___srcu_struct_ptrs") = &name
+ #else
+ # define __DEFINE_SRCU(name, is_static)					\
 -- 
-2.20.1
+2.17.1
