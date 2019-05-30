@@ -1,9 +1,9 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 5.0 086/346] x86/modules: Avoid breaking W^X while loading modules
-Date: Wed, 29 May 2019 20:02:39 -0700
-Message-Id: <20190530030545.523019342@linuxfoundation.org>
-In-Reply-To: <20190530030540.363386121@linuxfoundation.org>
-References: <20190530030540.363386121@linuxfoundation.org>
+Subject: [PATCH 4.19 079/276] x86/modules: Avoid breaking W^X while loading modules
+Date: Wed, 29 May 2019 20:03:57 -0700
+Message-Id: <20190530030531.331779845@linuxfoundation.org>
+In-Reply-To: <20190530030523.133519668@linuxfoundation.org>
+References: <20190530030523.133519668@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -62,10 +62,10 @@ Signed-off-by: Sasha Levin <sashal@kernel.org>
  4 files changed, 28 insertions(+), 8 deletions(-)
 
 diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index ebeac487a20c7..2db985513917a 100644
+index b9d5e7c9ef43e..918a23704c0c5 100644
 --- a/arch/x86/kernel/alternative.c
 +++ b/arch/x86/kernel/alternative.c
-@@ -666,15 +666,29 @@ void __init alternative_instructions(void)
+@@ -662,15 +662,29 @@ void __init alternative_instructions(void)
   * handlers seeing an inconsistent instruction while you patch.
   */
  void *__init_or_module text_poke_early(void *addr, const void *opcode,
@@ -103,7 +103,7 @@ index ebeac487a20c7..2db985513917a 100644
  }
  
 diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
-index b052e883dd8cc..cfa3106faee42 100644
+index f58336af095c9..6645f123419c6 100644
 --- a/arch/x86/kernel/module.c
 +++ b/arch/x86/kernel/module.c
 @@ -87,7 +87,7 @@ void *module_alloc(unsigned long size)
@@ -116,10 +116,10 @@ index b052e883dd8cc..cfa3106faee42 100644
  	if (p && (kasan_module_alloc(p, size) < 0)) {
  		vfree(p);
 diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 3358646a8e7a7..42513fa6846c9 100644
+index 6ecef32fd8bcd..d52a7484aeb2d 100644
 --- a/include/linux/filter.h
 +++ b/include/linux/filter.h
-@@ -709,6 +709,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+@@ -684,6 +684,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
  static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
  {
  	set_memory_ro((unsigned long)hdr, hdr->pages);
@@ -128,10 +128,10 @@ index 3358646a8e7a7..42513fa6846c9 100644
  
  static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
 diff --git a/kernel/module.c b/kernel/module.c
-index 2ad1b52399109..ae1b77da6a200 100644
+index 38bf28b5cc202..f797c6ace7121 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
-@@ -1950,8 +1950,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
+@@ -1949,8 +1949,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
  		return;
  
  	frob_text(&mod->core_layout, set_memory_ro);
