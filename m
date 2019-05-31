@@ -1,52 +1,80 @@
-From: David Howells <dhowells@redhat.com>
-In-Reply-To: <20190531164444.GD2606@hirez.programming.kicks-ass.net>
-References: <20190531164444.GD2606@hirez.programming.kicks-ass.net> <CAG48ez0R-R3Xs+3Xg9T9qcV3Xv6r4pnx1Z2y=Ltx7RGOayte_w@mail.gmail.com> <20190528162603.GA24097@kroah.com> <155905930702.7587.7100265859075976147.stgit@warthog.procyon.org.uk> <155905931502.7587.11705449537368497489.stgit@warthog.procyon.org.uk> <4031.1559064620@warthog.procyon.org.uk> <20190528231218.GA28384@kroah.com> <31936.1559146000@warthog.procyon.org.uk> <16193.1559163763@warthog.procyon.org.uk> <21942.1559304135@warthog.procyon.org.uk> <606.1559312412@warthog.procyon.org.uk>
-Subject: Re: [PATCH 1/7] General notification queue with user mmap()'able ring buffer
+From: Nadav Amit <namit@vmware.com>
+Subject: Re: [PATCH 4.19 079/276] x86/modules: Avoid breaking W^X while
+ loading modules
+Date: Fri, 31 May 2019 21:47:26 +0000
+Message-ID: <7FDC3F12-3F84-4BBB-A9D0-CBCD86CF5F82@vmware.com>
+References: <20190530030523.133519668@linuxfoundation.org>
+ <20190530030531.331779845@linuxfoundation.org> <20190531103730.GB9685@amd>
+In-Reply-To: <20190531103730.GB9685@amd>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <DE719B9F98B0E541A21F7A61FE7FE00E@namprd05.prod.outlook.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <15400.1559322762.1@warthog.procyon.org.uk>
-Date: Fri, 31 May 2019 18:12:42 +0100
-Message-ID: <15401.1559322762@warthog.procyon.org.uk>
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: dhowells@redhat.com, Jann Horn <jannh@google.com>, Greg KH <gregkh@linuxfoundation.org>, Al Viro <viro@zeniv.linux.org.uk>, raven@themaw.net, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, linux-block@vger.kernel.org, keyrings@vger.kernel.org, linux-security-module <linux-security-module@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Pavel Machek <pavel@denx.de>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, LKML <linux-kernel@vger.kernel.org>, "stable@vger.kernel.org" <stable@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>, Rick Edgecombe <rick.p.edgecombe@intel.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kristen Carlson Accardi <kristen@linux.intel.com>, Damian Tometzki <linux_dti@icloud.com>, Will Deacon <will.deacon@arm.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@intel.com>, "H. Peter Anvin" <hpa@zytor.com>, Jessica Yu <jeyu@kernel.org>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Masami Hiramatsu <mhiramat@kernel.org>, Rik van Riel <riel@surriel.com>, Ingo Molnar <mingo@kernel.org>, Sasha Levin <sashal@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Peter Zijlstra <peterz@infradead.org> wrote:
-
-> > > (and it has already been established that refcount_t doesn't work for
-> > > usage count scenarios)
-> > 
-> > ?
-> > 
-> > Does that mean struct kref doesn't either?
-> 
-> Indeed, since kref is just a pointless wrapper around refcount_t it does
-> not either.
-> 
-> The main distinction between a reference count and a usage count is that
-> 0 means different things. For a refcount 0 means dead. For a usage count
-> 0 is merely unused but valid.
-
-Ah - I consider the terms interchangeable.
-
-Take Documentation/filesystems/vfs.txt for instance:
-
-  dget: open a new handle for an existing dentry (this just increments
-	the usage count)
-
-  dput: close a handle for a dentry (decrements the usage count). ...
-
-  ...
-
-  d_lookup: look up a dentry given its parent and path name component
-	It looks up the child of that given name from the dcache
-	hash table. If it is found, the reference count is incremented
-	and the dentry is returned. The caller must use dput()
-	to free the dentry when it finishes using it.
-
-Here we interchange the terms.
-
-Or https://www.kernel.org/doc/gorman/html/understand/understand013.html
-which seems to interchange the terms in reference to struct page.
-
-David
+PiBPbiBNYXkgMzEsIDIwMTksIGF0IDM6MzcgQU0sIFBhdmVsIE1hY2hlayA8cGF2ZWxAZGVueC5k
+ZT4gd3JvdGU6DQo+IA0KPiBIaSENCj4gDQo+PiBbIFVwc3RyZWFtIGNvbW1pdCBmMmM2NWZiMzIy
+MWFkYzZiNzNiMDU0OWZjN2JhODkyMDIyZGI5Nzk3IF0NCj4+IA0KPj4gV2hlbiBtb2R1bGVzIGFu
+ZCBCUEYgZmlsdGVycyBhcmUgbG9hZGVkLCB0aGVyZSBpcyBhIHRpbWUgd2luZG93IGluDQo+PiB3
+aGljaCBzb21lIG1lbW9yeSBpcyBib3RoIHdyaXRhYmxlIGFuZCBleGVjdXRhYmxlLiBBbiBhdHRh
+Y2tlciB0aGF0IGhhcw0KPj4gYWxyZWFkeSBmb3VuZCBhbm90aGVyIHZ1bG5lcmFiaWxpdHkgKGUu
+Zy4sIGEgZGFuZ2xpbmcgcG9pbnRlcikgbWlnaHQgYmUNCj4+IGFibGUgdG8gZXhwbG9pdCB0aGlz
+IGJlaGF2aW9yIHRvIG92ZXJ3cml0ZSBrZXJuZWwgY29kZS4gUHJldmVudCBoYXZpbmcNCj4+IHdy
+aXRhYmxlIGV4ZWN1dGFibGUgUFRFcyBpbiB0aGlzIHN0YWdlLg0KPj4gDQo+PiBJbiBhZGRpdGlv
+biwgYXZvaWRpbmcgaGF2aW5nIFcrWCBtYXBwaW5ncyBjYW4gYWxzbyBzbGlnaHRseSBzaW1wbGlm
+eSB0aGUNCj4+IHBhdGNoaW5nIG9mIG1vZHVsZXMgY29kZSBvbiBpbml0aWFsaXphdGlvbiAoZS5n
+LiwgYnkgYWx0ZXJuYXRpdmVzIGFuZA0KPj4gc3RhdGljLWtleSksIGFzIHdvdWxkIGJlIGRvbmUg
+aW4gdGhlIG5leHQgcGF0Y2guIFRoaXMgd2FzIGFjdHVhbGx5IHRoZQ0KPj4gbWFpbiBtb3RpdmF0
+aW9uIGZvciB0aGlzIHBhdGNoLg0KPj4gDQo+PiBUbyBhdm9pZCBoYXZpbmcgVytYIG1hcHBpbmdz
+LCBzZXQgdGhlbSBpbml0aWFsbHkgYXMgUlcgKE5YKSBhbmQgYWZ0ZXINCj4+IHRoZXkgYXJlIHNl
+dCBhcyBSTyBzZXQgdGhlbSBhcyBYIGFzIHdlbGwuIFNldHRpbmcgdGhlbSBhcyBleGVjdXRhYmxl
+IGlzDQo+PiBkb25lIGFzIGEgc2VwYXJhdGUgc3RlcCB0byBhdm9pZCBvbmUgY29yZSBpbiB3aGlj
+aCB0aGUgb2xkIFBURSBpcyBjYWNoZWQNCj4+IChoZW5jZSB3cml0YWJsZSksIGFuZCBhbm90aGVy
+IHdoaWNoIHNlZXMgdGhlIHVwZGF0ZWQgUFRFIChleGVjdXRhYmxlKSwNCj4+IHdoaWNoIHdvdWxk
+IGJyZWFrIHRoZSBXXlggcHJvdGVjdGlvbi4NCj4gDQo+IEZpcnN0LCBpcyB0aGlzIHN0YWJsZSBt
+YXRlcmlhbD8gWWVzLCBpdCBjaGFuZ2VzIHNvbWV0aGluZy4NCj4gDQo+IEJ1dCBpZiB5b3UgYXNz
+dW1lIGF0dGFja2VyIGNhbiB3cml0ZSBpbnRvIGtlcm5lbCBtZW1vcnkgZHVyaW5nIG1vZHVsZQ0K
+PiBsb2FkLCB3aGF0IHByZXZlbnRzIGhpbSB0byBjaGFuZ2UgdGhlIG1vZHVsZSBhcyBoZSBzZWVz
+IGZpdCB3aGlsZSBpdA0KPiBpcyBub3QgZXhlY3V0YWJsZSwgc2ltcGx5IHdhaXRpbmcgZm9yIHN5
+c3RlbSB0byBleGVjdXRlIGl0Pw0KPiANCj4gSSBkb24ndCBzZWUgc2VjdXJpdHkgYmVuZWZpdCBo
+ZXJlLg0KDQpJIGFncmVlIHRoYXQgYXQgdGhlIG1vbWVudCB0aGUgYmVuZWZpdCBpdCBsaW1pdGVk
+LiBJIHRoaW5rIHRoZSBiZW5lZml0IHdvdWxkDQpjb21lIGxhdGVyLCBpZiB0aGUgbW9kdWxlIHNp
+Z25hdHVyZSBjaGVjayBpcyBwZXJmb3JtZWQgYWZ0ZXIgdGhlIG1vZHVsZSBoYXMNCmJlZW4gd3Jp
+dGUtcHJvdGVjdGVkLCBidXQgYmVmb3JlIGl0IGlzIGFjdHVhbGx5IGV4ZWN1dGVkLg0KDQo+PiAr
+KysgYi9hcmNoL3g4Ni9rZXJuZWwvYWx0ZXJuYXRpdmUuYw0KPj4gQEAgLTY2MiwxNSArNjYyLDI5
+IEBAIHZvaWQgX19pbml0IGFsdGVybmF0aXZlX2luc3RydWN0aW9ucyh2b2lkKQ0KPj4gICogaGFu
+ZGxlcnMgc2VlaW5nIGFuIGluY29uc2lzdGVudCBpbnN0cnVjdGlvbiB3aGlsZSB5b3UgcGF0Y2gu
+DQo+PiAgKi8NCj4+IHZvaWQgKl9faW5pdF9vcl9tb2R1bGUgdGV4dF9wb2tlX2Vhcmx5KHZvaWQg
+KmFkZHIsIGNvbnN0IHZvaWQgKm9wY29kZSwNCj4+IC0JCQkJCSAgICAgIHNpemVfdCBsZW4pDQo+
+PiArCQkJCSAgICAgICBzaXplX3QgbGVuKQ0KPj4gew0KPj4gCXVuc2lnbmVkIGxvbmcgZmxhZ3M7
+DQo+PiAtCWxvY2FsX2lycV9zYXZlKGZsYWdzKTsNCj4+IC0JbWVtY3B5KGFkZHIsIG9wY29kZSwg
+bGVuKTsNCj4+IC0JbG9jYWxfaXJxX3Jlc3RvcmUoZmxhZ3MpOw0KPj4gLQlzeW5jX2NvcmUoKTsN
+Cj4+IC0JLyogQ291bGQgYWxzbyBkbyBhIENMRkxVU0ggaGVyZSB0byBzcGVlZCB1cCBDUFUgcmVj
+b3Zlcnk7IGJ1dA0KPj4gLQkgICB0aGF0IGNhdXNlcyBoYW5ncyBvbiBzb21lIFZJQSBDUFVzLiAq
+Lw0KPj4gKw0KPj4gKwlpZiAoYm9vdF9jcHVfaGFzKFg4Nl9GRUFUVVJFX05YKSAmJg0KPj4gKwkg
+ICAgaXNfbW9kdWxlX3RleHRfYWRkcmVzcygodW5zaWduZWQgbG9uZylhZGRyKSkgew0KPj4gKwkJ
+LyoNCj4+ICsJCSAqIE1vZHVsZXMgdGV4dCBpcyBtYXJrZWQgaW5pdGlhbGx5IGFzIG5vbi1leGVj
+dXRhYmxlLCBzbyB0aGUNCj4+ICsJCSAqIGNvZGUgY2Fubm90IGJlIHJ1bm5pbmcgYW5kIHNwZWN1
+bGF0aXZlIGNvZGUtZmV0Y2hlcyBhcmUNCj4+ICsJCSAqIHByZXZlbnRlZC4gSnVzdCBjaGFuZ2Ug
+dGhlIGNvZGUuDQo+PiArCQkgKi8NCj4+ICsJCW1lbWNweShhZGRyLCBvcGNvZGUsIGxlbik7DQo+
+PiArCX0gZWxzZSB7DQo+PiArCQlsb2NhbF9pcnFfc2F2ZShmbGFncyk7DQo+PiArCQltZW1jcHko
+YWRkciwgb3Bjb2RlLCBsZW4pOw0KPj4gKwkJbG9jYWxfaXJxX3Jlc3RvcmUoZmxhZ3MpOw0KPj4g
+KwkJc3luY19jb3JlKCk7DQo+PiArDQo+PiArCQkvKg0KPj4gKwkJICogQ291bGQgYWxzbyBkbyBh
+IENMRkxVU0ggaGVyZSB0byBzcGVlZCB1cCBDUFUgcmVjb3Zlcnk7IGJ1dA0KPj4gKwkJICogdGhh
+dCBjYXVzZXMgaGFuZ3Mgb24gc29tZSBWSUEgQ1BVcy4NCj4+ICsJCSAqLw0KPiANCj4gSSBkb24n
+dCBnZXQgaXQuIElmIGNvZGUgY2FuIG5vdCBiZSBydW5uaW5nIGhlcmUsIGl0IGNhbiBub3QgYmUg
+cnVubmluZw0KPiBpbiB0aGUgIU5YIGNhc2UsIGVpdGhlciwgYW5kIHdlIGFyZSBmcmVlIHRvIGp1
+c3QgY2hhbmdlDQo+IGl0LiBTcGVjdWxhdGl2ZSBleGVjdXRpb24gc2hvdWxkIG5vdCBiZSBhIHBy
+b2JsZW0sIGVpdGhlciwgYXMgQ1BVcyBhcmUNCj4gc3VwcG9zZWQgdG8gbWFzayBpdCwgYW5kIHRo
+ZXJlIGFyZSBubyBrbm93biBidWdzIGluIHRoYXQgYXJlYS4gKFBsdXMsDQo+IEknZCBub3QgYmUg
+c3VycHJpc2UgaWYgc3BlY3VsYXRpdmUgZXhlY3V0aW9uIGlnbm9yZWQgTlguLi4ganVzdCBzYXlp
+bmcNCj4gOi0pICkNCg0KWWVzLCB0aGUgbW9kdWxlIGNvZGUgc2hvdWxkIG5vdCBydW4sIGJ1dCBz
+cGVjdWxhdGl2ZSBleGVjdXRpb24gbWlnaHQgY2F1c2UNCml0IHRvIGJlIGNhY2hlZCBpbiB0aGUg
+aW5zdHJ1Y3Rpb24gY2FjaGUgKGFzIHVubGlrZWx5IGFzIGl0IG1pZ2h0IGJlLCBidXQNCndlIG5l
+ZWQgdG8gY29uc2lkZXIgbWFsaWNpb3VzIHVzZXJzIHRoYXQgcGxheSB3aXRoIGJyYW5jaCBwcmVk
+aWN0b3JzKS4NCg0KSSBhbSB1bmZhbWlsaWFyIHdpdGggYW55IGJ1ZyB0aGF0IG1pZ2h0IGNhdXNl
+IHRoZSBDUFUgdG8gc3BlY3VsYXRpdmVseQ0KaWdub3JlIHRoZSBOWCBiaXQuIFdpdGhvdXQgdW5k
+ZXJlc3RpbWF0aW5nIEludGVs4oCZcyBhYmlsaXR5IHRvIGNyZWF0ZQ0KdGVycmlibGUgYnVncywg
+SSB3b3VsZCBhc3N1bWUsIGZvciBub3csIHRoYXQgaXQgaXMgc2FmZS4NCiA=
