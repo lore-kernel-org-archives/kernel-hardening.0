@@ -1,80 +1,156 @@
-From: David Howells <dhowells@redhat.com>
-In-Reply-To: <20190531132620.GC2606@hirez.programming.kicks-ass.net>
-References: <20190531132620.GC2606@hirez.programming.kicks-ass.net> <20190531111445.GO2677@hirez.programming.kicks-ass.net> <CAG48ez0R-R3Xs+3Xg9T9qcV3Xv6r4pnx1Z2y=Ltx7RGOayte_w@mail.gmail.com> <20190528162603.GA24097@kroah.com> <155905930702.7587.7100265859075976147.stgit@warthog.procyon.org.uk> <155905931502.7587.11705449537368497489.stgit@warthog.procyon.org.uk> <4031.1559064620@warthog.procyon.org.uk> <20190528231218.GA28384@kroah.com> <31936.1559146000@warthog.procyon.org.uk> <16193.1559163763@warthog.procyon.org.uk> <21942.1559304135@warthog.procyon.org.uk>
-Subject: Re: [PATCH 1/7] General notification queue with user mmap()'able ring buffer
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <605.1559312411.1@warthog.procyon.org.uk>
-Date: Fri, 31 May 2019 15:20:12 +0100
-Message-ID: <606.1559312412@warthog.procyon.org.uk>
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: dhowells@redhat.com, Jann Horn <jannh@google.com>, Greg KH <gregkh@linuxfoundation.org>, Al Viro <viro@zeniv.linux.org.uk>, raven@themaw.net, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, linux-block@vger.kernel.org, keyrings@vger.kernel.org, linux-security-module <linux-security-module@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+References: <20190530170033.GA5739@cisco> <CA+=Sn1kSg-Y8SseUWPTTJi5HRgYYxVtcDGUJvCcCYQQzKeiUQw@mail.gmail.com>
+ <20190530192606.GB5739@cisco>
+In-Reply-To: <20190530192606.GB5739@cisco>
+From: Mark Brand <markbrand@google.com>
+Date: Fri, 31 May 2019 17:43:44 +0200
+Message-ID: <CAN+XpFRPnt7w5jkadD9ANHA2NTDnjOzjnPWDLY26wOq-jNAW-g@mail.gmail.com>
+Subject: Re: unrecognizable insn generated in plugin?
+Content-Type: multipart/signed; protocol="application/pkcs7-signature"; micalg=sha-256;
+	boundary="000000000000ec18b9058a30e170"
+To: Tycho Andersen <tycho@tycho.ws>
+Cc: Andrew Pinski <pinskia@gmail.com>, GCC Mailing List <gcc@gcc.gnu.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Peter Zijlstra <peterz@infradead.org> wrote:
+--000000000000ec18b9058a30e170
+Content-Type: text/plain; charset="UTF-8"
 
-> Is it not the responsibility of the task that affects the 1->0
-> transition to actually free the memory?
-> 
-> That is, I'm expecting the '...' in both cases above the include the
-> actual freeing of the object. If this is not the case, then @usage is
-> not a reference count.
+On Thu, May 30, 2019 at 9:26 PM Tycho Andersen <tycho@tycho.ws> wrote:
+>
+> Hi Andrew,
+>
+> On Thu, May 30, 2019 at 10:09:44AM -0700, Andrew Pinski wrote:
+> > On Thu, May 30, 2019 at 10:01 AM Tycho Andersen <tycho@tycho.ws> wrote:
+> > >
+> > > Hi all,
+> > >
+> > > I've been trying to implement an idea Andy suggested recently for
+> > > preventing some kinds of ROP attacks. The discussion of the idea is
+> > > here:
+> > > https://lore.kernel.org/linux-mm/DFA69954-3F0F-4B79-A9B5-893D33D87E51@amacapital.net/
+> > >
 
-Yes.  The '...' does the freeing.  It seemed unnecessary to include the code
-ellipsised there since it's not the point of the discussion, but if you want
-the full function:
 
-	void afs_put_call(struct afs_call *call)
-	{
-		struct afs_net *net = call->net;
-		int n = atomic_dec_return(&call->usage);
-		int o = atomic_read(&net->nr_outstanding_calls);
+Hi Tycho,
 
-		trace_afs_call(call, afs_call_trace_put, n + 1, o,
-			       __builtin_return_address(0));
+I realise this is maybe not relevant to the topic of fixing the
+plugin; but I'm struggling to understand what this is intending to
+protect against.
 
-		ASSERTCMP(n, >=, 0);
-		if (n == 0) {
-			ASSERT(!work_pending(&call->async_work));
-			ASSERT(call->type->name != NULL);
+The idea seems to be to make sure that restored rbp, rsp values are
+"close" to the current rbp, rsp values? The only scenario I can see
+this providing any benefit is if an attacker can only corrupt a saved
+stack/frame pointer, which seems like such an unlikely situation that
+it's not really worth adding any complexity to defend against.
 
-			if (call->rxcall) {
-				rxrpc_kernel_end_call(net->socket, call->rxcall);
-				call->rxcall = NULL;
-			}
-			if (call->type->destructor)
-				call->type->destructor(call);
+An attacker who has control of rip can surely get a controlled value
+into rsp in various ways; a quick scan of the current Ubuntu 18.04
+kernel image offers the following sequence (which shows up
+everywhere):
 
-			afs_put_server(call->net, call->server);
-			afs_put_cb_interest(call->net, call->cbi);
-			afs_put_addrlist(call->alist);
-			kfree(call->request);
+lea rsp, qword ptr [r10 - 8]
+ret
 
-			trace_afs_call(call, afs_call_trace_free, 0, o,
-				       __builtin_return_address(0));
-			kfree(call);
+I'd assume that it's not tremendously difficult for an attacker to
+chain to this without needing to previously pivot out the stack
+pointer, assuming that at the point at which they gain control of rip
+they have control over some state somewhere. If you could explain the
+exact attack scenario that you have in mind then perhaps I could
+provide a better explanation of how one might bypass it.
 
-			o = atomic_dec_return(&net->nr_outstanding_calls);
-			if (o == 0)
-				wake_up_var(&net->nr_outstanding_calls);
-		}
-	}
+Regards,
+Mark
 
-You can see the kfree(call) in there.
-Peter Zijlstra <peterz@infradead.org> wrote:
+--000000000000ec18b9058a30e170
+Content-Type: application/pkcs7-signature; name="smime.p7s"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
+Content-Description: S/MIME Cryptographic Signature
 
-> (and it has already been established that refcount_t doesn't work for
-> usage count scenarios)
-
-?
-
-Does that mean struct kref doesn't either?
-
-> Aside from that, is the problem that refcount_dec_and_test() returns a
-> boolean (true - last put, false - not last) instead of the refcount
-> value? This does indeed make it hard to print the exact count value for
-> the event.
-
-That is the problem, yes - well, one of them: refcount_inc() doesn't either.
-
-David
+MIIS7QYJKoZIhvcNAQcCoIIS3jCCEtoCAQExDzANBglghkgBZQMEAgEFADALBgkqhkiG9w0BBwGg
+ghBTMIIEXDCCA0SgAwIBAgIOSBtqDm4P/739RPqw/wcwDQYJKoZIhvcNAQELBQAwZDELMAkGA1UE
+BhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExOjA4BgNVBAMTMUdsb2JhbFNpZ24gUGVy
+c29uYWxTaWduIFBhcnRuZXJzIENBIC0gU0hBMjU2IC0gRzIwHhcNMTYwNjE1MDAwMDAwWhcNMjEw
+NjE1MDAwMDAwWjBMMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEiMCAG
+A1UEAxMZR2xvYmFsU2lnbiBIViBTL01JTUUgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBALR23lKtjlZW/17kthzYcMHHKFgywfc4vLIjfq42NmMWbXkNUabIgS8KX4PnIFsTlD6F
+GO2fqnsTygvYPFBSMX4OCFtJXoikP2CQlEvO7WooyE94tqmqD+w0YtyP2IB5j4KvOIeNv1Gbnnes
+BIUWLFxs1ERvYDhmk+OrvW7Vd8ZfpRJj71Rb+QQsUpkyTySaqALXnyztTDp1L5d1bABJN/bJbEU3
+Hf5FLrANmognIu+Npty6GrA6p3yKELzTsilOFmYNWg7L838NS2JbFOndl+ce89gM36CW7vyhszi6
+6LqqzJL8MsmkP53GGhf11YMP9EkmawYouMDP/PwQYhIiUO0CAwEAAaOCASIwggEeMA4GA1UdDwEB
+/wQEAwIBBjAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUHAwQwEgYDVR0TAQH/BAgwBgEB/wIB
+ADAdBgNVHQ4EFgQUyzgSsMeZwHiSjLMhleb0JmLA4D8wHwYDVR0jBBgwFoAUJiSSix/TRK+xsBtt
+r+500ox4AAMwSwYDVR0fBEQwQjBAoD6gPIY6aHR0cDovL2NybC5nbG9iYWxzaWduLmNvbS9ncy9n
+c3BlcnNvbmFsc2lnbnB0bnJzc2hhMmcyLmNybDBMBgNVHSAERTBDMEEGCSsGAQQBoDIBKDA0MDIG
+CCsGAQUFBwIBFiZodHRwczovL3d3dy5nbG9iYWxzaWduLmNvbS9yZXBvc2l0b3J5LzANBgkqhkiG
+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
+QAYIKwYBBQUHMAKGNGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzaHZzbWlt
+ZWNhMS5jcnQwHQYDVR0OBBYEFMmmNA8o+g7Z9mSplZ2ZlZ3ktjVIMB8GA1UdIwQYMBaAFMs4ErDH
+mcB4koyzIZXm9CZiwOA/MEwGA1UdIARFMEMwQQYJKwYBBAGgMgEoMDQwMgYIKwYBBQUHAgEWJmh0
+dHBzOi8vd3d3Lmdsb2JhbHNpZ24uY29tL3JlcG9zaXRvcnkvMDsGA1UdHwQ0MDIwMKAuoCyGKmh0
+dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NodnNtaW1lY2ExLmNybDAOBgNVHQ8BAf8EBAMCBaAw
+HQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMEMA0GCSqGSIb3DQEBCwUAA4IBAQBC86z9ZdOi
+9uWAJJX6Ncjgl09HCPQyzL68RZUZFrBjg3DumxeZJexGUN9Ig/N1efcVulDPemWAwbMNAU2AtU85
+IWC1syrCf/ghM7V9s5Up5+qC4GNayOy5ssU3nb5MCoUDfGdFxqHsIeevqqiWm+VYHBcd3r4FAmGS
+NrSiRTmzbk4WGCrnfx82zrVJVXZogoMl2t++57cfXFEO90Oa2fkTxVpkBKgU02kHISGl3oYywljs
+avEUGS9CQZ7ltEPlOChc61Ku3Z2CcSAerY7OBI51l4U322J9JfpOSObzG8CgZPeZPYrG1/tXEwwm
+32LcmdRJWawUb9npagmgYymmS1CYMYICXjCCAloCAQEwXDBMMQswCQYDVQQGEwJCRTEZMBcGA1UE
+ChMQR2xvYmFsU2lnbiBudi1zYTEiMCAGA1UEAxMZR2xvYmFsU2lnbiBIViBTL01JTUUgQ0EgMQIM
+XWHyBA9I9vBnpY6lMA0GCWCGSAFlAwQCAQUAoIHUMC8GCSqGSIb3DQEJBDEiBCDkb2+2//OO7l9t
+/PzZlCQdVqqjCl0G+5cZCQbSwg3sCzAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3
+DQEJBTEPFw0xOTA1MzExNTQzNTZaMGkGCSqGSIb3DQEJDzFcMFowCwYJYIZIAWUDBAEqMAsGCWCG
+SAFlAwQBFjALBglghkgBZQMEAQIwCgYIKoZIhvcNAwcwCwYJKoZIhvcNAQEKMAsGCSqGSIb3DQEB
+BzALBglghkgBZQMEAgEwDQYJKoZIhvcNAQEBBQAEggEAQLqDPcITt8Tw1HSv7VGcsLhs5IOLPOLP
+Qv8XGgREYxyaVFGSxiKVT4OLqvyzUmyqjkYYeiBl4VlCNr0Ec4PTYYheKAKSYt7jA6Q6z/tNi4Eo
+D3nMQXOyIgo88RMpbMbARMdabQqCxVsUwstMHKhMbebgUapxJ6LA834EeX73UspC/TdzsyWJJwy8
+39/FsLonfFMnD0ZWrk+7N33wxVkeeNRc1/1+UpywXwDvoipfugBnxz+jWI+DY9URHief/W+gJgtb
+3MK+Rg3o6tCmFEGy01OVSsVcOEsXLEnGkPfahvgYVsQuQNtIjNAeIWxy2jHLYvxR5Dk6PWcDHjYi
+JcpYtQ==
+--000000000000ec18b9058a30e170--
