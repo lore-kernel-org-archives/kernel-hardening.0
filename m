@@ -1,9 +1,9 @@
 From: Sasha Levin <sashal@kernel.org>
-Subject: [PATCH AUTOSEL 5.1 037/186] gcc-plugins: arm_ssp_per_task_plugin: Fix for older GCC < 6
-Date: Sat,  1 Jun 2019 09:14:13 -0400
-Message-Id: <20190601131653.24205-37-sashal@kernel.org>
-In-Reply-To: <20190601131653.24205-1-sashal@kernel.org>
-References: <20190601131653.24205-1-sashal@kernel.org>
+Subject: [PATCH AUTOSEL 5.0 034/173] gcc-plugins: arm_ssp_per_task_plugin: Fix for older GCC < 6
+Date: Sat,  1 Jun 2019 09:17:06 -0400
+Message-Id: <20190601131934.25053-34-sashal@kernel.org>
+In-Reply-To: <20190601131934.25053-1-sashal@kernel.org>
+References: <20190601131934.25053-1-sashal@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
