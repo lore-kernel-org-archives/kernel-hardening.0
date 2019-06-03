@@ -1,43 +1,109 @@
-MIME-Version: 1.0
-References: <20190601222738.6856-1-joel@joelfernandes.org> <20190601222738.6856-3-joel@joelfernandes.org>
- <20190602070014.GA543@amd> <CAEXW_YT3t4Hb6wKsjXPGng+YbA5rhNRa7OSdZwdN4AKGfVkX3g@mail.gmail.com>
- <CAEXW_YSM2wwah2Q7LKmUO1Dp7GG62ciQA1nZ7GLw3m6cyuXXTw@mail.gmail.com> <20190603064212.GA7400@amd>
-In-Reply-To: <20190603064212.GA7400@amd>
+Date: Mon, 3 Jun 2019 10:18:47 -0400
 From: Joel Fernandes <joel@joelfernandes.org>
-Date: Mon, 3 Jun 2019 08:28:41 -0400
-Message-ID: <CAEXW_YSz8SNQCTnJj_86uJvRX3LFEQ6xJX-UV07HGwwA7oLwvg@mail.gmail.com>
-Subject: Re: [RFC 2/6] ipv4: add lockdep condition to fix for_each_entry
-Content-Type: text/plain; charset="UTF-8"
-To: Pavel Machek <pavel@denx.de>
-Cc: LKML <linux-kernel@vger.kernel.org>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Bjorn Helgaas <bhelgaas@google.com>, Borislav Petkov <bp@alien8.de>, "David S. Miller" <davem@davemloft.net>, Eric Dumazet <edumazet@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Josh Triplett <josh@joshtriplett.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Len Brown <lenb@kernel.org>, linux-acpi@vger.kernel.org, linux-pci@vger.kernel.org, Linux PM <linux-pm@vger.kernel.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Neil Brown <neilb@suse.com>, netdev <netdev@vger.kernel.org>, Oleg Nesterov <oleg@redhat.com>, "Paul E. McKenney" <paulmck@linux.ibm.com>, Peter Zilstra <peterz@infradead.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, rcu <rcu@vger.kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, "maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
+Subject: Re: [RFC 1/6] rcu: Add support for consolidated-RCU reader checking
+Message-ID: <20190603141847.GA94186@google.com>
+References: <20190601222738.6856-1-joel@joelfernandes.org>
+ <20190601222738.6856-2-joel@joelfernandes.org>
+ <20190603080128.GA3436@hirez.programming.kicks-ass.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190603080128.GA3436@hirez.programming.kicks-ass.net>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: linux-kernel@vger.kernel.org, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Bjorn Helgaas <bhelgaas@google.com>, Borislav Petkov <bp@alien8.de>, "David S. Miller" <davem@davemloft.net>, edumazet@google.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, Lai Jiangshan <jiangshanlai@gmail.com>, Len Brown <lenb@kernel.org>, linux-acpi@vger.kernel.org, linux-pci@vger.kernel.org, linux-pm@vger.kernel.org, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, neilb@suse.com, netdev@vger.kernel.org, oleg@redhat.com, "Paul E. McKenney" <paulmck@linux.ibm.com>, Pavel Machek <pavel@ucw.cz>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, rcu@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, "maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 3, 2019 at 2:42 AM Pavel Machek <pavel@denx.de> wrote:
->
-> On Sun 2019-06-02 08:24:35, Joel Fernandes wrote:
-> > On Sun, Jun 2, 2019 at 8:20 AM Joel Fernandes <joel@joelfernandes.org> wrote:
-> > >
-> > > On Sun, Jun 2, 2019 at 3:00 AM Pavel Machek <pavel@denx.de> wrote:
-> > > >
-> > > > On Sat 2019-06-01 18:27:34, Joel Fernandes (Google) wrote:
-> > > > > Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
-> > > >
-> > > > This really needs to be merged to previous patch, you can't break
-> > > > compilation in middle of series...
-> > > >
-> > > > Or probably you need hlist_for_each_entry_rcu_lockdep() macro with
-> > > > additional argument, and switch users to it.
-> > >
-> > > Good point. I can also just add a temporary transition macro, and then
-> > > remove it in the last patch. That way no new macro is needed.
-> >
-> > Actually, no. There is no compilation break so I did not follow what
-> > you mean. The fourth argument to the hlist_for_each_entry_rcu is
-> > optional. The only thing that happens is new lockdep warnings will
-> > arise which later parts of the series fix by passing in that fourth
-> > argument.
->
-> Sorry, I missed that subtlety. Might be worth it enabling the lockdep
-> warning last in the series...
+On Mon, Jun 03, 2019 at 10:01:28AM +0200, Peter Zijlstra wrote:
+> On Sat, Jun 01, 2019 at 06:27:33PM -0400, Joel Fernandes (Google) wrote:
+> > +#define list_for_each_entry_rcu(pos, head, member, cond...)		\
+> > +	if (COUNT_VARGS(cond) != 0) {					\
+> > +		__list_check_rcu_cond(0, ## cond);			\
+> > +	} else {							\
+> > +		__list_check_rcu();					\
+> > +	}								\
+> > +	for (pos = list_entry_rcu((head)->next, typeof(*pos), member);	\
+> > +		&pos->member != (head);					\
+> >  		pos = list_entry_rcu(pos->member.next, typeof(*pos), member))
+> >  
+> >  /**
+> > @@ -621,7 +648,12 @@ static inline void hlist_add_behind_rcu(struct hlist_node *n,
+> >   * the _rcu list-mutation primitives such as hlist_add_head_rcu()
+> >   * as long as the traversal is guarded by rcu_read_lock().
+> >   */
+> > +#define hlist_for_each_entry_rcu(pos, head, member, cond...)		\
+> > +	if (COUNT_VARGS(cond) != 0) {					\
+> > +		__list_check_rcu_cond(0, ## cond);			\
+> > +	} else {							\
+> > +		__list_check_rcu();					\
+> > +	}								\
+> >  	for (pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
+> >  			typeof(*(pos)), member);			\
+> >  		pos;							\
+> 
+> 
+> This breaks code like:
+> 
+> 	if (...)
+> 		list_for_each_entry_rcu(...);
+> 
+> as they are no longer a single statement. You'll have to frob it into
+> the initializer part of the for statement.
 
-Good idea, will do! Thanks.
+Thanks a lot for that. I fixed it as below (diff is on top of the patch):
+
+If not for that '##' , I could have abstracted the whole if/else
+expression into its own macro and called it from list_for_each_entry_rcu() to
+keep it more clean.
+
+---8<-----------------------
+
+diff --git a/include/linux/rculist.h b/include/linux/rculist.h
+index b641fdd9f1a2..cc742d294bb0 100644
+--- a/include/linux/rculist.h
++++ b/include/linux/rculist.h
+@@ -371,12 +372,15 @@ static inline void list_splice_tail_init_rcu(struct list_head *list,
+  * as long as the traversal is guarded by rcu_read_lock().
+  */
+ #define list_for_each_entry_rcu(pos, head, member, cond...)		\
+-	if (COUNT_VARGS(cond) != 0) {					\
+-		__list_check_rcu_cond(0, ## cond);			\
+-	} else {							\
+-		__list_check_rcu();					\
+-	}								\
+-	for (pos = list_entry_rcu((head)->next, typeof(*pos), member);	\
++	for (								\
++	     ({								\
++		if (COUNT_VARGS(cond) != 0) {				\
++			__list_check_rcu_cond(0, ## cond);		\
++		} else {						\
++			__list_check_rcu_nocond();			\
++		}							\
++	      }),							\
++	     pos = list_entry_rcu((head)->next, typeof(*pos), member);	\
+ 		&pos->member != (head);					\
+ 		pos = list_entry_rcu(pos->member.next, typeof(*pos), member))
+ 
+@@ -649,12 +653,15 @@ static inline void hlist_add_behind_rcu(struct hlist_node *n,
+  * as long as the traversal is guarded by rcu_read_lock().
+  */
+ #define hlist_for_each_entry_rcu(pos, head, member, cond...)		\
+-	if (COUNT_VARGS(cond) != 0) {					\
+-		__list_check_rcu_cond(0, ## cond);			\
+-	} else {							\
+-		__list_check_rcu();					\
+-	}								\
+-	for (pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
++	for (								\
++	     ({								\
++		if (COUNT_VARGS(cond) != 0) {				\
++			__list_check_rcu_cond(0, ## cond);		\
++		} else {						\
++			__list_check_rcu_nocond();			\
++		}							\
++	     }),							\
++	     pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
+ 			typeof(*(pos)), member);			\
+ 		pos;							\
+ 		pos = hlist_entry_safe(rcu_dereference_raw(hlist_next_rcu(\
+-- 
+2.22.0.rc1.311.g5d7573a151-goog
