@@ -1,140 +1,210 @@
-Date: Mon, 3 Jun 2019 15:42:11 -0400
-From: Joel Fernandes <joel@joelfernandes.org>
-Subject: Re: [RFC 1/6] rcu: Add support for consolidated-RCU reader checking
-Message-ID: <20190603194211.GA228607@google.com>
-References: <20190601222738.6856-1-joel@joelfernandes.org>
- <20190601222738.6856-2-joel@joelfernandes.org>
- <20190603080128.GA3436@hirez.programming.kicks-ass.net>
- <20190603141847.GA94186@google.com>
+Date: Mon, 3 Jun 2019 23:05:24 -0400 (EDT)
+From: Christopher M Riedl <cmr@informatik.wtf>
+Message-ID: <1146575236.484635.1559617524880@privateemail.com>
+In-Reply-To: <81549d40-e477-6552-9a12-7200933279af@linux.ibm.com>
+References: <20190524123816.1773-1-cmr@informatik.wtf>
+ <81549d40-e477-6552-9a12-7200933279af@linux.ibm.com>
+Subject: Re: [RFC PATCH v2] powerpc/xmon: restrict when kernel is locked
+ down
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190603141847.GA94186@google.com>
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: linux-kernel@vger.kernel.org, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Bjorn Helgaas <bhelgaas@google.com>, Borislav Petkov <bp@alien8.de>, "David S. Miller" <davem@davemloft.net>, edumazet@google.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, Lai Jiangshan <jiangshanlai@gmail.com>, Len Brown <lenb@kernel.org>, linux-acpi@vger.kernel.org, linux-pci@vger.kernel.org, linux-pm@vger.kernel.org, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, neilb@suse.com, netdev@vger.kernel.org, oleg@redhat.com, "Paul E. McKenney" <paulmck@linux.ibm.com>, Pavel Machek <pavel@ucw.cz>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, rcu@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, "maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+To: Andrew Donnellan <ajd@linux.ibm.com>, linuxppc-dev@ozlabs.org, kernel-hardening@lists.openwall.com
+Cc: mjg59@google.com, dja@axtens.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 03, 2019 at 10:18:47AM -0400, Joel Fernandes wrote:
-> On Mon, Jun 03, 2019 at 10:01:28AM +0200, Peter Zijlstra wrote:
-> > On Sat, Jun 01, 2019 at 06:27:33PM -0400, Joel Fernandes (Google) wrote:
-> > > +#define list_for_each_entry_rcu(pos, head, member, cond...)		\
-> > > +	if (COUNT_VARGS(cond) != 0) {					\
-> > > +		__list_check_rcu_cond(0, ## cond);			\
-> > > +	} else {							\
-> > > +		__list_check_rcu();					\
-> > > +	}								\
-> > > +	for (pos = list_entry_rcu((head)->next, typeof(*pos), member);	\
-> > > +		&pos->member != (head);					\
-> > >  		pos = list_entry_rcu(pos->member.next, typeof(*pos), member))
-> > >  
-> > >  /**
-> > > @@ -621,7 +648,12 @@ static inline void hlist_add_behind_rcu(struct hlist_node *n,
-> > >   * the _rcu list-mutation primitives such as hlist_add_head_rcu()
-> > >   * as long as the traversal is guarded by rcu_read_lock().
-> > >   */
-> > > +#define hlist_for_each_entry_rcu(pos, head, member, cond...)		\
-> > > +	if (COUNT_VARGS(cond) != 0) {					\
-> > > +		__list_check_rcu_cond(0, ## cond);			\
-> > > +	} else {							\
-> > > +		__list_check_rcu();					\
-> > > +	}								\
-> > >  	for (pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
-> > >  			typeof(*(pos)), member);			\
-> > >  		pos;							\
-> > 
-> > 
-> > This breaks code like:
-> > 
-> > 	if (...)
-> > 		list_for_each_entry_rcu(...);
-> > 
-> > as they are no longer a single statement. You'll have to frob it into
-> > the initializer part of the for statement.
+
+> On June 3, 2019 at 1:36 AM Andrew Donnellan <ajd@linux.ibm.com> wrote:
 > 
-> Thanks a lot for that. I fixed it as below (diff is on top of the patch):
 > 
-> If not for that '##' , I could have abstracted the whole if/else
-> expression into its own macro and called it from list_for_each_entry_rcu() to
-> keep it more clean.
+> On 24/5/19 10:38 pm, Christopher M. Riedl wrote:
+> > Xmon should be either fully or partially disabled depending on the
+> > kernel lockdown state.
+> > 
+> > Put xmon into read-only mode for lockdown=integrity and completely
+> > disable xmon when lockdown=confidentiality. Xmon checks the lockdown
+> > state and takes appropriate action:
+> > 
+> >   (1) during xmon_setup to prevent early xmon'ing
+> > 
+> >   (2) when triggered via sysrq
+> > 
+> >   (3) when toggled via debugfs
+> > 
+> >   (4) when triggered via a previously enabled breakpoint
+> > 
+> > The following lockdown state transitions are handled:
+> > 
+> >   (1) lockdown=none -> lockdown=integrity
+> >       clear all breakpoints, set xmon read-only mode
+> > 
+> >   (2) lockdown=none -> lockdown=confidentiality
+> >       clear all breakpoints, prevent re-entry into xmon
+> > 
+> >   (3) lockdown=integrity -> lockdown=confidentiality
+> >       prevent re-entry into xmon
+> > 
+> > Suggested-by: Andrew Donnellan <ajd@linux.ibm.com>
+> > Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
+> > ---
+> > 
+> > Applies on top of this series:
+> > 	https://patchwork.kernel.org/cover/10884631/
+> > 
+> > I've done some limited testing of the scenarios mentioned in the commit
+> > message on a single CPU QEMU config.
+> > 
+> > v1->v2:
+> > 	Fix subject line
+> > 	Submit to linuxppc-dev and kernel-hardening
+> > 
+> >   arch/powerpc/xmon/xmon.c | 56 +++++++++++++++++++++++++++++++++++++++-
+> >   1 file changed, 55 insertions(+), 1 deletion(-)
+> > 
+> > diff --git a/arch/powerpc/xmon/xmon.c b/arch/powerpc/xmon/xmon.c
+> > index 3e7be19aa208..8c4a5a0c28f0 100644
+> > --- a/arch/powerpc/xmon/xmon.c
+> > +++ b/arch/powerpc/xmon/xmon.c
+> > @@ -191,6 +191,9 @@ static void dump_tlb_44x(void);
+> >   static void dump_tlb_book3e(void);
+> >   #endif
+> >   
+> > +static void clear_all_bpt(void);
+> > +static void xmon_init(int);
+> > +
+> >   #ifdef CONFIG_PPC64
+> >   #define REG		"%.16lx"
+> >   #else
+> > @@ -291,6 +294,39 @@ Commands:\n\
+> >     zh	halt\n"
+> >   ;
+> >   
+> > +#ifdef CONFIG_LOCK_DOWN_KERNEL
+> > +static bool xmon_check_lockdown(void)
+> > +{
+> > +	static bool lockdown = false;
+> > +
+> > +	if (!lockdown) {
+> > +		lockdown = kernel_is_locked_down("Using xmon",
+> > +						 LOCKDOWN_CONFIDENTIALITY);
+> > +		if (lockdown) {
+> > +			printf("xmon: Disabled by strict kernel lockdown\n");
+> > +			xmon_on = 0;
+> > +			xmon_init(0);
+> > +		}
+> > +	}
+> > +
+> > +	if (!xmon_is_ro) {
+> > +		xmon_is_ro = kernel_is_locked_down("Using xmon write-access",
+> > +						   LOCKDOWN_INTEGRITY);
+> > +		if (xmon_is_ro) {
+> > +			printf("xmon: Read-only due to kernel lockdown\n");
+> > +			clear_all_bpt();
+> 
+> Remind me again why we need to clear breakpoints in integrity mode?
+> 
+> 
+> Andrew
+> 
 
-Actually was able to roll the if/else into its own macro as well, thus
-keeping it clean. thanks!
+I interpreted "integrity" mode as meaning that any changes made by xmon should
+be reversed. This also covers the case when a user creates some breakpoint(s)
+in xmon, exits xmon, and then elevates the lockdown state. Upon hitting the
+first breakpoint and (re-)entering xmon, xmon will clear all breakpoints.
 
----8<-----------------------
+Xmon can only take action in response to dynamic lockdown level changes when
+xmon is invoked in some manner - if there is a better way I am all ears :)
 
-diff --git a/include/linux/rculist.h b/include/linux/rculist.h
-index b641fdd9f1a2..cc9c382b080c 100644
---- a/include/linux/rculist.h
-+++ b/include/linux/rculist.h
-@@ -43,7 +43,11 @@ static inline void INIT_LIST_HEAD_RCU(struct list_head *list)
- /*
-  * Check during list traversal that we are within an RCU reader
-  */
--#define __list_check_rcu()						\
-+
-+#define SIXTH_ARG(a1, a2, a3, a4, a5, a6, ...) a6
-+#define COUNT_VARGS(...) SIXTH_ARG(dummy, ## __VA_ARGS__, 4, 3, 2, 1, 0)
-+
-+#define __list_check_rcu_nocond()					\
- 	RCU_LOCKDEP_WARN(!rcu_read_lock_any_held(),			\
- 			 "RCU-list traversed in non-reader section!")
- 
-@@ -59,6 +63,16 @@ static inline void __list_check_rcu_cond(int dummy, ...)
- 	RCU_LOCKDEP_WARN(!cond && !rcu_read_lock_any_held(),
- 			 "RCU-list traversed in non-reader section!");
- }
-+
-+#define __list_check_rcu(cond...)				\
-+     ({								\
-+	if (COUNT_VARGS(cond) != 0) {				\
-+		__list_check_rcu_cond(0, ## cond);		\
-+	} else {						\
-+		__list_check_rcu_nocond();			\
-+	}							\
-+      })
-+
- /*
-  * Insert a new entry between two known consecutive entries.
-  *
-@@ -357,9 +371,6 @@ static inline void list_splice_tail_init_rcu(struct list_head *list,
- 						  member) : NULL; \
- })
- 
--#define SIXTH_ARG(a1, a2, a3, a4, a5, a6, ...) a6
--#define COUNT_VARGS(...) SIXTH_ARG(dummy, ## __VA_ARGS__, 4, 3, 2, 1, 0)
--
- /**
-  * list_for_each_entry_rcu	-	iterate over rcu list of given type
-  * @pos:	the type * to use as a loop cursor.
-@@ -371,12 +382,8 @@ static inline void list_splice_tail_init_rcu(struct list_head *list,
-  * as long as the traversal is guarded by rcu_read_lock().
-  */
- #define list_for_each_entry_rcu(pos, head, member, cond...)		\
--	if (COUNT_VARGS(cond) != 0) {					\
--		__list_check_rcu_cond(0, ## cond);			\
--	} else {							\
--		__list_check_rcu();					\
--	}								\
--	for (pos = list_entry_rcu((head)->next, typeof(*pos), member);	\
-+	for (__list_check_rcu(cond),					\
-+	     pos = list_entry_rcu((head)->next, typeof(*pos), member);	\
- 		&pos->member != (head);					\
- 		pos = list_entry_rcu(pos->member.next, typeof(*pos), member))
- 
-@@ -649,12 +656,8 @@ static inline void hlist_add_behind_rcu(struct hlist_node *n,
-  * as long as the traversal is guarded by rcu_read_lock().
-  */
- #define hlist_for_each_entry_rcu(pos, head, member, cond...)		\
--	if (COUNT_VARGS(cond) != 0) {					\
--		__list_check_rcu_cond(0, ## cond);			\
--	} else {							\
--		__list_check_rcu();					\
--	}								\
--	for (pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
-+	for (__list_check_rcu(cond),					\
-+	     pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
- 			typeof(*(pos)), member);			\
- 		pos;							\
- 		pos = hlist_entry_safe(rcu_dereference_raw(hlist_next_rcu(\
--- 
-2.22.0.rc1.311.g5d7573a151-goog
+> 
+> > +		}
+> > +	}
+> > +
+> > +	return lockdown;
+> > +}
+> > +#else
+> > +inline static bool xmon_check_lockdown(void)
+> > +{
+> > +	return false;
+> > +}
+> > +#endif /* CONFIG_LOCK_DOWN_KERNEL */
+> > +
+> >   static struct pt_regs *xmon_regs;
+> >   
+> >   static inline void sync(void)
+> > @@ -708,6 +744,9 @@ static int xmon_bpt(struct pt_regs *regs)
+> >   	struct bpt *bp;
+> >   	unsigned long offset;
+> >   
+> > +	if (xmon_check_lockdown())
+> > +		return 0;
+> > +
+> >   	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+> >   		return 0;
+> >   
+> > @@ -739,6 +778,9 @@ static int xmon_sstep(struct pt_regs *regs)
+> >   
+> >   static int xmon_break_match(struct pt_regs *regs)
+> >   {
+> > +	if (xmon_check_lockdown())
+> > +		return 0;
+> > +
+> >   	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+> >   		return 0;
+> >   	if (dabr.enabled == 0)
+> > @@ -749,6 +791,9 @@ static int xmon_break_match(struct pt_regs *regs)
+> >   
+> >   static int xmon_iabr_match(struct pt_regs *regs)
+> >   {
+> > +	if (xmon_check_lockdown())
+> > +		return 0;
+> > +
+> >   	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+> >   		return 0;
+> >   	if (iabr == NULL)
+> > @@ -3742,6 +3787,9 @@ static void xmon_init(int enable)
+> >   #ifdef CONFIG_MAGIC_SYSRQ
+> >   static void sysrq_handle_xmon(int key)
+> >   {
+> > +	if (xmon_check_lockdown())
+> > +		return;
+> > +
+> >   	/* ensure xmon is enabled */
+> >   	xmon_init(1);
+> >   	debugger(get_irq_regs());
+> > @@ -3763,7 +3811,6 @@ static int __init setup_xmon_sysrq(void)
+> >   device_initcall(setup_xmon_sysrq);
+> >   #endif /* CONFIG_MAGIC_SYSRQ */
+> >   
+> > -#ifdef CONFIG_DEBUG_FS
+> >   static void clear_all_bpt(void)
+> >   {
+> >   	int i;
+> > @@ -3785,8 +3832,12 @@ static void clear_all_bpt(void)
+> >   	printf("xmon: All breakpoints cleared\n");
+> >   }
+> >   
+> > +#ifdef CONFIG_DEBUG_FS
+> >   static int xmon_dbgfs_set(void *data, u64 val)
+> >   {
+> > +	if (xmon_check_lockdown())
+> > +		return 0;
+> > +
+> >   	xmon_on = !!val;
+> >   	xmon_init(xmon_on);
+> >   
+> > @@ -3845,6 +3896,9 @@ early_param("xmon", early_parse_xmon);
+> >   
+> >   void __init xmon_setup(void)
+> >   {
+> > +	if (xmon_check_lockdown())
+> > +		return;
+> > +
+> >   	if (xmon_on)
+> >   		xmon_init(1);
+> >   	if (xmon_early)
+> > 
+> 
+> -- 
+> Andrew Donnellan              OzLabs, ADL Canberra
+> ajd@linux.ibm.com             IBM Australia Limited
+>
