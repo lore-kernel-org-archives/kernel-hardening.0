@@ -1,41 +1,86 @@
-Date: Tue, 4 Jun 2019 21:24:29 -0400
-From: Daniel Jordan <daniel.m.jordan@oracle.com>
-Subject: Re: [RFC 4/6] workqueue: Convert for_each_wq to use built-in list
- check
-Message-ID: <20190605012429.wmlvlgn4mb4jkvua@ca-dmjordan1.us.oracle.com>
-References: <20190601222738.6856-1-joel@joelfernandes.org>
- <20190601222738.6856-5-joel@joelfernandes.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190601222738.6856-5-joel@joelfernandes.org>
-To: "Joel Fernandes (Google)" <joel@joelfernandes.org>
-Cc: linux-kernel@vger.kernel.org, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Bjorn Helgaas <bhelgaas@google.com>, Borislav Petkov <bp@alien8.de>, "David S. Miller" <davem@davemloft.net>, edumazet@google.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org, kernel-hardening@lists.openwall.com, Lai Jiangshan <jiangshanlai@gmail.com>, Len Brown <lenb@kernel.org>, linux-acpi@vger.kernel.org, linux-pci@vger.kernel.org, linux-pm@vger.kernel.org, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, neilb@suse.com, netdev@vger.kernel.org, oleg@redhat.com, "Paul E. McKenney" <paulmck@linux.ibm.com>, Pavel Machek <pavel@ucw.cz>, peterz@infradead.org, "Rafael J. Wysocki" <rjw@rjwysocki.net>, rcu@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, "maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
+References: <20190529123812.43089-1-glider@google.com> <20190529123812.43089-3-glider@google.com>
+ <20190531181832.e7c3888870ce9e50db9f69e6@linux-foundation.org>
+ <CAG_fn=XBq-ipvZng3hEiGwyQH2rRNFbN_Cj0r+5VoJqou0vovA@mail.gmail.com>
+ <201906032010.8E630B7@keescook> <CAPDLWs-JqUx+_sDtsER=keDu9o2NKYQ3mvZVXLY8deXOMZoH=g@mail.gmail.com>
+ <CAG_fn=UxfaFVZbtnO0VefKhi3iZUYn5ybe_Nvo0rCOxxA2nn-Q@mail.gmail.com>
+In-Reply-To: <CAG_fn=UxfaFVZbtnO0VefKhi3iZUYn5ybe_Nvo0rCOxxA2nn-Q@mail.gmail.com>
+From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Date: Wed, 5 Jun 2019 08:28:43 +0530
+Message-ID: <CAPDLWs__StRJ3AwXNDL3D=_nEkzB_Hto+8+55V=npw63R6_SMQ@mail.gmail.com>
+Subject: Re: [PATCH v5 2/3] mm: init: report memory auto-initialization
+ features at boot time
+Content-Type: text/plain; charset="UTF-8"
+To: Alexander Potapenko <glider@google.com>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Dmitry Vyukov <dvyukov@google.com>, James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>, Kostya Serebryany <kcc@google.com>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Matthew Wilcox <willy@infradead.org>, Nick Desaulniers <ndesaulniers@google.com>, Randy Dunlap <rdunlap@infradead.org>, Sandeep Patil <sspatil@android.com>, "Serge E. Hallyn" <serge@hallyn.com>, Souptick Joarder <jrdr.linux@gmail.com>, Marco Elver <elver@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jun 01, 2019 at 06:27:36PM -0400, Joel Fernandes (Google) wrote:
-> list_for_each_entry_rcu now has support to check for RCU reader sections
-> as well as lock. Just use the support in it, instead of explictly
-> checking in the caller.
-> 
-> Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
-> ---
->  kernel/workqueue.c | 5 ++---
->  1 file changed, 2 insertions(+), 3 deletions(-)
-> 
-> diff --git a/kernel/workqueue.c b/kernel/workqueue.c
-> index 9657315405de..91ed7aca16e5 100644
-> --- a/kernel/workqueue.c
-> +++ b/kernel/workqueue.c
-> @@ -424,9 +424,8 @@ static void workqueue_sysfs_unregister(struct workqueue_struct *wq);
->   * ignored.
->   */
->  #define for_each_pwq(pwq, wq)						\
-> -	list_for_each_entry_rcu((pwq), &(wq)->pwqs, pwqs_node)		\
-> -		if (({ assert_rcu_or_wq_mutex(wq); false; })) { }	\
-> -		else
-> +	list_for_each_entry_rcu((pwq), &(wq)->pwqs, pwqs_node,		\
-> +				 lock_is_held(&(wq->mutex).dep_map))
->  
+On Tue, Jun 4, 2019 at 8:36 PM Alexander Potapenko <glider@google.com> wrote:
+>
+> On Tue, Jun 4, 2019 at 8:01 AM Kaiwan N Billimoria
+> <kaiwan@kaiwantech.com> wrote:
+> >
+> > On Tue, Jun 4, 2019 at 8:44 AM Kees Cook <keescook@chromium.org> wrote:
+> > >
+> > > On Mon, Jun 03, 2019 at 11:24:49AM +0200, Alexander Potapenko wrote:
+> > > > On Sat, Jun 1, 2019 at 3:18 AM Andrew Morton <akpm@linux-foundation.org> wrote:
+> > > > >
+> > > > > On Wed, 29 May 2019 14:38:11 +0200 Alexander Potapenko <glider@google.com> wrote:
+> > > > >
+> > > > > > Print the currently enabled stack and heap initialization modes.
+> > > > > >
+> > > > > > The possible options for stack are:
+> > > > > >  - "all" for CONFIG_INIT_STACK_ALL;
+> > > > > >  - "byref_all" for CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL;
+> > > > > >  - "byref" for CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF;
+> > > > > >  - "__user" for CONFIG_GCC_PLUGIN_STRUCTLEAK_USER;
+> > > > > >  - "off" otherwise.
+> > > > > >
+> > > > > > Depending on the values of init_on_alloc and init_on_free boottime
+> > > > > > options we also report "heap alloc" and "heap free" as "on"/"off".
+> > > > >
+> > > > > Why?
+> > > > >
+> > > > > Please fully describe the benefit to users so that others can judge the
+> > > > > desirability of the patch.  And so they can review it effectively, etc.
+> > > > I'm going to update the description with the following passage:
+> > > >
+> > > >     Print the currently enabled stack and heap initialization modes.
+> > > >
+> > > >     Stack initialization is enabled by a config flag, while heap
+> > > >     initialization is configured at boot time with defaults being set
+> > > >     in the config. It's more convenient for the user to have all information
+> > > >     about these hardening measures in one place.
+> > > >
+> > > > Does this make sense?
+> > > > > Always!
+> > > > >
+> > > > > > In the init_on_free mode initializing pages at boot time may take some
+> > > > > > time, so print a notice about that as well.
+> > > > >
+> > > > > How much time?
+> > > > I've seen pauses up to 1 second, not actually sure they're worth a
+> > > > separate line in the log.
+> > > > Kees, how long were the delays in your case?
+> > >
+> > > I didn't measure it, but I think it was something like 0.5 second per GB.
+> > > I noticed because normally boot flashes by. With init_on_free it pauses
+> > > for no apparent reason, which is why I suggested the note. (I mean *I*
+> > > knew why it was pausing, but it might surprise someone who sets
+> > > init_on_free=1 without really thinking about what's about to happen at
+> > > boot.)
+> >
+> > (Pardon the gmail client)
+> > How about:
+> > - if (want_init_on_free())
+> > -               pr_info("Clearing system memory may take some time...\n");
+> > +  if (want_init_on_free())
+> > +              pr_info("meminit: clearing system memory may take some
+> > time...\n");
+> Yes, adding a prefix may give the users better understanding of who's
+> clearing the memory.
+> We should stick to the same prefix as before though, i.e. "mem auto-init"
 
-I think the definition of assert_rcu_or_wq_mutex can also be deleted.
+True, agreed.
+--
+Kaiwan
