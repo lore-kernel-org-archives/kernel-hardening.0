@@ -1,9 +1,9 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.19 69/73] x86/kprobes: Set instruction page as executable
-Date: Fri,  7 Jun 2019 17:39:56 +0200
-Message-Id: <20190607153856.531407540@linuxfoundation.org>
-In-Reply-To: <20190607153848.669070800@linuxfoundation.org>
-References: <20190607153848.669070800@linuxfoundation.org>
+Subject: [PATCH 5.1 85/85] x86/kprobes: Set instruction page as executable
+Date: Fri,  7 Jun 2019 17:40:10 +0200
+Message-Id: <20190607153858.186248816@linuxfoundation.org>
+In-Reply-To: <20190607153849.101321647@linuxfoundation.org>
+References: <20190607153849.101321647@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -45,7 +45,7 @@ Signed-off-by: Sasha Levin <sashal@kernel.org>
  1 file changed, 20 insertions(+), 4 deletions(-)
 
 diff --git a/arch/x86/kernel/kprobes/core.c b/arch/x86/kernel/kprobes/core.c
-index 544bc2dfe408..e83a057564d1 100644
+index fed46ddb1eef..06058c44ab57 100644
 --- a/arch/x86/kernel/kprobes/core.c
 +++ b/arch/x86/kernel/kprobes/core.c
 @@ -431,8 +431,20 @@ void *alloc_insn_page(void)
