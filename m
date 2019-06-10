@@ -1,49 +1,52 @@
-Date: Mon, 10 Jun 2019 13:43:55 -0700
+Date: Mon, 10 Jun 2019 13:44:55 -0700
 From: Kees Cook <keescook@chromium.org>
-Subject: Re: [PATCH 2/5] x86/vsyscall: Add a new vsyscall=xonly mode
-Message-ID: <201906101342.B8A938BB@keescook>
+Subject: Re: [PATCH 5/5] x86/vsyscall: Change the default vsyscall mode to
+ xonly
+Message-ID: <201906101344.018BE4C5C1@keescook>
 References: <cover.1560198181.git.luto@kernel.org>
- <131caabf9d127db1a077525f978e1f1f74f9088f.1560198181.git.luto@kernel.org>
+ <25fd7036cefca16c68ecd990e05e05a8ad8fe8b2.1560198181.git.luto@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <131caabf9d127db1a077525f978e1f1f74f9088f.1560198181.git.luto@kernel.org>
+In-Reply-To: <25fd7036cefca16c68ecd990e05e05a8ad8fe8b2.1560198181.git.luto@kernel.org>
 To: Andy Lutomirski <luto@kernel.org>
 Cc: x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 10, 2019 at 01:25:28PM -0700, Andy Lutomirski wrote:
-> With vsyscall emulation on, we still expose a readable vsyscall page
-> that contains syscall instructions that validly implement the
-> vsyscalls.  We need this because certain dynamic binary
-> instrumentation tools attempt to read the call targets of call
-> instructions in the instrumented code.  If the instrumented code
-> uses vsyscalls, then the vsyscal page needs to contain readable
-> code.
-> 
-> Unfortunately, leaving readable memory at a deterministic address
-> can be used to help various ASLR bypasses, so we gain some hardening
-> value if we disallow vsyscall reads.
-> 
-> Given how rarely the vsyscall page needs to be readable, add a
-> mechanism to make the vsyscall page be execute only.
+On Mon, Jun 10, 2019 at 01:25:31PM -0700, Andy Lutomirski wrote:
+> The use case for full emulation over xonly is very esoteric.  Let's
+> change the default to the safer xonly mode.
 
-Should the commit log mention that the VVAR portion goes away under
-xonly? (Since it's not executable.)
-
-Otherwise, yay! Looks good to me and thanks for updating the selftests!
+Perhaps describe the esoteric cases here (and maybe in the Kconfig help
+text)? That should a user determine if they actually need it. (What
+would the failure under xonly look like for someone needing emulate?)
 
 -Kees
 
-> @@ -357,7 +368,7 @@ void __init map_vsyscall(void)
->  	extern char __vsyscall_page;
->  	unsigned long physaddr_vsyscall = __pa_symbol(&__vsyscall_page);
->  
-> -	if (vsyscall_mode != NONE) {
-> +	if (vsyscall_mode == EMULATE) {
->  		__set_fixmap(VSYSCALL_PAGE, physaddr_vsyscall,
->  			     PAGE_KERNEL_VVAR);
->  		set_vsyscall_pgtable_user_bits(swapper_pg_dir);
+> 
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Borislav Petkov <bp@alien8.de>
+> Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+> Cc: Peter Zijlstra <peterz@infradead.org>
+> Cc: Thomas Gleixner <tglx@linutronix.de>
+> Signed-off-by: Andy Lutomirski <luto@kernel.org>
+> ---
+>  arch/x86/Kconfig | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> index 054033cc4b1b..e56f33e6b045 100644
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -2280,7 +2280,7 @@ config COMPAT_VDSO
+>  choice
+>  	prompt "vsyscall table for legacy applications"
+>  	depends on X86_64
+> -	default LEGACY_VSYSCALL_EMULATE
+> +	default LEGACY_VSYSCALL_XONLY
+>  	help
+>  	  Legacy user code that does not know how to find the vDSO expects
+>  	  to be able to issue three syscalls by calling fixed addresses in
 > -- 
 > 2.21.0
 > 
