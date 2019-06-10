@@ -1,55 +1,23 @@
-Date: Mon, 10 Jun 2019 13:44:55 -0700
+Date: Mon, 10 Jun 2019 14:32:47 -0700
 From: Kees Cook <keescook@chromium.org>
-Subject: Re: [PATCH 5/5] x86/vsyscall: Change the default vsyscall mode to
- xonly
-Message-ID: <201906101344.018BE4C5C1@keescook>
-References: <cover.1560198181.git.luto@kernel.org>
- <25fd7036cefca16c68ecd990e05e05a8ad8fe8b2.1560198181.git.luto@kernel.org>
+Subject: Re: [PATCH v7 00/12] x86: PIE support to extend KASLR randomization
+Message-ID: <201906101432.B642E297F@keescook>
+References: <20190520231948.49693-1-thgarnie@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <25fd7036cefca16c68ecd990e05e05a8ad8fe8b2.1560198181.git.luto@kernel.org>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>
+In-Reply-To: <20190520231948.49693-1-thgarnie@chromium.org>
+To: Thomas Garnier <thgarnie@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, kristen@linux.intel.com, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Andy Lutomirski <luto@kernel.org>, Juergen Gross <jgross@suse.com>, Alok Kataria <akataria@vmware.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Peter Zijlstra <peterz@infradead.org>, Thomas Garnier <thgarnie@google.com>, Nadav Amit <namit@vmware.com>, Jann Horn <jannh@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Andi Kleen <ak@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Feng Tang <feng.tang@intel.com>, Jan Beulich <JBeulich@suse.com>, Maran Wilson <maran.wilson@oracle.com>, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, virtualization@lists.linux-foundation.org, linux-pm@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 10, 2019 at 01:25:31PM -0700, Andy Lutomirski wrote:
-> The use case for full emulation over xonly is very esoteric.  Let's
-> change the default to the safer xonly mode.
+On Mon, May 20, 2019 at 04:19:25PM -0700, Thomas Garnier wrote:
+> Splitting the previous serie in two. This part contains assembly code
+> changes required for PIE but without any direct dependencies with the
+> rest of the patchset.
 
-Perhaps describe the esoteric cases here (and maybe in the Kconfig help
-text)? That should a user determine if they actually need it. (What
-would the failure under xonly look like for someone needing emulate?)
-
--Kees
-
-> 
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Borislav Petkov <bp@alien8.de>
-> Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-> Cc: Peter Zijlstra <peterz@infradead.org>
-> Cc: Thomas Gleixner <tglx@linutronix.de>
-> Signed-off-by: Andy Lutomirski <luto@kernel.org>
-> ---
->  arch/x86/Kconfig | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-> index 054033cc4b1b..e56f33e6b045 100644
-> --- a/arch/x86/Kconfig
-> +++ b/arch/x86/Kconfig
-> @@ -2280,7 +2280,7 @@ config COMPAT_VDSO
->  choice
->  	prompt "vsyscall table for legacy applications"
->  	depends on X86_64
-> -	default LEGACY_VSYSCALL_EMULATE
-> +	default LEGACY_VSYSCALL_XONLY
->  	help
->  	  Legacy user code that does not know how to find the vDSO expects
->  	  to be able to issue three syscalls by calling fixed addresses in
-> -- 
-> 2.21.0
-> 
+Thanks for doing this! It should be easier to land the "little" fixes so
+there's less to review for the big PIE changes down the road.
 
 -- 
 Kees Cook
