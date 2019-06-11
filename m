@@ -1,48 +1,52 @@
-Date: Tue, 11 Jun 2019 14:09:07 -0700
-From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH V2] include: linux: Regularise the use of FIELD_SIZEOF
- macro
-Message-Id: <20190611140907.899bebb12a3d731da24a9ad1@linux-foundation.org>
-In-Reply-To: <6DCAE4F8-3BEC-45F2-A733-F4D15850B7F3@dilger.ca>
+MIME-Version: 1.0
 References: <20190611193836.2772-1-shyam.saini@amarulasolutions.com>
-	<20190611134831.a60c11f4b691d14d04a87e29@linux-foundation.org>
-	<6DCAE4F8-3BEC-45F2-A733-F4D15850B7F3@dilger.ca>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Andreas Dilger <adilger@dilger.ca>
-Cc: Shyam Saini <shyam.saini@amarulasolutions.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, keescook@chromium.org, linux-arm-kernel@lists.infradead.org, linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, dri-devel@lists.freedesktop.org, netdev@vger.kernel.org, linux-ext4 <linux-ext4@vger.kernel.org>, devel@lists.orangefs.org, linux-mm@kvack.org, linux-sctp@vger.kernel.org, bpf@vger.kernel.org, kvm@vger.kernel.org, mayhs11saini@gmail.com, Alexey Dobriyan <adobriyan@gmail.com>
+ <20190611134831.a60c11f4b691d14d04a87e29@linux-foundation.org>
+ <6DCAE4F8-3BEC-45F2-A733-F4D15850B7F3@dilger.ca> <20190611140907.899bebb12a3d731da24a9ad1@linux-foundation.org>
+In-Reply-To: <20190611140907.899bebb12a3d731da24a9ad1@linux-foundation.org>
+From: Shyam Saini <mayhs11saini@gmail.com>
+Date: Wed, 12 Jun 2019 02:57:58 +0530
+Message-ID: <CAOfkYf5_HTN1HO0gQY9iGchK5Anf6oVx7knzMhL1hWpv4gV20Q@mail.gmail.com>
+Subject: Re: [PATCH V2] include: linux: Regularise the use of FIELD_SIZEOF macro
+Content-Type: text/plain; charset="UTF-8"
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Andreas Dilger <adilger@dilger.ca>, Shyam Saini <shyam.saini@amarulasolutions.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-kernel <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, linux-arm-kernel@lists.infradead.org, linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, dri-devel <dri-devel@lists.freedesktop.org>, Network Development <netdev@vger.kernel.org>, linux-ext4 <linux-ext4@vger.kernel.org>, devel@lists.orangefs.org, linux-mm <linux-mm@kvack.org>, linux-sctp@vger.kernel.org, bpf <bpf@vger.kernel.org>, kvm@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 11 Jun 2019 15:00:10 -0600 Andreas Dilger <adilger@dilger.ca> wrote:
+Hi Andrew,
 
-> >> to FIELD_SIZEOF
-> > 
-> > As Alexey has pointed out, C structs and unions don't have fields -
-> > they have members.  So this is an opportunity to switch everything to
-> > a new member_sizeof().
-> > 
-> > What do people think of that and how does this impact the patch footprint?
-> 
-> I did a check, and FIELD_SIZEOF() is used about 350x, while sizeof_field()
-> is about 30x, and SIZEOF_FIELD() is only about 5x.
+>
+> On Tue, 11 Jun 2019 15:00:10 -0600 Andreas Dilger <adilger@dilger.ca> wrote:
+>
+> > >> to FIELD_SIZEOF
+> > >
+> > > As Alexey has pointed out, C structs and unions don't have fields -
+> > > they have members.  So this is an opportunity to switch everything to
+> > > a new member_sizeof().
+> > >
+> > > What do people think of that and how does this impact the patch footprint?
+> >
+> > I did a check, and FIELD_SIZEOF() is used about 350x, while sizeof_field()
+> > is about 30x, and SIZEOF_FIELD() is only about 5x.
+>
+> Erk.  Sorry, I should have grepped.
+>
+> > That said, I'm much more in favour of "sizeof_field()" or "sizeof_member()"
+> > than FIELD_SIZEOF().  Not only does that better match "offsetof()", with
+> > which it is closely related, but is also closer to the original "sizeof()".
+> >
+> > Since this is a rather trivial change, it can be split into a number of
+> > patches to get approval/landing via subsystem maintainers, and there is no
+> > huge urgency to remove the original macros until the users are gone.  It
+> > would make sense to remove SIZEOF_FIELD() and sizeof_field() quickly so
+> > they don't gain more users, and the remaining FIELD_SIZEOF() users can be
+> > whittled away as the patches come through the maintainer trees.
+>
+> In that case I'd say let's live with FIELD_SIZEOF() and remove
+> sizeof_field() and SIZEOF_FIELD().
+>
+> I'm a bit surprised that the FIELD_SIZEOF() definition ends up in
+> stddef.h rather than in kernel.h where such things are normally
+> defined.  Why is that?
 
-Erk.  Sorry, I should have grepped.
-
-> That said, I'm much more in favour of "sizeof_field()" or "sizeof_member()"
-> than FIELD_SIZEOF().  Not only does that better match "offsetof()", with
-> which it is closely related, but is also closer to the original "sizeof()".
-> 
-> Since this is a rather trivial change, it can be split into a number of
-> patches to get approval/landing via subsystem maintainers, and there is no
-> huge urgency to remove the original macros until the users are gone.  It
-> would make sense to remove SIZEOF_FIELD() and sizeof_field() quickly so
-> they don't gain more users, and the remaining FIELD_SIZEOF() users can be
-> whittled away as the patches come through the maintainer trees.
-
-In that case I'd say let's live with FIELD_SIZEOF() and remove
-sizeof_field() and SIZEOF_FIELD().
-
-I'm a bit surprised that the FIELD_SIZEOF() definition ends up in
-stddef.h rather than in kernel.h where such things are normally
-defined.  Why is that?
+Thanks for pointing out this, I was not aware if this is a convention.
+Anyway, I'll keep FIELD_SIZEOF definition in kernel.h in next version.
