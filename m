@@ -1,81 +1,80 @@
-MIME-Version: 1.0
-References: <20190612170834.14855-1-mhillenb@amazon.de> <eecc856f-7f3f-ed11-3457-ea832351e963@intel.com>
+From: Nadav Amit <namit@vmware.com>
+Subject: Re: [RFC 00/10] Process-local memory allocations for hiding KVM
+ secrets
+Date: Thu, 13 Jun 2019 01:50:46 +0000
+Message-ID: <F05B97DB-34BD-44CF-AC6A-945D7AD39C38@vmware.com>
+References: <20190612170834.14855-1-mhillenb@amazon.de>
+ <eecc856f-7f3f-ed11-3457-ea832351e963@intel.com>
  <A542C98B-486C-4849-9DAC-2355F0F89A20@amacapital.net>
-In-Reply-To: <A542C98B-486C-4849-9DAC-2355F0F89A20@amacapital.net>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Wed, 12 Jun 2019 18:30:03 -0700
-Message-ID: <CALCETrXHbS9VXfZ80kOjiTrreM2EbapYeGp68mvJPbosUtorYA@mail.gmail.com>
-Subject: Re: [RFC 00/10] Process-local memory allocations for hiding KVM secrets
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Dave Hansen <dave.hansen@intel.com>, Nadav Amit <namit@vmware.com>
-Cc: Marius Hillenbrand <mhillenb@amazon.de>, kvm list <kvm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Alexander Graf <graf@amazon.de>, David Woodhouse <dwmw@amazon.co.uk>, the arch/x86 maintainers <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+ <CALCETrXHbS9VXfZ80kOjiTrreM2EbapYeGp68mvJPbosUtorYA@mail.gmail.com>
+In-Reply-To: 
+ <CALCETrXHbS9VXfZ80kOjiTrreM2EbapYeGp68mvJPbosUtorYA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <DC6CAD422C9C324592B81075EE26ED66@namprd05.prod.outlook.com>
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Dave Hansen <dave.hansen@intel.com>, Marius Hillenbrand <mhillenb@amazon.de>, kvm list <kvm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Alexander Graf <graf@amazon.de>, David Woodhouse <dwmw@amazon.co.uk>, the arch/x86 maintainers <x86@kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 12, 2019 at 1:27 PM Andy Lutomirski <luto@amacapital.net> wrote=
-:
->
->
->
-> > On Jun 12, 2019, at 12:55 PM, Dave Hansen <dave.hansen@intel.com> wrote=
-:
-> >
-> >> On 6/12/19 10:08 AM, Marius Hillenbrand wrote:
-> >> This patch series proposes to introduce a region for what we call
-> >> process-local memory into the kernel's virtual address space.
-> >
-> > It might be fun to cc some x86 folks on this series.  They might have
-> > some relevant opinions. ;)
-> >
-> > A few high-level questions:
-> >
-> > Why go to all this trouble to hide guest state like registers if all th=
-e
-> > guest data itself is still mapped?
-> >
-> > Where's the context-switching code?  Did I just miss it?
-> >
-> > We've discussed having per-cpu page tables where a given PGD is only in
-> > use from one CPU at a time.  I *think* this scheme still works in such =
-a
-> > case, it just adds one more PGD entry that would have to context-switch=
-ed.
->
-> Fair warning: Linus is on record as absolutely hating this idea. He might=
- change his mind, but it=E2=80=99s an uphill battle.
-
-I looked at the patch, and it (sensibly) has nothing to do with
-per-cpu PGDs.  So it's in great shape!
-
-Seriously, though, here are some very high-level review comments:
-
-Please don't call it "process local", since "process" is meaningless.
-Call it "mm local" or something like that.
-
-We already have a per-mm kernel mapping: the LDT.  So please nix all
-the code that adds a new VA region, etc, except to the extent that
-some of it consists of valid cleanups in and of itself.  Instead,
-please refactor the LDT code (arch/x86/kernel/ldt.c, mainly) to make
-it use a more general "mm local" address range, and then reuse the
-same infrastructure for other fancy things.  The code that makes it
-KASLR-able should be in its very own patch that applies *after* the
-code that makes it all work so that, when the KASLR part causes a
-crash, we can bisect it.
-
-+ /*
-+ * Faults in process-local memory may be caused by process-local
-+ * addresses leaking into other contexts.
-+ * tbd: warn and handle gracefully.
-+ */
-+ if (unlikely(fault_in_process_local(address))) {
-+ pr_err("page fault in PROCLOCAL at %lx", address);
-+ force_sig_fault(SIGSEGV, SEGV_MAPERR, (void __user *)address, current);
-+ }
-+
-
-Huh?  Either it's an OOPS or you shouldn't print any special
-debugging.  As it is, you're just blatantly leaking the address of the
-mm-local range to malicious user programs.
-
-Also, you should IMO consider using this mechanism for kmap_atomic().
-Hi, Nadav!
+PiBPbiBKdW4gMTIsIDIwMTksIGF0IDY6MzAgUE0sIEFuZHkgTHV0b21pcnNraSA8bHV0b0BrZXJu
+ZWwub3JnPiB3cm90ZToNCj4gDQo+IE9uIFdlZCwgSnVuIDEyLCAyMDE5IGF0IDE6MjcgUE0gQW5k
+eSBMdXRvbWlyc2tpIDxsdXRvQGFtYWNhcGl0YWwubmV0PiB3cm90ZToNCj4+PiBPbiBKdW4gMTIs
+IDIwMTksIGF0IDEyOjU1IFBNLCBEYXZlIEhhbnNlbiA8ZGF2ZS5oYW5zZW5AaW50ZWwuY29tPiB3
+cm90ZToNCj4+PiANCj4+Pj4gT24gNi8xMi8xOSAxMDowOCBBTSwgTWFyaXVzIEhpbGxlbmJyYW5k
+IHdyb3RlOg0KPj4+PiBUaGlzIHBhdGNoIHNlcmllcyBwcm9wb3NlcyB0byBpbnRyb2R1Y2UgYSBy
+ZWdpb24gZm9yIHdoYXQgd2UgY2FsbA0KPj4+PiBwcm9jZXNzLWxvY2FsIG1lbW9yeSBpbnRvIHRo
+ZSBrZXJuZWwncyB2aXJ0dWFsIGFkZHJlc3Mgc3BhY2UuDQo+Pj4gDQo+Pj4gSXQgbWlnaHQgYmUg
+ZnVuIHRvIGNjIHNvbWUgeDg2IGZvbGtzIG9uIHRoaXMgc2VyaWVzLiAgVGhleSBtaWdodCBoYXZl
+DQo+Pj4gc29tZSByZWxldmFudCBvcGluaW9ucy4gOykNCj4+PiANCj4+PiBBIGZldyBoaWdoLWxl
+dmVsIHF1ZXN0aW9uczoNCj4+PiANCj4+PiBXaHkgZ28gdG8gYWxsIHRoaXMgdHJvdWJsZSB0byBo
+aWRlIGd1ZXN0IHN0YXRlIGxpa2UgcmVnaXN0ZXJzIGlmIGFsbCB0aGUNCj4+PiBndWVzdCBkYXRh
+IGl0c2VsZiBpcyBzdGlsbCBtYXBwZWQ/DQo+Pj4gDQo+Pj4gV2hlcmUncyB0aGUgY29udGV4dC1z
+d2l0Y2hpbmcgY29kZT8gIERpZCBJIGp1c3QgbWlzcyBpdD8NCj4+PiANCj4+PiBXZSd2ZSBkaXNj
+dXNzZWQgaGF2aW5nIHBlci1jcHUgcGFnZSB0YWJsZXMgd2hlcmUgYSBnaXZlbiBQR0QgaXMgb25s
+eSBpbg0KPj4+IHVzZSBmcm9tIG9uZSBDUFUgYXQgYSB0aW1lLiAgSSAqdGhpbmsqIHRoaXMgc2No
+ZW1lIHN0aWxsIHdvcmtzIGluIHN1Y2ggYQ0KPj4+IGNhc2UsIGl0IGp1c3QgYWRkcyBvbmUgbW9y
+ZSBQR0QgZW50cnkgdGhhdCB3b3VsZCBoYXZlIHRvIGNvbnRleHQtc3dpdGNoZWQuDQo+PiANCj4+
+IEZhaXIgd2FybmluZzogTGludXMgaXMgb24gcmVjb3JkIGFzIGFic29sdXRlbHkgaGF0aW5nIHRo
+aXMgaWRlYS4gSGUgbWlnaHQgY2hhbmdlIGhpcyBtaW5kLCBidXQgaXTigJlzIGFuIHVwaGlsbCBi
+YXR0bGUuDQo+IA0KPiBJIGxvb2tlZCBhdCB0aGUgcGF0Y2gsIGFuZCBpdCAoc2Vuc2libHkpIGhh
+cyBub3RoaW5nIHRvIGRvIHdpdGgNCj4gcGVyLWNwdSBQR0RzLiAgU28gaXQncyBpbiBncmVhdCBz
+aGFwZSENCj4gDQo+IFNlcmlvdXNseSwgdGhvdWdoLCBoZXJlIGFyZSBzb21lIHZlcnkgaGlnaC1s
+ZXZlbCByZXZpZXcgY29tbWVudHM6DQo+IA0KPiBQbGVhc2UgZG9uJ3QgY2FsbCBpdCAicHJvY2Vz
+cyBsb2NhbCIsIHNpbmNlICJwcm9jZXNzIiBpcyBtZWFuaW5nbGVzcy4NCj4gQ2FsbCBpdCAibW0g
+bG9jYWwiIG9yIHNvbWV0aGluZyBsaWtlIHRoYXQuDQo+IA0KPiBXZSBhbHJlYWR5IGhhdmUgYSBw
+ZXItbW0ga2VybmVsIG1hcHBpbmc6IHRoZSBMRFQuICBTbyBwbGVhc2Ugbml4IGFsbA0KPiB0aGUg
+Y29kZSB0aGF0IGFkZHMgYSBuZXcgVkEgcmVnaW9uLCBldGMsIGV4Y2VwdCB0byB0aGUgZXh0ZW50
+IHRoYXQNCj4gc29tZSBvZiBpdCBjb25zaXN0cyBvZiB2YWxpZCBjbGVhbnVwcyBpbiBhbmQgb2Yg
+aXRzZWxmLiAgSW5zdGVhZCwNCj4gcGxlYXNlIHJlZmFjdG9yIHRoZSBMRFQgY29kZSAoYXJjaC94
+ODYva2VybmVsL2xkdC5jLCBtYWlubHkpIHRvIG1ha2UNCj4gaXQgdXNlIGEgbW9yZSBnZW5lcmFs
+ICJtbSBsb2NhbCIgYWRkcmVzcyByYW5nZSwgYW5kIHRoZW4gcmV1c2UgdGhlDQo+IHNhbWUgaW5m
+cmFzdHJ1Y3R1cmUgZm9yIG90aGVyIGZhbmN5IHRoaW5ncy4gIFRoZSBjb2RlIHRoYXQgbWFrZXMg
+aXQNCj4gS0FTTFItYWJsZSBzaG91bGQgYmUgaW4gaXRzIHZlcnkgb3duIHBhdGNoIHRoYXQgYXBw
+bGllcyAqYWZ0ZXIqIHRoZQ0KPiBjb2RlIHRoYXQgbWFrZXMgaXQgYWxsIHdvcmsgc28gdGhhdCwg
+d2hlbiB0aGUgS0FTTFIgcGFydCBjYXVzZXMgYQ0KPiBjcmFzaCwgd2UgY2FuIGJpc2VjdCBpdC4N
+Cj4gDQo+ICsgLyoNCj4gKyAqIEZhdWx0cyBpbiBwcm9jZXNzLWxvY2FsIG1lbW9yeSBtYXkgYmUg
+Y2F1c2VkIGJ5IHByb2Nlc3MtbG9jYWwNCj4gKyAqIGFkZHJlc3NlcyBsZWFraW5nIGludG8gb3Ro
+ZXIgY29udGV4dHMuDQo+ICsgKiB0YmQ6IHdhcm4gYW5kIGhhbmRsZSBncmFjZWZ1bGx5Lg0KPiAr
+ICovDQo+ICsgaWYgKHVubGlrZWx5KGZhdWx0X2luX3Byb2Nlc3NfbG9jYWwoYWRkcmVzcykpKSB7
+DQo+ICsgcHJfZXJyKCJwYWdlIGZhdWx0IGluIFBST0NMT0NBTCBhdCAlbHgiLCBhZGRyZXNzKTsN
+Cj4gKyBmb3JjZV9zaWdfZmF1bHQoU0lHU0VHViwgU0VHVl9NQVBFUlIsICh2b2lkIF9fdXNlciAq
+KWFkZHJlc3MsIGN1cnJlbnQpOw0KPiArIH0NCj4gKw0KPiANCj4gSHVoPyAgRWl0aGVyIGl0J3Mg
+YW4gT09QUyBvciB5b3Ugc2hvdWxkbid0IHByaW50IGFueSBzcGVjaWFsDQo+IGRlYnVnZ2luZy4g
+IEFzIGl0IGlzLCB5b3UncmUganVzdCBibGF0YW50bHkgbGVha2luZyB0aGUgYWRkcmVzcyBvZiB0
+aGUNCj4gbW0tbG9jYWwgcmFuZ2UgdG8gbWFsaWNpb3VzIHVzZXIgcHJvZ3JhbXMuDQo+IA0KPiBB
+bHNvLCB5b3Ugc2hvdWxkIElNTyBjb25zaWRlciB1c2luZyB0aGlzIG1lY2hhbmlzbSBmb3Iga21h
+cF9hdG9taWMoKS4NCj4gSGksIE5hZGF2IQ0KDQpXZWxsLCBzb21lIGNvbnRleHQgZm9yIHRoZSDi
+gJxoaeKAnSB3b3VsZCBoYXZlIGJlZW4gaGVscGZ1bC4gKERvIEkgaGF2ZSBhIGJ1Zw0KYW5kIEkg
+c3RpbGwgZG9u4oCZdCB1bmRlcnN0YW5kIGl0PykNCg0KUGVyaGFwcyB5b3UgcmVnYXJkIHNvbWUg
+dXNlLWNhc2UgZm9yIGEgc2ltaWxhciBtZWNoYW5pc20gdGhhdCBJIG1lbnRpb25lZA0KYmVmb3Jl
+LiBJIGRpZCBpbXBsZW1lbnQgc29tZXRoaW5nIHNpbWlsYXIgKGJ1dCBub3QgdGhlIHdheSB0aGF0
+IHlvdSB3YW50ZWQpDQp0byBpbXByb3ZlIHRoZSBwZXJmb3JtYW5jZSBvZiBzZWNjb21wIGFuZCBz
+eXN0ZW0tY2FsbHMgd2hlbiByZXRwb2xpbmVzIGFyZQ0KdXNlZC4gSSBzZXQgcGVyLW1tIGNvZGUg
+YXJlYSB0aGF0IGhlbGQgY29kZSB0aGF0IHVzZWQgZGlyZWN0IGNhbGxzIHRvIGludm9rZQ0Kc2Vj
+Y29tcCBmaWx0ZXJzIGFuZCBmcmVxdWVudGx5IHVzZWQgc3lzdGVtLWNhbGxzLg0KDQpNeSBtZWNo
+YW5pc20sIEkgdGhpbmssIGlzIG1vcmUgbm90IHN1aXRhYmxlIGZvciB0aGlzIHVzZS1jYXNlLiBJ
+IG5lZWRlZCBteQ0KY29kZS1wYWdlIHRvIGJlIGF0IHRoZSBzYW1lIDJHQiByYW5nZSBhcyB0aGUg
+a2VybmVsIHRleHQvbW9kdWxlcywgd2hpY2ggZG9lcw0KY29tcGxpY2F0ZSB0aGluZ3MuIER1ZSB0
+byB0aGUgc2FtZSByZWFzb24sIGl0IGlzIGFsc28gbGltaXRlZCBpbiB0aGUgc2l6ZSBvZg0KdGhl
+IGRhdGEvY29kZSB0aGF0IGl0IGNhbiBob2xkLg0KDQo=
