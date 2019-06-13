@@ -1,24 +1,36 @@
 MIME-Version: 1.0
-References: <cover.1560198181.git.luto@kernel.org> <d28856fff74a385f88c493dafb9d96d2c38d91a2.1560198181.git.luto@kernel.org>
- <201906101340.AE18F49@keescook>
-In-Reply-To: <201906101340.AE18F49@keescook>
+References: <cover.1560198181.git.luto@kernel.org> <131caabf9d127db1a077525f978e1f1f74f9088f.1560198181.git.luto@kernel.org>
+ <201906101342.B8A938BB@keescook>
+In-Reply-To: <201906101342.B8A938BB@keescook>
 From: Andy Lutomirski <luto@kernel.org>
-Date: Thu, 13 Jun 2019 12:07:40 -0700
-Message-ID: <CALCETrVOzGCN+pjgsdd+x3APsrSGJzngfGeSWvqWy=XTQj3EiA@mail.gmail.com>
-Subject: Re: [PATCH 3/5] x86/vsyscall: Document odd #PF's error code for vsyscalls
+Date: Thu, 13 Jun 2019 12:08:38 -0700
+Message-ID: <CALCETrXJA2ws=M_RBge1+nVGkDR0qX-jdFypYxuE3yDiikt46w@mail.gmail.com>
+Subject: Re: [PATCH 2/5] x86/vsyscall: Add a new vsyscall=xonly mode
 Content-Type: text/plain; charset="UTF-8"
 To: Kees Cook <keescook@chromium.org>
 Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 10, 2019 at 1:40 PM Kees Cook <keescook@chromium.org> wrote:
+On Mon, Jun 10, 2019 at 1:43 PM Kees Cook <keescook@chromium.org> wrote:
 >
-> On Mon, Jun 10, 2019 at 01:25:29PM -0700, Andy Lutomirski wrote:
-> >  tools/testing/selftests/x86/test_vsyscall.c | 9 ++++++++-
+> On Mon, Jun 10, 2019 at 01:25:28PM -0700, Andy Lutomirski wrote:
+> > With vsyscall emulation on, we still expose a readable vsyscall page
+> > that contains syscall instructions that validly implement the
+> > vsyscalls.  We need this because certain dynamic binary
+> > instrumentation tools attempt to read the call targets of call
+> > instructions in the instrumented code.  If the instrumented code
+> > uses vsyscalls, then the vsyscal page needs to contain readable
+> > code.
+> >
+> > Unfortunately, leaving readable memory at a deterministic address
+> > can be used to help various ASLR bypasses, so we gain some hardening
+> > value if we disallow vsyscall reads.
+> >
+> > Given how rarely the vsyscall page needs to be readable, add a
+> > mechanism to make the vsyscall page be execute only.
 >
-> Did this hunk end up in the wrong patch? (It's not mentioned in the
-> commit log and the next patch has other selftest changes...)
->
+> Should the commit log mention that the VVAR portion goes away under
+> xonly? (Since it's not executable.)
 
-It was intentional -- you can run the improved selftest and observe
-the oddity for yourself :)  I'll improve the changelog.
+No, because vsyscall VVAR is long gone no matter what.  Even the old
+vsyscall=native didn't have it.
