@@ -1,26 +1,24 @@
-Subject: Re: [RFC 00/10] Process-local memory allocations for hiding KVM
- secrets
-References: <20190612170834.14855-1-mhillenb@amazon.de>
- <eecc856f-7f3f-ed11-3457-ea832351e963@intel.com>
- <A542C98B-486C-4849-9DAC-2355F0F89A20@amacapital.net>
- <CALCETrXHbS9VXfZ80kOjiTrreM2EbapYeGp68mvJPbosUtorYA@mail.gmail.com>
- <459e2273-bc27-f422-601b-2d6cdaf06f84@amazon.com>
- <CALCETrVRuQb-P7auHCgxzs5L=qA2_qHzVGTtRMAqoMAut0ETFw@mail.gmail.com>
- <f1dfbfb4-d2d5-bf30-600f-9e756a352860@intel.com>
- <70BEF143-00BA-4E4B-ACD7-41AD2E6250BE@vmware.com>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <f7f08704-dc4b-c5f8-3889-0fb5957c9c86@intel.com>
-Date: Thu, 13 Jun 2019 10:49:42 -0700
 MIME-Version: 1.0
-In-Reply-To: <70BEF143-00BA-4E4B-ACD7-41AD2E6250BE@vmware.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Nadav Amit <namit@vmware.com>, Andy Lutomirski <luto@kernel.org>
-Cc: Alexander Graf <graf@amazon.com>, Marius Hillenbrand <mhillenb@amazon.de>, kvm list <kvm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Alexander Graf <graf@amazon.de>, David Woodhouse <dwmw@amazon.co.uk>, the arch/x86 maintainers <x86@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+References: <cover.1560198181.git.luto@kernel.org> <d28856fff74a385f88c493dafb9d96d2c38d91a2.1560198181.git.luto@kernel.org>
+ <201906101340.AE18F49@keescook>
+In-Reply-To: <201906101340.AE18F49@keescook>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Thu, 13 Jun 2019 12:07:40 -0700
+Message-ID: <CALCETrVOzGCN+pjgsdd+x3APsrSGJzngfGeSWvqWy=XTQj3EiA@mail.gmail.com>
+Subject: Re: [PATCH 3/5] x86/vsyscall: Document odd #PF's error code for vsyscalls
+Content-Type: text/plain; charset="UTF-8"
+To: Kees Cook <keescook@chromium.org>
+Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 6/13/19 10:29 AM, Nadav Amit wrote:
-> Having said that, I am not too excited to deal with this issue. Do
-> people still care about x86/32-bit?
-No, not really.  It's just fun to try to give history lessons about the
-good old days. ;)
+On Mon, Jun 10, 2019 at 1:40 PM Kees Cook <keescook@chromium.org> wrote:
+>
+> On Mon, Jun 10, 2019 at 01:25:29PM -0700, Andy Lutomirski wrote:
+> >  tools/testing/selftests/x86/test_vsyscall.c | 9 ++++++++-
+>
+> Did this hunk end up in the wrong patch? (It's not mentioned in the
+> commit log and the next patch has other selftest changes...)
+>
+
+It was intentional -- you can run the improved selftest and observe
+the oddity for yourself :)  I'll improve the changelog.
