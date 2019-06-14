@@ -1,51 +1,68 @@
-Date: Fri, 14 Jun 2019 16:21:43 +0200 (CEST)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [RFC 00/10] Process-local memory allocations for hiding KVM
- secrets
-In-Reply-To: <A542C98B-486C-4849-9DAC-2355F0F89A20@amacapital.net>
-Message-ID: <alpine.DEB.2.21.1906141618000.1722@nanos.tec.linutronix.de>
-References: <20190612170834.14855-1-mhillenb@amazon.de> <eecc856f-7f3f-ed11-3457-ea832351e963@intel.com> <A542C98B-486C-4849-9DAC-2355F0F89A20@amacapital.net>
+From: Denis 'GNUtoo' Carikli <GNUtoo@cyberdimension.org>
+Subject: [PATCH] security: do not enable CONFIG_GCC_PLUGINS by default
+Date: Fri, 14 Jun 2019 16:57:54 +0200
+Message-Id: <20190614145755.10926-1-GNUtoo@cyberdimension.org>
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="8323329-1104140577-1560522104=:1722"
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Dave Hansen <dave.hansen@intel.com>, Marius Hillenbrand <mhillenb@amazon.de>, kvm@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, Alexander Graf <graf@amazon.de>, David Woodhouse <dwmw@amazon.co.uk>, the arch/x86 maintainers <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Paul Kocialkowski <paul.kocialkowski@bootlin.com>
+Cc: kernel-hardening@lists.openwall.com, Denis 'GNUtoo' Carikli <GNUtoo@cyberdimension.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
+On a Galaxy SIII (I9300), the patch mentioned below broke boot:
+- The display still had the bootloader logo, while with this
+  patch, the 4 Tux logo appears.
+- No print appeared on the serial port anymore after the kernel
+  was loaded, whereas with this patch, we have the serial
+  console working, and the device booting.
 
---8323329-1104140577-1560522104=:1722
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8BIT
+Booting was broken by the following commit:
+  9f671e58159a ("security: Create "kernel hardening" config area")
 
-On Wed, 12 Jun 2019, Andy Lutomirski wrote:
-> > On Jun 12, 2019, at 12:55 PM, Dave Hansen <dave.hansen@intel.com> wrote:
-> > 
-> >> On 6/12/19 10:08 AM, Marius Hillenbrand wrote:
-> >> This patch series proposes to introduce a region for what we call
-> >> process-local memory into the kernel's virtual address space. 
-> > 
-> > It might be fun to cc some x86 folks on this series.  They might have
-> > some relevant opinions. ;)
-> > 
-> > A few high-level questions:
-> > 
-> > Why go to all this trouble to hide guest state like registers if all the
-> > guest data itself is still mapped?
-> > 
-> > Where's the context-switching code?  Did I just miss it?
-> > 
-> > We've discussed having per-cpu page tables where a given PGD is only in
-> > use from one CPU at a time.  I *think* this scheme still works in such a
-> > case, it just adds one more PGD entry that would have to context-switched.
->
-> Fair warning: Linus is on record as absolutely hating this idea. He might
-> change his mind, but it’s an uphill battle.
+As the bootloader of this device enables the MMU, I had the following
+patch applied during the tests:
+  Author: Arve Hjønnevåg <arve@android.com>
+  Date:   Fri Nov 30 17:05:40 2012 -0800
 
-Yes I know, but as a benefit we could get rid of all the GSBASE horrors in
-the entry code as we could just put the percpu space into the local PGD.
+      ANDROID: arm: decompressor: Flush tlb before swiching domain 0 to client mode
 
-Thanks,
+      If the bootloader used a page table that is incompatible with domain 0
+      in client mode, and boots with the mmu on, then swithing domain 0 to
+      client mode causes a fault if we don't flush the tlb after updating
+      the page table pointer.
 
-	tglx
---8323329-1104140577-1560522104=:1722--
+      v2: Add ISB before loading dacr.
+
+  diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+  index 7135820f76d4..6e87ceda3b29 100644
+  --- a/arch/arm/boot/compressed/head.S
+  +++ b/arch/arm/boot/compressed/head.S
+  @@ -837,6 +837,8 @@ __armv7_mmu_cache_on:
+                  bic     r6, r6, #1 << 31        @ 32-bit translation system
+                  bic     r6, r6, #(7 << 0) | (1 << 4)    @ use only ttbr0
+                  mcrne   p15, 0, r3, c2, c0, 0   @ load page table pointer
+  +               mcrne   p15, 0, r0, c8, c7, 0   @ flush I,D TLBs
+  +               mcr     p15, 0, r0, c7, c5, 4   @ ISB
+                  mcrne   p15, 0, r1, c3, c0, 0   @ load domain access control
+                  mcrne   p15, 0, r6, c2, c0, 2   @ load ttb control
+   #endif
+
+Signed-off-by: Denis 'GNUtoo' Carikli <GNUtoo@cyberdimension.org>
+---
+ scripts/gcc-plugins/Kconfig | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
+index e9c677a53c74..afa1db3d3471 100644
+--- a/scripts/gcc-plugins/Kconfig
++++ b/scripts/gcc-plugins/Kconfig
+@@ -18,7 +18,6 @@ config GCC_PLUGINS
+ 	bool
+ 	depends on HAVE_GCC_PLUGINS
+ 	depends on PLUGIN_HOSTCC != ""
+-	default y
+ 	help
+ 	  GCC plugins are loadable modules that provide extra features to the
+ 	  compiler. They are useful for runtime instrumentation and static analysis.
+-- 
+2.21.0
