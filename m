@@ -1,43 +1,66 @@
-Date: Fri, 14 Jun 2019 20:08:42 -0700
-From: Kees Cook <keescook@chromium.org>
+Message-ID: <deb847beb643d43e6617f52eae7b15ee368d7ff8.camel@bootlin.com>
 Subject: Re: [PATCH] security: do not enable CONFIG_GCC_PLUGINS by default
-Message-ID: <201906142002.833D224C6F@keescook>
+From: Paul Kocialkowski <paul.kocialkowski@bootlin.com>
+Date: Sat, 15 Jun 2019 12:13:15 +0200
+In-Reply-To: <20190614201434.3fa4bb6d@primarylaptop.localdomain>
 References: <20190614145755.10926-1-GNUtoo@cyberdimension.org>
- <CAG48ez30+VOj78rCiWMKtm0tHdVR67CcrHVCV-FFCfK-nRQTOw@mail.gmail.com>
+	 <CAG48ez30+VOj78rCiWMKtm0tHdVR67CcrHVCV-FFCfK-nRQTOw@mail.gmail.com>
+	 <20190614162811.o33yeq65ythjumrh@shell.armlinux.org.uk>
+	 <20190614201434.3fa4bb6d@primarylaptop.localdomain>
+Content-Type: text/plain; charset="UTF-8"
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAG48ez30+VOj78rCiWMKtm0tHdVR67CcrHVCV-FFCfK-nRQTOw@mail.gmail.com>
-To: Jann Horn <jannh@google.com>
-Cc: Denis 'GNUtoo' Carikli <GNUtoo@cyberdimension.org>, Emese Revfy <re.emese@gmail.com>, Paul Kocialkowski <paul.kocialkowski@bootlin.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel@lists.infradead.org, Russell King <linux@armlinux.org.uk>
+Content-Transfer-Encoding: 7bit
+To: Denis 'GNUtoo' Carikli <GNUtoo@cyberdimension.org>, Russell King - ARM Linux admin <linux@armlinux.org.uk>
+Cc: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 14, 2019 at 06:05:19PM +0200, Jann Horn wrote:
-> On Fri, Jun 14, 2019 at 5:10 PM Denis 'GNUtoo' Carikli
-> <GNUtoo@cyberdimension.org> wrote:
-> > Booting was broken by the following commit:
-> >   9f671e58159a ("security: Create "kernel hardening" config area")
+Hi,
+
+On Fri, 2019-06-14 at 20:14 +0200, Denis 'GNUtoo' Carikli wrote:
+> On Fri, 14 Jun 2019 17:28:11 +0100
+> Russell King - ARM Linux admin <linux@armlinux.org.uk> wrote:
+> > I'm wondering whether this is sloppy wording or whether the author is
+> > really implying that they call the kernel decompressor with the MMU
+> > enabled, against the express instructions in
+> > Documentation/arm/Booting.
+> According to [1]
+> > If they are going against the express instructions, all bets are off.
 > 
-> I don't think GCC_PLUGINS alone is supposed to generate any code? It
-> just makes it possible to enable a bunch of other kconfig flags that
-> can generate code.
-> 
-> STACKPROTECTOR_PER_TASK defaults to y and depends on GCC_PLUGINS, so
-> is that perhaps what broke? Can you try whether disabling just that
-> works for you?
+> More background on the decompressor patch:
+> - The "ANDROID: arm: decompressor: Flush tlb before swiching domain 0 to
+>   client mode" patch is needed anyway since 3.4 in any case, and
+>   according to the thread about it [1], the MMU is on at boot.
+> - There is a downstream u-boot port for the Galaxy SIII and other very
+>   similar devices, which doesn't setup the MMU at boot, but I'm not
+>   confident enough to test in on the devices I have. To test with
+>   u-boot I'd need to find a new device.
+> - If I don't manage to find a new device to test on, since there is
+>   already some setup code like arch/arm/boot/compressed/head-sa1100.S
+>   that deal with MMU that are enabled with the bootloader, are patches
+>   to add a new file like that still accepted? The big downside is that
+>   using something like that is probably incompatible with
+>   ARCH_MULTIPLATFORM.
 
-Yes, this has come up before: the option you want to disable is as Jann
-mentions: CONFIG_STACKPROTECTOR_PER_TASK.
+Maybe we could also consider having a shim that is executed before the
+kernel in order to sanitize things and allow booting a mainline kernel,
+which would be less invasive than a full U-Boot port.
 
-> My guess is that maybe there is some early boot code that needs to
-> have the stack protector disabled, or something like that.
+Other than that, we can probably manage keeping a tree around (at the
+Replicant project) with mainline and this patch (enabled through a
+dedicated config option). As long as it's not horrible to rebase, it
+can work well enough for us. 
 
-Right, though I'm not sure what portion would be specific to that
-device. You can turn off SSP on a per-file basis with:
+I'm also not sure about the state of Android support in mainline today,
+but there's a chance we'll need to pick a few patches on top of
+mainline anyway.
 
-CFLAGS_target.o += $(DISABLE_ARM_SSP_PER_TASK_PLUGIN)
+What do you think?
 
-or per-Makefile, as in arch/arm/boot/compressed/Makefile.
+Cheers,
+
+Paul
 
 -- 
-Kees Cook
+Paul Kocialkowski, Bootlin
+Embedded Linux and kernel engineering
+https://bootlin.com
