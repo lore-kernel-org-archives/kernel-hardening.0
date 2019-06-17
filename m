@@ -1,51 +1,75 @@
-Subject: Re: [RFC 00/10] Process-local memory allocations for hiding KVM
- secrets
-References: <20190612170834.14855-1-mhillenb@amazon.de>
- <eecc856f-7f3f-ed11-3457-ea832351e963@intel.com>
- <A542C98B-486C-4849-9DAC-2355F0F89A20@amacapital.net>
- <alpine.DEB.2.21.1906141618000.1722@nanos.tec.linutronix.de>
-From: Alexander Graf <graf@amazon.com>
-Message-ID: <58788f05-04c3-e71c-12c3-0123be55012c@amazon.com>
-Date: Mon, 17 Jun 2019 09:38:00 +0200
-MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.21.1906141618000.1722@nanos.tec.linutronix.de>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Transfer-Encoding: 8bit
-To: Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@amacapital.net>
-Cc: Dave Hansen <dave.hansen@intel.com>, Marius Hillenbrand <mhillenb@amazon.de>, kvm@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, Alexander Graf <graf@amazon.de>, David Woodhouse <dwmw@amazon.co.uk>, the arch/x86
- maintainers <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Peter
- Zijlstra <peterz@infradead.org>
+Date: Mon, 17 Jun 2019 17:10:48 +0200
+Message-Id: <20190617151050.92663-1-glider@google.com>
+Mime-Version: 1.0
+Subject: [PATCH v7 0/3] add init_on_alloc/init_on_free boot options
+From: Alexander Potapenko <glider@google.com>
+Content-Type: text/plain; charset="UTF-8"
+To: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>
+Cc: Alexander Potapenko <glider@google.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Provide init_on_alloc and init_on_free boot options.
 
-On 14.06.19 16:21, Thomas Gleixner wrote:
-> On Wed, 12 Jun 2019, Andy Lutomirski wrote:
->>> On Jun 12, 2019, at 12:55 PM, Dave Hansen <dave.hansen@intel.com> wrote:
->>>
->>>> On 6/12/19 10:08 AM, Marius Hillenbrand wrote:
->>>> This patch series proposes to introduce a region for what we call
->>>> process-local memory into the kernel's virtual address space.
->>> It might be fun to cc some x86 folks on this series.  They might have
->>> some relevant opinions. ;)
->>>
->>> A few high-level questions:
->>>
->>> Why go to all this trouble to hide guest state like registers if all the
->>> guest data itself is still mapped?
->>>
->>> Where's the context-switching code?  Did I just miss it?
->>>
->>> We've discussed having per-cpu page tables where a given PGD is only in
->>> use from one CPU at a time.  I *think* this scheme still works in such a
->>> case, it just adds one more PGD entry that would have to context-switched.
->> Fair warning: Linus is on record as absolutely hating this idea. He might
->> change his mind, but it’s an uphill battle.
-> Yes I know, but as a benefit we could get rid of all the GSBASE horrors in
-> the entry code as we could just put the percpu space into the local PGD.
+These are aimed at preventing possible information leaks and making the
+control-flow bugs that depend on uninitialized values more deterministic.
 
+Enabling either of the options guarantees that the memory returned by the
+page allocator and SL[AU]B is initialized with zeroes.
+SLOB allocator isn't supported at the moment, as its emulation of kmem
+caches complicates handling of SLAB_TYPESAFE_BY_RCU caches correctly.
 
-Would that mean that with Meltdown affected CPUs we open speculation 
-attacks against the mmlocal memory from KVM user space?
+Enabling init_on_free also guarantees that pages and heap objects are
+initialized right after they're freed, so it won't be possible to access
+stale data by using a dangling pointer.
 
+As suggested by Michal Hocko, right now we don't let the heap users to
+disable initialization for certain allocations. There's not enough
+evidence that doing so can speed up real-life cases, and introducing
+ways to opt-out may result in things going out of control.
 
-Alex
+To: Andrew Morton <akpm@linux-foundation.org>
+To: Christoph Lameter <cl@linux.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Michal Hocko <mhocko@kernel.org>
+Cc: James Morris <jmorris@namei.org>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Nick Desaulniers <ndesaulniers@google.com>
+Cc: Kostya Serebryany <kcc@google.com>
+Cc: Dmitry Vyukov <dvyukov@google.com>
+Cc: Sandeep Patil <sspatil@android.com>
+Cc: Laura Abbott <labbott@redhat.com>
+Cc: Randy Dunlap <rdunlap@infradead.org>
+Cc: Jann Horn <jannh@google.com>
+Cc: Mark Rutland <mark.rutland@arm.com>
+Cc: Marco Elver <elver@google.com>
+Cc: linux-mm@kvack.org
+Cc: linux-security-module@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
+
+Alexander Potapenko (2):
+  mm: security: introduce init_on_alloc=1 and init_on_free=1 boot
+    options
+  mm: init: report memory auto-initialization features at boot time
+
+ .../admin-guide/kernel-parameters.txt         |  9 +++
+ drivers/infiniband/core/uverbs_ioctl.c        |  2 +-
+ include/linux/mm.h                            | 22 +++++++
+ init/main.c                                   | 24 +++++++
+ kernel/kexec_core.c                           |  2 +-
+ mm/dmapool.c                                  |  2 +-
+ mm/page_alloc.c                               | 63 ++++++++++++++++---
+ mm/slab.c                                     | 16 ++++-
+ mm/slab.h                                     | 19 ++++++
+ mm/slub.c                                     | 33 ++++++++--
+ net/core/sock.c                               |  2 +-
+ security/Kconfig.hardening                    | 29 +++++++++
+ 12 files changed, 204 insertions(+), 19 deletions(-)
+---
+ v3: dropped __GFP_NO_AUTOINIT patches
+ v5: dropped support for SLOB allocator, handle SLAB_TYPESAFE_BY_RCU
+ v6: changed wording in boot-time message
+ v7: dropped the test_meminit.c patch (picked by Andrew Morton already),
+     minor wording changes
+-- 
+2.22.0.410.gd8fdbe21b5-goog
