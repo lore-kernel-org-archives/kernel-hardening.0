@@ -1,42 +1,68 @@
+Date: Mon, 17 Jun 2019 18:24:55 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: [PATCH 1/7] General notification queue with user mmap()'able
+ ring buffer
+Message-ID: <20190617162455.GL3436@hirez.programming.kicks-ass.net>
+References: <20190528162603.GA24097@kroah.com>
+ <155905930702.7587.7100265859075976147.stgit@warthog.procyon.org.uk>
+ <155905931502.7587.11705449537368497489.stgit@warthog.procyon.org.uk>
+ <4031.1559064620@warthog.procyon.org.uk>
+ <20190528231218.GA28384@kroah.com>
+ <31936.1559146000@warthog.procyon.org.uk>
+ <16193.1559163763@warthog.procyon.org.uk>
+ <21942.1559304135@warthog.procyon.org.uk>
+ <606.1559312412@warthog.procyon.org.uk>
+ <15401.1559322762@warthog.procyon.org.uk>
 MIME-Version: 1.0
-References: <20190612170834.14855-1-mhillenb@amazon.de> <eecc856f-7f3f-ed11-3457-ea832351e963@intel.com>
- <A542C98B-486C-4849-9DAC-2355F0F89A20@amacapital.net> <alpine.DEB.2.21.1906141618000.1722@nanos.tec.linutronix.de>
- <58788f05-04c3-e71c-12c3-0123be55012c@amazon.com> <63b1b249-6bc7-ffd9-99db-d36dd3f1a962@intel.com>
- <CALCETrXph3Zg907kWTn6gAsZVsPbCB3A2XuNf0hy5Ez2jm2aNQ@mail.gmail.com> <698ca264-123d-46ae-c165-ed62ea149896@intel.com>
-In-Reply-To: <698ca264-123d-46ae-c165-ed62ea149896@intel.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 17 Jun 2019 09:14:50 -0700
-Message-ID: <CALCETrVt=X+FB2cM5hMN9okvbcROFfT4_KMwaKaN2YVvc7UQTw@mail.gmail.com>
-Subject: Re: [RFC 00/10] Process-local memory allocations for hiding KVM secrets
-Content-Type: text/plain; charset="UTF-8"
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Alexander Graf <graf@amazon.com>, Thomas Gleixner <tglx@linutronix.de>, Marius Hillenbrand <mhillenb@amazon.de>, kvm list <kvm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Alexander Graf <graf@amazon.de>, David Woodhouse <dwmw@amazon.co.uk>, the arch/x86 maintainers <x86@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <15401.1559322762@warthog.procyon.org.uk>
+To: David Howells <dhowells@redhat.com>
+Cc: Jann Horn <jannh@google.com>, Greg KH <gregkh@linuxfoundation.org>, Al Viro <viro@zeniv.linux.org.uk>, raven@themaw.net, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, linux-block@vger.kernel.org, keyrings@vger.kernel.org, linux-security-module <linux-security-module@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 17, 2019 at 9:09 AM Dave Hansen <dave.hansen@intel.com> wrote:
->
-> On 6/17/19 8:54 AM, Andy Lutomirski wrote:
-> >>> Would that mean that with Meltdown affected CPUs we open speculation
-> >>> attacks against the mmlocal memory from KVM user space?
-> >> Not necessarily.  There would likely be a _set_ of local PGDs.  We could
-> >> still have pair of PTI PGDs just like we do know, they'd just be a local
-> >> PGD pair.
-> >>
-> > Unfortunately, this would mean that we need to sync twice as many
-> > top-level entries when we context switch.
->
-> Yeah, PTI sucks. :)
->
-> For anyone following along at home, I'm going to go off into crazy
-> per-cpu-pgds speculation mode now...  Feel free to stop reading now. :)
->
-> But, I was thinking we could get away with not doing this on _every_
-> context switch at least.  For instance, couldn't 'struct tlb_context'
-> have PGD pointer (or two with PTI) in addition to the TLB info?  That
-> way we only do the copying when we change the context.  Or does that tie
-> the implementation up too much with PCIDs?
+On Fri, May 31, 2019 at 06:12:42PM +0100, David Howells wrote:
+> Peter Zijlstra <peterz@infradead.org> wrote:
+> 
+> > > > (and it has already been established that refcount_t doesn't work for
+> > > > usage count scenarios)
+> > > 
+> > > ?
+> > > 
+> > > Does that mean struct kref doesn't either?
+> > 
+> > Indeed, since kref is just a pointless wrapper around refcount_t it does
+> > not either.
+> > 
+> > The main distinction between a reference count and a usage count is that
+> > 0 means different things. For a refcount 0 means dead. For a usage count
+> > 0 is merely unused but valid.
+> 
+> Ah - I consider the terms interchangeable.
+> 
+> Take Documentation/filesystems/vfs.txt for instance:
+> 
+>   dget: open a new handle for an existing dentry (this just increments
+> 	the usage count)
+> 
+>   dput: close a handle for a dentry (decrements the usage count). ...
+> 
+>   ...
+> 
+>   d_lookup: look up a dentry given its parent and path name component
+> 	It looks up the child of that given name from the dcache
+> 	hash table. If it is found, the reference count is incremented
+> 	and the dentry is returned. The caller must use dput()
+> 	to free the dentry when it finishes using it.
+> 
+> Here we interchange the terms.
+> 
+> Or https://www.kernel.org/doc/gorman/html/understand/understand013.html
+> which seems to interchange the terms in reference to struct page.
 
-Hmm, that seems entirely reasonable.  I think the nasty bit would be
-figuring out all the interactions with PV TLB flushing.  PV TLB
-flushes already don't play so well with PCID tracking, and this will
-make it worse.  We probably need to rewrite all that code regardless.
+Right, but we have two distinct set of semantics, I figured it makes
+sense to have two different names for them. Do you have an alternative
+naming scheme we could use?
+
+Or should we better document our distinction between reference and usage
+count?
