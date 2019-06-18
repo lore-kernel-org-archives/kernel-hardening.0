@@ -1,147 +1,51 @@
+Date: Mon, 17 Jun 2019 22:07:41 -0700
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v3 1/3] lkdtm: Check for SMEP clearing protections
-Date: Mon, 17 Jun 2019 21:55:01 -0700
-Message-Id: <20190618045503.39105-2-keescook@chromium.org>
-In-Reply-To: <20190618045503.39105-1-keescook@chromium.org>
-References: <20190618045503.39105-1-keescook@chromium.org>
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, x86@kernel.org, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@intel.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH v7 1/2] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+Message-ID: <201906172157.8E88196@keescook>
+References: <20190617151050.92663-1-glider@google.com>
+ <20190617151050.92663-2-glider@google.com>
+ <20190617151027.6422016d74a7dc4c7a562fc6@linux-foundation.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190617151027.6422016d74a7dc4c7a562fc6@linux-foundation.org>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Alexander Potapenko <glider@google.com>, Christoph Lameter <cl@linux.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This adds an x86-specific test for pinned cr4 bits. A successful test
-will validate pinning and check the ROP-style call-middle-of-function
-defense, if needed. For example, in the case of native_write_cr4()
-looking like this:
+On Mon, Jun 17, 2019 at 03:10:27PM -0700, Andrew Morton wrote:
+> On Mon, 17 Jun 2019 17:10:49 +0200 Alexander Potapenko <glider@google.com> wrote:
+> 
+> > Slowdown for the new features compared to init_on_free=0,
+> > init_on_alloc=0:
+> > 
+> > hackbench, init_on_free=1:  +7.62% sys time (st.err 0.74%)
+> > hackbench, init_on_alloc=1: +7.75% sys time (st.err 2.14%)
+> 
+> Sanity check time.  Is anyone really going to use this?  Seriously,
+> honestly, for real?  If "yes" then how did we determine that?
 
-ffffffff8171bce0 <native_write_cr4>:
-ffffffff8171bce0:       48 8b 35 79 46 f2 00    mov    0xf24679(%rip),%rsi
-ffffffff8171bce7:       48 09 f7                or     %rsi,%rdi
-ffffffff8171bcea:       0f 22 e7                mov    %rdi,%cr4
-...
-ffffffff8171bd5a:       c3                      retq
+Absolutely! This is expected to be on-by-default on Android and Chrome
+OS. And it gives the opportunity for anyone else to use it under distros
+too via the boot args. (The init_on_free feature is regularly requested
+by folks where memory forensics is included in their thread models.)
 
-The UNSET_SMEP test will jump to ffffffff8171bcea (the mov to cr4)
-instead of ffffffff8171bce0 (native_write_cr4() entry) to simulate a
-direct-call bypass attempt.
+As for the performance implications, the request during review was to
+do that separately.
 
-Expected successful results:
+> Also, a bit of a nit: "init_on_alloc" and "init_on_free" aren't very
+> well chosen names for the boot options - they could refer to any kernel
+> object at all, really.  init_pages_on_alloc would be better?  I don't think
+> this matters much - the boot options are already chaotic.  But still...
 
-  # echo UNSET_SMEP > /sys/kernel/debug/provoke-crash/DIRECT
-  # dmesg
-  [   79.594433] lkdtm: Performing direct entry UNSET_SMEP
-  [   79.596459] lkdtm: trying to clear SMEP normally
-  [   79.601810] ------------[ cut here ]------------
-  [   79.603421] Attempt to unpin cr4 bits: 100000; bypass attack?!
-  ...
-  [   79.650170] ---[ end trace 2452ca0f6126242e ]---
-  [   79.652281] lkdtm: ok: SMEP did not get cleared
-  [   79.654344] lkdtm: trying to clear SMEP with call gadget
-  [   79.655937] lkdtm: ok: SMEP removal was reverted
+I agree; it's awkward. It covers both the page allocator and the slab
+allocator, though, so naming it "page" seems not great. It's part of
+a larger effort to auto-initialize all memory (stack auto-init has
+been around in a few forms with the Clang support now in Linus's tree
+for v5.2), and the feature has kind of ended up with the short name
+of "meminit". As this is the "heap" side of "meminit", what about
+"meminit.alloc=..." and "meminit.free=..." as alternative straw-men?
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- drivers/misc/lkdtm/bugs.c  | 66 ++++++++++++++++++++++++++++++++++++++
- drivers/misc/lkdtm/core.c  |  1 +
- drivers/misc/lkdtm/lkdtm.h |  1 +
- 3 files changed, 68 insertions(+)
-
-diff --git a/drivers/misc/lkdtm/bugs.c b/drivers/misc/lkdtm/bugs.c
-index 7eebbdfbcacd..3edf4464b9fc 100644
---- a/drivers/misc/lkdtm/bugs.c
-+++ b/drivers/misc/lkdtm/bugs.c
-@@ -255,3 +255,69 @@ void lkdtm_STACK_GUARD_PAGE_TRAILING(void)
- 
- 	pr_err("FAIL: accessed page after stack!\n");
- }
-+
-+void lkdtm_UNSET_SMEP(void)
-+{
-+#ifdef CONFIG_X86_64
-+#define MOV_CR4_DEPTH	64
-+	void (*direct_write_cr4)(unsigned long val);
-+	unsigned char *insn;
-+	unsigned long cr4;
-+	int i;
-+
-+	cr4 = native_read_cr4();
-+
-+	if ((cr4 & X86_CR4_SMEP) != X86_CR4_SMEP) {
-+		pr_err("FAIL: SMEP not in use\n");
-+		return;
-+	}
-+	cr4 &= ~(X86_CR4_SMEP);
-+
-+	pr_info("trying to clear SMEP normally\n");
-+	native_write_cr4(cr4);
-+	if (cr4 == native_read_cr4()) {
-+		pr_err("FAIL: pinning SMEP failed!\n");
-+		cr4 |= X86_CR4_SMEP;
-+		pr_info("restoring SMEP\n");
-+		native_write_cr4(cr4);
-+		return;
-+	}
-+	pr_info("ok: SMEP did not get cleared\n");
-+
-+	/*
-+	 * To test the post-write pinning verification we need to call
-+	 * directly into the the middle of native_write_cr4() where the
-+	 * cr4 write happens, skipping the pinning. This searches for
-+	 * the cr4 writing instruction.
-+	 */
-+	insn = (unsigned char *)native_write_cr4;
-+	for (i = 0; i < MOV_CR4_DEPTH; i++) {
-+		/* mov %rdi, %cr4 */
-+		if (insn[i] == 0x0f && insn[i+1] == 0x22 && insn[i+2] == 0xe7)
-+			break;
-+		/* mov %rdi,%rax; mov %rax, %cr4 */
-+		if (insn[i]   == 0x48 && insn[i+1] == 0x89 &&
-+		    insn[i+2] == 0xf8 && insn[i+3] == 0x0f &&
-+		    insn[i+4] == 0x22 && insn[i+5] == 0xe0)
-+			break;
-+	}
-+	if (i >= MOV_CR4_DEPTH) {
-+		pr_info("ok: cannot locate cr4 writing call gadget\n");
-+		return;
-+	}
-+	direct_write_cr4 = (void *)(insn + i);
-+
-+	pr_info("trying to clear SMEP with call gadget\n");
-+	direct_write_cr4(cr4);
-+	if (native_read_cr4() & X86_CR4_SMEP) {
-+		pr_info("ok: SMEP removal was reverted\n");
-+	} else {
-+		pr_err("FAIL: cleared SMEP not detected!\n");
-+		cr4 |= X86_CR4_SMEP;
-+		pr_info("restoring SMEP\n");
-+		native_write_cr4(cr4);
-+	}
-+#else
-+	pr_err("FAIL: this test is x86_64-only\n");
-+#endif
-+}
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index b51cf182b031..58cfd713f8dc 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -123,6 +123,7 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(CORRUPT_LIST_ADD),
- 	CRASHTYPE(CORRUPT_LIST_DEL),
- 	CRASHTYPE(CORRUPT_USER_DS),
-+	CRASHTYPE(UNSET_SMEP),
- 	CRASHTYPE(CORRUPT_STACK),
- 	CRASHTYPE(CORRUPT_STACK_STRONG),
- 	CRASHTYPE(STACK_GUARD_PAGE_LEADING),
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index b69ee004a3f7..d7eb5a8f1da4 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -26,6 +26,7 @@ void lkdtm_CORRUPT_LIST_DEL(void);
- void lkdtm_CORRUPT_USER_DS(void);
- void lkdtm_STACK_GUARD_PAGE_LEADING(void);
- void lkdtm_STACK_GUARD_PAGE_TRAILING(void);
-+void lkdtm_UNSET_SMEP(void);
- 
- /* lkdtm_heap.c */
- void lkdtm_OVERWRITE_ALLOCATION(void);
 -- 
-2.17.1
+Kees Cook
