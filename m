@@ -1,70 +1,64 @@
-From: "Gote, Nitin R" <nitin.r.gote@intel.com>
-Subject: RE: Get involved
-Date: Tue, 18 Jun 2019 10:36:35 +0000
-Message-ID: <12356C813DFF6F479B608F81178A5615869EB0@BGSMSX101.gar.corp.intel.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Shyam Saini <mayhs11saini@gmail.com>
+References: <12356C813DFF6F479B608F81178A5615869EB0@BGSMSX101.gar.corp.intel.com>
+In-Reply-To: <12356C813DFF6F479B608F81178A5615869EB0@BGSMSX101.gar.corp.intel.com>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 18 Jun 2019 13:35:51 +0200
+Message-ID: <CAG48ez1fGhPmARDo9F_h=aX5G4eS8ti76678ynrEF0=mqXH02Q@mail.gmail.com>
+Subject: Re: Get involved
+Content-Type: text/plain; charset="UTF-8"
+To: "Gote, Nitin R" <nitin.r.gote@intel.com>
+Cc: Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Shyam Saini <mayhs11saini@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SGkgS2VlcywNCg0KSSB3b3VsZCBsaWtlIHRvIGJlIGludm9sdmVkIG9uIHVwc3RyZWFtIG9uIHNl
-Y3VyaXR5IHJlbGF0ZWQgdG9waWNzLg0KSSdtIHBsYW5uaW5nIHRvIHdvcmsgb24gYmVsb3cgaXRl
-bXMgZnJvbSBLU1BQIHRvIGRvIGxpc3Q6DQoJMS4gZGVwcmVjYXRlIHN0cmNweSgpIGluIGZhdm9y
-IG9mIHN0cnNjcHkoKS4NCgkyLiBkZXByZWNhdGUgc3RybGNweSgpIGluIGZhdm9yIG9mIHN0cnNj
-cHkoKS4NCgkzLiBkZXByZWNhdGUgc3RybmNweSgpIGluIGZhdm9yIG9mIHN0cnNjcHkoKSwgc3Ry
-c2NweV9wYWQoKSwgb3Igc3RyMm1lbV9wYWQoKS4NCg0KSSdtIHRoaW5raW5nIG9mIGZvbGxvd2lu
-ZyBhcHByb2FjaCBmb3IgYWJvdmUgaXRlbXMgOg0KDQpBcHByb2FjaCAxIDogRG8gd2UgbmVlZCB0
-byBibGluZGx5IHJlcGxhY2Ugc3RyY3B5KCkgb3Igc3RybGNweSgpIG9yIHN0cm5jcHkoKSB3aXRo
-IHN0cnNjcHkoKSBpbiBlbnRpcmUgbGludXgga2VybmVsIHRyZWUgPw0KCSAgICAgICAgIChUaGlz
-IGFwcHJvYWNoIGlzIHRpbWUgY29uc3VtaW5nIGFzIGxvdHMgb2YgY2hhbmdlcyBuZWVkIHRvIGRv
-IGluIHNpbmdsZSBwYXRjaCBvciBtdWx0aXBsZSBwYXRjaCkNCg0KQXBwcm9hY2ggMiA6IERvIHdl
-IG5lZWQgdG8gaW1wbGVtZW50IHNjcmlwdCBvciBzb21lIG1lY2hhbmlzbSB3aGljaCBjaGVja3Mg
-Zm9yIGZ1bmN0aW9ucyBsaWtlcyBzdHJjcHkoKSwgc3RybGNweSgpIG9yIHN0cm5jcHkoKSBhbmQg
-DQoJICAgICAgICAgdGhyb3cgc29tZSBkZXByZWNhdGUgZXJyb3IsIGlmIHRoZXNlIGZ1bmN0aW9u
-cyBmb3VuZCBhbmQgc3VnZ2VzdCB0byB1c2Ugc3Ryc2NweSgpID8gDQoNCkNvdWxkIHlvdSBwbGVh
-c2UgcHJvdmlkZSBzb21lIHBvaW50IG9uIHRoZXNlID8gDQoNCklmIG5vbmUgb2YgYWJvdmUgYXBw
-cm9hY2ggaXMgY29ycmVjdCwgQ291bGQgeW91IHBsZWFzZSBnaXZlIHNvbWUgaWRlYSwgU28gdGhh
-dCBJIGNhbiBzdGFydCB3b3JrIG9uIG1lbnRpb25lZCBpdGVtcyA/DQpPbmUgbW9yZSBxdWVzdGlv
-biwgSXMgdGhlcmUgYW55IENJIGlzIG1haW50YWluZWQgZm9yIEtTUFAgPyBJZiB5ZXMsIGhvdyB0
-byBjaGVjayBDSSBjdXJyZW50IHN0YXR1cyA/DQoNClRoYW5rcyBhbmQgUmVnYXJkcywNCk5pdGlu
-IEdvdGUuDQoNCi0tLS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0tDQpGcm9tOiBTaHlhbSBTYWluaSBb
-bWFpbHRvOm1heWhzMTFzYWluaUBnbWFpbC5jb21dIA0KU2VudDogU2F0dXJkYXksIEp1bmUgOCwg
-MjAxOSAxMTozMiBBTQ0KVG86IEtlZXMgQ29vayA8a2Vlc2Nvb2tAY2hyb21pdW0ub3JnPg0KQ2M6
-IFJvbWFpbiBQZXJpZXIgPHJvbWFpbi5wZXJpZXJAZ21haWwuY29tPjsgS2VybmVsIEhhcmRlbmlu
-ZyA8a2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb20+DQpTdWJqZWN0OiBSZTogR2V0
-IGludm9sdmVkDQoNCkhpIEtlZXMsDQoNCg0KDQo+DQo+IEhpISBTb3JyeSBmb3IgdGhlIGxhdGUg
-cmVwbHk6IEkndmUgYmVlbiB0cmF2ZWxsaW5nIHRoaXMgd2Vlay4gOlANCg0KPiA+IE9rYXksIG5w
-LiBJIHdpbGwgc2VsZWN0IGFub3RoZXIgb25lIHRoZW4gOikgKGhlaGUgdGhhdCdzIHRoZSBnYW1l
-IDspIA0KPiA+ICkNCj4gPg0KPiA+IEBLZWVzOiBkbyB5b3UgaGF2ZSBzb21ldGhpbmcgaW4gbWlu
-ZCAoYXMgYSBuZXcgdGFzaykgPw0KPiBTaHlhbSwgeW91J2QgYWxzbyBzdGFydGVkIEZJRUxEX1NJ
-WkVPRiByZWZhY3RvcmluZywgYnV0IG5ldmVyIHNlbnQgYSANCj4gdjIgcGF0Y2ggaWYgSSB3YXMg
-Zm9sbG93aW5nIGNvcnJlY3RseT8gSXMgdGhlcmUgb25lIG9yIHRoZSBvdGhlciBvZiANCj4gdGhl
-c2UgdGFza3MgeW91J2QgbGlrZSBoZWxwIHdpdGg/ICANCj4gaHR0cHM6Ly9wYXRjaHdvcmsua2Vy
-bmVsLm9yZy9wYXRjaC8xMDkwMDE4Ny8NCg0Kc29ycnkgZm9yIGJlaW5nIHRvbyBsYXRlLg0KDQpZ
-b3UgYXNzaWduZWQgbWUgMyB0YXNrcw0KMSkgRklFTERfU0laRU9GDQoyKSBXQVJOIG9uIGtmcmVl
-KCkgb2YgRVJSX1BUUiByYW5nZQ0KMykgTkxBX1NUUklORw0KDQpJJ2xsIHNlbmQgcGF0Y2hlcyBm
-b3IgdGFzayAxIGFuZCAyIHRvZGF5IG9yIHRvbW9ycm93Lg0KDQpJZiBSb21hbiBpcyB0YWtpbmcg
-TkxBX1NUUklORyB0YXNrLCBJJ2QgcGljayBzb21lIG90aGVyIG9uY2UgaSBzZW5kIHBhdGNoZXMg
-Zm9yIDEgYW5kIDIuDQoNCg0KPiBSb21haW4sIHdoYXQgZG8geW91IHRoaW5rIGFib3V0IHJldmll
-d2luZyBOTEEgY29kZT8gSSdkIG1lbnRpb25lZCBhIA0KPiB0aGlyZCB0YXNrIGhlcmU6DQo+IGh0
-dHBzOi8vd3d3Lm9wZW53YWxsLmNvbS9saXN0cy9rZXJuZWwtaGFyZGVuaW5nLzIwMTkvMDQvMTcv
-OA0KPg0KPiBRdW90aW5nLi4uDQo+DQo+DQo+IC0gYXVkaXQgYW5kIGZpeCBhbGwgbWlzdXNlIG9m
-IE5MQV9TVFJJTkcNCj4NCj4gVGhpcyBpcyBhIGZvbGxvd2luZyB1cCBvbiBub3RpY2luZyB0aGUg
-bWlzdXNlIG9mIE5MQV9TVFJJTkcgKG5vIE5VTCANCj4gdGVybWluYXRvciksIGdldHRpbmcgdXNl
-ZCB3aXRoIHJlZ3VsYXIgc3RyaW5nIGZ1bmN0aW9ucyAodGhhdCBleHBlY3QgYSANCj4gTlVMIHRl
-cm1pbmF0aW9uKToNCj4gaHR0cHM6Ly9sb3JlLmtlcm5lbC5vcmcvbGttbC8xNTE5MzI5Mjg5LjI2
-MzcuMTIuY2FtZWxAc2lwc29sdXRpb25zLm5ldA0KPiAvVC8jdQ0KPg0KPiBJdCdkIGJlIG5pY2Ug
-aWYgc29tZW9uZSBjb3VsZCBpbnNwZWN0IGFsbCB0aGUgTkxBX1NUUklORyANCj4gcmVwcmVzZW50
-YXRpb25zIGFuZCBmaW5kIGlmIHRoZXJlIGFyZSBhbnkgb3RoZXIgcHJvYmxlbXMgbGlrZSB0aGlz
-IA0KPiAoYW5kIHNlZSBpZiB0aGVyZSB3YXMgYSBnb29kIHdheSB0byBzeXN0ZW1pY2FsbHkgZml4
-IHRoZSBwcm9ibGVtKS4NCj4NCj4NCj4NCj4gRm9yIHlldCBhbm90aGVyIGlkZWEgd291bGQgYmUg
-dG8gZ2V0IHN5emthbGxlclsxXSBzZXQgdXAgYW5kIGVuYWJsZSANCj4gaW50ZWdlciBvdmVyZmxv
-dyBkZXRlY3Rpb24gKGJ5IGFkZGluZyAiLWZzYW5pdGl6ZT1zaWduZWQtaW50ZWdlci1vdmVyZmxv
-dyINCj4gdG8gS0JVSUxEX0NGTEFHUykgYW5kIHN0YXJ0IGZpbmRpbmcgYW5kIGZpeGVzIGNhc2Vz
-IGxpa2UgdGhpc1syXS4NCj4NCj4gVGhhbmtzIGFuZCBsZXQgbWUga25vdyB3aGF0IHlvdSB0aGlu
-ayENCj4NCj4gLUtlZXMNCj4NCj4gWzFdIA0KPiBodHRwczovL2dpdGh1Yi5jb20vZ29vZ2xlL3N5
-emthbGxlci9ibG9iL21hc3Rlci9kb2NzL2xpbnV4L3NldHVwLm1kDQo+IFsyXSBodHRwczovL2xv
-cmUua2VybmVsLm9yZy9sa21sLzIwMTgwODI0MjE1NDM5LkdBNDY3ODVAYmVhc3QvDQo+DQo+DQo+
-IC0tDQo+IEtlZXMgQ29vaw0K
+On Tue, Jun 18, 2019 at 1:20 PM Gote, Nitin R <nitin.r.gote@intel.com> wrote:
+>
+> Hi Kees,
+>
+> I would like to be involved on upstream on security related topics.
+> I'm planning to work on below items from KSPP to do list:
+>         1. deprecate strcpy() in favor of strscpy().
+>         2. deprecate strlcpy() in favor of strscpy().
+>         3. deprecate strncpy() in favor of strscpy(), strscpy_pad(), or str2mem_pad().
+>
+> I'm thinking of following approach for above items :
+>
+> Approach 1 : Do we need to blindly replace strcpy() or strlcpy() or strncpy() with strscpy() in entire linux kernel tree ?
+>                  (This approach is time consuming as lots of changes need to do in single patch or multiple patch)
+
+Linus wrote at <https://lore.kernel.org/lkml/CA+55aFwHCPnPf_xs6GJu37UBvg_BSiFPH2uQps7qNNFV8Ej-SA@mail.gmail.com/>:
+
+| I wrote a longish merge message about why - but it boils down to me
+| hating the mindless trivial conversion patches. Which were not in the
+| pull request, but I want to make it clear to everybody that I have
+| absolutely zero interest in seeing such patches. I want to encourage
+| judicious use of strscpy() in new code, or in code that gets modified
+| because it is buggy or is updated for other reasons (and thus thought
+| about and tested), but I am *not* going to accept patches that do mass
+| conversions of strlcpy or strncpy to the new interface.
+
+>From the "longish merge message" at
+<https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=30c44659f4a3e7e1f9f47e895591b4b40bf62671>:
+
+| Every time we introduce a new-and-improved interface, people start doing
+| these interminable series of trivial conversion patches.
+|
+| And every time that happens, somebody does some silly mistake, and the
+| conversion patch to the improved interface actually makes things worse.
+| Because the patch is mindnumbing and trivial, nobody has the attention
+| span to look at it carefully, and it's usually done over large swatches
+| of source code which means that not every conversion gets tested.
+|
+| So I'm pulling the strscpy() support because it *is* a better interface.
+| But I will refuse to pull mindless conversion patches.  Use this in
+| places where it makes sense, but don't do trivial patches to fix things
+| that aren't actually known to be broken.
+
+Unless Linus changed his mind about that in the years since then, you
+probably don't want to spend your time writing a patch Linus doesn't
+want.
+
+> Approach 2 : Do we need to implement script or some mechanism which checks for functions likes strcpy(), strlcpy() or strncpy() and
+>                  throw some deprecate error, if these functions found and suggest to use strscpy() ?
+
+It would probably make sense to add warnings for strlcpy() and
+strncpy() in scripts/checkpatch.pl.
