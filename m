@@ -1,176 +1,147 @@
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v3 2/3] x86/asm: Pin sensitive CR4 bits
-Date: Mon, 17 Jun 2019 21:55:02 -0700
-Message-Id: <20190618045503.39105-3-keescook@chromium.org>
+Subject: [PATCH v3 1/3] lkdtm: Check for SMEP clearing protections
+Date: Mon, 17 Jun 2019 21:55:01 -0700
+Message-Id: <20190618045503.39105-2-keescook@chromium.org>
 In-Reply-To: <20190618045503.39105-1-keescook@chromium.org>
 References: <20190618045503.39105-1-keescook@chromium.org>
 To: Thomas Gleixner <tglx@linutronix.de>
 Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, x86@kernel.org, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@intel.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Several recent exploits have used direct calls to the native_write_cr4()
-function to disable SMEP and SMAP before then continuing their exploits
-using userspace memory access. This pins bits of CR4 so that they cannot
-be changed through a common function. This is not intended to be general
-ROP protection (which would require CFI to defend against properly), but
-rather a way to avoid trivial direct function calling (or CFI bypasses
-via a matching function prototype) as seen in:
+This adds an x86-specific test for pinned cr4 bits. A successful test
+will validate pinning and check the ROP-style call-middle-of-function
+defense, if needed. For example, in the case of native_write_cr4()
+looking like this:
 
-https://googleprojectzero.blogspot.com/2017/05/exploiting-linux-kernel-via-packet.html
-(https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-7308)
+ffffffff8171bce0 <native_write_cr4>:
+ffffffff8171bce0:       48 8b 35 79 46 f2 00    mov    0xf24679(%rip),%rsi
+ffffffff8171bce7:       48 09 f7                or     %rsi,%rdi
+ffffffff8171bcea:       0f 22 e7                mov    %rdi,%cr4
+...
+ffffffff8171bd5a:       c3                      retq
 
-The goals of this change:
- - pin specific bits (SMEP, SMAP, and UMIP) when writing CR4.
- - avoid setting the bits too early (they must become pinned only after
-   CPU feature detection and selection has finished).
- - pinning mask needs to be read-only during normal runtime.
- - pinning needs to be checked after write to validate the cr4 state
+The UNSET_SMEP test will jump to ffffffff8171bcea (the mov to cr4)
+instead of ffffffff8171bce0 (native_write_cr4() entry) to simulate a
+direct-call bypass attempt.
 
-Using __ro_after_init on the mask is done so it can't be first disabled
-with a malicious write.
+Expected successful results:
 
-Since these bits are global state (once established by the boot CPU
-and kernel boot parameters), they are safe to write to secondary CPUs
-before those CPUs have finished feature detection. As such, the bits
-are set at the first cr4 write, so that cr4 write bugs can be detected
-(instead of silently papered over). This uses a few bytes less storage
-of a location we don't have: read-only per-CPU data.
-
-A check is performed after the register write because an attack could
-just skip directly to the register write. Such a direct jump is possible
-because of how this function may be built by the compiler (especially
-due to the removal of frame pointers) where it doesn't add a stack frame
-(function exit may only be a retq without pops) which is sufficient for
-trivial exploitation like in the timer overwrites mentioned above).
-
-The asm argument constraints gain the "+" modifier to convince the
-compiler that it shouldn't make ordering assumptions about the arguments
-or memory, and treat them as changed.
+  # echo UNSET_SMEP > /sys/kernel/debug/provoke-crash/DIRECT
+  # dmesg
+  [   79.594433] lkdtm: Performing direct entry UNSET_SMEP
+  [   79.596459] lkdtm: trying to clear SMEP normally
+  [   79.601810] ------------[ cut here ]------------
+  [   79.603421] Attempt to unpin cr4 bits: 100000; bypass attack?!
+  ...
+  [   79.650170] ---[ end trace 2452ca0f6126242e ]---
+  [   79.652281] lkdtm: ok: SMEP did not get cleared
+  [   79.654344] lkdtm: trying to clear SMEP with call gadget
+  [   79.655937] lkdtm: ok: SMEP removal was reverted
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-v3:
-- added missing EXPORT_SYMBOL()s
-- remove always-OR, instead doing an early OR in secondary startup (tglx)
-v2:
-- move setup until after CPU feature detection and selection.
-- refactor to use static branches to have atomic enabling.
-- only perform the "or" after a failed check.
----
- arch/x86/include/asm/special_insns.h | 22 +++++++++++++++++++++-
- arch/x86/kernel/cpu/common.c         | 20 ++++++++++++++++++++
- arch/x86/kernel/smpboot.c            |  8 +++++++-
- 3 files changed, 48 insertions(+), 2 deletions(-)
+ drivers/misc/lkdtm/bugs.c  | 66 ++++++++++++++++++++++++++++++++++++++
+ drivers/misc/lkdtm/core.c  |  1 +
+ drivers/misc/lkdtm/lkdtm.h |  1 +
+ 3 files changed, 68 insertions(+)
 
-diff --git a/arch/x86/include/asm/special_insns.h b/arch/x86/include/asm/special_insns.h
-index 0a3c4cab39db..c8c8143ab27b 100644
---- a/arch/x86/include/asm/special_insns.h
-+++ b/arch/x86/include/asm/special_insns.h
-@@ -6,6 +6,8 @@
- #ifdef __KERNEL__
+diff --git a/drivers/misc/lkdtm/bugs.c b/drivers/misc/lkdtm/bugs.c
+index 7eebbdfbcacd..3edf4464b9fc 100644
+--- a/drivers/misc/lkdtm/bugs.c
++++ b/drivers/misc/lkdtm/bugs.c
+@@ -255,3 +255,69 @@ void lkdtm_STACK_GUARD_PAGE_TRAILING(void)
  
- #include <asm/nops.h>
-+#include <asm/processor-flags.h>
-+#include <linux/jump_label.h>
- 
- /*
-  * Volatile isn't enough to prevent the compiler from reordering the
-@@ -16,6 +18,10 @@
-  */
- extern unsigned long __force_order;
- 
-+/* Starts false and gets enabled once CPU feature detection is done. */
-+DECLARE_STATIC_KEY_FALSE(cr_pinning);
-+extern unsigned long cr4_pinned_bits;
-+
- static inline unsigned long native_read_cr0(void)
- {
- 	unsigned long val;
-@@ -74,7 +80,21 @@ static inline unsigned long native_read_cr4(void)
- 
- static inline void native_write_cr4(unsigned long val)
- {
--	asm volatile("mov %0,%%cr4": : "r" (val), "m" (__force_order));
-+	unsigned long bits_missing = 0;
-+
-+set_register:
-+	asm volatile("mov %0,%%cr4": "+r" (val), "+m" (cr4_pinned_bits));
-+
-+	if (static_branch_likely(&cr_pinning)) {
-+		if (unlikely((val & cr4_pinned_bits) != cr4_pinned_bits)) {
-+			bits_missing = ~val & cr4_pinned_bits;
-+			val |= bits_missing;
-+			goto set_register;
-+		}
-+		/* Warn after we've set the missing bits. */
-+		WARN_ONCE(bits_missing, "CR4 bits went missing: %lx!?\n",
-+			  bits_missing);
-+	}
+ 	pr_err("FAIL: accessed page after stack!\n");
  }
- 
- #ifdef CONFIG_X86_64
-diff --git a/arch/x86/kernel/cpu/common.c b/arch/x86/kernel/cpu/common.c
-index 2c57fffebf9b..c578addfcf8a 100644
---- a/arch/x86/kernel/cpu/common.c
-+++ b/arch/x86/kernel/cpu/common.c
-@@ -366,6 +366,25 @@ static __always_inline void setup_umip(struct cpuinfo_x86 *c)
- 	cr4_clear_bits(X86_CR4_UMIP);
- }
- 
-+DEFINE_STATIC_KEY_FALSE_RO(cr_pinning);
-+EXPORT_SYMBOL(cr_pinning);
-+unsigned long cr4_pinned_bits __ro_after_init;
-+EXPORT_SYMBOL(cr4_pinned_bits);
 +
-+/*
-+ * Once CPU feature detection is finished (and boot params have been
-+ * parsed), record any of the sensitive CR bits that are set, and
-+ * enable CR pinning.
-+ */
-+static void __init setup_cr_pinning(void)
++void lkdtm_UNSET_SMEP(void)
 +{
-+	unsigned long mask;
++#ifdef CONFIG_X86_64
++#define MOV_CR4_DEPTH	64
++	void (*direct_write_cr4)(unsigned long val);
++	unsigned char *insn;
++	unsigned long cr4;
++	int i;
 +
-+	mask = (X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP);
-+	cr4_pinned_bits = this_cpu_read(cpu_tlbstate.cr4) & mask;
-+	static_key_enable(&cr_pinning.key);
++	cr4 = native_read_cr4();
++
++	if ((cr4 & X86_CR4_SMEP) != X86_CR4_SMEP) {
++		pr_err("FAIL: SMEP not in use\n");
++		return;
++	}
++	cr4 &= ~(X86_CR4_SMEP);
++
++	pr_info("trying to clear SMEP normally\n");
++	native_write_cr4(cr4);
++	if (cr4 == native_read_cr4()) {
++		pr_err("FAIL: pinning SMEP failed!\n");
++		cr4 |= X86_CR4_SMEP;
++		pr_info("restoring SMEP\n");
++		native_write_cr4(cr4);
++		return;
++	}
++	pr_info("ok: SMEP did not get cleared\n");
++
++	/*
++	 * To test the post-write pinning verification we need to call
++	 * directly into the the middle of native_write_cr4() where the
++	 * cr4 write happens, skipping the pinning. This searches for
++	 * the cr4 writing instruction.
++	 */
++	insn = (unsigned char *)native_write_cr4;
++	for (i = 0; i < MOV_CR4_DEPTH; i++) {
++		/* mov %rdi, %cr4 */
++		if (insn[i] == 0x0f && insn[i+1] == 0x22 && insn[i+2] == 0xe7)
++			break;
++		/* mov %rdi,%rax; mov %rax, %cr4 */
++		if (insn[i]   == 0x48 && insn[i+1] == 0x89 &&
++		    insn[i+2] == 0xf8 && insn[i+3] == 0x0f &&
++		    insn[i+4] == 0x22 && insn[i+5] == 0xe0)
++			break;
++	}
++	if (i >= MOV_CR4_DEPTH) {
++		pr_info("ok: cannot locate cr4 writing call gadget\n");
++		return;
++	}
++	direct_write_cr4 = (void *)(insn + i);
++
++	pr_info("trying to clear SMEP with call gadget\n");
++	direct_write_cr4(cr4);
++	if (native_read_cr4() & X86_CR4_SMEP) {
++		pr_info("ok: SMEP removal was reverted\n");
++	} else {
++		pr_err("FAIL: cleared SMEP not detected!\n");
++		cr4 |= X86_CR4_SMEP;
++		pr_info("restoring SMEP\n");
++		native_write_cr4(cr4);
++	}
++#else
++	pr_err("FAIL: this test is x86_64-only\n");
++#endif
 +}
-+
- /*
-  * Protection Keys are not available in 32-bit mode.
-  */
-@@ -1464,6 +1483,7 @@ void __init identify_boot_cpu(void)
- 	enable_sep_cpu();
- #endif
- 	cpu_detect_tlb(&boot_cpu_data);
-+	setup_cr_pinning();
- }
+diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
+index b51cf182b031..58cfd713f8dc 100644
+--- a/drivers/misc/lkdtm/core.c
++++ b/drivers/misc/lkdtm/core.c
+@@ -123,6 +123,7 @@ static const struct crashtype crashtypes[] = {
+ 	CRASHTYPE(CORRUPT_LIST_ADD),
+ 	CRASHTYPE(CORRUPT_LIST_DEL),
+ 	CRASHTYPE(CORRUPT_USER_DS),
++	CRASHTYPE(UNSET_SMEP),
+ 	CRASHTYPE(CORRUPT_STACK),
+ 	CRASHTYPE(CORRUPT_STACK_STRONG),
+ 	CRASHTYPE(STACK_GUARD_PAGE_LEADING),
+diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
+index b69ee004a3f7..d7eb5a8f1da4 100644
+--- a/drivers/misc/lkdtm/lkdtm.h
++++ b/drivers/misc/lkdtm/lkdtm.h
+@@ -26,6 +26,7 @@ void lkdtm_CORRUPT_LIST_DEL(void);
+ void lkdtm_CORRUPT_USER_DS(void);
+ void lkdtm_STACK_GUARD_PAGE_LEADING(void);
+ void lkdtm_STACK_GUARD_PAGE_TRAILING(void);
++void lkdtm_UNSET_SMEP(void);
  
- void identify_secondary_cpu(struct cpuinfo_x86 *c)
-diff --git a/arch/x86/kernel/smpboot.c b/arch/x86/kernel/smpboot.c
-index 362dd8953f48..1af7a2d89419 100644
---- a/arch/x86/kernel/smpboot.c
-+++ b/arch/x86/kernel/smpboot.c
-@@ -205,13 +205,19 @@ static int enable_start_cpu0;
-  */
- static void notrace start_secondary(void *unused)
- {
-+	unsigned long cr4 = __read_cr4();
-+
- 	/*
- 	 * Don't put *anything* except direct CPU state initialization
- 	 * before cpu_init(), SMP booting is too fragile that we want to
- 	 * limit the things done here to the most necessary things.
- 	 */
- 	if (boot_cpu_has(X86_FEATURE_PCID))
--		__write_cr4(__read_cr4() | X86_CR4_PCIDE);
-+		cr4 |= X86_CR4_PCIDE;
-+	if (static_branch_likely(&cr_pinning))
-+		cr4 |= cr4_pinned_bits;
-+
-+	__write_cr4(cr4);
- 
- #ifdef CONFIG_X86_32
- 	/* switch away from the initial page table */
+ /* lkdtm_heap.c */
+ void lkdtm_OVERWRITE_ALLOCATION(void);
 -- 
 2.17.1
