@@ -1,32 +1,51 @@
-Date: Mon, 17 Jun 2019 22:26:54 -0700
-From: Kees Cook <keescook@chromium.org>
-Subject: Re: [PATCH v7 1/2] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
-Message-ID: <201906172225.4645462F1E@keescook>
-References: <20190617151050.92663-1-glider@google.com>
- <20190617151050.92663-2-glider@google.com>
- <20190617151027.6422016d74a7dc4c7a562fc6@linux-foundation.org>
- <201906172157.8E88196@keescook>
- <20190617221932.7406c74b6a8114a406984b70@linux-foundation.org>
+Subject: Re: [PATCH v3 1/3] lkdtm: Check for SMEP clearing protections
+References: <20190618045503.39105-1-keescook@chromium.org>
+ <20190618045503.39105-2-keescook@chromium.org>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <580611da-fd97-e82e-b604-581f105416ee@rasmusvillemoes.dk>
+Date: Tue, 18 Jun 2019 09:10:13 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190617221932.7406c74b6a8114a406984b70@linux-foundation.org>
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Alexander Potapenko <glider@google.com>, Christoph Lameter <cl@linux.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20190618045503.39105-2-keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@intel.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 17, 2019 at 10:19:32PM -0700, Andrew Morton wrote:
-> On Mon, 17 Jun 2019 22:07:41 -0700 Kees Cook <keescook@chromium.org> wrote:
-> 
-> > This is expected to be on-by-default on Android and Chrome
-> > OS. And it gives the opportunity for anyone else to use it under distros
-> > too via the boot args. (The init_on_free feature is regularly requested
-> > by folks where memory forensics is included in their thread models.)
-> 
-> Thanks.  I added the above to the changelog.  I assumed s/thread/threat/
+On 18/06/2019 06.55, Kees Cook wrote:
 
-Heh whoops, yes, "threat" was intended. Thanks! :)
+> +#else
+> +	pr_err("FAIL: this test is x86_64-only\n");
+> +#endif
+> +}
 
--- 
-Kees Cook
+Why expose it at all on all other architectures? If you wrap the
+CRASHTYPE() in an #ifdef, you can also guard the whole lkdtm_UNSET_SMEP
+definition (the declaration in lkdtm.h can stay, possibly with a comment
+saying /* x86-64 only */).
+
+> diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
+> index b51cf182b031..58cfd713f8dc 100644
+> --- a/drivers/misc/lkdtm/core.c
+> +++ b/drivers/misc/lkdtm/core.c
+> @@ -123,6 +123,7 @@ static const struct crashtype crashtypes[] = {
+>  	CRASHTYPE(CORRUPT_LIST_ADD),
+>  	CRASHTYPE(CORRUPT_LIST_DEL),
+>  	CRASHTYPE(CORRUPT_USER_DS),
+> +	CRASHTYPE(UNSET_SMEP),
+>  	CRASHTYPE(CORRUPT_STACK),
+>  	CRASHTYPE(CORRUPT_STACK_STRONG),
+>  	CRASHTYPE(STACK_GUARD_PAGE_LEADING),
+> diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
+> index b69ee004a3f7..d7eb5a8f1da4 100644
+> --- a/drivers/misc/lkdtm/lkdtm.h
+> +++ b/drivers/misc/lkdtm/lkdtm.h
+> @@ -26,6 +26,7 @@ void lkdtm_CORRUPT_LIST_DEL(void);
+>  void lkdtm_CORRUPT_USER_DS(void);
+>  void lkdtm_STACK_GUARD_PAGE_LEADING(void);
+>  void lkdtm_STACK_GUARD_PAGE_TRAILING(void);
+> +void lkdtm_UNSET_SMEP(void);
+>  
+>  /* lkdtm_heap.c */
+>  void lkdtm_OVERWRITE_ALLOCATION(void);
+Rasmus
