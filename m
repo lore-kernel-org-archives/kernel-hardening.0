@@ -1,30 +1,49 @@
-Date: Mon, 17 Jun 2019 15:10:27 -0700
-From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH v7 1/2] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
-Message-Id: <20190617151027.6422016d74a7dc4c7a562fc6@linux-foundation.org>
-In-Reply-To: <20190617151050.92663-2-glider@google.com>
-References: <20190617151050.92663-1-glider@google.com>
-	<20190617151050.92663-2-glider@google.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Alexander Potapenko <glider@google.com>
-Cc: Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH v3 3/3] x86/asm: Pin sensitive CR0 bits
+Date: Mon, 17 Jun 2019 21:55:03 -0700
+Message-Id: <20190618045503.39105-4-keescook@chromium.org>
+In-Reply-To: <20190618045503.39105-1-keescook@chromium.org>
+References: <20190618045503.39105-1-keescook@chromium.org>
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, x86@kernel.org, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@intel.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 17 Jun 2019 17:10:49 +0200 Alexander Potapenko <glider@google.com> wrote:
+With sensitive CR4 bits pinned now, it's possible that the WP bit for
+CR0 might become a target as well. Following the same reasoning for
+the CR4 pinning, this pins CR0's WP bit (but this can be done with a
+static value).
 
-> Slowdown for the new features compared to init_on_free=0,
-> init_on_alloc=0:
-> 
-> hackbench, init_on_free=1:  +7.62% sys time (st.err 0.74%)
-> hackbench, init_on_alloc=1: +7.75% sys time (st.err 2.14%)
+Suggested-by: Peter Zijlstra <peterz@infradead.org>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/x86/include/asm/special_insns.h | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
 
-Sanity check time.  Is anyone really going to use this?  Seriously,
-honestly, for real?  If "yes" then how did we determine that?
-
-Also, a bit of a nit: "init_on_alloc" and "init_on_free" aren't very
-well chosen names for the boot options - they could refer to any kernel
-object at all, really.  init_pages_on_alloc would be better?  I don't think
-this matters much - the boot options are already chaotic.  But still...
+diff --git a/arch/x86/include/asm/special_insns.h b/arch/x86/include/asm/special_insns.h
+index c8c8143ab27b..b2e84d113f2a 100644
+--- a/arch/x86/include/asm/special_insns.h
++++ b/arch/x86/include/asm/special_insns.h
+@@ -31,7 +31,20 @@ static inline unsigned long native_read_cr0(void)
+ 
+ static inline void native_write_cr0(unsigned long val)
+ {
+-	asm volatile("mov %0,%%cr0": : "r" (val), "m" (__force_order));
++	unsigned long bits_missing = 0;
++
++set_register:
++	asm volatile("mov %0,%%cr0": "+r" (val), "+m" (__force_order));
++
++	if (static_branch_likely(&cr_pinning)) {
++		if (unlikely((val & X86_CR0_WP) != X86_CR0_WP)) {
++			bits_missing = X86_CR0_WP;
++			val |= bits_missing;
++			goto set_register;
++		}
++		/* Warn after we've set the missing bits. */
++		WARN_ONCE(bits_missing, "CR0 WP bit went missing!?\n");
++	}
+ }
+ 
+ static inline unsigned long native_read_cr2(void)
+-- 
+2.17.1
