@@ -1,53 +1,73 @@
-Date: Wed, 19 Jun 2019 10:24:30 -0300
-From: Mauro Carvalho Chehab <mchehab+samsung@kernel.org>
-Subject: Re: [PATCH v1 12/22] docs: driver-api: add .rst files from the main
- dir
-Message-ID: <20190619102430.558a775e@coco.lan>
-In-Reply-To: <20190619121308.GA6284@openwall.com>
-References: <cover.1560890771.git.mchehab+samsung@kernel.org>
-	<b0d24e805d5368719cc64e8104d64ee9b5b89dd0.1560890772.git.mchehab+samsung@kernel.org>
-	<20190619114356.GP3419@hirez.programming.kicks-ass.net>
-	<20190619114551.GQ3463@hirez.programming.kicks-ass.net>
-	<20190619115007.GR3463@hirez.programming.kicks-ass.net>
-	<20190619121308.GA6284@openwall.com>
+From: "Gote, Nitin R" <nitin.r.gote@intel.com>
+Subject: RE: Get involved
+Date: Thu, 20 Jun 2019 10:27:09 +0000
+Message-ID: <12356C813DFF6F479B608F81178A561586A45E@BGSMSX101.gar.corp.intel.com>
+References: <12356C813DFF6F479B608F81178A5615869EB0@BGSMSX101.gar.corp.intel.com>
+ <CAG48ez1fGhPmARDo9F_h=aX5G4eS8ti76678ynrEF0=mqXH02Q@mail.gmail.com>
+In-Reply-To: <CAG48ez1fGhPmARDo9F_h=aX5G4eS8ti76678ynrEF0=mqXH02Q@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Solar Designer <solar@openwall.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, kernel-hardening@lists.openwall.com
+To: Jann Horn <jannh@google.com>
+Cc: Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Em Wed, 19 Jun 2019 14:13:08 +0200
-Solar Designer <solar@openwall.com> escreveu:
-
-> On Wed, Jun 19, 2019 at 01:50:07PM +0200, Peter Zijlstra wrote:
-> > Also, cross-posting to moderated lists is rude.  
-> 
-> It's even worse with partially-pre-moderated lists, because then list
-> moderators are forced to either accept all the mostly off-topic messages
-> (as some follow-ups from other lists would get through anyway, and would
-> be out of context if a message in a thread were rejected) or switch the
-> list to fully pre-moderated with no exceptions for anyone (and then it's
-> more work and greater delays on desirable messages).
-> 
-> I already brought this up with Mauro off-list, and I hope we'll see no
-> more of these threads on kernel-hardening, but we'll have to let the
-> rest of already started threads through.
-
-I'll take care on a next review to explicitly remove kernel-hardening.
-
-As I pointed in priv, as gcc-plugins file is listed at MAINTAINERS,
-except if someone actively remove kernel-hardening ML from 
-get_maintainers.pl results, you'll likely keep receiving e-mails with
-patches that will be touching it.
-
-> I think this has significant negative effect on the kernel-hardening
-> project, shifting it further towards and beyond security circus (to
-> non-security circus now) and thereby discouraging desirable
-> contributions, whereas the (one relevant) file rename is unimportant
-> (and buried in lots of other renames).
-
-Sorry for that.
-
-Thanks,
-Mauro
+SGkgSmFubiwNCg0KVGhhbmsgeW91IGZvciB0aGUgaW5wdXQuDQpJIGhhdmUgc3RhcnRlZCB3b3Jr
+aW5nIG9uIHRoZXNlIGFuZCBJIHdpbGwgc2VuZCBhIHBhdGNoIGZvciByZXZpZXcgc29vbi4NCg0K
+QmVzdCBSZWdhcmRzLA0KTml0aW4gR290ZS4gDQoNCi0tLS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0t
+DQpGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpqYW5uaEBnb29nbGUuY29tXSANClNlbnQ6IFR1ZXNk
+YXksIEp1bmUgMTgsIDIwMTkgNTowNiBQTQ0KVG86IEdvdGUsIE5pdGluIFIgPG5pdGluLnIuZ290
+ZUBpbnRlbC5jb20+DQpDYzogS2VlcyBDb29rIDxrZWVzY29va0BjaHJvbWl1bS5vcmc+OyBLZXJu
+ZWwgSGFyZGVuaW5nIDxrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbT47IFNoeWFt
+IFNhaW5pIDxtYXloczExc2FpbmlAZ21haWwuY29tPg0KU3ViamVjdDogUmU6IEdldCBpbnZvbHZl
+ZA0KDQpPbiBUdWUsIEp1biAxOCwgMjAxOSBhdCAxOjIwIFBNIEdvdGUsIE5pdGluIFIgPG5pdGlu
+LnIuZ290ZUBpbnRlbC5jb20+IHdyb3RlOg0KPg0KPiBIaSBLZWVzLA0KPg0KPiBJIHdvdWxkIGxp
+a2UgdG8gYmUgaW52b2x2ZWQgb24gdXBzdHJlYW0gb24gc2VjdXJpdHkgcmVsYXRlZCB0b3BpY3Mu
+DQo+IEknbSBwbGFubmluZyB0byB3b3JrIG9uIGJlbG93IGl0ZW1zIGZyb20gS1NQUCB0byBkbyBs
+aXN0Og0KPiAgICAgICAgIDEuIGRlcHJlY2F0ZSBzdHJjcHkoKSBpbiBmYXZvciBvZiBzdHJzY3B5
+KCkuDQo+ICAgICAgICAgMi4gZGVwcmVjYXRlIHN0cmxjcHkoKSBpbiBmYXZvciBvZiBzdHJzY3B5
+KCkuDQo+ICAgICAgICAgMy4gZGVwcmVjYXRlIHN0cm5jcHkoKSBpbiBmYXZvciBvZiBzdHJzY3B5
+KCksIHN0cnNjcHlfcGFkKCksIG9yIHN0cjJtZW1fcGFkKCkuDQo+DQo+IEknbSB0aGlua2luZyBv
+ZiBmb2xsb3dpbmcgYXBwcm9hY2ggZm9yIGFib3ZlIGl0ZW1zIDoNCj4NCj4gQXBwcm9hY2ggMSA6
+IERvIHdlIG5lZWQgdG8gYmxpbmRseSByZXBsYWNlIHN0cmNweSgpIG9yIHN0cmxjcHkoKSBvciBz
+dHJuY3B5KCkgd2l0aCBzdHJzY3B5KCkgaW4gZW50aXJlIGxpbnV4IGtlcm5lbCB0cmVlID8NCj4g
+ICAgICAgICAgICAgICAgICAoVGhpcyBhcHByb2FjaCBpcyB0aW1lIGNvbnN1bWluZyBhcyBsb3Rz
+IG9mIGNoYW5nZXMgDQo+IG5lZWQgdG8gZG8gaW4gc2luZ2xlIHBhdGNoIG9yIG11bHRpcGxlIHBh
+dGNoKQ0KDQpMaW51cyB3cm90ZSBhdCA8aHR0cHM6Ly9sb3JlLmtlcm5lbC5vcmcvbGttbC9DQSs1
+NWFGd0hDUG5QZl94czZHSnUzN1VCdmdfQlNpRlBIMnVRcHM3cU5ORlY4RWotU0FAbWFpbC5nbWFp
+bC5jb20vPjoNCg0KfCBJIHdyb3RlIGEgbG9uZ2lzaCBtZXJnZSBtZXNzYWdlIGFib3V0IHdoeSAt
+IGJ1dCBpdCBib2lscyBkb3duIHRvIG1lIA0KfCBoYXRpbmcgdGhlIG1pbmRsZXNzIHRyaXZpYWwg
+Y29udmVyc2lvbiBwYXRjaGVzLiBXaGljaCB3ZXJlIG5vdCBpbiB0aGUgDQp8IHB1bGwgcmVxdWVz
+dCwgYnV0IEkgd2FudCB0byBtYWtlIGl0IGNsZWFyIHRvIGV2ZXJ5Ym9keSB0aGF0IEkgaGF2ZSAN
+CnwgYWJzb2x1dGVseSB6ZXJvIGludGVyZXN0IGluIHNlZWluZyBzdWNoIHBhdGNoZXMuIEkgd2Fu
+dCB0byBlbmNvdXJhZ2UgDQp8IGp1ZGljaW91cyB1c2Ugb2Ygc3Ryc2NweSgpIGluIG5ldyBjb2Rl
+LCBvciBpbiBjb2RlIHRoYXQgZ2V0cyBtb2RpZmllZCANCnwgYmVjYXVzZSBpdCBpcyBidWdneSBv
+ciBpcyB1cGRhdGVkIGZvciBvdGhlciByZWFzb25zIChhbmQgdGh1cyB0aG91Z2h0IA0KfCBhYm91
+dCBhbmQgdGVzdGVkKSwgYnV0IEkgYW0gKm5vdCogZ29pbmcgdG8gYWNjZXB0IHBhdGNoZXMgdGhh
+dCBkbyBtYXNzIA0KfCBjb252ZXJzaW9ucyBvZiBzdHJsY3B5IG9yIHN0cm5jcHkgdG8gdGhlIG5l
+dyBpbnRlcmZhY2UuDQoNCkZyb20gdGhlICJsb25naXNoIG1lcmdlIG1lc3NhZ2UiIGF0DQo8aHR0
+cHM6Ly9naXQua2VybmVsLm9yZy9wdWIvc2NtL2xpbnV4L2tlcm5lbC9naXQvdG9ydmFsZHMvbGlu
+dXguZ2l0L2NvbW1pdC8/aWQ9MzBjNDQ2NTlmNGEzZTdlMWY5ZjQ3ZTg5NTU5MWI0YjQwYmY2MjY3
+MT46DQoNCnwgRXZlcnkgdGltZSB3ZSBpbnRyb2R1Y2UgYSBuZXctYW5kLWltcHJvdmVkIGludGVy
+ZmFjZSwgcGVvcGxlIHN0YXJ0IA0KfCBkb2luZyB0aGVzZSBpbnRlcm1pbmFibGUgc2VyaWVzIG9m
+IHRyaXZpYWwgY29udmVyc2lvbiBwYXRjaGVzLg0KfA0KfCBBbmQgZXZlcnkgdGltZSB0aGF0IGhh
+cHBlbnMsIHNvbWVib2R5IGRvZXMgc29tZSBzaWxseSBtaXN0YWtlLCBhbmQgdGhlIA0KfCBjb252
+ZXJzaW9uIHBhdGNoIHRvIHRoZSBpbXByb3ZlZCBpbnRlcmZhY2UgYWN0dWFsbHkgbWFrZXMgdGhp
+bmdzIHdvcnNlLg0KfCBCZWNhdXNlIHRoZSBwYXRjaCBpcyBtaW5kbnVtYmluZyBhbmQgdHJpdmlh
+bCwgbm9ib2R5IGhhcyB0aGUgYXR0ZW50aW9uIA0KfCBzcGFuIHRvIGxvb2sgYXQgaXQgY2FyZWZ1
+bGx5LCBhbmQgaXQncyB1c3VhbGx5IGRvbmUgb3ZlciBsYXJnZSANCnwgc3dhdGNoZXMgb2Ygc291
+cmNlIGNvZGUgd2hpY2ggbWVhbnMgdGhhdCBub3QgZXZlcnkgY29udmVyc2lvbiBnZXRzIHRlc3Rl
+ZC4NCnwNCnwgU28gSSdtIHB1bGxpbmcgdGhlIHN0cnNjcHkoKSBzdXBwb3J0IGJlY2F1c2UgaXQg
+KmlzKiBhIGJldHRlciBpbnRlcmZhY2UuDQp8IEJ1dCBJIHdpbGwgcmVmdXNlIHRvIHB1bGwgbWlu
+ZGxlc3MgY29udmVyc2lvbiBwYXRjaGVzLiAgVXNlIHRoaXMgaW4gDQp8IHBsYWNlcyB3aGVyZSBp
+dCBtYWtlcyBzZW5zZSwgYnV0IGRvbid0IGRvIHRyaXZpYWwgcGF0Y2hlcyB0byBmaXggDQp8IHRo
+aW5ncyB0aGF0IGFyZW4ndCBhY3R1YWxseSBrbm93biB0byBiZSBicm9rZW4uDQoNClVubGVzcyBM
+aW51cyBjaGFuZ2VkIGhpcyBtaW5kIGFib3V0IHRoYXQgaW4gdGhlIHllYXJzIHNpbmNlIHRoZW4s
+IHlvdSBwcm9iYWJseSBkb24ndCB3YW50IHRvIHNwZW5kIHlvdXIgdGltZSB3cml0aW5nIGEgcGF0
+Y2ggTGludXMgZG9lc24ndCB3YW50Lg0KDQo+IEFwcHJvYWNoIDIgOiBEbyB3ZSBuZWVkIHRvIGlt
+cGxlbWVudCBzY3JpcHQgb3Igc29tZSBtZWNoYW5pc20gd2hpY2ggY2hlY2tzIGZvciBmdW5jdGlv
+bnMgbGlrZXMgc3RyY3B5KCksIHN0cmxjcHkoKSBvciBzdHJuY3B5KCkgYW5kDQo+ICAgICAgICAg
+ICAgICAgICAgdGhyb3cgc29tZSBkZXByZWNhdGUgZXJyb3IsIGlmIHRoZXNlIGZ1bmN0aW9ucyBm
+b3VuZCBhbmQgc3VnZ2VzdCB0byB1c2Ugc3Ryc2NweSgpID8NCg0KSXQgd291bGQgcHJvYmFibHkg
+bWFrZSBzZW5zZSB0byBhZGQgd2FybmluZ3MgZm9yIHN0cmxjcHkoKSBhbmQNCnN0cm5jcHkoKSBp
+biBzY3JpcHRzL2NoZWNrcGF0Y2gucGwuDQo=
