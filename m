@@ -1,52 +1,132 @@
-Date: Thu, 20 Jun 2019 18:37:30 -0700
-From: Kees Cook <keescook@chromium.org>
-Subject: Re: [PATCH v6 1/3] mm: security: introduce init_on_alloc=1 and
+Date: Fri, 21 Jun 2019 09:09:05 +0200
+From: Michal Hocko <mhocko@kernel.org>
+Subject: Re: [PATCH v7 1/2] mm: security: introduce init_on_alloc=1 and
  init_on_free=1 boot options
-Message-ID: <201906201821.8887E75@keescook>
-References: <20190606164845.179427-1-glider@google.com>
- <20190606164845.179427-2-glider@google.com>
- <201906070841.4680E54@keescook>
+Message-ID: <20190621070905.GA3429@dhcp22.suse.cz>
+References: <20190617151050.92663-1-glider@google.com>
+ <20190617151050.92663-2-glider@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <201906070841.4680E54@keescook>
+In-Reply-To: <20190617151050.92663-2-glider@google.com>
 To: Alexander Potapenko <glider@google.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 07, 2019 at 08:42:27AM -0700, Kees Cook wrote:
-> On Thu, Jun 06, 2019 at 06:48:43PM +0200, Alexander Potapenko wrote:
-> > [...]
-> > diff --git a/mm/slub.c b/mm/slub.c
-> > index cd04dbd2b5d0..9c4a8b9a955c 100644
-> > --- a/mm/slub.c
-> > +++ b/mm/slub.c
-> > [...]
-> > @@ -2741,8 +2758,14 @@ static __always_inline void *slab_alloc_node(struct kmem_cache *s,
-> >  		prefetch_freepointer(s, next_object);
-> >  		stat(s, ALLOC_FASTPATH);
-> >  	}
-> > +	/*
-> > +	 * If the object has been wiped upon free, make sure it's fully
-> > +	 * initialized by zeroing out freelist pointer.
-> > +	 */
-> > +	if (unlikely(slab_want_init_on_free(s)) && object)
-> > +		*(void **)object = NULL;
+On Mon 17-06-19 17:10:49, Alexander Potapenko wrote:
+> The new options are needed to prevent possible information leaks and
+> make control-flow bugs that depend on uninitialized values more
+> deterministic.
+> 
+> init_on_alloc=1 makes the kernel initialize newly allocated pages and heap
+> objects with zeroes. Initialization is done at allocation time at the
+> places where checks for __GFP_ZERO are performed.
+> 
+> init_on_free=1 makes the kernel initialize freed pages and heap objects
+> with zeroes upon their deletion. This helps to ensure sensitive data
+> doesn't leak via use-after-free accesses.
+> 
+> Both init_on_alloc=1 and init_on_free=1 guarantee that the allocator
+> returns zeroed memory. The two exceptions are slab caches with
+> constructors and SLAB_TYPESAFE_BY_RCU flag. Those are never
+> zero-initialized to preserve their semantics.
+> 
+> Both init_on_alloc and init_on_free default to zero, but those defaults
+> can be overridden with CONFIG_INIT_ON_ALLOC_DEFAULT_ON and
+> CONFIG_INIT_ON_FREE_DEFAULT_ON.
+> 
+> Slowdown for the new features compared to init_on_free=0,
+> init_on_alloc=0:
+> 
+> hackbench, init_on_free=1:  +7.62% sys time (st.err 0.74%)
+> hackbench, init_on_alloc=1: +7.75% sys time (st.err 2.14%)
+> 
+> Linux build with -j12, init_on_free=1:  +8.38% wall time (st.err 0.39%)
+> Linux build with -j12, init_on_free=1:  +24.42% sys time (st.err 0.52%)
+> Linux build with -j12, init_on_alloc=1: -0.13% wall time (st.err 0.42%)
+> Linux build with -j12, init_on_alloc=1: +0.57% sys time (st.err 0.40%)
+> 
+> The slowdown for init_on_free=0, init_on_alloc=0 compared to the
+> baseline is within the standard error.
+> 
+> The new features are also going to pave the way for hardware memory
+> tagging (e.g. arm64's MTE), which will require both on_alloc and on_free
+> hooks to set the tags for heap objects. With MTE, tagging will have the
+> same cost as memory initialization.
+> 
+> Although init_on_free is rather costly, there are paranoid use-cases where
+> in-memory data lifetime is desired to be minimized. There are various
+> arguments for/against the realism of the associated threat models, but
+> given that we'll need the infrastructre for MTE anyway, and there are
+> people who want wipe-on-free behavior no matter what the performance cost,
+> it seems reasonable to include it in this series.
 
-In looking at metadata again, I noticed that I don't think this is
-correct, as it needs to be using s->offset to find the location of the
-freelist pointer:
+Thanks for reworking the original implemenation. This looks much better!
 
-	memset(object + s->offset, 0, sizeof(void *));
+> Signed-off-by: Alexander Potapenko <glider@google.com>
+> Acked-by: Kees Cook <keescook@chromium.org>
+> To: Andrew Morton <akpm@linux-foundation.org>
+> To: Christoph Lameter <cl@linux.com>
+> To: Kees Cook <keescook@chromium.org>
+> Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
+> Cc: Michal Hocko <mhocko@kernel.org>
+> Cc: James Morris <jmorris@namei.org>
+> Cc: "Serge E. Hallyn" <serge@hallyn.com>
+> Cc: Nick Desaulniers <ndesaulniers@google.com>
+> Cc: Kostya Serebryany <kcc@google.com>
+> Cc: Dmitry Vyukov <dvyukov@google.com>
+> Cc: Sandeep Patil <sspatil@android.com>
+> Cc: Laura Abbott <labbott@redhat.com>
+> Cc: Randy Dunlap <rdunlap@infradead.org>
+> Cc: Jann Horn <jannh@google.com>
+> Cc: Mark Rutland <mark.rutland@arm.com>
+> Cc: Marco Elver <elver@google.com>
+> Cc: linux-mm@kvack.org
+> Cc: linux-security-module@vger.kernel.org
+> Cc: kernel-hardening@lists.openwall.com
 
-> >  
-> > -	if (unlikely(gfpflags & __GFP_ZERO) && object)
-> > +	if (unlikely(slab_want_init_on_alloc(gfpflags, s)) && object)
-> >  		memset(object, 0, s->object_size);
+Acked-by: Michal Hocko <mhocko@suse.cz> # page allocator parts.
 
-init_on_alloc is using "object_size" but init_on_free is using "size". I
-assume the "alloc" wipe is smaller because metadata was just written
-for the allocation?
+kmalloc based parts look good to me as well but I am not sure I fill
+qualified to give my ack there without much more digging and I do not
+have much time for that now.
 
+[...]
+> diff --git a/kernel/kexec_core.c b/kernel/kexec_core.c
+> index fd5c95ff9251..2f75dd0d0d81 100644
+> --- a/kernel/kexec_core.c
+> +++ b/kernel/kexec_core.c
+> @@ -315,7 +315,7 @@ static struct page *kimage_alloc_pages(gfp_t gfp_mask, unsigned int order)
+>  		arch_kexec_post_alloc_pages(page_address(pages), count,
+>  					    gfp_mask);
+>  
+> -		if (gfp_mask & __GFP_ZERO)
+> +		if (want_init_on_alloc(gfp_mask))
+>  			for (i = 0; i < count; i++)
+>  				clear_highpage(pages + i);
+>  	}
+
+I am not really sure I follow here. Why do we want to handle
+want_init_on_alloc here? The allocated memory comes from the page
+allocator and so it will get zeroed there. arch_kexec_post_alloc_pages
+might touch the content there but is there any actual risk of any kind
+of leak?
+
+> diff --git a/mm/dmapool.c b/mm/dmapool.c
+> index 8c94c89a6f7e..e164012d3491 100644
+> --- a/mm/dmapool.c
+> +++ b/mm/dmapool.c
+> @@ -378,7 +378,7 @@ void *dma_pool_alloc(struct dma_pool *pool, gfp_t mem_flags,
+>  #endif
+>  	spin_unlock_irqrestore(&pool->lock, flags);
+>  
+> -	if (mem_flags & __GFP_ZERO)
+> +	if (want_init_on_alloc(mem_flags))
+>  		memset(retval, 0, pool->size);
+>  
+>  	return retval;
+
+Don't you miss dma_pool_free and want_init_on_free?
 -- 
-Kees Cook
+Michal Hocko
+SUSE Labs
