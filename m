@@ -1,57 +1,96 @@
-MIME-Version: 1.0
-References: <CABgxDoLSzkVJ7Vh8mLiZySz6uS+VEu+GUxRqX8EWHKQDyz2fSg@mail.gmail.com>
- <201906200913.D2698BD0@keescook>
-In-Reply-To: <201906200913.D2698BD0@keescook>
-From: Romain Perier <romain.perier@gmail.com>
-Date: Fri, 21 Jun 2019 12:54:34 +0200
-Message-ID: <CABgxDoKQ4cnSS3p0sz8BgP65-R15U2Sr1AHVpU77ZGJu-Gvvvg@mail.gmail.com>
-Subject: Re: Audit and fix all misuse of NLA_STRING: STATUS
+Message-ID: <1561120576.5154.35.camel@lca.pw>
+Subject: Re: [PATCH v7 1/2] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+From: Qian Cai <cai@lca.pw>
+Date: Fri, 21 Jun 2019 08:36:16 -0400
+In-Reply-To: <20190617151050.92663-2-glider@google.com>
+References: <20190617151050.92663-1-glider@google.com>
+	 <20190617151050.92663-2-glider@google.com>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+To: Alexander Potapenko <glider@google.com>, Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi!
+On Mon, 2019-06-17 at 17:10 +0200, Alexander Potapenko wrote:
+> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+> index d66bc8abe0af..50a3b104a491 100644
+> --- a/mm/page_alloc.c
+> +++ b/mm/page_alloc.c
+> @@ -136,6 +136,48 @@ unsigned long totalcma_pages __read_mostly;
+>  
+>  int percpu_pagelist_fraction;
+>  gfp_t gfp_allowed_mask __read_mostly = GFP_BOOT_MASK;
+> +#ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
+> +DEFINE_STATIC_KEY_TRUE(init_on_alloc);
+> +#else
+> +DEFINE_STATIC_KEY_FALSE(init_on_alloc);
+> +#endif
+> +#ifdef CONFIG_INIT_ON_FREE_DEFAULT_ON
+> +DEFINE_STATIC_KEY_TRUE(init_on_free);
+> +#else
+> +DEFINE_STATIC_KEY_FALSE(init_on_free);
+> +#endif
+> +
 
-Yeah, I have found some inconsistencies, but I am not 100% sure for
-all of these. I will double check and review the code closely.
-I keep you in touch.
+There is a problem here running kernels built with clang,
 
-Regards,
-Romain
+[    0.000000] static_key_disable(): static key 'init_on_free+0x0/0x4' used
+before call to jump_label_init()
+[    0.000000] WARNING: CPU: 0 PID: 0 at ./include/linux/jump_label.h:314
+early_init_on_free+0x1c0/0x200
+[    0.000000] Modules linked in:
+[    0.000000] CPU: 0 PID: 0 Comm: swapper Not tainted 5.2.0-rc5-next-20190620+
+#11
+[    0.000000] pstate: 60000089 (nZCv daIf -PAN -UAO)
+[    0.000000] pc : early_init_on_free+0x1c0/0x200
+[    0.000000] lr : early_init_on_free+0x1c0/0x200
+[    0.000000] sp : ffff100012c07df0
+[    0.000000] x29: ffff100012c07e20 x28: ffff1000110a01ec 
+[    0.000000] x27: 0000000000000001 x26: ffff100011716f88 
+[    0.000000] x25: ffff100010d367ae x24: ffff100010d367a5 
+[    0.000000] x23: ffff100010d36afd x22: ffff100011716758 
+[    0.000000] x21: 0000000000000000 x20: 0000000000000000 
+[    0.000000] x19: 0000000000000000 x18: 000000000000002e 
+[    0.000000] x17: 000000000000000f x16: 0000000000000040 
+[    0.000000] x15: 0000000000000000 x14: 6d756a206f74206c 
+[    0.000000] x13: 6c61632065726f66 x12: 6562206465737520 
+[    0.000000] x11: 0000000000000000 x10: 0000000000000000 
+[    0.000000] x9 : 0000000000000000 x8 : 0000000000000000 
+[    0.000000] x7 : 73203a2928656c62 x6 : ffff1000144367ad 
+[    0.000000] x5 : ffff100012c07b28 x4 : 000000000000000f 
+[    0.000000] x3 : ffff1000101b36ec x2 : 0000000000000001 
+[    0.000000] x1 : 0000000000000001 x0 : 000000000000005d 
+[    0.000000] Call trace:
+[    0.000000]  early_init_on_free+0x1c0/0x200
+[    0.000000]  do_early_param+0xd0/0x104
+[    0.000000]  parse_args+0x204/0x54c
+[    0.000000]  parse_early_param+0x70/0x8c
+[    0.000000]  setup_arch+0xa8/0x268
+[    0.000000]  start_kernel+0x80/0x588
+[    0.000000] random: get_random_bytes called from __warn+0x164/0x208 with
+crng_init=0
 
-Le jeu. 20 juin 2019 =C3=A0 18:15, Kees Cook <keescook@chromium.org> a =C3=
-=A9crit :
->
-> On Tue, Jun 18, 2019 at 07:56:42PM +0200, Romain Perier wrote:
-> > Hi !
-> >
-> > Here a first review, you can get the complete list here:
-> >
-> > https://salsa.debian.org/rperier-guest/linux-tree/raw/next/STATUS
->
-> Cool! You identified three issues:
->
-> net/netfilter/nfnetlink_cthelper.c:
->         NF_CT_HELPER_NAME_LEN is used instead of NF_CT_EXP_POLICY_NAME_LE=
-N
->
-> net/netfilter/ipset/ip_set_list_set.c:
->         IPSET_ATTR_NAME and IPSET_ATTR_NAMEREF both have a len of
->         IPSET_MAXNAMELEN for a string of size IPSET_MAXNAMELEN
->
-> net/openvswitch/conntrack.c:
->         maxlen of NF_CT_HELPER_NAME_LEN with a string of size
->         NF_CT_HELPER_NAME_LEN. maxlen of CTNL_TIMEOUT_NAME_MAX with a
->         string of size CTNL_TIMEOUT_NAME_MAX
->
-> I haven't looked closely at this myself yet, but I think the next step
-> would be to write patches for each of these. And while doing that, have
-> an eye toward thinking about how each case could be made more robust in
-> the future to avoid these kinds of flaws returning.
->
-> Nice!
->
-> --
-> Kees Cook
+> diff --git a/mm/slub.c b/mm/slub.c
+> index cd04dbd2b5d0..9c4a8b9a955c 100644
+> --- a/mm/slub.c
+> +++ b/mm/slub.c
+> @@ -1279,6 +1279,12 @@ static int __init setup_slub_debug(char *str)
+>  	if (*str == ',')
+>  		slub_debug_slabs = str + 1;
+>  out:
+> +	if ((static_branch_unlikely(&init_on_alloc) ||
+> +	     static_branch_unlikely(&init_on_free)) &&
+> +	    (slub_debug & SLAB_POISON)) {
+> +		pr_warn("disabling SLAB_POISON: can't be used together with
+> memory auto-initialization\n");
+> +		slub_debug &= ~SLAB_POISON;
+> +	}
+>  	return 1;
+>  }
+
+I don't think it is good idea to disable SLAB_POISON here as if people have
+decided to enable SLUB_DEBUG later already, they probably care more to make sure
+those additional checks with SLAB_POISON are still running to catch memory
+corruption.
