@@ -1,85 +1,57 @@
 MIME-Version: 1.0
-References: <20190617151050.92663-1-glider@google.com> <20190617151050.92663-2-glider@google.com>
- <20190621070905.GA3429@dhcp22.suse.cz> <CAG_fn=UFj0Lzy3FgMV_JBKtxCiwE03HVxnR8=f9a7=4nrUFXSw@mail.gmail.com>
- <20190621091159.GD3429@dhcp22.suse.cz>
-In-Reply-To: <20190621091159.GD3429@dhcp22.suse.cz>
-From: Alexander Potapenko <glider@google.com>
-Date: Fri, 21 Jun 2019 11:18:06 +0200
-Message-ID: <CAG_fn=Vhn4x_wVcftQUC4wh4JOgy8budA4+jj=dnRpPwqEz2TA@mail.gmail.com>
-Subject: Re: [PATCH v7 1/2] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
+References: <CABgxDoLSzkVJ7Vh8mLiZySz6uS+VEu+GUxRqX8EWHKQDyz2fSg@mail.gmail.com>
+ <201906200913.D2698BD0@keescook>
+In-Reply-To: <201906200913.D2698BD0@keescook>
+From: Romain Perier <romain.perier@gmail.com>
+Date: Fri, 21 Jun 2019 12:54:34 +0200
+Message-ID: <CABgxDoKQ4cnSS3p0sz8BgP65-R15U2Sr1AHVpU77ZGJu-Gvvvg@mail.gmail.com>
+Subject: Re: Audit and fix all misuse of NLA_STRING: STATUS
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
-To: Michal Hocko <mhocko@kernel.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, Linux Memory Management List <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 21, 2019 at 11:12 AM Michal Hocko <mhocko@kernel.org> wrote:
+Hi!
+
+Yeah, I have found some inconsistencies, but I am not 100% sure for
+all of these. I will double check and review the code closely.
+I keep you in touch.
+
+Regards,
+Romain
+
+Le jeu. 20 juin 2019 =C3=A0 18:15, Kees Cook <keescook@chromium.org> a =C3=
+=A9crit :
 >
-> On Fri 21-06-19 10:57:35, Alexander Potapenko wrote:
-> > On Fri, Jun 21, 2019 at 9:09 AM Michal Hocko <mhocko@kernel.org> wrote:
-> [...]
-> > > > diff --git a/kernel/kexec_core.c b/kernel/kexec_core.c
-> > > > index fd5c95ff9251..2f75dd0d0d81 100644
-> > > > --- a/kernel/kexec_core.c
-> > > > +++ b/kernel/kexec_core.c
-> > > > @@ -315,7 +315,7 @@ static struct page *kimage_alloc_pages(gfp_t gf=
-p_mask, unsigned int order)
-> > > >               arch_kexec_post_alloc_pages(page_address(pages), coun=
-t,
-> > > >                                           gfp_mask);
-> > > >
-> > > > -             if (gfp_mask & __GFP_ZERO)
-> > > > +             if (want_init_on_alloc(gfp_mask))
-> > > >                       for (i =3D 0; i < count; i++)
-> > > >                               clear_highpage(pages + i);
-> > > >       }
-> > >
-> > > I am not really sure I follow here. Why do we want to handle
-> > > want_init_on_alloc here? The allocated memory comes from the page
-> > > allocator and so it will get zeroed there. arch_kexec_post_alloc_page=
-s
-> > > might touch the content there but is there any actual risk of any kin=
-d
-> > > of leak?
-> > You're right, we don't want to initialize this memory if init_on_alloc =
-is on.
-> > We need something along the lines of:
-> >   if (!static_branch_unlikely(&init_on_alloc))
-> >     if (gfp_mask & __GFP_ZERO)
-> >       // clear the pages
+> On Tue, Jun 18, 2019 at 07:56:42PM +0200, Romain Perier wrote:
+> > Hi !
 > >
-> > Another option would be to disable initialization in alloc_pages() usin=
-g a flag.
+> > Here a first review, you can get the complete list here:
+> >
+> > https://salsa.debian.org/rperier-guest/linux-tree/raw/next/STATUS
 >
-> Or we can simply not care and keen the code the way it is. First of all
-> it seems that nobody actually does use __GFP_ZERO unless I have missed
-> soemthing
->         - kimage_alloc_pages(KEXEC_CONTROL_MEMORY_GFP, order); # GFP_KERN=
-EL | __GFP_NORETRY
->         - kimage_alloc_pages(gfp_mask, 0);
->                 - kimage_alloc_page(image, GFP_KERNEL, KIMAGE_NO_DEST);
->                 - kimage_alloc_page(image, GFP_HIGHUSER, maddr);
+> Cool! You identified three issues:
 >
-> but even if we actually had a user do we care about double intialization
-> for something kexec related? It is not any hot path AFAIR.
-Yes, sounds good. Spraying the code with too many checks for
-init_on_alloc doesn't really look nice.
-
+> net/netfilter/nfnetlink_cthelper.c:
+>         NF_CT_HELPER_NAME_LEN is used instead of NF_CT_EXP_POLICY_NAME_LE=
+N
+>
+> net/netfilter/ipset/ip_set_list_set.c:
+>         IPSET_ATTR_NAME and IPSET_ATTR_NAMEREF both have a len of
+>         IPSET_MAXNAMELEN for a string of size IPSET_MAXNAMELEN
+>
+> net/openvswitch/conntrack.c:
+>         maxlen of NF_CT_HELPER_NAME_LEN with a string of size
+>         NF_CT_HELPER_NAME_LEN. maxlen of CTNL_TIMEOUT_NAME_MAX with a
+>         string of size CTNL_TIMEOUT_NAME_MAX
+>
+> I haven't looked closely at this myself yet, but I think the next step
+> would be to write patches for each of these. And while doing that, have
+> an eye toward thinking about how each case could be made more robust in
+> the future to avoid these kinds of flaws returning.
+>
+> Nice!
+>
 > --
-> Michal Hocko
-> SUSE Labs
-
-
-
---=20
-Alexander Potapenko
-Software Engineer
-
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
-
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+> Kees Cook
