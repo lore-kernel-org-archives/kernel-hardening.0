@@ -1,121 +1,115 @@
-Message-ID: <d69f8b447b263a491283993d35a5a3817916a3cf.camel@bootlin.com>
-Subject: Re: [PATCH] security: do not enable CONFIG_GCC_PLUGINS by default
-From: Paul Kocialkowski <paul.kocialkowski@bootlin.com>
-Date: Mon, 24 Jun 2019 15:31:00 +0200
-In-Reply-To: <20190622014238.3231cdb4@primarylaptop.localdomain>
-References: <20190614145755.10926-1-GNUtoo@cyberdimension.org>
-	 <CAG48ez30+VOj78rCiWMKtm0tHdVR67CcrHVCV-FFCfK-nRQTOw@mail.gmail.com>
-	 <20190614162811.o33yeq65ythjumrh@shell.armlinux.org.uk>
-	 <20190614201434.3fa4bb6d@primarylaptop.localdomain>
-	 <deb847beb643d43e6617f52eae7b15ee368d7ff8.camel@bootlin.com>
-	 <20190622014238.3231cdb4@primarylaptop.localdomain>
-Content-Type: text/plain; charset="UTF-8"
+From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
+Subject: [PATCH RFC v2] Convert struct pid count to refcount_t
+Date: Mon, 24 Jun 2019 14:45:34 -0400
+Message-Id: <20190624184534.209896-1-joel@joelfernandes.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-To: Denis 'GNUtoo' Carikli <GNUtoo@cyberdimension.org>
-Cc: Russell King - ARM Linux admin <linux@armlinux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel@lists.infradead.org
+Content-Transfer-Encoding: 8bit
+To: linux-kernel@vger.kernel.org
+Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>, jannh@google.com, oleg@redhat.com, mathieu.desnoyers@efficios.com, willy@infradead.org, peterz@infradead.org, will.deacon@arm.com, paulmck@linux.vnet.ibm.com, elena.reshetova@intel.com, keescook@chromium.org, kernel-team@android.com, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Michal Hocko <mhocko@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+struct pid's count is an atomic_t field used as a refcount. Use
+refcount_t for it which is basically atomic_t but does additional
+checking to prevent use-after-free bugs.
 
-On Sat, 2019-06-22 at 01:42 +0200, Denis 'GNUtoo' Carikli wrote:
-> On Sat, 15 Jun 2019 12:13:15 +0200
-> Paul Kocialkowski <paul.kocialkowski@bootlin.com> wrote:
-> > Other than that, we can probably manage keeping a tree around (at the
-> > Replicant project) with mainline and this patch (enabled through a
-> > dedicated config option). As long as it's not horrible to rebase, it
-> > can work well enough for us.
-> I've managed to buy a new Galaxy SIII 4G (I9305) and I've tried u-boot
-> on it, and it works flawlessly without any patches and it does also
-> work with CONFIG_STACKPROTECTOR_PER_TASK=y.
+For memory ordering, the only change is with the following:
+ -	if ((atomic_read(&pid->count) == 1) ||
+ -	     atomic_dec_and_test(&pid->count)) {
+ +	if (refcount_dec_and_test(&pid->count)) {
+ 		kmem_cache_free(ns->pid_cachep, pid);
 
-That's good to know, maybe they realized that they got it wrong later
-on. Hopefully this can indicate that future models are not affected.
+Here the change is from:
+Fully ordered --> RELEASE + ACQUIRE (as per refcount-vs-atomic.rst)
+This ACQUIRE should take care of making sure the free happens after the
+refcount_dec_and_test().
 
-> Merely rebasing that arm decompressor patch over time should not be an
-> issue. However I really want to find a way to avoid having to look
-> again and again over time for commits that incidentally broke booting,
-> because, the bootloader doesn't do what it's supposed to do.
+The above hunk also removes atomic_read() since it is not needed for the
+code to work and it is unclear how beneficial it is. The removal lets
+refcount_dec_and_test() check for cases where get_pid() happened before
+the object was freed.
 
-I don't think there are many more areas where the bootloader can
-misbehave to a point where it will influence Linux (of course, that's
-without mention of software running in the "secure" world, which can be
-totally out of control as you know).
+Cc: jannh@google.com
+Cc: oleg@redhat.com
+Cc: mathieu.desnoyers@efficios.com
+Cc: willy@infradead.org
+Cc: peterz@infradead.org
+Cc: will.deacon@arm.com
+Cc: paulmck@linux.vnet.ibm.com
+Cc: elena.reshetova@intel.com
+Cc: keescook@chromium.org
+Cc: kernel-team@android.com
+Cc: kernel-hardening@lists.openwall.com
+Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
 
-> > Maybe we could also consider having a shim that is executed before the
-> > kernel in order to sanitize things and allow booting a mainline
-> > kernel, which would be less invasive than a full U-Boot port.
-> If I understand correctly, that isn't a solution either as it
-> would also be affected by the issues mentioned by Russell King.
+---
+Changed to RFC to get any feedback on the memory ordering.
 
-It is definitely a solution, but it comes with the constraint that it
-must be able to run and act as a trampoline between the bootloader and
-Linux. This means that the code must be able to deal with MMU and cache
-enabled.
 
-> More specifically I would need to do more research to find if the
-> bootloader(s) shipped on such smartphones properly cleans and
-> invalidates the caches before jumping to the first instruction.
-> 
-> Doing that research probably requires decompiling the bootloader,
-> which in turn would require me to get legal advise to understand if it's
-> possible to do it, and if so how to do it while respecting the laws
-> involved, and still being able to work on free and open
-> source bootloaders without creating issues for the projects.
+ include/linux/pid.h | 5 +++--
+ kernel/pid.c        | 7 +++----
+ 2 files changed, 6 insertions(+), 6 deletions(-)
 
-I would rather try to just write minimal code and make sure it
-generally works. We can't really have any hard guarantee, but a program
-that was shown to run over and over again without faulting is probably
-good enough, since it would be very small.
-
-> Another alternative to that would be to make users use u-boot but
-> this is not possible either because:
-> - The bootloader is signed. So the bootrom checks the signature of the
->   first bootloader (BL1), which in turn checks the second bootloader
->   (S-Boot) in which the MMU setup probably happens. So I can't merely
->   replace S-Boot like that.
-> - Fortunately for that system on a chip, there is at least one BL1 that
->   is signed but that doesn't check subsequent signatures[1]. The issue
->   is that it's not redistributable[2].
-> 
-> If that BL1 had not been published I would always need to use additional
-> patches to test the patch I send, which is very problematic in many
-> ways:
-> - The additional patches would need to be mentioned in most or all of
->   the commits I send upstream.
-> - If not, the maintainers and readers of the patch would be unaware
->   that it would require another patch on top to work.
-> 
-> So thanks to that, I'm at least able to test the patches I send in
-> Linux without requiring additional patches on top, but I'm still not
-> able to ship something usable to end users.
-> 
-> This means that the work to complete the support for the affected devices will
-> be way less useful, as there would be no guarantee of users still being
-> able to use the device with newer Linux kernels. 
-
-I agree and while a U-Boot port is desirable, it's not the easiest
-solution users to bootstrap mainline Linux on the device.
-
-> Are there other (Android) smartphones affected by similar bootloader
-> issues? If so is it even possible to replace part of the bootloader?
-> Did some people found a way to deal with that kind of bootloader issue?
-
-As far as I know, the few Android devices supported by mainline Linux
-don't have similar issues (e.g. OMAP phones/tablets) so the situation
-probably hasn't occured much.
-
-Cheers,
-
-Paul
-
-> References:
-> -----------
-> [1]https://wiki.odroid.com/_media/en/boot.tar.gz
-> [2]https://github.com/hardkernel/u-boot_firmware/issues/1
-> 
-> Denis.
+diff --git a/include/linux/pid.h b/include/linux/pid.h
+index 14a9a39da9c7..8cb86d377ff5 100644
+--- a/include/linux/pid.h
++++ b/include/linux/pid.h
+@@ -3,6 +3,7 @@
+ #define _LINUX_PID_H
+ 
+ #include <linux/rculist.h>
++#include <linux/refcount.h>
+ 
+ enum pid_type
+ {
+@@ -56,7 +57,7 @@ struct upid {
+ 
+ struct pid
+ {
+-	atomic_t count;
++	refcount_t count;
+ 	unsigned int level;
+ 	/* lists of tasks that use this pid */
+ 	struct hlist_head tasks[PIDTYPE_MAX];
+@@ -69,7 +70,7 @@ extern struct pid init_struct_pid;
+ static inline struct pid *get_pid(struct pid *pid)
+ {
+ 	if (pid)
+-		atomic_inc(&pid->count);
++		refcount_inc(&pid->count);
+ 	return pid;
+ }
+ 
+diff --git a/kernel/pid.c b/kernel/pid.c
+index 20881598bdfa..89c4849fab5d 100644
+--- a/kernel/pid.c
++++ b/kernel/pid.c
+@@ -37,7 +37,7 @@
+ #include <linux/init_task.h>
+ #include <linux/syscalls.h>
+ #include <linux/proc_ns.h>
+-#include <linux/proc_fs.h>
++#include <linux/refcount.h>
+ #include <linux/sched/task.h>
+ #include <linux/idr.h>
+ 
+@@ -106,8 +106,7 @@ void put_pid(struct pid *pid)
+ 		return;
+ 
+ 	ns = pid->numbers[pid->level].ns;
+-	if ((atomic_read(&pid->count) == 1) ||
+-	     atomic_dec_and_test(&pid->count)) {
++	if (refcount_dec_and_test(&pid->count)) {
+ 		kmem_cache_free(ns->pid_cachep, pid);
+ 		put_pid_ns(ns);
+ 	}
+@@ -210,7 +209,7 @@ struct pid *alloc_pid(struct pid_namespace *ns)
+ 	}
+ 
+ 	get_pid_ns(ns);
+-	atomic_set(&pid->count, 1);
++	refcount_set(&pid->count, 1);
+ 	for (type = 0; type < PIDTYPE_MAX; ++type)
+ 		INIT_HLIST_HEAD(&pid->tasks[type]);
+ 
 -- 
-Paul Kocialkowski, Bootlin
-Embedded Linux and kernel engineering
-https://bootlin.com
+2.22.0.410.gd8fdbe21b5-goog
