@@ -1,56 +1,71 @@
-From: Florian Weimer <fweimer@redhat.com>
-Subject: Re: Detecting the availability of VSYSCALL
-References: <87v9wty9v4.fsf@oldenburg2.str.redhat.com>
-	<alpine.DEB.2.21.1906251824500.32342@nanos.tec.linutronix.de>
-Date: Tue, 25 Jun 2019 18:38:15 +0200
-In-Reply-To: <alpine.DEB.2.21.1906251824500.32342@nanos.tec.linutronix.de>
-	(Thomas Gleixner's message of "Tue, 25 Jun 2019 18:30:29 +0200
-	(CEST)")
-Message-ID: <87lfxpy614.fsf@oldenburg2.str.redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org, linux-arch@vger.kernel.org, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Carlos O'Donell <carlos@redhat.com>, x86@kernel.org
+References: <CABgxDoLSzkVJ7Vh8mLiZySz6uS+VEu+GUxRqX8EWHKQDyz2fSg@mail.gmail.com>
+ <201906200913.D2698BD0@keescook> <CABgxDoKQ4cnSS3p0sz8BgP65-R15U2Sr1AHVpU77ZGJu-Gvvvg@mail.gmail.com>
+In-Reply-To: <CABgxDoKQ4cnSS3p0sz8BgP65-R15U2Sr1AHVpU77ZGJu-Gvvvg@mail.gmail.com>
+From: Romain Perier <romain.perier@gmail.com>
+Date: Tue, 25 Jun 2019 18:42:48 +0200
+Message-ID: <CABgxDoKTC1=5P=rnLmGzAgFs704+occs4Gw+6WyU99r4HwFBHA@mail.gmail.com>
+Subject: Re: Audit and fix all misuse of NLA_STRING: STATUS
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-* Thomas Gleixner:
+Hi,
 
-> On Tue, 25 Jun 2019, Florian Weimer wrote:
->> We're trying to create portable binaries which use VSYSCALL on older
->> kernels (to avoid performance regressions), but gracefully degrade to
->> full system calls on kernels which do not have VSYSCALL support compiled
->> in (or disabled at boot).
->>
->> For technical reasons, we cannot use vDSO fallback.  Trying vDSO first
->> and only then use VSYSCALL is the way this has been tackled in the past,
->> which is why this userspace ABI breakage goes generally unnoticed.  But
->> we don't have a dynamic linker in our scenario.
+I have double checked.
+
+See, https://salsa.debian.org/rperier-guest/linux-tree/raw/next/STATUS
+
+Nothing worrying, it seems.
+
+Regards,
+Romain
+
+Le ven. 21 juin 2019 =C3=A0 12:54, Romain Perier <romain.perier@gmail.com> =
+a =C3=A9crit :
 >
-> I'm not following. On newer kernels which usually have vsyscall disabled
-> you need to use real syscalls anyway, so why are you so worried about
-> performance on older kernels. That doesn't make sense.
-
-We want binaries that run fast on VSYSCALL kernels, but can fall back to
-full system calls on kernels that do not have them (instead of
-crashing).
-
-We could parse the vDSO and prefer the functions found there, but this
-is for the statically linked case.  We currently do not have a (minimal)
-dynamic loader there in that version of the code base, so that doesn't
-really work for us.
-
->> Is there any reliable way to detect that VSYSCALL is unavailable,
->> without resorting to parsing /proc/self/maps or opening file
->> descriptors?
+> Hi!
 >
-> Not that I'm aware of except
+> Yeah, I have found some inconsistencies, but I am not 100% sure for
+> all of these. I will double check and review the code closely.
+> I keep you in touch.
 >
->     sigaction(SIG_SEGV,....)
+> Regards,
+> Romain
 >
-> /me hides
-
-I know people do this for SIGILL to probe for CPU features, but yeah,
-let's just not go there. 8-p
-
-Thanks,
-Florian
+> Le jeu. 20 juin 2019 =C3=A0 18:15, Kees Cook <keescook@chromium.org> a =
+=C3=A9crit :
+> >
+> > On Tue, Jun 18, 2019 at 07:56:42PM +0200, Romain Perier wrote:
+> > > Hi !
+> > >
+> > > Here a first review, you can get the complete list here:
+> > >
+> > > https://salsa.debian.org/rperier-guest/linux-tree/raw/next/STATUS
+> >
+> > Cool! You identified three issues:
+> >
+> > net/netfilter/nfnetlink_cthelper.c:
+> >         NF_CT_HELPER_NAME_LEN is used instead of NF_CT_EXP_POLICY_NAME_=
+LEN
+> >
+> > net/netfilter/ipset/ip_set_list_set.c:
+> >         IPSET_ATTR_NAME and IPSET_ATTR_NAMEREF both have a len of
+> >         IPSET_MAXNAMELEN for a string of size IPSET_MAXNAMELEN
+> >
+> > net/openvswitch/conntrack.c:
+> >         maxlen of NF_CT_HELPER_NAME_LEN with a string of size
+> >         NF_CT_HELPER_NAME_LEN. maxlen of CTNL_TIMEOUT_NAME_MAX with a
+> >         string of size CTNL_TIMEOUT_NAME_MAX
+> >
+> > I haven't looked closely at this myself yet, but I think the next step
+> > would be to write patches for each of these. And while doing that, have
+> > an eye toward thinking about how each case could be made more robust in
+> > the future to avoid these kinds of flaws returning.
+> >
+> > Nice!
+> >
+> > --
+> > Kees Cook
