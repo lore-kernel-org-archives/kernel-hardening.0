@@ -1,47 +1,31 @@
-Date: Tue, 25 Jun 2019 09:34:07 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: [PATCH RFC v2] Convert struct pid count to refcount_t
-Message-ID: <20190625073407.GP3436@hirez.programming.kicks-ass.net>
-References: <20190624184534.209896-1-joel@joelfernandes.org>
- <20190624185214.GA211230@google.com>
- <CAG48ez3maGsRbN3qr8YVb6ZCw0FDq-7GqqiTiA4yEa1mebkubw@mail.gmail.com>
+From: Florian Weimer <fweimer@redhat.com>
+Subject: Detecting the availability of VSYSCALL
+Date: Tue, 25 Jun 2019 17:15:27 +0200
+Message-ID: <87v9wty9v4.fsf@oldenburg2.str.redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAG48ez3maGsRbN3qr8YVb6ZCw0FDq-7GqqiTiA4yEa1mebkubw@mail.gmail.com>
-To: Jann Horn <jannh@google.com>
-Cc: Joel Fernandes <joel@joelfernandes.org>, kernel list <linux-kernel@vger.kernel.org>, Oleg Nesterov <oleg@redhat.com>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Matthew Wilcox <willy@infradead.org>, Will Deacon <will.deacon@arm.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Elena Reshetova <elena.reshetova@intel.com>, Kees Cook <keescook@chromium.org>, kernel-team <kernel-team@android.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Michal Hocko <mhocko@suse.com>
+Content-Type: text/plain
+To: linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org, linux-arch@vger.kernel.org
+Cc: Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Carlos O'Donell <carlos@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 24, 2019 at 09:10:15PM +0200, Jann Horn wrote:
-> That part of the documentation only talks about cases where you have a
-> control dependency on the return value of the refcount operation. But
-> refcount_inc() does not return a value, so this isn't relevant for
-> refcount_inc().
-> 
-> Also, AFAIU, the control dependency mentioned in the documentation has
-> to exist *in the caller* - it's just pointing out that if you write
-> code like the following, you have a control dependency between the
-> refcount operation and the write:
-> 
->     if (refcount_inc_not_zero(&obj->refcount)) {
->       WRITE_ONCE(obj->x, y);
->     }
-> 
-> For more information on the details of this stuff, try reading the
-> section "CONTROL DEPENDENCIES" of Documentation/memory-barriers.txt.
+We're trying to create portable binaries which use VSYSCALL on older
+kernels (to avoid performance regressions), but gracefully degrade to
+full system calls on kernels which do not have VSYSCALL support compiled
+in (or disabled at boot).
 
-IIRC the argument went as follows:
+For technical reasons, we cannot use vDSO fallback.  Trying vDSO first
+and only then use VSYSCALL is the way this has been tackled in the past,
+which is why this userspace ABI breakage goes generally unnoticed.  But
+we don't have a dynamic linker in our scenario.
 
- - if you use refcount_inc(), you've already got a stable object and
-   have ACQUIRED it otherwise, typically through locking.
+Is there any reliable way to detect that VSYSCALL is unavailable,
+without resorting to parsing /proc/self/maps or opening file
+descriptors?
 
- - if you use refcount_inc_not_zero(), you have a semi stable object
-   (RCU), but you still need to ensure any changes to the object happen
-   after acquiring a reference, and this is where the control dependency
-   comes in as Jann already explained.
+Should we try mapping something at the magic address (without MAP_FIXED)
+and see if we get back a different address?  Something in the auxiliary
+vector would work for us, too, but nothing seems to exists there
+unfortunately.
 
-Specifically, it would be bad to allow STOREs to happen before we know
-the refcount isn't 0, as that would be a UaF.
-
-Also see the comment in lib/refcount.c.
+Thanks,
+Florian
