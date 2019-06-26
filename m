@@ -1,22 +1,23 @@
-Return-Path: <SRS0=4ehT=UZ=lists.openwall.com=kernel-hardening-return-16269-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=PR/2=UZ=lists.openwall.com=kernel-hardening-return-16270-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_MUTT autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AFFA2C48BD6
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 20:23:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D94EAC48BD6
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 21:51:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CD3182085A
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 20:23:56 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3099D20665
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 21:51:03 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="P/scPxgJ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CD3182085A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16269-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20280 invoked by uid 550); 26 Jun 2019 20:23:49 -0000
+	dkim=pass (1024-bit key) header.d=joelfernandes.org header.i=@joelfernandes.org header.b="gbrS0w+r"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3099D20665
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=joelfernandes.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16270-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1857 invoked by uid 550); 26 Jun 2019 21:50:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,179 +25,104 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20257 invoked from network); 26 Jun 2019 20:23:48 -0000
+Received: (qmail 1836 invoked from network); 26 Jun 2019 21:50:56 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
+        d=joelfernandes.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=muTYyZgRfl/88mIFAVs1e5kjaDnXa1/tEbRZdzaGsjo=;
-        b=P/scPxgJwc5farJAuIHByPDzINLlpr/5LkI5Tz6+ai7Kj6UtSOEPgw/pAPCJhurLrb
-         ZQ0eibdOJyW6g/M6uGhLEpiSkeN4GKncEIPlWE3Fza8R3XpnXSMtSrmpdDBC74OQmyy4
-         JbJbO0Oym2obl8mXnsLlMjJEvdkuFyPhp8y6U=
+         :content-disposition:in-reply-to:user-agent;
+        bh=iYzcb55D5fDYZJpA77KyVzeZrChGfiSNXIH61s2NG04=;
+        b=gbrS0w+rlg9zyEZINMY3HjVDCPGhz5MyqmTAjBg1Fbugu3dqmjIQmqAfYG67PejOX2
+         f2eL+rJpn1hkPmMBhkUEOKPTjTDtGNyeCGt/4bNEXxS9n+NzQIoiEQ2gMhkVBzmvfbTe
+         /gP3nGAQ4miAQjejoxT0d8OD9VmeEPBmMwSFk=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=muTYyZgRfl/88mIFAVs1e5kjaDnXa1/tEbRZdzaGsjo=;
-        b=KLyXYeCSX6NGWnNTfbXvsCeHngs6a4EOVPJ2SIOQbWlePiqj2ZueGJnh25MiEjT3k6
-         P+lAPEJ4lnYSybI0/ieY2FUJJrQtqZ5WIKoiZpVIOO+5ZRB+00q+/o8HyPnpWiQ2ZiGB
-         E8SwLTuI0LCm18VyLl8PWlYLEqz49IwhwlW4pBvBhJExycgUvgOelWtMdzzbJIu709cy
-         8Pm9m+/hKqO6qGEcD/ArWCWqkcggwzJ5txpzKIB3iSiAuObkpWN0xx6hzbxW2exl89mb
-         xMWia//lM9sY6VLAfa+/eHukWV5Y7Nvaoc1C4a2ZuFKCyFGkrr0TvrV6vObmhvld7jfJ
-         qkPw==
-X-Gm-Message-State: APjAAAXZCc3zp60evzL7lAmOb7B9H63tw49iPG+j+N4xhUIigjUcEJ4Y
-	cf0SFKrUS/BGVm9S7K/ckX3KKQ==
-X-Google-Smtp-Source: APXvYqzqyJA+jcyGndR/DWIwWD+l17OEz6109S6f0/nlZGL0QzbHiaGQY6O+Vl51hxMnbBXTaxumMg==
-X-Received: by 2002:a65:5003:: with SMTP id f3mr4639488pgo.75.1561580616571;
-        Wed, 26 Jun 2019 13:23:36 -0700 (PDT)
-Date: Wed, 26 Jun 2019 13:23:34 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Qian Cai <cai@lca.pw>
-Cc: Catalin Marinas <catalin.marinas@arm.com>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Alexander Potapenko <glider@google.com>,
+         :mime-version:content-disposition:in-reply-to:user-agent;
+        bh=iYzcb55D5fDYZJpA77KyVzeZrChGfiSNXIH61s2NG04=;
+        b=ehAYjGmy2MeUnWHhhwIhMJaJlCUoCr6G+DCZQriv15j7HSrbhY2hUq77dbUMdY0yVI
+         vQ6uoFe3sOemdP4Lsa4Xv/GGtUyUO13isCSYqh34qP2zS2VyAqjFROPirEb+jJldtA1V
+         CXsnOco1eeA5j3oL2XB4bgniIJhTRdCedXOPx7+wrOw5QP5NRsvNfz6hIGtkXisDFeSc
+         ZUi5TkVAPRXkmpTGbEdHtpiz+8fcKvV77JsAKY7ulGWwinbS/O0Ii7mWuU1nf9XQAYOm
+         SdfVuo2L8W3AwjbTP/XTHU8v629SlP2vFTuF84ilkDkltSw8sd5ViZlA4fnmSkY3y7U8
+         8bRA==
+X-Gm-Message-State: APjAAAWLFT5CeTdlhAM3+kkAcjDucyRioc+BU1BxxrfSS4hsCJDZxkp2
+	FDHxfzFn1s5aUzeV6Ujq4H3kDA==
+X-Google-Smtp-Source: APXvYqwfVAlFOB7s26jDV4AEoNGYTdz5In80RYc7g1IcpNe5bC/viaardLvXIqTJ6QQz/BYMRk/U6g==
+X-Received: by 2002:a17:90a:b011:: with SMTP id x17mr1540506pjq.113.1561585843661;
+        Wed, 26 Jun 2019 14:50:43 -0700 (PDT)
+Date: Wed, 26 Jun 2019 17:50:41 -0400
+From: Joel Fernandes <joel@joelfernandes.org>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Jann Horn <jannh@google.com>,
+	kernel list <linux-kernel@vger.kernel.org>,
+	Oleg Nesterov <oleg@redhat.com>,
+	Mathieu Desnoyers <mathieu.desnoyers@efficios.com>,
+	Matthew Wilcox <willy@infradead.org>,
+	Will Deacon <will.deacon@arm.com>,
+	"Paul E . McKenney" <paulmck@linux.vnet.ibm.com>,
+	Elena Reshetova <elena.reshetova@intel.com>,
+	Kees Cook <keescook@chromium.org>,
+	kernel-team <kernel-team@android.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	Andrew Morton <akpm@linux-foundation.org>,
-	Christoph Lameter <cl@linux.com>,
-	Masahiro Yamada <yamada.masahiro@socionext.com>,
-	Michal Hocko <mhocko@kernel.org>, James Morris <jmorris@namei.org>,
-	"Serge E. Hallyn" <serge@hallyn.com>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	Kostya Serebryany <kcc@google.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Sandeep Patil <sspatil@android.com>,
-	Laura Abbott <labbott@redhat.com>,
-	Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>,
-	Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>,
-	linux-mm@kvack.org, linux-security-module@vger.kernel.org,
-	kernel-hardening@lists.openwall.com,
-	clang-built-linux@googlegroups.com
-Subject: Re: [PATCH v8 1/2] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
-Message-ID: <201906261303.020ADC9@keescook>
-References: <20190626121943.131390-1-glider@google.com>
- <20190626121943.131390-2-glider@google.com>
- <1561572949.5154.81.camel@lca.pw>
+	"Eric W. Biederman" <ebiederm@xmission.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Michal Hocko <mhocko@suse.com>
+Subject: Re: [PATCH RFC v2] Convert struct pid count to refcount_t
+Message-ID: <20190626215041.GA234202@google.com>
+References: <20190624184534.209896-1-joel@joelfernandes.org>
+ <20190624185214.GA211230@google.com>
+ <CAG48ez3maGsRbN3qr8YVb6ZCw0FDq-7GqqiTiA4yEa1mebkubw@mail.gmail.com>
+ <20190625073407.GP3436@hirez.programming.kicks-ass.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <1561572949.5154.81.camel@lca.pw>
+In-Reply-To: <20190625073407.GP3436@hirez.programming.kicks-ass.net>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On Wed, Jun 26, 2019 at 02:15:49PM -0400, Qian Cai wrote:
-> On Wed, 2019-06-26 at 14:19 +0200, Alexander Potapenko wrote:
-> > Both init_on_alloc and init_on_free default to zero, but those defaults
-> > can be overridden with CONFIG_INIT_ON_ALLOC_DEFAULT_ON and
-> > CONFIG_INIT_ON_FREE_DEFAULT_ON.
-> > [...]
-> > +static int __init early_init_on_alloc(char *buf)
-> > +{
-> > +	int ret;
-> > +	bool bool_result;
-> > +
-> > +	if (!buf)
-> > +		return -EINVAL;
-> > +	ret = kstrtobool(buf, &bool_result);
-> > +	if (bool_result)
-> > +		static_branch_enable(&init_on_alloc);
-> > +	else
-> > +		static_branch_disable(&init_on_alloc);
-> > +	return ret;
-> > +}
-> > +early_param("init_on_alloc", early_init_on_alloc);
+On Tue, Jun 25, 2019 at 09:34:07AM +0200, Peter Zijlstra wrote:
+> On Mon, Jun 24, 2019 at 09:10:15PM +0200, Jann Horn wrote:
+> > That part of the documentation only talks about cases where you have a
+> > control dependency on the return value of the refcount operation. But
+> > refcount_inc() does not return a value, so this isn't relevant for
+> > refcount_inc().
+> > 
+> > Also, AFAIU, the control dependency mentioned in the documentation has
+> > to exist *in the caller* - it's just pointing out that if you write
+> > code like the following, you have a control dependency between the
+> > refcount operation and the write:
+> > 
+> >     if (refcount_inc_not_zero(&obj->refcount)) {
+> >       WRITE_ONCE(obj->x, y);
+> >     }
+> > 
+> > For more information on the details of this stuff, try reading the
+> > section "CONTROL DEPENDENCIES" of Documentation/memory-barriers.txt.
 > 
-> Do those really necessary need to be static keys?
+> IIRC the argument went as follows:
 > 
-> Adding either init_on_free=0 or init_on_alloc=0 to the kernel cmdline will
-> generate a warning with kernels built with clang.
+>  - if you use refcount_inc(), you've already got a stable object and
+>    have ACQUIRED it otherwise, typically through locking.
 > 
-> [    0.000000] static_key_disable(): static key 'init_on_free+0x0/0x4' used
-> before call to jump_label_init()
-> [    0.000000] WARNING: CPU: 0 PID: 0 at ./include/linux/jump_label.h:317
-> early_init_on_free+0x1c0/0x200
-> [    0.000000] Modules linked in:
-> [    0.000000] CPU: 0 PID: 0 Comm: swapper Not tainted 5.2.0-rc6-next-20190626+
-> #9
-> [    0.000000] pstate: 60000089 (nZCv daIf -PAN -UAO)
-
-I think the issue here is that arm64 doesn't initialize static keys
-early enough.
-
-init/main.c has the general case:
-
-asmlinkage __visible void __init start_kernel(void)
-{
-        ...
-        setup_arch(&command_line);
-        ...
-        smp_prepare_boot_cpu();
-        ...
-        /* parameters may set static keys */
-        jump_label_init();
-        parse_early_param();
-        ...
-}
-
-however, x86 does even earlier early params in setup_arch():
-
-void __init setup_arch(char **cmdline_p)
-{
-        ...
-        jump_label_init();
-        ...
-        parse_early_param();
-        ...
-}
-
-arm64 does similar very early early params in setup_arch()[1] too,
-but not jump_label_init() which is too late in smp_prepare_boot_cpu():
-
-void __init setup_arch(char **cmdline_p)
-{
-        ...
-        parse_early_param();
-        ...
-}
-
-void __init smp_prepare_boot_cpu(void)
-{
-        ...
-        jump_label_init();
-        ...
-}
-
-I can send a patch to fix this...
-
--Kees
-
-[1] since efd9e03facd07 ("arm64: Use static keys for CPU features")
-
-> [    0.000000] pc : early_init_on_free+0x1c0/0x200
-> [    0.000000] lr : early_init_on_free+0x1c0/0x200
-> [    0.000000] sp : ffff100012c07df0
-> [    0.000000] x29: ffff100012c07e20 x28: ffff1000110a01ec 
-> [    0.000000] x27: 000000000000005f x26: ffff100011716cd0 
-> [    0.000000] x25: ffff100010d36166 x24: ffff100010d3615d 
-> [    0.000000] x23: ffff100010d364b5 x22: ffff1000117164a0 
-> [    0.000000] x21: 0000000000000000 x20: 0000000000000000 
-> [    0.000000] x19: 0000000000000000 x18: 000000000000002e 
-> [    0.000000] x17: 000000000000000f x16: 0000000000000040 
-> [    0.000000] x15: 0000000000000000 x14: 6c61632065726f66 
-> [    0.000000] x13: 6562206465737520 x12: 273478302f307830 
-> [    0.000000] x11: 0000000000000000 x10: 0000000000000000 
-> [    0.000000] x9 : 0000000000000000 x8 : 0000000000000000 
-> [    0.000000] x7 : 6d756a206f74206c x6 : ffff100014426625 
-> [    0.000000] x5 : ffff100012c07b28 x4 : 0000000000000007 
-> [    0.000000] x3 : ffff1000101aadf4 x2 : 0000000000000001 
-> [    0.000000] x1 : 0000000000000001 x0 : 000000000000005d 
-> [    0.000000] Call trace:
-> [    0.000000]  early_init_on_free+0x1c0/0x200
-> [    0.000000]  do_early_param+0xd0/0x104
-> [    0.000000]  parse_args+0x1f0/0x524
-> [    0.000000]  parse_early_param+0x70/0x8c
-> [    0.000000]  setup_arch+0xa8/0x268
-> [    0.000000]  start_kernel+0x80/0x560
+>  - if you use refcount_inc_not_zero(), you have a semi stable object
+>    (RCU), but you still need to ensure any changes to the object happen
+>    after acquiring a reference, and this is where the control dependency
+>    comes in as Jann already explained.
+> 
+> Specifically, it would be bad to allow STOREs to happen before we know
+> the refcount isn't 0, as that would be a UaF.
+> 
+> Also see the comment in lib/refcount.c.
 > 
 
--- 
-Kees Cook
+Thanks a lot for the explanations and the pointers to the comment in
+lib/refcount.c . It makes it really clearly.
+
+Also, does this patch look good to you? If so and if ok with you, could you
+Ack it? The patch is not really "RFC" but I still tagged it as such since I
+wanted to have this discussion.
+
+Thanks!
+
+- Joel
+
