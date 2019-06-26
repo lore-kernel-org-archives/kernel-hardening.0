@@ -1,130 +1,100 @@
-Return-Path: 
- <kernel-hardening-return-16255-ydroneaud=opteya.com@lists.openwall.com>
-List-Post: <mailto:kernel-hardening@lists.openwall.com>
-List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
-List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
-List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
-List-ID: <kernel-hardening.lists.openwall.com>
-Date: Wed, 26 Jun 2019 14:19:43 +0200
-In-Reply-To: <20190626121943.131390-1-glider@google.com>
-Message-Id: <20190626121943.131390-3-glider@google.com>
-Mime-Version: 1.0
-References: <20190626121943.131390-1-glider@google.com>
-From: Alexander Potapenko <glider@google.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [PATCH v8 2/2] mm: init: report memory auto-initialization
- features at boot time
+Return-Path: <linux-api-owner@vger.kernel.org>
+Content-Type: text/plain;
+        charset=utf-8
+Mime-Version: 1.0 (1.0)
+From: Andy Lutomirski <luto@amacapital.net>
+In-Reply-To: <87o92kmtp5.fsf@oldenburg2.str.redhat.com>
+Date: Wed, 26 Jun 2019 07:15:59 -0700
+Message-Id: <CA96B819-30A9-43D3-9FE3-2D551D35369E@amacapital.net>
+References: <87v9wty9v4.fsf@oldenburg2.str.redhat.com>
+	 <alpine.DEB.2.21.1906251824500.32342@nanos.tec.linutronix.de>
+	 <87lfxpy614.fsf@oldenburg2.str.redhat.com>
+	 <CALCETrVh1f5wJNMbMoVqY=bq-7G=uQ84BUkepf5RksA3vUopNQ@mail.gmail.com>
+	 <87a7e5v1d9.fsf@oldenburg2.str.redhat.com>
+	 <CALCETrUDt4v3=FqD+vseGTKTuG=qY+1LwRPrOrU8C7vCVbo=uA@mail.gmail.com>
+	 <87o92kmtp5.fsf@oldenburg2.str.redhat.com>
+Sender: linux-api-owner@vger.kernel.org
+Subject: Re: Detecting the availability of VSYSCALL
 Content-Transfer-Encoding: 8bit
-To: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>
-Cc: Alexander Potapenko <glider@google.com>, Kees Cook <keescook@chromium.org>, Dmitry Vyukov <dvyukov@google.com>, James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>, Kostya Serebryany <kcc@google.com>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Matthew Wilcox <willy@infradead.org>, Nick Desaulniers <ndesaulniers@google.com>, Randy Dunlap <rdunlap@infradead.org>, Sandeep Patil <sspatil@android.com>, "Serge E. Hallyn" <serge@hallyn.com>, Souptick Joarder <jrdr.linux@gmail.com>, Marco Elver <elver@google.com>, Kaiwan N Billimoria <kaiwan@kaiwantech.com>, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-security-module@vger.kernel.org
+To: Florian Weimer <fweimer@redhat.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Linux API <linux-api@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-x86_64@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Carlos O'Donell <carlos@redhat.com>, X86 ML <x86@kernel.org>
+List-ID: <kernel-hardening.lists.openwall.com>
 
-Print the currently enabled stack and heap initialization modes.
 
-Stack initialization is enabled by a config flag, while heap
-initialization is configured at boot time with defaults being set
-in the config. It's more convenient for the user to have all information
-about these hardening measures in one place at boot, so the user can
-reason about the expected behavior of the running system.
 
-The possible options for stack are:
- - "all" for CONFIG_INIT_STACK_ALL;
- - "byref_all" for CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL;
- - "byref" for CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF;
- - "__user" for CONFIG_GCC_PLUGIN_STRUCTLEAK_USER;
- - "off" otherwise.
+> On Jun 26, 2019, at 5:12 AM, Florian Weimer <fweimer@redhat.com> wrote:
+> 
+> * Andy Lutomirski:
+> 
+>>> On Tue, Jun 25, 2019 at 1:47 PM Florian Weimer <fweimer@redhat.com> wrote:
+>>> 
+>>> * Andy Lutomirski:
+>>> 
+>>>>> We want binaries that run fast on VSYSCALL kernels, but can fall back to
+>>>>> full system calls on kernels that do not have them (instead of
+>>>>> crashing).
+>>>> 
+>>>> Define "VSYSCALL kernels."  On any remotely recent kernel (*all* new
+>>>> kernels and all kernels for the last several years that haven't
+>>>> specifically requested vsyscall=native), using vsyscalls is much, much
+>>>> slower than just doing syscalls.  I know a way you can tell whether
+>>>> vsyscalls are fast, but it's unreliable, and I'm disinclined to
+>>>> suggest it.  There are also at least two pending patch series that
+>>>> will interfere.
+>>> 
+>>> The fast path is for the benefit of the 2.6.32-based kernel in Red Hat
+>>> Enterprise Linux 6.  It doesn't have the vsyscall emulation code yet, I
+>>> think.
+>>> 
+>>> My hope is to produce (statically linked) binaries that run as fast on
+>>> that kernel as they run today, but can gracefully fall back to something
+>>> else on kernels without vsyscall support.
+>>> 
+>>>>> We could parse the vDSO and prefer the functions found there, but this
+>>>>> is for the statically linked case.  We currently do not have a (minimal)
+>>>>> dynamic loader there in that version of the code base, so that doesn't
+>>>>> really work for us.
+>>>> 
+>>>> Is anything preventing you from adding a vDSO parser?  I wrote one
+>>>> just for this type of use:
+>>>> 
+>>>> $ wc -l tools/testing/selftests/vDSO/parse_vdso.c
+>>>> 269 tools/testing/selftests/vDSO/parse_vdso.c
+>>>> 
+>>>> (289 lines includes quite a bit of comment.)
+>>> 
+>>> I'm worried that if I use a custom parser and the binaries start
+>>> crashing again because something changed in the kernel (within the scope
+>>> permitted by the ELF specification), the kernel won't be fixed.
+>>> 
+>>> That is, we'd be in exactly the same situation as today.
+>> 
+>> With my maintainer hat on, the kernel won't do that.  Obviously a
+>> review of my parser would be appreciated, but I consider it to be
+>> fully supported, just like glibc and musl's parsers are fully
+>> supported.  Sadly, I *also* consider the version Go forked for a while
+>> (now fixed) to be supported.  Sigh.
+> 
+> We've been burnt once, otherwise we wouldn't be having this
+> conversation.  It's not just what the kernel does by default; if it's
+> configurable, it will be disabled by some, and if it's label as
+> “security hardening”, the userspace ABI promise is suddenly forgotten
+> and it's all userspace's fault for not supporting the new way.
+> 
+> It looks like parsing the vDSO is the only way forward, and we have to
+> move in that direction if we move at all.
+> 
+> It's tempting to read the machine code on the vsyscall page and analyze
+> that, but vsyscall=none behavior changed at one point, and you no longer
+> any mapping there at all.  So that doesn't work, either.
 
-Depending on the values of init_on_alloc and init_on_free boottime
-options we also report "heap alloc" and "heap free" as "on"/"off".
+It’s worse than that. I have patches to make the vsyscall be execute-only. And the slowly forthcoming CET patches will change the machine code.
 
-In the init_on_free mode initializing pages at boot time may take a
-while, so print a notice about that as well. This depends on how much
-memory is installed, the memory bandwidth, etc.
-On a relatively modern x86 system, it takes about 0.75s/GB to wipe all
-memory:
+> 
+> I do hope the next userspace ABI break will have an option to undo it on
+> a per-container basis.  Or at least a flag to detect it.
+> 
 
-  [    0.418722] mem auto-init: stack:byref_all, heap alloc:off, heap free:on
-  [    0.419765] mem auto-init: clearing system memory may take some time...
-  [   12.376605] Memory: 16408564K/16776672K available (14339K kernel code, 1397K rwdata, 3756K rodata, 1636K init, 11460K bss, 368108K reserved, 0K cma-reserved)
+I didn’t add a flag because the vsyscall page was thoroughly obsolete when all this happened, and I wanted to encourage all new code to just parse the vDSO instead of piling on the hacks.
 
-Signed-off-by: Alexander Potapenko <glider@google.com>
-Suggested-by: Kees Cook <keescook@chromium.org>
-Acked-by: Kees Cook <keescook@chromium.org>
-To: Andrew Morton <akpm@linux-foundation.org>
-To: Christoph Lameter <cl@linux.com>
-Cc: Dmitry Vyukov <dvyukov@google.com>
-Cc: James Morris <jmorris@namei.org>
-Cc: Jann Horn <jannh@google.com>
-Cc: Kostya Serebryany <kcc@google.com>
-Cc: Laura Abbott <labbott@redhat.com>
-Cc: Mark Rutland <mark.rutland@arm.com>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Matthew Wilcox <willy@infradead.org>
-Cc: Nick Desaulniers <ndesaulniers@google.com>
-Cc: Randy Dunlap <rdunlap@infradead.org>
-Cc: Sandeep Patil <sspatil@android.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Souptick Joarder <jrdr.linux@gmail.com>
-Cc: Marco Elver <elver@google.com>
-Cc: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Cc: kernel-hardening@lists.openwall.com
-Cc: linux-mm@kvack.org
-Cc: linux-security-module@vger.kernel.org
-Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
-
----
- v6:
- - update patch description, fixed message about clearing memory
- v7:
- - rebase the patch, add the Acked-by: tag;
- - more description updates as suggested by Kees;
- - make report_meminit() static.
- v8:
- - added the Signed-off-by: tag
----
- init/main.c | 24 ++++++++++++++++++++++++
- 1 file changed, 24 insertions(+)
-
-diff --git a/init/main.c b/init/main.c
-index 66a196c5e4c3..ff5803b0841c 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -520,6 +520,29 @@ static inline void initcall_debug_enable(void)
- }
- #endif
- 
-+/* Report memory auto-initialization states for this boot. */
-+static void __init report_meminit(void)
-+{
-+	const char *stack;
-+
-+	if (IS_ENABLED(CONFIG_INIT_STACK_ALL))
-+		stack = "all";
-+	else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL))
-+		stack = "byref_all";
-+	else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF))
-+		stack = "byref";
-+	else if (IS_ENABLED(CONFIG_GCC_PLUGIN_STRUCTLEAK_USER))
-+		stack = "__user";
-+	else
-+		stack = "off";
-+
-+	pr_info("mem auto-init: stack:%s, heap alloc:%s, heap free:%s\n",
-+		stack, want_init_on_alloc(GFP_KERNEL) ? "on" : "off",
-+		want_init_on_free() ? "on" : "off");
-+	if (want_init_on_free())
-+		pr_info("mem auto-init: clearing system memory may take some time...\n");
-+}
-+
- /*
-  * Set up kernel memory allocators
-  */
-@@ -530,6 +553,7 @@ static void __init mm_init(void)
- 	 * bigger than MAX_ORDER unless SPARSEMEM.
- 	 */
- 	page_ext_init_flatmem();
-+	report_meminit();
- 	mem_init();
- 	kmem_cache_init();
- 	pgtable_init();
--- 
-2.22.0.410.gd8fdbe21b5-goog
+Anyway, you may be the right person to ask: is there some credible way that the kernel could detect new binaries that don’t need vsyscalls?  Maybe a new ELF note on a static binary or on the ELF interpreter? We can dynamically switch it in principle.
