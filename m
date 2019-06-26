@@ -1,21 +1,20 @@
-Return-Path: <SRS0=PRX9=UZ=lists.openwall.com=kernel-hardening-return-16257-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/5po=UZ=lists.openwall.com=kernel-hardening-return-16258-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.5 required=3.0 tests=INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_MUTT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 38F6FC48BD3
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 14:56:41 +0000 (UTC)
-X-Greylist: delayed 395 seconds by postgrey-1.34 at mail.kernel.org; Wed, 26 Jun 2019 14:56:40 UTC
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 941C32063F
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16257-kernel-hardening=archiver.kernel.org@lists.openwall.com
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 62770C48BD3
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 15:00:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 941C32063F
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 14:56:40 +0000 (UTC)
-Received: (qmail 1143 invoked by uid 550); 26 Jun 2019 14:49:57 -0000
+	by mail.kernel.org (Postfix) with SMTP id BFACD2133F
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Jun 2019 15:00:57 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BFACD2133F
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16258-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13846 invoked by uid 550); 26 Jun 2019 15:00:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,74 +22,72 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1125 invoked from network); 26 Jun 2019 14:49:57 -0000
-X-Virus-Scanned: by amavisd-new at test-mx.suse.de
-Date: Wed, 26 Jun 2019 16:49:43 +0200
-From: Michal Hocko <mhocko@kernel.org>
-To: Alexander Potapenko <glider@google.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>,
-	Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>,
-	Masahiro Yamada <yamada.masahiro@socionext.com>,
-	James Morris <jmorris@namei.org>,
-	"Serge E. Hallyn" <serge@hallyn.com>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	Kostya Serebryany <kcc@google.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Sandeep Patil <sspatil@android.com>,
-	Laura Abbott <labbott@redhat.com>,
-	Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>,
-	Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>,
-	Qian Cai <cai@lca.pw>, linux-mm@kvack.org,
-	linux-security-module@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v8 1/2] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
-Message-ID: <20190626144943.GY17798@dhcp22.suse.cz>
-References: <20190626121943.131390-1-glider@google.com>
- <20190626121943.131390-2-glider@google.com>
+Received: (qmail 13828 invoked from network); 26 Jun 2019 15:00:50 -0000
+From: Florian Weimer <fweimer@redhat.com>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Andy Lutomirski <luto@kernel.org>,  Thomas Gleixner <tglx@linutronix.de>,  Linux API <linux-api@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  linux-x86_64@vger.kernel.org,  linux-arch <linux-arch@vger.kernel.org>,  Kees Cook <keescook@chromium.org>,  Carlos O'Donell <carlos@redhat.com>,  X86 ML <x86@kernel.org>
+Subject: Re: Detecting the availability of VSYSCALL
+References: <87v9wty9v4.fsf@oldenburg2.str.redhat.com>
+	<alpine.DEB.2.21.1906251824500.32342@nanos.tec.linutronix.de>
+	<87lfxpy614.fsf@oldenburg2.str.redhat.com>
+	<CALCETrVh1f5wJNMbMoVqY=bq-7G=uQ84BUkepf5RksA3vUopNQ@mail.gmail.com>
+	<87a7e5v1d9.fsf@oldenburg2.str.redhat.com>
+	<CALCETrUDt4v3=FqD+vseGTKTuG=qY+1LwRPrOrU8C7vCVbo=uA@mail.gmail.com>
+	<87o92kmtp5.fsf@oldenburg2.str.redhat.com>
+	<CA96B819-30A9-43D3-9FE3-2D551D35369E@amacapital.net>
+Date: Wed, 26 Jun 2019 17:00:28 +0200
+In-Reply-To: <CA96B819-30A9-43D3-9FE3-2D551D35369E@amacapital.net> (Andy
+	Lutomirski's message of "Wed, 26 Jun 2019 07:15:59 -0700")
+Message-ID: <87r27gjss3.fsf@oldenburg2.str.redhat.com>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.2 (gnu/linux)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190626121943.131390-2-glider@google.com>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+X-Scanned-By: MIMEDefang 2.79 on 10.5.11.14
+X-Greylist: Sender IP whitelisted, not delayed by milter-greylist-4.5.16 (mx1.redhat.com [10.5.110.44]); Wed, 26 Jun 2019 15:00:38 +0000 (UTC)
 
-On Wed 26-06-19 14:19:42, Alexander Potapenko wrote:
-[...]
-> diff --git a/mm/dmapool.c b/mm/dmapool.c
-> index 8c94c89a6f7e..fe5d33060415 100644
-> --- a/mm/dmapool.c
-> +++ b/mm/dmapool.c
-[...]
-> @@ -428,6 +428,8 @@ void dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma)
->  	}
->  
->  	offset = vaddr - page->vaddr;
-> +	if (want_init_on_free())
-> +		memset(vaddr, 0, pool->size);
+* Andy Lutomirski:
 
-any reason why this is not in DMAPOOL_DEBUG else branch? Why would you
-want to both zero on free and poison on free?
+> I didn=E2=80=99t add a flag because the vsyscall page was thoroughly obso=
+lete
+> when all this happened, and I wanted to encourage all new code to just
+> parse the vDSO instead of piling on the hacks.
 
->  #ifdef	DMAPOOL_DEBUG
->  	if ((dma - page->dma) != offset) {
->  		spin_unlock_irqrestore(&pool->lock, flags);
+It turned out that the thorny cases just switched to system calls
+instead.  I think we finally completed the transition in glibc upstream
+in 2018 (for x86).
 
-[...]
+> Anyway, you may be the right person to ask: is there some credible way
+> that the kernel could detect new binaries that don=E2=80=99t need vsyscal=
+ls?
+> Maybe a new ELF note on a static binary or on the ELF interpreter? We
+> can dynamically switch it in principle.
 
-> @@ -1142,6 +1200,8 @@ static __always_inline bool free_pages_prepare(struct page *page,
->  	}
->  	arch_free_page(page, order);
->  	kernel_poison_pages(page, 1 << order, 0);
-> +	if (want_init_on_free())
-> +		kernel_init_free_pages(page, 1 << order);
+For this kind of change, markup similar to PT_GNU_STACK would have been
+appropriate, I think: Old kernels and loaders would have ignored the
+program header and loaded the program anyway, but the vsyscall page
+still existed, so that would have been fine. The kernel would have
+needed to check the program interpreter or the main executable (without
+a program interpreter, i.e., the statically linked case).  Due the way
+the vsyscalls are concentrated in glibc, a dynamically linked executable
+would not have needed checking (or re-linking).  I don't think we would
+have implemented the full late enablement after dlopen we did for
+executable stacks.  In theory, any code could have jumped to the
+vsyscall area, but in practice, it's just dynamically linked glibc and
+static binaries.
 
-same here. If you don't want to make this exclusive then you have to
-zero before poisoning otherwise you are going to blow up on the poison
-check, right?
+But nowadays, unmarked glibcs which do not depend on vsyscall vastly
+outnumber unmarked glibcs which requrie it.  Therefore, markup of
+binaries does not seem to be reasonable to day.  I could imagine a
+personality flag you can set (if yoy have CAP_SYS_ADMIN) that re-enables
+vsyscall support for new subprocesses.  And a container runtime would do
+this based on metadata found in the image.  This way, the container host
+itself could be protected, and you could still run legacy images which
+require vsyscall.
 
->  	if (debug_pagealloc_enabled())
->  		kernel_map_pages(page, 1 << order, 0);
->  
--- 
-Michal Hocko
-SUSE Labs
+For the non-container case, if you know that you'll run legacy
+workloads, you'd still have the boot parameter.  But I think it could
+default to vsyscall=3Dnone in many more cases.
+
+Thanks,
+Florian
