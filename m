@@ -1,23 +1,22 @@
-Return-Path: <SRS0=G4Tc=U2=lists.openwall.com=kernel-hardening-return-16292-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=iCpL=U2=lists.openwall.com=kernel-hardening-return-16293-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4802AC48BD7
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 14:30:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5D223C48BD7
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 16:18:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9C2A920828
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 14:30:37 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 82D7C20659
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 16:18:29 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="NxocVgNq"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9C2A920828
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16292-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7575 invoked by uid 550); 27 Jun 2019 14:30:30 -0000
+	dkim=pass (2048-bit key) header.d=ssi.gouv.fr header.i=@ssi.gouv.fr header.b="W6wClXcU"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 82D7C20659
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=ssi.gouv.fr
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16293-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26262 invoked by uid 550); 27 Jun 2019 16:18:20 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,75 +24,178 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7537 invoked from network); 27 Jun 2019 14:30:29 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :content-transfer-encoding;
-        bh=/zC8GO8bqHnXUqvMp3nSlEtzu8NhgecwJnWv6fQW+5s=;
-        b=NxocVgNqPlMmUtov9VlWD/LK6TwoCzb2hpgAf62jRpKz8XNAXsYGfS4v/E4Za4Ap3p
-         78lOmEIIwlq/4VexMSg6dQF1y8dCqP5DAMniFUOoeznSuHGtvJO7nVHYrlSJvzk/VFZ0
-         9jZAQ3blwP5il+fhbAN3odkU7cdPZnKYx1jKNNdov05zKTDLa6VeVkRSPgiXLX1vkkgW
-         hdMbIre0HNinPHTqAzBYOajM4PKinOOmi/Yll5kf2/CZ6MYOGFcdAVUOpUt++pG7qFeI
-         Eqi2kh0mr7HQkIJ9fSGvxWuo+FVae5BMM/LIZ5x+Ho1VMjpx9eJWhBgFICWLL8ZYB4Hw
-         /jGg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:content-transfer-encoding;
-        bh=/zC8GO8bqHnXUqvMp3nSlEtzu8NhgecwJnWv6fQW+5s=;
-        b=AYwDQdR3n7/i6sq70oNIhYbUbQBQlFxCC4/EqAkcMkZopr4QS5k0Ddneo5EP2pjwOf
-         jw89DZkhjfpf9l2N/cnP2Ilak9vWE0My4/5NU2OQM2RIOgPqfbLcHOD7W7s8daBCbEWQ
-         GBRP7V6Fhann1TTWpMYG3C6lSoatxJPOACm1o1xETjF/9ZKxvLY/+mzs+e9f4MNVBsBF
-         QzpoKnMHnp+iOEbtUuzahgtxwD5ggJOcVXmZ8arvc0Slwj1upxP/w3p698BehgIDXmFL
-         j3So35CfeejqBQ0m51yKmFuTLPn71hx/iAfDxQ4+TBisFo3T7E483AOEg3OKrAe3PYFN
-         3AKA==
-X-Gm-Message-State: APjAAAW+HM1lPOalGW33cnR/N0IJifjGmjJxYZmnBDliPeTE/LVq25Cv
-	Qu6Yq9ZXCUvmVldlgWbzO7dIJ1rOKkOEBAMAtwHqtA==
-X-Google-Smtp-Source: APXvYqzpSun2qfET13+wKS9lv4dcRQn7bwhAch8nPdiY7axVZ2jtaaCp4v2SswxH1NQrNssfDxjcvhqtgS+2ZQhmeQY=
-X-Received: by 2002:a17:90a:2190:: with SMTP id q16mr6251047pjc.23.1561645817259;
- Thu, 27 Jun 2019 07:30:17 -0700 (PDT)
+Received: (qmail 26230 invoked from network); 27 Jun 2019 16:18:19 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=ssi.gouv.fr;
+	s=20160407; t=1561652296;
+	bh=e/9/soaXxtPOLGylT6FEbrJeqf5CH04oQATLaTVtYYU=;
+	h=Subject:To:CC:References:From:Date:In-Reply-To:From:Subject;
+	b=W6wClXcUUlkKnnGLJvw4aTCMWkm09TDrSTk9aM9xnwww4FBi0ejQRAcafStv5/PaJ
+	 TqrbxB0HJK5AlaMj+32Fv5C+eIXElxPDgSsWmy8WNE0FLMTpJKJCXCDNGJH1h32ujf
+	 j3MYKbBu4YcvZG46mgjJZp8EBFnFZqhYxuyHP8lyHu4ZI8r+dYtyn+iL/vL6YOtxyy
+	 QU6Mq5Q0bVZHHLEXz3klncr6GlMrRPDL9Tn4C2pQLuLAfn5TywxxeMwPSIi/Fs+lCq
+	 gy/tTNJzdYhegMvZKVrDR2iD1hhhEK7jXeI+DDvom0fHd4UcejWmedP6Ns5bAcnTlx
+	 feTNxO0qXLdaw==
+Subject: Re: [PATCH bpf-next v9 05/10] bpf,landlock: Add a new map type: inode
+To: Al Viro <viro@zeniv.linux.org.uk>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?=
+	<mic@digikod.net>
+CC: <linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, Alexei
+ Starovoitov <ast@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Andy
+ Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>,
+	Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann
+	<daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S .
+ Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>,
+	James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>, John Johansen
+	<john.johansen@canonical.com>, Jonathan Corbet <corbet@lwn.net>, Kees Cook
+	<keescook@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Paul Moore
+	<paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn"
+	<serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Stephen Smalley
+	<sds@tycho.nsa.gov>, Tejun Heo <tj@kernel.org>, Tetsuo Handa
+	<penguin-kernel@i-love.sakura.ne.jp>, Thomas Graf <tgraf@suug.ch>, Tycho
+ Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>,
+	<kernel-hardening@lists.openwall.com>, <linux-api@vger.kernel.org>,
+	<linux-fsdevel@vger.kernel.org>, <linux-security-module@vger.kernel.org>,
+	<netdev@vger.kernel.org>
+References: <20190625215239.11136-1-mic@digikod.net>
+ <20190625215239.11136-6-mic@digikod.net>
+ <20190625225201.GJ17978@ZenIV.linux.org.uk>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
+Message-ID: <79bac827-4092-8a4d-9dc6-6019419b2486@ssi.gouv.fr>
+Date: Thu, 27 Jun 2019 18:18:12 +0200
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:52.0) Gecko/20100101
+ Thunderbird/52.9.0
 MIME-Version: 1.0
-References: <CABgxDoLSzkVJ7Vh8mLiZySz6uS+VEu+GUxRqX8EWHKQDyz2fSg@mail.gmail.com>
- <201906200913.D2698BD0@keescook> <CABgxDoKQ4cnSS3p0sz8BgP65-R15U2Sr1AHVpU77ZGJu-Gvvvg@mail.gmail.com>
- <CABgxDoKTC1=5P=rnLmGzAgFs704+occs4Gw+6WyU99r4HwFBHA@mail.gmail.com>
- <201906261649.F2AFDCDBE@keescook> <CABgxDoJJo=AUHc1vWMeBpZHnMeBdRHSFnXWuN4RZwWnmB-9nBg@mail.gmail.com>
-In-Reply-To: <CABgxDoJJo=AUHc1vWMeBpZHnMeBdRHSFnXWuN4RZwWnmB-9nBg@mail.gmail.com>
-From: Romain Perier <romain.perier@gmail.com>
-Date: Thu, 27 Jun 2019 16:30:06 +0200
-Message-ID: <CABgxDo+KH25gscncQ7TLaQsw4UOir5whqkj8SgMWxtgDiSj7uw@mail.gmail.com>
-Subject: Fwd: Audit and fix all misuse of NLA_STRING: STATUS
-To: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <20190625225201.GJ17978@ZenIV.linux.org.uk>
+Content-Type: text/plain; charset="utf-8"
+Content-Language: en-US
 Content-Transfer-Encoding: quoted-printable
 
-Adding the ML to Cc:
----------- Forwarded message ---------
-De : Romain Perier <romain.perier@gmail.com>
-Date: jeu. 27 juin 2019 =C3=A0 16:29
-Subject: Re: Audit and fix all misuse of NLA_STRING: STATUS
-To: Kees Cook <keescook@chromium.org>
 
-
-Hi,
-
-Yeah sure, it's done :)
-What do you suggest as next task ?
-
-Regards,
-Romain
-
-Le jeu. 27 juin 2019 =C3=A0 01:51, Kees Cook <keescook@chromium.org> a =C3=
-=A9crit :
+On 26/06/2019 00:52, Al Viro wrote:
+> On Tue, Jun 25, 2019 at 11:52:34PM +0200, Micka=C3=ABl Sala=C3=BCn wrote:
+>> +/* must call iput(inode) after this call */
+>> +static struct inode *inode_from_fd(int ufd, bool check_access)
+>> +{
+>> +    struct inode *ret;
+>> +    struct fd f;
+>> +    int deny;
+>> +
+>> +    f =3D fdget(ufd);
+>> +    if (unlikely(!f.file || !file_inode(f.file))) {
+>> +            ret =3D ERR_PTR(-EBADF);
+>> +            goto put_fd;
+>> +    }
 >
-> On Tue, Jun 25, 2019 at 06:42:48PM +0200, Romain Perier wrote:
-> > I have double checked.
-> >
-> > See, https://salsa.debian.org/rperier-guest/linux-tree/raw/next/STATUS
-> >
-> > Nothing worrying, it seems.
+> Just when does one get a NULL file_inode()?  The reason I'm asking is
+> that arseloads of code would break if one managed to create such
+> a beast...
+
+I didn't find any API documentation about this guarantee, so I followed
+a defensive programming approach. I'll remove the file_inode() check.
+
 >
-> Excellent; thanks! Do you want to remove this from the TODO list?
+> Incidentally, that should be return ERR_PTR(-EBADF); fdput() is wrong the=
+re.
+
+Right, I'll fix that.
+
 >
-> --
-> Kees Cook
+>> +    }
+>> +    /* check if the FD is tied to a mount point */
+>> +    /* TODO: add this check when called from an eBPF program too */
+>> +    if (unlikely(!f.file->f_path.mnt
+>
+> Again, the same question - when the hell can that happen?
+
+Defensive programming again, I'll remove it.
+
+> If you are
+> sitting on an exploitable roothole, do share it...
+>
+>  || f.file->f_path.mnt->mnt_flags &
+>> +                            MNT_INTERNAL)) {
+>> +            ret =3D ERR_PTR(-EINVAL);
+>> +            goto put_fd;
+>
+> What does it have to do with mountpoints, anyway?
+
+I want to only manage inodes tied to a userspace-visible file system
+(this check may not be enough though). It doesn't make sense to be able
+to add inodes which are not mounted, to this kind of map.
+
+>
+>> +/* called from syscall */
+>> +static int sys_inode_map_delete_elem(struct bpf_map *map, struct inode =
+*key)
+>> +{
+>> +    struct inode_array *array =3D container_of(map, struct inode_array,=
+ map);
+>> +    struct inode *inode;
+>> +    int i;
+>> +
+>> +    WARN_ON_ONCE(!rcu_read_lock_held());
+>> +    for (i =3D 0; i < array->map.max_entries; i++) {
+>> +            if (array->elems[i].inode =3D=3D key) {
+>> +                    inode =3D xchg(&array->elems[i].inode, NULL);
+>> +                    array->nb_entries--;
+>
+> Umm...  Is that intended to be atomic in any sense?
+
+nb_entries is not used as a bound check but to avoid walking uselessly
+through the (pre-allocated) array when adding a new element, but I'll
+use an atomic to avoid inconsistencies anyway.
+
+>
+>> +                    iput(inode);
+>> +                    return 0;
+>> +            }
+>> +    }
+>> +    return -ENOENT;
+>> +}
+>> +
+>> +/* called from syscall */
+>> +int bpf_inode_map_delete_elem(struct bpf_map *map, int *key)
+>> +{
+>> +    struct inode *inode;
+>> +    int err;
+>> +
+>> +    inode =3D inode_from_fd(*key, false);
+>> +    if (IS_ERR(inode))
+>> +            return PTR_ERR(inode);
+>> +    err =3D sys_inode_map_delete_elem(map, inode);
+>> +    iput(inode);
+>> +    return err;
+>> +}
+>
+> Wait a sec...  So we have those beasties that can have long-term
+> references to arbitrary inodes stuck in them?  What will happen
+> if you get umount(2) called while such a thing exists?
+
+I though an umount would be denied but no, we get a self-destructed busy
+inode and a bug!
+What about wrapping the inode's superblock->s_op->destroy_inode() to
+first remove the element from the map and then call the real
+destroy_inode(), if any?
+Or I could update fs/inode.c:destroy_inode() to call inode->free_inode()
+if it is set, and set it when such inode is referenced by a map?
+Or maybe I could hold the referencing file in the map and then wrap its
+f_op?
+
+
+--
+Micka=C3=ABl Sala=C3=BCn
+ANSSI/SDE/ST/LAM
+
+Les donn=C3=A9es =C3=A0 caract=C3=A8re personnel recueillies et trait=C3=A9=
+es dans le cadre de cet =C3=A9change, le sont =C3=A0 seule fin d=E2=80=99ex=
+=C3=A9cution d=E2=80=99une relation professionnelle et s=E2=80=99op=C3=A8re=
+nt dans cette seule finalit=C3=A9 et pour la dur=C3=A9e n=C3=A9cessaire =C3=
+=A0 cette relation. Si vous souhaitez faire usage de vos droits de consulta=
+tion, de rectification et de suppression de vos donn=C3=A9es, veuillez cont=
+acter contact.rgpd@sgdsn.gouv.fr. Si vous avez re=C3=A7u ce message par err=
+eur, nous vous remercions d=E2=80=99en informer l=E2=80=99exp=C3=A9diteur e=
+t de d=C3=A9truire le message. The personal data collected and processed du=
+ring this exchange aims solely at completing a business relationship and is=
+ limited to the necessary duration of that relationship. If you wish to use=
+ your rights of consultation, rectification and deletion of your data, plea=
+se contact: contact.rgpd@sgdsn.gouv.fr. If you have received this message i=
+n error, we thank you for informing the sender and destroying the message.
