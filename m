@@ -1,23 +1,20 @@
-Return-Path: <SRS0=knJQ=U2=lists.openwall.com=kernel-hardening-return-16282-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=R2Bm=U2=lists.openwall.com=kernel-hardening-return-16283-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	HTML_MESSAGE,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 97BB7C48BD6
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 10:06:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 464CEC48BD6
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 10:23:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E7AEA2083B
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 10:06:26 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="WJWfF4PV"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E7AEA2083B
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16282-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15576 invoked by uid 550); 27 Jun 2019 10:06:19 -0000
+	by mail.kernel.org (Postfix) with SMTP id 721DD208CB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 10:23:24 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 721DD208CB
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16283-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30674 invoked by uid 550); 27 Jun 2019 10:23:17 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,97 +22,209 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15550 invoked from network); 27 Jun 2019 10:06:18 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc:content-transfer-encoding;
-        bh=d3Ru/epqcKSdd6urtlGQx+RBPxT9C1o3y8n/GaRj0IQ=;
-        b=WJWfF4PVo0+95PvGT5hg2e4Xeu/u3T/2L4nJe69VTor4JJVxeDdlqbkIbil08BQcFq
-         4WNizc0907sGpZ4DC8lCEjX+TqmlXc6gNLvaAixKpQpcDzXZ/csQnyTyJ9LyWnlKP5XK
-         DfzkoEGW0SfvupgEB+clKSA6s//2MV85T08hiVgG34Mr+wMKt1v7ZYUd4D5ntgPfiIWT
-         BQIO/8nMl3PMVW49ehtZAe939r/ma8rq5oFi0/exvVxF+r/wj/vRmU7YNMfyJa4c2yiW
-         3wy4T1Z6Y7C0Nl2uGzKVuMCPOreBitQMkM5u9hBPZtV3zoOH/jyJBhyExmyBNM5uutqZ
-         op6A==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc:content-transfer-encoding;
-        bh=d3Ru/epqcKSdd6urtlGQx+RBPxT9C1o3y8n/GaRj0IQ=;
-        b=FZOfGZkc6Fym8hifhlnsF69pNawtqNNoa3Dt2kkuu5jIjk7ifLJs/YbdB5T3wV4LiT
-         42siV0+Kn5pijLARHDd5Pp5AA2a+LrQXDR9lwQlczUAu+KNhA8nbIum3Ykkb3++MgkVl
-         F+tiuWf7iPVcEKABFJ251EIL7JED3kS2JOPcTW8tKd98DCeH+u6F2PcJzArTVC6tWq4k
-         L6pE6xSEh6z+Fx/luG9EnTH94R4b5gQCWtQtKsLgTrObzVyrUgOvUCQoQNee/I8/Uyst
-         JDG4puNbT7I/09Thy4z+MeqJQ1j25ENRR9ZI/cgmQavVz49rToyhYpUE/jwAPi1oYI5z
-         jp4A==
-X-Gm-Message-State: APjAAAXwlvdgHNKGJUE5VfqVO4Y3iXWRZ8TCrI3yFpgVuLErgKsosPNF
-	uWMFDAmMpcfab6y3WXLCsTkKqXGXBquaVzBkSFEJgQ==
-X-Google-Smtp-Source: APXvYqy57wqyZI8LbJdgFCXKbEYhDUuoxxAgY0BAe68utv9cKzvGiUTExbd/UyfLgBKJ4hy2WFzLkW2oZMYLWpxsMYo=
-X-Received: by 2002:ab0:64cc:: with SMTP id j12mr1845628uaq.110.1561629965902;
- Thu, 27 Jun 2019 03:06:05 -0700 (PDT)
+Received: (qmail 28397 invoked from network); 27 Jun 2019 10:19:57 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.63,423,1557212400"; 
+   d="scan'208,217";a="189009795"
+From: "Gote, Nitin R" <nitin.r.gote@intel.com>
+To: Kees Cook <keescook@chromium.org>
+CC: "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>
+Subject: Re: Regarding have kfree() (and related) set the pointer to NULL too
+Thread-Topic: Re: Regarding have kfree() (and related) set the pointer to
+ NULL too
+Thread-Index: AdUsykFtUud3fmLZSQCAsXJ9Yw2gPA==
+Date: Thu, 27 Jun 2019 10:19:40 +0000
+Message-ID: <12356C813DFF6F479B608F81178A561586BDFE@BGSMSX101.gar.corp.intel.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+dlp-product: dlpe-windows
+dlp-version: 11.0.600.7
+dlp-reaction: no-action
+x-ctpclassification: CTP_NT
+x-titus-metadata-40: eyJDYXRlZ29yeUxhYmVscyI6IiIsIk1ldGFkYXRhIjp7Im5zIjoiaHR0cDpcL1wvd3d3LnRpdHVzLmNvbVwvbnNcL0ludGVsMyIsImlkIjoiNWEwOWQzZDAtYzI4Zi00ZmVkLWI0MWUtZDBmZGI2Nzk3MjVkIiwicHJvcHMiOlt7Im4iOiJDVFBDbGFzc2lmaWNhdGlvbiIsInZhbHMiOlt7InZhbHVlIjoiQ1RQX05UIn1dfV19LCJTdWJqZWN0TGFiZWxzIjpbXSwiVE1DVmVyc2lvbiI6IjE3LjEwLjE4MDQuNDkiLCJUcnVzdGVkTGFiZWxIYXNoIjoiSXZNK2xWT3RsNHFvdUVHUkwySWpERW5MemtJU1JVNVlCelZoZG12N3dmVkxjQVM4YmQ0QzRHalZ0MnRZdVpNXC8ifQ==
+x-originating-ip: [10.223.10.10]
+Content-Type: multipart/alternative;
+	boundary="_000_12356C813DFF6F479B608F81178A561586BDFEBGSMSX101garcorpi_"
 MIME-Version: 1.0
-References: <20190626121943.131390-1-glider@google.com> <20190626121943.131390-2-glider@google.com>
- <20190626162835.0947684d36ef01639f969232@linux-foundation.org>
-In-Reply-To: <20190626162835.0947684d36ef01639f969232@linux-foundation.org>
-From: Alexander Potapenko <glider@google.com>
-Date: Thu, 27 Jun 2019 12:05:54 +0200
-Message-ID: <CAG_fn=XF1C-3CCKGCHTrgCtcsh-u390hjM=rp5ZRv3ijTH5YgQ@mail.gmail.com>
-Subject: Re: [PATCH v8 1/2] mm: security: introduce init_on_alloc=1 and
- init_on_free=1 boot options
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, 
-	Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Hocko <mhocko@kernel.org>, 
-	James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, 
-	Nick Desaulniers <ndesaulniers@google.com>, Kostya Serebryany <kcc@google.com>, 
-	Dmitry Vyukov <dvyukov@google.com>, Sandeep Patil <sspatil@android.com>, 
-	Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>, 
-	Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>, Qian Cai <cai@lca.pw>, 
-	Linux Memory Management List <linux-mm@kvack.org>, 
-	linux-security-module <linux-security-module@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Content-Type: text/plain; charset="UTF-8"
+
+--_000_12356C813DFF6F479B608F81178A561586BDFEBGSMSX101garcorpi_
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: quoted-printable
 
-On Thu, Jun 27, 2019 at 1:28 AM Andrew Morton <akpm@linux-foundation.org> w=
-rote:
->
-> On Wed, 26 Jun 2019 14:19:42 +0200 Alexander Potapenko <glider@google.com=
-> wrote:
->
-> >  v8:
-> >   - addressed comments by Michal Hocko: revert kernel/kexec_core.c and
-> >     apply initialization in dma_pool_free()
-> >   - disable init_on_alloc/init_on_free if slab poisoning or page
-> >     poisoning are enabled, as requested by Qian Cai
-> >   - skip the redzone when initializing a freed heap object, as requeste=
-d
-> >     by Qian Cai and Kees Cook
-> >   - use s->offset to address the freeptr (suggested by Kees Cook)
-> >   - updated the patch description, added Signed-off-by: tag
->
-> v8 failed to incorporate
->
-> https://ozlabs.org/~akpm/mmots/broken-out/mm-security-introduce-init_on_a=
-lloc=3D1-and-init_on_free=3D1-boot-options-fix.patch
-> and
-> https://ozlabs.org/~akpm/mmots/broken-out/mm-security-introduce-init_on_a=
-lloc=3D1-and-init_on_free=3D1-boot-options-fix-2.patch
->
-> it's conventional to incorporate such fixes when preparing a new
-> version of a patch.
->
+Hi,
 
-Ah, sorry about that.
-I'll probably send out v9 with proper poison handling and will pick
-those two patches as well.
---=20
-Alexander Potapenko
-Software Engineer
+I'm looking  into "have kfree() (and related) set the pointer to NULL too" =
+task.
 
-Google Germany GmbH
-Erika-Mann-Stra=C3=9Fe, 33
-80636 M=C3=BCnchen
+As per my understanding, I did below changes :
+Could you please provide some points on below ways ?
 
-Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
-Registergericht und -nummer: Hamburg, HRB 86891
-Sitz der Gesellschaft: Hamburg
+diff --git a/mm/slab.c b/mm/slab.c
+index f7117ad..a6e3d1b 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -3754,6 +3754,7 @@ void kfree(const void *objp)
+        debug_check_no_obj_freed(objp, c->object_size);
+        __cache_free(c, (void *)objp, _RET_IP_);
+        local_irq_restore(flags);
++       objp =3D NULL;
+}
+EXPORT_SYMBOL(kfree);
+
+diff --git a/mm/slob.c b/mm/slob.c
+index 84aefd9..dcdb815 100644
+--- a/mm/slob.c
++++ b/mm/slob.c
+@@ -523,6 +523,8 @@ void kfree(const void *block)
+                slob_free(m, *m + align);
+        } else
+                __free_pages(sp, compound_order(sp));
++
++       block =3D NULL;
+}
+EXPORT_SYMBOL(kfree);
+
+diff --git a/mm/slub.c b/mm/slub.c
+index cd04dbd..7cc400a 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -3947,6 +3947,8 @@ void kfree(const void *x)
+                return;
+        }
+        slab_free(page->slab_cache, page, object, NULL, 1, _RET_IP_);
++
++       x =3D NULL;
+}
+EXPORT_SYMBOL(kfree);
+
+--_000_12356C813DFF6F479B608F81178A561586BDFEBGSMSX101garcorpi_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+>
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0cm;
+	margin-bottom:.0001pt;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;
+	mso-fareast-language:EN-US;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:#0563C1;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-priority:99;
+	color:#954F72;
+	text-decoration:underline;}
+span.EmailStyle17
+	{mso-style-type:personal-compose;
+	font-family:"Calibri",sans-serif;
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-family:"Calibri",sans-serif;
+	mso-fareast-language:EN-US;}
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:72.0pt 72.0pt 72.0pt 72.0pt;}
+div.WordSection1
+	{page:WordSection1;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]-->
+</head>
+<body lang=3D"EN-IN" link=3D"#0563C1" vlink=3D"#954F72">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal">Hi,<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">I&#8217;m looking &nbsp;into &#8220;have kfree() (an=
+d related) set the pointer to NULL too&#8221; task. &nbsp;<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">As per my understanding, I did below changes :<o:p><=
+/o:p></p>
+<p class=3D"MsoNormal">Could you please provide some points on below ways ?=
+<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">diff --git a/mm/slab.c b/mm/slab.c<o:p></o:p></p>
+<p class=3D"MsoNormal">index f7117ad..a6e3d1b 100644<o:p></o:p></p>
+<p class=3D"MsoNormal">--- a/mm/slab.c<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;&#43;&#43; b/mm/slab.c<o:p></o:p></p>
+<p class=3D"MsoNormal">@@ -3754,6 &#43;3754,7 @@ void kfree(const void *obj=
+p)<o:p></o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; debug_che=
+ck_no_obj_freed(objp, c-&gt;object_size);<o:p></o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __cache_f=
+ree(c, (void *)objp, _RET_IP_);<o:p></o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; local_irq=
+_restore(flags);<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; objp =3D N=
+ULL;<o:p></o:p></p>
+<p class=3D"MsoNormal">}<o:p></o:p></p>
+<p class=3D"MsoNormal">EXPORT_SYMBOL(kfree);<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">diff --git a/mm/slob.c b/mm/slob.c<o:p></o:p></p>
+<p class=3D"MsoNormal">index 84aefd9..dcdb815 100644<o:p></o:p></p>
+<p class=3D"MsoNormal">--- a/mm/slob.c<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;&#43;&#43; b/mm/slob.c<o:p></o:p></p>
+<p class=3D"MsoNormal">@@ -523,6 &#43;523,8 @@ void kfree(const void *block=
+)<o:p></o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; slob_free(m, *m &#43; align);<o:p></=
+o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else<o:=
+p></o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __free_pages(sp, compound_order(sp))=
+;<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; block =3D =
+NULL;<o:p></o:p></p>
+<p class=3D"MsoNormal">}<o:p></o:p></p>
+<p class=3D"MsoNormal">EXPORT_SYMBOL(kfree);<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">diff --git a/mm/slub.c b/mm/slub.c<o:p></o:p></p>
+<p class=3D"MsoNormal">index cd04dbd..7cc400a 100644<o:p></o:p></p>
+<p class=3D"MsoNormal">--- a/mm/slub.c<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;&#43;&#43; b/mm/slub.c<o:p></o:p></p>
+<p class=3D"MsoNormal">@@ -3947,6 &#43;3947,8 @@ void kfree(const void *x)<=
+o:p></o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return;<o:p></o:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<o:p></o=
+:p></p>
+<p class=3D"MsoNormal">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; slab_free=
+(page-&gt;slab_cache, page, object, NULL, 1, _RET_IP_);<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;<o:p></o:p></p>
+<p class=3D"MsoNormal">&#43;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; x =3D NULL=
+;<o:p></o:p></p>
+<p class=3D"MsoNormal">}<o:p></o:p></p>
+<p class=3D"MsoNormal">EXPORT_SYMBOL(kfree);<o:p></o:p></p>
+</div>
+</body>
+</html>
+
+--_000_12356C813DFF6F479B608F81178A561586BDFEBGSMSX101garcorpi_--
