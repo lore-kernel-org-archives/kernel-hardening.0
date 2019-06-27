@@ -1,23 +1,20 @@
-Return-Path: <SRS0=QpfU=U2=lists.openwall.com=kernel-hardening-return-16279-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=vOBe=U2=lists.openwall.com=kernel-hardening-return-16280-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
+X-Spam-Status: No, score=-2.5 required=3.0 tests=MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_MUTT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8CECBC48BD7
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 04:46:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D673AC48BD7
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 06:15:56 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DBE3921855
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 04:46:34 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="q/S1g6tA"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DBE3921855
+	by mail.kernel.org (Postfix) with SMTP id 396D8204FD
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 06:15:55 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 396D8204FD
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16279-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13564 invoked by uid 550); 27 Jun 2019 04:45:39 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16280-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7715 invoked by uid 550); 27 Jun 2019 06:15:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,70 +22,84 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13381 invoked from network); 27 Jun 2019 04:45:37 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1561610716;
-	bh=It8qNuorDHkN++30w/QRv2Qr7Cixz/gz1T4PqMIF4Kg=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=q/S1g6tA36w5ZCGiw3DETjmxkhfWf0/8H4PK/ziyQkxVJCNMsRDQT/INUuLD/N/j/
-	 vsRGwWDvAJ+aHq51RKzHWxsT6vVnXdZN9qZqIwHHw4E9mLLZa/tYI1tfURMEeUQ+P9
-	 4OnNX7VYmYUw6ad95mECRjcB0g4vGLkbOjg+122c=
-From: Andy Lutomirski <luto@kernel.org>
-To: x86@kernel.org
-Cc: LKML <linux-kernel@vger.kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	Florian Weimer <fweimer@redhat.com>,
-	Jann Horn <jannh@google.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Borislav Petkov <bp@alien8.de>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Thomas Gleixner <tglx@linutronix.de>
-Subject: [PATCH v2 7/8] x86/vsyscall: Add __ro_after_init to global variables
-Date: Wed, 26 Jun 2019 21:45:08 -0700
-Message-Id: <a386925835e49d319e70c4d7404b1f6c3c2e3702.1561610354.git.luto@kernel.org>
-X-Mailer: git-send-email 2.21.0
-In-Reply-To: <cover.1561610354.git.luto@kernel.org>
-References: <cover.1561610354.git.luto@kernel.org>
+Received: (qmail 7694 invoked from network); 27 Jun 2019 06:15:48 -0000
+X-Virus-Scanned: by amavisd-new at test-mx.suse.de
+Date: Thu, 27 Jun 2019 08:15:34 +0200
+From: Michal Hocko <mhocko@kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Qian Cai <cai@lca.pw>, Catalin Marinas <catalin.marinas@arm.com>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Alexander Potapenko <glider@google.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Christoph Lameter <cl@linux.com>,
+	Masahiro Yamada <yamada.masahiro@socionext.com>,
+	James Morris <jmorris@namei.org>,
+	"Serge E. Hallyn" <serge@hallyn.com>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	Kostya Serebryany <kcc@google.com>,
+	Dmitry Vyukov <dvyukov@google.com>,
+	Sandeep Patil <sspatil@android.com>,
+	Laura Abbott <labbott@redhat.com>,
+	Randy Dunlap <rdunlap@infradead.org>, Jann Horn <jannh@google.com>,
+	Mark Rutland <mark.rutland@arm.com>, Marco Elver <elver@google.com>,
+	linux-mm@kvack.org, linux-security-module@vger.kernel.org,
+	kernel-hardening@lists.openwall.com,
+	clang-built-linux@googlegroups.com
+Subject: Re: [PATCH v8 1/2] mm: security: introduce init_on_alloc=1 and
+ init_on_free=1 boot options
+Message-ID: <20190627061534.GA17798@dhcp22.suse.cz>
+References: <20190626121943.131390-1-glider@google.com>
+ <20190626121943.131390-2-glider@google.com>
+ <1561572949.5154.81.camel@lca.pw>
+ <201906261303.020ADC9@keescook>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
+In-Reply-To: <201906261303.020ADC9@keescook>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-The vDSO is only configurable by command-line options, so make its
-global variables __ro_after_init.  This seems highly unlikely to
-ever stop an exploit, but I think it's nice anyway.
+On Wed 26-06-19 13:23:34, Kees Cook wrote:
+> On Wed, Jun 26, 2019 at 02:15:49PM -0400, Qian Cai wrote:
+> > On Wed, 2019-06-26 at 14:19 +0200, Alexander Potapenko wrote:
+> > > Both init_on_alloc and init_on_free default to zero, but those defaults
+> > > can be overridden with CONFIG_INIT_ON_ALLOC_DEFAULT_ON and
+> > > CONFIG_INIT_ON_FREE_DEFAULT_ON.
+> > > [...]
+> > > +static int __init early_init_on_alloc(char *buf)
+> > > +{
+> > > +	int ret;
+> > > +	bool bool_result;
+> > > +
+> > > +	if (!buf)
+> > > +		return -EINVAL;
+> > > +	ret = kstrtobool(buf, &bool_result);
+> > > +	if (bool_result)
+> > > +		static_branch_enable(&init_on_alloc);
+> > > +	else
+> > > +		static_branch_disable(&init_on_alloc);
+> > > +	return ret;
+> > > +}
+> > > +early_param("init_on_alloc", early_init_on_alloc);
+> > 
+> > Do those really necessary need to be static keys?
+> > 
+> > Adding either init_on_free=0 or init_on_alloc=0 to the kernel cmdline will
+> > generate a warning with kernels built with clang.
+> > 
+> > [    0.000000] static_key_disable(): static key 'init_on_free+0x0/0x4' used
+> > before call to jump_label_init()
+> > [    0.000000] WARNING: CPU: 0 PID: 0 at ./include/linux/jump_label.h:317
+> > early_init_on_free+0x1c0/0x200
+> > [    0.000000] Modules linked in:
+> > [    0.000000] CPU: 0 PID: 0 Comm: swapper Not tainted 5.2.0-rc6-next-20190626+
+> > #9
+> > [    0.000000] pstate: 60000089 (nZCv daIf -PAN -UAO)
+> 
+> I think the issue here is that arm64 doesn't initialize static keys
+> early enough.
 
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Borislav Petkov <bp@alien8.de>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
----
- arch/x86/entry/vsyscall/vsyscall_64.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/arch/x86/entry/vsyscall/vsyscall_64.c b/arch/x86/entry/vsyscall/vsyscall_64.c
-index 9c58ab807aeb..07003f3f1bfc 100644
---- a/arch/x86/entry/vsyscall/vsyscall_64.c
-+++ b/arch/x86/entry/vsyscall/vsyscall_64.c
-@@ -42,7 +42,7 @@
- #define CREATE_TRACE_POINTS
- #include "vsyscall_trace.h"
- 
--static enum { EMULATE, XONLY, NONE } vsyscall_mode =
-+static enum { EMULATE, XONLY, NONE } vsyscall_mode __ro_after_init =
- #ifdef CONFIG_LEGACY_VSYSCALL_NONE
- 	NONE;
- #elif defined(CONFIG_LEGACY_VSYSCALL_XONLY)
-@@ -305,7 +305,7 @@ static const char *gate_vma_name(struct vm_area_struct *vma)
- static const struct vm_operations_struct gate_vma_ops = {
- 	.name = gate_vma_name,
- };
--static struct vm_area_struct gate_vma = {
-+static struct vm_area_struct gate_vma __ro_after_init = {
- 	.vm_start	= VSYSCALL_ADDR,
- 	.vm_end		= VSYSCALL_ADDR + PAGE_SIZE,
- 	.vm_page_prot	= PAGE_READONLY_EXEC,
+This sounds familiar: http://lkml.kernel.org/r/CABXOdTd-cqHM_feAO1tvwn4Z=kM6WHKYAbDJ7LGfMvRPRPG7GA@mail.gmail.com
 -- 
-2.21.0
-
+Michal Hocko
+SUSE Labs
