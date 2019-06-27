@@ -1,22 +1,22 @@
-Return-Path: <SRS0=iCpL=U2=lists.openwall.com=kernel-hardening-return-16293-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=NaFC=U2=lists.openwall.com=kernel-hardening-return-16294-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5D223C48BD7
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 16:18:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 72944C48BD7
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 16:22:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 82D7C20659
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 16:18:29 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C438F208E3
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Jun 2019 16:22:03 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=ssi.gouv.fr header.i=@ssi.gouv.fr header.b="W6wClXcU"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 82D7C20659
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=ssi.gouv.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16293-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26262 invoked by uid 550); 27 Jun 2019 16:18:20 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="nKfkCXy5"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C438F208E3
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16294-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32026 invoked by uid 550); 27 Jun 2019 16:21:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,178 +24,111 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26230 invoked from network); 27 Jun 2019 16:18:19 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=ssi.gouv.fr;
-	s=20160407; t=1561652296;
-	bh=e/9/soaXxtPOLGylT6FEbrJeqf5CH04oQATLaTVtYYU=;
-	h=Subject:To:CC:References:From:Date:In-Reply-To:From:Subject;
-	b=W6wClXcUUlkKnnGLJvw4aTCMWkm09TDrSTk9aM9xnwww4FBi0ejQRAcafStv5/PaJ
-	 TqrbxB0HJK5AlaMj+32Fv5C+eIXElxPDgSsWmy8WNE0FLMTpJKJCXCDNGJH1h32ujf
-	 j3MYKbBu4YcvZG46mgjJZp8EBFnFZqhYxuyHP8lyHu4ZI8r+dYtyn+iL/vL6YOtxyy
-	 QU6Mq5Q0bVZHHLEXz3klncr6GlMrRPDL9Tn4C2pQLuLAfn5TywxxeMwPSIi/Fs+lCq
-	 gy/tTNJzdYhegMvZKVrDR2iD1hhhEK7jXeI+DDvom0fHd4UcejWmedP6Ns5bAcnTlx
-	 feTNxO0qXLdaw==
-Subject: Re: [PATCH bpf-next v9 05/10] bpf,landlock: Add a new map type: inode
-To: Al Viro <viro@zeniv.linux.org.uk>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?=
-	<mic@digikod.net>
-CC: <linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, Alexei
- Starovoitov <ast@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Andy
- Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>,
-	Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann
-	<daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S .
- Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>,
-	James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>, John Johansen
-	<john.johansen@canonical.com>, Jonathan Corbet <corbet@lwn.net>, Kees Cook
-	<keescook@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Paul Moore
-	<paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn"
-	<serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Stephen Smalley
-	<sds@tycho.nsa.gov>, Tejun Heo <tj@kernel.org>, Tetsuo Handa
-	<penguin-kernel@i-love.sakura.ne.jp>, Thomas Graf <tgraf@suug.ch>, Tycho
- Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>,
-	<kernel-hardening@lists.openwall.com>, <linux-api@vger.kernel.org>,
-	<linux-fsdevel@vger.kernel.org>, <linux-security-module@vger.kernel.org>,
-	<netdev@vger.kernel.org>
-References: <20190625215239.11136-1-mic@digikod.net>
- <20190625215239.11136-6-mic@digikod.net>
- <20190625225201.GJ17978@ZenIV.linux.org.uk>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
-Message-ID: <79bac827-4092-8a4d-9dc6-6019419b2486@ssi.gouv.fr>
-Date: Thu, 27 Jun 2019 18:18:12 +0200
-User-Agent: Mozilla/5.0 (X11; Linux i686; rv:52.0) Gecko/20100101
- Thunderbird/52.9.0
+Received: (qmail 31993 invoked from network); 27 Jun 2019 16:21:56 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:content-transfer-encoding:in-reply-to;
+        bh=a11qEPyS+a9erWsxAU6/c8TjLgk6sFl5CXvB3mQcz9I=;
+        b=nKfkCXy5eCVuDoeIFTGkYIqnKuEEM2ST1LszbWDR11xwtGgLe1J0hp+k1up1ZAtfdS
+         ni/O5Jix3CqmfCyfbFkkYc/vadpPk/kq6xfwNHbcCZu9kBHlftrKl61ycNdWBjP3QjjN
+         EhUHh4stl6e7oE1nwVTDN4xoBxsiXNrBS191U=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:content-transfer-encoding
+         :in-reply-to;
+        bh=a11qEPyS+a9erWsxAU6/c8TjLgk6sFl5CXvB3mQcz9I=;
+        b=U7Ntjbg0uedhWeV/UAklbiBM9hhN5kKzic5o+Wl7cAYV0XiQpsrXOdLr1RWEVOpT9i
+         mYNNWWl9ztcAoF3NH7rsqocN2c/RnDWOvS13op3VBmGgSm9kNqiOL2kQhBCG3ls1T1ih
+         DCinON/Ab8SoiNkKg8lbUJ1+yQtwc3+2jwqLwVOIDyVOlXQLVXLLlcjeylJJrf9+ad6w
+         FZClTUXGBHUXSn/mUANbeMw1tGCjgAAaKCh/nihYmchrVToHfb+gxn61i36R/7GO6A5A
+         pAw0wtRPUK2pHyVcLV49hgn9qfu7Ndko2emD/6YtBfeTOFVrjWJ7lTsjZT8zPjUoUcqr
+         z7mA==
+X-Gm-Message-State: APjAAAXDC8fo9mfI/GposIqpBLSJN54JNuHiOTfrdRB+WflioCGj+B0r
+	UMw1bdya9HezVGNvueZWJlKRDw==
+X-Google-Smtp-Source: APXvYqxhqvqy4C1utQ6meUJYk1YN8mhKuYds8OVyKDpmSXZV9Kgo2OSl15P/4pWzp4FpPs2Ix4uA8Q==
+X-Received: by 2002:a17:902:9a95:: with SMTP id w21mr5587234plp.126.1561652504748;
+        Thu, 27 Jun 2019 09:21:44 -0700 (PDT)
+Date: Thu, 27 Jun 2019 09:21:42 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Vegard Nossum <vegard.nossum@gmail.com>
+Cc: "Gote, Nitin R" <nitin.r.gote@intel.com>,
+	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: Regarding have kfree() (and related) set the pointer to NULL too
+Message-ID: <201906270908.28E5E1FDC3@keescook>
+References: <12356C813DFF6F479B608F81178A561586BDFE@BGSMSX101.gar.corp.intel.com>
+ <CAOMGZ=FfWUf=2wMKXJVOsfr5b394ERUbhQehEFOtMx8zh26M4w@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20190625225201.GJ17978@ZenIV.linux.org.uk>
-Content-Type: text/plain; charset="utf-8"
-Content-Language: en-US
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAOMGZ=FfWUf=2wMKXJVOsfr5b394ERUbhQehEFOtMx8zh26M4w@mail.gmail.com>
 
+On Thu, Jun 27, 2019 at 01:45:06PM +0200, Vegard Nossum wrote:
+> On Thu, 27 Jun 2019 at 12:23, Gote, Nitin R <nitin.r.gote@intel.com> wrote:
+> > Hi,
+> >
+> > I’m looking  into “have kfree() (and related) set the pointer to NULL too” task.
+> >
+> > As per my understanding, I did below changes :
+> >
+> > Could you please provide some points on below ways ?
+> > @@ -3754,6 +3754,7 @@ void kfree(const void *objp)
+> >         debug_check_no_obj_freed(objp, c->object_size);
+> >         __cache_free(c, (void *)objp, _RET_IP_);
+> >         local_irq_restore(flags);
+> > +       objp = NULL;
+> >
+> > }
+> 
+> This will not do anything, since the assignment happens to the local
+> variable inside kfree() rather than to the original expression that
+> was passed to it as an argument.
+> 
+> Consider that the code in the caller looks like this:
+> 
+> void *x = kmalloc(...);
+> kfree(x);
+> pr_info("x = %p\n", x);
+> 
+> this will still print "x = (some non-NULL address)" because the
+> variable 'x' in the caller still retains its original value.
+> 
+> You could try wrapping kfree() in a C macro, something like
+> 
+> #define kfree(x) real_kfree(x); (x) = NULL;
 
-On 26/06/2019 00:52, Al Viro wrote:
-> On Tue, Jun 25, 2019 at 11:52:34PM +0200, Micka=C3=ABl Sala=C3=BCn wrote:
->> +/* must call iput(inode) after this call */
->> +static struct inode *inode_from_fd(int ufd, bool check_access)
->> +{
->> +    struct inode *ret;
->> +    struct fd f;
->> +    int deny;
->> +
->> +    f =3D fdget(ufd);
->> +    if (unlikely(!f.file || !file_inode(f.file))) {
->> +            ret =3D ERR_PTR(-EBADF);
->> +            goto put_fd;
->> +    }
->
-> Just when does one get a NULL file_inode()?  The reason I'm asking is
-> that arseloads of code would break if one managed to create such
-> a beast...
+Right, though we want to avoid silent double-evaluation, so we have to
+do some macro tricks. I suspect the starting point is something like:
 
-I didn't find any API documentation about this guarantee, so I followed
-a defensive programming approach. I'll remove the file_inode() check.
+#define kfree(x)			\
+	do {				\
+		typeof(x) *ptr = &(x);	\
+		real_kfree(*ptr);	\
+		*ptr = NULL;		\
+	} while (0)
 
->
-> Incidentally, that should be return ERR_PTR(-EBADF); fdput() is wrong the=
-re.
+However, there are a non-zero number of places in the kernel where kfree()
+is used on things that are not simple memory references, like function
+return values, or copies of the actual reference:
 
-Right, I'll fix that.
+	kfree(get_my_allocation(foo));
 
->
->> +    }
->> +    /* check if the FD is tied to a mount point */
->> +    /* TODO: add this check when called from an eBPF program too */
->> +    if (unlikely(!f.file->f_path.mnt
->
-> Again, the same question - when the hell can that happen?
+or
 
-Defensive programming again, I'll remove it.
+	previous = something->allocation;
+	...
+	kfree(prevous)
 
-> If you are
-> sitting on an exploitable roothole, do share it...
->
->  || f.file->f_path.mnt->mnt_flags &
->> +                            MNT_INTERNAL)) {
->> +            ret =3D ERR_PTR(-EINVAL);
->> +            goto put_fd;
->
-> What does it have to do with mountpoints, anyway?
+So the larger work is figuring out how to gracefully deal with those
+using a reasonable API, or through refactoring.
 
-I want to only manage inodes tied to a userspace-visible file system
-(this check may not be enough though). It doesn't make sense to be able
-to add inodes which are not mounted, to this kind of map.
+However, before getting too far, it's worth going though past
+use-after-free vulnerabilities to figure out how many would have been
+rendered harmless (NULL deref instead of UaF) with this change. Has this
+been studied before, etc. With this information it's easier to decide
+if the benefit of this refactoring is worth the work to do it.
 
->
->> +/* called from syscall */
->> +static int sys_inode_map_delete_elem(struct bpf_map *map, struct inode =
-*key)
->> +{
->> +    struct inode_array *array =3D container_of(map, struct inode_array,=
- map);
->> +    struct inode *inode;
->> +    int i;
->> +
->> +    WARN_ON_ONCE(!rcu_read_lock_held());
->> +    for (i =3D 0; i < array->map.max_entries; i++) {
->> +            if (array->elems[i].inode =3D=3D key) {
->> +                    inode =3D xchg(&array->elems[i].inode, NULL);
->> +                    array->nb_entries--;
->
-> Umm...  Is that intended to be atomic in any sense?
-
-nb_entries is not used as a bound check but to avoid walking uselessly
-through the (pre-allocated) array when adding a new element, but I'll
-use an atomic to avoid inconsistencies anyway.
-
->
->> +                    iput(inode);
->> +                    return 0;
->> +            }
->> +    }
->> +    return -ENOENT;
->> +}
->> +
->> +/* called from syscall */
->> +int bpf_inode_map_delete_elem(struct bpf_map *map, int *key)
->> +{
->> +    struct inode *inode;
->> +    int err;
->> +
->> +    inode =3D inode_from_fd(*key, false);
->> +    if (IS_ERR(inode))
->> +            return PTR_ERR(inode);
->> +    err =3D sys_inode_map_delete_elem(map, inode);
->> +    iput(inode);
->> +    return err;
->> +}
->
-> Wait a sec...  So we have those beasties that can have long-term
-> references to arbitrary inodes stuck in them?  What will happen
-> if you get umount(2) called while such a thing exists?
-
-I though an umount would be denied but no, we get a self-destructed busy
-inode and a bug!
-What about wrapping the inode's superblock->s_op->destroy_inode() to
-first remove the element from the map and then call the real
-destroy_inode(), if any?
-Or I could update fs/inode.c:destroy_inode() to call inode->free_inode()
-if it is set, and set it when such inode is referenced by a map?
-Or maybe I could hold the referencing file in the map and then wrap its
-f_op?
-
-
---
-Micka=C3=ABl Sala=C3=BCn
-ANSSI/SDE/ST/LAM
-
-Les donn=C3=A9es =C3=A0 caract=C3=A8re personnel recueillies et trait=C3=A9=
-es dans le cadre de cet =C3=A9change, le sont =C3=A0 seule fin d=E2=80=99ex=
-=C3=A9cution d=E2=80=99une relation professionnelle et s=E2=80=99op=C3=A8re=
-nt dans cette seule finalit=C3=A9 et pour la dur=C3=A9e n=C3=A9cessaire =C3=
-=A0 cette relation. Si vous souhaitez faire usage de vos droits de consulta=
-tion, de rectification et de suppression de vos donn=C3=A9es, veuillez cont=
-acter contact.rgpd@sgdsn.gouv.fr. Si vous avez re=C3=A7u ce message par err=
-eur, nous vous remercions d=E2=80=99en informer l=E2=80=99exp=C3=A9diteur e=
-t de d=C3=A9truire le message. The personal data collected and processed du=
-ring this exchange aims solely at completing a business relationship and is=
- limited to the necessary duration of that relationship. If you wish to use=
- your rights of consultation, rectification and deletion of your data, plea=
-se contact: contact.rgpd@sgdsn.gouv.fr. If you have received this message i=
-n error, we thank you for informing the sender and destroying the message.
+-- 
+Kees Cook
