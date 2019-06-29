@@ -1,23 +1,23 @@
-Return-Path: <SRS0=tPfG=U4=lists.openwall.com=kernel-hardening-return-16324-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8tx1=U4=lists.openwall.com=kernel-hardening-return-16325-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6D5FBC4321A
-	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Jun 2019 14:25:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 84880C4321A
+	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Jun 2019 15:38:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C2571214AF
-	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Jun 2019 14:25:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id CCF84208E3
+	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Jun 2019 15:38:04 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="Wmn42cCj"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C2571214AF
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16324-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1619 invoked by uid 550); 29 Jun 2019 14:25:40 -0000
+	dkim=pass (1024-bit key) header.d=amarulasolutions.com header.i=@amarulasolutions.com header.b="lUU651ei"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CCF84208E3
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=amarulasolutions.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16325-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26027 invoked by uid 550); 29 Jun 2019 15:37:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,83 +25,167 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1587 invoked from network); 29 Jun 2019 14:25:39 -0000
+Received: (qmail 9490 invoked from network); 29 Jun 2019 14:30:42 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
+        d=amarulasolutions.com; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to:user-agent;
-        bh=tSfTfCg1RYrQS9+orWf92BVXcSGyjMupz270+2KJ+Us=;
-        b=Wmn42cCjIZF370922nlT8XBZNT0vFC3qdUoivrJz5yLafRIjdx1Vw+bUvno+QUBVO5
-         oMyQcmwqGx4DE3Y07CmSTM0IATWqZAW8kgg+hDEKwh+1CP4NznlAWonwVsCaGpQLaVCV
-         I2vA/VdkUZjqS9WvauRGJBO3Xjdwe01bpXzqQP8wAMh3LJ6yI1E5Z9SfpRw+TuNVA5cx
-         Mol2Xo2HUenKPsAtO6b1Hxjmm06+PdB0ii0cFoQihuSTWnRJjwjpf6NZuH7lsl3/21RK
-         LnPOrpaBytkjll+vsC5zrv5VKacw2e2sTlF82+ldUSC/dM1uFOjAFEnxgQGkqlBXSG7l
-         +TOw==
+        bh=070cp9I/SRMDJELJ0z/c3XEauBwl1ZxN5yPCygGTCPQ=;
+        b=lUU651eipMCT1srkIPR9JOSY5V+6PQStClOz1RjE1XK7KjNH90pZCVnjbVIqaKOuD6
+         HkZMsMa8gZBgOa5PveUDDogQfTC8GlJyozuhO2CSaqdIOsR9kFhTTP3yPedz7vDGEqv+
+         bc9V4JC7pakYx3Erm+VSwwaocqvCd1k4naIdQ=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to:user-agent;
-        bh=tSfTfCg1RYrQS9+orWf92BVXcSGyjMupz270+2KJ+Us=;
-        b=fapfdbivF3il0rWgxsG9Tg5fxo7l/Jtdw2n9SWgCRKjJjHFpay8oBZaVEgPoeIHOYN
-         WNAQFwCBfxWuF/wjHS576jwlFXo0PC8UICGmCPhCM0lvygHapFb9M2t6JPfcb98tM4Do
-         +ssZDudS8b8/XMAqgDpQ9g131BR/0ykR5GbaJHlZ6dPzXgHJT9rI8e4dYGID1KYInl2W
-         nk8A5Rsd3uMypqrcmIg7CTYE/l29bOCqZ0cmA6pJoAw2j08HoQbZDEEsyO7qwwqKpdJ6
-         83SJlUYhno8kxYTw9mutImzPgXC4xemDDrZQ+zpHfmyKPCXK4YGBuXxBEL72bwV8vG9d
-         +BMg==
-X-Gm-Message-State: APjAAAX+eHn5zZk+Gpdst9dg9KZ1w//QdWBbrBPOoXHg0yI8CAwxEPp3
-	3xoCNwmcQzLIPAxz7HnQcA==
-X-Google-Smtp-Source: APXvYqzYjeGlAIXCK0Otnr3tBdPOmwP6gFHgUXBBLaR5nRWD1D7mhQsGKJ7ZXMMjG4yeTA5UDqjZKg==
-X-Received: by 2002:a1c:dc46:: with SMTP id t67mr9957034wmg.159.1561818328264;
-        Sat, 29 Jun 2019 07:25:28 -0700 (PDT)
-Date: Sat, 29 Jun 2019 17:25:10 +0300
-From: Alexey Dobriyan <adobriyan@gmail.com>
-To: Andreas Dilger <adilger@dilger.ca>
-Cc: Andrew Morton <akpm@linux-foundation.org>,
-	Shyam Saini <shyam.saini@amarulasolutions.com>,
-	kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org,
-	keescook@chromium.org, linux-arm-kernel@lists.infradead.org,
-	linux-mips@vger.kernel.org, intel-gvt-dev@lists.freedesktop.org,
-	intel-gfx@lists.freedesktop.org, dri-devel@lists.freedesktop.org,
-	netdev@vger.kernel.org, linux-ext4 <linux-ext4@vger.kernel.org>,
-	devel@lists.orangefs.org, linux-mm@kvack.org,
-	linux-sctp@vger.kernel.org, bpf@vger.kernel.org,
-	kvm@vger.kernel.org, mayhs11saini@gmail.com
-Subject: Re: [PATCH V2] include: linux: Regularise the use of FIELD_SIZEOF
- macro
-Message-ID: <20190629142510.GA10629@avx2>
-References: <20190611193836.2772-1-shyam.saini@amarulasolutions.com>
- <20190611134831.a60c11f4b691d14d04a87e29@linux-foundation.org>
- <6DCAE4F8-3BEC-45F2-A733-F4D15850B7F3@dilger.ca>
+        bh=070cp9I/SRMDJELJ0z/c3XEauBwl1ZxN5yPCygGTCPQ=;
+        b=ExUMSegcD8MqY7DYyHmEdJsAJt07ogq0Nlo/E997b78ggsxWuv3B7V0zoBYNZlCASL
+         ETWNNZ1WyiLKLkzfYS0LXv2CIW5ejmzRz7RTyEOe/190XMjoJnXkoxJHaimsyT/+gchC
+         fiM1joCuFm+mBfMr6uCNozMEgpyRe38NEb2CHWBo8khDN1k7G+aQGnPbW4FTpp1W0nZp
+         FENeGkNpsgCGnMRf49gnPbfmq/izJGfdjhTs7jrFL9ZpY1mGoT8SeToAd56rty2tXjvO
+         RL0Gz5sEwxlBm+w3oC2E44s6srXx7fNx0+2yPRimDyxv11LNtTF+cje0yW7jfb4tqHPh
+         pRJw==
+X-Gm-Message-State: APjAAAVk4W74DIHsGwJFUMgDUm0J66H9mavhxWQFfRLZbZu6cVZ3CjyQ
+	/nZed7YyW3RZxnZWgYibwNFgwQ==
+X-Google-Smtp-Source: APXvYqzKG09KKQ/W+bTS7i9nxQvsfETg7bFosDlNb6r3a88XlayWBx4N9262X8Ss4OhYe2mA5pAzew==
+X-Received: by 2002:adf:c541:: with SMTP id s1mr11705107wrf.44.1561818630753;
+        Sat, 29 Jun 2019 07:30:30 -0700 (PDT)
+Date: Sat, 29 Jun 2019 16:30:24 +0200
+From: Andrea Parri <andrea.parri@amarulasolutions.com>
+To: "Joel Fernandes (Google)" <joel@joelfernandes.org>
+Cc: linux-kernel@vger.kernel.org, jannh@google.com, oleg@redhat.com,
+	mathieu.desnoyers@efficios.com, willy@infradead.org,
+	peterz@infradead.org, will.deacon@arm.com,
+	paulmck@linux.vnet.ibm.com, elena.reshetova@intel.com,
+	keescook@chromium.org, kernel-team@android.com,
+	kernel-hardening@lists.openwall.com,
+	Andrew Morton <akpm@linux-foundation.org>,
+	"Eric W. Biederman" <ebiederm@xmission.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Michal Hocko <mhocko@suse.com>
+Subject: Re: [PATCH RFC v2] Convert struct pid count to refcount_t
+Message-ID: <20190629143024.GA6810@andrea>
+References: <20190624184534.209896-1-joel@joelfernandes.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <6DCAE4F8-3BEC-45F2-A733-F4D15850B7F3@dilger.ca>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+In-Reply-To: <20190624184534.209896-1-joel@joelfernandes.org>
+User-Agent: Mutt/1.5.24 (2015-08-30)
 
-On Tue, Jun 11, 2019 at 03:00:10PM -0600, Andreas Dilger wrote:
-> On Jun 11, 2019, at 2:48 PM, Andrew Morton <akpm@linux-foundation.org> wrote:
-> > 
-> > On Wed, 12 Jun 2019 01:08:36 +0530 Shyam Saini <shyam.saini@amarulasolutions.com> wrote:
-
-> I did a check, and FIELD_SIZEOF() is used about 350x, while sizeof_field()
-> is about 30x, and SIZEOF_FIELD() is only about 5x.
+On Mon, Jun 24, 2019 at 02:45:34PM -0400, Joel Fernandes (Google) wrote:
+> struct pid's count is an atomic_t field used as a refcount. Use
+> refcount_t for it which is basically atomic_t but does additional
+> checking to prevent use-after-free bugs.
 > 
-> That said, I'm much more in favour of "sizeof_field()" or "sizeof_member()"
-> than FIELD_SIZEOF().  Not only does that better match "offsetof()", with
-> which it is closely related, but is also closer to the original "sizeof()".
+> For memory ordering, the only change is with the following:
+>  -	if ((atomic_read(&pid->count) == 1) ||
+>  -	     atomic_dec_and_test(&pid->count)) {
+>  +	if (refcount_dec_and_test(&pid->count)) {
+>  		kmem_cache_free(ns->pid_cachep, pid);
 > 
-> Since this is a rather trivial change, it can be split into a number of
-> patches to get approval/landing via subsystem maintainers, and there is no
-> huge urgency to remove the original macros until the users are gone.  It
-> would make sense to remove SIZEOF_FIELD() and sizeof_field() quickly so
-> they don't gain more users, and the remaining FIELD_SIZEOF() users can be
-> whittled away as the patches come through the maintainer trees.
+> Here the change is from:
+> Fully ordered --> RELEASE + ACQUIRE (as per refcount-vs-atomic.rst)
+> This ACQUIRE should take care of making sure the free happens after the
+> refcount_dec_and_test().
+> 
+> The above hunk also removes atomic_read() since it is not needed for the
+> code to work and it is unclear how beneficial it is. The removal lets
+> refcount_dec_and_test() check for cases where get_pid() happened before
+> the object was freed.
+> 
+> Cc: jannh@google.com
+> Cc: oleg@redhat.com
+> Cc: mathieu.desnoyers@efficios.com
+> Cc: willy@infradead.org
+> Cc: peterz@infradead.org
+> Cc: will.deacon@arm.com
+> Cc: paulmck@linux.vnet.ibm.com
+> Cc: elena.reshetova@intel.com
+> Cc: keescook@chromium.org
+> Cc: kernel-team@android.com
+> Cc: kernel-hardening@lists.openwall.com
+> Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
 
-The signature should be
+As always with these matters, it's quite possible that I'm missing
+something subtle here; said this, ;-)  the patch does look good to
+me: FWIW,
 
-	sizeof_member(T, m)
+Reviewed-by: Andrea Parri <andrea.parri@amarulasolutions.com>
 
-it is proper English,
-it is lowercase, so is easier to type,
-it uses standard term (member, not field),
-it blends in with standard "sizeof" operator,
+Thanks,
+  Andrea
+
+
+> 
+> ---
+> Changed to RFC to get any feedback on the memory ordering.
+> 
+> 
+>  include/linux/pid.h | 5 +++--
+>  kernel/pid.c        | 7 +++----
+>  2 files changed, 6 insertions(+), 6 deletions(-)
+> 
+> diff --git a/include/linux/pid.h b/include/linux/pid.h
+> index 14a9a39da9c7..8cb86d377ff5 100644
+> --- a/include/linux/pid.h
+> +++ b/include/linux/pid.h
+> @@ -3,6 +3,7 @@
+>  #define _LINUX_PID_H
+>  
+>  #include <linux/rculist.h>
+> +#include <linux/refcount.h>
+>  
+>  enum pid_type
+>  {
+> @@ -56,7 +57,7 @@ struct upid {
+>  
+>  struct pid
+>  {
+> -	atomic_t count;
+> +	refcount_t count;
+>  	unsigned int level;
+>  	/* lists of tasks that use this pid */
+>  	struct hlist_head tasks[PIDTYPE_MAX];
+> @@ -69,7 +70,7 @@ extern struct pid init_struct_pid;
+>  static inline struct pid *get_pid(struct pid *pid)
+>  {
+>  	if (pid)
+> -		atomic_inc(&pid->count);
+> +		refcount_inc(&pid->count);
+>  	return pid;
+>  }
+>  
+> diff --git a/kernel/pid.c b/kernel/pid.c
+> index 20881598bdfa..89c4849fab5d 100644
+> --- a/kernel/pid.c
+> +++ b/kernel/pid.c
+> @@ -37,7 +37,7 @@
+>  #include <linux/init_task.h>
+>  #include <linux/syscalls.h>
+>  #include <linux/proc_ns.h>
+> -#include <linux/proc_fs.h>
+> +#include <linux/refcount.h>
+>  #include <linux/sched/task.h>
+>  #include <linux/idr.h>
+>  
+> @@ -106,8 +106,7 @@ void put_pid(struct pid *pid)
+>  		return;
+>  
+>  	ns = pid->numbers[pid->level].ns;
+> -	if ((atomic_read(&pid->count) == 1) ||
+> -	     atomic_dec_and_test(&pid->count)) {
+> +	if (refcount_dec_and_test(&pid->count)) {
+>  		kmem_cache_free(ns->pid_cachep, pid);
+>  		put_pid_ns(ns);
+>  	}
+> @@ -210,7 +209,7 @@ struct pid *alloc_pid(struct pid_namespace *ns)
+>  	}
+>  
+>  	get_pid_ns(ns);
+> -	atomic_set(&pid->count, 1);
+> +	refcount_set(&pid->count, 1);
+>  	for (type = 0; type < PIDTYPE_MAX; ++type)
+>  		INIT_HLIST_HEAD(&pid->tasks[type]);
+>  
+> -- 
+> 2.22.0.410.gd8fdbe21b5-goog
