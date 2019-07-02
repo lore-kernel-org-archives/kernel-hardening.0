@@ -1,23 +1,24 @@
-Return-Path: <SRS0=5CEw=U7=lists.openwall.com=kernel-hardening-return-16337-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pCPw=U7=lists.openwall.com=kernel-hardening-return-16338-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.0 required=3.0 tests=DATE_IN_PAST_03_06,
+X-Spam-Status: No, score=-6.0 required=3.0 tests=DATE_IN_PAST_03_06,
 	DKIMWL_WL_HIGH,DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EF8B8C5B57D
-	for <kernel-hardening@archiver.kernel.org>; Tue,  2 Jul 2019 21:04:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 18B7FC5B57D
+	for <kernel-hardening@archiver.kernel.org>; Tue,  2 Jul 2019 21:04:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4DD51218B6
-	for <kernel-hardening@archiver.kernel.org>; Tue,  2 Jul 2019 21:04:48 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 38AFB218B6
+	for <kernel-hardening@archiver.kernel.org>; Tue,  2 Jul 2019 21:04:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="SJrNkPBd"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4DD51218B6
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="mNIyPmcI"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 38AFB218B6
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16337-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22036 invoked by uid 550); 2 Jul 2019 21:04:25 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16338-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23708 invoked by uid 550); 2 Jul 2019 21:04:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,62 +26,167 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21908 invoked from network); 2 Jul 2019 21:04:23 -0000
+Received: (qmail 23552 invoked from network); 2 Jul 2019 21:04:31 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=SUVDDvVHWZQdqqeYC3Ylmti8VS+Hw8xp8Rwtgp+EZ08=;
-        b=SJrNkPBd+yGmaL7MwJlDAL3hoOg5/PNlXpqH4fiOUCEjDU7XvuOMciXmB8cPoT+n2/
-         HU33Fh6VqqDMT1goa9ATaIP7k1LBzcGA1ct8CbccucMTiIHK2XyZgpK/X09Vu8ILkbWH
-         9dJ2f4Owt/Sb6TPBTgMQ0eM3q07WV42g0a0+o=
+         :content-disposition:in-reply-to;
+        bh=3oRQP6OyMncZqs1P2VDPYtUqP4kfvHXKeERBXGzurro=;
+        b=mNIyPmcIdfUYVXLezp0+aCAemf+uXroBOQ7Cufglx9hU40ZFaUpveEvWqmi8xDnx5A
+         CHBhRgeLck8qjLoQK2k1xNr2ATAPiS2nFkjvhhgn3v8lqYRTmDCHtrvteC51W2zH8lZ9
+         LVx8tHM7hGV7yGgzkj1yX/s+G8rG2Y7W1RZH0=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=SUVDDvVHWZQdqqeYC3Ylmti8VS+Hw8xp8Rwtgp+EZ08=;
-        b=HirNF25+cVAzPfHg6Ik2tcX9B61tFXNsDY7nxwaVzAM7ftBHL2L8jph+2NXr6evng1
-         netr3GJjgLRUqWqUbmAb5ffpNb6IWg6cDCxInYD3gA4WYDlk8V0uQNiMmLNLkM97lZ3A
-         xQQDxBcJUO4VWMYwI7aUwvrgvfB1319KBofPv1JjFVE0x93nzfzrnblM62JyWeJTRzmL
-         e8mI8FVM2vomBoQ9plPinVfVUpYR7bJIzHTGtzIrSOtXKRjfZAA+VqHQUKHovHtmt6LQ
-         sYwggPRxn3qO0d7SS2QxQz505nZyL4JHCQGguT/XwL7GpMtcqaMvzPrQxg2D4AV1suwE
-         J+kg==
-X-Gm-Message-State: APjAAAXMPJChbU08UwT8uR9F8TyCH8hdEs/c7vRt1KlqrFynFUWZvwDA
-	UHOLoG0qGkjDGv4gPq3UTEYvWQ==
-X-Google-Smtp-Source: APXvYqwcJJEeXoRvcEHyUpuRg4L8X6jsMqgQTja/9PFIrJ95fLg+i/GQWS7UMCTozQh4UkRafF7X8Q==
-X-Received: by 2002:a17:90a:384d:: with SMTP id l13mr8060330pjf.86.1562101451990;
-        Tue, 02 Jul 2019 14:04:11 -0700 (PDT)
-Date: Tue, 2 Jul 2019 10:25:04 -0700
+         :mime-version:content-disposition:in-reply-to;
+        bh=3oRQP6OyMncZqs1P2VDPYtUqP4kfvHXKeERBXGzurro=;
+        b=sT1BRTJIlOXOktBH0YEd3t7Czez68WTA6EYWPZj6jVv9jVYoveDOxECMY4U9qeAehe
+         FTfUUMCl04Bj7EOUjnZ5zqusTbXwKy8fbIbmvCD2nSGlEKK8ZDfLwnLEBXVqv6oIFuje
+         ETIPk9NtIO2zPtqKsypYccL0nUERKRp5B5z7XEDB9gjwvtH/PgZlZVt/h/feZLpPzu44
+         sm+avsSAUogb3jDaaw8l1ilwy+MoTHQtD9IRRo4/jLWSAtLjzq0d0gLC1J32j4JBlUmN
+         bNz0Yvke+EWnXEIu7+Vy1KioYuH4zo/bCOa3juVdJbxlg8zuXfe2zT6P2hQS5F9VZwKY
+         UdoQ==
+X-Gm-Message-State: APjAAAXgRObHgnIkbrRV3IiCN/l4dYIluuDx/wdoJ/c0czrcEOC7YXAI
+	JcOktcQBHKB6LgQ0tjkx2aSDzg==
+X-Google-Smtp-Source: APXvYqw6TMrYI/EiBfGv58xQZ/jM2louHdBlwjxy3r/WX6tidkdzXiq+sLNP3aejulYCRpK2ZFhEGQ==
+X-Received: by 2002:a17:90a:384d:: with SMTP id l13mr8061002pjf.86.1562101459754;
+        Tue, 02 Jul 2019 14:04:19 -0700 (PDT)
+Date: Tue, 2 Jul 2019 10:31:33 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Stephen Kitt <steve@sk2.org>
-Cc: Nitin Gote <nitin.r.gote@intel.com>, jannh@google.com,
-	kernel-hardening@lists.openwall.com
+To: "Gote, Nitin R" <nitin.r.gote@intel.com>
+Cc: "jannh@google.com" <jannh@google.com>,
+	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 Subject: Re: [PATCH] checkpatch: Added warnings in favor of strscpy().
-Message-ID: <201907021024.D1C8E7B2D@keescook>
+Message-ID: <201907021025.C798E540@keescook>
 References: <1561722948-28289-1-git-send-email-nitin.r.gote@intel.com>
- <20190629181537.7d524f7d@sk2.org>
+ <201906280739.9CD1E4B@keescook>
+ <12356C813DFF6F479B608F81178A561586C2AC@BGSMSX101.gar.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20190629181537.7d524f7d@sk2.org>
+In-Reply-To: <12356C813DFF6F479B608F81178A561586C2AC@BGSMSX101.gar.corp.intel.com>
 
-On Sat, Jun 29, 2019 at 06:15:37PM +0200, Stephen Kitt wrote:
-> On Fri, 28 Jun 2019 17:25:48 +0530, Nitin Gote <nitin.r.gote@intel.com> wrote:
+On Mon, Jul 01, 2019 at 08:42:39AM +0000, Gote, Nitin R wrote:
+> Hi Kees,
+> 
+> As per my understanding, I have updated strncpy() section in Documentation/process/deprecated.rst for strscpy_pad() case. Other two cases of strncpy() are already explained. 
+> 
+> Also updated checkpatch for __nonstring case.
+> 
+> Could you please give your inputs on below diff changes ? If this looks good, I will send the patch.
+> 
+> Diff changes :
+> 
+> diff --git a/Documentation/process/deprecated.rst b/Documentation/process/deprecated.rst
+> index 49e0f64..6ab05ac 100644
+> --- a/Documentation/process/deprecated.rst
+> +++ b/Documentation/process/deprecated.rst
+> @@ -102,6 +102,9 @@ still be used, but destinations should be marked with the `__nonstring
+>  <https://gcc.gnu.org/onlinedocs/gcc/Common-Variable-Attributes.html>`_
+>  attribute to avoid future compiler warnings.
+> 
+> +If a caller is using NUL-terminated strings, and destination needing
+> +trailing NUL, then the safe replace is :c:func:`strscpy_pad()`.
+
+I'd move this above the __nonstring discussion and remove the memset
+mention. How about doing this?
+
+diff --git a/Documentation/process/deprecated.rst b/Documentation/process/deprecated.rst
+index 49e0f64a3427..f564de3caf76 100644
+--- a/Documentation/process/deprecated.rst
++++ b/Documentation/process/deprecated.rst
+@@ -93,9 +93,9 @@ will be NUL terminated. This can lead to various linear read overflows
+ and other misbehavior due to the missing termination. It also NUL-pads the
+ destination buffer if the source contents are shorter than the destination
+ buffer size, which may be a needless performance penalty for callers using
+-only NUL-terminated strings. The safe replacement is :c:func:`strscpy`.
+-(Users of :c:func:`strscpy` still needing NUL-padding will need an
+-explicit :c:func:`memset` added.)
++only NUL-terminated strings. In this case, the safe replacement is
++:c:func:`strscpy`. If, however, the destination buffer still needs
++NUL-padding, the safe replacement is :c:func:`strscpy_pad`.
+ 
+ If a caller is using non-NUL-terminated strings, :c:func:`strncpy()` can
+ still be used, but destinations should be marked with the `__nonstring
+
+> +
+>  strlcpy()
+>  ---------
+>  :c:func:`strlcpy` reads the entire source buffer first, possibly exceeding
+> diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
+> index 342c7c7..d3c0587 100755
+> --- a/scripts/checkpatch.pl
+> +++ b/scripts/checkpatch.pl
+> @@ -595,6 +595,10 @@ our %deprecated_apis = (
+>         "rcu_barrier_sched"                     => "rcu_barrier",
+>         "get_state_synchronize_sched"           => "get_state_synchronize_rcu",
+>         "cond_synchronize_sched"                => "cond_synchronize_rcu",
+> +       "strcpy"                                => "strscpy",
+> +       "strlcpy"                               => "strscpy",
+> +       "strncpy"                               => "strscpy, strscpy_pad Or for non-NUL-terminated strings,
+> +        strncpy() can still be used, but destinations should be marked with the __nonstring",
+
+I found the "Or" strange here; I think just "or" is fine.
+
+-Kees
+
+>  );
+> 
+> Thanks and Regards,
+> Nitin Gote
+> 
+> -----Original Message-----
+> From: Kees Cook [mailto:keescook@chromium.org] 
+> Sent: Friday, June 28, 2019 8:16 PM
+> To: Gote, Nitin R <nitin.r.gote@intel.com>
+> Cc: jannh@google.com; kernel-hardening@lists.openwall.com
+> Subject: Re: [PATCH] checkpatch: Added warnings in favor of strscpy().
+> 
+> On Fri, Jun 28, 2019 at 05:25:48PM +0530, Nitin Gote wrote:
+> > Added warnings in checkpatch.pl script to :
+> > 
 > > 1. Deprecate strcpy() in favor of strscpy().
+> > 2. Deprecate strlcpy() in favor of strscpy().
+> > 3. Deprecate strncpy() in favor of strscpy() or strscpy_pad().
+> > 
+> > Signed-off-by: Nitin Gote <nitin.r.gote@intel.com>
 > 
-> This isn’t a comment “against” this patch, but something I’ve been wondering
-> recently and which raises a question about how to handle strcpy’s deprecation
-> in particular. There is still one scenario where strcpy is useful: when GCC
-> replaces it with its builtin, inline version...
+> Excellent, yes. Can you also add a bit to the strncpy() section in Documentation/process/deprecated.rst so that all three cases of strncpy() are explained:
 > 
-> Would it be worth introducing a macro for strcpy-from-constant-string, which
-> would check that GCC’s builtin is being used (when building with GCC), and
-> fall back to strscpy otherwise?
-
-How would you suggest it operate? A separate API, or something like the
-existing overloaded strcpy() macros in string.h?
+> - strncpy() into NUL-terminated target should use strscpy()
+> - strncpy() into NUL-terminated target needing trailing NUL: strscpy_pad()
+> - strncpy() into non-NUL-terminated target should have target marked
+>   with __nonstring.
+> 
+> (and probably mention the __nonstring case in checkpatch too)
+> 
+> -Kees
+> 
+> > ---
+> >  scripts/checkpatch.pl | 3 +++
+> >  1 file changed, 3 insertions(+)
+> > 
+> > diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl index 
+> > 342c7c7..bb0fa11 100755
+> > --- a/scripts/checkpatch.pl
+> > +++ b/scripts/checkpatch.pl
+> > @@ -595,6 +595,9 @@ our %deprecated_apis = (
+> >  	"rcu_barrier_sched"			=> "rcu_barrier",
+> >  	"get_state_synchronize_sched"		=> "get_state_synchronize_rcu",
+> >  	"cond_synchronize_sched"		=> "cond_synchronize_rcu",
+> > +	"strcpy"				=> "strscpy",
+> > +	"strlcpy"				=> "strscpy",
+> > +	"strncpy"				=> "strscpy or strscpy_pad",
+> >  );
+> > 
+> >  #Create a search pattern for all these strings to speed up a loop 
+> > below
+> > --
+> > 2.7.4
+> > 
+> 
+> --
+> Kees Cook
 
 -- 
 Kees Cook
