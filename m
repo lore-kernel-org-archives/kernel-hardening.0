@@ -1,20 +1,20 @@
-Return-Path: <SRS0=dtA3=VD=lists.openwall.com=kernel-hardening-return-16373-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=i4cM=VD=lists.openwall.com=kernel-hardening-return-16374-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.4 required=3.0 tests=GAPPY_SUBJECT,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-1.0 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 40B26C0650E
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 19:29:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 803D3C0650E
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 20:53:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9B4E620838
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 19:29:18 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B4E620838
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=zeniv.linux.org.uk
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16373-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 10190 invoked by uid 550); 6 Jul 2019 19:29:11 -0000
+	by mail.kernel.org (Postfix) with SMTP id C67BA20838
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 20:53:09 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C67BA20838
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16374-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7496 invoked by uid 550); 6 Jul 2019 20:53:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,67 +22,92 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 10129 invoked from network); 6 Jul 2019 19:29:10 -0000
-Date: Sat, 6 Jul 2019 20:28:53 +0100
-From: Al Viro <viro@zeniv.linux.org.uk>
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
-	linux-mm@kvack.org, linux-security-module@vger.kernel.org,
-	Brad Spengler <spender@grsecurity.net>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christoph Hellwig <hch@infradead.org>,
-	James Morris <james.l.morris@oracle.com>,
-	Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>,
-	PaX Team <pageexec@freemail.hu>,
-	"Serge E. Hallyn" <serge@hallyn.com>,
-	Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH v5 06/12] S.A.R.A.: WX protection
-Message-ID: <20190706192852.GO17978@ZenIV.linux.org.uk>
-References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
- <1562410493-8661-7-git-send-email-s.mesoraca16@gmail.com>
+Received: (qmail 7456 invoked from network); 6 Jul 2019 20:53:01 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.63,460,1557212400"; 
+   d="scan'208";a="169917110"
+From: "Gote, Nitin R" <nitin.r.gote@intel.com>
+To: Kees Cook <keescook@chromium.org>, Vegard Nossum <vegard.nossum@gmail.com>
+CC: "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>
+Subject: RE: Regarding have kfree() (and related) set the pointer to NULL too
+Thread-Topic: Regarding have kfree() (and related) set the pointer to NULL
+ too
+Thread-Index: AQHVLN3/1onQPuLQW0enNiTmJ7gvZKavUt8AgA67ihA=
+Date: Sat, 6 Jul 2019 20:52:44 +0000
+Message-ID: <12356C813DFF6F479B608F81178A5615875DA9@BGSMSX101.gar.corp.intel.com>
+References: <12356C813DFF6F479B608F81178A561586BDFE@BGSMSX101.gar.corp.intel.com>
+ <CAOMGZ=FfWUf=2wMKXJVOsfr5b394ERUbhQehEFOtMx8zh26M4w@mail.gmail.com>
+ <201906270908.28E5E1FDC3@keescook>
+In-Reply-To: <201906270908.28E5E1FDC3@keescook>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+dlp-product: dlpe-windows
+dlp-version: 11.0.600.7
+dlp-reaction: no-action
+x-ctpclassification: CTP_NT
+x-titus-metadata-40: eyJDYXRlZ29yeUxhYmVscyI6IiIsIk1ldGFkYXRhIjp7Im5zIjoiaHR0cDpcL1wvd3d3LnRpdHVzLmNvbVwvbnNcL0ludGVsMyIsImlkIjoiOTI5NWJjNTctMzFkZC00ODkxLTg4NDYtMjg3ZjY2YTVmYmEzIiwicHJvcHMiOlt7Im4iOiJDVFBDbGFzc2lmaWNhdGlvbiIsInZhbHMiOlt7InZhbHVlIjoiQ1RQX05UIn1dfV19LCJTdWJqZWN0TGFiZWxzIjpbXSwiVE1DVmVyc2lvbiI6IjE3LjEwLjE4MDQuNDkiLCJUcnVzdGVkTGFiZWxIYXNoIjoiK1hWXC9DZUxSMlo4Rzhhc3kwRFNBMllDTW5TNXFvZFVESXY3ZHVRdjlcLzBQcjZ0MUI4QktEeUJsbWlYMTNVcElZIn0=
+x-originating-ip: [10.223.10.10]
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1562410493-8661-7-git-send-email-s.mesoraca16@gmail.com>
-User-Agent: Mutt/1.11.3 (2019-02-01)
-Sender: Al Viro <viro@ftp.linux.org.uk>
 
-On Sat, Jul 06, 2019 at 12:54:47PM +0200, Salvatore Mesoraca wrote:
-
-> +#define sara_warn_or_return(err, msg) do {		\
-> +	if ((sara_wxp_flags & SARA_WXP_VERBOSE))	\
-> +		pr_wxp(msg);				\
-> +	if (!(sara_wxp_flags & SARA_WXP_COMPLAIN))	\
-> +		return -err;				\
-> +} while (0)
-> +
-> +#define sara_warn_or_goto(label, msg) do {		\
-> +	if ((sara_wxp_flags & SARA_WXP_VERBOSE))	\
-> +		pr_wxp(msg);				\
-> +	if (!(sara_wxp_flags & SARA_WXP_COMPLAIN))	\
-> +		goto label;				\
-> +} while (0)
-
-No.  This kind of "style" has no place in the kernel.
-
-Don't hide control flow.  It's nasty enough to reviewers,
-but it's pure hell on anyone who strays into your code while
-chasing a bug or doing general code audit.  In effect, you
-are creating your oh-so-private C dialect and assuming that
-everyone who ever looks at your code will start with learning
-that *AND* incorporating it into their mental C parser.
-I'm sorry, but you are not that important.
-
-If it looks like a function call, a casual reader will assume
-that this is exactly what it is.  And when one is scanning
-through a function (e.g. to tell if handling of some kind
-of refcounts is correct, with twentieth grep through the
-tree having brought something in your code into the view),
-the last thing one wants is to switch between the area-specific
-C dialects.  Simply because looking at yours is sandwiched
-between digging through some crap in drivers/target/ and that
-weird thing in kernel/tracing/, hopefully staying limited
-to 20 seconds of glancing through several functions in your
-code.
-
-Don't Do That.  Really.
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBLZWVzIENvb2sgW21haWx0bzpr
+ZWVzY29va0BjaHJvbWl1bS5vcmddDQo+IFNlbnQ6IFRodXJzZGF5LCBKdW5lIDI3LCAyMDE5IDk6
+NTIgUE0NCj4gVG86IFZlZ2FyZCBOb3NzdW0gPHZlZ2FyZC5ub3NzdW1AZ21haWwuY29tPg0KPiBD
+YzogR290ZSwgTml0aW4gUiA8bml0aW4uci5nb3RlQGludGVsLmNvbT47IGtlcm5lbC0NCj4gaGFy
+ZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbQ0KPiBTdWJqZWN0OiBSZTogUmVnYXJkaW5nIGhhdmUg
+a2ZyZWUoKSAoYW5kIHJlbGF0ZWQpIHNldCB0aGUgcG9pbnRlciB0byBOVUxMIHRvbw0KPiANCj4g
+T24gVGh1LCBKdW4gMjcsIDIwMTkgYXQgMDE6NDU6MDZQTSArMDIwMCwgVmVnYXJkIE5vc3N1bSB3
+cm90ZToNCj4gPiBPbiBUaHUsIDI3IEp1biAyMDE5IGF0IDEyOjIzLCBHb3RlLCBOaXRpbiBSIDxu
+aXRpbi5yLmdvdGVAaW50ZWwuY29tPiB3cm90ZToNCj4gPiA+IEhpLA0KPiA+ID4NCj4gPiA+IEni
+gJltIGxvb2tpbmcgIGludG8g4oCcaGF2ZSBrZnJlZSgpIChhbmQgcmVsYXRlZCkgc2V0IHRoZSBw
+b2ludGVyIHRvIE5VTEwgdG9v4oCdDQo+IHRhc2suDQo+ID4gPg0KPiA+ID4gQXMgcGVyIG15IHVu
+ZGVyc3RhbmRpbmcsIEkgZGlkIGJlbG93IGNoYW5nZXMgOg0KPiA+ID4NCj4gPiA+IENvdWxkIHlv
+dSBwbGVhc2UgcHJvdmlkZSBzb21lIHBvaW50cyBvbiBiZWxvdyB3YXlzID8NCj4gPiA+IEBAIC0z
+NzU0LDYgKzM3NTQsNyBAQCB2b2lkIGtmcmVlKGNvbnN0IHZvaWQgKm9ianApDQo+ID4gPiAgICAg
+ICAgIGRlYnVnX2NoZWNrX25vX29ial9mcmVlZChvYmpwLCBjLT5vYmplY3Rfc2l6ZSk7DQo+ID4g
+PiAgICAgICAgIF9fY2FjaGVfZnJlZShjLCAodm9pZCAqKW9ianAsIF9SRVRfSVBfKTsNCj4gPiA+
+ICAgICAgICAgbG9jYWxfaXJxX3Jlc3RvcmUoZmxhZ3MpOw0KPiA+ID4gKyAgICAgICBvYmpwID0g
+TlVMTDsNCj4gPiA+DQo+ID4gPiB9DQo+ID4NCj4gPiBUaGlzIHdpbGwgbm90IGRvIGFueXRoaW5n
+LCBzaW5jZSB0aGUgYXNzaWdubWVudCBoYXBwZW5zIHRvIHRoZSBsb2NhbA0KPiA+IHZhcmlhYmxl
+IGluc2lkZSBrZnJlZSgpIHJhdGhlciB0aGFuIHRvIHRoZSBvcmlnaW5hbCBleHByZXNzaW9uIHRo
+YXQNCj4gPiB3YXMgcGFzc2VkIHRvIGl0IGFzIGFuIGFyZ3VtZW50Lg0KPiA+DQo+ID4gQ29uc2lk
+ZXIgdGhhdCB0aGUgY29kZSBpbiB0aGUgY2FsbGVyIGxvb2tzIGxpa2UgdGhpczoNCj4gPg0KPiA+
+IHZvaWQgKnggPSBrbWFsbG9jKC4uLik7DQo+ID4ga2ZyZWUoeCk7DQo+ID4gcHJfaW5mbygieCA9
+ICVwXG4iLCB4KTsNCj4gPg0KPiA+IHRoaXMgd2lsbCBzdGlsbCBwcmludCAieCA9IChzb21lIG5v
+bi1OVUxMIGFkZHJlc3MpIiBiZWNhdXNlIHRoZQ0KPiA+IHZhcmlhYmxlICd4JyBpbiB0aGUgY2Fs
+bGVyIHN0aWxsIHJldGFpbnMgaXRzIG9yaWdpbmFsIHZhbHVlLg0KPiA+DQo+ID4gWW91IGNvdWxk
+IHRyeSB3cmFwcGluZyBrZnJlZSgpIGluIGEgQyBtYWNybywgc29tZXRoaW5nIGxpa2UNCj4gPg0K
+PiA+ICNkZWZpbmUga2ZyZWUoeCkgcmVhbF9rZnJlZSh4KTsgKHgpID0gTlVMTDsNCj4gDQo+IFJp
+Z2h0LCB0aG91Z2ggd2Ugd2FudCB0byBhdm9pZCBzaWxlbnQgZG91YmxlLWV2YWx1YXRpb24sIHNv
+IHdlIGhhdmUgdG8gZG8NCj4gc29tZSBtYWNybyB0cmlja3MuIEkgc3VzcGVjdCB0aGUgc3RhcnRp
+bmcgcG9pbnQgaXMgc29tZXRoaW5nIGxpa2U6DQo+IA0KPiAjZGVmaW5lIGtmcmVlKHgpCQkJXA0K
+PiAJZG8gewkJCQlcDQo+IAkJdHlwZW9mKHgpICpwdHIgPSAmKHgpOwlcDQo+IAkJcmVhbF9rZnJl
+ZSgqcHRyKTsJXA0KPiAJCSpwdHIgPSBOVUxMOwkJXA0KPiAJfSB3aGlsZSAoMCkNCj4gDQo+IEhv
+d2V2ZXIsIHRoZXJlIGFyZSBhIG5vbi16ZXJvIG51bWJlciBvZiBwbGFjZXMgaW4gdGhlIGtlcm5l
+bCB3aGVyZSBrZnJlZSgpDQo+IGlzIHVzZWQgb24gdGhpbmdzIHRoYXQgYXJlIG5vdCBzaW1wbGUg
+bWVtb3J5IHJlZmVyZW5jZXMsIGxpa2UgZnVuY3Rpb24gcmV0dXJuDQo+IHZhbHVlcywgb3IgY29w
+aWVzIG9mIHRoZSBhY3R1YWwgcmVmZXJlbmNlOg0KPiANCj4gCWtmcmVlKGdldF9teV9hbGxvY2F0
+aW9uKGZvbykpOw0KPiANCj4gb3INCj4gDQo+IAlwcmV2aW91cyA9IHNvbWV0aGluZy0+YWxsb2Nh
+dGlvbjsNCj4gCS4uLg0KPiAJa2ZyZWUocHJldm91cykNCj4gDQo+IFNvIHRoZSBsYXJnZXIgd29y
+ayBpcyBmaWd1cmluZyBvdXQgaG93IHRvIGdyYWNlZnVsbHkgZGVhbCB3aXRoIHRob3NlIHVzaW5n
+IGENCj4gcmVhc29uYWJsZSBBUEksIG9yIHRocm91Z2ggcmVmYWN0b3JpbmcuDQo+IA0KPiBIb3dl
+dmVyLCBiZWZvcmUgZ2V0dGluZyB0b28gZmFyLCBpdCdzIHdvcnRoIGdvaW5nIHRob3VnaCBwYXN0
+IHVzZS1hZnRlci1mcmVlDQo+IHZ1bG5lcmFiaWxpdGllcyB0byBmaWd1cmUgb3V0IGhvdyBtYW55
+IHdvdWxkIGhhdmUgYmVlbiByZW5kZXJlZCBoYXJtbGVzcw0KPiAoTlVMTCBkZXJlZiBpbnN0ZWFk
+IG9mIFVhRikgd2l0aCB0aGlzIGNoYW5nZS4gSGFzIHRoaXMgYmVlbiBzdHVkaWVkIGJlZm9yZSwN
+Cj4gZXRjLiBXaXRoIHRoaXMgaW5mb3JtYXRpb24gaXQncyBlYXNpZXIgdG8gZGVjaWRlIGlmIHRo
+ZSBiZW5lZml0IG9mIHRoaXMgcmVmYWN0b3JpbmcNCj4gaXMgd29ydGggdGhlIHdvcmsgdG8gZG8g
+aXQuDQo+IA0KDQpBcyBwZXIgbXkgdW5kZXJzdGFuZGluZyBmcm9tIGFib3ZlIGNvbW1lbnQgaXMg
+dGhhdCwgDQpGaXJzdCBuZWVkIHRvIGNoZWNrIGJlbG93IGNoYW5nZXMgYXJlIGhhcm1sZXNzIG9y
+IG5vdCB1c2luZyB0b29sIGxpa2UgS0FTQU4gKEtBU0FOIHJlcG9ydCkuDQoNCj4gI2RlZmluZSBr
+ZnJlZSh4KQkJCVwNCj4gCWRvIHsJCQkJXA0KPiAJCXR5cGVvZih4KSAqcHRyID0gJih4KTsJXA0K
+PiAJCXJlYWxfa2ZyZWUoKnB0cik7CVwNCj4gCQkqcHRyID0gTlVMTDsJCVwNCj4gCX0gd2hpbGUg
+KDApDQoNCklmIEkgbWlzdW5kZXJzdG9vZCB0aGlzLCBDb3VsZCB5b3UgcGxlYXNlIGVsYWJvcmF0
+ZSB0aGlzPyBBcyBJJ20gbm90IGFibGUgdG8gY29uY2x1ZGUgb24gdGhpcyBjb21wbGV0ZWx5Lg0K
+DQotLQ0KTml0aW4gR290ZS4NCg0KDQo=
