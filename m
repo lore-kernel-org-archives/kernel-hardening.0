@@ -1,24 +1,24 @@
-Return-Path: <SRS0=zO3Q=VD=lists.openwall.com=kernel-hardening-return-16361-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=b3ZL=VD=lists.openwall.com=kernel-hardening-return-16360-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+X-Spam-Status: No, score=-10.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,GAPPY_SUBJECT,
 	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,UNWANTED_LANGUAGE_BODY,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2A7AFC0650E
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:14 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6E403C0650E
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4D08A214AF
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:13 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 66625214AF
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:24 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="thNRn6TJ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4D08A214AF
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ZLNuz0c2"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 66625214AF
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16361-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25943 invoked by uid 550); 6 Jul 2019 10:55:38 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16360-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25886 invoked by uid 550); 6 Jul 2019 10:55:37 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,33 +26,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25793 invoked from network); 6 Jul 2019 10:55:35 -0000
+Received: (qmail 25734 invoked from network); 6 Jul 2019 10:55:34 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=u2RjwdUFNE3OIK/3bCmlFikIsAzp11hkr0vwILrcAOk=;
-        b=thNRn6TJGPSAjqCTr1tPi/WxernvhpJlmpA3TOqpdYJiE30WEHmKtQQLBhQkPRLOPw
-         6LdBMJiwQeRDj45LsQ+CyPeBPtz6Sm/DVPA/1jFuQwsFGykkDeEEAkecFk+eI93fAHD1
-         qYlH4joBKaM50/AAsI6LhYNjkSKoWjJohjBdSbGLIHp32dQu3tN7YZr1eYxcsB+bqXUy
-         bX3ZLkExfr5FGb8+TAw/oOIVBNNg7ayqAkWV/3r6PYpzR3qHiM4xg4ORrndOJWzJXK+K
-         OUQHzEOkfBbfQCpO4tDaUbNknqB74EkTe516YzXQIsCHfecezahJQP/7fVtAx2XeBD7c
-         +9Fw==
+        bh=yTf2cEJ/R1sIWwnnsJBizfOJ+ZTQkKILtxUL3GoVlWE=;
+        b=ZLNuz0c29GG+6CNJGcOAjeOlpRMP9h7O99Pi/gakDKFGU3lhhHikq8a99CInc2k/XO
+         x6Aq3KQ16oEDc3jolc38IPHfVlXaurELUSiUDHn05p6lfOFDkkvsNRWEIR/u9OIqM0Iv
+         HtbBQ2B/Kq1vvvG4gn4LbVxWfdc/sXmvb7bh25PrgcUiOFGqI5qzgRkWR5JJ3qB8it29
+         nt6KXK7N3DC9FtosDIw8Yw2FSs9KbQjD6zMPBftq1aXOG2YvtlhuzxNjQd3NYN3DSsHP
+         AO1doaXc1DmHasyn5SSmlIyHvB5/T78+l9uWIWn6bgSiY0WNtJcA4pqYF4yEJgMx128n
+         jwQQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references;
-        bh=u2RjwdUFNE3OIK/3bCmlFikIsAzp11hkr0vwILrcAOk=;
-        b=NBCmreKdSJlP0+NkFyb97+cwPliVndUDs8/Ma1uPIbgu7FeZ2ChY7195MLv7cnNaf2
-         d0NObFzhcxEseH6MUMmxCJ26Y+PJnftwlXFMQQlnSZYPCsmmm4DZNU4PD+Gi1WgKoBQ/
-         TKyDC6XUoBlnPlH2Za7GUbWGdeEr7CBw4kD6kOKHb3nT+1fZCrl05qqCZg4sg4TzJ2hU
-         cheCCnUbWogX8rWpkZKKpIuRsFoeOyppNwiDhBd6+o2xsArgFvFMSPMyOgFcxsk2394l
-         r1oclPUL0+sBLY6D3Jk0OHGjqGB2b7z7CEzrcW0v+afeSL94E1nnYMwdhajys2rTH7ly
-         xaZg==
-X-Gm-Message-State: APjAAAUEs9irQZby7Auw+vbdIMkhnPJgdic7PSL7HcGki2FGb4s/kp65
-	wldGtVJ9ZIkRvyREbVgl2IQ=
-X-Google-Smtp-Source: APXvYqxxhkCkToEoUM8bgIOUXQl0J7gFqXqis0ZuQI5jP94wYx8vI8XERZcndoRkmUp3pDS0ZQ935g==
-X-Received: by 2002:a1c:5f87:: with SMTP id t129mr8243038wmb.150.1562410524445;
-        Sat, 06 Jul 2019 03:55:24 -0700 (PDT)
+        bh=yTf2cEJ/R1sIWwnnsJBizfOJ+ZTQkKILtxUL3GoVlWE=;
+        b=GteYvN13HQ6OTvScuT3hdlx2IYMZsDmhl6G2LaePenLPhHOS1IMWr8lwCNSqsjmpPe
+         LvCTs5ykub47Av7ksivjpo4uMWtExkZQqnI0X0diW1i9NAOxohh3SleFxgiYPtrN7Lx/
+         TUglck5/fRpQExH1WPctNQz/5iAN+RYiUBvbTX3RRZRXVcvV87a6/PM09B4iXDZ7d0yl
+         aJAE51UMbJkaBw9zIocCXfK9x5+ed+rSl3m/1uXmnRJu+rUlBSslmR7KoWOY76ypbpSy
+         I4AuXFjNjENbMosInApvAI2MIKqD4BaGwun4q1fqccbREqiDQcN1RwII4PFSn47GrX5l
+         esGQ==
+X-Gm-Message-State: APjAAAWbmq0PBqk4aesu77BXx6VFClG2VXrHQoIjasDhSvCLcsksxkQw
+	EnERpoC+/a+EId0o9m+KonM=
+X-Google-Smtp-Source: APXvYqy4CMl5RxszjxSvrEAMWtejw7CVXkEcAJC69QuAF9VdqwZsgSkOM4PQR4vCXHHgIdQEtRBcQw==
+X-Received: by 2002:adf:e483:: with SMTP id i3mr7749477wrm.210.1562410523298;
+        Sat, 06 Jul 2019 03:55:23 -0700 (PDT)
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com,
@@ -69,170 +69,298 @@ Cc: kernel-hardening@lists.openwall.com,
 	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
 	"Serge E. Hallyn" <serge@hallyn.com>,
 	Thomas Gleixner <tglx@linutronix.de>
-Subject: [PATCH v5 11/12] S.A.R.A.: /proc/*/mem write limitation
-Date: Sat,  6 Jul 2019 12:54:52 +0200
-Message-Id: <1562410493-8661-12-git-send-email-s.mesoraca16@gmail.com>
+Subject: [PATCH v5 10/12] S.A.R.A.: XATTRs support
+Date: Sat,  6 Jul 2019 12:54:51 +0200
+Message-Id: <1562410493-8661-11-git-send-email-s.mesoraca16@gmail.com>
 X-Mailer: git-send-email 1.9.1
 In-Reply-To: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 
-Prevent a task from opening, in "write" mode, any /proc/*/mem
-file that operates on the task's mm.
-A process could use it to overwrite read-only memory, bypassing
-S.A.R.A. restrictions.
+Adds support for extended filesystem attributes in security and user
+namespaces. They can be used to override flags set via the centralized
+configuration, even when S.A.R.A. configuration is locked or saractl
+is not used at all.
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- security/sara/include/sara_data.h | 18 ++++++++++++++++-
- security/sara/sara_data.c         |  8 ++++++++
- security/sara/wxprot.c            | 41 +++++++++++++++++++++++++++++++++++++++
- 3 files changed, 66 insertions(+), 1 deletion(-)
+ Documentation/admin-guide/LSM/SARA.rst          | 20 +++++
+ Documentation/admin-guide/kernel-parameters.txt | 16 ++++
+ include/uapi/linux/xattr.h                      |  4 +
+ security/sara/Kconfig                           | 22 ++++++
+ security/sara/wxprot.c                          | 99 +++++++++++++++++++++++++
+ 5 files changed, 161 insertions(+)
 
-diff --git a/security/sara/include/sara_data.h b/security/sara/include/sara_data.h
-index 9216c47..ee95f74 100644
---- a/security/sara/include/sara_data.h
-+++ b/security/sara/include/sara_data.h
-@@ -15,6 +15,7 @@
- #define __SARA_DATA_H
+diff --git a/Documentation/admin-guide/LSM/SARA.rst b/Documentation/admin-guide/LSM/SARA.rst
+index fdde04c..47d9364 100644
+--- a/Documentation/admin-guide/LSM/SARA.rst
++++ b/Documentation/admin-guide/LSM/SARA.rst
+@@ -55,6 +55,8 @@ WX Protection. In particular:
+ To extend the scope of the above features, despite the issues that they may
+ cause, they are complemented by **/proc/PID/attr/sara/wxprot** interface
+ and **trampoline emulation**.
++It's also possible to override the centralized configuration via `Extended
++filesystem attributes`_.
  
- #include <linux/cred.h>
-+#include <linux/fs.h>
- #include <linux/init.h>
- #include <linux/lsm_hooks.h>
- #include <linux/spinlock.h>
-@@ -40,6 +41,10 @@ struct sara_shm_data {
- 	spinlock_t	lock;
- };
+ At the moment, WX Protection (unless specified otherwise) should work on
+ any architecture supporting the NX bit, including, but not limited to:
+@@ -123,6 +125,24 @@ in your project or copy/paste parts of it.
+ To make things simpler `libsara` is the only part of S.A.R.A. released under
+ *CC0 - No Rights Reserved* license.
  
-+struct sara_inode_data {
-+	struct task_struct *task;
-+};
++Extended filesystem attributes
++^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++When this functionality is enabled, it's possible to override
++WX Protection flags set in the main configuration via extended attributes,
++even when S.A.R.A.'s configuration is in "locked" mode.
++If the user namespace is also enabled, its attributes will override settings
++configured via the security namespace.
++The xattrs currently in use are:
 +
- 
- static inline struct sara_data *get_sara_data(const struct cred *cred)
- {
-@@ -79,6 +84,17 @@ static inline struct sara_shm_data *get_sara_shm_data(
- #define lock_sara_shm(X) (spin_lock(&get_sara_shm_data((X))->lock))
- #define unlock_sara_shm(X) (spin_unlock(&get_sara_shm_data((X))->lock))
- 
--#endif
++- security.sara.wxprot
++- user.sara.wxprot
 +
-+static inline struct sara_inode_data *get_sara_inode_data(
-+						const struct inode *inode)
-+{
-+	if (unlikely(!inode->i_security))
-+		return NULL;
-+	return inode->i_security + sara_blob_sizes.lbs_inode;
-+}
++They can be manually set to the desired value as a decimal, hexadecimal or
++octal number. When this functionality is enabled, S.A.R.A. can be easily used
++without the help of its userspace tools. Though the preferred way to change
++these attributes is `sara-xattr` which is part of `saractl` [2]_.
 +
-+#define get_sara_inode_task(X) (get_sara_inode_data((X))->task)
 +
-+#endif /* CONFIG_SECURITY_SARA_WXPROT */
+ Trampoline emulation
+ ^^^^^^^^^^^^^^^^^^^^
+ Some programs need to generate part of their code at runtime. Luckily enough,
+diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+index 3d6e86d..af40f1b 100644
+--- a/Documentation/admin-guide/kernel-parameters.txt
++++ b/Documentation/admin-guide/kernel-parameters.txt
+@@ -4254,6 +4254,22 @@
+ 			See S.A.R.A. documentation.
+ 			Default value is set via kernel config option.
  
- #endif /* __SARA_H */
-diff --git a/security/sara/sara_data.c b/security/sara/sara_data.c
-index 9afca37..e875cf0 100644
---- a/security/sara/sara_data.c
-+++ b/security/sara/sara_data.c
-@@ -17,6 +17,7 @@
- #include <linux/cred.h>
- #include <linux/lsm_hooks.h>
- #include <linux/mm.h>
-+#include <linux/slab.h>
- #include <linux/spinlock.h>
- 
- static int sara_cred_prepare(struct cred *new, const struct cred *old,
-@@ -40,15 +41,22 @@ static int sara_shm_alloc_security(struct kern_ipc_perm *shp)
- 	return 0;
- }
- 
-+static void sara_task_to_inode(struct task_struct *t, struct inode *i)
-+{
-+	get_sara_inode_task(i) = t;
-+}
++	sara.wxprot_xattrs_enabled= [SARA]
++			Enable support for security xattrs.
++			Format: { "0" | "1" }
++			See security/sara/Kconfig help text
++			0 -- disable.
++			1 -- enable.
++			Default value is set via kernel config option.
 +
- static struct security_hook_list data_hooks[] __lsm_ro_after_init = {
- 	LSM_HOOK_INIT(cred_prepare, sara_cred_prepare),
- 	LSM_HOOK_INIT(cred_transfer, sara_cred_transfer),
- 	LSM_HOOK_INIT(shm_alloc_security, sara_shm_alloc_security),
-+	LSM_HOOK_INIT(task_to_inode, sara_task_to_inode),
- };
++	sara.wxprot_xattrs_user= [SARA]
++			Enable support for user xattrs.
++			Format: { "0" | "1" }
++			See security/sara/Kconfig help text
++			0 -- disable.
++			1 -- enable.
++			Default value is set via kernel config option.
++
+ 	serialnumber	[BUGS=X86-32]
  
- struct lsm_blob_sizes sara_blob_sizes __lsm_ro_after_init = {
- 	.lbs_cred = sizeof(struct sara_data),
- 	.lbs_ipc = sizeof(struct sara_shm_data),
-+	.lbs_inode = sizeof(struct sara_inode_data),
- };
+ 	shapers=	[NET]
+diff --git a/include/uapi/linux/xattr.h b/include/uapi/linux/xattr.h
+index c1395b5..45c0333 100644
+--- a/include/uapi/linux/xattr.h
++++ b/include/uapi/linux/xattr.h
+@@ -77,5 +77,9 @@
+ #define XATTR_POSIX_ACL_DEFAULT  "posix_acl_default"
+ #define XATTR_NAME_POSIX_ACL_DEFAULT XATTR_SYSTEM_PREFIX XATTR_POSIX_ACL_DEFAULT
  
- int __init sara_data_init(void)
++#define XATTR_SARA_SUFFIX "sara."
++#define XATTR_SARA_WXP_SUFFIX XATTR_SARA_SUFFIX "wxp"
++#define XATTR_NAME_SEC_SARA_WXP XATTR_SECURITY_PREFIX XATTR_SARA_WXP_SUFFIX
++#define XATTR_NAME_USR_SARA_WXP XATTR_USER_PREFIX XATTR_SARA_WXP_SUFFIX
+ 
+ #endif /* _UAPI_LINUX_XATTR_H */
+diff --git a/security/sara/Kconfig b/security/sara/Kconfig
+index 458e0e8..773256b 100644
+--- a/security/sara/Kconfig
++++ b/security/sara/Kconfig
+@@ -135,6 +135,28 @@ config SECURITY_SARA_WXPROT_EMUTRAMP
+ 
+ 	  If unsure, answer y.
+ 
++config SECURITY_SARA_WXPROT_XATTRS_ENABLED
++	bool "xattrs support enabled by default."
++	depends on SECURITY_SARA_WXPROT
++	default n
++	help
++	  If you say Y here it will be possible to override WX protection
++	  configuration via extended attributes in the security namespace.
++	  Even when S.A.R.A.'s configuration has been locked.
++
++	  If unsure, answer N.
++
++config CONFIG_SECURITY_SARA_WXPROT_XATTRS_USER
++	bool "'user' namespace xattrs support enabled by default."
++	depends on SECURITY_SARA_WXPROT_XATTRS_ENABLED
++	default n
++	help
++	  If you say Y here it will be possible to override WX protection
++	  configuration via extended attributes in the user namespace.
++	  Even when S.A.R.A.'s configuration has been locked.
++
++	  If unsure, answer N.
++
+ config SECURITY_SARA_WXPROT_DISABLED
+ 	bool "WX protection will be disabled at boot."
+ 	depends on SECURITY_SARA_WXPROT
 diff --git a/security/sara/wxprot.c b/security/sara/wxprot.c
-index 773d1fd..1a8d132 100644
+index 84f7b1e..773d1fd 100644
 --- a/security/sara/wxprot.c
 +++ b/security/sara/wxprot.c
-@@ -22,8 +22,11 @@
- #include <linux/mm.h>
- #include <linux/mman.h>
- #include <linux/module.h>
-+#include <linux/mount.h>
+@@ -25,6 +25,7 @@
  #include <linux/printk.h>
  #include <linux/ratelimit.h>
-+#include <linux/sched/mm.h>
-+#include <linux/sched/task.h>
  #include <linux/spinlock.h>
- #include <linux/xattr.h>
++#include <linux/xattr.h>
  
-@@ -615,6 +618,43 @@ static int sara_file_mprotect(struct vm_area_struct *vma,
- 	return 0;
+ #include "include/dfa.h"
+ #include "include/sara.h"
+@@ -82,6 +83,18 @@ struct wxprot_config_container {
+ static const bool wxprot_emutramp;
+ #endif
+ 
++#ifdef CONFIG_SECURITY_SARA_WXPROT_XATTRS_ENABLED
++static int wxprot_xattrs_enabled __read_mostly = true;
++#else
++static int wxprot_xattrs_enabled __read_mostly;
++#endif
++
++#ifdef CONFIG_SECURITY_SARA_WXPROT_XATTRS_USER
++static int wxprot_xattrs_user __read_mostly = true;
++#else
++static int wxprot_xattrs_user __read_mostly;
++#endif
++
+ static void pr_wxp(char *msg)
+ {
+ 	char *buf, *path;
+@@ -133,6 +146,14 @@ static bool are_flags_valid(u16 flags)
+ MODULE_PARM_DESC(wxprot_enabled,
+ 		 "Disable or enable S.A.R.A. WX Protection at boot time.");
+ 
++module_param(wxprot_xattrs_enabled, int, 0);
++MODULE_PARM_DESC(wxprot_xattrs_enabled,
++		 "Disable or enable S.A.R.A. WXP extended attributes interfaces.");
++
++module_param(wxprot_xattrs_user, int, 0);
++MODULE_PARM_DESC(wxprot_xattrs_user,
++		 "Allow normal users to override S.A.R.A. WXP settings via extended attributes.");
++
+ static int param_set_wxpflags(const char *val, const struct kernel_param *kp)
+ {
+ 	u16 flags;
+@@ -236,6 +257,65 @@ static inline int is_relro_page(const struct vm_area_struct *vma)
  }
  
-+static int sara_file_open(struct file *file)
+ /*
++ * Extended attributes handling
++ */
++static int sara_wxprot_xattrs_name(struct dentry *d,
++				   const char *name,
++				   u16 *flags)
 +{
-+	struct task_struct *t;
-+	struct mm_struct *mm;
-+	u16 sara_wxp_flags = get_current_sara_wxp_flags();
++	int rc;
++	char buffer[10];
++	u16 tmp;
 +
-+	/*
-+	 * Prevent write access to /proc/.../mem
-+	 * if it operates on the mm_struct of the
-+	 * current process: it could be used to
-+	 * bypass W^X.
-+	 */
++	if (!(d->d_inode->i_opflags & IOP_XATTR))
++		return -EOPNOTSUPP;
 +
-+	if (!sara_enabled ||
-+	    !wxprot_enabled ||
-+	    !(sara_wxp_flags & SARA_WXP_WXORX) ||
-+	    !(file->f_mode & FMODE_WRITE))
++	rc = __vfs_getxattr(d, d->d_inode, name, buffer, sizeof(buffer) - 1);
++	if (rc > 0) {
++		buffer[rc] = '\0';
++		rc = kstrtou16(buffer, 0, &tmp);
++		if (rc)
++			return rc;
++		if (!are_flags_valid(tmp))
++			return -EINVAL;
++		*flags = tmp;
 +		return 0;
++	} else if (rc < 0)
++		return rc;
 +
-+	t = get_sara_inode_task(file_inode(file));
-+	if (unlikely(t != NULL &&
-+		     strcmp(file->f_path.dentry->d_name.name,
-+			    "mem") == 0)) {
-+		get_task_struct(t);
-+		mm = get_task_mm(t);
-+		put_task_struct(t);
-+		if (unlikely(mm == current->mm))
-+			sara_warn_or_goto(error,
-+					  "write access to /proc/*/mem");
-+		mmput(mm);
-+	}
-+	return 0;
-+error:
-+	mmput(mm);
-+	return -EACCES;
++	return -ENODATA;
 +}
 +
- #ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
- static int sara_pagefault_handler(struct pt_regs *regs,
- 				  unsigned long error_code,
-@@ -778,6 +818,7 @@ static int sara_setprocattr(const char *name, void *value, size_t size)
- 	LSM_HOOK_INIT(check_vmflags, sara_check_vmflags),
- 	LSM_HOOK_INIT(shm_shmat, sara_shm_shmat),
- 	LSM_HOOK_INIT(file_mprotect, sara_file_mprotect),
-+	LSM_HOOK_INIT(file_open, sara_file_open),
- #ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
- 	LSM_HOOK_INIT(pagefault_handler, sara_pagefault_handler),
- #endif
++#define sara_xattrs_may_return(RC, XATTRNAME, FNAME) do {	\
++	if (RC == -EINVAL || RC == -ERANGE)			\
++		pr_info_ratelimited(				\
++			"WXP: malformed xattr '%s' on '%s'\n",	\
++			XATTRNAME,				\
++			FNAME);					\
++	else if (RC == 0)					\
++		return 0;					\
++} while (0)
++
++static inline int sara_wxprot_xattrs(struct dentry *d,
++				     u16 *flags)
++{
++	int rc;
++
++	if (!wxprot_xattrs_enabled)
++		return 1;
++	if (wxprot_xattrs_user) {
++		rc = sara_wxprot_xattrs_name(d, XATTR_NAME_USR_SARA_WXP,
++					     flags);
++		sara_xattrs_may_return(rc, XATTR_NAME_USR_SARA_WXP,
++				       d->d_name.name);
++	}
++	rc = sara_wxprot_xattrs_name(d, XATTR_NAME_SEC_SARA_WXP, flags);
++	sara_xattrs_may_return(rc, XATTR_NAME_SEC_SARA_WXP, d->d_name.name);
++	return 1;
++}
++
++
++/*
+  * LSM hooks
+  */
+ static int sara_bprm_set_creds(struct linux_binprm *bprm)
+@@ -259,6 +339,10 @@ static int sara_bprm_set_creds(struct linux_binprm *bprm)
+ 	if (!sara_enabled || !wxprot_enabled)
+ 		return 0;
+ 
++	if (sara_wxprot_xattrs(bprm->file->f_path.dentry,
++			       &sara_wxp_flags) == 0)
++		goto flags_set;
++
+ 	/*
+ 	 * SARA_WXP_TRANSFER means that the parent
+ 	 * wants this child to inherit its flags.
+@@ -283,6 +367,7 @@ static int sara_bprm_set_creds(struct linux_binprm *bprm)
+ 	} else
+ 		path = (char *) bprm->interp;
+ 
++flags_set:
+ 	if (sara_wxp_flags != default_flags &&
+ 	    sara_wxp_flags & SARA_WXP_VERBOSE)
+ 		pr_debug_ratelimited("WXP: '%s' run with flags '0x%x'.\n",
+@@ -777,6 +862,10 @@ static int config_hash(char **buf)
+ 
+ static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_enabled_data,
+ 				   wxprot_enabled);
++static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_xattrs_enabled_data,
++				   wxprot_xattrs_enabled);
++static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_xattrs_user_data,
++				   wxprot_xattrs_user);
+ 
+ static struct sara_secfs_fptrs fptrs __lsm_ro_after_init = {
+ 	.load = config_load,
+@@ -820,6 +909,16 @@ static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_enabled_data,
+ 		.type = SARA_SECFS_CONFIG_HASH,
+ 		.data = &fptrs,
+ 	},
++	{
++		.name = "xattr_enabled",
++		.type = SARA_SECFS_BOOL,
++		.data = (void *) &wxprot_xattrs_enabled_data,
++	},
++	{
++		.name = "xattr_user_allowed",
++		.type = SARA_SECFS_BOOL,
++		.data = (void *) &wxprot_xattrs_user_data,
++	},
+ };
+ 
+ 
 -- 
 1.9.1
 
