@@ -1,24 +1,24 @@
-Return-Path: <SRS0=zmFD=VD=lists.openwall.com=kernel-hardening-return-16352-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=74Rv=VD=lists.openwall.com=kernel-hardening-return-16353-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+X-Spam-Status: No, score=-7.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,GAPPY_SUBJECT,
 	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,UNWANTED_LANGUAGE_BODY,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F1533C468AD
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:55:53 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 40E67C468AD
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:02 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B7B3321670
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:55:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 69DE221670
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:01 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="Gy5TPt6/"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B7B3321670
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="kc2cJKhD"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 69DE221670
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16352-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24293 invoked by uid 550); 6 Jul 2019 10:55:26 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16353-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24337 invoked by uid 550); 6 Jul 2019 10:55:27 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,32 +26,32 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24191 invoked from network); 6 Jul 2019 10:55:25 -0000
+Received: (qmail 24240 invoked from network); 6 Jul 2019 10:55:26 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=BW+8xpyQbi7Tl8ElYIH8BHwSiQojAb3nUmPsO54K1pU=;
-        b=Gy5TPt6/txGbLsMhEqym/m39JJLOPOcUp33pKsBXIoOfib1/thpFoahS2bYRfcTk3z
-         YNCV71Qgi/dESSZ5Cid+OeLB1kL5AdVmRTO1vtsKAzliLqu7E7guphMsmUBivmlCBN9g
-         xXzIOQiEkfK/fwXB37ZloNWywr4ijHxf18F1oIlU9mdS91Ib1dAwG4QSrlNu3fnRfpnt
-         3p7hdKEu8kHcCxudsUWLovvcISlvkL1gmsmZp3MnaoXR7hhnPpsk7hzk0La7U/SOhyJv
-         xup3QV0T0CwQ7M6Z2iZnyYkyuKJsml23601/JLFeKW/SNDL3jpiboPC6IzfY0EGKVst3
-         ko2g==
+        bh=tntZg8r5S9LwiMO7vss45dOAl1fEVW4KEshHq7hSndk=;
+        b=kc2cJKhDmxsorvbYBJN4L4LP1TLlMTnFPLFX6zgkZebJ/WsFIMzWWYWhtSgVtP7zMQ
+         0cOB3K0BaSp0V5QtNPW6SGBa+vrt3q/HL19vYWaeS7qrfH+dWKn9nfeK/a+K8xeUEotp
+         5ZmpQDndExIKqNYdSvxCEi9NPZMxIGZK9+ornVkxCqrBSuxArZeonMC6E7vUvtjhX4VT
+         5szWyZvmeouxknBYxB9Wbjm9LbY7t21Y+4zZ9LjC/eMDRTlMMT+GuGm2SSyALI9h5Hng
+         oeLX0GzYFtaj78gVuuV1vufxWfJg/xwaAdrvfKBhwc/EYZdO2fu2pXy4SOCaITR4HIIa
+         gRdw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references;
-        bh=BW+8xpyQbi7Tl8ElYIH8BHwSiQojAb3nUmPsO54K1pU=;
-        b=Mqn9nW1knuyGSfQBa4b6S939ZkzV1PpOVFrW2NhM6VeQeVTzXFWxbOgVYkt4VNJm6p
-         Tl2fkq+l+Kl1amtnZwVg4S1wCQqfjJU7VimYK1Qi0YoBdb80t3VSdtnizjmdto6EdcvW
-         9PdAJLnGwVHtnqSN0GykrItwF2VvfgG3csACjDz7oGrp7IIwMfIeQ1uol3t6BmLzq84p
-         koZeacolm0Zl1Ol9lK1oDWdEwGi1JtR/6uY0Q3XGm7qlE8A+LADMwAI8VQjfj3BN4wTJ
-         UZRW/PSeLOGYF43Dy+JsZCNLLAOfFyTM4WKuXHA14hqn0yRd0KBHD8qqdgIyERJfyj4U
-         MuFg==
-X-Gm-Message-State: APjAAAVdWqfhKv0unGN7EH6WBrNaPpj1hL6EHGg64GS6gPZGaPrmN+9R
-	5Rag7dpReZjifR6ORuCzkyg=
-X-Google-Smtp-Source: APXvYqy1ogO8dZ6NgaXXKK6DDQbYjudAU/lxFkXrHqpSoq4/f+IV71mZjPvf6fXPReqkMC7l8mLNCQ==
-X-Received: by 2002:a5d:468a:: with SMTP id u10mr8850925wrq.177.1562410514014;
+        bh=tntZg8r5S9LwiMO7vss45dOAl1fEVW4KEshHq7hSndk=;
+        b=S8spdPsU5uwDKWYR7RyNfq93yfVyCh5z6nM+4gX0KAsezHOq1cjlTQ6nmthHQOAKt1
+         6BJnNi5rjw+sG2ePOuxrTMKgXF+/TkfkUa02yWsO0aJ4cuhVO5C+jRGoSct9z7FiTEj4
+         UNlUI42u7Lrfk1RunTJbvMO67Ycfc7kxA2IseoQ0ahP+K/6agwMSjN0K44sCO0ba6Xln
+         wr3p4e6eW1K5K2djMBIFh2atVe07vclGZ5jZjYfaxQkgyZwTYpQrjBkqN/rONDF62XQO
+         xdc5qJNVOmJbtLR0DFz+rkp0Bncihz6lQQZnNo/O7RWAa6Ap8S7TfuUHY+P357p5S/7v
+         WG4g==
+X-Gm-Message-State: APjAAAUOjqp0qAJRaOJ9rQga/UtBC5C6bNvomtEKvzVo8jpqeQDTaESZ
+	0OBqaojdngY3w/6wTglydaM=
+X-Google-Smtp-Source: APXvYqyT5FvHevvfORCP5Opw4y7yO1x8K1YKmTYR/PUKpHFg48nVRxzDqlQiuBD7tLbShBXcjqdbVA==
+X-Received: by 2002:a1c:b706:: with SMTP id h6mr7598997wmf.119.1562410514962;
         Sat, 06 Jul 2019 03:55:14 -0700 (PDT)
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
@@ -69,151 +69,46 @@ Cc: kernel-hardening@lists.openwall.com,
 	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
 	"Serge E. Hallyn" <serge@hallyn.com>,
 	Thomas Gleixner <tglx@linutronix.de>
-Subject: [PATCH v5 02/12] S.A.R.A.: create framework
-Date: Sat,  6 Jul 2019 12:54:43 +0200
-Message-Id: <1562410493-8661-3-git-send-email-s.mesoraca16@gmail.com>
+Subject: [PATCH v5 03/12] S.A.R.A.: cred blob management
+Date: Sat,  6 Jul 2019 12:54:44 +0200
+Message-Id: <1562410493-8661-4-git-send-email-s.mesoraca16@gmail.com>
 X-Mailer: git-send-email 1.9.1
 In-Reply-To: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 
-Initial S.A.R.A. framework setup.
-Creation of a simplified interface to securityfs API to store and retrieve
-configurations and flags from user-space.
-Creation of some generic functions and macros to handle concurrent access
-to configurations, memory allocation and path resolution.
+Creation of the S.A.R.A. cred blob management "API".
+In order to allow S.A.R.A. to be stackable with other LSMs, it doesn't use
+the "security" field of struct cred, instead it uses an ad hoc field named
+security_sara.
+This solution is probably not acceptable for upstream, so this part will
+be modified as soon as the LSM stackable cred blob management will be
+available.
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- security/Kconfig                   |  11 +-
- security/Makefile                  |   2 +
- security/sara/Kconfig              |  40 +++
- security/sara/Makefile             |   3 +
- security/sara/include/sara.h       |  29 ++
- security/sara/include/securityfs.h |  61 ++++
- security/sara/include/utils.h      |  80 ++++++
- security/sara/main.c               | 115 ++++++++
- security/sara/securityfs.c         | 565 +++++++++++++++++++++++++++++++++++++
- security/sara/utils.c              |  92 ++++++
- 10 files changed, 993 insertions(+), 5 deletions(-)
- create mode 100644 security/sara/Kconfig
- create mode 100644 security/sara/Makefile
- create mode 100644 security/sara/include/sara.h
- create mode 100644 security/sara/include/securityfs.h
- create mode 100644 security/sara/include/utils.h
- create mode 100644 security/sara/main.c
- create mode 100644 security/sara/securityfs.c
- create mode 100644 security/sara/utils.c
+ security/sara/Makefile            |  2 +-
+ security/sara/include/sara_data.h | 84 +++++++++++++++++++++++++++++++++++++++
+ security/sara/main.c              |  7 ++++
+ security/sara/sara_data.c         | 69 ++++++++++++++++++++++++++++++++
+ 4 files changed, 161 insertions(+), 1 deletion(-)
+ create mode 100644 security/sara/include/sara_data.h
+ create mode 100644 security/sara/sara_data.c
 
-diff --git a/security/Kconfig b/security/Kconfig
-index 466cc1f..4cae0ec 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -237,6 +237,7 @@ source "security/apparmor/Kconfig"
- source "security/loadpin/Kconfig"
- source "security/yama/Kconfig"
- source "security/safesetid/Kconfig"
-+source "security/sara/Kconfig"
- 
- source "security/integrity/Kconfig"
- 
-@@ -276,11 +277,11 @@ endchoice
- 
- config LSM
- 	string "Ordered list of enabled LSMs"
--	default "yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor" if DEFAULT_SECURITY_SMACK
--	default "yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo" if DEFAULT_SECURITY_APPARMOR
--	default "yama,loadpin,safesetid,integrity,tomoyo" if DEFAULT_SECURITY_TOMOYO
--	default "yama,loadpin,safesetid,integrity" if DEFAULT_SECURITY_DAC
--	default "yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor"
-+	default "yama,loadpin,safesetid,integrity,sara,smack,selinux,tomoyo,apparmor" if DEFAULT_SECURITY_SMACK
-+	default "yama,loadpin,safesetid,integrity,sara,apparmor,selinux,smack,tomoyo" if DEFAULT_SECURITY_APPARMOR
-+	default "yama,loadpin,safesetid,integrity,sara,tomoyo" if DEFAULT_SECURITY_TOMOYO
-+	default "yama,loadpin,safesetid,integrity,sara" if DEFAULT_SECURITY_DAC
-+	default "yama,loadpin,safesetid,integrity,sara,selinux,smack,tomoyo,apparmor"
- 	help
- 	  A comma-separated list of LSMs, in initialization order.
- 	  Any LSMs left off this list will be ignored. This can be
-diff --git a/security/Makefile b/security/Makefile
-index c598b90..4b0fd11 100644
---- a/security/Makefile
-+++ b/security/Makefile
-@@ -11,6 +11,7 @@ subdir-$(CONFIG_SECURITY_APPARMOR)	+= apparmor
- subdir-$(CONFIG_SECURITY_YAMA)		+= yama
- subdir-$(CONFIG_SECURITY_LOADPIN)	+= loadpin
- subdir-$(CONFIG_SECURITY_SAFESETID)    += safesetid
-+subdir-$(CONFIG_SECURITY_SARA)		+= sara
- 
- # always enable default capabilities
- obj-y					+= commoncap.o
-@@ -27,6 +28,7 @@ obj-$(CONFIG_SECURITY_APPARMOR)		+= apparmor/
- obj-$(CONFIG_SECURITY_YAMA)		+= yama/
- obj-$(CONFIG_SECURITY_LOADPIN)		+= loadpin/
- obj-$(CONFIG_SECURITY_SAFESETID)       += safesetid/
-+obj-$(CONFIG_SECURITY_SARA)		+= sara/
- obj-$(CONFIG_CGROUP_DEVICE)		+= device_cgroup.o
- 
- # Object integrity file lists
-diff --git a/security/sara/Kconfig b/security/sara/Kconfig
-new file mode 100644
-index 0000000..0456220
---- /dev/null
-+++ b/security/sara/Kconfig
-@@ -0,0 +1,40 @@
-+menuconfig SECURITY_SARA
-+	bool "S.A.R.A."
-+	depends on SECURITY
-+	select SECURITYFS
-+	default n
-+	help
-+	  This selects S.A.R.A. LSM which aims to collect heterogeneous
-+	  security measures providing a common interface to manage them.
-+	  This LSM will always be stacked with the selected primary LSM and
-+	  other stacked LSMs.
-+	  Further information can be found in
-+	  Documentation/admin-guide/LSM/SARA.rst.
-+
-+	  If unsure, answer N.
-+
-+config SECURITY_SARA_DEFAULT_DISABLED
-+	bool "S.A.R.A. will be disabled at boot."
-+	depends on SECURITY_SARA
-+	default n
-+	help
-+	  If you say Y here, S.A.R.A. will not be enabled at startup. You can
-+	  override this option at boot time via "sara.enabled=[1|0]" kernel
-+	  parameter or via user-space utilities.
-+	  This option is useful for distro kernels.
-+
-+	  If unsure, answer N.
-+
-+config SECURITY_SARA_NO_RUNTIME_ENABLE
-+	bool "S.A.R.A. can be turn on only at boot time."
-+	depends on SECURITY_SARA_DEFAULT_DISABLED
-+	default y
-+	help
-+	  By enabling this option it won't be possible to turn on S.A.R.A.
-+	  at runtime via user-space utilities. However it can still be
-+	  turned on at boot time via the "sara.enabled=1" kernel parameter.
-+	  This option is functionally equivalent to "sara.enabled=0" kernel
-+	  parameter. This option is useful for distro kernels.
-+
-+	  If unsure, answer Y.
-+
 diff --git a/security/sara/Makefile b/security/sara/Makefile
-new file mode 100644
-index 0000000..8acd291
---- /dev/null
+index 8acd291..14bf7a8 100644
+--- a/security/sara/Makefile
 +++ b/security/sara/Makefile
-@@ -0,0 +1,3 @@
-+obj-$(CONFIG_SECURITY_SARA) := sara.o
-+
-+sara-y := main.o securityfs.o utils.o
-diff --git a/security/sara/include/sara.h b/security/sara/include/sara.h
+@@ -1,3 +1,3 @@
+ obj-$(CONFIG_SECURITY_SARA) := sara.o
+ 
+-sara-y := main.o securityfs.o utils.o
++sara-y := main.o securityfs.o utils.o sara_data.o
+diff --git a/security/sara/include/sara_data.h b/security/sara/include/sara_data.h
 new file mode 100644
-index 0000000..cd12f52
+index 0000000..9216c47
 --- /dev/null
-+++ b/security/sara/include/sara.h
-@@ -0,0 +1,29 @@
++++ b/security/sara/include/sara_data.h
+@@ -0,0 +1,84 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +
 +/*
@@ -227,181 +122,113 @@ index 0000000..cd12f52
 + *
 + */
 +
-+#ifndef __SARA_H
-+#define __SARA_H
++#ifndef __SARA_DATA_H
++#define __SARA_DATA_H
 +
-+#include <linux/types.h>
-+#include <uapi/linux/limits.h>
++#include <linux/cred.h>
++#include <linux/init.h>
++#include <linux/lsm_hooks.h>
++#include <linux/spinlock.h>
 +
-+#define SARA_VERSION 0
-+#define SARA_PATH_MAX PATH_MAX
++int sara_data_init(void) __init;
 +
-+#undef pr_fmt
-+#define pr_fmt(fmt) "SARA: " fmt
++extern struct lsm_blob_sizes sara_blob_sizes __lsm_ro_after_init;
 +
-+extern int sara_config_locked __read_mostly;
-+extern int sara_enabled __read_mostly;
++#ifdef CONFIG_SECURITY_SARA_WXPROT
++
++struct sara_data {
++	unsigned long	relro_page;
++	struct file	*relro_file;
++	u16		wxp_flags;
++	u16		execve_flags;
++	bool		relro_page_found;
++	bool		mmap_blocked;
++};
++
++struct sara_shm_data {
++	bool		no_exec;
++	bool		no_write;
++	spinlock_t	lock;
++};
++
++
++static inline struct sara_data *get_sara_data(const struct cred *cred)
++{
++	return cred->security + sara_blob_sizes.lbs_cred;
++}
++
++#define get_current_sara_data() get_sara_data(current_cred())
++
++#define get_sara_wxp_flags(X) (get_sara_data((X))->wxp_flags)
++#define get_current_sara_wxp_flags() get_sara_wxp_flags(current_cred())
++
++#define get_sara_execve_flags(X) (get_sara_data((X))->execve_flags)
++#define get_current_sara_execve_flags() get_sara_execve_flags(current_cred())
++
++#define get_sara_relro_page(X) (get_sara_data((X))->relro_page)
++#define get_current_sara_relro_page() get_sara_relro_page(current_cred())
++
++#define get_sara_relro_file(X) (get_sara_data((X))->relro_file)
++#define get_current_sara_relro_file() get_sara_relro_file(current_cred())
++
++#define get_sara_relro_page_found(X) (get_sara_data((X))->relro_page_found)
++#define get_current_sara_relro_page_found() \
++	get_sara_relro_page_found(current_cred())
++
++#define get_sara_mmap_blocked(X) (get_sara_data((X))->mmap_blocked)
++#define get_current_sara_mmap_blocked() get_sara_mmap_blocked(current_cred())
++
++
++static inline struct sara_shm_data *get_sara_shm_data(
++					const struct kern_ipc_perm *ipc)
++{
++	return ipc->security + sara_blob_sizes.lbs_ipc;
++}
++
++#define get_sara_shm_no_exec(X) (get_sara_shm_data((X))->no_exec)
++#define get_sara_shm_no_write(X) (get_sara_shm_data((X))->no_write)
++#define lock_sara_shm(X) (spin_lock(&get_sara_shm_data((X))->lock))
++#define unlock_sara_shm(X) (spin_unlock(&get_sara_shm_data((X))->lock))
++
++#endif
 +
 +#endif /* __SARA_H */
-diff --git a/security/sara/include/securityfs.h b/security/sara/include/securityfs.h
-new file mode 100644
-index 0000000..92d6180
---- /dev/null
-+++ b/security/sara/include/securityfs.h
-@@ -0,0 +1,61 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#ifndef __SARA_SECURITYFS_H
-+#define __SARA_SECURITYFS_H
-+
-+#include <linux/init.h>
-+
-+#define SARA_SUBTREE_NN_LEN 24
-+#define SARA_CONFIG_HASH_LEN 20
-+
-+struct sara_secfs_node;
-+
-+int sara_secfs_init(void) __init;
-+int sara_secfs_subtree_register(const char *subtree_name,
-+				const struct sara_secfs_node *nodes,
-+				size_t size) __init;
-+
-+enum sara_secfs_node_type {
-+	SARA_SECFS_BOOL,
-+	SARA_SECFS_READONLY_INT,
-+	SARA_SECFS_CONFIG_LOAD,
-+	SARA_SECFS_CONFIG_DUMP,
-+	SARA_SECFS_CONFIG_HASH,
-+};
-+
-+struct sara_secfs_node {
-+	const enum sara_secfs_node_type type;
-+	void *const data;
-+	const size_t dir_contents_len;
-+	const char name[SARA_SUBTREE_NN_LEN];
-+};
-+
-+struct sara_secfs_fptrs {
-+	int (*const load)(const char *, size_t);
-+	ssize_t (*const dump)(char **);
-+	int (*const hash)(char **);
-+};
-+
-+struct sara_secfs_bool_flag {
-+	const char notice_line[SARA_SUBTREE_NN_LEN];
-+	int *const flag;
-+};
-+
-+#define DEFINE_SARA_SECFS_BOOL_FLAG(NAME, VAR)		\
-+const struct sara_secfs_bool_flag NAME = {		\
-+	.notice_line = #VAR,				\
-+	.flag = &(VAR),					\
-+}
-+
-+#endif /* __SARA_SECURITYFS_H */
-diff --git a/security/sara/include/utils.h b/security/sara/include/utils.h
-new file mode 100644
-index 0000000..ce9d5fb
---- /dev/null
-+++ b/security/sara/include/utils.h
-@@ -0,0 +1,80 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#ifndef __SARA_UTILS_H
-+#define __SARA_UTILS_H
-+
-+#include <linux/kref.h>
-+#include <linux/rcupdate.h>
-+#include <linux/spinlock.h>
-+
-+char *get_absolute_path(const struct path *spath, char **buf);
-+char *get_current_path(char **buf);
-+
-+static inline void release_entry(struct kref *ref)
-+{
-+	/* All work is done after the return from kref_put(). */
-+}
-+
-+
-+/*
-+ * The following macros must be used to access S.A.R.A. configuration
-+ * structures.
-+ * They are thread-safe under the assumption that a configuration
-+ * won't ever be deleted but just replaced using SARA_CONFIG_REPLACE,
-+ * possibly using an empty configuration.
-+ * i.e. every call to SARA_CONFIG_PUT *must* be preceded by a matching
-+ * SARA_CONFIG_GET invocation.
-+ */
-+
-+#define SARA_CONFIG_GET_RCU(DEST, CONFIG) do {	\
-+	rcu_read_lock();			\
-+	(DEST) = rcu_dereference(CONFIG);	\
-+} while (0)
-+
-+#define SARA_CONFIG_PUT_RCU(DATA) do {		\
-+	rcu_read_unlock();			\
-+	(DATA) = NULL;				\
-+} while (0)
-+
-+#define SARA_CONFIG_GET(DEST, CONFIG) do {				\
-+	rcu_read_lock();						\
-+	do {								\
-+		(DEST) = rcu_dereference(CONFIG);			\
-+	} while ((DEST) && !kref_get_unless_zero(&(DEST)->refcount));	\
-+	rcu_read_unlock();						\
-+} while (0)
-+
-+#define SARA_CONFIG_PUT(DATA, FREE) do {			\
-+	if (kref_put(&(DATA)->refcount, release_entry)) {	\
-+		synchronize_rcu();				\
-+		(FREE)(DATA);					\
-+	}							\
-+	(DATA) = NULL;						\
-+} while (0)
-+
-+#define SARA_CONFIG_REPLACE(CONFIG, NEW, FREE, LOCK) do {	\
-+	typeof(NEW) tmp;					\
-+	spin_lock(LOCK);					\
-+	tmp = rcu_dereference_protected(CONFIG,			\
-+					lockdep_is_held(LOCK));	\
-+	rcu_assign_pointer(CONFIG, NEW);			\
-+	if (kref_put(&tmp->refcount, release_entry)) {		\
-+		spin_unlock(LOCK);				\
-+		synchronize_rcu();				\
-+		FREE(tmp);					\
-+	} else							\
-+		spin_unlock(LOCK);				\
-+} while (0)
-+
-+#endif /* __SARA_UTILS_H */
 diff --git a/security/sara/main.c b/security/sara/main.c
-new file mode 100644
-index 0000000..52e6d18
---- /dev/null
+index 52e6d18..dc5dda4 100644
+--- a/security/sara/main.c
 +++ b/security/sara/main.c
-@@ -0,0 +1,115 @@
+@@ -18,6 +18,7 @@
+ #include <linux/printk.h>
+ 
+ #include "include/sara.h"
++#include "include/sara_data.h"
+ #include "include/securityfs.h"
+ 
+ static const int sara_version = SARA_VERSION;
+@@ -93,6 +94,11 @@ static int __init sara_init(void)
+ 		goto error;
+ 	}
+ 
++	if (sara_data_init()) {
++		pr_crit("impossible to initialize creds.\n");
++		goto error;
++	}
++
+ 	pr_debug("initialized.\n");
+ 
+ 	if (sara_enabled)
+@@ -112,4 +118,5 @@ static int __init sara_init(void)
+ 	.name = "sara",
+ 	.enabled = &sara_enabled,
+ 	.init = sara_init,
++	.blobs = &sara_blob_sizes,
+ };
+diff --git a/security/sara/sara_data.c b/security/sara/sara_data.c
+new file mode 100644
+index 0000000..9afca37
+--- /dev/null
++++ b/security/sara/sara_data.c
+@@ -0,0 +1,69 @@
 +// SPDX-License-Identifier: GPL-2.0
 +
 +/*
@@ -415,777 +242,62 @@ index 0000000..52e6d18
 + *
 + */
 +
-+#include <linux/bug.h>
-+#include <linux/kernel.h>
++#include "include/sara_data.h"
++
++#ifdef CONFIG_SECURITY_SARA_WXPROT
++#include <linux/cred.h>
 +#include <linux/lsm_hooks.h>
-+#include <linux/module.h>
-+#include <linux/printk.h>
-+
-+#include "include/sara.h"
-+#include "include/securityfs.h"
-+
-+static const int sara_version = SARA_VERSION;
-+
-+#ifdef CONFIG_SECURITY_SARA_NO_RUNTIME_ENABLE
-+int sara_config_locked __read_mostly = true;
-+#else
-+int sara_config_locked __read_mostly;
-+#endif
-+
-+#ifdef CONFIG_SECURITY_SARA_DEFAULT_DISABLED
-+int sara_enabled __read_mostly;
-+#else
-+int sara_enabled __read_mostly = true;
-+#endif
-+
-+static DEFINE_SARA_SECFS_BOOL_FLAG(sara_enabled_data, sara_enabled);
-+static DEFINE_SARA_SECFS_BOOL_FLAG(sara_config_locked_data, sara_config_locked);
-+
-+static int param_set_senabled(const char *val, const struct kernel_param *kp)
-+{
-+	if (!val)
-+		return 0;
-+	if (strtobool(val, kp->arg))
-+		return -EINVAL;
-+	/* config must by locked when S.A.R.A. is disabled at boot
-+	 * and unlocked when it's enabled
-+	 */
-+	sara_config_locked = !(*(int *) kp->arg);
-+	return 0;
-+}
-+
-+static struct kernel_param_ops param_ops_senabled = {
-+	.set = param_set_senabled,
-+};
-+
-+#define param_check_senabled(name, p) __param_check(name, p, int)
-+
-+module_param_named(enabled, sara_enabled, senabled, 0000);
-+MODULE_PARM_DESC(enabled, "Disable or enable S.A.R.A. at boot time. If disabled this way S.A.R.A. can't be enabled again.");
-+
-+static const struct sara_secfs_node main_fs[] __initconst = {
-+	{
-+		.name = "enabled",
-+		.type = SARA_SECFS_BOOL,
-+		.data = (void *) &sara_enabled_data,
-+	},
-+	{
-+		.name = "locked",
-+		.type = SARA_SECFS_BOOL,
-+		.data = (void *) &sara_config_locked_data,
-+	},
-+	{
-+		.name = "version",
-+		.type = SARA_SECFS_READONLY_INT,
-+		.data = (int *) &sara_version,
-+	},
-+};
-+
-+static int __init sara_init(void)
-+{
-+	if (!sara_enabled && sara_config_locked) {
-+		pr_notice("permanently disabled.\n");
-+		return 0;
-+	}
-+
-+	pr_debug("initializing...\n");
-+
-+	if (sara_secfs_subtree_register("main",
-+					main_fs,
-+					ARRAY_SIZE(main_fs))) {
-+		pr_crit("impossible to register main fs.\n");
-+		goto error;
-+	}
-+
-+	pr_debug("initialized.\n");
-+
-+	if (sara_enabled)
-+		pr_info("enabled\n");
-+	else
-+		pr_notice("disabled\n");
-+	return 0;
-+
-+error:
-+	sara_enabled = false;
-+	sara_config_locked = true;
-+	pr_crit("permanently disabled.\n");
-+	return 1;
-+}
-+
-+DEFINE_LSM(sara) = {
-+	.name = "sara",
-+	.enabled = &sara_enabled,
-+	.init = sara_init,
-+};
-diff --git a/security/sara/securityfs.c b/security/sara/securityfs.c
-new file mode 100644
-index 0000000..f6b152c
---- /dev/null
-+++ b/security/sara/securityfs.c
-@@ -0,0 +1,565 @@
-+// SPDX-License-Identifier: GPL-2.0
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#include <linux/capability.h>
-+#include <linux/ctype.h>
 +#include <linux/mm.h>
-+#include <linux/printk.h>
-+#include <linux/security.h>
-+#include <linux/seq_file.h>
 +#include <linux/spinlock.h>
-+#include <linux/uaccess.h>
 +
-+#include "include/sara.h"
-+#include "include/utils.h"
-+#include "include/securityfs.h"
-+
-+#define __SARA_STR_HELPER(x) #x
-+#define SARA_STR(x) __SARA_STR_HELPER(x)
-+
-+static struct dentry *fs_root;
-+
-+static inline bool check_config_write_access(void)
++static int sara_cred_prepare(struct cred *new, const struct cred *old,
++			     gfp_t gfp)
 +{
-+	if (unlikely(sara_config_locked)) {
-+		pr_warn("config write access blocked.\n");
-+		return false;
-+	}
-+	return true;
-+}
-+
-+static bool check_config_access(const struct file *file)
-+{
-+	if (!capable(CAP_MAC_ADMIN))
-+		return false;
-+	if (file->f_flags & O_WRONLY || file->f_flags & O_RDWR)
-+		if (unlikely(!check_config_write_access()))
-+			return false;
-+	return true;
-+}
-+
-+static int file_flag_show(struct seq_file *seq, void *v)
-+{
-+	int *flag = ((struct sara_secfs_bool_flag *)seq->private)->flag;
-+
-+	seq_printf(seq, "%d\n", *flag);
++	*get_sara_data(new) = *get_sara_data(old);
 +	return 0;
 +}
 +
-+static ssize_t file_flag_write(struct file *file,
-+				const char __user *ubuf,
-+				size_t buf_size,
-+				loff_t *offset)
++static void sara_cred_transfer(struct cred *new, const struct cred *old)
 +{
-+	struct sara_secfs_bool_flag *bool_flag =
-+		((struct seq_file *) file->private_data)->private;
-+	char kbuf[2] = {'A', '\n'};
-+	int nf;
-+
-+	if (unlikely(*offset != 0))
-+		return -ESPIPE;
-+
-+	if (unlikely(buf_size != 1 && buf_size != 2))
-+		return -EPERM;
-+
-+	if (unlikely(copy_from_user(kbuf, ubuf, buf_size)))
-+		return -EFAULT;
-+
-+	if (unlikely(kbuf[1] != '\n'))
-+		return -EPERM;
-+
-+	switch (kbuf[0]) {
-+	case '0':
-+		nf = false;
-+		break;
-+	case '1':
-+		nf = true;
-+		break;
-+	default:
-+		return -EPERM;
-+	}
-+
-+	*bool_flag->flag = nf;
-+
-+	if (strlen(bool_flag->notice_line) > 0)
-+		pr_notice("flag \"%s\" set to %d\n",
-+			  bool_flag->notice_line,
-+			  nf);
-+
-+	return buf_size;
++	*get_sara_data(new) = *get_sara_data(old);
 +}
 +
-+static int file_flag_open(struct inode *inode, struct file *file)
++static int sara_shm_alloc_security(struct kern_ipc_perm *shp)
 +{
-+	if (unlikely(!check_config_access(file)))
-+		return -EACCES;
-+	return single_open(file, file_flag_show, inode->i_private);
-+}
++	struct sara_shm_data *d;
 +
-+static const struct file_operations file_flag = {
-+	.owner		= THIS_MODULE,
-+	.open		= file_flag_open,
-+	.write		= file_flag_write,
-+	.read		= seq_read,
-+	.release	= single_release,
-+};
-+
-+static int file_readonly_int_show(struct seq_file *seq, void *v)
-+{
-+	int *flag = seq->private;
-+
-+	seq_printf(seq, "%d\n", *flag);
++	d = get_sara_shm_data(shp);
++	spin_lock_init(&d->lock);
 +	return 0;
 +}
 +
-+static int file_readonly_int_open(struct inode *inode, struct file *file)
-+{
-+	if (unlikely(!check_config_access(file)))
-+		return -EACCES;
-+	return single_open(file, file_readonly_int_show, inode->i_private);
-+}
-+
-+static const struct file_operations file_readonly_int = {
-+	.owner		= THIS_MODULE,
-+	.open		= file_readonly_int_open,
-+	.read		= seq_read,
-+	.release	= single_release,
++static struct security_hook_list data_hooks[] __lsm_ro_after_init = {
++	LSM_HOOK_INIT(cred_prepare, sara_cred_prepare),
++	LSM_HOOK_INIT(cred_transfer, sara_cred_transfer),
++	LSM_HOOK_INIT(shm_alloc_security, sara_shm_alloc_security),
 +};
 +
-+static ssize_t file_config_loader_write(struct file *file,
-+					const char __user *ubuf,
-+					size_t buf_size,
-+					loff_t *offset)
++struct lsm_blob_sizes sara_blob_sizes __lsm_ro_after_init = {
++	.lbs_cred = sizeof(struct sara_data),
++	.lbs_ipc = sizeof(struct sara_shm_data),
++};
++
++int __init sara_data_init(void)
 +{
-+	const struct sara_secfs_fptrs *fptrs = file->private_data;
-+	char *kbuf = NULL;
-+	ssize_t ret;
-+
-+	ret = -ESPIPE;
-+	if (unlikely(*offset != 0))
-+		goto out;
-+
-+	ret = -ENOMEM;
-+	kbuf = kvmalloc(buf_size, GFP_KERNEL_ACCOUNT);
-+	if (unlikely(kbuf == NULL))
-+		goto out;
-+
-+	ret = -EFAULT;
-+	if (unlikely(copy_from_user(kbuf, ubuf, buf_size)))
-+		goto out;
-+
-+	ret = fptrs->load(kbuf, buf_size);
-+
-+	if (unlikely(ret))
-+		goto out;
-+
-+	ret = buf_size;
-+
-+out:
-+	kvfree(kbuf);
-+	return ret;
-+}
-+
-+static int file_config_loader_open(struct inode *inode, struct file *file)
-+{
-+	if (unlikely(!check_config_access(file)))
-+		return -EACCES;
-+	file->private_data = inode->i_private;
++	security_add_hooks(data_hooks, ARRAY_SIZE(data_hooks), "sara");
 +	return 0;
 +}
 +
-+static const struct file_operations file_config_loader = {
-+	.owner		= THIS_MODULE,
-+	.open		= file_config_loader_open,
-+	.write		= file_config_loader_write,
-+};
++#else /* CONFIG_SECURITY_SARA_WXPROT */
 +
-+static int file_config_show(struct seq_file *seq, void *v)
++struct lsm_blob_sizes sara_blob_sizes __lsm_ro_after_init = { };
++
++int __init sara_data_init(void)
 +{
-+	const struct sara_secfs_fptrs *fptrs = seq->private;
-+	char *buf = NULL;
-+	ssize_t ret;
-+
-+	ret = fptrs->dump(&buf);
-+	if (unlikely(ret <= 0))
-+		goto out;
-+	seq_write(seq, buf, ret);
-+	kvfree(buf);
-+	ret = 0;
-+out:
-+	return ret;
-+}
-+
-+static int file_dumper_open(struct inode *inode, struct file *file)
-+{
-+	if (unlikely(!check_config_access(file)))
-+		return -EACCES;
-+	return single_open(file, file_config_show, inode->i_private);
-+}
-+
-+static const struct file_operations file_config_dumper = {
-+	.owner		= THIS_MODULE,
-+	.open		= file_dumper_open,
-+	.read		= seq_read,
-+	.release	= single_release,
-+};
-+
-+static int file_hash_show(struct seq_file *seq, void *v)
-+{
-+	const struct sara_secfs_fptrs *fptrs = seq->private;
-+	char *buf = NULL;
-+	int ret;
-+
-+	ret = fptrs->hash(&buf);
-+	if (unlikely(ret))
-+		goto out;
-+	seq_printf(seq, "%" SARA_STR(SARA_CONFIG_HASH_LEN) "phN\n", buf);
-+	kvfree(buf);
-+	ret = 0;
-+out:
-+	return ret;
-+}
-+
-+static int file_hash_open(struct inode *inode, struct file *file)
-+{
-+	if (unlikely(!check_config_access(file)))
-+		return -EACCES;
-+	return single_open(file, file_hash_show, inode->i_private);
-+}
-+
-+static const struct file_operations file_hash = {
-+	.owner		= THIS_MODULE,
-+	.open		= file_hash_open,
-+	.read		= seq_read,
-+	.release	= single_release,
-+};
-+
-+static int mk_dir(struct dentry *parent,
-+		const char *dir_name,
-+		struct dentry **dir_out)
-+{
-+	int ret = 0;
-+
-+	*dir_out = securityfs_create_dir(dir_name, parent);
-+	if (IS_ERR(*dir_out)) {
-+		ret = -PTR_ERR(*dir_out);
-+		*dir_out = NULL;
-+	}
-+	return ret;
-+}
-+
-+static int mk_bool_flag(struct dentry *parent,
-+			const char *file_name,
-+			struct dentry **dir_out,
-+			void *flag)
-+{
-+	int ret = 0;
-+
-+	*dir_out = securityfs_create_file(file_name,
-+					0600,
-+					parent,
-+					flag,
-+					&file_flag);
-+	if (IS_ERR(*dir_out)) {
-+		ret = -PTR_ERR(*dir_out);
-+		*dir_out = NULL;
-+	}
-+	return ret;
-+}
-+
-+static int mk_readonly_int(struct dentry *parent,
-+			const char *file_name,
-+			struct dentry **dir_out,
-+			void *readonly_int)
-+{
-+	int ret = 0;
-+
-+	*dir_out = securityfs_create_file(file_name,
-+					0400,
-+					parent,
-+					readonly_int,
-+					&file_readonly_int);
-+	if (IS_ERR(*dir_out)) {
-+		ret = -PTR_ERR(*dir_out);
-+		*dir_out = NULL;
-+	}
-+	return ret;
-+}
-+
-+static int mk_config_loader(struct dentry *parent,
-+			const char *file_name,
-+			struct dentry **dir_out,
-+			void *fptrs)
-+{
-+	int ret = 0;
-+
-+	*dir_out = securityfs_create_file(file_name,
-+					0200,
-+					parent,
-+					fptrs,
-+					&file_config_loader);
-+	if (IS_ERR(*dir_out)) {
-+		ret = -PTR_ERR(*dir_out);
-+		*dir_out = NULL;
-+	}
-+	return ret;
-+}
-+
-+static int mk_config_dumper(struct dentry *parent,
-+				const char *file_name,
-+				struct dentry **dir_out,
-+				void *fptrs)
-+{
-+	int ret = 0;
-+
-+	*dir_out = securityfs_create_file(file_name,
-+					0400,
-+					parent,
-+					fptrs,
-+					&file_config_dumper);
-+	if (IS_ERR(*dir_out)) {
-+		ret = -PTR_ERR(*dir_out);
-+		*dir_out = NULL;
-+	}
-+	return ret;
-+}
-+
-+static int mk_config_hash(struct dentry *parent,
-+			const char *file_name,
-+			struct dentry **dir_out,
-+			void *fptrs)
-+{
-+	int ret = 0;
-+
-+	*dir_out = securityfs_create_file(file_name,
-+					0400,
-+					parent,
-+					fptrs,
-+					&file_hash);
-+	if (IS_ERR(*dir_out)) {
-+		ret = -PTR_ERR(*dir_out);
-+		*dir_out = NULL;
-+	}
-+	return ret;
-+}
-+
-+struct sara_secfs_subtree {
-+	char name[SARA_SUBTREE_NN_LEN];
-+	size_t size;
-+	struct dentry **nodes;
-+	const struct sara_secfs_node *nodes_description;
-+	struct list_head subtree_list;
-+};
-+
-+static LIST_HEAD(subtree_list);
-+
-+int __init sara_secfs_subtree_register(const char *subtree_name,
-+				const struct sara_secfs_node *nodes,
-+				size_t size)
-+{
-+	int ret;
-+	struct sara_secfs_subtree *subtree = NULL;
-+
-+	ret = -EINVAL;
-+	if (unlikely(size < 1))
-+		goto error;
-+	ret = -ENOMEM;
-+	subtree = kmalloc(sizeof(*subtree), GFP_KERNEL);
-+	if (unlikely(subtree == NULL))
-+		goto error;
-+	strncpy(subtree->name,
-+		subtree_name,
-+		sizeof(subtree->name));
-+	subtree->name[sizeof(subtree->name)-1] = '\0';
-+	subtree->size = size+1;
-+	subtree->nodes = kcalloc(subtree->size,
-+				sizeof(*subtree->nodes),
-+				GFP_KERNEL);
-+	if (unlikely(subtree->nodes == NULL))
-+		goto error;
-+	subtree->nodes_description = nodes;
-+	INIT_LIST_HEAD(&subtree->subtree_list);
-+	list_add(&subtree->subtree_list, &subtree_list);
 +	return 0;
-+
-+error:
-+	kfree(subtree);
-+	pr_warn("SECFS: Impossible to register '%s' (%d).\n",
-+		subtree_name, ret);
-+	return ret;
 +}
 +
-+static inline int __init create_node(enum sara_secfs_node_type type,
-+					struct dentry *parent,
-+					const char *name,
-+					struct dentry **output,
-+					void *data)
-+{
-+	switch (type) {
-+	case SARA_SECFS_BOOL:
-+		return mk_bool_flag(parent, name, output, data);
-+	case SARA_SECFS_READONLY_INT:
-+		return mk_readonly_int(parent, name, output, data);
-+	case SARA_SECFS_CONFIG_LOAD:
-+		return mk_config_loader(parent, name, output, data);
-+	case SARA_SECFS_CONFIG_DUMP:
-+		return mk_config_dumper(parent, name, output, data);
-+	case SARA_SECFS_CONFIG_HASH:
-+		return mk_config_hash(parent, name, output, data);
-+	default:
-+		return -EINVAL;
-+	}
-+}
-+
-+static void subtree_unplug(struct sara_secfs_subtree *subtree)
-+{
-+	int i;
-+
-+	for (i = 0; i < subtree->size; ++i) {
-+		if (subtree->nodes[i] != NULL) {
-+			securityfs_remove(subtree->nodes[i]);
-+			subtree->nodes[i] = NULL;
-+		}
-+	}
-+}
-+
-+static int __init subtree_plug(struct sara_secfs_subtree *subtree)
-+{
-+	int ret;
-+	int i;
-+	const struct sara_secfs_node *nodes = subtree->nodes_description;
-+
-+	ret = -EINVAL;
-+	if (unlikely(fs_root == NULL))
-+		goto out;
-+	ret = mk_dir(fs_root,
-+			subtree->name,
-+			&subtree->nodes[subtree->size-1]);
-+	if (unlikely(ret))
-+		goto out_unplug;
-+	for (i = 0; i < subtree->size-1; ++i) {
-+		ret = create_node(nodes[i].type,
-+				  subtree->nodes[subtree->size-1],
-+				  nodes[i].name,
-+				  &subtree->nodes[i],
-+				  nodes[i].data);
-+		if (unlikely(ret))
-+			goto out_unplug;
-+	}
-+	return 0;
-+
-+out_unplug:
-+	subtree_unplug(subtree);
-+out:
-+	pr_warn("SECFS: Impossible to plug '%s' (%d).\n", subtree->name, ret);
-+	return ret;
-+}
-+
-+static int __init subtree_plug_all(void)
-+{
-+	int ret;
-+	struct list_head *position;
-+	struct sara_secfs_subtree *subtree;
-+
-+	ret = -EINVAL;
-+	if (unlikely(fs_root == NULL))
-+		goto out;
-+	ret = 0;
-+	list_for_each(position, &subtree_list) {
-+		subtree = list_entry(position,
-+					struct sara_secfs_subtree,
-+					subtree_list);
-+		if (subtree->nodes[0] == NULL) {
-+			ret = subtree_plug(subtree);
-+			if (unlikely(ret))
-+				goto out;
-+		}
-+	}
-+out:
-+	if (unlikely(ret))
-+		pr_warn("SECFS: Impossible to plug subtrees (%d).\n", ret);
-+	return ret;
-+}
-+
-+static void __init subtree_free_all(bool unplug)
-+{
-+	struct list_head *position;
-+	struct list_head *next;
-+	struct sara_secfs_subtree *subtree;
-+
-+	list_for_each_safe(position, next, &subtree_list) {
-+		subtree = list_entry(position,
-+					struct sara_secfs_subtree,
-+					subtree_list);
-+		list_del(position);
-+		if (unplug)
-+			subtree_unplug(subtree);
-+		kfree(subtree->nodes);
-+		kfree(subtree);
-+	}
-+}
-+
-+static int mk_root(void)
-+{
-+	int ret = -1;
-+
-+	if (fs_root == NULL)
-+		ret = mk_dir(NULL, "sara", &fs_root);
-+	if (unlikely(ret || fs_root == NULL))
-+		pr_warn("SECFS: Impossible to create root (%d).\n", ret);
-+	return ret;
-+}
-+
-+static inline void rm_root(void)
-+{
-+	if (likely(fs_root != NULL)) {
-+		securityfs_remove(fs_root);
-+		fs_root = NULL;
-+	}
-+}
-+
-+static inline void __init sara_secfs_destroy(void)
-+{
-+	subtree_free_all(true);
-+	rm_root();
-+}
-+
-+int __init sara_secfs_init(void)
-+{
-+	int ret;
-+
-+	if (!sara_enabled && sara_config_locked)
-+		return 0;
-+
-+	fs_root = NULL;
-+
-+	ret = mk_root();
-+	if (unlikely(ret))
-+		goto error;
-+
-+	ret = subtree_plug_all();
-+	if (unlikely(ret))
-+		goto error;
-+
-+	subtree_free_all(false);
-+
-+	pr_debug("securityfs initilaized.\n");
-+	return 0;
-+
-+error:
-+	sara_secfs_destroy();
-+	pr_crit("impossible to build securityfs.\n");
-+	return ret;
-+}
-+
-+fs_initcall(sara_secfs_init);
-diff --git a/security/sara/utils.c b/security/sara/utils.c
-new file mode 100644
-index 0000000..d63febb
---- /dev/null
-+++ b/security/sara/utils.c
-@@ -0,0 +1,92 @@
-+// SPDX-License-Identifier: GPL-2.0
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#include <linux/dcache.h>
-+#include <linux/file.h>
-+#include <linux/fs.h>
-+#include <linux/mm.h>
-+#include <linux/sched.h>
-+#include <linux/slab.h>
-+#include <linux/vmalloc.h>
-+
-+#include "include/sara.h"
-+#include "include/utils.h"
-+
-+/**
-+ * get_absolute_path - return the absolute path for a struct path
-+ * @spath: the struct path to report
-+ * @buf: double pointer where the newly allocated buffer will be placed
-+ *
-+ * Returns a pointer into @buf or an error code.
-+ *
-+ * The caller MUST kvfree @buf when finished using it.
-+ */
-+char *get_absolute_path(const struct path *spath, char **buf)
-+{
-+	size_t size = 128;
-+	char *work_buf = NULL;
-+	char *path = NULL;
-+
-+	do {
-+		kvfree(work_buf);
-+		work_buf = NULL;
-+		if (size > SARA_PATH_MAX) {
-+			path = ERR_PTR(-ENAMETOOLONG);
-+			goto error;
-+		}
-+		work_buf = kvmalloc(size, GFP_KERNEL);
-+		if (unlikely(work_buf == NULL)) {
-+			path = ERR_PTR(-ENOMEM);
-+			goto error;
-+		}
-+		path = d_absolute_path(spath, work_buf, size);
-+		size *= 2;
-+	} while (PTR_ERR(path) == -ENAMETOOLONG);
-+	if (!IS_ERR(path))
-+		goto out;
-+
-+error:
-+	kvfree(work_buf);
-+	work_buf = NULL;
-+out:
-+	*buf = work_buf;
-+	return path;
-+}
-+
-+/**
-+ * get_current_path - return the absolute path for the exe_file
-+ *		      in the current task_struct, falling back
-+ *		      to the contents of the comm field.
-+ * @buf: double pointer where the newly allocated buffer will be placed
-+ *
-+ * Returns a pointer into @buf or an error code.
-+ *
-+ * The caller MUST kvfree @buf when finished using it.
-+ */
-+char *get_current_path(char **buf)
-+{
-+	struct file *exe_file;
-+	char *path = NULL;
-+
-+	exe_file = get_task_exe_file(current);
-+	if (exe_file) {
-+		path = get_absolute_path(&exe_file->f_path, buf);
-+		fput(exe_file);
-+	}
-+	if (IS_ERR_OR_NULL(path)) {
-+		*buf = kzalloc(TASK_COMM_LEN, GFP_KERNEL);
-+		__get_task_comm(*buf, TASK_COMM_LEN, current);
-+		path = *buf;
-+	}
-+	return path;
-+}
++#endif
 -- 
 1.9.1
 
