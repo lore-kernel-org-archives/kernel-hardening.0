@@ -1,24 +1,24 @@
-Return-Path: <SRS0=Dwod=VD=lists.openwall.com=kernel-hardening-return-16359-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=zO3Q=VD=lists.openwall.com=kernel-hardening-return-16361-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-15.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+X-Spam-Status: No, score=-7.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,GAPPY_SUBJECT,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,UNWANTED_LANGUAGE_BODY,USER_AGENT_GIT
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 58AE7C0650E
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2A7AFC0650E
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:14 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 796D3214AF
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:02 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 4D08A214AF
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:13 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="rPg5B9Tq"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 796D3214AF
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="thNRn6TJ"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4D08A214AF
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16359-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25772 invoked by uid 550); 6 Jul 2019 10:55:35 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16361-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25943 invoked by uid 550); 6 Jul 2019 10:55:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,33 +26,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25672 invoked from network); 6 Jul 2019 10:55:33 -0000
+Received: (qmail 25793 invoked from network); 6 Jul 2019 10:55:35 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=2o5CRslS3uRS8RVi/y7cIRyfxfb3HvwyRL/v1ZeEIno=;
-        b=rPg5B9TqS7krvMJJliXmsCRezH5NtE0qwL7MshANq/BMIQk+fLCGGDvdN0TqTFS/Hg
-         6+JesQatpm70HrH1/sKDHhJW5NuJ9lbPo/Pt3diMYQHeYiUTvped3PnPQZHI+4YJ0jN8
-         9/g0eLOYr5OMGYidjZj/2dAXPCxNHpShNsdocDH/i6xFouRHR8c8cHVZsIJgLYUcb0DD
-         FQpwJKoiJ419jrwGoHRUHCLQTGHHWLdYLwHvsLFGedgjUlQUYEHsbPU+I9QqdvMXnfZ9
-         v9/8/wdff2V5mB4KBlxcXIQv7e6lcDopq/KTB5+TyDiIp+3dMLe+RN3aV4nQOiuYU/ye
-         mN5g==
+        bh=u2RjwdUFNE3OIK/3bCmlFikIsAzp11hkr0vwILrcAOk=;
+        b=thNRn6TJGPSAjqCTr1tPi/WxernvhpJlmpA3TOqpdYJiE30WEHmKtQQLBhQkPRLOPw
+         6LdBMJiwQeRDj45LsQ+CyPeBPtz6Sm/DVPA/1jFuQwsFGykkDeEEAkecFk+eI93fAHD1
+         qYlH4joBKaM50/AAsI6LhYNjkSKoWjJohjBdSbGLIHp32dQu3tN7YZr1eYxcsB+bqXUy
+         bX3ZLkExfr5FGb8+TAw/oOIVBNNg7ayqAkWV/3r6PYpzR3qHiM4xg4ORrndOJWzJXK+K
+         OUQHzEOkfBbfQCpO4tDaUbNknqB74EkTe516YzXQIsCHfecezahJQP/7fVtAx2XeBD7c
+         +9Fw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references;
-        bh=2o5CRslS3uRS8RVi/y7cIRyfxfb3HvwyRL/v1ZeEIno=;
-        b=GZPDj7mPyCZg/JQCf6gmQU6YgOrqwLm+sAdb7BE7WPdsyNhdIAm5A7P2diP584d9KO
-         FBAL8zbYIsDSF1FC/ziUKyZYRKG+QZgsWy6RutSHG8QG83jq/51VWz2qU1ay9/6sBV1o
-         o5XBAEy+P2keXoH+c+7/sOo802jLpDiLyTvaQLyVZ9Scp2jQ4aAQu+PMof3UfXlVooXI
-         JeEHKN1+4v1MfKthYXNUamuWaeRILF0x+gqsEypv1/34enL6fmciHRLRaDO8OTAybuTk
-         tFAtlK/JExGvIf+GeQ2zO99Way3BXcezCqOaDTdP+B319I47EMEGQxdYOefCqvAsZy4K
-         Kj+g==
-X-Gm-Message-State: APjAAAWoj4yxr7ROlHhFLKB5JDM0Nhr+UEhKbmWp3lbsGnjWm2FTwflk
-	jzmZpGqMgpqtG+akwbpdmw0=
-X-Google-Smtp-Source: APXvYqztD1m1u9aJTdBW5y6FhM7gZEDkT1ZI7+xUeEaha6acs1qD6E71wBnezSnp1EbFzIl12Fdq9g==
-X-Received: by 2002:a5d:42c5:: with SMTP id t5mr8328348wrr.5.1562410521889;
-        Sat, 06 Jul 2019 03:55:21 -0700 (PDT)
+        bh=u2RjwdUFNE3OIK/3bCmlFikIsAzp11hkr0vwILrcAOk=;
+        b=NBCmreKdSJlP0+NkFyb97+cwPliVndUDs8/Ma1uPIbgu7FeZ2ChY7195MLv7cnNaf2
+         d0NObFzhcxEseH6MUMmxCJ26Y+PJnftwlXFMQQlnSZYPCsmmm4DZNU4PD+Gi1WgKoBQ/
+         TKyDC6XUoBlnPlH2Za7GUbWGdeEr7CBw4kD6kOKHb3nT+1fZCrl05qqCZg4sg4TzJ2hU
+         cheCCnUbWogX8rWpkZKKpIuRsFoeOyppNwiDhBd6+o2xsArgFvFMSPMyOgFcxsk2394l
+         r1oclPUL0+sBLY6D3Jk0OHGjqGB2b7z7CEzrcW0v+afeSL94E1nnYMwdhajys2rTH7ly
+         xaZg==
+X-Gm-Message-State: APjAAAUEs9irQZby7Auw+vbdIMkhnPJgdic7PSL7HcGki2FGb4s/kp65
+	wldGtVJ9ZIkRvyREbVgl2IQ=
+X-Google-Smtp-Source: APXvYqxxhkCkToEoUM8bgIOUXQl0J7gFqXqis0ZuQI5jP94wYx8vI8XERZcndoRkmUp3pDS0ZQ935g==
+X-Received: by 2002:a1c:5f87:: with SMTP id t129mr8243038wmb.150.1562410524445;
+        Sat, 06 Jul 2019 03:55:24 -0700 (PDT)
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com,
@@ -69,245 +69,170 @@ Cc: kernel-hardening@lists.openwall.com,
 	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
 	"Serge E. Hallyn" <serge@hallyn.com>,
 	Thomas Gleixner <tglx@linutronix.de>
-Subject: [PATCH v5 09/12] S.A.R.A.: WX protection procattr interface
-Date: Sat,  6 Jul 2019 12:54:50 +0200
-Message-Id: <1562410493-8661-10-git-send-email-s.mesoraca16@gmail.com>
+Subject: [PATCH v5 11/12] S.A.R.A.: /proc/*/mem write limitation
+Date: Sat,  6 Jul 2019 12:54:52 +0200
+Message-Id: <1562410493-8661-12-git-send-email-s.mesoraca16@gmail.com>
 X-Mailer: git-send-email 1.9.1
 In-Reply-To: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 
-This allow threads to get current WX Protection flags for themselves or
-for other threads (if they have CAP_MAC_ADMIN).
-It also allow a thread to set itself flags to a stricter set of rules than
-the current one.
-Via a new wxprot flag (SARA_WXP_FORCE_WXORX) is it possible to ask the
-kernel to rescan the memory and remove the VM_WRITE flag from any area
-that is marked both writable and executable.
-Protections that prevent the runtime creation of executable code
-can be troublesome for all those programs that actually need to do it
-e.g. programs shipping with a JIT compiler built-in.
-This feature can be use to run the JIT compiler with few restrictions while
-enforcing full WX Protection in the rest of the program.
-To simplify access to this interface a CC0 licensed library is available
-here: https://github.com/smeso/libsara
+Prevent a task from opening, in "write" mode, any /proc/*/mem
+file that operates on the task's mm.
+A process could use it to overwrite read-only memory, bypassing
+S.A.R.A. restrictions.
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- fs/proc/base.c         |  11 ++++
- security/sara/wxprot.c | 150 +++++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 161 insertions(+)
+ security/sara/include/sara_data.h | 18 ++++++++++++++++-
+ security/sara/sara_data.c         |  8 ++++++++
+ security/sara/wxprot.c            | 41 +++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 66 insertions(+), 1 deletion(-)
 
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 255f675..7873d27 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -2612,6 +2612,13 @@ static ssize_t proc_pid_attr_write(struct file * file, const char __user * buf,
- LSM_DIR_OPS(smack);
- #endif
+diff --git a/security/sara/include/sara_data.h b/security/sara/include/sara_data.h
+index 9216c47..ee95f74 100644
+--- a/security/sara/include/sara_data.h
++++ b/security/sara/include/sara_data.h
+@@ -15,6 +15,7 @@
+ #define __SARA_DATA_H
  
-+#ifdef CONFIG_SECURITY_SARA
-+static const struct pid_entry sara_attr_dir_stuff[] = {
-+	ATTR("sara", "wxprot", 0666),
-+};
-+LSM_DIR_OPS(sara);
-+#endif
-+
- static const struct pid_entry attr_dir_stuff[] = {
- 	ATTR(NULL, "current",		0666),
- 	ATTR(NULL, "prev",		0444),
-@@ -2623,6 +2630,10 @@ static ssize_t proc_pid_attr_write(struct file * file, const char __user * buf,
- 	DIR("smack",			0555,
- 	    proc_smack_attr_dir_inode_ops, proc_smack_attr_dir_ops),
- #endif
-+#ifdef CONFIG_SECURITY_SARA
-+	DIR("sara",			0555,
-+	    proc_sara_attr_dir_inode_ops, proc_sara_attr_dir_ops),
-+#endif
+ #include <linux/cred.h>
++#include <linux/fs.h>
+ #include <linux/init.h>
+ #include <linux/lsm_hooks.h>
+ #include <linux/spinlock.h>
+@@ -40,6 +41,10 @@ struct sara_shm_data {
+ 	spinlock_t	lock;
  };
  
- static int proc_attr_dir_readdir(struct file *file, struct dir_context *ctx)
++struct sara_inode_data {
++	struct task_struct *task;
++};
++
+ 
+ static inline struct sara_data *get_sara_data(const struct cred *cred)
+ {
+@@ -79,6 +84,17 @@ static inline struct sara_shm_data *get_sara_shm_data(
+ #define lock_sara_shm(X) (spin_lock(&get_sara_shm_data((X))->lock))
+ #define unlock_sara_shm(X) (spin_unlock(&get_sara_shm_data((X))->lock))
+ 
+-#endif
++
++static inline struct sara_inode_data *get_sara_inode_data(
++						const struct inode *inode)
++{
++	if (unlikely(!inode->i_security))
++		return NULL;
++	return inode->i_security + sara_blob_sizes.lbs_inode;
++}
++
++#define get_sara_inode_task(X) (get_sara_inode_data((X))->task)
++
++#endif /* CONFIG_SECURITY_SARA_WXPROT */
+ 
+ #endif /* __SARA_H */
+diff --git a/security/sara/sara_data.c b/security/sara/sara_data.c
+index 9afca37..e875cf0 100644
+--- a/security/sara/sara_data.c
++++ b/security/sara/sara_data.c
+@@ -17,6 +17,7 @@
+ #include <linux/cred.h>
+ #include <linux/lsm_hooks.h>
+ #include <linux/mm.h>
++#include <linux/slab.h>
+ #include <linux/spinlock.h>
+ 
+ static int sara_cred_prepare(struct cred *new, const struct cred *old,
+@@ -40,15 +41,22 @@ static int sara_shm_alloc_security(struct kern_ipc_perm *shp)
+ 	return 0;
+ }
+ 
++static void sara_task_to_inode(struct task_struct *t, struct inode *i)
++{
++	get_sara_inode_task(i) = t;
++}
++
+ static struct security_hook_list data_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(cred_prepare, sara_cred_prepare),
+ 	LSM_HOOK_INIT(cred_transfer, sara_cred_transfer),
+ 	LSM_HOOK_INIT(shm_alloc_security, sara_shm_alloc_security),
++	LSM_HOOK_INIT(task_to_inode, sara_task_to_inode),
+ };
+ 
+ struct lsm_blob_sizes sara_blob_sizes __lsm_ro_after_init = {
+ 	.lbs_cred = sizeof(struct sara_data),
+ 	.lbs_ipc = sizeof(struct sara_shm_data),
++	.lbs_inode = sizeof(struct sara_inode_data),
+ };
+ 
+ int __init sara_data_init(void)
 diff --git a/security/sara/wxprot.c b/security/sara/wxprot.c
-index 9c42bfc..84f7b1e 100644
+index 773d1fd..1a8d132 100644
 --- a/security/sara/wxprot.c
 +++ b/security/sara/wxprot.c
-@@ -14,6 +14,7 @@
- #ifdef CONFIG_SECURITY_SARA_WXPROT
+@@ -22,8 +22,11 @@
+ #include <linux/mm.h>
+ #include <linux/mman.h>
+ #include <linux/module.h>
++#include <linux/mount.h>
+ #include <linux/printk.h>
+ #include <linux/ratelimit.h>
++#include <linux/sched/mm.h>
++#include <linux/sched/task.h>
+ #include <linux/spinlock.h>
+ #include <linux/xattr.h>
  
- #include <linux/binfmts.h>
-+#include <linux/capability.h>
- #include <linux/cred.h>
- #include <linux/elf.h>
- #include <linux/kref.h>
-@@ -42,6 +43,7 @@
- #define SARA_WXP_COMPLAIN	0x0010
- #define SARA_WXP_VERBOSE	0x0020
- #define SARA_WXP_MMAP		0x0040
-+#define SARA_WXP_FORCE_WXORX	0x0080
- #define SARA_WXP_EMUTRAMP	0x0100
- #define SARA_WXP_TRANSFER	0x0200
- #define SARA_WXP_NONE		0x0000
-@@ -540,6 +542,152 @@ static int sara_pagefault_handler(struct pt_regs *regs,
+@@ -615,6 +618,43 @@ static int sara_file_mprotect(struct vm_area_struct *vma,
+ 	return 0;
  }
- #endif
  
-+static int sara_getprocattr(struct task_struct *p, char *name, char **value)
++static int sara_file_open(struct file *file)
 +{
-+	int ret;
-+	u16 flags;
-+	char *buf;
++	struct task_struct *t;
++	struct mm_struct *mm;
++	u16 sara_wxp_flags = get_current_sara_wxp_flags();
 +
-+	ret = -EINVAL;
-+	if (strcmp(name, "wxprot") != 0)
-+		goto out;
++	/*
++	 * Prevent write access to /proc/.../mem
++	 * if it operates on the mm_struct of the
++	 * current process: it could be used to
++	 * bypass W^X.
++	 */
 +
-+	ret = -EACCES;
-+	if (unlikely(current != p &&
-+		     !capable(CAP_MAC_ADMIN)))
-+		goto out;
++	if (!sara_enabled ||
++	    !wxprot_enabled ||
++	    !(sara_wxp_flags & SARA_WXP_WXORX) ||
++	    !(file->f_mode & FMODE_WRITE))
++		return 0;
 +
-+	ret = -ENOMEM;
-+	buf = kzalloc(8, GFP_KERNEL);
-+	if (unlikely(buf == NULL))
-+		goto out;
-+
-+	if (!sara_enabled || !wxprot_enabled) {
-+		flags = 0x0;
-+	} else {
-+		rcu_read_lock();
-+		flags = get_sara_wxp_flags(__task_cred(p));
-+		rcu_read_unlock();
++	t = get_sara_inode_task(file_inode(file));
++	if (unlikely(t != NULL &&
++		     strcmp(file->f_path.dentry->d_name.name,
++			    "mem") == 0)) {
++		get_task_struct(t);
++		mm = get_task_mm(t);
++		put_task_struct(t);
++		if (unlikely(mm == current->mm))
++			sara_warn_or_goto(error,
++					  "write access to /proc/*/mem");
++		mmput(mm);
 +	}
-+
-+	snprintf(buf, 8, "0x%04x\n", flags);
-+	ret = strlen(buf);
-+	*value = buf;
-+
-+out:
-+	return ret;
-+}
-+
-+static int sara_setprocattr(const char *name, void *value, size_t size)
-+{
-+	int ret;
-+	struct vm_area_struct *vma;
-+	struct cred *new = prepare_creds();
-+	u16 cur_flags;
-+	u16 req_flags;
-+	char *buf = NULL;
-+
-+	ret = -EINVAL;
-+	if (!sara_enabled || !wxprot_enabled)
-+		goto error;
-+	if (unlikely(new == NULL))
-+		return -ENOMEM;
-+	if (strcmp(name, "wxprot") != 0)
-+		goto error;
-+	if (unlikely(value == NULL || size == 0 || size > 7))
-+		goto error;
-+	ret = -ENOMEM;
-+	buf = kmalloc(size+1, GFP_KERNEL);
-+	if (unlikely(buf == NULL))
-+		goto error;
-+	buf[size] = '\0';
-+	memcpy(buf, value, size);
-+	ret = -EINVAL;
-+	if (unlikely(strlen(buf) != size))
-+		goto error;
-+	if (unlikely(kstrtou16(buf, 0, &req_flags) != 0))
-+		goto error;
-+	/*
-+	 * SARA_WXP_FORCE_WXORX is a procattr only flag with a special
-+	 * meaning and it isn't recognized by are_flags_valid
-+	 */
-+	if (unlikely(!are_flags_valid(req_flags & ~SARA_WXP_FORCE_WXORX)))
-+		goto error;
-+	/*
-+	 * Extra checks on requested flags:
-+	 *   - SARA_WXP_FORCE_WXORX requires SARA_WXP_WXORX
-+	 *   - SARA_WXP_MMAP can only be activated if the program
-+	 *     has a relro section
-+	 *   - COMPLAIN mode can only be requested if it was already
-+	 *     on (procattr can only be used to make protection stricter)
-+	 *   - EMUTRAMP can only be activated if it was already on or
-+	 *     if MPROTECT and WXORX weren't already on (procattr can
-+	 *     only be used to make protection stricter)
-+	 *   - VERBOSITY request is ignored
-+	 */
-+	if (unlikely(req_flags & SARA_WXP_FORCE_WXORX &&
-+		     !(req_flags & SARA_WXP_WXORX)))
-+		goto error;
-+	if (unlikely(!get_current_sara_relro_page_found() &&
-+		     req_flags & SARA_WXP_MMAP))
-+		goto error;
-+	cur_flags = get_current_sara_wxp_flags();
-+	if (unlikely((req_flags & SARA_WXP_COMPLAIN) &&
-+		     !(cur_flags & SARA_WXP_COMPLAIN)))
-+		goto error;
-+	if (unlikely((req_flags & SARA_WXP_EMUTRAMP) &&
-+		     !(cur_flags & SARA_WXP_EMUTRAMP) &&
-+		     (cur_flags & (SARA_WXP_MPROTECT |
-+				   SARA_WXP_WXORX))))
-+		goto error;
-+	if (cur_flags & SARA_WXP_VERBOSE)
-+		req_flags |= SARA_WXP_VERBOSE;
-+	else
-+		req_flags &= ~SARA_WXP_VERBOSE;
-+	/*
-+	 * Except SARA_WXP_COMPLAIN and SARA_WXP_EMUTRAMP,
-+	 * any other flag can't be removed (procattr can
-+	 * only be used to make protection stricter).
-+	 */
-+	if (unlikely(cur_flags & (req_flags ^ cur_flags) &
-+		     ~(SARA_WXP_COMPLAIN|SARA_WXP_EMUTRAMP)))
-+		goto error;
-+	ret = -EINTR;
-+	/*
-+	 * When SARA_WXP_FORCE_WXORX is on we traverse all the
-+	 * memory and remove the write permission from any area
-+	 * that is both writable and executable.
-+	 */
-+	if (req_flags & SARA_WXP_FORCE_WXORX) {
-+		if (down_write_killable(&current->mm->mmap_sem))
-+			goto error;
-+		for (vma = current->mm->mmap; vma; vma = vma->vm_next) {
-+			if (vma->vm_flags & VM_EXEC &&
-+			    vma->vm_flags & VM_WRITE) {
-+				vma->vm_flags &= ~VM_WRITE;
-+				vma_set_page_prot(vma);
-+				change_protection(vma,
-+						  vma->vm_start,
-+						  vma->vm_end,
-+						  vma->vm_page_prot,
-+						  0,
-+						  0);
-+			}
-+		}
-+		up_write(&current->mm->mmap_sem);
-+	}
-+	get_sara_wxp_flags(new) = req_flags & ~SARA_WXP_FORCE_WXORX;
-+	commit_creds(new);
-+	ret = size;
-+	goto out;
-+
++	return 0;
 +error:
-+	abort_creds(new);
-+out:
-+	kfree(buf);
-+	return ret;
++	mmput(mm);
++	return -EACCES;
 +}
 +
- static struct security_hook_list wxprot_hooks[] __lsm_ro_after_init = {
- 	LSM_HOOK_INIT(bprm_set_creds, sara_bprm_set_creds),
+ #ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
+ static int sara_pagefault_handler(struct pt_regs *regs,
+ 				  unsigned long error_code,
+@@ -778,6 +818,7 @@ static int sara_setprocattr(const char *name, void *value, size_t size)
  	LSM_HOOK_INIT(check_vmflags, sara_check_vmflags),
-@@ -548,6 +696,8 @@ static int sara_pagefault_handler(struct pt_regs *regs,
+ 	LSM_HOOK_INIT(shm_shmat, sara_shm_shmat),
+ 	LSM_HOOK_INIT(file_mprotect, sara_file_mprotect),
++	LSM_HOOK_INIT(file_open, sara_file_open),
  #ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
  	LSM_HOOK_INIT(pagefault_handler, sara_pagefault_handler),
  #endif
-+	LSM_HOOK_INIT(getprocattr, sara_getprocattr),
-+	LSM_HOOK_INIT(setprocattr, sara_setprocattr),
- };
- 
- static void config_free(struct wxprot_config_container *data)
 -- 
 1.9.1
 
