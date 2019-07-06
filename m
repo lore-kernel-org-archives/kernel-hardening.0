@@ -1,24 +1,24 @@
-Return-Path: <SRS0=+6Fl=VD=lists.openwall.com=kernel-hardening-return-16357-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=LOZS=VD=lists.openwall.com=kernel-hardening-return-16358-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+X-Spam-Status: No, score=-10.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,GAPPY_SUBJECT,
 	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 456FBC0650E
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 00EECC0650E
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:53 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6D402214AF
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:41 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id ED000214AF
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:51 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="V7AvK11r"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6D402214AF
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="nXuWwFea"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org ED000214AF
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16357-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25671 invoked by uid 550); 6 Jul 2019 10:55:33 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16358-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25730 invoked by uid 550); 6 Jul 2019 10:55:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,33 +26,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24509 invoked from network); 6 Jul 2019 10:55:31 -0000
+Received: (qmail 25609 invoked from network); 6 Jul 2019 10:55:32 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=HSNnsoi40sXC9a5NBIzV0J+z/SUw5gqWPuXVFawRMYc=;
-        b=V7AvK11reWJTiJ1DMourV1U4KNoutKJGDoiTGDXXM3R+PR5LpFynIPMuHGWbUmIT6N
-         62QOnfL7Spg5I7UppXlkG9bH566FlMkdYX2c5mITv+X49REEJ7TzTRD5C+iQfoN/4rPl
-         UgKMTPNUamuI84pgZfGnM+KdecKNvQnLCdW9YiA5ieNyU+3CJjFBApwua+MKXWYTWR3W
-         cDjDfWnzPiKTGrdUhnTZwNc+HFKvMUxWxCZ7CxTIxdI37rHw++WBf8TzZNY7DbiPJbPx
-         Vi4i+Oh39vDEODfCMLRruFPTteb2P7fgj4MRU+BMXpmRVkxdZYPg4w23p2aEvnIp8KBu
-         br5g==
+        bh=GuxALAFQ/TNai2yWaUBZYrBAIJmgHr1PeMz07TcuHEk=;
+        b=nXuWwFeaFB10NA4V6lB4djfCG4L03Q6YVTn+kObhLt+JnC9zkbzXGcCXqxJ+khdjo0
+         uwJBElmo7sJB/OZhWNONnRz0FNfsGlRBcU13eybEa3in1yWNnQhM2ZVWqPKflMf8G9q8
+         yJqcXaTPODZ09JeyF2MJJbCLKwcqRKf9n0m5xpF62VdZNkdS7DTRXY1KsNuFyyu6eWg+
+         lTH/lyd0NHCcCvuVNS69Bl8/tPzx//CMr/uVPkJbMAvW2/fasALxnJQ69pGmUAuxZX9M
+         Iso4mDoYZ17y8anniEhUvdE3SAAb8m0iakYlkfo5QCYApCOkWwUB3c3re0pm1oEW0nq7
+         Q8Yg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references;
-        bh=HSNnsoi40sXC9a5NBIzV0J+z/SUw5gqWPuXVFawRMYc=;
-        b=O0LE3DNdGi9CykFQuBRIJj3Vi1oVAKIuTTB/z9uNu5TwTMWIqHTPOXabqXTFHLyy91
-         ZppcE7UlJC49isVp0x6Aig2xb1hq+4bL+t0QtJi/vFOYljaWNgqQlTE5L0IHE5E6BbAa
-         frPRkHFm8CN3CFAriMAKVRUkvuzFhHsTc9WjDF2KvFKmVwSgn2cefFOJ4o9tY1xgZcnL
-         X5V6U2ohDn0wifcCB7CqRfygXrCLNPrfgJFij2w41GxDXkT0YlDof5Yxv+a+pTIdRTzR
-         0ITuqZIguuNphAwujyx4Z9Sa9kCF25vlG/F6ou+z8zngwYtiJTkwpdW7PLl6ShzbA+CZ
-         f+lg==
-X-Gm-Message-State: APjAAAWFRfr2MHQP8MMfmP18s1+Wa670ZVurC+nf/wZuQMJ6M6hX+WsQ
-	w/Dwni7P0hFoz1pEYaDs1/0=
-X-Google-Smtp-Source: APXvYqxTOz8ZdoRBiRrROUWhnI6SyewPlaUzoSCGW9GiCDm2WtNdoe4eOEEH3/a8B3ek3jvZ4FdMSg==
-X-Received: by 2002:a7b:cbc6:: with SMTP id n6mr8125351wmi.14.1562410519789;
-        Sat, 06 Jul 2019 03:55:19 -0700 (PDT)
+        bh=GuxALAFQ/TNai2yWaUBZYrBAIJmgHr1PeMz07TcuHEk=;
+        b=OZWZXe0di8r69CEtIWC6kXYKsHYPxkLi5xV5ZdBA91ZuCSi7bIs6OF9gCiqLmoUW1T
+         dyrunKVd1uaVJuP6Yy1O//GWqoXvm6FmH6pGyuOIZkoCI68y08KaxjQozxwpRHGWceZg
+         SGgAHODvF3nynbUWW8E/TAfO7CF8sv7petBK2rDVjoqe/20WVPTekywlC1fZKYxa6Dyw
+         TXUugLd9ysRQlBuE0nZ0ZxluQoM2EqtAWPg5J7wbw4QoveZN5nhZhfYxxlHQgyDDRn+S
+         23YxpnM/iSFrOVytuLN9Sxxebgx95zQ0hLzVw3KGC5IZSm35Qxgd+zA/PHVDynL5PWj6
+         P2WQ==
+X-Gm-Message-State: APjAAAWzC62NS/DGM/TvCKYVuID0cH/4don0gZrqiQcgS65yNpydBumk
+	Pc+eS+FxZSWVW2+CzjY7qi8=
+X-Google-Smtp-Source: APXvYqy1+ynai1OSOQkeLSv5Es/MREYsXma7ZlHF4OC5iwOUmuCSj70NPI+2aNwlq+0KMTWYYdT8cw==
+X-Received: by 2002:a1c:c5c2:: with SMTP id v185mr4017391wmf.161.1562410520881;
+        Sat, 06 Jul 2019 03:55:20 -0700 (PDT)
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com,
@@ -69,188 +69,600 @@ Cc: kernel-hardening@lists.openwall.com,
 	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
 	"Serge E. Hallyn" <serge@hallyn.com>,
 	Thomas Gleixner <tglx@linutronix.de>
-Subject: [PATCH v5 07/12] LSM: creation of "pagefault_handler" LSM hook
-Date: Sat,  6 Jul 2019 12:54:48 +0200
-Message-Id: <1562410493-8661-8-git-send-email-s.mesoraca16@gmail.com>
+Subject: [PATCH v5 08/12] S.A.R.A.: trampoline emulation
+Date: Sat,  6 Jul 2019 12:54:49 +0200
+Message-Id: <1562410493-8661-9-git-send-email-s.mesoraca16@gmail.com>
 X-Mailer: git-send-email 1.9.1
 In-Reply-To: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 
-Creation of a new hook to let LSM modules handle user-space pagefaults on
-x86.
-It can be used to avoid segfaulting the originating process.
-If it's the case it can modify process registers before returning.
-This is not a security feature by itself, it's a way to soften some
-unwanted side-effects of restrictive security features.
-In particular this is used by S.A.R.A. to implement what PaX call
-"trampoline emulation" that, in practice, allows for some specific
-code sequences to be executed even if they are in non executable memory.
-This may look like a bad thing at first, but you have to consider
-that:
-- This allows for strict memory restrictions (e.g. W^X) to stay on even
-  when they should be turned off. And, even if this emulation
-  makes those features less effective, it's still better than having
-  them turned off completely.
-- The only code sequences emulated are trampolines used to make
-  function calls. In many cases, when you have the chance to
-  make arbitrary memory writes, you can already manipulate the
-  control flow of the program by overwriting function pointers or
-  return values. So, in many cases, "trampoline emulation"
-  doesn't introduce new exploit vectors.
-- It's a feature that can be turned on only if needed, on a per
-  executable file basis.
+Some programs need to generate part of their code at runtime. Luckily
+enough, in some cases they only generate well-known code sequences (the
+"trampolines") that can be easily recognized and emulated by the kernel.
+This way WX Protection can still be active, so a potential attacker won't
+be able to generate arbitrary sequences of code, but just those that are
+explicitly allowed. This is not ideal, but it's still better than having WX
+Protection completely disabled.
+In particular S.A.R.A. is able to recognize trampolines used by GCC for
+nested C functions and libffi's trampolines.
+This feature is implemented only on x86_32 and x86_64.
+Trampoline emulation is modified from Brad Spengler/PaX Team's code in the
+last public patch of grsecurity/PaX based on my understanding of the code.
+Changes or omissions from the original code are mine and don't reflect the
+original grsecurity/PaX code.
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- arch/Kconfig              |  6 ++++++
- arch/x86/Kconfig          |  1 +
- arch/x86/mm/fault.c       |  6 ++++++
- include/linux/lsm_hooks.h | 12 ++++++++++++
- include/linux/security.h  | 11 +++++++++++
- security/security.c       | 11 +++++++++++
- 6 files changed, 47 insertions(+)
+ arch/x86/Kbuild                        |   2 +
+ arch/x86/security/Makefile             |   2 +
+ arch/x86/security/sara/Makefile        |   1 +
+ arch/x86/security/sara/emutramp.c      |  57 ++++++++++++
+ arch/x86/security/sara/trampolines32.h | 137 +++++++++++++++++++++++++++
+ arch/x86/security/sara/trampolines64.h | 164 +++++++++++++++++++++++++++++++++
+ security/sara/Kconfig                  |  18 ++++
+ security/sara/include/emutramp.h       |  35 +++++++
+ security/sara/wxprot.c                 |  29 ++++++
+ 9 files changed, 445 insertions(+)
+ create mode 100644 arch/x86/security/Makefile
+ create mode 100644 arch/x86/security/sara/Makefile
+ create mode 100644 arch/x86/security/sara/emutramp.c
+ create mode 100644 arch/x86/security/sara/trampolines32.h
+ create mode 100644 arch/x86/security/sara/trampolines64.h
+ create mode 100644 security/sara/include/emutramp.h
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index c47b328..16997c3 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -252,6 +252,12 @@ config ARCH_HAS_FORTIFY_SOURCE
- config ARCH_HAS_KEEPINITRD
- 	bool
+diff --git a/arch/x86/Kbuild b/arch/x86/Kbuild
+index 30dec01..4fea778 100644
+--- a/arch/x86/Kbuild
++++ b/arch/x86/Kbuild
+@@ -25,3 +25,5 @@ obj-y += platform/
+ obj-y += net/
  
-+config ARCH_HAS_LSM_PAGEFAULT
-+	bool
-+	help
-+	  An architecture should select this if it supports
-+	  "pagefault_handler" LSM hook.
+ obj-$(CONFIG_KEXEC_FILE) += purgatory/
 +
- # Select if arch has all set_memory_ro/rw/x/nx() functions in asm/cacheflush.h
- config ARCH_HAS_SET_MEMORY
- 	bool
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 2bbbd4d..a3c7660 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -67,6 +67,7 @@ config X86
- 	select ARCH_HAS_FORTIFY_SOURCE
- 	select ARCH_HAS_GCOV_PROFILE_ALL
- 	select ARCH_HAS_KCOV			if X86_64
-+	select ARCH_HAS_LSM_PAGEFAULT
- 	select ARCH_HAS_MEMBARRIER_SYNC_CORE
- 	select ARCH_HAS_PMEM_API		if X86_64
- 	select ARCH_HAS_PTE_SPECIAL
-diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
-index 46df4c6..7fe36f1 100644
---- a/arch/x86/mm/fault.c
-+++ b/arch/x86/mm/fault.c
-@@ -18,6 +18,7 @@
- #include <linux/uaccess.h>		/* faulthandler_disabled()	*/
- #include <linux/efi.h>			/* efi_recover_from_page_fault()*/
- #include <linux/mm_types.h>
-+#include <linux/security.h>		/* security_pagefault_handler	*/
- 
- #include <asm/cpufeature.h>		/* boot_cpu_has, ...		*/
- #include <asm/traps.h>			/* dotraplinkage, ...		*/
-@@ -1360,6 +1361,11 @@ void do_user_addr_fault(struct pt_regs *regs,
- 			local_irq_enable();
- 	}
- 
-+	if (unlikely(security_pagefault_handler(regs,
-+						hw_error_code,
-+						address)))
-+		return;
++obj-y += security/
+diff --git a/arch/x86/security/Makefile b/arch/x86/security/Makefile
+new file mode 100644
+index 0000000..ba4be4c
+--- /dev/null
++++ b/arch/x86/security/Makefile
+@@ -0,0 +1,2 @@
++subdir-$(CONFIG_SECURITY_SARA)		+= sara
++obj-$(CONFIG_SECURITY_SARA)		+= sara/
+diff --git a/arch/x86/security/sara/Makefile b/arch/x86/security/sara/Makefile
+new file mode 100644
+index 0000000..a4a76217
+--- /dev/null
++++ b/arch/x86/security/sara/Makefile
+@@ -0,0 +1 @@
++obj-$(CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP) := emutramp.o
+diff --git a/arch/x86/security/sara/emutramp.c b/arch/x86/security/sara/emutramp.c
+new file mode 100644
+index 0000000..45122e5
+--- /dev/null
++++ b/arch/x86/security/sara/emutramp.c
+@@ -0,0 +1,57 @@
++// SPDX-License-Identifier: GPL-2.0
 +
- 	perf_sw_event(PERF_COUNT_SW_PAGE_FAULTS, 1, regs, address);
- 
- 	if (hw_error_code & X86_PF_WRITE)
-diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
-index 12ce609..478a187 100644
---- a/include/linux/lsm_hooks.h
-+++ b/include/linux/lsm_hooks.h
-@@ -518,6 +518,14 @@
-  *	@vmflags contains the requested vmflags.
-  *	Return 0 if the operation is allowed to continue otherwise return
-  *	the appropriate error code.
-+ * @pagefault_handler:
-+ *	Handle pagefaults on supported architectures, that is any architecture
-+ *	which defines CONFIG_ARCH_HAS_LSM_PAGEFAULT.
-+ *	@regs contains process' registers.
-+ *	@error_code contains error code for the pagefault.
-+ *	@address contains the address that caused the pagefault.
-+ *	Return 0 to let the kernel handle the pagefault as usually, any other
-+ *	value to let the process continue its execution.
-  * @file_lock:
-  *	Check permission before performing file locking operations.
-  *	Note the hook mediates both flock and fcntl style locks.
-@@ -1603,6 +1611,9 @@
- 	int (*file_mprotect)(struct vm_area_struct *vma, unsigned long reqprot,
- 				unsigned long prot);
- 	int (*check_vmflags)(vm_flags_t vmflags);
-+	int (*pagefault_handler)(struct pt_regs *regs,
-+				 unsigned long error_code,
-+				 unsigned long address);
- 	int (*file_lock)(struct file *file, unsigned int cmd);
- 	int (*file_fcntl)(struct file *file, unsigned int cmd,
- 				unsigned long arg);
-@@ -1904,6 +1915,7 @@ struct security_hook_heads {
- 	struct hlist_head mmap_file;
- 	struct hlist_head file_mprotect;
- 	struct hlist_head check_vmflags;
-+	struct hlist_head pagefault_handler;
- 	struct hlist_head file_lock;
- 	struct hlist_head file_fcntl;
- 	struct hlist_head file_set_fowner;
-diff --git a/include/linux/security.h b/include/linux/security.h
-index aed78eb..c287eb2 100644
---- a/include/linux/security.h
-+++ b/include/linux/security.h
-@@ -313,6 +313,9 @@ int security_mmap_file(struct file *file, unsigned long prot,
- int security_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
- 			   unsigned long prot);
- int security_check_vmflags(vm_flags_t vmflags);
-+int __maybe_unused security_pagefault_handler(struct pt_regs *regs,
-+					      unsigned long error_code,
-+					      unsigned long address);
- int security_file_lock(struct file *file, unsigned int cmd);
- int security_file_fcntl(struct file *file, unsigned int cmd, unsigned long arg);
- void security_file_set_fowner(struct file *file);
-@@ -865,6 +868,14 @@ static inline int security_check_vmflags(vm_flags_t vmflags)
- 	return 0;
- }
- 
-+static inline int __maybe_unused security_pagefault_handler(
-+						struct pt_regs *regs,
-+						unsigned long error_code,
-+						unsigned long address)
++/*
++ * S.A.R.A. Linux Security Module
++ *
++ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ *
++ * Assembly sequences used here were copied from
++ * PaX patch by PaX Team <pageexec@freemail.hu>
++ * Being just hexadecimal constants, they are not subject to
++ * any copyright.
++ *
++ */
++
++#define PF_PROT		(1 << 0)
++#define PF_USER		(1 << 2)
++#define PF_INSTR	(1 << 4)
++
++#ifdef CONFIG_X86_32
++
++#include "trampolines32.h"
++static inline int trampoline_emulator(struct pt_regs *regs,
++				      unsigned long address)
 +{
++	return sara_trampoline_emulator_x86_32(regs);
++}
++
++#else /* CONFIG_X86_32 */
++
++#include "trampolines64.h"
++static inline int trampoline_emulator(struct pt_regs *regs,
++				      unsigned long address)
++{
++	return sara_trampoline_emulator_x86_64(regs, address);
++}
++
++#endif /* CONFIG_X86_32 */
++
++
++int sara_trampoline_emulator(struct pt_regs *regs,
++			     unsigned long error_code,
++			     unsigned long address)
++{
++	if (!(error_code & PF_USER) ||
++	    !(error_code & PF_INSTR) ||
++	    !(error_code & PF_PROT))
++		return 0;
++
++	local_irq_enable();
++	might_sleep();
++	might_fault();
++	return trampoline_emulator(regs, address);
++}
+diff --git a/arch/x86/security/sara/trampolines32.h b/arch/x86/security/sara/trampolines32.h
+new file mode 100644
+index 0000000..b3622d0
+--- /dev/null
++++ b/arch/x86/security/sara/trampolines32.h
+@@ -0,0 +1,137 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++
++/*
++ * S.A.R.A. Linux Security Module
++ *
++ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ *
++ * Assembly sequences used here were copied from
++ * PaX patch by PaX Team <pageexec@freemail.hu>
++ * Being just hexadecimal constants, they are not subject to
++ * any copyright.
++ *
++ */
++
++#ifndef __SARA_TRAMPOLINES32_H
++#define __SARA_TRAMPOLINES32_H
++
++#include <linux/printk.h>
++#include <linux/uaccess.h>
++
++struct libffi_trampoline_x86_32 {
++	unsigned char mov;
++	unsigned int addr1;
++	unsigned char jmp;
++	unsigned int addr2;
++} __packed;
++
++struct gcc_trampoline_x86_32_t1 {
++	unsigned char mov1;
++	unsigned int addr1;
++	unsigned char mov2;
++	unsigned int addr2;
++	unsigned short jmp;
++} __packed;
++
++struct gcc_trampoline_x86_32_t2 {
++	unsigned char mov;
++	unsigned int addr1;
++	unsigned char jmp;
++	unsigned int addr2;
++} __packed;
++
++union trampolines_x86_32 {
++	struct libffi_trampoline_x86_32 lf;
++	struct gcc_trampoline_x86_32_t1 g1;
++	struct gcc_trampoline_x86_32_t2 g2;
++};
++
++static inline int is_libffi_tramp_x86_32(const union trampolines_x86_32 *u)
++{
++	return (u->lf.mov == 0xB8 && u->lf.jmp == 0xE9);
++}
++
++static inline void emu_libffi_tramp_x86_32(const union trampolines_x86_32 *u,
++					   struct pt_regs *regs)
++{
++	regs->ax = u->lf.addr1;
++	regs->ip = (unsigned int) (regs->ip +
++				   u->lf.addr2 +
++				   sizeof(u->lf));
++}
++
++static inline int is_gcc_tramp_x86_32_t1(const union trampolines_x86_32 *u,
++					 const struct pt_regs *regs)
++{
++	return (u->g1.mov1 == 0xB9 &&
++		u->g1.mov2 == 0xB8 &&
++		u->g1.jmp == 0xE0FF &&
++		regs->ip > regs->sp);
++}
++
++static inline void emu_gcc_tramp_x86_32_t1(const union trampolines_x86_32 *u,
++					   struct pt_regs *regs)
++{
++	regs->cx = u->g1.addr1;
++	regs->ax = u->g1.addr2;
++	regs->ip = u->g1.addr2;
++}
++
++static inline int is_gcc_tramp_x86_32_t2(const union trampolines_x86_32 *u,
++					 const struct pt_regs *regs)
++{
++	return (u->g2.mov == 0xB9 &&
++		u->g2.jmp == 0xE9 &&
++		regs->ip > regs->sp);
++}
++
++static inline void emu_gcc_tramp_x86_32_t2(const union trampolines_x86_32 *u,
++					   struct pt_regs *regs)
++{
++	regs->cx = u->g2.addr1;
++	regs->ip = (unsigned int) (regs->ip +
++				   u->g2.addr2 +
++				   sizeof(u->g2));
++}
++
++static inline int sara_trampoline_emulator_x86_32(struct pt_regs *regs)
++{
++	int ret;
++	void __user *ip = (void __user *) regs->ip;
++	union trampolines_x86_32 t; //zero init
++
++	BUILD_BUG_ON(sizeof(t.lf) > sizeof(t.g1));
++	BUILD_BUG_ON(sizeof(t.g2) > sizeof(t.lf));
++
++	ret = copy_from_user(&t, ip, sizeof(t.g1));
++	if (ret)
++		ret = copy_from_user(&t, ip, sizeof(t.lf));
++	if (ret)
++		ret = copy_from_user(&t, ip, sizeof(t.g2));
++	if (ret)
++		return 0;
++
++	if (is_gcc_tramp_x86_32_t1(&t, regs)) {
++		pr_debug("Trampoline: gcc1 x86_32.\n");
++		emu_gcc_tramp_x86_32_t1(&t, regs);
++		return 1;
++	} else if (is_libffi_tramp_x86_32(&t)) {
++		pr_debug("Trampoline: libffi x86_32.\n");
++		emu_libffi_tramp_x86_32(&t, regs);
++		return 1;
++	} else if (is_gcc_tramp_x86_32_t2(&t, regs)) {
++		pr_debug("Trampoline: gcc2 x86_32.\n");
++		emu_gcc_tramp_x86_32_t2(&t, regs);
++		return 1;
++	}
++
++	pr_debug("Not a trampoline (x86_32).\n");
++
 +	return 0;
 +}
 +
- static inline int security_file_lock(struct file *file, unsigned int cmd)
- {
- 	return 0;
-diff --git a/security/security.c b/security/security.c
-index 3308e89..a8bdcf3 100644
---- a/security/security.c
-+++ b/security/security.c
-@@ -1426,6 +1426,17 @@ int security_check_vmflags(vm_flags_t vmflags)
- 	return call_int_hook(check_vmflags, 0, vmflags);
- }
- 
-+int __maybe_unused security_pagefault_handler(struct pt_regs *regs,
-+					      unsigned long error_code,
-+					      unsigned long address)
++#endif /* __SARA_TRAMPOLINES32_H */
+diff --git a/arch/x86/security/sara/trampolines64.h b/arch/x86/security/sara/trampolines64.h
+new file mode 100644
+index 0000000..c9aaa03
+--- /dev/null
++++ b/arch/x86/security/sara/trampolines64.h
+@@ -0,0 +1,164 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++
++/*
++ * S.A.R.A. Linux Security Module
++ *
++ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ *
++ * Assembly sequences used here were copied from
++ * PaX patch by PaX Team <pageexec@freemail.hu>
++ * Being just hexadecimal constants, they are not subject to
++ * any copyright.
++ *
++ */
++
++#ifndef __SARA_TRAMPOLINES64_H
++#define __SARA_TRAMPOLINES64_H
++
++#include <linux/printk.h>
++#include <linux/uaccess.h>
++
++#include "trampolines32.h"
++
++struct libffi_trampoline_x86_64 {
++	unsigned short mov1;
++	unsigned long addr1;
++	unsigned short mov2;
++	unsigned long addr2;
++	unsigned char stcclc;
++	unsigned short jmp1;
++	unsigned char jmp2;
++} __packed;
++
++struct gcc_trampoline_x86_64_type1 {
++	unsigned short mov1;
++	unsigned long addr1;
++	unsigned short mov2;
++	unsigned long addr2;
++	unsigned short jmp1;
++	unsigned char jmp2;
++} __packed;
++
++struct gcc_trampoline_x86_64_type2 {
++	unsigned short mov1;
++	unsigned int addr1;
++	unsigned short mov2;
++	unsigned long addr2;
++	unsigned short jmp1;
++	unsigned char jmp2;
++} __packed;
++
++union trampolines_x86_64 {
++	struct libffi_trampoline_x86_64 lf;
++	struct gcc_trampoline_x86_64_type1 g1;
++	struct gcc_trampoline_x86_64_type2 g2;
++};
++
++static inline int is_libffi_tramp_x86_64(const union trampolines_x86_64 *u)
 +{
-+	return call_int_hook(pagefault_handler,
-+			     0,
-+			     regs,
-+			     error_code,
-+			     address);
++	return (u->lf.mov1 == 0xBB49 &&
++		u->lf.mov2 == 0xBA49 &&
++		(u->lf.stcclc == 0xF8 ||
++		 u->lf.stcclc == 0xF9) &&
++		u->lf.jmp1 == 0xFF49 &&
++		u->lf.jmp2 == 0xE3);
 +}
 +
- int security_file_lock(struct file *file, unsigned int cmd)
++static inline void emu_libffi_tramp_x86_64(const union trampolines_x86_64 *u,
++					   struct pt_regs *regs)
++{
++	regs->r11 = u->lf.addr1;
++	regs->r10 = u->lf.addr2;
++	regs->ip = u->lf.addr1;
++	if (u->lf.stcclc == 0xF8)
++		regs->flags &= ~X86_EFLAGS_CF;
++	else
++		regs->flags |= X86_EFLAGS_CF;
++}
++
++static inline int is_gcc_tramp_x86_64_t1(const union trampolines_x86_64 *u,
++					 const struct pt_regs *regs)
++{
++	return (u->g1.mov1 == 0xBB49 &&
++		u->g1.mov2 == 0xBA49 &&
++		u->g1.jmp1 == 0xFF49 &&
++		u->g1.jmp2 == 0xE3 &&
++		regs->ip > regs->sp);
++}
++
++static inline void emu_gcc_tramp_x86_64_t1(const union trampolines_x86_64 *u,
++					   struct pt_regs *regs)
++{
++	regs->r11 = u->g1.addr1;
++	regs->r10 = u->g1.addr2;
++	regs->ip = u->g1.addr1;
++}
++
++static inline int is_gcc_tramp_x86_64_t2(const union trampolines_x86_64 *u,
++					 const struct pt_regs *regs)
++{
++	return (u->g2.mov1 == 0xBB41 &&
++		u->g2.mov2 == 0xBA49 &&
++		u->g2.jmp1 == 0xFF49 &&
++		u->g2.jmp2 == 0xE3 &&
++		regs->ip > regs->sp);
++}
++
++static inline void emu_gcc_tramp_x86_64_t2(const union trampolines_x86_64 *u,
++					   struct pt_regs *regs)
++{
++	regs->r11 = u->g2.addr1;
++	regs->r10 = u->g2.addr2;
++	regs->ip = u->g2.addr1;
++}
++
++static inline int sara_trampoline_emulator_x86_64(struct pt_regs *regs,
++						  unsigned long address)
++{
++	int ret;
++	void __user *ip = (void __user *) regs->ip;
++	union trampolines_x86_64 t;
++
++	BUILD_BUG_ON(sizeof(t.g1) > sizeof(t.lf));
++	BUILD_BUG_ON(sizeof(t.g2) > sizeof(t.g1));
++
++	if (regs->cs == __USER32_CS ||
++	    regs->cs & (1<<2)) {
++		if (address >> 32)	/* K8 erratum #100 */
++			return 0;
++		return sara_trampoline_emulator_x86_32(regs);
++	}
++
++	ret = copy_from_user(&t, ip, sizeof(t.lf));
++	if (ret)
++		ret = copy_from_user(&t, ip, sizeof(t.g1));
++	if (ret)
++		ret = copy_from_user(&t, ip, sizeof(t.g2));
++	if (ret)
++		return 0;
++
++	if (is_libffi_tramp_x86_64(&t)) {
++		pr_debug("Trampoline: libffi x86_64.\n");
++		emu_libffi_tramp_x86_64(&t, regs);
++		return 1;
++	} else if (is_gcc_tramp_x86_64_t1(&t, regs)) {
++		pr_debug("Trampoline: gcc1 x86_64.\n");
++		emu_gcc_tramp_x86_64_t1(&t, regs);
++		return 1;
++	} else if (is_gcc_tramp_x86_64_t2(&t, regs)) {
++		pr_debug("Trampoline: gcc2 x86_64.\n");
++		emu_gcc_tramp_x86_64_t2(&t, regs);
++		return 1;
++	}
++
++	pr_debug("Not a trampoline (x86_64).\n");
++
++	return 0;
++
++}
++
++#endif /* __SARA_TRAMPOLINES64_H */
+diff --git a/security/sara/Kconfig b/security/sara/Kconfig
+index 54a96e0..458e0e8 100644
+--- a/security/sara/Kconfig
++++ b/security/sara/Kconfig
+@@ -117,6 +117,24 @@ choice
+ 		  Documentation/admin-guide/LSM/SARA.rst.
+ endchoice
+ 
++config SECURITY_SARA_WXPROT_EMUTRAMP
++	bool "Enable emulation for some types of trampolines"
++	depends on SECURITY_SARA_WXPROT
++	depends on ARCH_HAS_LSM_PAGEFAULT
++	depends on X86
++	default y
++	help
++	  Some programs and libraries need to execute special small code
++	  snippets from non-executable memory pages.
++	  Most notable examples are the GCC and libffi trampolines.
++	  This features make it possible to execute those trampolines even
++	  if they reside in non-executable memory pages.
++	  This features need to be enabled on a per-executable basis
++	  via user-space utilities.
++	  See Documentation/admin-guide/LSM/SARA.rst. for further information.
++
++	  If unsure, answer y.
++
+ config SECURITY_SARA_WXPROT_DISABLED
+ 	bool "WX protection will be disabled at boot."
+ 	depends on SECURITY_SARA_WXPROT
+diff --git a/security/sara/include/emutramp.h b/security/sara/include/emutramp.h
+new file mode 100644
+index 0000000..d82f92d
+--- /dev/null
++++ b/security/sara/include/emutramp.h
+@@ -0,0 +1,35 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++
++/*
++ * S.A.R.A. Linux Security Module
++ *
++ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ *
++ * Assembly sequences used here were copied from
++ * PaX patch by PaX Team <pageexec@freemail.hu>
++ * Being just hexadecimal constants, they are not subject to
++ * any copyright.
++ *
++ */
++
++#ifndef __SARA_EMUTRAMP_H
++#define __SARA_EMUTRAMP_H
++
++#ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
++int sara_trampoline_emulator(struct pt_regs *regs,
++			     unsigned long error_code,
++			     unsigned long address);
++#else
++inline int sara_trampoline_emulator(struct pt_regs *regs,
++				    unsigned long error_code,
++				    unsigned long address)
++{
++	return 0;
++}
++#endif /* CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP */
++
++#endif /* __SARA_EMUTRAMP_H */
+diff --git a/security/sara/wxprot.c b/security/sara/wxprot.c
+index 8a3d002..9c42bfc 100644
+--- a/security/sara/wxprot.c
++++ b/security/sara/wxprot.c
+@@ -31,6 +31,7 @@
+ #include "include/utils.h"
+ #include "include/securityfs.h"
+ #include "include/wxprot.h"
++#include "include/emutramp.h"
+ 
+ #define SARA_WXPROT_CONFIG_VERSION 0
+ 
+@@ -41,6 +42,7 @@
+ #define SARA_WXP_COMPLAIN	0x0010
+ #define SARA_WXP_VERBOSE	0x0020
+ #define SARA_WXP_MMAP		0x0040
++#define SARA_WXP_EMUTRAMP	0x0100
+ #define SARA_WXP_TRANSFER	0x0200
+ #define SARA_WXP_NONE		0x0000
+ #define SARA_WXP_MPROTECT	(SARA_WXP_HEAP	| \
+@@ -51,7 +53,12 @@
+ 				 SARA_WXP_WXORX		| \
+ 				 SARA_WXP_COMPLAIN	| \
+ 				 SARA_WXP_VERBOSE)
++#ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
++#define SARA_WXP_ALL		(__SARA_WXP_ALL		| \
++				 SARA_WXP_EMUTRAMP)
++#else /* CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP */
+ #define SARA_WXP_ALL		__SARA_WXP_ALL
++#endif /* CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP */
+ 
+ struct wxprot_config_container {
+ 	struct sara_dfa_tables *dfa;
+@@ -67,7 +74,11 @@ struct wxprot_config_container {
+ static u16 default_flags __lsm_ro_after_init =
+ 				CONFIG_SECURITY_SARA_WXPROT_DEFAULT_FLAGS;
+ 
++#ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
++static const bool wxprot_emutramp = true;
++#else
+ static const bool wxprot_emutramp;
++#endif
+ 
+ static void pr_wxp(char *msg)
  {
- 	return call_int_hook(file_lock, 0, file, cmd);
+@@ -110,6 +121,9 @@ static bool are_flags_valid(u16 flags)
+ 	if (unlikely(flags & SARA_WXP_MMAP &&
+ 		     !(flags & SARA_WXP_OTHER)))
+ 		return false;
++	if (unlikely(flags & SARA_WXP_EMUTRAMP &&
++		     ((flags & SARA_WXP_MPROTECT) != SARA_WXP_MPROTECT)))
++		return false;
+ 	return true;
+ }
+ 
+@@ -514,11 +528,26 @@ static int sara_file_mprotect(struct vm_area_struct *vma,
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
++static int sara_pagefault_handler(struct pt_regs *regs,
++				  unsigned long error_code,
++				  unsigned long address)
++{
++	if (!sara_enabled || !wxprot_enabled ||
++	    likely(!(get_current_sara_wxp_flags() & SARA_WXP_EMUTRAMP)))
++		return 0;
++	return sara_trampoline_emulator(regs, error_code, address);
++}
++#endif
++
+ static struct security_hook_list wxprot_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(bprm_set_creds, sara_bprm_set_creds),
+ 	LSM_HOOK_INIT(check_vmflags, sara_check_vmflags),
+ 	LSM_HOOK_INIT(shm_shmat, sara_shm_shmat),
+ 	LSM_HOOK_INIT(file_mprotect, sara_file_mprotect),
++#ifdef CONFIG_SECURITY_SARA_WXPROT_EMUTRAMP
++	LSM_HOOK_INIT(pagefault_handler, sara_pagefault_handler),
++#endif
+ };
+ 
+ static void config_free(struct wxprot_config_container *data)
 -- 
 1.9.1
 
