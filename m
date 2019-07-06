@@ -1,24 +1,24 @@
-Return-Path: <SRS0=wQei=VD=lists.openwall.com=kernel-hardening-return-16354-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=c8RO=VD=lists.openwall.com=kernel-hardening-return-16355-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,GAPPY_SUBJECT,
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
 	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 32E60C0650E
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:12 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D90B5C0650E
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:20 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EE4E521670
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:10 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 059F0216B7
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:56:19 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="K5QOWWJF"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EE4E521670
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="H/hv3oql"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 059F0216B7
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16354-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24410 invoked by uid 550); 6 Jul 2019 10:55:28 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16355-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24480 invoked by uid 550); 6 Jul 2019 10:55:30 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,33 +26,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24343 invoked from network); 6 Jul 2019 10:55:27 -0000
+Received: (qmail 24411 invoked from network); 6 Jul 2019 10:55:28 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=HMLlUTvH7NymWaOjPDDSuVqGYq2w/v7gPHlts+YCCcY=;
-        b=K5QOWWJF4uULt5fhx/WTlCd03sw83j2/BUkVXgohygderzW3Yt/f6QRhLm2eLDTQR3
-         xl+1XbsuQqiJAk4SXGU6K0j5eIrmywleN3fQ6cHF5HfkUqWwu1jZhobuDMpeV45Ffk6A
-         vaZ1MOkxmFNd5+GEc+kizOsk+IvmkjVSn1xU+C4usl+oMLtBR1O1BuMEEPSsXl9sX6Rk
-         FhwQMcRdiGIs38g45n1NmlKmC69JLrl7SoJBdFoN99AUiviKYx27dWS0XlOoqXpmSULf
-         TLxKu1OgktRPTQAgODy06VNXmQ9MyDej9YHpgbswqpGwsZAATTgyXBskdkA4DXCQJ1sZ
-         d8JQ==
+        bh=tc9nxOt0YynZlg4DtgqDwIM4b55l1zqGz9yWCnOUqxc=;
+        b=H/hv3oqlvBbndX96qLPf5yWClDQ6sRuTVt5tRUmkZdBjqfNT8QP6eSS48eMgnLnX3M
+         WMQ4grRnDFsHfzcmJCa2NZW22qa3lXOGIluOW5jgh2LpcgL7DkJ54y1w0C6Xhkpp2ntZ
+         I/av/JjLtKAzbQq7e3mH2IiGg67xxHpyAjtACqs2raUphqFhtSD3uoAU+89+iqorUH8i
+         Taggjzu3zY8qh5GVcr/ruUdLkoTpT4zqR8vtjxaqQtGYSk/tQjq/DHcYhOTPMA3P0Zf2
+         4XSF8AjFUnGcVP26TnVi4uep/PBucOaPpgJiMZ2o/nHHHTtddc59KmP2z9DdGZLZZfYC
+         2KfA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references;
-        bh=HMLlUTvH7NymWaOjPDDSuVqGYq2w/v7gPHlts+YCCcY=;
-        b=N+GbsPT+VrfOkpmRfVvF9vRX+XlFSUcNp/8YzbdoKidQVxLvmRYCg3Q9Dln5fvsWiO
-         mqNZ/M5LUzjDNWJNvhmFyl/L5R+UXYZhfdxZ3lZA0h2b1WXoO+w09OGiIIq2yN/2p+wB
-         OHPOuDlWmoJr5X/1vzwIcqvK51KqqK6Q6alEg0OWxSvE2aAPvWoPBatJikfDCBBgp5ct
-         L2iDQ5LF1PRxTmqnuWKorafj9VxFIvhR9xNAQ+C8FFaB3kq2tT5U/O84AhBAWNuWkJYC
-         qKHcgP4vfMXeTkIr99xQCdcTT3uaN4FhFLFs6zkUP9mZMv8d1TsBJSZj5F+cYM71HoIj
-         9lyA==
-X-Gm-Message-State: APjAAAVUHCagJzjxC3uiq3NkNzGTPzch6zeVnlPQPSC89XsHUFTHTmXa
-	caAt1TlZ8Juymbe0iuEgAD1hLJxWUgDLQA==
-X-Google-Smtp-Source: APXvYqxjW7TL1355+CnHJ4vlClfGDq4A6u03xqUecwa9PCLIfnLUO69I+8Q4hEKf748yiZXv3SX3UA==
-X-Received: by 2002:a5d:6284:: with SMTP id k4mr8982680wru.179.1562410515966;
-        Sat, 06 Jul 2019 03:55:15 -0700 (PDT)
+        bh=tc9nxOt0YynZlg4DtgqDwIM4b55l1zqGz9yWCnOUqxc=;
+        b=f/dc+eZ2fbx33bKuFNMW2c/ZVjnafQv9D+KgFuSYx7OpMU2sBAaxzg+3IvWWHWvUav
+         BBc3XE0IJy3AWbtHjC8eJMniUM3nlwb0IEuDZZdujYzFeg6U0H8Oh7JyeqXS/wWn/0jG
+         hoV9oc4+QPcF0WHjESsNpYoYoKzbTjt0Eg+yajcJ8MV2/9mljwAuLI0WI2nBpdAUX3xk
+         ZFRgUMgNL3ZQ4D/clmLuIZWjPQp5rnepEHY3wIiOVidnW5q7mjPwfinAQ1rzTJBltI1d
+         S3cEku9DZkCYICzMU+eUw7wcRt+ybds+p1Sl6d9UN/lCJ/889Zr6RMuYAbnDO6y/s3nA
+         O5+A==
+X-Gm-Message-State: APjAAAXivCONwZqaao3DYEQ8nuGEnkQLyCNm0YUvVwh1dsChRnrqVD1t
+	xXMovhxF/eRe9i+Zhyx4SOw=
+X-Google-Smtp-Source: APXvYqwjn5IyS6SWM65IBzeh/bdnAqkvGqGa6i9TXN3uin56hMILK/3JcH3obevfA3uL9Qb6/jMB4g==
+X-Received: by 2002:a1c:4d6:: with SMTP id 205mr7201683wme.148.1562410517083;
+        Sat, 06 Jul 2019 03:55:17 -0700 (PDT)
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com,
@@ -69,677 +69,193 @@ Cc: kernel-hardening@lists.openwall.com,
 	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
 	"Serge E. Hallyn" <serge@hallyn.com>,
 	Thomas Gleixner <tglx@linutronix.de>
-Subject: [PATCH v5 04/12] S.A.R.A.: generic DFA for string matching
-Date: Sat,  6 Jul 2019 12:54:45 +0200
-Message-Id: <1562410493-8661-5-git-send-email-s.mesoraca16@gmail.com>
+Subject: [PATCH v5 05/12] LSM: creation of "check_vmflags" LSM hook
+Date: Sat,  6 Jul 2019 12:54:46 +0200
+Message-Id: <1562410493-8661-6-git-send-email-s.mesoraca16@gmail.com>
 X-Mailer: git-send-email 1.9.1
 In-Reply-To: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 
-Creation of a generic Discrete Finite Automata implementation
-for string matching. The transition tables have to be produced
-in user-space.
-This allows us to possibly support advanced string matching
-patterns like regular expressions, but they need to be supported
-by user-space tools.
+Creation of a new LSM hook to check if a given configuration of vmflags,
+for a new memory allocation request, should be allowed or not.
+It's placed in "do_mmap", "do_brk_flags", "__install_special_mapping"
+and "setup_arg_pages".
+When loading an ELF, this hook is also used to determine what to do
+with an RWE PT_GNU_STACK header. This allows LSM to force the loader
+to silently ignore executable stack markings, which is useful a thing to
+do when trampoline emulation is available.
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- security/sara/Kconfig            |  22 +++
- security/sara/Makefile           |   3 +-
- security/sara/dfa.c              | 335 +++++++++++++++++++++++++++++++++++++++
- security/sara/dfa_test.c         | 135 ++++++++++++++++
- security/sara/include/dfa.h      |  52 ++++++
- security/sara/include/dfa_test.h |  29 ++++
- security/sara/main.c             |   6 +
- 7 files changed, 581 insertions(+), 1 deletion(-)
- create mode 100644 security/sara/dfa.c
- create mode 100644 security/sara/dfa_test.c
- create mode 100644 security/sara/include/dfa.h
- create mode 100644 security/sara/include/dfa_test.h
+ fs/binfmt_elf.c           |  3 ++-
+ fs/binfmt_elf_fdpic.c     |  3 ++-
+ fs/exec.c                 |  4 ++++
+ include/linux/lsm_hooks.h |  7 +++++++
+ include/linux/security.h  |  6 ++++++
+ mm/mmap.c                 | 13 +++++++++++++
+ security/security.c       |  5 +++++
+ 7 files changed, 39 insertions(+), 2 deletions(-)
 
-diff --git a/security/sara/Kconfig b/security/sara/Kconfig
-index 0456220..b98cf27 100644
---- a/security/sara/Kconfig
-+++ b/security/sara/Kconfig
-@@ -13,6 +13,28 @@ menuconfig SECURITY_SARA
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index 8264b46..1d98737 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -806,7 +806,8 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 	for (i = 0; i < loc->elf_ex.e_phnum; i++, elf_ppnt++)
+ 		switch (elf_ppnt->p_type) {
+ 		case PT_GNU_STACK:
+-			if (elf_ppnt->p_flags & PF_X)
++			if (elf_ppnt->p_flags & PF_X &&
++			    !security_check_vmflags(VM_EXEC|VM_READ|VM_WRITE))
+ 				executable_stack = EXSTACK_ENABLE_X;
+ 			else
+ 				executable_stack = EXSTACK_DISABLE_X;
+diff --git a/fs/binfmt_elf_fdpic.c b/fs/binfmt_elf_fdpic.c
+index d86ebd0d..6e0dee1 100644
+--- a/fs/binfmt_elf_fdpic.c
++++ b/fs/binfmt_elf_fdpic.c
+@@ -163,7 +163,8 @@ static int elf_fdpic_fetch_phdrs(struct elf_fdpic_params *params,
+ 		if (phdr->p_type != PT_GNU_STACK)
+ 			continue;
  
- 	  If unsure, answer N.
+-		if (phdr->p_flags & PF_X)
++		if (phdr->p_flags & PF_X &&
++		    !security_check_vmflags(VM_EXEC|VM_READ|VM_WRITE))
+ 			params->flags |= ELF_FDPIC_FLAG_EXEC_STACK;
+ 		else
+ 			params->flags |= ELF_FDPIC_FLAG_NOEXEC_STACK;
+diff --git a/fs/exec.c b/fs/exec.c
+index 89a500b..abf770a 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -756,6 +756,10 @@ int setup_arg_pages(struct linux_binprm *bprm,
+ 	vm_flags |= mm->def_flags;
+ 	vm_flags |= VM_STACK_INCOMPLETE_SETUP;
  
-+config SECURITY_SARA_DFA_32BIT
-+	bool "Use 32 bits instead of 16 bits for DFA states' id"
-+	depends on SECURITY_SARA
-+	default n
-+	help
-+	  If you say Y here S.A.R.A. will use more memory, but you will be
-+	  able to configure more rules.
-+	  See Documentation/admin-guide/LSM/SARA.rst. for further information.
++	ret = security_check_vmflags(vm_flags);
++	if (ret)
++		goto out_unlock;
 +
-+	  If unsure, answer N.
-+
-+config SECURITY_SARA_DFA_TEST
-+	bool "Enable test interface for the internal DFA engine"
-+	depends on SECURITY_SARA
-+	default n
-+	help
-+	  If you say Y here S.A.R.A. will enable a user-space interface
-+	  that can be used to test the DFA engine (e.g. via `saractl test`).
-+	  See Documentation/admin-guide/LSM/SARA.rst. for further information.
-+
-+	  If unsure, answer N.
-+
- config SECURITY_SARA_DEFAULT_DISABLED
- 	bool "S.A.R.A. will be disabled at boot."
- 	depends on SECURITY_SARA
-diff --git a/security/sara/Makefile b/security/sara/Makefile
-index 14bf7a8..ffa1be1 100644
---- a/security/sara/Makefile
-+++ b/security/sara/Makefile
-@@ -1,3 +1,4 @@
- obj-$(CONFIG_SECURITY_SARA) := sara.o
+ 	ret = mprotect_fixup(vma, &prev, vma->vm_start, vma->vm_end,
+ 			vm_flags);
+ 	if (ret)
+diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+index 47f58cf..12ce609 100644
+--- a/include/linux/lsm_hooks.h
++++ b/include/linux/lsm_hooks.h
+@@ -513,6 +513,11 @@
+  *	@reqprot contains the protection requested by the application.
+  *	@prot contains the protection that will be applied by the kernel.
+  *	Return 0 if permission is granted.
++ * @check_vmflags:
++ *	Check if the requested @vmflags are allowed.
++ *	@vmflags contains the requested vmflags.
++ *	Return 0 if the operation is allowed to continue otherwise return
++ *	the appropriate error code.
+  * @file_lock:
+  *	Check permission before performing file locking operations.
+  *	Note the hook mediates both flock and fcntl style locks.
+@@ -1597,6 +1602,7 @@
+ 				unsigned long prot, unsigned long flags);
+ 	int (*file_mprotect)(struct vm_area_struct *vma, unsigned long reqprot,
+ 				unsigned long prot);
++	int (*check_vmflags)(vm_flags_t vmflags);
+ 	int (*file_lock)(struct file *file, unsigned int cmd);
+ 	int (*file_fcntl)(struct file *file, unsigned int cmd,
+ 				unsigned long arg);
+@@ -1897,6 +1903,7 @@ struct security_hook_heads {
+ 	struct hlist_head mmap_addr;
+ 	struct hlist_head mmap_file;
+ 	struct hlist_head file_mprotect;
++	struct hlist_head check_vmflags;
+ 	struct hlist_head file_lock;
+ 	struct hlist_head file_fcntl;
+ 	struct hlist_head file_set_fowner;
+diff --git a/include/linux/security.h b/include/linux/security.h
+index 659071c..aed78eb 100644
+--- a/include/linux/security.h
++++ b/include/linux/security.h
+@@ -312,6 +312,7 @@ int security_mmap_file(struct file *file, unsigned long prot,
+ int security_mmap_addr(unsigned long addr);
+ int security_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
+ 			   unsigned long prot);
++int security_check_vmflags(vm_flags_t vmflags);
+ int security_file_lock(struct file *file, unsigned int cmd);
+ int security_file_fcntl(struct file *file, unsigned int cmd, unsigned long arg);
+ void security_file_set_fowner(struct file *file);
+@@ -859,6 +860,11 @@ static inline int security_file_mprotect(struct vm_area_struct *vma,
+ 	return 0;
+ }
  
--sara-y := main.o securityfs.o utils.o sara_data.o
-+sara-y := main.o securityfs.o utils.o sara_data.o dfa.o
-+sara-$(CONFIG_SECURITY_SARA_DFA_TEST) += dfa_test.o
-diff --git a/security/sara/dfa.c b/security/sara/dfa.c
-new file mode 100644
-index 0000000..e39b27e
---- /dev/null
-+++ b/security/sara/dfa.c
-@@ -0,0 +1,335 @@
-+// SPDX-License-Identifier: GPL-2.0
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#include <linux/mm.h>
-+#include <linux/printk.h>
-+#include <linux/ratelimit.h>
-+#include <linux/slab.h>
-+
-+#include "include/sara.h"
-+#include "include/dfa.h"
-+#include "include/securityfs.h"
-+
-+#define DFA_MAGIC_SIZE 8
-+#define DFA_MAGIC "SARADFAT"
-+
-+#define DFA_INPUTS 255
-+
-+#ifndef CONFIG_SECURITY_SARA_DFA_32BIT
-+#define pr_err_dfa_size() \
-+	pr_err_ratelimited("DFA: too many states. Recompile kernel with CONFIG_SARA_DFA_32BIT.\n")
-+#else
-+#define pr_err_dfa_size() pr_err_ratelimited("DFA: too many states.\n")
-+#endif
-+
-+void sara_dfa_free_tables(struct sara_dfa_tables *dfa)
++static inline int security_check_vmflags(vm_flags_t vmflags)
 +{
-+	if (dfa) {
-+		kvfree(dfa->output);
-+		kvfree(dfa->def);
-+		kvfree(dfa->base);
-+		kvfree(dfa->next);
-+		kvfree(dfa->check);
-+		kvfree(dfa);
-+	}
-+}
-+
-+static struct sara_dfa_tables *sara_dfa_alloc_tables(sara_dfa_state states,
-+						     sara_dfa_state cmp_states)
-+{
-+	struct sara_dfa_tables *tmp = NULL;
-+
-+	tmp = kvzalloc(sizeof(*tmp), GFP_KERNEL_ACCOUNT);
-+	if (!tmp)
-+		goto err;
-+	tmp->output = kvcalloc(states,
-+			       sizeof(*tmp->output),
-+			       GFP_KERNEL_ACCOUNT);
-+	if (!tmp->output)
-+		goto err;
-+	tmp->def = kvcalloc(states,
-+			    sizeof(*tmp->def),
-+			    GFP_KERNEL_ACCOUNT);
-+	if (!tmp->def)
-+		goto err;
-+	tmp->base = kvcalloc(states,
-+			     sizeof(*tmp->base),
-+			     GFP_KERNEL_ACCOUNT);
-+	if (!tmp->base)
-+		goto err;
-+	tmp->next = kvcalloc(cmp_states,
-+			     sizeof(*tmp->next) * DFA_INPUTS,
-+			     GFP_KERNEL_ACCOUNT);
-+	if (!tmp->next)
-+		goto err;
-+	tmp->check = kvcalloc(cmp_states,
-+			      sizeof(*tmp->check) * DFA_INPUTS,
-+			      GFP_KERNEL_ACCOUNT);
-+	if (!tmp->check)
-+		goto err;
-+	tmp->states = states;
-+	tmp->cmp_states = cmp_states;
-+	return tmp;
-+
-+err:
-+	sara_dfa_free_tables(tmp);
-+	return ERR_PTR(-ENOMEM);
-+}
-+
-+int sara_dfa_match(struct sara_dfa_tables *dfa,
-+		   const unsigned char *s,
-+		   sara_dfa_output *output)
-+{
-+	sara_dfa_state i, j;
-+	sara_dfa_state c_state = 0;
-+
-+	/* Max s[x] value must be == DFA_INPUTS */
-+	BUILD_BUG_ON((((1ULL << (sizeof(*s) * 8)) - 1) != DFA_INPUTS));
-+
-+	/*
-+	 * The DFA transition table is compressed using 5 linear arrays
-+	 * as shown in the Dragon Book.
-+	 * These arrays are: default, base, next, check and output.
-+	 * default, base and output have the same size and are indexed by
-+	 * state number.
-+	 * next and check tables have the same size and are indexed by
-+	 * the value from base for a given state and the input symbol.
-+	 * To match a string against this set of arrays we need to:
-+	 * - Use the base arrays to recover the index to use
-+	 *   with check and next arrays for the current state and symbol.
-+	 * - If the value in the check array matches the current state
-+	 *   number the next state should be retrieved from the next array,
-+	 *   otherwise we take it from the default array.
-+	 * - If the next state is not valid we should return immediately
-+	 * - If the input sequence is over and the value in the output array
-+	 *   is valid, the string matches, and we should return the output
-+	 *   value.
-+	 */
-+
-+	for (i = 0; s[i]; i++) {
-+		j = (dfa->base[c_state] * DFA_INPUTS) + s[i] - 1;
-+		if (dfa->check[j] != c_state)
-+			c_state = dfa->def[c_state];
-+		else
-+			c_state = dfa->next[j];
-+		if (c_state == SARA_INVALID_DFA_VALUE)
-+			return 0;
-+	}
-+
-+	if (dfa->output[c_state] != SARA_INVALID_DFA_VALUE) {
-+		*output = dfa->output[c_state];
-+		return 1;
-+	}
 +	return 0;
 +}
 +
-+struct sara_dfa_tables *sara_dfa_make_null(void)
-+{
-+	int i;
-+	struct sara_dfa_tables *dfa = NULL;
-+
-+	dfa = sara_dfa_alloc_tables(1, 1);
-+	if (unlikely(IS_ERR_OR_NULL(dfa)))
-+		return NULL;
-+	dfa->output[0] = SARA_INVALID_DFA_VALUE;
-+	dfa->def[0] = SARA_INVALID_DFA_VALUE;
-+	dfa->base[0] = 0;
-+	for (i = 0; i < DFA_INPUTS; ++i)
-+		dfa->next[i] = SARA_INVALID_DFA_VALUE;
-+	for (i = 0; i < DFA_INPUTS; ++i)
-+		dfa->check[i] = 0;
-+	memset(dfa->hash, 0, SARA_CONFIG_HASH_LEN);
-+	return dfa;
-+}
-+
-+struct binary_dfa_header {
-+	char magic[DFA_MAGIC_SIZE];
-+	__le32 version;
-+	__le32 states;
-+	__le32 cmp_states;
-+	char hash[SARA_CONFIG_HASH_LEN];
-+} __packed;
-+
-+#define SARA_INVALID_DFA_VALUE_LOAD 0xffffffffu
-+
-+struct sara_dfa_tables *sara_dfa_load(const char *buf,
-+				      size_t buf_len,
-+				      bool (*is_valid)(sara_dfa_output))
-+{
-+	int ret;
-+	struct sara_dfa_tables *dfa = NULL;
-+	struct binary_dfa_header *h = (struct binary_dfa_header *) buf;
-+	__le32 *p;
-+	uint64_t i;
-+	u32 version, states, cmp_states, tmp;
-+
-+	ret = -EINVAL;
-+	if (unlikely(buf_len < sizeof(*h)))
-+		goto out;
-+
-+	ret = -EINVAL;
-+	if (unlikely(memcmp(h->magic, DFA_MAGIC, DFA_MAGIC_SIZE) != 0))
-+		goto out;
-+	version = le32_to_cpu(h->version);
-+	states = le32_to_cpu(h->states);
-+	cmp_states = le32_to_cpu(h->cmp_states);
-+	if (unlikely(version != SARA_DFA_VERSION)) {
-+		pr_err_ratelimited("DFA: unsupported version\n");
-+		goto out;
-+	}
-+	if (unlikely(states >= SARA_INVALID_DFA_VALUE ||
-+		     cmp_states >= SARA_INVALID_DFA_VALUE)) {
-+		pr_err_dfa_size();
-+		goto out;
-+	}
-+	if (unlikely(states == 0 ||
-+		     cmp_states == 0))
-+		goto out;
-+	if (unlikely(((states * sizeof(u32) * 3) +
-+		      (cmp_states * sizeof(u32) * 2 * DFA_INPUTS) +
-+		      sizeof(*h)) != buf_len))
-+		goto out;
-+
-+	ret = -ENOMEM;
-+	dfa = sara_dfa_alloc_tables(h->states, h->cmp_states);
-+	if (unlikely(IS_ERR_OR_NULL(dfa)))
-+		goto out;
-+
-+	dfa->states = states;
-+	dfa->cmp_states = cmp_states;
-+
-+	ret = -EINVAL;
-+	p = (__le32 *) (buf + sizeof(*h));
-+	for (i = 0; i < dfa->states; i++) {
-+		tmp = le32_to_cpu(*p);
-+		if (unlikely(tmp != SARA_INVALID_DFA_VALUE_LOAD &&
-+			     tmp >= dfa->states))
-+			goto out_alloc;
-+		dfa->def[i] = (sara_dfa_state) tmp;
-+		++p;
-+	}
-+	for (i = 0; i < dfa->states; i++) {
-+		tmp = le32_to_cpu(*p);
-+		if (unlikely(tmp >= dfa->cmp_states))
-+			goto out_alloc;
-+		dfa->base[i] = (sara_dfa_state) tmp;
-+		++p;
-+	}
-+	for (i = 0; i < (dfa->cmp_states * DFA_INPUTS); i++) {
-+		tmp = le32_to_cpu(*p);
-+		if (unlikely(tmp != SARA_INVALID_DFA_VALUE_LOAD &&
-+			     tmp >= dfa->states))
-+			goto out_alloc;
-+		dfa->next[i] = (sara_dfa_state) tmp;
-+		++p;
-+	}
-+	for (i = 0; i < (dfa->cmp_states * DFA_INPUTS); i++) {
-+		tmp = le32_to_cpu(*p);
-+		if (unlikely(tmp != SARA_INVALID_DFA_VALUE_LOAD &&
-+			     tmp >= dfa->states))
-+			goto out_alloc;
-+		dfa->check[i] = (sara_dfa_state) tmp;
-+		++p;
-+	}
-+	for (i = 0; i < dfa->states; i++) {
-+		tmp = le32_to_cpu(*p);
-+		if (unlikely(tmp != SARA_INVALID_DFA_VALUE_LOAD &&
-+			     !is_valid(tmp)))
-+			goto out_alloc;
-+		dfa->output[i] = (sara_dfa_state) tmp;
-+		++p;
-+	}
-+	if (unlikely((void *) p != (void *) (buf + buf_len)))
-+		goto out_alloc;
-+
-+	BUILD_BUG_ON(sizeof(dfa->hash) != sizeof(h->hash));
-+	memcpy(dfa->hash, h->hash, sizeof(dfa->hash));
-+
-+	return dfa;
-+out_alloc:
-+	sara_dfa_free_tables(dfa);
-+out:
-+	pr_err_ratelimited("DFA: invalid load\n");
-+	return ERR_PTR(ret);
-+}
-+
-+ssize_t sara_dfa_dump(const struct sara_dfa_tables *dfa, char **buffer)
-+{
-+	char *buf;
-+	size_t buf_len = 0;
-+	struct binary_dfa_header *h;
-+	__le32 *p;
-+	int i;
-+
-+	buf_len = sizeof(*h) +
-+		  dfa->states * sizeof(__le32) * 3 +
-+		  dfa->cmp_states * sizeof(__le32) * DFA_INPUTS * 2;
-+	buf = kvmalloc(buf_len, GFP_KERNEL_ACCOUNT);
-+	if (unlikely(!buf))
-+		return -ENOMEM;
-+
-+	h = (struct binary_dfa_header *) buf;
-+	memcpy(h->magic, DFA_MAGIC, DFA_MAGIC_SIZE);
-+	h->version = cpu_to_le32(SARA_DFA_VERSION);
-+	h->states = cpu_to_le32(dfa->states);
-+	h->cmp_states = cpu_to_le32(dfa->cmp_states);
-+	BUILD_BUG_ON(sizeof(dfa->hash) != sizeof(h->hash));
-+	memcpy(h->hash, dfa->hash, sizeof(dfa->hash));
-+
-+	p = (__le32 *) (buf + sizeof(*h));
-+	for (i = 0; i < dfa->states; i++) {
-+		if (dfa->def[i] == SARA_INVALID_DFA_VALUE)
-+			*p++ = cpu_to_le32(SARA_INVALID_DFA_VALUE_LOAD);
-+		else
-+			*p++ = cpu_to_le32(dfa->def[i]);
-+	}
-+	for (i = 0; i < dfa->states; i++) {
-+		if (dfa->base[i] == SARA_INVALID_DFA_VALUE)
-+			*p++ = cpu_to_le32(SARA_INVALID_DFA_VALUE_LOAD);
-+		else
-+			*p++ = cpu_to_le32(dfa->base[i]);
-+	}
-+	for (i = 0; i < (dfa->cmp_states * DFA_INPUTS); i++) {
-+		if (dfa->next[i] == SARA_INVALID_DFA_VALUE)
-+			*p++ = cpu_to_le32(SARA_INVALID_DFA_VALUE_LOAD);
-+		else
-+			*p++ = cpu_to_le32(dfa->next[i]);
-+	}
-+	for (i = 0; i < (dfa->cmp_states * DFA_INPUTS); i++) {
-+		if (dfa->check[i] == SARA_INVALID_DFA_VALUE)
-+			*p++ = cpu_to_le32(SARA_INVALID_DFA_VALUE_LOAD);
-+		else
-+			*p++ = cpu_to_le32(dfa->check[i]);
-+	}
-+	for (i = 0; i < dfa->states; i++) {
-+		if (dfa->output[i] == SARA_INVALID_DFA_VALUE)
-+			*p++ = cpu_to_le32(SARA_INVALID_DFA_VALUE_LOAD);
-+		else
-+			*p++ = cpu_to_le32(dfa->output[i]);
-+	}
-+
-+	if (unlikely((void *) p != (void *) (buf + buf_len))) {
-+		/*
-+		 * We can calculate the correct buffer size upfront.
-+		 * This should never happen.
-+		 */
-+		kvfree(buf);
-+		pr_crit("memory corruption in %s\n", __func__);
-+		return 0;
-+	}
-+
-+	*buffer = buf;
-+	return buf_len;
-+}
-+
-+#undef SARA_INVALID_DFA_VALUE_LOAD
-diff --git a/security/sara/dfa_test.c b/security/sara/dfa_test.c
-new file mode 100644
-index 0000000..9c06414
---- /dev/null
-+++ b/security/sara/dfa_test.c
-@@ -0,0 +1,135 @@
-+// SPDX-License-Identifier: GPL-2.0
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#include "include/dfa.h"
-+#include "include/securityfs.h"
-+#include <linux/lsm_hooks.h>
-+#include <linux/mutex.h>
-+#include <linux/slab.h>
-+
-+#define SARA_DFA_MAX_RES_SIZE 20
-+
-+struct sara_dfa_tables *table;
-+
-+static DEFINE_MUTEX(test_lock);
-+static sara_dfa_output result;
-+
-+static bool is_valid_output(sara_dfa_output output)
-+{
-+	return true;
-+}
-+
-+static int config_load(const char *buf, size_t buf_len)
-+{
-+	struct sara_dfa_tables *dfa, *tmp;
-+
-+	dfa = sara_dfa_load(buf, buf_len, is_valid_output);
-+	if (unlikely(IS_ERR_OR_NULL(dfa))) {
-+		if (unlikely(dfa == NULL))
-+			return -EINVAL;
-+		else
-+			return PTR_ERR(dfa);
-+	}
-+	mutex_lock(&test_lock);
-+	tmp = table;
-+	table = dfa;
-+	mutex_unlock(&test_lock);
-+	sara_dfa_free_tables(tmp);
-+	return 0;
-+}
-+
-+static int config_load_str(const char *buf, size_t buf_len)
-+{
-+	char *s;
-+
-+	s = kmalloc(buf_len+1, GFP_KERNEL_ACCOUNT);
-+	if (unlikely(s == NULL))
-+		return -ENOMEM;
-+	s[buf_len] = '\0';
-+	memcpy(s, buf, buf_len);
-+
-+	mutex_lock(&test_lock);
-+	result = SARA_INVALID_DFA_VALUE;
-+	sara_dfa_match(table, s, &result);
-+	mutex_unlock(&test_lock);
-+
-+	kfree(s);
-+
-+	return 0;
-+}
-+
-+static ssize_t config_dump_result(char **buf)
-+{
-+	char *s;
-+
-+	s = kzalloc(SARA_DFA_MAX_RES_SIZE, GFP_KERNEL_ACCOUNT);
-+	if (unlikely(s == NULL))
-+		return -ENOMEM;
-+	mutex_lock(&test_lock);
-+	if (result == SARA_INVALID_DFA_VALUE)
-+		snprintf(s, SARA_DFA_MAX_RES_SIZE, "%u\n", 0xffffffff);
-+	else
-+		snprintf(s,
-+			 SARA_DFA_MAX_RES_SIZE,
-+			 "%u\n",
-+			 (unsigned int) result);
-+	mutex_unlock(&test_lock);
-+	*buf = s;
-+	return strlen(s);
-+}
-+
-+static struct sara_secfs_fptrs fptrs __lsm_ro_after_init = {
-+	.load = config_load,
-+};
-+
-+static struct sara_secfs_fptrs teststr __lsm_ro_after_init = {
-+	.load = config_load_str,
-+	.dump = config_dump_result,
-+};
-+
-+static const struct sara_secfs_node dfa_test_fs[] __initconst = {
-+	{
-+		.name = ".load",
-+		.type = SARA_SECFS_CONFIG_LOAD,
-+		.data = &fptrs,
-+	},
-+	{
-+		.name = "test",
-+		.type = SARA_SECFS_CONFIG_LOAD,
-+		.data = &teststr,
-+	},
-+	{
-+		.name = "result",
-+		.type = SARA_SECFS_CONFIG_DUMP,
-+		.data = &teststr,
-+	},
-+};
-+
-+int __init sara_dfa_test_init(void)
-+{
-+	int ret;
-+
-+	table = sara_dfa_make_null();
-+	if (unlikely(!table))
-+		return -ENOMEM;
-+	ret = sara_secfs_subtree_register("dfa_test",
-+					  dfa_test_fs,
-+					  ARRAY_SIZE(dfa_test_fs));
-+	if (unlikely(ret))
-+		goto out_fail;
-+	return 0;
-+
-+out_fail:
-+	sara_dfa_free_tables(table);
-+	return ret;
-+}
-diff --git a/security/sara/include/dfa.h b/security/sara/include/dfa.h
-new file mode 100644
-index 0000000..a536b60
---- /dev/null
-+++ b/security/sara/include/dfa.h
-@@ -0,0 +1,52 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#ifndef __SARA_DFA_H
-+#define __SARA_DFA_H
-+
-+#include "securityfs.h"
-+
-+#ifdef CONFIG_SARA_DFA_32BIT
-+typedef uint32_t sara_dfa_state;
-+typedef uint32_t sara_dfa_output;
-+#define SARA_INVALID_DFA_VALUE 0xffffffffu
-+#else
-+typedef uint16_t sara_dfa_state;
-+typedef uint16_t sara_dfa_output;
-+#define SARA_INVALID_DFA_VALUE 0xffffu
-+#endif
-+
-+#define SARA_DFA_VERSION 2
-+
-+struct sara_dfa_tables {
-+	sara_dfa_state states;
-+	sara_dfa_state cmp_states;
-+	sara_dfa_output *output;
-+	sara_dfa_state *def;
-+	sara_dfa_state *base;
-+	sara_dfa_state *next;
-+	sara_dfa_state *check;
-+	char hash[SARA_CONFIG_HASH_LEN];
-+};
-+
-+int sara_dfa_match(struct sara_dfa_tables *dfa,
-+		   const unsigned char *s,
-+		   sara_dfa_output *output);
-+struct sara_dfa_tables *sara_dfa_make_null(void);
-+struct sara_dfa_tables *sara_dfa_load(const char *buf,
-+				      size_t buf_len,
-+				      bool (*is_valid)(sara_dfa_output));
-+ssize_t sara_dfa_dump(const struct sara_dfa_tables *dfa, char **buffer);
-+void sara_dfa_free_tables(struct sara_dfa_tables *dfa);
-+
-+#endif /* __SARA_DFA_H */
-diff --git a/security/sara/include/dfa_test.h b/security/sara/include/dfa_test.h
-new file mode 100644
-index 0000000..f10f78a
---- /dev/null
-+++ b/security/sara/include/dfa_test.h
-@@ -0,0 +1,29 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+
-+/*
-+ * S.A.R.A. Linux Security Module
-+ *
-+ * Copyright (C) 2017 Salvatore Mesoraca <s.mesoraca16@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ *
-+ */
-+
-+#ifndef __SARA_DFA_TEST_H
-+#define __SARA_DFA_TEST_H
-+
-+#ifdef CONFIG_SECURITY_SARA_DFA_TEST
-+
-+#include <linux/init.h>
-+int sara_dfa_test_init(void) __init;
-+
-+#else /* CONFIG_SECURITY_SARA_DFA_TEST */
-+inline int sara_dfa_test_init(void)
-+{
-+	return 0;
-+}
-+#endif /* CONFIG_SECURITY_SARA_DFA_TEST */
-+
-+#endif /* __SARA_DFA_TEST_H */
-diff --git a/security/sara/main.c b/security/sara/main.c
-index dc5dda4..6b09500 100644
---- a/security/sara/main.c
-+++ b/security/sara/main.c
-@@ -17,6 +17,7 @@
- #include <linux/module.h>
- #include <linux/printk.h>
+ static inline int security_file_lock(struct file *file, unsigned int cmd)
+ {
+ 	return 0;
+diff --git a/mm/mmap.c b/mm/mmap.c
+index 7e8c3e8a..ec9c0e3d 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -1390,6 +1390,7 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
+ {
+ 	struct mm_struct *mm = current->mm;
+ 	int pkey = 0;
++	int error;
  
-+#include "include/dfa_test.h"
- #include "include/sara.h"
- #include "include/sara_data.h"
- #include "include/securityfs.h"
-@@ -99,6 +100,11 @@ static int __init sara_init(void)
- 		goto error;
- 	}
+ 	*populate = 0;
  
-+	if (sara_dfa_test_init()) {
-+		pr_crit("impossible to initialize DFA test interface.\n");
-+		goto error;
-+	}
+@@ -1453,6 +1454,10 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
+ 	vm_flags |= calc_vm_prot_bits(prot, pkey) | calc_vm_flag_bits(flags) |
+ 			mm->def_flags | VM_MAYREAD | VM_MAYWRITE | VM_MAYEXEC;
+ 
++	error = security_check_vmflags(vm_flags);
++	if (error)
++		return error;
 +
- 	pr_debug("initialized.\n");
+ 	if (flags & MAP_LOCKED)
+ 		if (!can_do_mlock())
+ 			return -EPERM;
+@@ -2996,6 +3001,10 @@ static int do_brk_flags(unsigned long addr, unsigned long len, unsigned long fla
+ 		return -EINVAL;
+ 	flags |= VM_DATA_DEFAULT_FLAGS | VM_ACCOUNT | mm->def_flags;
  
- 	if (sara_enabled)
++	error = security_check_vmflags(flags);
++	if (error)
++		return error;
++
+ 	error = get_unmapped_area(NULL, addr, len, 0, MAP_FIXED);
+ 	if (offset_in_page(error))
+ 		return error;
+@@ -3393,6 +3402,10 @@ static struct vm_area_struct *__install_special_mapping(
+ 	int ret;
+ 	struct vm_area_struct *vma;
+ 
++	ret = security_check_vmflags(vm_flags);
++	if (ret)
++		return ERR_PTR(ret);
++
+ 	vma = vm_area_alloc(mm);
+ 	if (unlikely(vma == NULL))
+ 		return ERR_PTR(-ENOMEM);
+diff --git a/security/security.c b/security/security.c
+index f493db0..3308e89 100644
+--- a/security/security.c
++++ b/security/security.c
+@@ -1421,6 +1421,11 @@ int security_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
+ 	return call_int_hook(file_mprotect, 0, vma, reqprot, prot);
+ }
+ 
++int security_check_vmflags(vm_flags_t vmflags)
++{
++	return call_int_hook(check_vmflags, 0, vmflags);
++}
++
+ int security_file_lock(struct file *file, unsigned int cmd)
+ {
+ 	return call_int_hook(file_lock, 0, file, cmd);
 -- 
 1.9.1
 
