@@ -1,24 +1,24 @@
-Return-Path: <SRS0=b3ZL=VD=lists.openwall.com=kernel-hardening-return-16360-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8czZ=VD=lists.openwall.com=kernel-hardening-return-16362-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+X-Spam-Status: No, score=-15.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,GAPPY_SUBJECT,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6E403C0650E
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:25 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 665DCC0650E
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 66625214AF
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:24 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B5C0621670
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Jul 2019 10:57:34 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ZLNuz0c2"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 66625214AF
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="U523Em2K"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B5C0621670
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16360-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25886 invoked by uid 550); 6 Jul 2019 10:55:37 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16362-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26000 invoked by uid 550); 6 Jul 2019 10:55:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,33 +26,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25734 invoked from network); 6 Jul 2019 10:55:34 -0000
+Received: (qmail 25850 invoked from network); 6 Jul 2019 10:55:36 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=yTf2cEJ/R1sIWwnnsJBizfOJ+ZTQkKILtxUL3GoVlWE=;
-        b=ZLNuz0c29GG+6CNJGcOAjeOlpRMP9h7O99Pi/gakDKFGU3lhhHikq8a99CInc2k/XO
-         x6Aq3KQ16oEDc3jolc38IPHfVlXaurELUSiUDHn05p6lfOFDkkvsNRWEIR/u9OIqM0Iv
-         HtbBQ2B/Kq1vvvG4gn4LbVxWfdc/sXmvb7bh25PrgcUiOFGqI5qzgRkWR5JJ3qB8it29
-         nt6KXK7N3DC9FtosDIw8Yw2FSs9KbQjD6zMPBftq1aXOG2YvtlhuzxNjQd3NYN3DSsHP
-         AO1doaXc1DmHasyn5SSmlIyHvB5/T78+l9uWIWn6bgSiY0WNtJcA4pqYF4yEJgMx128n
-         jwQQ==
+        bh=7bgA3KVSNsVJyluNyhiPajryn8BOsiL4nv8POO6e3hg=;
+        b=U523Em2KEtwXXxdV/BGn5jTzA7rwZNHEXsm1OcyY68qXcXEIgtM7G0Cet6d7ccvPCH
+         xbNCt3TDC5HduqU/DgmJHVWSZe3KHZA5S97dUyH+Nq+WuUGuXAX0ragXjruWpmzsAxwt
+         ZI947WMH7fH0XqCrCOg3eUA/2YAFkYNqtSug+CIUNQQHYURAjMXd6h9N5ALvdD0NpxEB
+         AK2lAV8bchfSrDSx25gT6m0BWN8JZu//SbcHOnuqBRH2eqm3G2johuskfOsaaGz6nZlh
+         deThmGjYCWPUDpw151T+5llw2TOJGBzuERv8CkChSGkkIYR0JLd+dQLERH79C+pRIoUr
+         14dA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references;
-        bh=yTf2cEJ/R1sIWwnnsJBizfOJ+ZTQkKILtxUL3GoVlWE=;
-        b=GteYvN13HQ6OTvScuT3hdlx2IYMZsDmhl6G2LaePenLPhHOS1IMWr8lwCNSqsjmpPe
-         LvCTs5ykub47Av7ksivjpo4uMWtExkZQqnI0X0diW1i9NAOxohh3SleFxgiYPtrN7Lx/
-         TUglck5/fRpQExH1WPctNQz/5iAN+RYiUBvbTX3RRZRXVcvV87a6/PM09B4iXDZ7d0yl
-         aJAE51UMbJkaBw9zIocCXfK9x5+ed+rSl3m/1uXmnRJu+rUlBSslmR7KoWOY76ypbpSy
-         I4AuXFjNjENbMosInApvAI2MIKqD4BaGwun4q1fqccbREqiDQcN1RwII4PFSn47GrX5l
-         esGQ==
-X-Gm-Message-State: APjAAAWbmq0PBqk4aesu77BXx6VFClG2VXrHQoIjasDhSvCLcsksxkQw
-	EnERpoC+/a+EId0o9m+KonM=
-X-Google-Smtp-Source: APXvYqy4CMl5RxszjxSvrEAMWtejw7CVXkEcAJC69QuAF9VdqwZsgSkOM4PQR4vCXHHgIdQEtRBcQw==
-X-Received: by 2002:adf:e483:: with SMTP id i3mr7749477wrm.210.1562410523298;
-        Sat, 06 Jul 2019 03:55:23 -0700 (PDT)
+        bh=7bgA3KVSNsVJyluNyhiPajryn8BOsiL4nv8POO6e3hg=;
+        b=eKc0taZ/lqu/sVoQSV40FeTsldHTFQV6RSfIjiRqWEPj+3OCkoIwzyoFLreJ3DTyOe
+         t35gGbGLZ5XebE2FvkHSDaO6tX2Ms91WMHYb0RsvqrpIDwHvegJCgp6og6JcrMNJf2GY
+         s65H/5ZBdKfERhNEhqvYLhngWRVD3R0ODG079qgeAbNDWe7gzjhHfPjMWzvmvz+vK4Hi
+         crq0DiptWvI+FddxvAQUo5M29nNAI9f+U9TQrP0Dwbln0VYvGva3zqfdESJXto8kdsbD
+         TczHUwaAu6GJLaYRag3xtrOgGL+LO4+apWCsvDJsusEOwR5hgWE8+eVplkE0HYIzy09p
+         asBg==
+X-Gm-Message-State: APjAAAX9hxe40SKEaWAOEUqZFYCiaafLvm0WC/z34Xr6luHYTB/8/BBv
+	kdEgPPgnOR11R0df+/SwLCM=
+X-Google-Smtp-Source: APXvYqzPbEUIxunmBrxyk9NAIxCXus8RCS7gBuXZApUJVMJ6c1dTQqt5X0xbeRxaG4n4nmyktigDXg==
+X-Received: by 2002:adf:e843:: with SMTP id d3mr9048922wrn.249.1562410525376;
+        Sat, 06 Jul 2019 03:55:25 -0700 (PDT)
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com,
@@ -69,298 +69,38 @@ Cc: kernel-hardening@lists.openwall.com,
 	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
 	"Serge E. Hallyn" <serge@hallyn.com>,
 	Thomas Gleixner <tglx@linutronix.de>
-Subject: [PATCH v5 10/12] S.A.R.A.: XATTRs support
-Date: Sat,  6 Jul 2019 12:54:51 +0200
-Message-Id: <1562410493-8661-11-git-send-email-s.mesoraca16@gmail.com>
+Subject: [PATCH v5 12/12] MAINTAINERS: take maintainership for S.A.R.A.
+Date: Sat,  6 Jul 2019 12:54:53 +0200
+Message-Id: <1562410493-8661-13-git-send-email-s.mesoraca16@gmail.com>
 X-Mailer: git-send-email 1.9.1
 In-Reply-To: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
 
-Adds support for extended filesystem attributes in security and user
-namespaces. They can be used to override flags set via the centralized
-configuration, even when S.A.R.A. configuration is locked or saractl
-is not used at all.
-
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- Documentation/admin-guide/LSM/SARA.rst          | 20 +++++
- Documentation/admin-guide/kernel-parameters.txt | 16 ++++
- include/uapi/linux/xattr.h                      |  4 +
- security/sara/Kconfig                           | 22 ++++++
- security/sara/wxprot.c                          | 99 +++++++++++++++++++++++++
- 5 files changed, 161 insertions(+)
+ MAINTAINERS | 9 +++++++++
+ 1 file changed, 9 insertions(+)
 
-diff --git a/Documentation/admin-guide/LSM/SARA.rst b/Documentation/admin-guide/LSM/SARA.rst
-index fdde04c..47d9364 100644
---- a/Documentation/admin-guide/LSM/SARA.rst
-+++ b/Documentation/admin-guide/LSM/SARA.rst
-@@ -55,6 +55,8 @@ WX Protection. In particular:
- To extend the scope of the above features, despite the issues that they may
- cause, they are complemented by **/proc/PID/attr/sara/wxprot** interface
- and **trampoline emulation**.
-+It's also possible to override the centralized configuration via `Extended
-+filesystem attributes`_.
+diff --git a/MAINTAINERS b/MAINTAINERS
+index f16e5d0..de6dab1 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -13925,6 +13925,15 @@ F:	drivers/phy/samsung/phy-s5pv210-usb2.c
+ F:	drivers/phy/samsung/phy-samsung-usb2.c
+ F:	drivers/phy/samsung/phy-samsung-usb2.h
  
- At the moment, WX Protection (unless specified otherwise) should work on
- any architecture supporting the NX bit, including, but not limited to:
-@@ -123,6 +125,24 @@ in your project or copy/paste parts of it.
- To make things simpler `libsara` is the only part of S.A.R.A. released under
- *CC0 - No Rights Reserved* license.
- 
-+Extended filesystem attributes
-+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-+When this functionality is enabled, it's possible to override
-+WX Protection flags set in the main configuration via extended attributes,
-+even when S.A.R.A.'s configuration is in "locked" mode.
-+If the user namespace is also enabled, its attributes will override settings
-+configured via the security namespace.
-+The xattrs currently in use are:
++SARA SECURITY MODULE
++M:	Salvatore Mesoraca <s.mesoraca16@gmail.com>
++T:	git git://github.com/smeso/sara.git lsm/sara/master
++W:	https://sara.smeso.it
++S:	Maintained
++F:	security/sara/
++F:	arch/x86/security/sara/
++F:	Documentation/admin-guide/LSM/SARA.rst
 +
-+- security.sara.wxprot
-+- user.sara.wxprot
-+
-+They can be manually set to the desired value as a decimal, hexadecimal or
-+octal number. When this functionality is enabled, S.A.R.A. can be easily used
-+without the help of its userspace tools. Though the preferred way to change
-+these attributes is `sara-xattr` which is part of `saractl` [2]_.
-+
-+
- Trampoline emulation
- ^^^^^^^^^^^^^^^^^^^^
- Some programs need to generate part of their code at runtime. Luckily enough,
-diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index 3d6e86d..af40f1b 100644
---- a/Documentation/admin-guide/kernel-parameters.txt
-+++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -4254,6 +4254,22 @@
- 			See S.A.R.A. documentation.
- 			Default value is set via kernel config option.
- 
-+	sara.wxprot_xattrs_enabled= [SARA]
-+			Enable support for security xattrs.
-+			Format: { "0" | "1" }
-+			See security/sara/Kconfig help text
-+			0 -- disable.
-+			1 -- enable.
-+			Default value is set via kernel config option.
-+
-+	sara.wxprot_xattrs_user= [SARA]
-+			Enable support for user xattrs.
-+			Format: { "0" | "1" }
-+			See security/sara/Kconfig help text
-+			0 -- disable.
-+			1 -- enable.
-+			Default value is set via kernel config option.
-+
- 	serialnumber	[BUGS=X86-32]
- 
- 	shapers=	[NET]
-diff --git a/include/uapi/linux/xattr.h b/include/uapi/linux/xattr.h
-index c1395b5..45c0333 100644
---- a/include/uapi/linux/xattr.h
-+++ b/include/uapi/linux/xattr.h
-@@ -77,5 +77,9 @@
- #define XATTR_POSIX_ACL_DEFAULT  "posix_acl_default"
- #define XATTR_NAME_POSIX_ACL_DEFAULT XATTR_SYSTEM_PREFIX XATTR_POSIX_ACL_DEFAULT
- 
-+#define XATTR_SARA_SUFFIX "sara."
-+#define XATTR_SARA_WXP_SUFFIX XATTR_SARA_SUFFIX "wxp"
-+#define XATTR_NAME_SEC_SARA_WXP XATTR_SECURITY_PREFIX XATTR_SARA_WXP_SUFFIX
-+#define XATTR_NAME_USR_SARA_WXP XATTR_USER_PREFIX XATTR_SARA_WXP_SUFFIX
- 
- #endif /* _UAPI_LINUX_XATTR_H */
-diff --git a/security/sara/Kconfig b/security/sara/Kconfig
-index 458e0e8..773256b 100644
---- a/security/sara/Kconfig
-+++ b/security/sara/Kconfig
-@@ -135,6 +135,28 @@ config SECURITY_SARA_WXPROT_EMUTRAMP
- 
- 	  If unsure, answer y.
- 
-+config SECURITY_SARA_WXPROT_XATTRS_ENABLED
-+	bool "xattrs support enabled by default."
-+	depends on SECURITY_SARA_WXPROT
-+	default n
-+	help
-+	  If you say Y here it will be possible to override WX protection
-+	  configuration via extended attributes in the security namespace.
-+	  Even when S.A.R.A.'s configuration has been locked.
-+
-+	  If unsure, answer N.
-+
-+config CONFIG_SECURITY_SARA_WXPROT_XATTRS_USER
-+	bool "'user' namespace xattrs support enabled by default."
-+	depends on SECURITY_SARA_WXPROT_XATTRS_ENABLED
-+	default n
-+	help
-+	  If you say Y here it will be possible to override WX protection
-+	  configuration via extended attributes in the user namespace.
-+	  Even when S.A.R.A.'s configuration has been locked.
-+
-+	  If unsure, answer N.
-+
- config SECURITY_SARA_WXPROT_DISABLED
- 	bool "WX protection will be disabled at boot."
- 	depends on SECURITY_SARA_WXPROT
-diff --git a/security/sara/wxprot.c b/security/sara/wxprot.c
-index 84f7b1e..773d1fd 100644
---- a/security/sara/wxprot.c
-+++ b/security/sara/wxprot.c
-@@ -25,6 +25,7 @@
- #include <linux/printk.h>
- #include <linux/ratelimit.h>
- #include <linux/spinlock.h>
-+#include <linux/xattr.h>
- 
- #include "include/dfa.h"
- #include "include/sara.h"
-@@ -82,6 +83,18 @@ struct wxprot_config_container {
- static const bool wxprot_emutramp;
- #endif
- 
-+#ifdef CONFIG_SECURITY_SARA_WXPROT_XATTRS_ENABLED
-+static int wxprot_xattrs_enabled __read_mostly = true;
-+#else
-+static int wxprot_xattrs_enabled __read_mostly;
-+#endif
-+
-+#ifdef CONFIG_SECURITY_SARA_WXPROT_XATTRS_USER
-+static int wxprot_xattrs_user __read_mostly = true;
-+#else
-+static int wxprot_xattrs_user __read_mostly;
-+#endif
-+
- static void pr_wxp(char *msg)
- {
- 	char *buf, *path;
-@@ -133,6 +146,14 @@ static bool are_flags_valid(u16 flags)
- MODULE_PARM_DESC(wxprot_enabled,
- 		 "Disable or enable S.A.R.A. WX Protection at boot time.");
- 
-+module_param(wxprot_xattrs_enabled, int, 0);
-+MODULE_PARM_DESC(wxprot_xattrs_enabled,
-+		 "Disable or enable S.A.R.A. WXP extended attributes interfaces.");
-+
-+module_param(wxprot_xattrs_user, int, 0);
-+MODULE_PARM_DESC(wxprot_xattrs_user,
-+		 "Allow normal users to override S.A.R.A. WXP settings via extended attributes.");
-+
- static int param_set_wxpflags(const char *val, const struct kernel_param *kp)
- {
- 	u16 flags;
-@@ -236,6 +257,65 @@ static inline int is_relro_page(const struct vm_area_struct *vma)
- }
- 
- /*
-+ * Extended attributes handling
-+ */
-+static int sara_wxprot_xattrs_name(struct dentry *d,
-+				   const char *name,
-+				   u16 *flags)
-+{
-+	int rc;
-+	char buffer[10];
-+	u16 tmp;
-+
-+	if (!(d->d_inode->i_opflags & IOP_XATTR))
-+		return -EOPNOTSUPP;
-+
-+	rc = __vfs_getxattr(d, d->d_inode, name, buffer, sizeof(buffer) - 1);
-+	if (rc > 0) {
-+		buffer[rc] = '\0';
-+		rc = kstrtou16(buffer, 0, &tmp);
-+		if (rc)
-+			return rc;
-+		if (!are_flags_valid(tmp))
-+			return -EINVAL;
-+		*flags = tmp;
-+		return 0;
-+	} else if (rc < 0)
-+		return rc;
-+
-+	return -ENODATA;
-+}
-+
-+#define sara_xattrs_may_return(RC, XATTRNAME, FNAME) do {	\
-+	if (RC == -EINVAL || RC == -ERANGE)			\
-+		pr_info_ratelimited(				\
-+			"WXP: malformed xattr '%s' on '%s'\n",	\
-+			XATTRNAME,				\
-+			FNAME);					\
-+	else if (RC == 0)					\
-+		return 0;					\
-+} while (0)
-+
-+static inline int sara_wxprot_xattrs(struct dentry *d,
-+				     u16 *flags)
-+{
-+	int rc;
-+
-+	if (!wxprot_xattrs_enabled)
-+		return 1;
-+	if (wxprot_xattrs_user) {
-+		rc = sara_wxprot_xattrs_name(d, XATTR_NAME_USR_SARA_WXP,
-+					     flags);
-+		sara_xattrs_may_return(rc, XATTR_NAME_USR_SARA_WXP,
-+				       d->d_name.name);
-+	}
-+	rc = sara_wxprot_xattrs_name(d, XATTR_NAME_SEC_SARA_WXP, flags);
-+	sara_xattrs_may_return(rc, XATTR_NAME_SEC_SARA_WXP, d->d_name.name);
-+	return 1;
-+}
-+
-+
-+/*
-  * LSM hooks
-  */
- static int sara_bprm_set_creds(struct linux_binprm *bprm)
-@@ -259,6 +339,10 @@ static int sara_bprm_set_creds(struct linux_binprm *bprm)
- 	if (!sara_enabled || !wxprot_enabled)
- 		return 0;
- 
-+	if (sara_wxprot_xattrs(bprm->file->f_path.dentry,
-+			       &sara_wxp_flags) == 0)
-+		goto flags_set;
-+
- 	/*
- 	 * SARA_WXP_TRANSFER means that the parent
- 	 * wants this child to inherit its flags.
-@@ -283,6 +367,7 @@ static int sara_bprm_set_creds(struct linux_binprm *bprm)
- 	} else
- 		path = (char *) bprm->interp;
- 
-+flags_set:
- 	if (sara_wxp_flags != default_flags &&
- 	    sara_wxp_flags & SARA_WXP_VERBOSE)
- 		pr_debug_ratelimited("WXP: '%s' run with flags '0x%x'.\n",
-@@ -777,6 +862,10 @@ static int config_hash(char **buf)
- 
- static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_enabled_data,
- 				   wxprot_enabled);
-+static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_xattrs_enabled_data,
-+				   wxprot_xattrs_enabled);
-+static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_xattrs_user_data,
-+				   wxprot_xattrs_user);
- 
- static struct sara_secfs_fptrs fptrs __lsm_ro_after_init = {
- 	.load = config_load,
-@@ -820,6 +909,16 @@ static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_enabled_data,
- 		.type = SARA_SECFS_CONFIG_HASH,
- 		.data = &fptrs,
- 	},
-+	{
-+		.name = "xattr_enabled",
-+		.type = SARA_SECFS_BOOL,
-+		.data = (void *) &wxprot_xattrs_enabled_data,
-+	},
-+	{
-+		.name = "xattr_user_allowed",
-+		.type = SARA_SECFS_BOOL,
-+		.data = (void *) &wxprot_xattrs_user_data,
-+	},
- };
- 
- 
+ SC1200 WDT DRIVER
+ M:	Zwane Mwaikambo <zwanem@gmail.com>
+ S:	Maintained
 -- 
 1.9.1
 
