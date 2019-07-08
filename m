@@ -1,20 +1,23 @@
-Return-Path: <SRS0=aFXX=VF=lists.openwall.com=kernel-hardening-return-16382-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=WB88=VF=lists.openwall.com=kernel-hardening-return-16383-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	TRACKER_ID autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,GAPPY_SUBJECT,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CA244C606C1
-	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jul 2019 15:23:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8F170C606C5
+	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jul 2019 17:38:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F18CC204EC
-	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jul 2019 15:23:06 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F18CC204EC
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16382-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19681 invoked by uid 550); 8 Jul 2019 15:22:57 -0000
+	by mail.kernel.org (Postfix) with SMTP id E417620644
+	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jul 2019 17:38:20 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="oTS27VBG"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E417620644
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16383-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15448 invoked by uid 550); 8 Jul 2019 17:38:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,179 +25,86 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17819 invoked from network); 8 Jul 2019 14:54:29 -0000
-X-Mailer: emacs 26.2 (via feedmail 11-beta-1 I)
-From: "Aneesh Kumar K.V" <aneesh.kumar@linux.ibm.com>
-To: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org
-Cc: Russell Currey <ruscur@russell.cc>, kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v2] powerpc/mm: Implement STRICT_MODULE_RWX
-In-Reply-To: <20190614055013.21014-1-ruscur@russell.cc>
-References: <20190614055013.21014-1-ruscur@russell.cc>
-Date: Mon, 08 Jul 2019 20:24:08 +0530
+Received: (qmail 15415 invoked from network); 8 Jul 2019 17:38:12 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=7dDlUWXE3BDiYJAkGp7CGjzY68vf5TiBs2gkLxCROPg=;
+        b=oTS27VBGAXTGyWJrG+1bRf5KktV5vuIvxa8IWh1u4JAjBQEhi23d4SyczOUH26kY2R
+         y//ajtI2TI29q75dcyp4FSN6kHo6UyR1wPu6Y62WtELMtJtY2Xkr824CBphlKwNvrFuO
+         ieIrosIuDlKuPw3h2M3licdQ3No/OcsZmxHFpt3c0Kc+o5hSNDIzOkDfH9Z91ZQWyD9C
+         grhZTvCUxZJhweX5ja9rWveALtoabLG30fihRzI/xTkp6fk/mdSPQab2R5qH1XoaWpiD
+         o9GNdIcFxNYegyyTxVLrvQTgO8RvIuuA7e/Fsm1h2c1BcSOCqsarhQ/oMOQ4o/vR2/An
+         BE2Q==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=7dDlUWXE3BDiYJAkGp7CGjzY68vf5TiBs2gkLxCROPg=;
+        b=DY1WUELyye7JQ0dkJIJoSvHaEecrGyJ5QUwV/zvJz9Nqi5WnuKsh8Vse6JEuoMcThm
+         TCuCHR9iTE56HDswdflHtxhSs8iVVmgkwLZQSTaEXUkA/FAOdMb2tS3gcAuTAeAyGIT8
+         rykzMCiQyJgpDgLwreylL135hRGGA8hwYySaKu4bOs5Vgh6fhjxlDxuIkDGcOzyTilCD
+         8//KAl6n7N9F4QTT91ftyaHpL/1glktP3uoB0EqHvCdVjT3bVgb1g9PZNNqn5K7d1KUV
+         JfdpBf6RutC28gifleP8BPPRKSGEdJPFgpsI96dRIK2ES6MVwO5kctBsseYWWd8qMlvP
+         U70g==
+X-Gm-Message-State: APjAAAWWA3Uo8vNYRWxp00OwxeEX9iq0ZNSLPr+uqPuP07Csm7WtntMq
+	5WM90bVjHjwadj3tKKw6Hq/d9NhzC1xNnZG1BMwaRg==
+X-Google-Smtp-Source: APXvYqxWC2WzfHpl8ZigyXVHyyT6QtrbedYXY8/NrWJL/zNHr0x2cmYj/XsDrwdBKxwSxPY6OsYxHdMmiMEzeBNat6Y=
+X-Received: by 2002:aca:b06:: with SMTP id 6mr10585303oil.175.1562607480451;
+ Mon, 08 Jul 2019 10:38:00 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain
-X-TM-AS-GCONF: 00
-x-cbid: 19070814-4275-0000-0000-0000034A3B3A
-X-IBM-AV-DETECTION: SAVI=unused REMOTE=unused XFE=unused
-x-cbparentid: 19070814-4276-0000-0000-0000385A6307
-Message-Id: <87y318wp9r.fsf@linux.ibm.com>
-X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:,, definitions=2019-07-08_05:,,
- signatures=0
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 priorityscore=1501
- malwarescore=0 suspectscore=0 phishscore=0 bulkscore=0 spamscore=0
- clxscore=1011 lowpriorityscore=0 mlxscore=0 impostorscore=0
- mlxlogscore=999 adultscore=0 classifier=spam adjust=0 reason=mlx
- scancount=1 engine=8.0.1-1810050000 definitions=main-1907080186
+References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
+ <1562410493-8661-5-git-send-email-s.mesoraca16@gmail.com> <CAG48ez35oJhey5WNzMQR14ko6RPJUJp+nCuAHVUJqX7EPPPokA@mail.gmail.com>
+ <CAJHCu1+35GhGJY8jDMPEU8meYhJTVgvzY5sJgVCuLrxCoGgHEg@mail.gmail.com>
+In-Reply-To: <CAJHCu1+35GhGJY8jDMPEU8meYhJTVgvzY5sJgVCuLrxCoGgHEg@mail.gmail.com>
+From: Jann Horn <jannh@google.com>
+Date: Mon, 8 Jul 2019 19:37:33 +0200
+Message-ID: <CAG48ez2f1TbUZt_0F99DLyzn-3DhjuoTJZ7Dwxgmto7J9ZQ95g@mail.gmail.com>
+Subject: Re: [PATCH v5 04/12] S.A.R.A.: generic DFA for string matching
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, 
+	linux-security-module <linux-security-module@vger.kernel.org>, 
+	Alexander Viro <viro@zeniv.linux.org.uk>, Brad Spengler <spender@grsecurity.net>, 
+	Casey Schaufler <casey@schaufler-ca.com>, Christoph Hellwig <hch@infradead.org>, 
+	Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, 
+	"Serge E. Hallyn" <serge@hallyn.com>, Thomas Gleixner <tglx@linutronix.de>, James Morris <jmorris@namei.org>, 
+	John Johansen <john.johansen@canonical.com>
+Content-Type: text/plain; charset="UTF-8"
 
-Russell Currey <ruscur@russell.cc> writes:
-
-> Strict module RWX is just like strict kernel RWX, but for modules - so
-> loadable modules aren't marked both writable and executable at the same
-> time.  This is handled by the generic code in kernel/module.c, and
-> simply requires the architecture to implement the set_memory() set of
-> functions, declared with ARCH_HAS_SET_MEMORY.
+On Sun, Jul 7, 2019 at 6:01 PM Salvatore Mesoraca
+<s.mesoraca16@gmail.com> wrote:
+> Jann Horn <jannh@google.com> wrote:
+> > Throughout the series, you are adding files that both add an SPDX
+> > identifier and have a description of the license in the comment block
+> > at the top. The SPDX identifier already identifies the license.
 >
-> There's nothing other than these functions required to turn
-> ARCH_HAS_STRICT_MODULE_RWX on, so turn that on too.
->
-> With STRICT_MODULE_RWX enabled, there are as many W+X pages at runtime
-> as there are with CONFIG_MODULES=n (none), so in Russel's testing it works
-> well on both Hash and Radix book3s64.
->
-> There's a TODO in the code for also applying the page permission changes
-> to the backing pages in the linear mapping: this is pretty simple for
-> Radix and (seemingly) a lot harder for Hash, so I've left it for now
-> since there's still a notable security benefit for the patch as-is.
->
-> Technically can be enabled without STRICT_KERNEL_RWX, but
-> that doesn't gets you a whole lot, so we should leave it off by default
-> until we can get STRICT_KERNEL_RWX to the point where it's enabled by
-> default.
->
-> Signed-off-by: Russell Currey <ruscur@russell.cc>
-> Signed-off-by: Christophe Leroy <christophe.leroy@c-s.fr>
-> ---
-> Changes from v1 (sent by Christophe):
->  - return if VM_FLUSH_RESET_PERMS is set
->
->  arch/powerpc/Kconfig                  |  2 +
->  arch/powerpc/include/asm/set_memory.h | 32 ++++++++++
->  arch/powerpc/mm/Makefile              |  2 +-
->  arch/powerpc/mm/pageattr.c            | 85 +++++++++++++++++++++++++++
->  4 files changed, 120 insertions(+), 1 deletion(-)
->  create mode 100644 arch/powerpc/include/asm/set_memory.h
->  create mode 100644 arch/powerpc/mm/pageattr.c
->
-> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-> index 8c1c636308c8..3d98240ce965 100644
-> --- a/arch/powerpc/Kconfig
-> +++ b/arch/powerpc/Kconfig
-> @@ -131,7 +131,9 @@ config PPC
->  	select ARCH_HAS_PTE_SPECIAL
->  	select ARCH_HAS_MEMBARRIER_CALLBACKS
->  	select ARCH_HAS_SCALED_CPUTIME		if VIRT_CPU_ACCOUNTING_NATIVE && PPC64
-> +	select ARCH_HAS_SET_MEMORY
->  	select ARCH_HAS_STRICT_KERNEL_RWX	if ((PPC_BOOK3S_64 || PPC32) && !RELOCATABLE && !HIBERNATION)
-> +	select ARCH_HAS_STRICT_MODULE_RWX	if PPC_BOOK3S_64 || PPC32
->  	select ARCH_HAS_TICK_BROADCAST		if GENERIC_CLOCKEVENTS_BROADCAST
->  	select ARCH_HAS_UACCESS_FLUSHCACHE	if PPC64
->  	select ARCH_HAS_UBSAN_SANITIZE_ALL
-> diff --git a/arch/powerpc/include/asm/set_memory.h b/arch/powerpc/include/asm/set_memory.h
-> new file mode 100644
-> index 000000000000..4b9683f3b3dd
-> --- /dev/null
-> +++ b/arch/powerpc/include/asm/set_memory.h
-> @@ -0,0 +1,32 @@
-> +/* SPDX-License-Identifier: GPL-2.0+ */
-> +#ifndef _ASM_POWERPC_SET_MEMORY_H
-> +#define _ASM_POWERPC_SET_MEMORY_H
-> +
-> +#define SET_MEMORY_RO	1
-> +#define SET_MEMORY_RW	2
-> +#define SET_MEMORY_NX	3
-> +#define SET_MEMORY_X	4
-> +
-> +int change_memory(unsigned long addr, int numpages, int action);
-> +
-> +static inline int set_memory_ro(unsigned long addr, int numpages)
-> +{
-> +	return change_memory(addr, numpages, SET_MEMORY_RO);
-> +}
-> +
-> +static inline int set_memory_rw(unsigned long addr, int numpages)
-> +{
-> +	return change_memory(addr, numpages, SET_MEMORY_RW);
-> +}
-> +
-> +static inline int set_memory_nx(unsigned long addr, int numpages)
-> +{
-> +	return change_memory(addr, numpages, SET_MEMORY_NX);
-> +}
-> +
-> +static inline int set_memory_x(unsigned long addr, int numpages)
-> +{
-> +	return change_memory(addr, numpages, SET_MEMORY_X);
-> +}
-> +
-> +#endif
-> diff --git a/arch/powerpc/mm/Makefile b/arch/powerpc/mm/Makefile
-> index 0f499db315d6..b683d1c311b3 100644
-> --- a/arch/powerpc/mm/Makefile
-> +++ b/arch/powerpc/mm/Makefile
-> @@ -7,7 +7,7 @@ ccflags-$(CONFIG_PPC64)	:= $(NO_MINIMAL_TOC)
->  
->  obj-y				:= fault.o mem.o pgtable.o mmap.o \
->  				   init_$(BITS).o pgtable_$(BITS).o \
-> -				   pgtable-frag.o \
-> +				   pgtable-frag.o pageattr.o \
->  				   init-common.o mmu_context.o drmem.o
->  obj-$(CONFIG_PPC_MMU_NOHASH)	+= nohash/
->  obj-$(CONFIG_PPC_BOOK3S_32)	+= book3s32/
-> diff --git a/arch/powerpc/mm/pageattr.c b/arch/powerpc/mm/pageattr.c
-> new file mode 100644
-> index 000000000000..41baf92f632b
-> --- /dev/null
-> +++ b/arch/powerpc/mm/pageattr.c
-> @@ -0,0 +1,85 @@
-> +// SPDX-License-Identifier: GPL-2.0+
-> +
-> +/*
-> + * Page attribute and set_memory routines
-> + *
-> + * Derived from the arm64 implementation.
-> + *
-> + * Author: Russell Currey <ruscur@russell.cc>
-> + *
-> + * Copyright 2019, IBM Corporation.
-> + *
-> + */
-> +
-> +#include <linux/mm.h>
-> +#include <linux/set_memory.h>
-> +#include <linux/vmalloc.h>
-> +
-> +#include <asm/mmu.h>
-> +#include <asm/page.h>
-> +#include <asm/pgtable.h>
-> +
-> +static int change_page_ro(pte_t *ptep, pgtable_t token, unsigned long addr, void *data)
-> +{
-> +	set_pte_at(&init_mm, addr, ptep, pte_wrprotect(READ_ONCE(*ptep)));
-> +	return 0;
-> +}
+> I added the license description because I thought it was required anyway.
+> IANAL, if you tell me that SPDX it's enough I'll remove the description.
 
-We can't use set_pte_at when updating a valid pte entry. This should have
-triggered 
+IANAL too, but Documentation/process/license-rules.rst says:
 
-	/*
-	 * Make sure hardware valid bit is not set. We don't do
-	 * tlb flush for this update.
-	 */
-	VM_WARN_ON(pte_hw_valid(*ptep) && !pte_protnone(*ptep));
+====
+The common way of expressing the license of a source file is to add the
+matching boilerplate text into the top comment of the file.  Due to
+formatting, typos etc. these "boilerplates" are hard to validate for
+tools which are used in the context of license compliance.
 
-The details are explained as part of
+An alternative to boilerplate text is the use of Software Package Data
+Exchange (SPDX) license identifiers in each source file.  SPDX license
+identifiers are machine parsable and precise shorthands for the license
+under which the content of the file is contributed.  SPDX license
+identifiers are managed by the SPDX Workgroup at the Linux Foundation and
+have been agreed on by partners throughout the industry, tool vendors, and
+legal teams.  For further information see https://spdx.org/
 
-56eecdb912b536a4fa97fb5bfe5a940a54d79be6
+The Linux kernel requires the precise SPDX identifier in all source files.
+The valid identifiers used in the kernel are explained in the section
+`License identifiers`_ and have been retrieved from the official SPDX
+license list at https://spdx.org/licenses/ along with the license texts.
+====
 
--aneesh
-
+and there have been lots of conversion patches to replace license
+boilerplate headers with SPDX identifiers, see e.g. all the "treewide:
+Replace GPLv2 boilerplate/reference with SPDX" patches.
