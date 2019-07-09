@@ -1,23 +1,21 @@
-Return-Path: <SRS0=QPVp=VG=lists.openwall.com=kernel-hardening-return-16396-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=0cqE=VG=lists.openwall.com=kernel-hardening-return-16397-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,GAPPY_SUBJECT,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B2206C606B0
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jul 2019 04:51:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EBAA3C606B0
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jul 2019 05:42:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0FB52214AF
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jul 2019 04:51:33 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="SagoGHLw"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0FB52214AF
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16396-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24512 invoked by uid 550); 9 Jul 2019 04:51:26 -0000
+	by mail.kernel.org (Postfix) with SMTP id 514FF2073D
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jul 2019 05:42:32 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 514FF2073D
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16397-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1773 invoked by uid 550); 9 Jul 2019 05:42:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,132 +23,114 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24477 invoked from network); 9 Jul 2019 04:51:25 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=NHGXxZKoUC+etV5J4TA2pzGAE32N1lUMWS0xtU10i5g=;
-        b=SagoGHLwdhyzez71wGl/CWUd7JfpmwBlosfeoAMty1PvK2lxm4NEetTyojTrzhwaud
-         Ts1+0xOhHRFwpsMA3AASevOpJhCQpHPI498ZcCp2Qj9585GB+tRmt389Z+LWTJKx/y7s
-         mH1FVgB0X1hwFpGEC/wHgqIXjB8rWZKfMla1I=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=NHGXxZKoUC+etV5J4TA2pzGAE32N1lUMWS0xtU10i5g=;
-        b=NMCVn6IZf6PWO4AXrkDPInzwC2XPC5eV/zeK5NtOGkbzAywsmxOW1/IcvHQDWF1egt
-         iJwXi5aO7qbeQQt6PYQ518KOIfWsSqCzAmp1FqHcvYPVacG1rHkuxcfd+/G1C7WcJQR5
-         5micU2Z+BwvIaZO7tT2RLfigrdc20A9LEI+tOS6Sa2wWC8A7OC+P2xzNOdVSIVXZX9Up
-         gl3EsNLWSvB20VIpdYeZ/VRk4HppvrICKrd1NoHw9tWE0vjreaK+ryXLG2K8SR3ypQCT
-         KuRmP4UuUQz1OVe+f2pcAXhPua93g7kFqIFyunB8VDY2fYZHZU+Tf3+9BUy1OpAvorFS
-         BF6Q==
-X-Gm-Message-State: APjAAAV1tVeZ/oNZDFta8TovGrQnk0U1ALlduGEfFESBO//s+IVhmbpP
-	99CCD4Y+40Z5xBtcsfeMI/gfPQ==
-X-Google-Smtp-Source: APXvYqyra4dBr6pwAJEejOYr3AfqsfOhUfKQCLpljKcJwOvohsdTUY/A0C/0JPVAWBLwSN9mXPaIsg==
-X-Received: by 2002:a63:7a5b:: with SMTP id j27mr28067294pgn.242.1562647873177;
-        Mon, 08 Jul 2019 21:51:13 -0700 (PDT)
-Date: Mon, 8 Jul 2019 21:51:11 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-mm@kvack.org, linux-security-module@vger.kernel.org,
-	Brad Spengler <spender@grsecurity.net>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christoph Hellwig <hch@infradead.org>, Jann Horn <jannh@google.com>,
-	PaX Team <pageexec@freemail.hu>,
-	"Serge E. Hallyn" <serge@hallyn.com>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	James Morris <jmorris@namei.org>
-Subject: Re: [PATCH v5 06/12] S.A.R.A.: WX protection
-Message-ID: <201907082140.51E0B9E2@keescook>
-References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
- <1562410493-8661-7-git-send-email-s.mesoraca16@gmail.com>
- <20190706192852.GO17978@ZenIV.linux.org.uk>
- <CAJHCu1+JYWN7mEHprmCc+osP=K4qGA9xB3Jxg53_K4kwo4J6dA@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAJHCu1+JYWN7mEHprmCc+osP=K4qGA9xB3Jxg53_K4kwo4J6dA@mail.gmail.com>
+Received: (qmail 1741 invoked from network); 9 Jul 2019 05:42:24 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.63,469,1557212400"; 
+   d="scan'208";a="249045835"
+From: NitinGote <nitin.r.gote@intel.com>
+To: akpm@linux-foundation.org,
+	joe@perches.com
+Cc: corbet@lwn.net,
+	apw@canonical.com,
+	keescook@chromium.org,
+	linux-doc@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com,
+	Nitin Gote <nitin.r.gote@intel.com>
+Subject: [PATCH v2] Added warnings in checkpatch.pl script to :
+Date: Tue,  9 Jul 2019 11:10:55 +0530
+Message-Id: <20190709054055.21984-1-nitin.r.gote@intel.com>
+X-Mailer: git-send-email 2.17.1
 
-On Sun, Jul 07, 2019 at 05:49:35PM +0200, Salvatore Mesoraca wrote:
-> Al Viro <viro@zeniv.linux.org.uk> wrote:
-> >
-> > On Sat, Jul 06, 2019 at 12:54:47PM +0200, Salvatore Mesoraca wrote:
-> >
-> > > +#define sara_warn_or_return(err, msg) do {           \
-> > > +     if ((sara_wxp_flags & SARA_WXP_VERBOSE))        \
-> > > +             pr_wxp(msg);                            \
-> > > +     if (!(sara_wxp_flags & SARA_WXP_COMPLAIN))      \
-> > > +             return -err;                            \
-> > > +} while (0)
-> > > +
-> > > +#define sara_warn_or_goto(label, msg) do {           \
-> > > +     if ((sara_wxp_flags & SARA_WXP_VERBOSE))        \
-> > > +             pr_wxp(msg);                            \
-> > > +     if (!(sara_wxp_flags & SARA_WXP_COMPLAIN))      \
-> > > +             goto label;                             \
-> > > +} while (0)
-> >
-> > No.  This kind of "style" has no place in the kernel.
-> >
-> > Don't hide control flow.  It's nasty enough to reviewers,
-> > but it's pure hell on anyone who strays into your code while
-> > chasing a bug or doing general code audit.  In effect, you
-> > are creating your oh-so-private C dialect and assuming that
-> > everyone who ever looks at your code will start with learning
-> > that *AND* incorporating it into their mental C parser.
-> > I'm sorry, but you are not that important.
-> >
-> > If it looks like a function call, a casual reader will assume
-> > that this is exactly what it is.  And when one is scanning
-> > through a function (e.g. to tell if handling of some kind
-> > of refcounts is correct, with twentieth grep through the
-> > tree having brought something in your code into the view),
-> > the last thing one wants is to switch between the area-specific
-> > C dialects.  Simply because looking at yours is sandwiched
-> > between digging through some crap in drivers/target/ and that
-> > weird thing in kernel/tracing/, hopefully staying limited
-> > to 20 seconds of glancing through several functions in your
-> > code.
-> >
-> > Don't Do That.  Really.
-> 
-> I understand your concerns.
-> The first version of SARA didn't use these macros,
-> they were added because I was asked[1] to do so.
-> 
-> I have absolutely no problems in reverting this change.
-> I just want to make sure that there is agreement on this matter.
-> Maybe Kees can clarify his stance.
-> 
-> Thank you for your suggestions.
-> 
-> [1] https://lkml.kernel.org/r/CAGXu5jJuQx2qOt_aDqDQDcqGOZ5kmr5rQ9Zjv=MRRCJ65ERfGw@mail.gmail.com
+From: Nitin Gote <nitin.r.gote@intel.com>
 
-I just didn't like how difficult it was to review the repeated checking.
-I thought then (and still think now) it's worth the unusual style to
-improve the immediate readability. Obviously Al disagrees. I'm not
-against dropping my suggestion; it's just a pain to review it and it
-seems like an area that would be highly prone to subtle typos. Perhaps
-some middle ground:
+1. Deprecate strcpy() in favor of strscpy().
+2. Deprecate strlcpy() in favor of strscpy().
+3. Deprecate strncpy() in favor of strscpy() or strscpy_pad().
 
-#define sara_warn(msg)	({				\
-		if ((sara_wxp_flags & SARA_WXP_VERBOSE))	\
-			pr_wxp(msg);				\
-		!(sara_wxp_flags & SARA_WXP_COMPLAIN);		\
-	})
+Updated strncpy() section in Documentation/process/deprecated.rst
+to cover strscpy_pad() case.
 
-...
+Acked-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Nitin Gote <nitin.r.gote@intel.com>
+---
+ Change log:
+ v1->v2
+ - For string related apis, created different %deprecated_string_api
+   and these will get emitted at CHECK Level using command line option
+   -f/--file to avoid bad patched from novice script users.
 
-	if (unlikely(sara_wxp_flags & SARA_WXP_WXORX &&
-		     vm_flags & VM_WRITE &&
-		     vm_flags & VM_EXEC &&
-		     sara_warn("W^X")))
-		return -EPERM;
+ This patch is already reviewed by mailing list
+ kernel-hardening@lists.openwall.com. Refer below link
+ <https://www.openwall.com/lists/kernel-hardening/2019/07/03/4>
+Acked-by: Kees Cook <keescook@chromium.org>
 
-that way the copy/pasting isn't present but the control flow is visible?
+ Documentation/process/deprecated.rst |  6 +++---
+ scripts/checkpatch.pl                | 25 +++++++++++++++++++++++++
+ 2 files changed, 28 insertions(+), 3 deletions(-)
 
--- 
-Kees Cook
+diff --git a/Documentation/process/deprecated.rst b/Documentation/process/deprecated.rst
+index 49e0f64a3427..f564de3caf76 100644
+--- a/Documentation/process/deprecated.rst
++++ b/Documentation/process/deprecated.rst
+@@ -93,9 +93,9 @@ will be NUL terminated. This can lead to various linear read overflows
+ and other misbehavior due to the missing termination. It also NUL-pads the
+ destination buffer if the source contents are shorter than the destination
+ buffer size, which may be a needless performance penalty for callers using
+-only NUL-terminated strings. The safe replacement is :c:func:`strscpy`.
+-(Users of :c:func:`strscpy` still needing NUL-padding will need an
+-explicit :c:func:`memset` added.)
++only NUL-terminated strings. In this case, the safe replacement is
++:c:func:`strscpy`. If, however, the destination buffer still needs
++NUL-padding, the safe replacement is :c:func:`strscpy_pad`.
+
+ If a caller is using non-NUL-terminated strings, :c:func:`strncpy()` can
+ still be used, but destinations should be marked with the `__nonstring
+diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
+index bb28b178d929..10bd72e99dc8 100755
+--- a/scripts/checkpatch.pl
++++ b/scripts/checkpatch.pl
+@@ -605,6 +605,21 @@ foreach my $entry (keys %deprecated_apis) {
+ }
+ $deprecated_apis_search = "(?:${deprecated_apis_search})";
+
++our %deprecated_string_apis = (
++        "strcpy"                                => "strscpy",
++        "strlcpy"                               => "strscpy",
++        "strncpy"                               => "strscpy, strscpy_pad or for non-NUL-terminated strings,
++         strncpy() can still be used, but destinations should be marked with the __nonstring",
++);
++
++#Create a search pattern for all these strings apis to speed up a loop below
++our $deprecated_string_apis_search = "";
++foreach my $entry (keys %deprecated_string_apis) {
++        $deprecated_string_apis_search .= '|' if ($deprecated_string_apis_search ne "");
++        $deprecated_string_apis_search .= $entry;
++}
++$deprecated_string_apis_search = "(?:${deprecated_string_apis_search})";
++
+ our $mode_perms_world_writable = qr{
+ 	S_IWUGO		|
+ 	S_IWOTH		|
+@@ -6446,6 +6461,16 @@ sub process {
+ 			     "Deprecated use of '$deprecated_api', prefer '$new_api' instead\n" . $herecurr);
+ 		}
+
++# check for string deprecated apis
++                if ($line =~ /\b($deprecated_string_apis_search)\b\s*\(/) {
++                        my $deprecated_string_api = $1;
++                        my $new_api = $deprecated_string_apis{$deprecated_string_api};
++			$check = 1;
++                        CHK("DEPRECATED_API",
++                             "Deprecated use of '$deprecated_string_api', prefer '$new_api' instead\n" . $herecurr);
++			$check = 0;
++                }
++
+ # check for various structs that are normally const (ops, kgdb, device_tree)
+ # and avoid what seem like struct definitions 'struct foo {'
+ 		if ($line !~ /\bconst\b/ &&
+--
+2.17.1
+
