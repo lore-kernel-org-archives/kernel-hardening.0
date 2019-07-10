@@ -1,22 +1,20 @@
-Return-Path: <SRS0=5Srr=VH=lists.openwall.com=kernel-hardening-return-16402-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=7nXh=VH=lists.openwall.com=kernel-hardening-return-16403-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F1A45C73C6D
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jul 2019 06:01:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 40752C73C7C
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jul 2019 08:47:16 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1DAF820838
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jul 2019 06:01:55 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=mengyan1223.wang header.i=@mengyan1223.wang header.b="Rz+8KWX7"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1DAF820838
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=mengyan1223.wang
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16402-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3427 invoked by uid 550); 10 Jul 2019 06:00:41 -0000
+	by mail.kernel.org (Postfix) with SMTP id 8F10C20838
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jul 2019 08:47:15 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8F10C20838
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=altlinux.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16403-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11426 invoked by uid 550); 10 Jul 2019 08:47:08 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,160 +22,51 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11432 invoked from network); 10 Jul 2019 05:44:38 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=mengyan1223.wang;
-	s=mail; t=1562737465;
-	bh=GRrheC6yZnCgSZrciA+fCazzXFyCSHlC1LBmIR19mkE=;
-	h=Subject:From:To:Cc:Date:From;
-	b=Rz+8KWX7f0FdUlr+XjwifZ/ttPMAjn4MbNQ/tnEa8I8DF17+ZC28IbqW87nkEt41N
-	 l8FVK+E1CF31SUbumpRccJWXFUk+gN2I0WlJv+sh7CmO/G2JopQNvqN7kyoUN/bPPg
-	 EeWP6/fPByE2hcC4AcTtFLi0Ai6ZjnBtnYm+6vvebiVUwWNnQRerzZJvTMZd/ZUTZw
-	 lHcLxyVOusWTvqbESVrQQLVJQ7qO7+I25zBf4PUFus/7vJ/nt+DRb3F7rLP2JQbtfF
-	 zAA9YrjGBm7Q0GE/a6RbFTYknTb7XPMTdIBafz31ELkMJynrpQnjTpoUceHhyaLWcI
-	 b1Pt90gwSAqCw==
-Message-ID: <e5baec48e5c362256a631a2d55fbc30251ab5e83.camel@mengyan1223.wang>
-Subject: kernel oops loading i915 after "x86/asm: Pin sensitive CR4 bits"
+Received: (qmail 11394 invoked from network); 10 Jul 2019 08:47:08 -0000
+Date: Wed, 10 Jul 2019 11:46:56 +0300
+From: "Dmitry V. Levin" <ldv@altlinux.org>
+To: Xi Ruoyao <xry111@mengyan1223.wang>
+Cc: Kees Cook <keescook@chromium.org>,
+	Jani Nikula <jani.nikula@linux.intel.com>,
+	David Airlie <airlied@linux.ie>, Jessica Yu <jeyu@kernel.org>,
+	kernel-hardening@lists.openwall.com,
+	intel-gfx@lists.freedesktop.org, dri-devel@lists.freedesktop.org,
+	linux-modules@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: Re: kernel oops loading i915 after "x86/asm: Pin sensitive CR4 bits"
  (873d50d58)
-From: Xi Ruoyao <xry111@mengyan1223.wang>
-To: Kees Cook <keescook@chromium.org>, Jani Nikula
- <jani.nikula@linux.intel.com>,  David Airlie <airlied@linux.ie>, Jessica Yu
- <jeyu@kernel.org>
-Cc: kernel-hardening@lists.openwall.com, intel-gfx@lists.freedesktop.org, 
-	dri-devel@lists.freedesktop.org, linux-modules@vger.kernel.org, 
-	linux-kernel@vger.kernel.org
-Date: Wed, 10 Jul 2019 13:44:17 +0800
-Content-Type: multipart/mixed; boundary="=-8sC1bMl1WM6oK8eaXuPt"
-User-Agent: Evolution 3.32.3 
+Message-ID: <20190710084656.GB5447@altlinux.org>
+References: <e5baec48e5c362256a631a2d55fbc30251ab5e83.camel@mengyan1223.wang>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <e5baec48e5c362256a631a2d55fbc30251ab5e83.camel@mengyan1223.wang>
+
+Hi,
+
+On Wed, Jul 10, 2019 at 01:44:17PM +0800, Xi Ruoyao wrote:
+> Hello,
+> 
+> When I try to build and run the latest mainline kernel, it Oops loading i915
+> module:
+> 
+> BUG: unable to handle page fault for address: ffffffff9edc1598
+> #PF: supervisor write access in kernel mode
+> #PF: error_code(0x0003) - permissions violation
+> PGD 1a20c067 P4D 1a20c067 PUD 1a20d063 PMD 8000000019e000e1 
+> Oops: 0003 [#1] SMP PTI
+> 
+> The complete log is attached.
+> 
+> Bisection tells "x86/asm: Pin sensitive CR4 bits" (873d50d58) is the first "bad"
+> commit.  I can revert it and also "x86/asm: Pin sensitive CR0 bits" (8dbec27a2)
+> to make the kernel "seems to" work.
+> 
+> I'm not a kernel expert so I can't tell if there is a bug in Kees' patch, or his
+> patch exploits a bug in i915 or module loader.
+
+This seems to be a kernel bug introduced after v5.2, see
+https://lore.kernel.org/lkml/CAHk-=wjh+h_-fd-gJz=wor42ZNmqq46QnB90jyfzqmKLsLFWOg@mail.gmail.com/
 
 
---=-8sC1bMl1WM6oK8eaXuPt
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 7bit
-
-Hello,
-
-When I try to build and run the latest mainline kernel, it Oops loading i915
-module:
-
-BUG: unable to handle page fault for address: ffffffff9edc1598
-#PF: supervisor write access in kernel mode
-#PF: error_code(0x0003) - permissions violation
-PGD 1a20c067 P4D 1a20c067 PUD 1a20d063 PMD 8000000019e000e1 
-Oops: 0003 [#1] SMP PTI
-
-The complete log is attached.
-
-Bisection tells "x86/asm: Pin sensitive CR4 bits" (873d50d58) is the first "bad"
-commit.  I can revert it and also "x86/asm: Pin sensitive CR0 bits" (8dbec27a2)
-to make the kernel "seems to" work.
-
-I'm not a kernel expert so I can't tell if there is a bug in Kees' patch, or his
-patch exploits a bug in i915 or module loader.
-
-My CPU is an i3-3217u.  If a kdump is helpful I'll try to gather it.
 -- 
-Xi Ruoyao <xry111@mengyan1223.wang>
-School of Aerospace Science and Technology, Xidian University
-
---=-8sC1bMl1WM6oK8eaXuPt
-Content-Disposition: attachment; filename="log"
-Content-Type: text/plain; name="log"; charset="UTF-8"
-Content-Transfer-Encoding: base64
-
-SnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBCVUc6IHVuYWJsZSB0byBoYW5k
-bGUgcGFnZSBmYXVsdCBmb3IgYWRkcmVzczogZmZmZmZmZmY5ZWRjMTU5OApKdWwgMTAgMTI6NTg6
-NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6ICNQRjogc3VwZXJ2aXNvciB3cml0ZSBhY2Nlc3MgaW4g
-a2VybmVsIG1vZGUKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiAjUEY6IGVy
-cm9yX2NvZGUoMHgwMDAzKSAtIHBlcm1pc3Npb25zIHZpb2xhdGlvbgpKdWwgMTAgMTI6NTg6NTIg
-eHJ5MTExLWxhcHRvcCBrZXJuZWw6IFBHRCAxYTIwYzA2NyBQNEQgMWEyMGMwNjcgUFVEIDFhMjBk
-MDYzIFBNRCA4MDAwMDAwMDE5ZTAwMGUxIApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBr
-ZXJuZWw6IE9vcHM6IDAwMDMgWyMxXSBTTVAgUFRJCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFw
-dG9wIGtlcm5lbDogQ1BVOiAyIFBJRDogMTUxIENvbW06IHN5c3RlbWQtdWRldmQgTm90IHRhaW50
-ZWQgNS4yLjArICM1NApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IEhhcmR3
-YXJlIG5hbWU6IExFTk9WTyAyMDE3NS9JTlZBTElELCBCSU9TIDY2Q041NFdXIDAxLzIxLzIwMTMK
-SnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBSSVA6IDAwMTA6c3RhdGljX2tl
-eV9zZXRfbW9kLmlzcmEuMCsweDEwLzB4MzAKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Ag
-a2VybmVsOiBDb2RlOiA0OCA4YiAzNyA4MyBlNiAwMyA0OCAwOSBjNiA0OCA4OSAzNyBjMyA2NiA2
-NiAyZSAwZiAxZiA4NCAwMCAwMCAwMCAwMCAwMCA2NiA5MCA0OCA4OSBmMCBhOCAwMyA3NSAwZCA0
-OCA4YiAzNyA4MyBlNiAwMyA0OCAwOSBjNiA8NDg+IDg5IDM3IGMzIDBmIDBiIDQ4IDhiIDM3IDgz
-IGU2IDAzIDQ4IDA5IGM2IDQ4IDg5IDM3IGMzIDY2IDY2IDJlCkp1bCAxMCAxMjo1ODo1MiB4cnkx
-MTEtbGFwdG9wIGtlcm5lbDogUlNQOiAwMDAwOmZmZmZhNjA2YzAzMmJjOTggRUZMQUdTOiAwMDAx
-MDI4NgpKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IFJBWDogZmZmZjk5ODFk
-ZGNlMzBhMCBSQlg6IGZmZmZmZmZmOWVkYzE1OTAgUkNYOiAwMDAwMDAwMDAwMDAwMDAwCkp1bCAx
-MCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDogUkRYOiAwMDAwMDAwMDAwMDAwMDIwIFJT
-STogZmZmZjk5ODFkZGNlMzBhMCBSREk6IGZmZmZmZmZmOWVkYzE1OTgKSnVsIDEwIDEyOjU4OjUy
-IHhyeTExMS1sYXB0b3Aga2VybmVsOiBSQlA6IGZmZmZmZmZmYzA2ZjQwMDAgUjA4OiBmZmZmOTk4
-MWU2MDAzOTgwIFIwOTogZmZmZjk5ODFkZGNlMzBhMApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxh
-cHRvcCBrZXJuZWw6IFIxMDogMDAwMDAwMDAwMDAwMDAwMCBSMTE6IDAwMDAwMDAwMDAwMjhiNTYg
-UjEyOiBmZmZmZmZmZmMwNmY4ODgwCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5l
-bDogUjEzOiBmZmZmOTk4MWRkY2UzMDgwIFIxNDogZmZmZmZmZmZjMDZmNDAwOCBSMTU6IGZmZmZm
-ZmZmYzA2ZjZkYzAKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBGUzogIDAw
-MDA3Zjk5MmRkOWE2ODAoMDAwMCkgR1M6ZmZmZjk5ODFlNzA4MDAwMCgwMDAwKSBrbmxHUzowMDAw
-MDAwMDAwMDAwMDAwCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDogQ1M6ICAw
-MDEwIERTOiAwMDAwIEVTOiAwMDAwIENSMDogMDAwMDAwMDA4MDA1MDAzMwpKdWwgMTAgMTI6NTg6
-NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IENSMjogZmZmZmZmZmY5ZWRjMTU5OCBDUjM6IDAwMDAw
-MDAyMjMzYWEwMDEgQ1I0OiAwMDAwMDAwMDAwMTYwNmUwCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEt
-bGFwdG9wIGtlcm5lbDogQ2FsbCBUcmFjZToKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Ag
-a2VybmVsOiAganVtcF9sYWJlbF9tb2R1bGVfbm90aWZ5KzB4MWU3LzB4MmIwCkp1bCAxMCAxMjo1
-ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDogIG5vdGlmaWVyX2NhbGxfY2hhaW4rMHg0NC8weDcw
-Ckp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDogIGJsb2NraW5nX25vdGlmaWVy
-X2NhbGxfY2hhaW4rMHg0My8weDYwCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5l
-bDogIGxvYWRfbW9kdWxlKzB4MWJjYi8weDI0OTAKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0
-b3Aga2VybmVsOiAgPyB2ZnNfcmVhZCsweDExZi8weDE1MApKdWwgMTAgMTI6NTg6NTIgeHJ5MTEx
-LWxhcHRvcCBrZXJuZWw6ICA/IF9fZG9fc3lzX2Zpbml0X21vZHVsZSsweGJmLzB4ZTAKSnVsIDEw
-IDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiAgX19kb19zeXNfZmluaXRfbW9kdWxlKzB4
-YmYvMHhlMApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6ICBkb19zeXNjYWxs
-XzY0KzB4NDMvMHgxMTAKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiAgZW50
-cnlfU1lTQ0FMTF82NF9hZnRlcl9od2ZyYW1lKzB4NDQvMHhhOQpKdWwgMTAgMTI6NTg6NTIgeHJ5
-MTExLWxhcHRvcCBrZXJuZWw6IFJJUDogMDAzMzoweDdmOTkyZTJlZWFmOQpKdWwgMTAgMTI6NTg6
-NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IENvZGU6IDAwIGMzIDY2IDJlIDBmIDFmIDg0IDAwIDAw
-IDAwIDAwIDAwIDBmIDFmIDQ0IDAwIDAwIDQ4IDg5IGY4IDQ4IDg5IGY3IDQ4IDg5IGQ2IDQ4IDg5
-IGNhIDRkIDg5IGMyIDRkIDg5IGM4IDRjIDhiIDRjIDI0IDA4IDBmIDA1IDw0OD4gM2QgMDEgZjAg
-ZmYgZmYgNzMgMDEgYzMgNDggOGIgMGQgNjcgNzMgMGQgMDAgZjcgZDggNjQgODkgMDEgNDgKSnVs
-IDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBSU1A6IDAwMmI6MDAwMDdmZmNhMjIw
-ZDI4OCBFRkxBR1M6IDAwMDAwMjQ2IE9SSUdfUkFYOiAwMDAwMDAwMDAwMDAwMTM5Ckp1bCAxMCAx
-Mjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDogUkFYOiBmZmZmZmZmZmZmZmZmZmRhIFJCWDog
-MDAwMDAwMDAwMDliOGRhMCBSQ1g6IDAwMDA3Zjk5MmUyZWVhZjkKSnVsIDEwIDEyOjU4OjUyIHhy
-eTExMS1sYXB0b3Aga2VybmVsOiBSRFg6IDAwMDAwMDAwMDAwMDAwMDAgUlNJOiAwMDAwN2Y5OTJl
-NDY0ODg1IFJESTogMDAwMDAwMDAwMDAwMDAxMApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRv
-cCBrZXJuZWw6IFJCUDogMDAwMDAwMDAwMDAyMDAwMCBSMDg6IDAwMDAwMDAwMDAwMDAwMDAgUjA5
-OiAwMDAwMDAwMDAwOWM0NWMwCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDog
-UjEwOiAwMDAwMDAwMDAwMDAwMDEwIFIxMTogMDAwMDAwMDAwMDAwMDI0NiBSMTI6IDAwMDA3Zjk5
-MmU0NjQ4ODUKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBSMTM6IDAwMDAw
-MDAwMDAwMDAwMDAgUjE0OiAwMDAwMDAwMDAwOWFjYzUwIFIxNTogMDAwMDAwMDAwMDliOGRhMApK
-dWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IE1vZHVsZXMgbGlua2VkIGluOiBr
-dm1faW50ZWwoKykga3ZtIGlycWJ5cGFzcyBoaWRfc2Vuc29yX2h1YiBjcmMzMl9wY2xtdWwgbWZk
-X2NvcmUgaTJjX2k4MDEgc25kX2hkYV9pbnRlbCBpOTE1KCspIGludGVsX2d0dCBzbmRfaGRhX2Nv
-ZGVjIGkyY19hbGdvX2JpdCBzbmRfaHdkZXAgc25kX2hkYV9jb3JlIGRybV9rbXNfaGVscGVyIHNu
-ZF9wY20gc3lzY29weWFyZWEgc3lzZmlsbHJlY3Qgc3lzaW1nYmx0IGZiX3N5c19mb3BzIGRybSBo
-aWRfbXVsdGl0b3VjaCBpZGVhcGFkX2xhcHRvcCBzcGFyc2Vfa2V5bWFwIGhpZF9nZW5lcmljIHdt
-aSBlZml2YXJmcwpKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IENSMjogZmZm
-ZmZmZmY5ZWRjMTU5OApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IC0tLVsg
-ZW5kIHRyYWNlIGRiZWI3ZTY2ZGFhOWJkY2EgXS0tLQpKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxh
-cHRvcCBrZXJuZWw6IFJJUDogMDAxMDpzdGF0aWNfa2V5X3NldF9tb2QuaXNyYS4wKzB4MTAvMHgz
-MApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IENvZGU6IDQ4IDhiIDM3IDgz
-IGU2IDAzIDQ4IDA5IGM2IDQ4IDg5IDM3IGMzIDY2IDY2IDJlIDBmIDFmIDg0IDAwIDAwIDAwIDAw
-IDAwIDY2IDkwIDQ4IDg5IGYwIGE4IDAzIDc1IDBkIDQ4IDhiIDM3IDgzIGU2IDAzIDQ4IDA5IGM2
-IDw0OD4gODkgMzcgYzMgMGYgMGIgNDggOGIgMzcgODMgZTYgMDMgNDggMDkgYzYgNDggODkgMzcg
-YzMgNjYgNjYgMmUKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBSU1A6IDAw
-MDA6ZmZmZmE2MDZjMDMyYmM5OCBFRkxBR1M6IDAwMDEwMjg2Ckp1bCAxMCAxMjo1ODo1MiB4cnkx
-MTEtbGFwdG9wIGtlcm5lbDogUkFYOiBmZmZmOTk4MWRkY2UzMGEwIFJCWDogZmZmZmZmZmY5ZWRj
-MTU5MCBSQ1g6IDAwMDAwMDAwMDAwMDAwMDAKSnVsIDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Ag
-a2VybmVsOiBSRFg6IDAwMDAwMDAwMDAwMDAwMjAgUlNJOiBmZmZmOTk4MWRkY2UzMGEwIFJESTog
-ZmZmZmZmZmY5ZWRjMTU5OApKdWwgMTAgMTI6NTg6NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IFJC
-UDogZmZmZmZmZmZjMDZmNDAwMCBSMDg6IGZmZmY5OTgxZTYwMDM5ODAgUjA5OiBmZmZmOTk4MWRk
-Y2UzMGEwCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDogUjEwOiAwMDAwMDAw
-MDAwMDAwMDAwIFIxMTogMDAwMDAwMDAwMDAyOGI1NiBSMTI6IGZmZmZmZmZmYzA2Zjg4ODAKSnVs
-IDEwIDEyOjU4OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBSMTM6IGZmZmY5OTgxZGRjZTMwODAg
-UjE0OiBmZmZmZmZmZmMwNmY0MDA4IFIxNTogZmZmZmZmZmZjMDZmNmRjMApKdWwgMTAgMTI6NTg6
-NTIgeHJ5MTExLWxhcHRvcCBrZXJuZWw6IEZTOiAgMDAwMDdmOTkyZGQ5YTY4MCgwMDAwKSBHUzpm
-ZmZmOTk4MWU3MDgwMDAwKDAwMDApIGtubEdTOjAwMDAwMDAwMDAwMDAwMDAKSnVsIDEwIDEyOjU4
-OjUyIHhyeTExMS1sYXB0b3Aga2VybmVsOiBDUzogIDAwMTAgRFM6IDAwMDAgRVM6IDAwMDAgQ1Iw
-OiAwMDAwMDAwMDgwMDUwMDMzCkp1bCAxMCAxMjo1ODo1MiB4cnkxMTEtbGFwdG9wIGtlcm5lbDog
-Q1IyOiBmZmZmZmZmZjllZGMxNTk4IENSMzogMDAwMDAwMDIyMzNhYTAwMSBDUjQ6IDAwMDAwMDAw
-MDAxNjA2ZTAK
-
-
---=-8sC1bMl1WM6oK8eaXuPt--
-
+ldv
