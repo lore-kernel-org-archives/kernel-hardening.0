@@ -1,23 +1,23 @@
-Return-Path: <SRS0=Go0d=VI=lists.openwall.com=kernel-hardening-return-16410-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=2AdI=VI=lists.openwall.com=kernel-hardening-return-16411-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+X-Spam-Status: No, score=-9.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5CB42C742A2
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:44:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 97ED6C742A2
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:45:00 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9E55121019
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:44:51 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C16D5214AF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:44:59 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=joelfernandes.org header.i=@joelfernandes.org header.b="POP2I6vc"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9E55121019
+	dkim=pass (1024-bit key) header.d=joelfernandes.org header.i=@joelfernandes.org header.b="ZR89dJ0g"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C16D5214AF
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=joelfernandes.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16410-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 10218 invoked by uid 550); 11 Jul 2019 23:44:35 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16411-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11634 invoked by uid 550); 11 Jul 2019 23:44:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,31 +25,31 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 10126 invoked from network); 11 Jul 2019 23:44:34 -0000
+Received: (qmail 11523 invoked from network); 11 Jul 2019 23:44:37 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=joelfernandes.org; s=google;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=/GuW47+ITVwlHRyFWoit77iH8wSxBVV56wbG/AJ8g+A=;
-        b=POP2I6vcsX7mrpLNszrDZ3jHjn5JeGjYvt0TIBarOc+TTSSHTMCxN8ZJl3umrbGe13
-         LL/K6XJbcw8liWBMr5VJm7tJsyYXkpeSHOo93Z5cFDVSa8Vym2EQZ+vSjFXjz8J4Wkoy
-         ABgjJP8Cfel0JsMbqaLz7L8BjEej7RSdpehss=
+        bh=DxaBT1tnbAEQu4unrE+ZIdJanB1uVhDn4/7rfKQHrQ8=;
+        b=ZR89dJ0gCvmFd48H56kuCm2XzQpnVhPx64wtgiHyZvxa33ANSu0oXUTttSIxFI0x9Z
+         fHKlA+45Bqn3L3g08DQds8w60ml29tD/QN8R/vX0Ix2Z2Akl/LzUSDrgZDI4Q/+otrRY
+         I+DBueCyfUEugUlr0uSGpkRYwIAjZJZdHOtgc=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=/GuW47+ITVwlHRyFWoit77iH8wSxBVV56wbG/AJ8g+A=;
-        b=Tv3rvCqEQZRoumCnL1IVB8AzTuZhDg/0zsRtJg1yybAgSzCDD4ykJrdAOfkTDmZ6vB
-         jbWYtmPzvxWdJmVAQJ+orG1/CSMnLiLtcz+LHBiHg/HoQ4saHu4TH6f4V7DmVl1Uj/VI
-         Bun9FGZ7G2ycgKOL39rgCvV/Sqe0tczbBXqvUsktSIEQNd/J9K7K9YW9p7N14REecSt1
-         llwWulDYbUlSfcRyCvcibcbss0ggub9SxPfCR7j5Gl2MMjSzkyuX5iALzJDuccn1h6jP
-         OHCRHLcjx+fv7lrUxWP6myAeIEB5buU5Kc7u6Q68ILQDEeyc2k6iyMiyeyj//HBQ3iSm
-         2VlQ==
-X-Gm-Message-State: APjAAAVZJnNsVWXuh+11e5yOi5nKsNwPeQSthpJINy9us0fF2lKE+OxM
-	QkO/yuq6fm2F2bb7OQn5VFE=
-X-Google-Smtp-Source: APXvYqwL3radJMAbdECmS/G+TOrWXAIf4q3T6x0oa7czoYNYGbVr9jTCwdHXMM+5nal4G43CSaqnjQ==
-X-Received: by 2002:a63:3f48:: with SMTP id m69mr7029829pga.17.1562888662320;
-        Thu, 11 Jul 2019 16:44:22 -0700 (PDT)
+        bh=DxaBT1tnbAEQu4unrE+ZIdJanB1uVhDn4/7rfKQHrQ8=;
+        b=fPrieMb53y34gFFzveeQ6ntNopbGdpkL1ddneuMdUG72RwubT/Vi4+Fbx8vDdOtyb3
+         a1F+m+Ibmkqu+VMq2s8DkYnm9HjbcjikR9eb4G2Ap0+HxjfiZwGCMOz0U3M7yyTVzKxG
+         5osPlInucrA20DO5MN93zQSDhSlYyjDHuBeotctUnd7O2aowkCkE1eXaSjU19Wk6ft03
+         z0XGlY7xYyjmRls/yOytQccJAGZr++MRKYn1FHxkuc4xpa/MCwmMcOJwBDC9FoMhY6tK
+         at6i7mmXbnc3zO6YUVXswvpN/l60WDmwj4/nD3eNbSkt5J1kVoV8NVB7pHA0y31X0SGt
+         UeHw==
+X-Gm-Message-State: APjAAAXlEbi4QaX5Uv+JorPUZXv8E9dzLUsbOA6JhsnILN7Xy6muYftI
+	DXvCE2oiX01RHferoLbxxZo=
+X-Google-Smtp-Source: APXvYqzUKLrrGWpDYD2bC1yFQhR2A3bxbRxsjgXB3UX8GkC2wLperL0TYvgWXgyR72s0kBdwkN7Ihw==
+X-Received: by 2002:a63:5212:: with SMTP id g18mr2790151pgb.387.1562888666095;
+        Thu, 11 Jul 2019 16:44:26 -0700 (PDT)
 From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
 To: linux-kernel@vger.kernel.org
 Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>,
@@ -86,34 +86,119 @@ Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>,
 	Thomas Gleixner <tglx@linutronix.de>,
 	will@kernel.org,
 	x86@kernel.org (maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT))
-Subject: [PATCH v1 2/6] ipv4: add lockdep condition to fix for_each_entry
-Date: Thu, 11 Jul 2019 19:43:57 -0400
-Message-Id: <20190711234401.220336-3-joel@joelfernandes.org>
+Subject: [PATCH v1 3/6] driver/core: Convert to use built-in RCU list checking
+Date: Thu, 11 Jul 2019 19:43:58 -0400
+Message-Id: <20190711234401.220336-4-joel@joelfernandes.org>
 X-Mailer: git-send-email 2.22.0.410.gd8fdbe21b5-goog
 In-Reply-To: <20190711234401.220336-1-joel@joelfernandes.org>
 References: <20190711234401.220336-1-joel@joelfernandes.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
+list_for_each_entry_rcu has built-in RCU and lock checking. Make use of
+it in driver core.
+
 Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
 ---
- net/ipv4/fib_frontend.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
+ drivers/base/base.h          |  1 +
+ drivers/base/core.c          | 10 ++++++++++
+ drivers/base/power/runtime.c | 15 ++++++++++-----
+ 3 files changed, 21 insertions(+), 5 deletions(-)
 
-diff --git a/net/ipv4/fib_frontend.c b/net/ipv4/fib_frontend.c
-index b298255f6fdb..ef7c9f8e8682 100644
---- a/net/ipv4/fib_frontend.c
-+++ b/net/ipv4/fib_frontend.c
-@@ -127,7 +127,8 @@ struct fib_table *fib_get_table(struct net *net, u32 id)
- 	h = id & (FIB_TABLE_HASHSZ - 1);
+diff --git a/drivers/base/base.h b/drivers/base/base.h
+index b405436ee28e..0d32544b6f91 100644
+--- a/drivers/base/base.h
++++ b/drivers/base/base.h
+@@ -165,6 +165,7 @@ static inline int devtmpfs_init(void) { return 0; }
+ /* Device links support */
+ extern int device_links_read_lock(void);
+ extern void device_links_read_unlock(int idx);
++extern int device_links_read_lock_held(void);
+ extern int device_links_check_suppliers(struct device *dev);
+ extern void device_links_driver_bound(struct device *dev);
+ extern void device_links_driver_cleanup(struct device *dev);
+diff --git a/drivers/base/core.c b/drivers/base/core.c
+index fd7511e04e62..6c5ca9685647 100644
+--- a/drivers/base/core.c
++++ b/drivers/base/core.c
+@@ -68,6 +68,11 @@ void device_links_read_unlock(int idx)
+ {
+ 	srcu_read_unlock(&device_links_srcu, idx);
+ }
++
++int device_links_read_lock_held(void)
++{
++	return srcu_read_lock_held(&device_links_srcu);
++}
+ #else /* !CONFIG_SRCU */
+ static DECLARE_RWSEM(device_links_lock);
  
- 	head = &net->ipv4.fib_table_hash[h];
--	hlist_for_each_entry_rcu(tb, head, tb_hlist) {
-+	hlist_for_each_entry_rcu(tb, head, tb_hlist,
-+				 lockdep_rtnl_is_held()) {
- 		if (tb->tb_id == id)
- 			return tb;
- 	}
+@@ -91,6 +96,11 @@ void device_links_read_unlock(int not_used)
+ {
+ 	up_read(&device_links_lock);
+ }
++
++int device_links_read_lock_held(void)
++{
++	return lock_is_held(&device_links_lock);
++}
+ #endif /* !CONFIG_SRCU */
+ 
+ /**
+diff --git a/drivers/base/power/runtime.c b/drivers/base/power/runtime.c
+index 952a1e7057c7..7a10e8379a70 100644
+--- a/drivers/base/power/runtime.c
++++ b/drivers/base/power/runtime.c
+@@ -287,7 +287,8 @@ static int rpm_get_suppliers(struct device *dev)
+ {
+ 	struct device_link *link;
+ 
+-	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node) {
++	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node,
++				device_links_read_lock_held()) {
+ 		int retval;
+ 
+ 		if (!(link->flags & DL_FLAG_PM_RUNTIME) ||
+@@ -309,7 +310,8 @@ static void rpm_put_suppliers(struct device *dev)
+ {
+ 	struct device_link *link;
+ 
+-	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node) {
++	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node,
++				device_links_read_lock_held()) {
+ 		if (READ_ONCE(link->status) == DL_STATE_SUPPLIER_UNBIND)
+ 			continue;
+ 
+@@ -1640,7 +1642,8 @@ void pm_runtime_clean_up_links(struct device *dev)
+ 
+ 	idx = device_links_read_lock();
+ 
+-	list_for_each_entry_rcu(link, &dev->links.consumers, s_node) {
++	list_for_each_entry_rcu(link, &dev->links.consumers, s_node,
++				device_links_read_lock_held()) {
+ 		if (link->flags & DL_FLAG_STATELESS)
+ 			continue;
+ 
+@@ -1662,7 +1665,8 @@ void pm_runtime_get_suppliers(struct device *dev)
+ 
+ 	idx = device_links_read_lock();
+ 
+-	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node)
++	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node,
++				device_links_read_lock_held())
+ 		if (link->flags & DL_FLAG_PM_RUNTIME) {
+ 			link->supplier_preactivated = true;
+ 			refcount_inc(&link->rpm_active);
+@@ -1683,7 +1687,8 @@ void pm_runtime_put_suppliers(struct device *dev)
+ 
+ 	idx = device_links_read_lock();
+ 
+-	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node)
++	list_for_each_entry_rcu(link, &dev->links.suppliers, c_node,
++				device_links_read_lock_held())
+ 		if (link->supplier_preactivated) {
+ 			link->supplier_preactivated = false;
+ 			if (refcount_dec_not_one(&link->rpm_active))
 -- 
 2.22.0.410.gd8fdbe21b5-goog
 
