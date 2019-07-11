@@ -1,20 +1,23 @@
-Return-Path: <SRS0=XZ7O=VI=lists.openwall.com=kernel-hardening-return-16404-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/nTs=VI=lists.openwall.com=kernel-hardening-return-16405-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 43B25C74A42
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 03:47:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5982FC74A35
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 13:06:46 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9F10821019
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 03:47:23 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9F10821019
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16404-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3325 invoked by uid 550); 11 Jul 2019 03:47:15 -0000
+	by mail.kernel.org (Postfix) with SMTP id A613021019
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 13:06:45 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="W+eYmai1"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A613021019
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linuxfoundation.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16405-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3442 invoked by uid 550); 11 Jul 2019 13:06:37 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,136 +25,87 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3277 invoked from network); 11 Jul 2019 03:47:13 -0000
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="5.63,476,1557212400"; 
-   d="scan'208";a="177043503"
-From: "Gote, Nitin R" <nitin.r.gote@intel.com>
-To: 'Joe Perches' <joe@perches.com>, "corbet@lwn.net" <corbet@lwn.net>
-CC: "akpm@linux-foundation.org" <akpm@linux-foundation.org>,
-	"apw@canonical.com" <apw@canonical.com>, "keescook@chromium.org"
-	<keescook@chromium.org>, "linux-doc@vger.kernel.org"
-	<linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org"
-	<linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com"
-	<kernel-hardening@lists.openwall.com>
-Subject: RE: [PATCH v4] Added warnings in checkpatch.pl script to :
-Thread-Topic: [PATCH v4] Added warnings in checkpatch.pl script to :
-Thread-Index: AQHVNm3hVzOhL9haf0KMxjtR64B8zqbCGIgAgAFiYNA=
-Date: Thu, 11 Jul 2019 03:46:53 +0000
-Message-ID: <12356C813DFF6F479B608F81178A5615878BFA@BGSMSX101.gar.corp.intel.com>
-References: <20190709154806.26363-1-nitin.r.gote@intel.com>
- <040b50f00501ae131256bb13a5362731ebdd6bfe.camel@perches.com>
-In-Reply-To: <040b50f00501ae131256bb13a5362731ebdd6bfe.camel@perches.com>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach:
-X-MS-TNEF-Correlator:
-dlp-product: dlpe-windows
-dlp-version: 11.0.600.7
-dlp-reaction: no-action
-x-ctpclassification: CTP_NT
-x-titus-metadata-40: eyJDYXRlZ29yeUxhYmVscyI6IiIsIk1ldGFkYXRhIjp7Im5zIjoiaHR0cDpcL1wvd3d3LnRpdHVzLmNvbVwvbnNcL0ludGVsMyIsImlkIjoiOGE2YzA0YmEtOGQ4MC00MTJkLTg5NTgtZDAwYTljOTVlYjYwIiwicHJvcHMiOlt7Im4iOiJDVFBDbGFzc2lmaWNhdGlvbiIsInZhbHMiOlt7InZhbHVlIjoiQ1RQX05UIn1dfV19LCJTdWJqZWN0TGFiZWxzIjpbXSwiVE1DVmVyc2lvbiI6IjE3LjEwLjE4MDQuNDkiLCJUcnVzdGVkTGFiZWxIYXNoIjoiTlVmU3pPaTFySlpBV0ZVOEhBekFpcGYzQjJTS2JiZXAweWozOVBFeURlXC9TS3B1RVVtWHlnS21mUXBOQTduQTYifQ==
-x-originating-ip: [10.223.10.10]
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+Received: (qmail 3424 invoked from network); 11 Jul 2019 13:06:36 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1562850384;
+	bh=bI7P/JiKe8i673RB+8uZZ7KGdqMIu1kiJ+67svzY7XE=;
+	h=Subject:To:Cc:From:Date:From;
+	b=W+eYmai1z9AvJcKxW1HVRetgL5L1q1qDCM63Hd+vYxtdr9MddSICrLypt/OB4v3oV
+	 xCnTrBn+nE9xuqBr/OouyXrLEhnBaKTSIWZhn43lBhcZ6/JcFbzXsA+GDeSDQKYupS
+	 2d9HFxyZFiKoK4f2SYpq623LWsFxL7XRVGcL3gZc=
+Subject: Patch "Documentation/admin: Remove the vsyscall=native documentation" has been added to the 4.19-stable tree
+To: bp@alien8.de,fweimer@redhat.com,gregkh@linuxfoundation.org,jannh@google.com,keescook@chromium.org,kernel-hardening@lists.openwall.com,luto@kernel.org,peterz@infradead.org,tglx@linutronix.de
+Cc: <stable-commits@vger.kernel.org>
+From: <gregkh@linuxfoundation.org>
+Date: Thu, 11 Jul 2019 13:45:25 +0200
+Message-ID: <156284552510181@kroah.com>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=ANSI_X3.4-1968
+Content-Transfer-Encoding: 8bit
+X-stable: commit
+X-Patchwork-Hint: ignore 
 
 
-> -----Original Message-----
-> From: Joe Perches [mailto:joe@perches.com]
-> Sent: Tuesday, July 9, 2019 9:40 PM
-> To: Gote, Nitin R <nitin.r.gote@intel.com>; corbet@lwn.net
-> Cc: akpm@linux-foundation.org; apw@canonical.com;
-> keescook@chromium.org; linux-doc@vger.kernel.org; linux-
-> kernel@vger.kernel.org; kernel-hardening@lists.openwall.com
-> Subject: Re: [PATCH v4] Added warnings in checkpatch.pl script to :
->=20
-> On Tue, 2019-07-09 at 21:18 +0530, NitinGote wrote:
-> > From: Nitin Gote <nitin.r.gote@intel.com>
-> >
-> > 1. Deprecate strcpy() in favor of strscpy().
-> > 2. Deprecate strlcpy() in favor of strscpy().
-> > 3. Deprecate strncpy() in favor of strscpy() or strscpy_pad().
-> >
-> > Updated strncpy() section in Documentation/process/deprecated.rst
-> > to cover strscpy_pad() case.
->=20
-> Please slow down your patch submission rate for this instance and respond
-> appropriately to the comments you've been given.
+This is a note to let you know that I've just added the patch titled
 
-Sure, I will explore this things more. And sorry, I missed to incorporate o=
-ne comment.=20
-I will take care of such things.
+    Documentation/admin: Remove the vsyscall=native documentation
 
->=20
-> This stuff is not critical bug fixing.
->=20
-Noted.
+to the 4.19-stable tree which can be found at:
+    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
 
-> The subject could be something like:
->=20
-> Subject: [PATCH v#] Documentation/checkpatch: Prefer strscpy over
-> strcpy/strlcpy
->=20
+The filename of the patch is:
+     documentation-admin-remove-the-vsyscall-native-documentation.patch
+and it can be found in the queue-4.19 subdirectory.
 
-How about this  :
-Subject: [PATCH v#] Doc/checkpatch: Prefer strscpy/strscpy_pad over strcpy/=
-strlcpy/strncpy
-
-> > diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
-> []
-> > @@ -605,6 +605,20 @@ foreach my $entry (keys %deprecated_apis) {  }
-> > $deprecated_apis_search =3D "(?:${deprecated_apis_search})";
-> >
-> > +our %deprecated_string_apis =3D (
-> > +        "strcpy"				=3D> "strscpy",
-> > +        "strlcpy"				=3D> "strscpy",
-> > +        "strncpy"				=3D> "strscpy, strscpy_pad or
-> for non-NUL-terminated strings, strncpy() can still be used, but destinat=
-ions
-> should be marked with the __nonstring",
->=20
-> 'the' is not necessary.
-
-Noted.
-
->=20
-> There could likely also be a strscat created for strcat, strlcat and strn=
-cat.
->
-
-I have not found reference for strscat in kernel.
-Could you please give any reference for strscat ?
-=20
-> btw:
->=20
-> There were several defects in the kernel for misuses of strlcpy.
->=20
-> Did you or anyone else have an opinion on stracpy to avoid duplicating th=
-e
-> first argument in a sizeof()?
->=20
-> 	strlcpy(foo, bar, sizeof(foo))
-> to
-> 	stracpy(foo, bar)
->=20
-> where foo must be char array compatible ?
->=20
-> https://lore.kernel.org/lkml/d1524130f91d7cfd61bc736623409693d2895f57.
-> camel@perches.com/
->=20
->
-
-As I understood, your trying to give new interface like stracpy(), to avoid=
- duplication of first=20
-argument in a sizeof(), we can also make it more robust for users by adding=
- check or warn in=20
-checkpatch.pl to prefer stracpy().
-
-Did you or anyone has opinion on this ?
+If you, or anyone else, feels it should not be added to the stable tree,
+please let <stable@vger.kernel.org> know about it.
 
 
-Thanks,
-Nitin Gote
+From d974ffcfb7447db5f29a4b662a3eaf99a4e1109e Mon Sep 17 00:00:00 2001
+From: Andy Lutomirski <luto@kernel.org>
+Date: Wed, 26 Jun 2019 21:45:02 -0700
+Subject: Documentation/admin: Remove the vsyscall=native documentation
+
+From: Andy Lutomirski <luto@kernel.org>
+
+commit d974ffcfb7447db5f29a4b662a3eaf99a4e1109e upstream.
+
+The vsyscall=native feature is gone -- remove the docs.
+
+Fixes: 076ca272a14c ("x86/vsyscall/64: Drop "native" vsyscalls")
+Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Acked-by: Kees Cook <keescook@chromium.org>
+Cc: Florian Weimer <fweimer@redhat.com>
+Cc: Jann Horn <jannh@google.com>
+Cc: stable@vger.kernel.org
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Link: https://lkml.kernel.org/r/d77c7105eb4c57c1a95a95b6a5b8ba194a18e764.1561610354.git.luto@kernel.org
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+
+---
+ Documentation/admin-guide/kernel-parameters.txt |    6 ------
+ 1 file changed, 6 deletions(-)
+
+--- a/Documentation/admin-guide/kernel-parameters.txt
++++ b/Documentation/admin-guide/kernel-parameters.txt
+@@ -4976,12 +4976,6 @@
+ 			emulate     [default] Vsyscalls turn into traps and are
+ 			            emulated reasonably safely.
+ 
+-			native      Vsyscalls are native syscall instructions.
+-			            This is a little bit faster than trapping
+-			            and makes a few dynamic recompilers work
+-			            better than they would in emulation mode.
+-			            It also makes exploits much easier to write.
+-
+ 			none        Vsyscalls don't work at all.  This makes
+ 			            them quite hard to use for exploits but
+ 			            might break your system.
+
+
+Patches currently in stable-queue which might be from luto@kernel.org are
+
+queue-4.19/documentation-admin-remove-the-vsyscall-native-documentation.patch
