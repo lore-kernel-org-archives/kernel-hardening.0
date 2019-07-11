@@ -1,22 +1,23 @@
-Return-Path: <SRS0=Toia=VI=lists.openwall.com=kernel-hardening-return-16408-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8Hw3=VI=lists.openwall.com=kernel-hardening-return-16409-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1B782C742A1
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:44:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0D4F9C742A5
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:44:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 41945208E4
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:44:36 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 358EF216B7
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jul 2019 23:44:43 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=joelfernandes.org header.i=@joelfernandes.org header.b="CNNjweAs"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 41945208E4
+	dkim=pass (1024-bit key) header.d=joelfernandes.org header.i=@joelfernandes.org header.b="IGKpfpLd"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 358EF216B7
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=joelfernandes.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16408-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9497 invoked by uid 550); 11 Jul 2019 23:44:27 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16409-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9912 invoked by uid 550); 11 Jul 2019 23:44:31 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,31 +25,31 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9475 invoked from network); 11 Jul 2019 23:44:27 -0000
+Received: (qmail 9797 invoked from network); 11 Jul 2019 23:44:30 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=joelfernandes.org; s=google;
-        h=from:to:cc:subject:date:message-id:mime-version
-         :content-transfer-encoding;
-        bh=tghsUW8vZE4uu9yXB3UzdXY9yotoHS+3md0iqX4wNrc=;
-        b=CNNjweAsrPvkDGMoc+Bl+izOV7h5rnwQiW5+Qq/Rcn6ALDGWghfqH0nMSbAeMYrkM3
-         /J4tlfNNWxLzUUkUKEp92qZboOdyapuZ2tNTxJAxNF/w1Fu6FzqjLGB2pNaL8BS+RrH5
-         Dd+Ya7ZpvGKyq0zNFBJG83LhPAEugUpO1kKJ8=
+        h=from:to:cc:subject:date:message-id:in-reply-to:references
+         :mime-version:content-transfer-encoding;
+        bh=FITTKsy0ccvIyixSPRiCdGiovalZSrd3OHcUD21QK98=;
+        b=IGKpfpLdCh9L199i85cDoWBN2sVOwSD+UtAb3c4qrcAw43wxgeMdcgA9g+jve3LID5
+         6vOOpxemLXJj1CZ79tB3Pje6chjO0HvYbVetcbgPQoCchXFtYur1Efy9Q7vdAWUF4ngJ
+         VBDST6I2Pm3/IeSKN7V5T8vNCOjcm1ESkYOGo=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
-         :content-transfer-encoding;
-        bh=tghsUW8vZE4uu9yXB3UzdXY9yotoHS+3md0iqX4wNrc=;
-        b=t5KzaHERogFRzHAUD8qXZeF66tXtaQ88d9WZvmzhCN/95vEG/CNkDx2de4jgLvLN0y
-         rXRqffl86PNhsYq9amz9U+Mtll9Uaez6u52M/EoMWNgc+NuvgoyjNrKQjBLfsnQ74cTx
-         aBz94nPhDK0B2QAnoMk7nGRiFIlFZogj+Kiw3h5WLlJaeJhEB5ldBH2WE90aPZ/YOuFb
-         KrBg4z/qWfPtoFGXPB0XQYCxHiXaePFF3aeCpgzfxXNR3lBd+aHH027Irj8e0RHqDd+g
-         08gyRXy6yAqGciT5b5BI70HhVct2KZOA1TDZzU4MXr3Xq9z8tMGbS9ot44loeCp1046y
-         p9tg==
-X-Gm-Message-State: APjAAAU+GK3GMvffiKfCP+E6/xetnLLBfN/ef/Jo7HwdXzGIJI/IAxoT
-	aXrBGP+A9NvYSnwsuKSw12c=
-X-Google-Smtp-Source: APXvYqyOaV5WjXgkTT8tKpfQzhT/+VO/P+nGJFfag5j+wibGuibka3Txc0o6Ppycfqb6JVTltTTnQQ==
-X-Received: by 2002:a63:89c7:: with SMTP id v190mr6903311pgd.299.1562888654760;
-        Thu, 11 Jul 2019 16:44:14 -0700 (PDT)
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=FITTKsy0ccvIyixSPRiCdGiovalZSrd3OHcUD21QK98=;
+        b=FxCX5FDhKvfPa9ZKCYNvVPOKeqmH4u3Tez05I+OWxxlaf8G7SanuKl0FMIDuVVgYA7
+         3+XMdg6YxRD+IZpx1sYo3ZRWu2bnyGGOQpSomORIgZrELmbpROW4NdUi3VuaoPs9DAYL
+         ETtilZWkps2RCZbEoZ0jNWt+dLh3frrtfMb57KrxfRtogCWJUJNKW2wWNoAXpk/VF8Ey
+         UEa3I7xktmvGZgJJ1aAKNEyCma3g8Xc+OlEaTA3EDixsAVynfLl2Nc/LsHU0xkJ+aGQi
+         GxvztK5o7S3G/Bw48MIm91oiGubt209qvlmrIwrO2F7yo61ApyPKqS5QXKPnbygi6rWj
+         Obyg==
+X-Gm-Message-State: APjAAAVWcMcQnWzdasdz89bI3FENLHFpaWeHulMYZs7LT6cj/olLxx1k
+	dMIb+h4ewOvRNl2TgWFeJF8=
+X-Google-Smtp-Source: APXvYqwozgq75nMKR73qox3f/PRoDIY5soJTLm7wRfHEcQK+usIOeqo0yORbOwCrmC8k4mWWATDhPg==
+X-Received: by 2002:a17:902:e281:: with SMTP id cf1mr7321567plb.271.1562888658619;
+        Thu, 11 Jul 2019 16:44:18 -0700 (PDT)
 From: "Joel Fernandes (Google)" <joel@joelfernandes.org>
 To: linux-kernel@vger.kernel.org
 Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>,
@@ -85,88 +86,170 @@ Cc: "Joel Fernandes (Google)" <joel@joelfernandes.org>,
 	Thomas Gleixner <tglx@linutronix.de>,
 	will@kernel.org,
 	x86@kernel.org (maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT))
-Subject: [PATCH v1 0/6] Harden list_for_each_entry_rcu() and family
-Date: Thu, 11 Jul 2019 19:43:55 -0400
-Message-Id: <20190711234401.220336-1-joel@joelfernandes.org>
+Subject: [PATCH v1 1/6] rcu: Add support for consolidated-RCU reader checking
+Date: Thu, 11 Jul 2019 19:43:56 -0400
+Message-Id: <20190711234401.220336-2-joel@joelfernandes.org>
 X-Mailer: git-send-email 2.22.0.410.gd8fdbe21b5-goog
+In-Reply-To: <20190711234401.220336-1-joel@joelfernandes.org>
+References: <20190711234401.220336-1-joel@joelfernandes.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Hi,
-This series aims to provide lockdep checking to RCU list macros.
+This patch adds support for checking RCU reader sections in list
+traversal macros. Optionally, if the list macro is called under SRCU or
+other lock/mutex protection, then appropriate lockdep expressions can be
+passed to make the checks pass.
 
-RCU has a number of primitives for "consumption" of an RCU protected pointer.
-Most of the time, these consumers make sure that such accesses are under a RCU
-reader-section (such as rcu_dereference{,sched,bh} or under a lock, such as
-with rcu_dereference_protected()).
+Existing list_for_each_entry_rcu() invocations don't need to pass the
+optional fourth argument (cond) unless they are under some non-RCU
+protection and needs to make lockdep check pass.
 
-However, there are other ways to consume RCU pointers, such as by
-list_for_each_entry_rcu or hlist_for_each_enry_rcu. Unlike the rcu_dereference
-family, these consumers do no lockdep checking at all. And with the growing
-number of RCU list uses (1000+), it is possible for bugs to creep in and go
-unnoticed which lockdep checks can catch.
+Signed-off-by: Joel Fernandes (Google) <joel@joelfernandes.org>
+---
+ include/linux/rculist.h  | 29 ++++++++++++++++++++++++-----
+ include/linux/rcupdate.h |  7 +++++++
+ kernel/rcu/Kconfig.debug | 11 +++++++++++
+ kernel/rcu/update.c      | 26 ++++++++++++++++++++++++++
+ 4 files changed, 68 insertions(+), 5 deletions(-)
 
-Since RCU consolidation efforts last year, the different traditional RCU
-flavors (preempt, bh, sched) are all consolidated. In other words, any of these
-flavors can cause a reader section to occur and all of them must cease before
-the reader section is considered to be unlocked. Thanks to this, we can
-generically check if we are in an RCU reader. This is what patch 1 does. Note
-that the list_for_each_entry_rcu and family are different from the
-rcu_dereference family in that, there is no _bh or _sched version of this
-macro. They are used under many different RCU reader flavors, and also SRCU.
-Patch 1 adds a new internal function rcu_read_lock_any_held() which checks
-if any reader section is active at all, when these macros are called. If no
-reader section exists, then the optional fourth argument to
-list_for_each_entry_rcu() can be a lockdep expression which is evaluated
-(similar to how rcu_dereference_check() works). If no lockdep expression is
-passed, and we are not in a reader, then a splat occurs. Just take off the
-lockdep expression after applying the patches, by using the following diff and
-see what happens:
-
-+++ b/arch/x86/pci/mmconfig-shared.c
-@@ -55,7 +55,7 @@ static void list_add_sorted(struct pci_mmcfg_region *new)
-        struct pci_mmcfg_region *cfg;
-
-        /* keep list sorted by segment and starting bus number */
--       list_for_each_entry_rcu(cfg, &pci_mmcfg_list, list, pci_mmcfg_lock_held()) {
-+       list_for_each_entry_rcu(cfg, &pci_mmcfg_list, list) {
-
-
-The optional argument trick to list_for_each_entry_rcu() can also be used in
-the future to possibly remove rcu_dereference_{,bh,sched}_protected() API and
-we can pass an optional lockdep expression to rcu_dereference() itself. Thus
-eliminating 3 more RCU APIs.
-
-Note that some list macro wrappers already do their own lockdep checking in the
-caller side. These can be eliminated in favor of the built-in lockdep checking
-in the list macro that this series adds. For example, workqueue code has a
-assert_rcu_or_wq_mutex() function which is called in for_each_wq().  This
-series replaces that in favor of the built-in check.
-
-Also in the future, we can extend these checks to list_entry_rcu() and other
-list macros as well, if needed.
-
-Joel Fernandes (Google) (6):
-rcu: Add support for consolidated-RCU reader checking
-ipv4: add lockdep condition to fix for_each_entry
-driver/core: Convert to use built-in RCU list checking
-workqueue: Convert for_each_wq to use built-in list check
-x86/pci: Pass lockdep condition to pcm_mmcfg_list iterator
-acpi: Use built-in RCU list checking for acpi_ioremaps list
-
-arch/x86/pci/mmconfig-shared.c |  5 +++--
-drivers/acpi/osl.c             |  6 ++++--
-drivers/base/base.h            |  1 +
-drivers/base/core.c            | 10 ++++++++++
-drivers/base/power/runtime.c   | 15 ++++++++++-----
-include/linux/rculist.h        | 29 ++++++++++++++++++++++++-----
-include/linux/rcupdate.h       |  7 +++++++
-kernel/rcu/Kconfig.debug       | 11 +++++++++++
-kernel/rcu/update.c            | 26 ++++++++++++++++++++++++++
-kernel/workqueue.c             |  5 ++---
-net/ipv4/fib_frontend.c        |  3 ++-
-11 files changed, 100 insertions(+), 18 deletions(-)
-
---
+diff --git a/include/linux/rculist.h b/include/linux/rculist.h
+index e91ec9ddcd30..78c15ec6b2c9 100644
+--- a/include/linux/rculist.h
++++ b/include/linux/rculist.h
+@@ -40,6 +40,23 @@ static inline void INIT_LIST_HEAD_RCU(struct list_head *list)
+  */
+ #define list_next_rcu(list)	(*((struct list_head __rcu **)(&(list)->next)))
+ 
++/*
++ * Check during list traversal that we are within an RCU reader
++ */
++
++#define SIXTH_ARG(a1, a2, a3, a4, a5, a6, ...) a6
++#define COUNT_VARGS(...) SIXTH_ARG(dummy, ## __VA_ARGS__, 4, 3, 2, 1, 0)
++
++#ifdef CONFIG_PROVE_RCU_LIST
++#define __list_check_rcu(dummy, cond, ...)				\
++	({								\
++	RCU_LOCKDEP_WARN(!cond && !rcu_read_lock_any_held(),		\
++			 "RCU-list traversed in non-reader section!");	\
++	 })
++#else
++#define __list_check_rcu(dummy, cond, ...) ({})
++#endif
++
+ /*
+  * Insert a new entry between two known consecutive entries.
+  *
+@@ -348,9 +365,10 @@ static inline void list_splice_tail_init_rcu(struct list_head *list,
+  * the _rcu list-mutation primitives such as list_add_rcu()
+  * as long as the traversal is guarded by rcu_read_lock().
+  */
+-#define list_for_each_entry_rcu(pos, head, member) \
+-	for (pos = list_entry_rcu((head)->next, typeof(*pos), member); \
+-		&pos->member != (head); \
++#define list_for_each_entry_rcu(pos, head, member, cond...)		\
++	for (__list_check_rcu(dummy, ## cond, 0),			\
++	     pos = list_entry_rcu((head)->next, typeof(*pos), member);	\
++		&pos->member != (head);					\
+ 		pos = list_entry_rcu(pos->member.next, typeof(*pos), member))
+ 
+ /**
+@@ -621,8 +639,9 @@ static inline void hlist_add_behind_rcu(struct hlist_node *n,
+  * the _rcu list-mutation primitives such as hlist_add_head_rcu()
+  * as long as the traversal is guarded by rcu_read_lock().
+  */
+-#define hlist_for_each_entry_rcu(pos, head, member)			\
+-	for (pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
++#define hlist_for_each_entry_rcu(pos, head, member, cond...)		\
++	for (__list_check_rcu(dummy, ## cond, 0),			\
++	     pos = hlist_entry_safe (rcu_dereference_raw(hlist_first_rcu(head)),\
+ 			typeof(*(pos)), member);			\
+ 		pos;							\
+ 		pos = hlist_entry_safe(rcu_dereference_raw(hlist_next_rcu(\
+diff --git a/include/linux/rcupdate.h b/include/linux/rcupdate.h
+index 922bb6848813..712b464ab960 100644
+--- a/include/linux/rcupdate.h
++++ b/include/linux/rcupdate.h
+@@ -223,6 +223,7 @@ int debug_lockdep_rcu_enabled(void);
+ int rcu_read_lock_held(void);
+ int rcu_read_lock_bh_held(void);
+ int rcu_read_lock_sched_held(void);
++int rcu_read_lock_any_held(void);
+ 
+ #else /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
+ 
+@@ -243,6 +244,12 @@ static inline int rcu_read_lock_sched_held(void)
+ {
+ 	return !preemptible();
+ }
++
++static inline int rcu_read_lock_any_held(void)
++{
++	return !preemptible();
++}
++
+ #endif /* #else #ifdef CONFIG_DEBUG_LOCK_ALLOC */
+ 
+ #ifdef CONFIG_PROVE_RCU
+diff --git a/kernel/rcu/Kconfig.debug b/kernel/rcu/Kconfig.debug
+index 0ec7d1d33a14..b20d0e2903d1 100644
+--- a/kernel/rcu/Kconfig.debug
++++ b/kernel/rcu/Kconfig.debug
+@@ -7,6 +7,17 @@ menu "RCU Debugging"
+ config PROVE_RCU
+ 	def_bool PROVE_LOCKING
+ 
++config PROVE_RCU_LIST
++	bool "RCU list lockdep debugging"
++	depends on PROVE_RCU
++	default n
++	help
++	  Enable RCU lockdep checking for list usages. By default it is
++	  turned off since there are several list RCU users that still
++	  need to be converted to pass a lockdep expression. To prevent
++	  false-positive splats, we keep it default disabled but once all
++	  users are converted, we can remove this config option.
++
+ config TORTURE_TEST
+ 	tristate
+ 	default n
+diff --git a/kernel/rcu/update.c b/kernel/rcu/update.c
+index c3bf44ba42e5..9cb30006a5e1 100644
+--- a/kernel/rcu/update.c
++++ b/kernel/rcu/update.c
+@@ -298,6 +298,32 @@ int rcu_read_lock_bh_held(void)
+ }
+ EXPORT_SYMBOL_GPL(rcu_read_lock_bh_held);
+ 
++int rcu_read_lock_any_held(void)
++{
++	int lockdep_opinion = 0;
++
++	if (!debug_lockdep_rcu_enabled())
++		return 1;
++	if (!rcu_is_watching())
++		return 0;
++	if (!rcu_lockdep_current_cpu_online())
++		return 0;
++
++	/* Preemptible RCU flavor */
++	if (lock_is_held(&rcu_lock_map))
++		return 1;
++
++	/* BH flavor */
++	if (in_softirq() || irqs_disabled())
++		return 1;
++
++	/* Sched flavor */
++	if (debug_locks)
++		lockdep_opinion = lock_is_held(&rcu_sched_lock_map);
++	return lockdep_opinion || !preemptible();
++}
++EXPORT_SYMBOL_GPL(rcu_read_lock_any_held);
++
+ #endif /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
+ 
+ /**
+-- 
 2.22.0.410.gd8fdbe21b5-goog
 
