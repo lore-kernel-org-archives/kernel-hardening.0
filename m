@@ -1,23 +1,23 @@
-Return-Path: <SRS0=mw6d=VJ=lists.openwall.com=kernel-hardening-return-16421-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=eFMh=VJ=lists.openwall.com=kernel-hardening-return-16422-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 56F57C742BA
-	for <kernel-hardening@archiver.kernel.org>; Fri, 12 Jul 2019 12:23:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 929D7C742B9
+	for <kernel-hardening@archiver.kernel.org>; Fri, 12 Jul 2019 12:30:12 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AA029208E4
-	for <kernel-hardening@archiver.kernel.org>; Fri, 12 Jul 2019 12:23:33 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E921E208E4
+	for <kernel-hardening@archiver.kernel.org>; Fri, 12 Jul 2019 12:30:11 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="Y6INyY1D"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AA029208E4
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="GSODTSO+"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E921E208E4
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linuxfoundation.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16421-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 27773 invoked by uid 550); 12 Jul 2019 12:23:26 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16422-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1304 invoked by uid 550); 12 Jul 2019 12:30:05 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,14 +25,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27752 invoked from network); 12 Jul 2019 12:23:25 -0000
+Received: (qmail 1279 invoked from network); 12 Jul 2019 12:30:05 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1562934193;
-	bh=jz4QdF75ZQmZg10jBk1fPZWL3pu6t/6Ae9I3qsqqKOo=;
+	s=default; t=1562934593;
+	bh=xxRtUTDCKhzXdeTgs0S5YKCWNASaZOqK2PANmHf8px8=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=Y6INyY1DsJqFxLyr2JowQv1MmEFa+sJMHR8DUj3BEm5QYa+QANO+GmMIOc3YyC+9z
-	 KB429YXsETSjo2VDiVswFDnsJCR4O7U2+2Ca7m1bmvHwQWNKdYGItaCAg44CZpC/WU
-	 yPic920XVuZVL8zFmziP0rgPt/IhubCWm7ycfL1k=
+	b=GSODTSO+wG8kk636QnZzDojug75nlV/NTVjRMMyRJbFNp6Vty4AVuAS/6dpIIpj9T
+	 D0g1fhwYLrxBHw+2BKF0frlNgDOr5oc69THZGwLn1udyZsLeHIhgwb0d3H/E3FncHN
+	 QW6KooajjVYmPTbkwE2UZYliqNM86pJOogpB++LM=
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 To: linux-kernel@vger.kernel.org
 Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
@@ -45,12 +45,12 @@ Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	Borislav Petkov <bp@alien8.de>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	Peter Zijlstra <peterz@infradead.org>
-Subject: [PATCH 4.19 66/91] Documentation/admin: Remove the vsyscall=native documentation
-Date: Fri, 12 Jul 2019 14:19:09 +0200
-Message-Id: <20190712121625.381583411@linuxfoundation.org>
+Subject: [PATCH 5.1 105/138] Documentation/admin: Remove the vsyscall=native documentation
+Date: Fri, 12 Jul 2019 14:19:29 +0200
+Message-Id: <20190712121632.793176749@linuxfoundation.org>
 X-Mailer: git-send-email 2.22.0
-In-Reply-To: <20190712121621.422224300@linuxfoundation.org>
-References: <20190712121621.422224300@linuxfoundation.org>
+In-Reply-To: <20190712121628.731888964@linuxfoundation.org>
+References: <20190712121628.731888964@linuxfoundation.org>
 User-Agent: quilt/0.66
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -81,7 +81,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 --- a/Documentation/admin-guide/kernel-parameters.txt
 +++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -4976,12 +4976,6 @@
+@@ -5074,12 +5074,6 @@
  			emulate     [default] Vsyscalls turn into traps and are
  			            emulated reasonably safely.
  
