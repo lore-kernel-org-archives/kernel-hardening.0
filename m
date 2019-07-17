@@ -1,21 +1,20 @@
-Return-Path: <SRS0=wNHV=VO=lists.openwall.com=kernel-hardening-return-16503-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=OWbx=VO=lists.openwall.com=kernel-hardening-return-16504-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
+X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C5FCEC76186
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 07:51:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DEDF1C76186
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 10:01:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2DF7420818
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 07:51:26 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2DF7420818
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16503-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1328 invoked by uid 550); 17 Jul 2019 07:49:45 -0000
+	by mail.kernel.org (Postfix) with SMTP id 129E020818
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 10:01:46 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 129E020818
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16504-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7768 invoked by uid 550); 17 Jul 2019 10:01:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,113 +22,100 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1168 invoked from network); 17 Jul 2019 07:49:40 -0000
-From: Jason Yan <yanaijie@huawei.com>
-To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
-CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
-	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
-	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>, Jason Yan
-	<yanaijie@huawei.com>
-Subject: [RFC PATCH 10/10] powerpc/fsl_booke/kaslr: dump out kernel offset information on panic
-Date: Wed, 17 Jul 2019 16:06:21 +0800
-Message-ID: <20190717080621.40424-11-yanaijie@huawei.com>
-X-Mailer: git-send-email 2.17.2
-In-Reply-To: <20190717080621.40424-1-yanaijie@huawei.com>
-References: <20190717080621.40424-1-yanaijie@huawei.com>
+Received: (qmail 7710 invoked from network); 17 Jul 2019 10:01:38 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.64,273,1559545200"; 
+   d="scan'208";a="366513879"
+From: "Gote, Nitin R" <nitin.r.gote@intel.com>
+To: Kees Cook <keescook@chromium.org>, Vegard Nossum <vegard.nossum@gmail.com>
+CC: "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>
+Subject: RE: Regarding have kfree() (and related) set the pointer to NULL too
+Thread-Topic: Regarding have kfree() (and related) set the pointer to NULL
+ too
+Thread-Index: AQHVLN3/1onQPuLQW0enNiTmJ7gvZKavUt8AgA67ihCAEGjE0A==
+Date: Wed, 17 Jul 2019 10:01:21 +0000
+Message-ID: <12356C813DFF6F479B608F81178A561587A39C@BGSMSX101.gar.corp.intel.com>
+References: <12356C813DFF6F479B608F81178A561586BDFE@BGSMSX101.gar.corp.intel.com>
+ <CAOMGZ=FfWUf=2wMKXJVOsfr5b394ERUbhQehEFOtMx8zh26M4w@mail.gmail.com>
+ <201906270908.28E5E1FDC3@keescook>
+ <12356C813DFF6F479B608F81178A5615875DA9@BGSMSX101.gar.corp.intel.com>
+In-Reply-To: <12356C813DFF6F479B608F81178A5615875DA9@BGSMSX101.gar.corp.intel.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+dlp-product: dlpe-windows
+dlp-version: 11.0.600.7
+dlp-reaction: no-action
+x-ctpclassification: CTP_NT
+x-titus-metadata-40: eyJDYXRlZ29yeUxhYmVscyI6IiIsIk1ldGFkYXRhIjp7Im5zIjoiaHR0cDpcL1wvd3d3LnRpdHVzLmNvbVwvbnNcL0ludGVsMyIsImlkIjoiOTI5NWJjNTctMzFkZC00ODkxLTg4NDYtMjg3ZjY2YTVmYmEzIiwicHJvcHMiOlt7Im4iOiJDVFBDbGFzc2lmaWNhdGlvbiIsInZhbHMiOlt7InZhbHVlIjoiQ1RQX05UIn1dfV19LCJTdWJqZWN0TGFiZWxzIjpbXSwiVE1DVmVyc2lvbiI6IjE3LjEwLjE4MDQuNDkiLCJUcnVzdGVkTGFiZWxIYXNoIjoiK1hWXC9DZUxSMlo4Rzhhc3kwRFNBMllDTW5TNXFvZFVESXY3ZHVRdjlcLzBQcjZ0MUI4QktEeUJsbWlYMTNVcElZIn0=
+x-originating-ip: [10.223.10.10]
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain
-X-Originating-IP: [10.175.124.28]
-X-CFilter-Loop: Reflected
 
-When kaslr is enabled, the kernel offset is different for every boot.
-This brings some difficult to debug the kernel. Dump out the kernel
-offset when panic so that we can easily debug the kernel.
-
-Signed-off-by: Jason Yan <yanaijie@huawei.com>
-Cc: Diana Craciun <diana.craciun@nxp.com>
-Cc: Michael Ellerman <mpe@ellerman.id.au>
-Cc: Christophe Leroy <christophe.leroy@c-s.fr>
-Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-Cc: Paul Mackerras <paulus@samba.org>
-Cc: Nicholas Piggin <npiggin@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>
----
- arch/powerpc/include/asm/page.h     |  5 +++++
- arch/powerpc/kernel/machine_kexec.c |  1 +
- arch/powerpc/kernel/setup-common.c  | 23 +++++++++++++++++++++++
- 3 files changed, 29 insertions(+)
-
-diff --git a/arch/powerpc/include/asm/page.h b/arch/powerpc/include/asm/page.h
-index 60a68d3a54b1..cd3ac530e58d 100644
---- a/arch/powerpc/include/asm/page.h
-+++ b/arch/powerpc/include/asm/page.h
-@@ -317,6 +317,11 @@ struct vm_area_struct;
- 
- extern unsigned long kimage_vaddr;
- 
-+static inline unsigned long kaslr_offset(void)
-+{
-+	return kimage_vaddr - KERNELBASE;
-+}
-+
- #include <asm-generic/memory_model.h>
- #endif /* __ASSEMBLY__ */
- #include <asm/slice.h>
-diff --git a/arch/powerpc/kernel/machine_kexec.c b/arch/powerpc/kernel/machine_kexec.c
-index c4ed328a7b96..078fe3d76feb 100644
---- a/arch/powerpc/kernel/machine_kexec.c
-+++ b/arch/powerpc/kernel/machine_kexec.c
-@@ -86,6 +86,7 @@ void arch_crash_save_vmcoreinfo(void)
- 	VMCOREINFO_STRUCT_SIZE(mmu_psize_def);
- 	VMCOREINFO_OFFSET(mmu_psize_def, shift);
- #endif
-+	vmcoreinfo_append_str("KERNELOFFSET=%lx\n", kaslr_offset());
- }
- 
- /*
-diff --git a/arch/powerpc/kernel/setup-common.c b/arch/powerpc/kernel/setup-common.c
-index 1f8db666468d..49e540c0adeb 100644
---- a/arch/powerpc/kernel/setup-common.c
-+++ b/arch/powerpc/kernel/setup-common.c
-@@ -715,12 +715,35 @@ static struct notifier_block ppc_panic_block = {
- 	.priority = INT_MIN /* may not return; must be done last */
- };
- 
-+/*
-+ * Dump out kernel offset information on panic.
-+ */
-+static int dump_kernel_offset(struct notifier_block *self, unsigned long v,
-+			      void *p)
-+{
-+	const unsigned long offset = kaslr_offset();
-+
-+	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE) && offset > 0)
-+		pr_emerg("Kernel Offset: 0x%lx from 0x%lx\n",
-+			 offset, KERNELBASE);
-+	else
-+		pr_emerg("Kernel Offset: disabled\n");
-+
-+	return 0;
-+}
-+
-+static struct notifier_block kernel_offset_notifier = {
-+	.notifier_call = dump_kernel_offset
-+};
-+
- void __init setup_panic(void)
- {
- 	/* PPC64 always does a hard irq disable in its panic handler */
- 	if (!IS_ENABLED(CONFIG_PPC64) && !ppc_md.panic)
- 		return;
- 	atomic_notifier_chain_register(&panic_notifier_list, &ppc_panic_block);
-+	atomic_notifier_chain_register(&panic_notifier_list,
-+				       &kernel_offset_notifier);
- }
- 
- #ifdef CONFIG_CHECK_CACHE_COHERENCY
--- 
-2.17.2
-
+PiA+IC0tLS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0tDQo+ID4gRnJvbTogS2VlcyBDb29rIFttYWls
+dG86a2Vlc2Nvb2tAY2hyb21pdW0ub3JnXQ0KPiA+IFNlbnQ6IFRodXJzZGF5LCBKdW5lIDI3LCAy
+MDE5IDk6NTIgUE0NCj4gPiBUbzogVmVnYXJkIE5vc3N1bSA8dmVnYXJkLm5vc3N1bUBnbWFpbC5j
+b20+DQo+ID4gQ2M6IEdvdGUsIE5pdGluIFIgPG5pdGluLnIuZ290ZUBpbnRlbC5jb20+OyBrZXJu
+ZWwtDQo+ID4gaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbQ0KPiA+IFN1YmplY3Q6IFJlOiBS
+ZWdhcmRpbmcgaGF2ZSBrZnJlZSgpIChhbmQgcmVsYXRlZCkgc2V0IHRoZSBwb2ludGVyIHRvDQo+
+ID4gTlVMTCB0b28NCj4gPg0KPiA+IE9uIFRodSwgSnVuIDI3LCAyMDE5IGF0IDAxOjQ1OjA2UE0g
+KzAyMDAsIFZlZ2FyZCBOb3NzdW0gd3JvdGU6DQo+ID4gPiBPbiBUaHUsIDI3IEp1biAyMDE5IGF0
+IDEyOjIzLCBHb3RlLCBOaXRpbiBSIDxuaXRpbi5yLmdvdGVAaW50ZWwuY29tPg0KPiB3cm90ZToN
+Cj4gPiA+ID4gSGksDQo+ID4gPiA+DQo+ID4gPiA+IEnigJltIGxvb2tpbmcgIGludG8g4oCcaGF2
+ZSBrZnJlZSgpIChhbmQgcmVsYXRlZCkgc2V0IHRoZSBwb2ludGVyIHRvIE5VTEwgdG9v4oCdDQo+
+ID4gdGFzay4NCj4gPiA+ID4NCj4gPiA+ID4gQXMgcGVyIG15IHVuZGVyc3RhbmRpbmcsIEkgZGlk
+IGJlbG93IGNoYW5nZXMgOg0KPiA+ID4gPg0KPiA+ID4gPiBDb3VsZCB5b3UgcGxlYXNlIHByb3Zp
+ZGUgc29tZSBwb2ludHMgb24gYmVsb3cgd2F5cyA/DQo+ID4gPiA+IEBAIC0zNzU0LDYgKzM3NTQs
+NyBAQCB2b2lkIGtmcmVlKGNvbnN0IHZvaWQgKm9ianApDQo+ID4gPiA+ICAgICAgICAgZGVidWdf
+Y2hlY2tfbm9fb2JqX2ZyZWVkKG9ianAsIGMtPm9iamVjdF9zaXplKTsNCj4gPiA+ID4gICAgICAg
+ICBfX2NhY2hlX2ZyZWUoYywgKHZvaWQgKilvYmpwLCBfUkVUX0lQXyk7DQo+ID4gPiA+ICAgICAg
+ICAgbG9jYWxfaXJxX3Jlc3RvcmUoZmxhZ3MpOw0KPiA+ID4gPiArICAgICAgIG9ianAgPSBOVUxM
+Ow0KPiA+ID4gPg0KPiA+ID4gPiB9DQo+ID4gPg0KPiA+ID4gVGhpcyB3aWxsIG5vdCBkbyBhbnl0
+aGluZywgc2luY2UgdGhlIGFzc2lnbm1lbnQgaGFwcGVucyB0byB0aGUgbG9jYWwNCj4gPiA+IHZh
+cmlhYmxlIGluc2lkZSBrZnJlZSgpIHJhdGhlciB0aGFuIHRvIHRoZSBvcmlnaW5hbCBleHByZXNz
+aW9uIHRoYXQNCj4gPiA+IHdhcyBwYXNzZWQgdG8gaXQgYXMgYW4gYXJndW1lbnQuDQo+ID4gPg0K
+PiA+ID4gQ29uc2lkZXIgdGhhdCB0aGUgY29kZSBpbiB0aGUgY2FsbGVyIGxvb2tzIGxpa2UgdGhp
+czoNCj4gPiA+DQo+ID4gPiB2b2lkICp4ID0ga21hbGxvYyguLi4pOw0KPiA+ID4ga2ZyZWUoeCk7
+DQo+ID4gPiBwcl9pbmZvKCJ4ID0gJXBcbiIsIHgpOw0KPiA+ID4NCj4gPiA+IHRoaXMgd2lsbCBz
+dGlsbCBwcmludCAieCA9IChzb21lIG5vbi1OVUxMIGFkZHJlc3MpIiBiZWNhdXNlIHRoZQ0KPiA+
+ID4gdmFyaWFibGUgJ3gnIGluIHRoZSBjYWxsZXIgc3RpbGwgcmV0YWlucyBpdHMgb3JpZ2luYWwg
+dmFsdWUuDQo+ID4gPg0KPiA+ID4gWW91IGNvdWxkIHRyeSB3cmFwcGluZyBrZnJlZSgpIGluIGEg
+QyBtYWNybywgc29tZXRoaW5nIGxpa2UNCj4gPiA+DQo+ID4gPiAjZGVmaW5lIGtmcmVlKHgpIHJl
+YWxfa2ZyZWUoeCk7ICh4KSA9IE5VTEw7DQo+ID4NCj4gPiBSaWdodCwgdGhvdWdoIHdlIHdhbnQg
+dG8gYXZvaWQgc2lsZW50IGRvdWJsZS1ldmFsdWF0aW9uLCBzbyB3ZSBoYXZlIHRvDQo+ID4gZG8g
+c29tZSBtYWNybyB0cmlja3MuIEkgc3VzcGVjdCB0aGUgc3RhcnRpbmcgcG9pbnQgaXMgc29tZXRo
+aW5nIGxpa2U6DQo+ID4NCj4gPiAjZGVmaW5lIGtmcmVlKHgpCQkJXA0KPiA+IAlkbyB7CQkJCVwN
+Cj4gPiAJCXR5cGVvZih4KSAqcHRyID0gJih4KTsJXA0KPiA+IAkJcmVhbF9rZnJlZSgqcHRyKTsJ
+XA0KPiA+IAkJKnB0ciA9IE5VTEw7CQlcDQo+ID4gCX0gd2hpbGUgKDApDQo+ID4NCj4gPiBIb3dl
+dmVyLCB0aGVyZSBhcmUgYSBub24temVybyBudW1iZXIgb2YgcGxhY2VzIGluIHRoZSBrZXJuZWwg
+d2hlcmUNCj4gPiBrZnJlZSgpIGlzIHVzZWQgb24gdGhpbmdzIHRoYXQgYXJlIG5vdCBzaW1wbGUg
+bWVtb3J5IHJlZmVyZW5jZXMsIGxpa2UNCj4gPiBmdW5jdGlvbiByZXR1cm4gdmFsdWVzLCBvciBj
+b3BpZXMgb2YgdGhlIGFjdHVhbCByZWZlcmVuY2U6DQo+ID4NCj4gPiAJa2ZyZWUoZ2V0X215X2Fs
+bG9jYXRpb24oZm9vKSk7DQo+ID4NCg0KV2UgaGF2ZSBub3QgZm91bmQgYW55IGNsdWUgb3IgY29t
+cGlsZXIgZXh0ZW5zaW9uIG9uIHRoaXMgY2FzZSB0byBrbm93IHggDQppcyB2YWx1ZSBvciB2YXJp
+YWJsZS4NCg0KVGhlcmUgYXJlIGFyb3VuZCAzMDAgc3VjaCBjYXNlcyBpbiBrZXJuZWwgd2hlcmUg
+a2ZyZWUoKSBpcyB1c2VkIG9uIGZ1bmN0aW9uIHJldHVybiB2YWx1ZXMuIA0KDQpPbmUgcHJvcG9z
+YWwgaXMgd2UgY2FuIHJlZmFjdG9yIHRoZSBrZnJlZSgpIGNhbGwgYnkgYXNzaWduaW5nIGl0IHRv
+IGxvY2FsIHZhcmlhYmxlIHNvIHRoYXQNCndlIGNhbiBvdmVyY29tZSB0aGUgY29tcGlsYXRpb24g
+aXNzdWUgKGVycm9yOiBsdmFsdWUgcmVxdWlyZWQgYXMgdW5hcnkgJiBvcGVyYW5kKS4NCg0KUGxl
+YXNlIGxldCB1cyBrbm93IHRoYXQgd2Ugc2hvdWxkIHByb2NlZWQgd2l0aCB0aGlzIHByb3Bvc2Fs
+IG9yIHlvdSAob3IgYW55b25lKQ0KaGF2ZSBvdGhlciBwcm9wb3NhbHMuDQoNCj4gPiBvcg0KPiA+
+DQo+ID4gCXByZXZpb3VzID0gc29tZXRoaW5nLT5hbGxvY2F0aW9uOw0KPiA+IAkuLi4NCj4gPiAJ
+a2ZyZWUocHJldmlvdXMpDQo+ID4NCg0KQXMgb2Ygbm93LCB3ZSBkb24ndCBoYXZlIGFueSBpZGVh
+IHRvIG92ZXJjb21lIHRoaXMgY2FzZS4gDQpTbywgd2UgYXJlIGtlZXBpbmcgdGhpcyBmb3IgbGF0
+ZXIgc3RhZ2UuIA0KDQpJbiBjYXNlIGFueW9uZSBoYXMgaWRlYSBvbiB0aGlzIHRoZW4gbGV0IG1l
+IGtub3csIA0Kd2UgYXJlIHJlYWR5IHRvIHdvcmsgb24gdGhpcy4gDQoNCj4gPiBTbyB0aGUgbGFy
+Z2VyIHdvcmsgaXMgZmlndXJpbmcgb3V0IGhvdyB0byBncmFjZWZ1bGx5IGRlYWwgd2l0aCB0aG9z
+ZQ0KPiA+IHVzaW5nIGEgcmVhc29uYWJsZSBBUEksIG9yIHRocm91Z2ggcmVmYWN0b3JpbmcuDQo+
+ID4NCj4gPiBIb3dldmVyLCBiZWZvcmUgZ2V0dGluZyB0b28gZmFyLCBpdCdzIHdvcnRoIGdvaW5n
+IHRob3VnaCBwYXN0DQo+ID4gdXNlLWFmdGVyLWZyZWUgdnVsbmVyYWJpbGl0aWVzIHRvIGZpZ3Vy
+ZSBvdXQgaG93IG1hbnkgd291bGQgaGF2ZSBiZWVuDQo+ID4gcmVuZGVyZWQgaGFybWxlc3MgKE5V
+TEwgZGVyZWYgaW5zdGVhZCBvZiBVYUYpIHdpdGggdGhpcyBjaGFuZ2UuIEhhcw0KPiA+IHRoaXMg
+YmVlbiBzdHVkaWVkIGJlZm9yZSwgZXRjLiBXaXRoIHRoaXMgaW5mb3JtYXRpb24gaXQncyBlYXNp
+ZXIgdG8NCj4gPiBkZWNpZGUgaWYgdGhlIGJlbmVmaXQgb2YgdGhpcyByZWZhY3RvcmluZyBpcyB3
+b3J0aCB0aGUgd29yayB0byBkbyBpdC4NCj4gPg0KDQpUaGFua3MsDQpOaXRpbg0KDQo=
