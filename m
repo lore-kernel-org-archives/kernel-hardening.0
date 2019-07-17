@@ -1,20 +1,20 @@
-Return-Path: <SRS0=fJst=VO=lists.openwall.com=kernel-hardening-return-16491-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ZyRM=VO=lists.openwall.com=kernel-hardening-return-16492-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 58E91C7618F
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 00:09:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DEB37C76186
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 04:31:48 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A35D821872
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 00:09:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A35D821872
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16491-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32764 invoked by uid 550); 17 Jul 2019 00:09:24 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4312C21743
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 04:31:48 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4312C21743
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16492-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7352 invoked by uid 550); 17 Jul 2019 04:31:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,104 +22,101 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32742 invoked from network); 17 Jul 2019 00:09:23 -0000
-Date: Tue, 16 Jul 2019 17:07:57 -0700
-From: "Paul E. McKenney" <paulmck@linux.ibm.com>
-To: Joel Fernandes <joel@joelfernandes.org>
-Cc: linux-kernel@vger.kernel.org, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>,
-        Bjorn Helgaas <bhelgaas@google.com>, Borislav Petkov <bp@alien8.de>,
-        c0d1n61at3@gmail.com, "David S. Miller" <davem@davemloft.net>,
-        edumazet@google.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-        Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>,
-        "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>,
-        Jonathan Corbet <corbet@lwn.net>,
-        Josh Triplett <josh@joshtriplett.org>, keescook@chromium.org,
-        kernel-hardening@lists.openwall.com, kernel-team@android.com,
-        Lai Jiangshan <jiangshanlai@gmail.com>, Len Brown <lenb@kernel.org>,
-        linux-acpi@vger.kernel.org, linux-doc@vger.kernel.org,
-        linux-pci@vger.kernel.org, linux-pm@vger.kernel.org,
-        Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, neilb@suse.com,
-        netdev@vger.kernel.org, Oleg Nesterov <oleg@redhat.com>,
-        Pavel Machek <pavel@ucw.cz>, peterz@infradead.org,
-        "Rafael J. Wysocki" <rjw@rjwysocki.net>,
-        Rasmus Villemoes <rasmus.villemoes@prevas.dk>, rcu@vger.kernel.org,
-        Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>,
-        Thomas Gleixner <tglx@linutronix.de>, will@kernel.org,
-        "maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
-Subject: Re: [PATCH 2/9] rcu: Add support for consolidated-RCU reader
- checking (v3)
-Message-ID: <20190717000757.GQ14271@linux.ibm.com>
-References: <20190715143705.117908-1-joel@joelfernandes.org>
- <20190715143705.117908-3-joel@joelfernandes.org>
- <20190716183833.GD14271@linux.ibm.com>
- <20190716184649.GA130463@google.com>
- <20190716185303.GM14271@linux.ibm.com>
- <20190716220205.GB172157@google.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190716220205.GB172157@google.com>
-User-Agent: Mutt/1.5.21 (2010-09-15)
-X-TM-AS-GCONF: 00
-X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:,, definitions=2019-07-16_06:,,
- signatures=0
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 priorityscore=1501
- malwarescore=0 suspectscore=0 phishscore=0 bulkscore=0 spamscore=0
- clxscore=1015 lowpriorityscore=0 mlxscore=0 impostorscore=0
- mlxlogscore=999 adultscore=0 classifier=spam adjust=0 reason=mlx
- scancount=1 engine=8.0.1-1810050000 definitions=main-1907160263
+Received: (qmail 7317 invoked from network); 17 Jul 2019 04:31:40 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.64,272,1559545200"; 
+   d="scan'208";a="251375368"
+From: NitinGote <nitin.r.gote@intel.com>
+To: joe@perches.com,
+	corbet@lwn.net
+Cc: akpm@linux-foundation.org,
+	apw@canonical.com,
+	keescook@chromium.org,
+	linux-doc@vger.kernel.org,
+	kernel-hardening@lists.openwall.com,
+	Nitin Gote <nitin.r.gote@intel.com>
+Subject: [PATCH v5] Documentation/checkpatch: Prefer strscpy/strscpy_pad over strcpy/strlcpy/strncpy
+Date: Wed, 17 Jul 2019 10:00:05 +0530
+Message-Id: <20190717043005.19627-1-nitin.r.gote@intel.com>
+X-Mailer: git-send-email 2.17.1
 
-On Tue, Jul 16, 2019 at 06:02:05PM -0400, Joel Fernandes wrote:
-> On Tue, Jul 16, 2019 at 11:53:03AM -0700, Paul E. McKenney wrote:
-> [snip]
-> > > > A few more things below.
-> > > > > ---
-> > > > >  include/linux/rculist.h  | 28 ++++++++++++++++++++-----
-> > > > >  include/linux/rcupdate.h |  7 +++++++
-> > > > >  kernel/rcu/Kconfig.debug | 11 ++++++++++
-> > > > >  kernel/rcu/update.c      | 44 ++++++++++++++++++++++++----------------
-> > > > >  4 files changed, 67 insertions(+), 23 deletions(-)
-> > > > > 
-> > > > > diff --git a/include/linux/rculist.h b/include/linux/rculist.h
-> > > > > index e91ec9ddcd30..1048160625bb 100644
-> > > > > --- a/include/linux/rculist.h
-> > > > > +++ b/include/linux/rculist.h
-> > > > > @@ -40,6 +40,20 @@ static inline void INIT_LIST_HEAD_RCU(struct list_head *list)
-> > > > >   */
-> > > > >  #define list_next_rcu(list)	(*((struct list_head __rcu **)(&(list)->next)))
-> > > > >  
-> > > > > +/*
-> > > > > + * Check during list traversal that we are within an RCU reader
-> > > > > + */
-> > > > > +
-> > > > > +#ifdef CONFIG_PROVE_RCU_LIST
-> > > > 
-> > > > This new Kconfig option is OK temporarily, but unless there is reason to
-> > > > fear malfunction that a few weeks of rcutorture, 0day, and -next won't
-> > > > find, it would be better to just use CONFIG_PROVE_RCU.  The overall goal
-> > > > is to reduce the number of RCU knobs rather than grow them, must though
-> > > > history might lead one to believe otherwise.  :-/
-> > > 
-> > > If you want, we can try to drop this option and just use PROVE_RCU however I
-> > > must say there may be several warnings that need to be fixed in a short
-> > > period of time (even a few weeks may be too short) considering the 1000+
-> > > uses of RCU lists.
-> > Do many people other than me build with CONFIG_PROVE_RCU?  If so, then
-> > that would be a good reason for a temporary CONFIG_PROVE_RCU_LIST,
-> > as in going away in a release or two once the warnings get fixed.
-> 
-> PROVE_RCU is enabled by default with PROVE_LOCKING, so it is used quite
-> heavilty.
-> 
-> > > But I don't mind dropping it and it may just accelerate the fixing up of all
-> > > callers.
-> > 
-> > I will let you decide based on the above question.  But if you have
-> > CONFIG_PROVE_RCU_LIST, as noted below, it needs to depend on RCU_EXPERT.
-> 
-> Ok, will make it depend. But yes for temporary purpose, I will leave it as a
-> config and remove it later.
+From: Nitin Gote <nitin.r.gote@intel.com>
 
-Very good, thank you!  Plus you got another ack.  ;-)
+Added check in checkpatch.pl to
+1. Deprecate strcpy() in favor of strscpy().
+2. Deprecate strlcpy() in favor of strscpy().
+3. Deprecate strncpy() in favor of strscpy() or strscpy_pad().
 
-							Thanx, Paul
+Updated strncpy() section in Documentation/process/deprecated.rst
+to cover strscpy_pad() case.
+
+Signed-off-by: Nitin Gote <nitin.r.gote@intel.com>
+---
+ Documentation/process/deprecated.rst |  6 +++---
+ scripts/checkpatch.pl                | 24 ++++++++++++++++++++++++
+ 2 files changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/process/deprecated.rst b/Documentation/process/deprecated.rst
+index 49e0f64a3427..c348ef9d44f5 100644
+--- a/Documentation/process/deprecated.rst
++++ b/Documentation/process/deprecated.rst
+@@ -93,9 +93,9 @@ will be NUL terminated. This can lead to various linear read overflows
+ and other misbehavior due to the missing termination. It also NUL-pads the
+ destination buffer if the source contents are shorter than the destination
+ buffer size, which may be a needless performance penalty for callers using
+-only NUL-terminated strings. The safe replacement is :c:func:`strscpy`.
+-(Users of :c:func:`strscpy` still needing NUL-padding will need an
+-explicit :c:func:`memset` added.)
++only NUL-terminated strings. In this case, the safe replacement is
++strscpy(). If, however, the destination buffer still needs NUL-padding,
++the safe replacement is strscpy_pad().
+
+ If a caller is using non-NUL-terminated strings, :c:func:`strncpy()` can
+ still be used, but destinations should be marked with the `__nonstring
+diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
+index bb28b178d929..1bb12127115d 100755
+--- a/scripts/checkpatch.pl
++++ b/scripts/checkpatch.pl
+@@ -605,6 +605,20 @@ foreach my $entry (keys %deprecated_apis) {
+ }
+ $deprecated_apis_search = "(?:${deprecated_apis_search})";
+
++our %deprecated_string_apis = (
++        "strcpy"				=> "strscpy",
++        "strlcpy"				=> "strscpy",
++        "strncpy"				=> "strscpy, strscpy_pad or for non-NUL-terminated strings, strncpy() can still be used, but destinations should be marked with __nonstring",
++);
++
++#Create a search pattern for all these strings apis to speed up a loop below
++our $deprecated_string_apis_search = "";
++foreach my $entry (keys %deprecated_string_apis) {
++        $deprecated_string_apis_search .= '|' if ($deprecated_string_apis_search ne "");
++        $deprecated_string_apis_search .= $entry;
++}
++$deprecated_string_apis_search = "(?:${deprecated_string_apis_search})";
++
+ our $mode_perms_world_writable = qr{
+ 	S_IWUGO		|
+ 	S_IWOTH		|
+@@ -6446,6 +6460,16 @@ sub process {
+ 			     "Deprecated use of '$deprecated_api', prefer '$new_api' instead\n" . $herecurr);
+ 		}
+
++# check for string deprecated apis
++		if ($line =~ /\b($deprecated_string_apis_search)\b\s*\(/) {
++			my $deprecated_string_api = $1;
++			my $new_api = $deprecated_string_apis{$deprecated_string_api};
++			my $msg_level = \&WARN;
++			$msg_level = \&CHK if ($file);
++			&{$msg_level}("DEPRECATED_API",
++				      "Deprecated use of '$deprecated_string_api', prefer '$new_api' instead\n" . $herecurr);
++		}
++
+ # check for various structs that are normally const (ops, kgdb, device_tree)
+ # and avoid what seem like struct definitions 'struct foo {'
+ 		if ($line !~ /\bconst\b/ &&
+--
+2.17.1
+
