@@ -1,20 +1,20 @@
-Return-Path: <SRS0=ZyRM=VO=lists.openwall.com=kernel-hardening-return-16492-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=2tn3=VO=lists.openwall.com=kernel-hardening-return-16493-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DEB37C76186
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 04:31:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 213BAC76196
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 07:49:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4312C21743
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 04:31:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4312C21743
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16492-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7352 invoked by uid 550); 17 Jul 2019 04:31:41 -0000
+	by mail.kernel.org (Postfix) with SMTP id 7ECA520818
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jul 2019 07:49:51 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7ECA520818
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16493-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32183 invoked by uid 550); 17 Jul 2019 07:49:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,101 +22,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7317 invoked from network); 17 Jul 2019 04:31:40 -0000
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="5.64,272,1559545200"; 
-   d="scan'208";a="251375368"
-From: NitinGote <nitin.r.gote@intel.com>
-To: joe@perches.com,
-	corbet@lwn.net
-Cc: akpm@linux-foundation.org,
-	apw@canonical.com,
-	keescook@chromium.org,
-	linux-doc@vger.kernel.org,
-	kernel-hardening@lists.openwall.com,
-	Nitin Gote <nitin.r.gote@intel.com>
-Subject: [PATCH v5] Documentation/checkpatch: Prefer strscpy/strscpy_pad over strcpy/strlcpy/strncpy
-Date: Wed, 17 Jul 2019 10:00:05 +0530
-Message-Id: <20190717043005.19627-1-nitin.r.gote@intel.com>
-X-Mailer: git-send-email 2.17.1
+Received: (qmail 32144 invoked from network); 17 Jul 2019 07:49:31 -0000
+From: Jason Yan <yanaijie@huawei.com>
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
+CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
+	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
+	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>, Jason Yan
+	<yanaijie@huawei.com>
+Subject: [RFC PATCH 00/10] implement KASLR for powerpc/fsl_booke/32
+Date: Wed, 17 Jul 2019 16:06:11 +0800
+Message-ID: <20190717080621.40424-1-yanaijie@huawei.com>
+X-Mailer: git-send-email 2.17.2
+MIME-Version: 1.0
+Content-Type: text/plain
+X-Originating-IP: [10.175.124.28]
+X-CFilter-Loop: Reflected
 
-From: Nitin Gote <nitin.r.gote@intel.com>
+This series implements KASLR for powerpc/fsl_booke/32, as a security
+feature that deters exploit attempts relying on knowledge of the location
+of kernel internals.
 
-Added check in checkpatch.pl to
-1. Deprecate strcpy() in favor of strscpy().
-2. Deprecate strlcpy() in favor of strscpy().
-3. Deprecate strncpy() in favor of strscpy() or strscpy_pad().
+Since CONFIG_RELOCATABLE has already supported, what we need to do is
+map or copy kernel to a proper place and relocate. Freescale Book-E
+parts expect lowmem to be mapped by fixed TLB entries(TLB1). The TLB1
+entries are not suitable to map the kernel directly in a randomized
+region, so we chose to copy the kernel to a proper place and restart to
+relocate.
 
-Updated strncpy() section in Documentation/process/deprecated.rst
-to cover strscpy_pad() case.
+Entropy is derived from the banner and timer base, which will change every
+build and boot. This not so much safe so additionally the bootloader may
+pass entropy via the /chosen/kaslr-seed node in device tree.
 
-Signed-off-by: Nitin Gote <nitin.r.gote@intel.com>
----
- Documentation/process/deprecated.rst |  6 +++---
- scripts/checkpatch.pl                | 24 ++++++++++++++++++++++++
- 2 files changed, 27 insertions(+), 3 deletions(-)
+We will use the first 512M of the low memory to randomize the kernel
+image. The memory will be split in 64M zones. We will use the lower 8
+bit of the entropy to decide the index of the 64M zone. Then we chose a
+16K aligned offset inside the 64M zone to put the kernel in.
 
-diff --git a/Documentation/process/deprecated.rst b/Documentation/process/deprecated.rst
-index 49e0f64a3427..c348ef9d44f5 100644
---- a/Documentation/process/deprecated.rst
-+++ b/Documentation/process/deprecated.rst
-@@ -93,9 +93,9 @@ will be NUL terminated. This can lead to various linear read overflows
- and other misbehavior due to the missing termination. It also NUL-pads the
- destination buffer if the source contents are shorter than the destination
- buffer size, which may be a needless performance penalty for callers using
--only NUL-terminated strings. The safe replacement is :c:func:`strscpy`.
--(Users of :c:func:`strscpy` still needing NUL-padding will need an
--explicit :c:func:`memset` added.)
-+only NUL-terminated strings. In this case, the safe replacement is
-+strscpy(). If, however, the destination buffer still needs NUL-padding,
-+the safe replacement is strscpy_pad().
+    KERNELBASE
 
- If a caller is using non-NUL-terminated strings, :c:func:`strncpy()` can
- still be used, but destinations should be marked with the `__nonstring
-diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
-index bb28b178d929..1bb12127115d 100755
---- a/scripts/checkpatch.pl
-+++ b/scripts/checkpatch.pl
-@@ -605,6 +605,20 @@ foreach my $entry (keys %deprecated_apis) {
- }
- $deprecated_apis_search = "(?:${deprecated_apis_search})";
+        |-->   64M   <--|
+        |               |
+        +---------------+    +----------------+---------------+
+        |               |....|    |kernel|    |               |
+        +---------------+    +----------------+---------------+
+        |                         |
+        |----->   offset    <-----|
 
-+our %deprecated_string_apis = (
-+        "strcpy"				=> "strscpy",
-+        "strlcpy"				=> "strscpy",
-+        "strncpy"				=> "strscpy, strscpy_pad or for non-NUL-terminated strings, strncpy() can still be used, but destinations should be marked with __nonstring",
-+);
-+
-+#Create a search pattern for all these strings apis to speed up a loop below
-+our $deprecated_string_apis_search = "";
-+foreach my $entry (keys %deprecated_string_apis) {
-+        $deprecated_string_apis_search .= '|' if ($deprecated_string_apis_search ne "");
-+        $deprecated_string_apis_search .= $entry;
-+}
-+$deprecated_string_apis_search = "(?:${deprecated_string_apis_search})";
-+
- our $mode_perms_world_writable = qr{
- 	S_IWUGO		|
- 	S_IWOTH		|
-@@ -6446,6 +6460,16 @@ sub process {
- 			     "Deprecated use of '$deprecated_api', prefer '$new_api' instead\n" . $herecurr);
- 		}
+                              kimage_vaddr
 
-+# check for string deprecated apis
-+		if ($line =~ /\b($deprecated_string_apis_search)\b\s*\(/) {
-+			my $deprecated_string_api = $1;
-+			my $new_api = $deprecated_string_apis{$deprecated_string_api};
-+			my $msg_level = \&WARN;
-+			$msg_level = \&CHK if ($file);
-+			&{$msg_level}("DEPRECATED_API",
-+				      "Deprecated use of '$deprecated_string_api', prefer '$new_api' instead\n" . $herecurr);
-+		}
-+
- # check for various structs that are normally const (ops, kgdb, device_tree)
- # and avoid what seem like struct definitions 'struct foo {'
- 		if ($line !~ /\bconst\b/ &&
---
-2.17.1
+We also check if we will overlap with some areas like the dtb area, the
+initrd area or the crashkernel area. If we cannot find a proper area,
+kaslr will be disabled and boot from the original kernel.
+
+Jason Yan (10):
+  powerpc: unify definition of M_IF_NEEDED
+  powerpc: move memstart_addr and kernstart_addr to init-common.c
+  powerpc: introduce kimage_vaddr to store the kernel base
+  powerpc/fsl_booke/32: introduce create_tlb_entry() helper
+  powerpc/fsl_booke/32: introduce reloc_kernel_entry() helper
+  powerpc/fsl_booke/32: implement KASLR infrastructure
+  powerpc/fsl_booke/32: randomize the kernel image offset
+  powerpc/fsl_booke/kaslr: clear the original kernel if randomized
+  powerpc/fsl_booke/kaslr: support nokaslr cmdline parameter
+  powerpc/fsl_booke/kaslr: dump out kernel offset information on panic
+
+ arch/powerpc/Kconfig                          |  11 +
+ arch/powerpc/include/asm/nohash/mmu-book3e.h  |  10 +
+ arch/powerpc/include/asm/page.h               |   7 +
+ arch/powerpc/kernel/Makefile                  |   1 +
+ arch/powerpc/kernel/early_32.c                |   2 +-
+ arch/powerpc/kernel/exceptions-64e.S          |  10 -
+ arch/powerpc/kernel/fsl_booke_entry_mapping.S |  23 +-
+ arch/powerpc/kernel/head_fsl_booke.S          |  61 ++-
+ arch/powerpc/kernel/kaslr_booke.c             | 439 ++++++++++++++++++
+ arch/powerpc/kernel/machine_kexec.c           |   1 +
+ arch/powerpc/kernel/misc_64.S                 |   5 -
+ arch/powerpc/kernel/setup-common.c            |  23 +
+ arch/powerpc/mm/init-common.c                 |   7 +
+ arch/powerpc/mm/init_32.c                     |   5 -
+ arch/powerpc/mm/init_64.c                     |   5 -
+ arch/powerpc/mm/mmu_decl.h                    |  10 +
+ arch/powerpc/mm/nohash/fsl_booke.c            |   8 +-
+ 17 files changed, 580 insertions(+), 48 deletions(-)
+ create mode 100644 arch/powerpc/kernel/kaslr_booke.c
+
+-- 
+2.17.2
 
