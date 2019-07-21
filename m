@@ -1,21 +1,20 @@
-Return-Path: <SRS0=426k=VS=lists.openwall.com=kernel-hardening-return-16510-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/4W5=VS=lists.openwall.com=kernel-hardening-return-16511-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3B02DC76191
-	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Jul 2019 21:33:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 70F7CC76196
+	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Jul 2019 21:33:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 136DA20659
-	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Jul 2019 21:33:17 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 136DA20659
+	by mail.kernel.org (Postfix) with SMTP id 4864A20659
+	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Jul 2019 21:33:30 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4864A20659
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16510-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17639 invoked by uid 550); 21 Jul 2019 21:32:25 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16511-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17729 invoked by uid 550); 21 Jul 2019 21:32:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17560 invoked from network); 21 Jul 2019 21:32:23 -0000
+Received: (qmail 17637 invoked from network); 21 Jul 2019 21:32:25 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -50,9 +49,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
         Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
         linux-api@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-security-module@vger.kernel.org, netdev@vger.kernel.org
-Subject: [PATCH bpf-next v10 03/10] bpf,landlock: Define an eBPF program type for Landlock hooks
-Date: Sun, 21 Jul 2019 23:31:09 +0200
-Message-Id: <20190721213116.23476-4-mic@digikod.net>
+Subject: [PATCH bpf-next v10 05/10] landlock: Handle filesystem access control
+Date: Sun, 21 Jul 2019 23:31:11 +0200
+Message-Id: <20190721213116.23476-6-mic@digikod.net>
 X-Mailer: git-send-email 2.22.0
 In-Reply-To: <20190721213116.23476-1-mic@digikod.net>
 References: <20190721213116.23476-1-mic@digikod.net>
@@ -62,14 +61,21 @@ Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
-Add a new type of eBPF program used by Landlock hooks.  The goal of this
-type of program is to accept or deny a requested access from userspace
-to a kernel object (e.g. a file).
+This add two Landlock hooks: FS_WALK and FS_PICK.
 
-This new BPF program type will be registered with the Landlock LSM
-initialization.
+The FS_WALK hook is used to walk through a file path. A program tied to
+this hook will be evaluated for each directory traversal except the last
+one if it is the leaf of the path.  It is important to differentiate
+this hook from FS_PICK to enable more powerful path evaluation in the
+future (cf. Landlock patch v8).
 
-Add an initial Landlock Kconfig and update the MAINTAINERS file.
+The FS_PICK hook is used to validate a set of actions requested on a
+file. This actions are defined with triggers (e.g. read, write, open,
+append...).
+
+The Landlock LSM hook registration is done after other LSM to only run
+actions from user-space, via eBPF programs, if the access was granted by
+major (privileged) LSMs.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
@@ -82,604 +88,927 @@ Cc: Serge E. Hallyn <serge@hallyn.com>
 ---
 
 Changes since v9:
-* handle inode put and map put, which fix unmount (reported by Al Viro)
 * replace subtype with expected_attach_type and expected_attach_triggers
-* check eBPF program return code
 
 Changes since v8:
-* Remove the chaining concept from the eBPF program contexts (chain and
-  cookie). We need to keep these subtypes this way to be able to make
-  them evolve, though.
-* remove bpf_landlock_put_extra() because there is no more a "previous"
-  field to free (for now)
+* add a new LSM_ORDER_LAST, cf. commit e2bc445b66ca ("LSM: Introduce
+  enum lsm_order")
+* add WARN_ON() for pointer dereferencement
+* remove the FS_GET subtype which rely on program chaining
+* remove the subtype option which was only used for chaining (with the
+  "previous" field)
+* remove inode_lookup which depends on the (removed) nameidata security
+  blob
+* remove eBPF helpers to get and set Landlock inode tags
+* do not use task LSM credentials (for now)
 
 Changes since v7:
-* cosmetic fixes
-* rename LANDLOCK_SUBTYPE_* to LANDLOCK_*
-* cleanup UAPI definitions and move them from bpf.h to landlock.h
-  (suggested by Alexei Starovoitov)
-* disable Landlock by default (suggested by Alexei Starovoitov)
-* rename BPF_PROG_TYPE_LANDLOCK_{RULE,HOOK}
-* update the Kconfig
-* update the MAINTAINERS file
-* replace the IOCTL, LOCK and FCNTL events with FS_PICK, FS_WALK and
-  FS_GET hook types
-* add the ability to chain programs with an eBPF program file descriptor
-  (i.e. the "previous" field in a Landlock subtype) and keep a state
-  with a "cookie" value available from the context
-* add a "triggers" subtype bitfield to match specific actions (e.g.
-  append, chdir, read...)
+* major rewrite with clean Landlock hooks able to deal with file paths
 
 Changes since v6:
 * add 3 more sub-events: IOCTL, LOCK, FCNTL
   https://lkml.kernel.org/r/2fbc99a6-f190-f335-bd14-04bdeed35571@digikod.net
-* rename LANDLOCK_VERSION to LANDLOCK_ABI to better reflect its purpose,
-  and move it from landlock.h to common.h
-* rename BPF_PROG_TYPE_LANDLOCK to BPF_PROG_TYPE_LANDLOCK_RULE: an eBPF
-  program could be used for something else than a rule
-* simplify struct landlock_context by removing the arch and syscall_nr fields
-* remove all eBPF map functions call, remove ABILITY_WRITE
-* refactor bpf_landlock_func_proto() (suggested by Kees Cook)
+* use the new security_add_hooks()
+* explain the -Werror=unused-function
 * constify pointers
-* fix doc inclusion
+* cleanup headers
 
 Changes since v5:
-* rename file hooks.c to init.c
-* fix spelling
+* split hooks.[ch] into hooks.[ch] and hooks_fs.[ch]
+* add more documentation
+* cosmetic fixes
+* rebase (SCALAR_VALUE)
 
 Changes since v4:
-* merge a minimal (not enabled) LSM code and Kconfig in this commit
+* add LSM hook abstraction called Landlock event
+  * use the compiler type checking to verify hooks use by an event
+  * handle all filesystem related LSM hooks (e.g. file_permission,
+    mmap_file, sb_mount...)
+* register BPF programs for Landlock just after LSM hooks registration
+* move hooks registration after other LSMs
+* add failsafes to check if a hook is not used by the kernel
+* allow partial raw value access form the context (needed for programs
+  generated by LLVM)
 
 Changes since v3:
 * split commit
-* revamp the landlock_context:
-  * add arch, syscall_nr and syscall_cmd (ioctl, fcntl…) to be able to
-    cross-check action with the event type
-  * replace args array with dedicated fields to ease the addition of new
-    fields
+* add hooks dealing with struct inode and struct path pointers:
+  inode_permission and inode_getattr
+* add abstraction over eBPF helper arguments thanks to wrapping structs
 ---
- MAINTAINERS                         |  13 ++++
- include/uapi/linux/bpf.h            |   1 +
- include/uapi/linux/landlock.h       |  94 ++++++++++++++++++++++++
- kernel/bpf/verifier.c               |   1 +
- security/Kconfig                    |   1 +
- security/Makefile                   |   2 +
- security/landlock/Kconfig           |  18 +++++
- security/landlock/Makefile          |   3 +
- security/landlock/common.h          |  44 +++++++++++
- security/landlock/init.c            | 100 +++++++++++++++++++++++++
- tools/include/uapi/linux/bpf.h      |   1 +
- tools/include/uapi/linux/landlock.h | 109 ++++++++++++++++++++++++++++
- tools/lib/bpf/libbpf.c              |   1 +
- tools/lib/bpf/libbpf_probes.c       |   1 +
- 14 files changed, 389 insertions(+)
- create mode 100644 include/uapi/linux/landlock.h
- create mode 100644 security/landlock/Kconfig
- create mode 100644 security/landlock/Makefile
- create mode 100644 security/landlock/common.h
- create mode 100644 security/landlock/init.c
- create mode 100644 tools/include/uapi/linux/landlock.h
+ include/linux/lsm_hooks.h    |   1 +
+ security/landlock/Makefile   |   3 +-
+ security/landlock/common.h   |   9 +
+ security/landlock/hooks.c    |  94 ++++++
+ security/landlock/hooks.h    |  31 ++
+ security/landlock/hooks_fs.c | 554 +++++++++++++++++++++++++++++++++++
+ security/landlock/hooks_fs.h |  31 ++
+ security/landlock/init.c     |  33 +++
+ security/security.c          |  15 +
+ 9 files changed, 770 insertions(+), 1 deletion(-)
+ create mode 100644 security/landlock/hooks.c
+ create mode 100644 security/landlock/hooks.h
+ create mode 100644 security/landlock/hooks_fs.c
+ create mode 100644 security/landlock/hooks_fs.h
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 211ea3a199bd..d30b535a613a 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -8947,6 +8947,19 @@ F:	net/core/skmsg.c
- F:	net/core/sock_map.c
- F:	net/ipv4/tcp_bpf.c
- 
-+LANDLOCK SECURITY MODULE
-+M:	Mickaël Salaün <mic@digikod.net>
-+S:	Supported
-+F:	Documentation/security/landlock/
-+F:	include/linux/landlock.h
-+F:	include/uapi/linux/landlock.h
-+F:	samples/bpf/landlock*
-+F:	security/landlock/
-+F:	tools/include/uapi/linux/landlock.h
-+F:	tools/testing/selftests/landlock/
-+K:	landlock
-+K:	LANDLOCK
-+
- LANTIQ / INTEL Ethernet drivers
- M:	Hauke Mehrtens <hauke@hauke-m.de>
- L:	netdev@vger.kernel.org
-diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
-index 1664d260861b..d68613f737f3 100644
---- a/include/uapi/linux/bpf.h
-+++ b/include/uapi/linux/bpf.h
-@@ -171,6 +171,7 @@ enum bpf_prog_type {
- 	BPF_PROG_TYPE_CGROUP_SYSCTL,
- 	BPF_PROG_TYPE_RAW_TRACEPOINT_WRITABLE,
- 	BPF_PROG_TYPE_CGROUP_SOCKOPT,
-+	BPF_PROG_TYPE_LANDLOCK_HOOK,
+diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+index df1318d85f7d..c06ad8a1d424 100644
+--- a/include/linux/lsm_hooks.h
++++ b/include/linux/lsm_hooks.h
+@@ -2092,6 +2092,7 @@ extern void security_add_hooks(struct security_hook_list *hooks, int count,
+ enum lsm_order {
+ 	LSM_ORDER_FIRST = -1,	/* This is only for capabilities. */
+ 	LSM_ORDER_MUTABLE = 0,
++	LSM_ORDER_LAST = 1,	/* potentially-unprivileged LSM */
  };
  
- enum bpf_attach_type {
-diff --git a/include/uapi/linux/landlock.h b/include/uapi/linux/landlock.h
-new file mode 100644
-index 000000000000..be3c4757a3ad
---- /dev/null
-+++ b/include/uapi/linux/landlock.h
-@@ -0,0 +1,94 @@
-+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-+/*
-+ * Landlock - UAPI headers
-+ *
-+ * Copyright © 2017-2019 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2018-2019 ANSSI
-+ */
-+
-+#ifndef _UAPI__LINUX_LANDLOCK_H__
-+#define _UAPI__LINUX_LANDLOCK_H__
-+
-+#include <linux/types.h>
-+
-+#define LANDLOCK_RET_ALLOW	0
-+#define LANDLOCK_RET_DENY	1
-+
-+/**
-+ * DOC: landlock_triggers
-+ *
-+ * A landlock trigger is used as a bitmask in subtype.landlock_hook.triggers
-+ * for a fs_pick program.  It defines a set of actions for which the program
-+ * should verify an access request.
-+ *
-+ * - %LANDLOCK_TRIGGER_FS_PICK_APPEND
-+ * - %LANDLOCK_TRIGGER_FS_PICK_CHDIR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_CHROOT
-+ * - %LANDLOCK_TRIGGER_FS_PICK_CREATE
-+ * - %LANDLOCK_TRIGGER_FS_PICK_EXECUTE
-+ * - %LANDLOCK_TRIGGER_FS_PICK_FCNTL
-+ * - %LANDLOCK_TRIGGER_FS_PICK_GETATTR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_IOCTL
-+ * - %LANDLOCK_TRIGGER_FS_PICK_LINK
-+ * - %LANDLOCK_TRIGGER_FS_PICK_LINKTO
-+ * - %LANDLOCK_TRIGGER_FS_PICK_LOCK
-+ * - %LANDLOCK_TRIGGER_FS_PICK_MAP
-+ * - %LANDLOCK_TRIGGER_FS_PICK_MOUNTON
-+ * - %LANDLOCK_TRIGGER_FS_PICK_OPEN
-+ * - %LANDLOCK_TRIGGER_FS_PICK_READ
-+ * - %LANDLOCK_TRIGGER_FS_PICK_READDIR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RECEIVE
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RENAME
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RENAMETO
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RMDIR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_SETATTR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_TRANSFER
-+ * - %LANDLOCK_TRIGGER_FS_PICK_UNLINK
-+ * - %LANDLOCK_TRIGGER_FS_PICK_WRITE
-+ */
-+#define LANDLOCK_TRIGGER_FS_PICK_APPEND			(1ULL << 0)
-+#define LANDLOCK_TRIGGER_FS_PICK_CHDIR			(1ULL << 1)
-+#define LANDLOCK_TRIGGER_FS_PICK_CHROOT			(1ULL << 2)
-+#define LANDLOCK_TRIGGER_FS_PICK_CREATE			(1ULL << 3)
-+#define LANDLOCK_TRIGGER_FS_PICK_EXECUTE		(1ULL << 4)
-+#define LANDLOCK_TRIGGER_FS_PICK_FCNTL			(1ULL << 5)
-+#define LANDLOCK_TRIGGER_FS_PICK_GETATTR		(1ULL << 6)
-+#define LANDLOCK_TRIGGER_FS_PICK_IOCTL			(1ULL << 7)
-+#define LANDLOCK_TRIGGER_FS_PICK_LINK			(1ULL << 8)
-+#define LANDLOCK_TRIGGER_FS_PICK_LINKTO			(1ULL << 9)
-+#define LANDLOCK_TRIGGER_FS_PICK_LOCK			(1ULL << 10)
-+#define LANDLOCK_TRIGGER_FS_PICK_MAP			(1ULL << 11)
-+#define LANDLOCK_TRIGGER_FS_PICK_MOUNTON		(1ULL << 12)
-+#define LANDLOCK_TRIGGER_FS_PICK_OPEN			(1ULL << 13)
-+#define LANDLOCK_TRIGGER_FS_PICK_READ			(1ULL << 14)
-+#define LANDLOCK_TRIGGER_FS_PICK_READDIR		(1ULL << 15)
-+#define LANDLOCK_TRIGGER_FS_PICK_RECEIVE		(1ULL << 16)
-+#define LANDLOCK_TRIGGER_FS_PICK_RENAME			(1ULL << 17)
-+#define LANDLOCK_TRIGGER_FS_PICK_RENAMETO		(1ULL << 18)
-+#define LANDLOCK_TRIGGER_FS_PICK_RMDIR			(1ULL << 19)
-+#define LANDLOCK_TRIGGER_FS_PICK_SETATTR		(1ULL << 20)
-+#define LANDLOCK_TRIGGER_FS_PICK_TRANSFER		(1ULL << 21)
-+#define LANDLOCK_TRIGGER_FS_PICK_UNLINK			(1ULL << 22)
-+#define LANDLOCK_TRIGGER_FS_PICK_WRITE			(1ULL << 23)
-+
-+/**
-+ * struct landlock_ctx_fs_pick - context accessible to a fs_pick program
-+ *
-+ * @inode: pointer to the current kernel object that can be used to compare
-+ *         inodes from an inode map.
-+ */
-+struct landlock_ctx_fs_pick {
-+	__u64 inode;
-+};
-+
-+/**
-+ * struct landlock_ctx_fs_walk - context accessible to a fs_walk program
-+ *
-+ * @inode: pointer to the current kernel object that can be used to compare
-+ *         inodes from an inode map.
-+ */
-+struct landlock_ctx_fs_walk {
-+	__u64 inode;
-+};
-+
-+#endif /* _UAPI__LINUX_LANDLOCK_H__ */
-diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
-index 94a43d7c8175..026c68cb9116 100644
---- a/kernel/bpf/verifier.c
-+++ b/kernel/bpf/verifier.c
-@@ -6116,6 +6116,7 @@ static int check_return_code(struct bpf_verifier_env *env)
- 	case BPF_PROG_TYPE_CGROUP_DEVICE:
- 	case BPF_PROG_TYPE_CGROUP_SYSCTL:
- 	case BPF_PROG_TYPE_CGROUP_SOCKOPT:
-+	case BPF_PROG_TYPE_LANDLOCK_HOOK:
- 		break;
- 	default:
- 		return 0;
-diff --git a/security/Kconfig b/security/Kconfig
-index 06a30851511a..549822ea60b7 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -237,6 +237,7 @@ source "security/apparmor/Kconfig"
- source "security/loadpin/Kconfig"
- source "security/yama/Kconfig"
- source "security/safesetid/Kconfig"
-+source "security/landlock/Kconfig"
- 
- source "security/integrity/Kconfig"
- 
-diff --git a/security/Makefile b/security/Makefile
-index c598b904938f..396ff107f70d 100644
---- a/security/Makefile
-+++ b/security/Makefile
-@@ -11,6 +11,7 @@ subdir-$(CONFIG_SECURITY_APPARMOR)	+= apparmor
- subdir-$(CONFIG_SECURITY_YAMA)		+= yama
- subdir-$(CONFIG_SECURITY_LOADPIN)	+= loadpin
- subdir-$(CONFIG_SECURITY_SAFESETID)    += safesetid
-+subdir-$(CONFIG_SECURITY_LANDLOCK)		+= landlock
- 
- # always enable default capabilities
- obj-y					+= commoncap.o
-@@ -27,6 +28,7 @@ obj-$(CONFIG_SECURITY_APPARMOR)		+= apparmor/
- obj-$(CONFIG_SECURITY_YAMA)		+= yama/
- obj-$(CONFIG_SECURITY_LOADPIN)		+= loadpin/
- obj-$(CONFIG_SECURITY_SAFESETID)       += safesetid/
-+obj-$(CONFIG_SECURITY_LANDLOCK)	+= landlock/
- obj-$(CONFIG_CGROUP_DEVICE)		+= device_cgroup.o
- 
- # Object integrity file lists
-diff --git a/security/landlock/Kconfig b/security/landlock/Kconfig
-new file mode 100644
-index 000000000000..8bd103102008
---- /dev/null
-+++ b/security/landlock/Kconfig
-@@ -0,0 +1,18 @@
-+config SECURITY_LANDLOCK
-+	bool "Landlock support"
-+	depends on SECURITY
-+	depends on BPF_SYSCALL
-+	depends on SECCOMP_FILTER
-+	default n
-+	help
-+	  This selects Landlock, a programmatic access control.  It enables to
-+	  restrict processes on the fly (i.e. create a sandbox).  The security
-+	  policy is a set of eBPF programs, dedicated to deny a list of actions
-+	  on specific kernel objects (e.g. file).
-+
-+	  You need to enable seccomp filter to apply a security policy to a
-+	  process hierarchy (e.g. application with built-in sandboxing).
-+
-+	  See Documentation/security/landlock/ for further information.
-+
-+	  If you are unsure how to answer this question, answer N.
+ struct lsm_info {
 diff --git a/security/landlock/Makefile b/security/landlock/Makefile
-new file mode 100644
-index 000000000000..7205f9a7a2ee
---- /dev/null
+index 2a1a7082a365..270ece5d93de 100644
+--- a/security/landlock/Makefile
 +++ b/security/landlock/Makefile
-@@ -0,0 +1,3 @@
-+obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
-+
-+landlock-y := init.o
+@@ -1,4 +1,5 @@
+ obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
+ 
+ landlock-y := init.o \
+-	enforce.o enforce_seccomp.o
++	enforce.o enforce_seccomp.o \
++	hooks.o hooks_fs.o
 diff --git a/security/landlock/common.h b/security/landlock/common.h
-new file mode 100644
-index 000000000000..80dc36f4d0ac
---- /dev/null
+index 2cf36dbf4560..b2ee018eb6fc 100644
+--- a/security/landlock/common.h
 +++ b/security/landlock/common.h
-@@ -0,0 +1,44 @@
-+/* SPDX-License-Identifier: GPL-2.0-only */
+@@ -79,4 +79,13 @@ static inline enum landlock_hook_type get_hook_type(const struct bpf_prog *prog)
+ 	}
+ }
+ 
++__maybe_unused
++static bool current_has_prog_type(enum landlock_hook_type hook_type)
++{
++	struct landlock_prog_set *prog_set;
++
++	prog_set = current->seccomp.landlock_prog_set;
++	return (prog_set && prog_set->programs[get_hook_index(hook_type)]);
++}
++
+ #endif /* _SECURITY_LANDLOCK_COMMON_H */
+diff --git a/security/landlock/hooks.c b/security/landlock/hooks.c
+new file mode 100644
+index 000000000000..97c54957f17b
+--- /dev/null
++++ b/security/landlock/hooks.c
+@@ -0,0 +1,94 @@
++// SPDX-License-Identifier: GPL-2.0-only
 +/*
-+ * Landlock LSM - private headers
++ * Landlock LSM - hook helpers
 + *
 + * Copyright © 2016-2019 Mickaël Salaün <mic@digikod.net>
 + * Copyright © 2018-2019 ANSSI
 + */
 +
-+#ifndef _SECURITY_LANDLOCK_COMMON_H
-+#define _SECURITY_LANDLOCK_COMMON_H
++#include <asm/current.h>
++#include <linux/bpf.h> /* enum bpf_prog_aux */
++#include <linux/errno.h>
++#include <linux/filter.h> /* BPF_PROG_RUN() */
++#include <linux/rculist.h> /* list_add_tail_rcu */
++#include <uapi/linux/landlock.h> /* struct landlock_context */
 +
-+#include <linux/bpf.h> /* enum bpf_attach_type */
-+#include <linux/filter.h> /* bpf_prog */
-+#include <linux/refcount.h> /* refcount_t */
-+#include <uapi/linux/landlock.h> /* LANDLOCK_TRIGGER_* */
++#include "common.h" /* struct landlock_rule, get_hook_index() */
++#include "hooks.h" /* landlock_hook_ctx */
 +
-+#define LANDLOCK_NAME "landlock"
++#include "hooks_fs.h"
 +
-+/* UAPI bounds and bitmasks */
-+
-+#define _LANDLOCK_HOOK_LAST LANDLOCK_HOOK_FS_WALK
-+
-+#define _LANDLOCK_TRIGGER_FS_PICK_LAST	LANDLOCK_TRIGGER_FS_PICK_WRITE
-+#define _LANDLOCK_TRIGGER_FS_PICK_MASK	((_LANDLOCK_TRIGGER_FS_PICK_LAST << 1ULL) - 1)
-+
-+enum landlock_hook_type {
-+	LANDLOCK_HOOK_FS_PICK = 1,
-+	LANDLOCK_HOOK_FS_WALK,
-+};
-+
-+static inline enum landlock_hook_type get_hook_type(const struct bpf_prog *prog)
++/* return a Landlock program context (e.g. hook_ctx->fs_walk.prog_ctx) */
++static const void *get_ctx(enum landlock_hook_type hook_type,
++		struct landlock_hook_ctx *hook_ctx)
 +{
-+	switch (prog->expected_attach_type) {
-+	case BPF_LANDLOCK_FS_PICK:
-+		return LANDLOCK_HOOK_FS_PICK;
-+	case BPF_LANDLOCK_FS_WALK:
-+		return LANDLOCK_HOOK_FS_WALK;
-+	default:
-+		WARN_ON(1);
-+		return BPF_LANDLOCK_FS_PICK;
++	switch (hook_type) {
++	case LANDLOCK_HOOK_FS_WALK:
++		return landlock_get_ctx_fs_walk(hook_ctx->fs_walk);
++	case LANDLOCK_HOOK_FS_PICK:
++		return landlock_get_ctx_fs_pick(hook_ctx->fs_pick);
 +	}
++	WARN_ON(1);
++	return NULL;
 +}
 +
-+#endif /* _SECURITY_LANDLOCK_COMMON_H */
-diff --git a/security/landlock/init.c b/security/landlock/init.c
++/**
++ * landlock_access_deny - run Landlock programs tied to a hook
++ *
++ * @hook_idx: hook index in the programs array
++ * @ctx: non-NULL valid eBPF context
++ * @prog_set: Landlock program set pointer
++ * @triggers: a bitmask to check if a program should be run
++ *
++ * Return true if at least one program return deny.
++ */
++static bool landlock_access_deny(enum landlock_hook_type hook_type,
++		struct landlock_hook_ctx *hook_ctx,
++		struct landlock_prog_set *prog_set, u64 triggers)
++{
++	struct landlock_prog_list *prog_list, *prev_list = NULL;
++	u32 hook_idx = get_hook_index(hook_type);
++
++	if (!prog_set)
++		return false;
++
++	for (prog_list = prog_set->programs[hook_idx];
++			prog_list; prog_list = prog_list->prev) {
++		u32 ret;
++		const void *prog_ctx;
++
++		/* check if @prog expect at least one of this triggers */
++		if (triggers && !(triggers & prog_list->prog->aux->
++					expected_attach_triggers))
++			continue;
++		prog_ctx = get_ctx(hook_type, hook_ctx);
++		if (!prog_ctx || WARN_ON(IS_ERR(prog_ctx)))
++			return true;
++		rcu_read_lock();
++		ret = BPF_PROG_RUN(prog_list->prog, prog_ctx);
++		rcu_read_unlock();
++		/* deny access if a program returns a value different than 0 */
++		if (ret)
++			return true;
++		if (prev_list && prog_list->prev && prog_list->prev->prog->
++				expected_attach_type ==
++				prev_list->prog->expected_attach_type)
++			WARN_ON(prog_list->prev != prev_list);
++		prev_list = prog_list;
++	}
++	return false;
++}
++
++int landlock_decide(enum landlock_hook_type hook_type,
++		struct landlock_hook_ctx *hook_ctx, u64 triggers)
++{
++	bool deny = false;
++
++#ifdef CONFIG_SECCOMP_FILTER
++	deny = landlock_access_deny(hook_type, hook_ctx,
++			current->seccomp.landlock_prog_set, triggers);
++#endif /* CONFIG_SECCOMP_FILTER */
++
++	/* should we use -EPERM or -EACCES? */
++	return deny ? -EACCES : 0;
++}
+diff --git a/security/landlock/hooks.h b/security/landlock/hooks.h
 new file mode 100644
-index 000000000000..8dfd5fea3c1f
+index 000000000000..31446e6629fb
 --- /dev/null
-+++ b/security/landlock/init.c
-@@ -0,0 +1,100 @@
++++ b/security/landlock/hooks.h
+@@ -0,0 +1,31 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++/*
++ * Landlock LSM - hooks helpers
++ *
++ * Copyright © 2016-2019 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018-2019 ANSSI
++ */
++
++#include <asm/current.h>
++#include <linux/sched.h> /* struct task_struct */
++#include <linux/seccomp.h>
++
++#include "hooks_fs.h"
++
++struct landlock_hook_ctx {
++	union {
++		struct landlock_hook_ctx_fs_walk *fs_walk;
++		struct landlock_hook_ctx_fs_pick *fs_pick;
++	};
++};
++
++static inline bool landlocked(const struct task_struct *task)
++{
++#ifdef CONFIG_SECCOMP_FILTER
++	return !!(task->seccomp.landlock_prog_set);
++#else
++	return false;
++#endif /* CONFIG_SECCOMP_FILTER */
++}
++
++int landlock_decide(enum landlock_hook_type, struct landlock_hook_ctx *, u64);
+diff --git a/security/landlock/hooks_fs.c b/security/landlock/hooks_fs.c
+new file mode 100644
+index 000000000000..3f81b7fc2938
+--- /dev/null
++++ b/security/landlock/hooks_fs.c
+@@ -0,0 +1,554 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
-+ * Landlock LSM - init
++ * Landlock LSM - filesystem hooks
 + *
 + * Copyright © 2016-2019 Mickaël Salaün <mic@digikod.net>
 + * Copyright © 2018-2019 ANSSI
 + */
 +
 +#include <linux/bpf.h> /* enum bpf_access_type */
-+#include <linux/capability.h> /* capable */
-+#include <linux/filter.h> /* struct bpf_prog */
++#include <linux/kernel.h> /* ARRAY_SIZE */
++#include <linux/lsm_hooks.h>
++#include <linux/rcupdate.h> /* synchronize_rcu() */
++#include <linux/stat.h> /* S_ISDIR */
++#include <linux/stddef.h> /* offsetof */
++#include <linux/types.h> /* uintptr_t */
++#include <linux/workqueue.h> /* INIT_WORK() */
 +
-+#include "common.h" /* LANDLOCK_* */
++/* permissions translation */
++#include <linux/fs.h> /* MAY_* */
++#include <linux/mman.h> /* PROT_* */
++#include <linux/namei.h>
 +
-+static bool bpf_landlock_is_valid_access(int off, int size,
-+		enum bpf_access_type type, const struct bpf_prog *prog,
-+		struct bpf_insn_access_aux *info)
++/* hook arguments */
++#include <linux/dcache.h> /* struct dentry */
++#include <linux/fs.h> /* struct inode, struct iattr */
++#include <linux/mm_types.h> /* struct vm_area_struct */
++#include <linux/mount.h> /* struct vfsmount */
++#include <linux/path.h> /* struct path */
++#include <linux/sched.h> /* struct task_struct */
++#include <linux/time.h> /* struct timespec */
++
++#include "common.h"
++#include "hooks_fs.h"
++#include "hooks.h"
++
++/* fs_pick */
++
++#include <asm/page.h> /* PAGE_SIZE */
++#include <asm/syscall.h>
++#include <linux/dcache.h> /* d_path, dentry_path_raw */
++#include <linux/err.h> /* *_ERR */
++#include <linux/gfp.h> /* __get_free_page, GFP_KERNEL */
++#include <linux/path.h> /* struct path */
++
++bool landlock_is_valid_access_fs_pick(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size)
 +{
-+	enum bpf_reg_type reg_type = NOT_INIT;
-+	int max_size = 0;
-+
-+	if (WARN_ON(!prog->expected_attach_type))
-+		return false;
-+
-+	if (off < 0)
-+		return false;
-+	if (size <= 0 || size > sizeof(__u64))
-+		return false;
-+
-+	/* check memory range access */
-+	switch (reg_type) {
-+	case NOT_INIT:
-+		return false;
-+	case SCALAR_VALUE:
-+		/* allow partial raw value */
-+		if (size > max_size)
-+			return false;
-+		info->ctx_field_size = max_size;
-+		break;
++	switch (off) {
 +	default:
-+		/* deny partial pointer */
-+		if (size != max_size)
-+			return false;
++		return false;
 +	}
-+
-+	info->reg_type = reg_type;
-+	return true;
 +}
 +
-+static bool bpf_landlock_is_valid_triggers(const struct bpf_prog *prog)
++bool landlock_is_valid_access_fs_walk(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size)
++{
++	switch (off) {
++	default:
++		return false;
++	}
++}
++
++/* fs_walk */
++
++struct landlock_hook_ctx_fs_walk {
++	struct landlock_ctx_fs_walk prog_ctx;
++};
++
++const struct landlock_ctx_fs_walk *landlock_get_ctx_fs_walk(
++		const struct landlock_hook_ctx_fs_walk *hook_ctx)
++{
++	if (WARN_ON(!hook_ctx))
++		return NULL;
++
++	return &hook_ctx->prog_ctx;
++}
++
++static int decide_fs_walk(int may_mask, struct inode *inode)
++{
++	struct landlock_hook_ctx_fs_walk fs_walk = {};
++	struct landlock_hook_ctx hook_ctx = {
++		.fs_walk = &fs_walk,
++	};
++	const enum landlock_hook_type hook_type = LANDLOCK_HOOK_FS_WALK;
++
++	if (!current_has_prog_type(hook_type))
++		/* no fs_walk */
++		return 0;
++	if (WARN_ON(!inode))
++		return -EFAULT;
++
++	/* init common data: inode */
++	fs_walk.prog_ctx.inode = (uintptr_t)inode;
++	return landlock_decide(hook_type, &hook_ctx, 0);
++}
++
++/* fs_pick */
++
++struct landlock_hook_ctx_fs_pick {
++	__u64 triggers;
++	struct landlock_ctx_fs_pick prog_ctx;
++};
++
++const struct landlock_ctx_fs_pick *landlock_get_ctx_fs_pick(
++		const struct landlock_hook_ctx_fs_pick *hook_ctx)
++{
++	if (WARN_ON(!hook_ctx))
++		return NULL;
++
++	return &hook_ctx->prog_ctx;
++}
++
++static int decide_fs_pick(__u64 triggers, struct inode *inode)
++{
++	struct landlock_hook_ctx_fs_pick fs_pick = {};
++	struct landlock_hook_ctx hook_ctx = {
++		.fs_pick = &fs_pick,
++	};
++	const enum landlock_hook_type hook_type = LANDLOCK_HOOK_FS_PICK;
++
++	if (WARN_ON(!triggers))
++		return 0;
++	if (!current_has_prog_type(hook_type))
++		/* no fs_pick */
++		return 0;
++	if (WARN_ON(!inode))
++		return -EFAULT;
++
++	fs_pick.triggers = triggers,
++	/* init common data: inode */
++	fs_pick.prog_ctx.inode = (uintptr_t)inode;
++	return landlock_decide(hook_type, &hook_ctx, fs_pick.triggers);
++}
++
++/* helpers */
++
++static u64 fs_may_to_triggers(int may_mask, umode_t mode)
++{
++	u64 ret = 0;
++
++	if (may_mask & MAY_EXEC)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_EXECUTE;
++	if (may_mask & MAY_READ) {
++		if (S_ISDIR(mode))
++			ret |= LANDLOCK_TRIGGER_FS_PICK_READDIR;
++		else
++			ret |= LANDLOCK_TRIGGER_FS_PICK_READ;
++	}
++	if (may_mask & MAY_WRITE)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_WRITE;
++	if (may_mask & MAY_APPEND)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_APPEND;
++	if (may_mask & MAY_OPEN)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_OPEN;
++	if (may_mask & MAY_CHROOT)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_CHROOT;
++	else if (may_mask & MAY_CHDIR)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_CHDIR;
++	/* XXX: ignore MAY_ACCESS */
++	WARN_ON(!ret);
++	return ret;
++}
++
++static inline u64 mem_prot_to_triggers(unsigned long prot, bool private)
++{
++	u64 ret = LANDLOCK_TRIGGER_FS_PICK_MAP;
++
++	/* private mapping do not write to files */
++	if (!private && (prot & PROT_WRITE))
++		ret |= LANDLOCK_TRIGGER_FS_PICK_WRITE;
++	if (prot & PROT_READ)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_READ;
++	if (prot & PROT_EXEC)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_EXECUTE;
++	WARN_ON(!ret);
++	return ret;
++}
++
++/* binder hooks */
++
++static int hook_binder_transfer_file(struct task_struct *from,
++		struct task_struct *to, struct file *file)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_TRANSFER,
++			file_inode(file));
++}
++
++/* sb hooks */
++
++static int hook_sb_statfs(struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			dentry->d_inode);
++}
++
++/* TODO: handle mount source and remount */
++static int hook_sb_mount(const char *dev_name, const struct path *path,
++		const char *type, unsigned long flags, void *data)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!path))
++		return 0;
++	if (WARN_ON(!path->dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_MOUNTON,
++			path->dentry->d_inode);
++}
++
++/*
++ * The @old_path is similar to a destination mount point.
++ */
++static int hook_sb_pivotroot(const struct path *old_path,
++		const struct path *new_path)
++{
++	int err;
++
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!old_path))
++		return 0;
++	if (WARN_ON(!old_path->dentry))
++		return 0;
++	err = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_MOUNTON,
++			old_path->dentry->d_inode);
++	if (err)
++		return err;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CHROOT,
++			new_path->dentry->d_inode);
++}
++
++/* inode hooks */
++
++/* a directory inode contains only one dentry */
++static int hook_inode_create(struct inode *dir, struct dentry *dentry,
++		umode_t mode)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_link(struct dentry *old_dentry, struct inode *dir,
++		struct dentry *new_dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!old_dentry)) {
++		int ret = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_LINK,
++				old_dentry->d_inode);
++		if (ret)
++			return ret;
++	}
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_LINKTO, dir);
++}
++
++static int hook_inode_unlink(struct inode *dir, struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_UNLINK,
++			dentry->d_inode);
++}
++
++static int hook_inode_symlink(struct inode *dir, struct dentry *dentry,
++		const char *old_name)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_mkdir(struct inode *dir, struct dentry *dentry,
++		umode_t mode)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_rmdir(struct inode *dir, struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RMDIR, dentry->d_inode);
++}
++
++static int hook_inode_mknod(struct inode *dir, struct dentry *dentry,
++		umode_t mode, dev_t dev)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_rename(struct inode *old_dir, struct dentry *old_dentry,
++		struct inode *new_dir, struct dentry *new_dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (!WARN_ON(!old_dentry)) {
++		int ret = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RENAME,
++				old_dentry->d_inode);
++		if (ret)
++			return ret;
++	}
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RENAMETO, new_dir);
++}
++
++static int hook_inode_readlink(struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_READ, dentry->d_inode);
++}
++
++/*
++ * ignore the inode_follow_link hook (could set is_symlink in the fs_walk
++ * context)
++ */
++
++static int hook_inode_permission(struct inode *inode, int mask)
 +{
 +	u64 triggers;
 +
-+	if (!prog)
-+		return false;
-+	triggers = prog->aux->expected_attach_triggers;
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!inode))
++		return 0;
 +
-+	switch (get_hook_type(prog)) {
-+	case LANDLOCK_HOOK_FS_PICK:
-+		if (!triggers || triggers & ~_LANDLOCK_TRIGGER_FS_PICK_MASK)
-+			return false;
-+		break;
-+	case LANDLOCK_HOOK_FS_WALK:
-+		if (triggers)
-+			return false;
-+		break;
-+	}
-+	return true;
++	triggers = fs_may_to_triggers(mask, inode->i_mode);
++	/*
++	 * decide_fs_walk() is exclusive with decide_fs_pick(): in a path walk,
++	 * ignore execute-only access on directory for any fs_pick program
++	 */
++	if (triggers == LANDLOCK_TRIGGER_FS_PICK_EXECUTE &&
++			S_ISDIR(inode->i_mode))
++		return decide_fs_walk(mask, inode);
++
++	return decide_fs_pick(triggers, inode);
 +}
 +
-+static const struct bpf_func_proto *bpf_landlock_func_proto(
-+		enum bpf_func_id func_id,
-+		const struct bpf_prog *prog)
++static int hook_inode_setattr(struct dentry *dentry, struct iattr *attr)
 +{
-+	if (WARN_ON(!prog->expected_attach_type))
-+		return NULL;
-+
-+	/* generic functions */
-+	/* TODO: do we need/want update/delete functions for every LL prog?
-+	 * => impurity vs. audit */
-+	switch (func_id) {
-+	case BPF_FUNC_map_lookup_elem:
-+		return &bpf_map_lookup_elem_proto;
-+	case BPF_FUNC_map_update_elem:
-+		return &bpf_map_update_elem_proto;
-+	case BPF_FUNC_map_delete_elem:
-+		return &bpf_map_delete_elem_proto;
-+	default:
-+		break;
-+	}
-+	return NULL;
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR,
++			dentry->d_inode);
 +}
 +
-+const struct bpf_verifier_ops landlock_verifier_ops = {
-+	.get_func_proto	= bpf_landlock_func_proto,
-+	.is_valid_access = bpf_landlock_is_valid_access,
-+	.is_valid_triggers = bpf_landlock_is_valid_triggers,
++static int hook_inode_getattr(const struct path *path)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!path))
++		return 0;
++	if (WARN_ON(!path->dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			path->dentry->d_inode);
++}
++
++static int hook_inode_setxattr(struct dentry *dentry, const char *name,
++		const void *value, size_t size, int flags)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_getxattr(struct dentry *dentry, const char *name)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_listxattr(struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_removexattr(struct dentry *dentry, const char *name)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_getsecurity(struct inode *inode, const char *name,
++		void **buffer, bool alloc)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR, inode);
++}
++
++static int hook_inode_setsecurity(struct inode *inode, const char *name,
++		const void *value, size_t size, int flag)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR, inode);
++}
++
++static int hook_inode_listsecurity(struct inode *inode, char *buffer,
++		size_t buffer_size)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR, inode);
++}
++
++/* file hooks */
++
++static int hook_file_ioctl(struct file *file, unsigned int cmd,
++		unsigned long arg)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_IOCTL,
++			file_inode(file));
++}
++
++static int hook_file_lock(struct file *file, unsigned int cmd)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_LOCK, file_inode(file));
++}
++
++static int hook_file_fcntl(struct file *file, unsigned int cmd,
++		unsigned long arg)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_FCNTL,
++			file_inode(file));
++}
++
++static int hook_mmap_file(struct file *file, unsigned long reqprot,
++		unsigned long prot, unsigned long flags)
++{
++	if (!landlocked(current))
++		return 0;
++	/* file can be null for anonymous mmap */
++	if (!file)
++		return 0;
++	return decide_fs_pick(mem_prot_to_triggers(prot, flags & MAP_PRIVATE),
++			file_inode(file));
++}
++
++static int hook_file_mprotect(struct vm_area_struct *vma,
++		unsigned long reqprot, unsigned long prot)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!vma))
++		return 0;
++	if (!vma->vm_file)
++		return 0;
++	return decide_fs_pick(mem_prot_to_triggers(prot,
++				!(vma->vm_flags & VM_SHARED)),
++			file_inode(vma->vm_file));
++}
++
++static int hook_file_receive(struct file *file)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RECEIVE,
++			file_inode(file));
++}
++
++static struct security_hook_list landlock_hooks[] = {
++	LSM_HOOK_INIT(binder_transfer_file, hook_binder_transfer_file),
++
++	LSM_HOOK_INIT(sb_statfs, hook_sb_statfs),
++	LSM_HOOK_INIT(sb_mount, hook_sb_mount),
++	LSM_HOOK_INIT(sb_pivotroot, hook_sb_pivotroot),
++
++	LSM_HOOK_INIT(inode_create, hook_inode_create),
++	LSM_HOOK_INIT(inode_link, hook_inode_link),
++	LSM_HOOK_INIT(inode_unlink, hook_inode_unlink),
++	LSM_HOOK_INIT(inode_symlink, hook_inode_symlink),
++	LSM_HOOK_INIT(inode_mkdir, hook_inode_mkdir),
++	LSM_HOOK_INIT(inode_rmdir, hook_inode_rmdir),
++	LSM_HOOK_INIT(inode_mknod, hook_inode_mknod),
++	LSM_HOOK_INIT(inode_rename, hook_inode_rename),
++	LSM_HOOK_INIT(inode_readlink, hook_inode_readlink),
++	LSM_HOOK_INIT(inode_permission, hook_inode_permission),
++	LSM_HOOK_INIT(inode_setattr, hook_inode_setattr),
++	LSM_HOOK_INIT(inode_getattr, hook_inode_getattr),
++	LSM_HOOK_INIT(inode_setxattr, hook_inode_setxattr),
++	LSM_HOOK_INIT(inode_getxattr, hook_inode_getxattr),
++	LSM_HOOK_INIT(inode_listxattr, hook_inode_listxattr),
++	LSM_HOOK_INIT(inode_removexattr, hook_inode_removexattr),
++	LSM_HOOK_INIT(inode_getsecurity, hook_inode_getsecurity),
++	LSM_HOOK_INIT(inode_setsecurity, hook_inode_setsecurity),
++	LSM_HOOK_INIT(inode_listsecurity, hook_inode_listsecurity),
++
++	/* do not handle file_permission for now */
++	LSM_HOOK_INIT(file_ioctl, hook_file_ioctl),
++	LSM_HOOK_INIT(file_lock, hook_file_lock),
++	LSM_HOOK_INIT(file_fcntl, hook_file_fcntl),
++	LSM_HOOK_INIT(mmap_file, hook_mmap_file),
++	LSM_HOOK_INIT(file_mprotect, hook_file_mprotect),
++	LSM_HOOK_INIT(file_receive, hook_file_receive),
++	/* file_open is not handled, use inode_permission instead */
 +};
 +
-+const struct bpf_prog_ops landlock_prog_ops = {};
-diff --git a/tools/include/uapi/linux/bpf.h b/tools/include/uapi/linux/bpf.h
-index 232747393405..7b7a4f6c3104 100644
---- a/tools/include/uapi/linux/bpf.h
-+++ b/tools/include/uapi/linux/bpf.h
-@@ -171,6 +171,7 @@ enum bpf_prog_type {
- 	BPF_PROG_TYPE_CGROUP_SYSCTL,
- 	BPF_PROG_TYPE_RAW_TRACEPOINT_WRITABLE,
- 	BPF_PROG_TYPE_CGROUP_SOCKOPT,
-+	BPF_PROG_TYPE_LANDLOCK_HOOK,
- };
- 
- enum bpf_attach_type {
-diff --git a/tools/include/uapi/linux/landlock.h b/tools/include/uapi/linux/landlock.h
++__init void landlock_add_hooks_fs(void)
++{
++	security_add_hooks(landlock_hooks, ARRAY_SIZE(landlock_hooks),
++			LANDLOCK_NAME);
++}
+diff --git a/security/landlock/hooks_fs.h b/security/landlock/hooks_fs.h
 new file mode 100644
-index 000000000000..9e6d8e10ec2c
+index 000000000000..eeae4dcd842f
 --- /dev/null
-+++ b/tools/include/uapi/linux/landlock.h
-@@ -0,0 +1,109 @@
-+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++++ b/security/landlock/hooks_fs.h
+@@ -0,0 +1,31 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
-+ * Landlock - UAPI headers
++ * Landlock LSM - filesystem hooks
 + *
 + * Copyright © 2017-2019 Mickaël Salaün <mic@digikod.net>
 + * Copyright © 2018-2019 ANSSI
 + */
 +
-+#ifndef _UAPI__LINUX_LANDLOCK_H__
-+#define _UAPI__LINUX_LANDLOCK_H__
++#include <linux/bpf.h> /* enum bpf_access_type */
 +
-+#include <linux/types.h>
++__init void landlock_add_hooks_fs(void);
 +
-+#define LANDLOCK_RET_ALLOW	0
-+#define LANDLOCK_RET_DENY	1
++/* fs_pick */
 +
-+/**
-+ * enum landlock_hook_type - hook type for which a Landlock program is called
-+ *
-+ * A hook is a policy decision point which exposes the same context type for
-+ * each program evaluation.
-+ *
-+ * @LANDLOCK_HOOK_FS_PICK: called for the last element of a file path
-+ * @LANDLOCK_HOOK_FS_WALK: called for each directory of a file path (excluding
-+ *			   the directory passed to fs_pick, if any)
-+ */
-+enum landlock_hook_type {
-+	LANDLOCK_HOOK_FS_PICK = 1,
-+	LANDLOCK_HOOK_FS_WALK,
-+};
++struct landlock_hook_ctx_fs_pick;
 +
-+/**
-+ * DOC: landlock_triggers
-+ *
-+ * A landlock trigger is used as a bitmask in subtype.landlock_hook.triggers
-+ * for a fs_pick program.  It defines a set of actions for which the program
-+ * should verify an access request.
-+ *
-+ * - %LANDLOCK_TRIGGER_FS_PICK_APPEND
-+ * - %LANDLOCK_TRIGGER_FS_PICK_CHDIR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_CHROOT
-+ * - %LANDLOCK_TRIGGER_FS_PICK_CREATE
-+ * - %LANDLOCK_TRIGGER_FS_PICK_EXECUTE
-+ * - %LANDLOCK_TRIGGER_FS_PICK_FCNTL
-+ * - %LANDLOCK_TRIGGER_FS_PICK_GETATTR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_IOCTL
-+ * - %LANDLOCK_TRIGGER_FS_PICK_LINK
-+ * - %LANDLOCK_TRIGGER_FS_PICK_LINKTO
-+ * - %LANDLOCK_TRIGGER_FS_PICK_LOCK
-+ * - %LANDLOCK_TRIGGER_FS_PICK_MAP
-+ * - %LANDLOCK_TRIGGER_FS_PICK_MOUNTON
-+ * - %LANDLOCK_TRIGGER_FS_PICK_OPEN
-+ * - %LANDLOCK_TRIGGER_FS_PICK_READ
-+ * - %LANDLOCK_TRIGGER_FS_PICK_READDIR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RECEIVE
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RENAME
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RENAMETO
-+ * - %LANDLOCK_TRIGGER_FS_PICK_RMDIR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_SETATTR
-+ * - %LANDLOCK_TRIGGER_FS_PICK_TRANSFER
-+ * - %LANDLOCK_TRIGGER_FS_PICK_UNLINK
-+ * - %LANDLOCK_TRIGGER_FS_PICK_WRITE
-+ */
-+#define LANDLOCK_TRIGGER_FS_PICK_APPEND			(1ULL << 0)
-+#define LANDLOCK_TRIGGER_FS_PICK_CHDIR			(1ULL << 1)
-+#define LANDLOCK_TRIGGER_FS_PICK_CHROOT			(1ULL << 2)
-+#define LANDLOCK_TRIGGER_FS_PICK_CREATE			(1ULL << 3)
-+#define LANDLOCK_TRIGGER_FS_PICK_EXECUTE		(1ULL << 4)
-+#define LANDLOCK_TRIGGER_FS_PICK_FCNTL			(1ULL << 5)
-+#define LANDLOCK_TRIGGER_FS_PICK_GETATTR		(1ULL << 6)
-+#define LANDLOCK_TRIGGER_FS_PICK_IOCTL			(1ULL << 7)
-+#define LANDLOCK_TRIGGER_FS_PICK_LINK			(1ULL << 8)
-+#define LANDLOCK_TRIGGER_FS_PICK_LINKTO			(1ULL << 9)
-+#define LANDLOCK_TRIGGER_FS_PICK_LOCK			(1ULL << 10)
-+#define LANDLOCK_TRIGGER_FS_PICK_MAP			(1ULL << 11)
-+#define LANDLOCK_TRIGGER_FS_PICK_MOUNTON		(1ULL << 12)
-+#define LANDLOCK_TRIGGER_FS_PICK_OPEN			(1ULL << 13)
-+#define LANDLOCK_TRIGGER_FS_PICK_READ			(1ULL << 14)
-+#define LANDLOCK_TRIGGER_FS_PICK_READDIR		(1ULL << 15)
-+#define LANDLOCK_TRIGGER_FS_PICK_RECEIVE		(1ULL << 16)
-+#define LANDLOCK_TRIGGER_FS_PICK_RENAME			(1ULL << 17)
-+#define LANDLOCK_TRIGGER_FS_PICK_RENAMETO		(1ULL << 18)
-+#define LANDLOCK_TRIGGER_FS_PICK_RMDIR			(1ULL << 19)
-+#define LANDLOCK_TRIGGER_FS_PICK_SETATTR		(1ULL << 20)
-+#define LANDLOCK_TRIGGER_FS_PICK_TRANSFER		(1ULL << 21)
-+#define LANDLOCK_TRIGGER_FS_PICK_UNLINK			(1ULL << 22)
-+#define LANDLOCK_TRIGGER_FS_PICK_WRITE			(1ULL << 23)
++bool landlock_is_valid_access_fs_pick(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size);
 +
-+/**
-+ * struct landlock_ctx_fs_pick - context accessible to a fs_pick program
-+ *
-+ * @inode: pointer to the current kernel object that can be used to compare
-+ *         inodes from an inode map.
-+ */
-+struct landlock_ctx_fs_pick {
-+	__u64 inode;
-+};
++const struct landlock_ctx_fs_pick *landlock_get_ctx_fs_pick(
++		const struct landlock_hook_ctx_fs_pick *hook_ctx);
 +
-+/**
-+ * struct landlock_ctx_fs_walk - context accessible to a fs_walk program
-+ *
-+ * @inode: pointer to the current kernel object that can be used to compare
-+ *         inodes from an inode map.
-+ */
-+struct landlock_ctx_fs_walk {
-+	__u64 inode;
-+};
++/* fs_walk */
 +
-+#endif /* _UAPI__LINUX_LANDLOCK_H__ */
-diff --git a/tools/lib/bpf/libbpf.c b/tools/lib/bpf/libbpf.c
-index ed07789b3e62..ab3b8b510b8a 100644
---- a/tools/lib/bpf/libbpf.c
-+++ b/tools/lib/bpf/libbpf.c
-@@ -2665,6 +2665,7 @@ static bool bpf_prog_type__needs_kver(enum bpf_prog_type type)
- 	case BPF_PROG_TYPE_PERF_EVENT:
- 	case BPF_PROG_TYPE_CGROUP_SYSCTL:
- 	case BPF_PROG_TYPE_CGROUP_SOCKOPT:
-+	case BPF_PROG_TYPE_LANDLOCK_HOOK:
++struct landlock_hook_ctx_fs_walk;
++
++bool landlock_is_valid_access_fs_walk(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size);
++
++const struct landlock_ctx_fs_walk *landlock_get_ctx_fs_walk(
++		const struct landlock_hook_ctx_fs_walk *hook_ctx);
+diff --git a/security/landlock/init.c b/security/landlock/init.c
+index 8dfd5fea3c1f..391e88bd4d3a 100644
+--- a/security/landlock/init.c
++++ b/security/landlock/init.c
+@@ -9,8 +9,10 @@
+ #include <linux/bpf.h> /* enum bpf_access_type */
+ #include <linux/capability.h> /* capable */
+ #include <linux/filter.h> /* struct bpf_prog */
++#include <linux/lsm_hooks.h>
+ 
+ #include "common.h" /* LANDLOCK_* */
++#include "hooks_fs.h"
+ 
+ static bool bpf_landlock_is_valid_access(int off, int size,
+ 		enum bpf_access_type type, const struct bpf_prog *prog,
+@@ -27,6 +29,20 @@ static bool bpf_landlock_is_valid_access(int off, int size,
+ 	if (size <= 0 || size > sizeof(__u64))
  		return false;
- 	case BPF_PROG_TYPE_KPROBE:
- 	default:
-diff --git a/tools/lib/bpf/libbpf_probes.c b/tools/lib/bpf/libbpf_probes.c
-index ace1a0708d99..03c910d1f84c 100644
---- a/tools/lib/bpf/libbpf_probes.c
-+++ b/tools/lib/bpf/libbpf_probes.c
-@@ -102,6 +102,7 @@ probe_load(enum bpf_prog_type prog_type, const struct bpf_insn *insns,
- 	case BPF_PROG_TYPE_FLOW_DISSECTOR:
- 	case BPF_PROG_TYPE_CGROUP_SYSCTL:
- 	case BPF_PROG_TYPE_CGROUP_SOCKOPT:
-+	case BPF_PROG_TYPE_LANDLOCK_HOOK:
- 	default:
- 		break;
+ 
++	/* set register type and max size */
++	switch (get_hook_type(prog)) {
++	case LANDLOCK_HOOK_FS_PICK:
++		if (!landlock_is_valid_access_fs_pick(off, type, &reg_type,
++					&max_size))
++			return false;
++		break;
++	case LANDLOCK_HOOK_FS_WALK:
++		if (!landlock_is_valid_access_fs_walk(off, type, &reg_type,
++					&max_size))
++			return false;
++		break;
++	}
++
+ 	/* check memory range access */
+ 	switch (reg_type) {
+ 	case NOT_INIT:
+@@ -98,3 +114,20 @@ const struct bpf_verifier_ops landlock_verifier_ops = {
+ };
+ 
+ const struct bpf_prog_ops landlock_prog_ops = {};
++
++static int __init landlock_init(void)
++{
++	pr_info(LANDLOCK_NAME ": Initializing (sandbox with seccomp)\n");
++	landlock_add_hooks_fs();
++	return 0;
++}
++
++struct lsm_blob_sizes landlock_blob_sizes __lsm_ro_after_init = {
++};
++
++DEFINE_LSM(LANDLOCK_NAME) = {
++	.name = LANDLOCK_NAME,
++	.order = LSM_ORDER_LAST,
++	.blobs = &landlock_blob_sizes,
++	.init = landlock_init,
++};
+diff --git a/security/security.c b/security/security.c
+index 250ee2d76406..e694e5fe7021 100644
+--- a/security/security.c
++++ b/security/security.c
+@@ -263,6 +263,21 @@ static void __init ordered_lsm_parse(const char *order, const char *origin)
+ 		}
  	}
+ 
++	/*
++	 * In case of an unprivileged access-control, we don't want to give the
++	 * ability to any process to do some checks (e.g. through an eBPF
++	 * program) on kernel objects (e.g. files) if a privileged security
++	 * policy forbid their access.  We must then load
++	 * potentially-unprivileged security modules after all other LSMs.
++	 *
++	 * LSM_ORDER_LAST is always last and does not appear in the modifiable
++	 * ordered list of enabled LSMs.
++	 */
++	for (lsm = __start_lsm_info; lsm < __end_lsm_info; lsm++) {
++		if (lsm->order == LSM_ORDER_LAST)
++			append_ordered_lsm(lsm, "last");
++	}
++
+ 	/* Disable all LSMs not in the ordered list. */
+ 	for (lsm = __start_lsm_info; lsm < __end_lsm_info; lsm++) {
+ 		if (exists_ordered_lsm(lsm))
 -- 
 2.22.0
 
