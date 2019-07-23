@@ -1,23 +1,23 @@
-Return-Path: <SRS0=05ba=VU=lists.openwall.com=kernel-hardening-return-16547-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Z62d=VU=lists.openwall.com=kernel-hardening-return-16548-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8D4D6C76190
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 06:08:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 47F86C76188
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 06:55:53 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DAB222239E
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 06:08:33 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 968242190F
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 06:55:52 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=paul-moore-com.20150623.gappssmtp.com header.i=@paul-moore-com.20150623.gappssmtp.com header.b="eYCyZD6+"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DAB222239E
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=paul-moore.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16547-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30035 invoked by uid 550); 23 Jul 2019 06:08:23 -0000
+	dkim=pass (1024-bit key) header.d=rasmusvillemoes.dk header.i=@rasmusvillemoes.dk header.b="Vbk/ZCGC"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 968242190F
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=rasmusvillemoes.dk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16548-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25878 invoked by uid 550); 23 Jul 2019 06:55:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,82 +25,121 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19590 invoked from network); 23 Jul 2019 00:36:28 -0000
+Received: (qmail 25810 invoked from network); 23 Jul 2019 06:55:44 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=paul-moore-com.20150623.gappssmtp.com; s=20150623;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=V1qLox/HcKqaARh5nCdyrjblfDl+n5sFe9PDB624/uQ=;
-        b=eYCyZD6+ZuS/vB5TpYkBQYdKK5kd/jAesT2uuum+J1rP8+F3tiaJNaHOM+OvjFJDG7
-         uyATfkYBrP90hc/NdWXf2hUkpuNxNzNetlz/kRTIFKRObov3+7X5p8wuG52iS8nnvPkR
-         YTmISBefoo5i53nN3wMEnKTAOaVfnLWq93v+NfwsCgIzjejDXAxplDvUw25W/orQuqAO
-         FGp6wzvEcIMvgx0GkySU0cKoMKt4d6zWjmQ2cm0MUSIzIRT8Jku/LWMDQTWkozOiTlYX
-         VRcf1qdMDEESplMOLNSnS2NS6S8uADE6jrv7pW+uFESXyEazFYl/WuFdYQKaEphIibCh
-         41jQ==
+        d=rasmusvillemoes.dk; s=google;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-language:content-transfer-encoding;
+        bh=KzumU4vf4iQ0yCjcI7GufgOjQcY02wT9BJvKr2yKblQ=;
+        b=Vbk/ZCGCgd46r0PMV6Act0cKDWkFQrmxkMtFo5uac99+wBpXse62SUWDz4Ne6diFwz
+         L0QzTzgppdR7zXcLyvXiSDpNujZWE0k1aq9gN2WO4XxmEoFsY5W4bVUsrIp9pvLjO2k3
+         CLTEyV51LC6anxappuMkxr2ZPcUBxX3V0Nz3c=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=V1qLox/HcKqaARh5nCdyrjblfDl+n5sFe9PDB624/uQ=;
-        b=IU2wfgMwa9fIQk3rrRYypdXlH4eLO5rnSk/dXUGXH5ICCS1p0K7d0TMh+GNuTqWnd9
-         p5+V2CwMd9KfKNItqYzLUhZIaAEF3vx5mRGe9scPFUDh3oTUrIgU0iz8Li0GqGDNWGg1
-         YYvM1/mssi0w/LkW29PkwZlf9i7SpViGuZpsuDwj6iNnjx4SYjtqaWUAGDOXZS7PYrZI
-         IQPaYndkmJIw7TlVQd5LnWJPR2fdikXgGoW8cs2ViLEjCjSvvhRoVdR1WoURRKP9Hckt
-         szrTVBaK72ralpReEWMivyzueV1W0A+hIzPzWIkJRdTm7INxW7a8WXFZm5iWxExwczRW
-         8IIg==
-X-Gm-Message-State: APjAAAXWaqU6FtQo7aqrWfaAv1+V9I3vdNYmMG/517kF6Cp0eZyv9TVb
-	zrh1KFfYAMsjypiZpIhhgKJZIjZBixkRIY6KyQ==
-X-Google-Smtp-Source: APXvYqzoUjfQZm+IXQbdMcOuDKAltzsj6XLnjHXuqPGc8HA3CrakVkrDK/T3HMwcmv9vyX3yUlvdz45JWRZ28K7TVvw=
-X-Received: by 2002:ac2:4c37:: with SMTP id u23mr19426864lfq.119.1563842177418;
- Mon, 22 Jul 2019 17:36:17 -0700 (PDT)
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
+         :content-transfer-encoding;
+        bh=KzumU4vf4iQ0yCjcI7GufgOjQcY02wT9BJvKr2yKblQ=;
+        b=OUEJS5j3xhAjd5/t92Zw0s9dsb1X629Z+2mofORQ0G3nkPe4v2KaPQqW+u+SRU5Los
+         5o/wehhgt0jWTlw0js2zLlPZQRTUkupfDPjgY7710g5cV5CxszYSnOojOiy9gvMldt8C
+         D5oVMXiGcHbpqt4QiDmMo5rpFVtck1uSlO9Q/LybCzjq2zavPnJ6/H+7NYBML3usuVaW
+         0uwQBCPh7Lr2K3WGcTaKZmyY9plJHJVxg29K36zrws0W2Jomiw9aY4ssJMckkCiAMuSE
+         kp8QPBkUwglkTgBA1fAfwI1dFlNKry3+/aHceZ/jWtPLGXHZ3rAJvB00pHHk4L/b6hpG
+         IL2w==
+X-Gm-Message-State: APjAAAXkP11X7fiaiVwzn33200/pQqCnuqkqnrC5auIjZJnTy/r4TJ8B
+	+YUXNr8j92IwOhKIYclj2CM=
+X-Google-Smtp-Source: APXvYqyDaJthJ33Ha+KAczukiJNzPASPUSTjhru/qheXBb5PobVEd4ScWLMZpVSNtJfe5mX7IhkxfQ==
+X-Received: by 2002:a19:4349:: with SMTP id m9mr33666196lfj.64.1563864933047;
+        Mon, 22 Jul 2019 23:55:33 -0700 (PDT)
+Subject: Re: [PATCH 1/2] string: Add stracpy and stracpy_pad mechanisms
+To: Joe Perches <joe@perches.com>,
+ Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org
+Cc: Jonathan Corbet <corbet@lwn.net>, Stephen Kitt <steve@sk2.org>,
+ Kees Cook <keescook@chromium.org>, Nitin Gote <nitin.r.gote@intel.com>,
+ jannh@google.com, kernel-hardening@lists.openwall.com,
+ Andrew Morton <akpm@linux-foundation.org>
+References: <cover.1563841972.git.joe@perches.com>
+ <7ab8957eaf9b0931a59eff6e2bd8c5169f2f6c41.1563841972.git.joe@perches.com>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <eec901c6-ca51-89e4-1887-1ccab0288bee@rasmusvillemoes.dk>
+Date: Tue, 23 Jul 2019 08:55:31 +0200
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+ Thunderbird/60.7.2
 MIME-Version: 1.0
-References: <20190722132111.25743-1-omosnace@redhat.com> <201907220949.AFB5B68@keescook>
-In-Reply-To: <201907220949.AFB5B68@keescook>
-From: Paul Moore <paul@paul-moore.com>
-Date: Mon, 22 Jul 2019 20:36:06 -0400
-Message-ID: <CAHC9VhSpwafSdcX97VPiy1Earns4UOBjywcM9R=j24KFUtWB8g@mail.gmail.com>
-Subject: Re: [PATCH] selinux: check sidtab limit before adding a new entry
-To: Kees Cook <keescook@chromium.org>
-Cc: Ondrej Mosnacek <omosnace@redhat.com>, selinux@vger.kernel.org, 
-	NitinGote <nitin.r.gote@intel.com>, kernel-hardening@lists.openwall.com, 
-	linux-security-module@vger.kernel.org
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <7ab8957eaf9b0931a59eff6e2bd8c5169f2f6c41.1563841972.git.joe@perches.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-On Mon, Jul 22, 2019 at 12:50 PM Kees Cook <keescook@chromium.org> wrote:
-> On Mon, Jul 22, 2019 at 03:21:11PM +0200, Ondrej Mosnacek wrote:
-> > We need to error out when trying to add an entry above SIDTAB_MAX in
-> > sidtab_reverse_lookup() to avoid overflow on the odd chance that this
-> > happens.
-> >
-> > Fixes: ee1a84fdfeed ("selinux: overhaul sidtab to fix bug and improve performance")
-> > Signed-off-by: Ondrej Mosnacek <omosnace@redhat.com>
->
-> Is this reachable from unprivileged userspace?
+On 23/07/2019 02.38, Joe Perches wrote:
+> Several uses of strlcpy and strscpy have had defects because the
+> last argument of each function is misused or typoed.
+> 
+> Add macro mechanisms to avoid this defect.
+> 
+> stracpy (copy a string to a string array) must have a string
+> array as the first argument (to) and uses sizeof(to) as the
+> size.
+> 
+> These mechanisms verify that the to argument is an array of
+> char or other compatible types
 
-I believe it's reachable via selinuxfs under /sys/fs/selinux/context,
-and the DAC permissions are for the relevant files are 0666, but the
-SELinux policy might restrict that.
+yes
 
-> > ---
-> >  security/selinux/ss/sidtab.c | 5 +++++
-> >  1 file changed, 5 insertions(+)
-> >
-> > diff --git a/security/selinux/ss/sidtab.c b/security/selinux/ss/sidtab.c
-> > index e63a90ff2728..54c1ba1e79ab 100644
-> > --- a/security/selinux/ss/sidtab.c
-> > +++ b/security/selinux/ss/sidtab.c
-> > @@ -286,6 +286,11 @@ static int sidtab_reverse_lookup(struct sidtab *s, struct context *context,
-> >               ++count;
-> >       }
-> >
-> > +     /* bail out if we already reached max entries */
-> > +     rc = -ENOMEM;
-> > +     if (count == SIDTAB_MAX)
->
-> Do you want to use >= here instead?
+like u8 or unsigned char.
 
-Yes, definitely.
+no. "unsigned char" aka u8, "signed char" aka s8 and plain char are not
+__builtin_types_compatible_p to one another.
 
--- 
-paul moore
-www.paul-moore.com
+> A BUILD_BUG is emitted when the type of to is not compatible.
+> 
+> Signed-off-by: Joe Perches <joe@perches.com>
+> ---
+>  include/linux/string.h | 41 +++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 41 insertions(+)
+> 
+> diff --git a/include/linux/string.h b/include/linux/string.h
+> index 4deb11f7976b..f80b0973f0e5 100644
+> --- a/include/linux/string.h
+> +++ b/include/linux/string.h
+> @@ -35,6 +35,47 @@ ssize_t strscpy(char *, const char *, size_t);
+>  /* Wraps calls to strscpy()/memset(), no arch specific code required */
+>  ssize_t strscpy_pad(char *dest, const char *src, size_t count);
+>  
+> +/**
+> + * stracpy - Copy a C-string into an array of char
+> + * @to: Where to copy the string, must be an array of char and not a pointer
+> + * @from: String to copy, may be a pointer or const char array
+> + *
+> + * Helper for strscpy.
+> + * Copies a maximum of sizeof(@to) bytes of @from with %NUL termination.
+> + *
+> + * Returns:
+> + * * The number of characters copied (not including the trailing %NUL)
+> + * * -E2BIG if @to is a zero size array.
+
+Well, yes, but more importantly and generally: -E2BIG if the copy
+including %NUL didn't fit. [The zero size array thing could be made into
+a build bug for these stra* variants if one thinks that might actually
+occur in real code.]
+
+> + */
+> +#define stracpy(to, from)					\
+> +({								\
+> +	size_t size = ARRAY_SIZE(to);				\
+> +	BUILD_BUG_ON(!__same_type(typeof(*to), char));		\
+> +								\
+
+ARRAY_SIZE should ensure to is indeed an array, but it doesn't hurt to
+spell the second condition
+
+  BUILD_BUG_ON(!__same_type(typeof(to), char[]))
+
+(the gcc docs explicitly mention that "The type 'int[]' and 'int[5]' are
+compatible.) - just in case that line gets copy-pasted somewhere that
+doesn't have another must-be-array check nearby.
+
+You should use a more "unique" identifier than "size". from could be
+some expression that refers to such a variable from the surrounding scope.
+
+Rasmus
