@@ -1,20 +1,20 @@
-Return-Path: <SRS0=N0gv=VU=lists.openwall.com=kernel-hardening-return-16550-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=NFsq=VU=lists.openwall.com=kernel-hardening-return-16551-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A123CC7618B
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 09:26:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BBA94C7618E
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 12:30:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0362F223BA
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 09:26:49 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0362F223BA
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16550-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1308 invoked by uid 550); 23 Jul 2019 09:26:40 -0000
+	by mail.kernel.org (Postfix) with SMTP id 280C6223A1
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 12:30:39 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 280C6223A1
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16551-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1343 invoked by uid 550); 23 Jul 2019 12:30:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,102 +22,78 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1272 invoked from network); 23 Jul 2019 09:26:40 -0000
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="5.64,298,1559545200"; 
-   d="scan'208";a="344686884"
-From: "Gote, Nitin R" <nitin.r.gote@intel.com>
-To: Joe Perches <joe@perches.com>, Kees Cook <keescook@chromium.org>
-CC: "corbet@lwn.net" <corbet@lwn.net>, "akpm@linux-foundation.org"
-	<akpm@linux-foundation.org>, "apw@canonical.com" <apw@canonical.com>,
-	"linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>,
-	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Subject: RE: [PATCH v5] Documentation/checkpatch: Prefer strscpy/strscpy_pad
- over strcpy/strlcpy/strncpy
-Thread-Topic: [PATCH v5] Documentation/checkpatch: Prefer
- strscpy/strscpy_pad over strcpy/strlcpy/strncpy
-Thread-Index: AQHVPFiM9cWMTc5Km0imVXiG0lTtQKbWkWuAgAAC7gCAAUjQQA==
-Date: Tue, 23 Jul 2019 09:26:23 +0000
-Message-ID: <12356C813DFF6F479B608F81178A561587ABA9@BGSMSX101.gar.corp.intel.com>
-References: <20190717043005.19627-1-nitin.r.gote@intel.com>
-	 <201907221029.B0CBED4F@keescook>
- <28404b52d58efa0a3e85ce05ce0b210049ed6050.camel@perches.com>
-In-Reply-To: <28404b52d58efa0a3e85ce05ce0b210049ed6050.camel@perches.com>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach:
-X-MS-TNEF-Correlator:
-dlp-product: dlpe-windows
-dlp-version: 11.0.600.7
-dlp-reaction: no-action
-x-ctpclassification: CTP_NT
-x-titus-metadata-40: eyJDYXRlZ29yeUxhYmVscyI6IiIsIk1ldGFkYXRhIjp7Im5zIjoiaHR0cDpcL1wvd3d3LnRpdHVzLmNvbVwvbnNcL0ludGVsMyIsImlkIjoiMjBhMDJiYjQtNTEzYy00MzQ5LTlkYTktNTRlZThhY2JhNjhlIiwicHJvcHMiOlt7Im4iOiJDVFBDbGFzc2lmaWNhdGlvbiIsInZhbHMiOlt7InZhbHVlIjoiQ1RQX05UIn1dfV19LCJTdWJqZWN0TGFiZWxzIjpbXSwiVE1DVmVyc2lvbiI6IjE3LjEwLjE4MDQuNDkiLCJUcnVzdGVkTGFiZWxIYXNoIjoiOW9FcGxDcGpvbTJ1eHdcLzRvWURPVXdVWTZ4MDh4OXVpbkFrd2h1WGFjaDg5aUhRYmhJV1g0WkFaNVFJSUkxVTQifQ==
-x-originating-ip: [10.223.10.10]
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+Received: (qmail 15621 invoked from network); 23 Jul 2019 06:48:35 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=cY5YICyEZTZmKAe8S+z84IVZKH+kurb4pXia9o6wuCY=;
+        b=ZpN25z046BGy2LB8LO8fokreH1ZR7KovNcaiUJEIqB/WOmh7GtDQRVdpl8nbN0a1Cs
+         mi9eUy8I1PBTx7h6fRQY6Qz3zpgzRNR1o6Kk+Ai+6Ss4mWDOlbSbAXHmjI7kOJ/0UtX5
+         S7y4eckcEZozypBA19N3AgCraJVAxUrGK3CUDW6J7c0LB1w6cP+qxaoaQ/1GX1S76EOG
+         VZOU8nC+A6Taj/2GKBi3GA8kr4L6AOTtq01WJNkqosfVp6T/p+i2EskGGP2l/uZi+C9S
+         hNyeZMX+QGxuY8arnwyPB5MMJiiTBiMXFHva8xyfOJk9+Z1IDMF+p3S9HOewTm/Jis9q
+         /NXw==
+X-Gm-Message-State: APjAAAWBcnoiQsap7TW//KhoPNws9LSFXC9ZbSgJoVuTgDECZXP8FFsy
+	SLdHLicVLqSYeKPMB/+6ApCJoYMKT4tsVZEZTlURow==
+X-Google-Smtp-Source: APXvYqxsddQYVNqohu4Jb847ypd+7U9vUJnysW3/+0Sp9QkhauBUew6rE6lNs/w8PcqsF2R2eim5RvqRMoXbKMYvJEE=
+X-Received: by 2002:a9d:73cd:: with SMTP id m13mr20394988otk.43.1563864503462;
+ Mon, 22 Jul 2019 23:48:23 -0700 (PDT)
 MIME-Version: 1.0
+References: <20190722132111.25743-1-omosnace@redhat.com> <CAFftDdqROGAUDD3wXRC-PSjnrm29B6bfsBDn8AMPKkzJ8yJ=Hg@mail.gmail.com>
+In-Reply-To: <CAFftDdqROGAUDD3wXRC-PSjnrm29B6bfsBDn8AMPKkzJ8yJ=Hg@mail.gmail.com>
+From: Ondrej Mosnacek <omosnace@redhat.com>
+Date: Tue, 23 Jul 2019 08:48:12 +0200
+Message-ID: <CAFqZXNtSVvE9XiMSFei7+PD6v-urELi=UjdOtWW8KPdM8e=Q5Q@mail.gmail.com>
+Subject: Re: [PATCH] selinux: check sidtab limit before adding a new entry
+To: William Roberts <bill.c.roberts@gmail.com>
+Cc: SElinux list <selinux@vger.kernel.org>, Paul Moore <paul@paul-moore.com>, 
+	NitinGote <nitin.r.gote@intel.com>, kernel-hardening@lists.openwall.com, 
+	Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset="UTF-8"
 
-
-> -----Original Message-----
-> From: Joe Perches [mailto:joe@perches.com]
-> Sent: Monday, July 22, 2019 11:11 PM
-> To: Kees Cook <keescook@chromium.org>; Gote, Nitin R
-> <nitin.r.gote@intel.com>
-> Cc: corbet@lwn.net; akpm@linux-foundation.org; apw@canonical.com;
-> linux-doc@vger.kernel.org; kernel-hardening@lists.openwall.com
-> Subject: Re: [PATCH v5] Documentation/checkpatch: Prefer
-> strscpy/strscpy_pad over strcpy/strlcpy/strncpy
->=20
-> On Mon, 2019-07-22 at 10:30 -0700, Kees Cook wrote:
-> > On Wed, Jul 17, 2019 at 10:00:05AM +0530, NitinGote wrote:
-> > > From: Nitin Gote <nitin.r.gote@intel.com>
-> > >
-> > > Added check in checkpatch.pl to
-> > > 1. Deprecate strcpy() in favor of strscpy().
-> > > 2. Deprecate strlcpy() in favor of strscpy().
-> > > 3. Deprecate strncpy() in favor of strscpy() or strscpy_pad().
-> > >
-> > > Updated strncpy() section in Documentation/process/deprecated.rst
-> > > to cover strscpy_pad() case.
-> > >
-> > > Signed-off-by: Nitin Gote <nitin.r.gote@intel.com>
+On Mon, Jul 22, 2019 at 4:17 PM William Roberts
+<bill.c.roberts@gmail.com> wrote:
+> On Mon, Jul 22, 2019 at 8:34 AM Ondrej Mosnacek <omosnace@redhat.com> wrote:
 > >
-> > Reviewed-by: Kees Cook <keescook@chromium.org>
+> > We need to error out when trying to add an entry above SIDTAB_MAX in
+> > sidtab_reverse_lookup() to avoid overflow on the odd chance that this
+> > happens.
 > >
-> > Joe, does this address your checkpatch concerns?
->=20
-> Well, kinda.
->=20
-> strscpy_pad isn't used anywhere in the kernel.
->=20
-> And
->=20
-> +        "strncpy"				=3D> "strscpy, strscpy_pad or for non-
-> NUL-terminated strings, strncpy() can still be used, but destinations sho=
-uld
-> be marked with __nonstring",
->=20
-> is a bit verbose.  This could be simply:
->=20
-> +        "strncpy" =3D> "strscpy - for non-NUL-terminated uses, strncpy()=
- dst
-> should be __nonstring",
->=20
+> > Fixes: ee1a84fdfeed ("selinux: overhaul sidtab to fix bug and improve performance")
+> > Signed-off-by: Ondrej Mosnacek <omosnace@redhat.com>
+> > ---
+> >  security/selinux/ss/sidtab.c | 5 +++++
+> >  1 file changed, 5 insertions(+)
+> >
+> > diff --git a/security/selinux/ss/sidtab.c b/security/selinux/ss/sidtab.c
+> > index e63a90ff2728..54c1ba1e79ab 100644
+> > --- a/security/selinux/ss/sidtab.c
+> > +++ b/security/selinux/ss/sidtab.c
+> > @@ -286,6 +286,11 @@ static int sidtab_reverse_lookup(struct sidtab *s, struct context *context,
+> >                 ++count;
+> >         }
+> >
+> > +       /* bail out if we already reached max entries */
+> > +       rc = -ENOMEM;
+>
+> Wouldn't -EOVERFLOW be better?
 
-But, if the destination buffer needs extra NUL-padding for remaining size o=
-f destination,=20
-then safe replacement is strscpy_pad().  Right?  If yes, then what is your =
-opinion on below change :
+Good point. Will change it in v2.
 
-        "strncpy" =3D> "strscpy, strcpy_pad - for non-NUL-terminated uses, =
-strncpy() dst
-should be __nonstring",
+>
+> > +       if (count == SIDTAB_MAX)
+> > +               goto out_unlock;
+> > +
+> >         /* insert context into new entry */
+> >         rc = -ENOMEM;
+> >         dst = sidtab_do_lookup(s, count, 1);
+> > --
+> > 2.21.0
+> >
 
-
-> And I still prefer adding stracpy as it
-> reduces code verbosity and eliminates defects.
->=20
-
--Nitin
+Thanks,
+-- 
+Ondrej Mosnacek <omosnace at redhat dot com>
+Software Engineer, Security Technologies
+Red Hat, Inc.
