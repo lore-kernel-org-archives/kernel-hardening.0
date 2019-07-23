@@ -1,20 +1,20 @@
-Return-Path: <SRS0=AOOT=VU=lists.openwall.com=kernel-hardening-return-16544-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=6wfJ=VU=lists.openwall.com=kernel-hardening-return-16545-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 72F2AC76188
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 04:43:16 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AC4BAC76188
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 05:46:26 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9E8F02239F
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 04:43:15 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9E8F02239F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=perches.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16544-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12175 invoked by uid 550); 23 Jul 2019 04:43:07 -0000
+	by mail.kernel.org (Postfix) with SMTP id A43AF2229A
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 05:46:25 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A43AF2229A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16545-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24309 invoked by uid 550); 23 Jul 2019 05:44:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,180 +22,141 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12137 invoked from network); 23 Jul 2019 04:43:06 -0000
-X-Session-Marker: 6A6F6540706572636865732E636F6D
-X-HE-Tag: sort64_8d7b5ff508a0e
-X-Filterd-Recvd-Size: 6752
-Message-ID: <24bcbaee40a4174cb5d9fa876f88b2a1869a4870.camel@perches.com>
-Subject: Re: [PATCH 1/2] string: Add stracpy and stracpy_pad mechanisms
-From: Joe Perches <joe@perches.com>
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, 
- linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, Stephen
- Kitt <steve@sk2.org>, Kees Cook <keescook@chromium.org>, Nitin Gote
- <nitin.r.gote@intel.com>, jannh@google.com,
- kernel-hardening@lists.openwall.com,  Rasmus Villemoes
- <rasmus.villemoes@prevas.dk>
-Date: Mon, 22 Jul 2019 21:42:51 -0700
-In-Reply-To: <20190722213527.18deeaf07ae036cce57035ea@linux-foundation.org>
-References: <cover.1563841972.git.joe@perches.com>
-	 <7ab8957eaf9b0931a59eff6e2bd8c5169f2f6c41.1563841972.git.joe@perches.com>
-	 <20190722213527.18deeaf07ae036cce57035ea@linux-foundation.org>
-Content-Type: text/plain; charset="ISO-8859-1"
-User-Agent: Evolution 3.30.5-0ubuntu0.18.10.1 
+Received: (qmail 24243 invoked from network); 23 Jul 2019 05:44:51 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.64,297,1559545200"; 
+   d="scan'208";a="163392678"
+From: "Gote, Nitin R" <nitin.r.gote@intel.com>
+To: Ondrej Mosnacek <omosnace@redhat.com>
+CC: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>, Paul Moore <paul@paul-moore.com>,
+	Stephen Smalley <sds@tycho.nsa.gov>, Eric Paris <eparis@parisplace.org>,
+	SElinux list <selinux@vger.kernel.org>, Linux kernel mailing list
+	<linux-kernel@vger.kernel.org>
+Subject: RE: [PATCH] selinux: convert struct sidtab count to refcount_t
+Thread-Topic: [PATCH] selinux: convert struct sidtab count to refcount_t
+Thread-Index: AQHVQIGaAIpBwRsLTUq40fonHwZflqbWQoqAgAFqC9A=
+Date: Tue, 23 Jul 2019 05:44:30 +0000
+Message-ID: <12356C813DFF6F479B608F81178A561587AAD1@BGSMSX101.gar.corp.intel.com>
+References: <20190722113151.1584-1-nitin.r.gote@intel.com>
+ <CAFqZXNs5vdQwoy2k=_XLiGRdyZCL=n8as6aL01Dw-U62amFREA@mail.gmail.com>
+In-Reply-To: <CAFqZXNs5vdQwoy2k=_XLiGRdyZCL=n8as6aL01Dw-U62amFREA@mail.gmail.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+dlp-product: dlpe-windows
+dlp-version: 11.0.600.7
+dlp-reaction: no-action
+x-ctpclassification: CTP_NT
+x-titus-metadata-40: eyJDYXRlZ29yeUxhYmVscyI6IiIsIk1ldGFkYXRhIjp7Im5zIjoiaHR0cDpcL1wvd3d3LnRpdHVzLmNvbVwvbnNcL0ludGVsMyIsImlkIjoiMjRmYTYxNzItYTgyYS00ZWY0LTlmNDEtN2Q3MWMxMzk3ZmQ2IiwicHJvcHMiOlt7Im4iOiJDVFBDbGFzc2lmaWNhdGlvbiIsInZhbHMiOlt7InZhbHVlIjoiQ1RQX05UIn1dfV19LCJTdWJqZWN0TGFiZWxzIjpbXSwiVE1DVmVyc2lvbiI6IjE3LjEwLjE4MDQuNDkiLCJUcnVzdGVkTGFiZWxIYXNoIjoiUXR5T2NaYVliaVlzMG9aZ2tIQTBWbkNjOWpRR1ZXS1BiQnZLNWlCMmxVaEJHelhNdWFIS2UxdFwvTXI5T3M5WXMifQ==
+x-originating-ip: [10.223.10.10]
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
 
-On Mon, 2019-07-22 at 21:35 -0700, Andrew Morton wrote:
-> On Mon, 22 Jul 2019 17:38:15 -0700 Joe Perches <joe@perches.com> wrote:
-> 
-> > Several uses of strlcpy and strscpy have had defects because the
-> > last argument of each function is misused or typoed.
-> > 
-> > Add macro mechanisms to avoid this defect.
-> > 
-> > stracpy (copy a string to a string array) must have a string
-> > array as the first argument (to) and uses sizeof(to) as the
-> > size.
-> > 
-> > These mechanisms verify that the to argument is an array of
-> > char or other compatible types like u8 or unsigned char.
-> > 
-> > A BUILD_BUG is emitted when the type of to is not compatible.
-> > 
-> 
-> It would be nice to include some conversions.  To demonstrate the need,
-> to test the code, etc.
-
-How about all the kernel/ ?
----
- kernel/acct.c                  | 2 +-
- kernel/cgroup/cgroup-v1.c      | 3 +--
- kernel/debug/gdbstub.c         | 4 ++--
- kernel/debug/kdb/kdb_support.c | 2 +-
- kernel/events/core.c           | 4 ++--
- kernel/module.c                | 2 +-
- kernel/printk/printk.c         | 2 +-
- kernel/time/clocksource.c      | 2 +-
- 8 files changed, 10 insertions(+), 11 deletions(-)
-
-diff --git a/kernel/acct.c b/kernel/acct.c
-index 81f9831a7859..5ad29248b654 100644
---- a/kernel/acct.c
-+++ b/kernel/acct.c
-@@ -425,7 +425,7 @@ static void fill_ac(acct_t *ac)
- 	memset(ac, 0, sizeof(acct_t));
- 
- 	ac->ac_version = ACCT_VERSION | ACCT_BYTEORDER;
--	strlcpy(ac->ac_comm, current->comm, sizeof(ac->ac_comm));
-+	stracpy(ac->ac_comm, current->comm);
- 
- 	/* calculate run_time in nsec*/
- 	run_time = ktime_get_ns();
-diff --git a/kernel/cgroup/cgroup-v1.c b/kernel/cgroup/cgroup-v1.c
-index 88006be40ea3..dd4f041e4179 100644
---- a/kernel/cgroup/cgroup-v1.c
-+++ b/kernel/cgroup/cgroup-v1.c
-@@ -571,8 +571,7 @@ static ssize_t cgroup_release_agent_write(struct kernfs_open_file *of,
- 	if (!cgrp)
- 		return -ENODEV;
- 	spin_lock(&release_agent_path_lock);
--	strlcpy(cgrp->root->release_agent_path, strstrip(buf),
--		sizeof(cgrp->root->release_agent_path));
-+	stracpy(cgrp->root->release_agent_path, strstrip(buf));
- 	spin_unlock(&release_agent_path_lock);
- 	cgroup_kn_unlock(of->kn);
- 	return nbytes;
-diff --git a/kernel/debug/gdbstub.c b/kernel/debug/gdbstub.c
-index 4b280fc7dd67..a263f27f51ad 100644
---- a/kernel/debug/gdbstub.c
-+++ b/kernel/debug/gdbstub.c
-@@ -1095,10 +1095,10 @@ int gdbstub_state(struct kgdb_state *ks, char *cmd)
- 		return error;
- 	case 's':
- 	case 'c':
--		strscpy(remcom_in_buffer, cmd, sizeof(remcom_in_buffer));
-+		stracpy(remcom_in_buffer, cmd);
- 		return 0;
- 	case '$':
--		strscpy(remcom_in_buffer, cmd, sizeof(remcom_in_buffer));
-+		stracpy(remcom_in_buffer, cmd);
- 		gdbstub_use_prev_in_buf = strlen(remcom_in_buffer);
- 		gdbstub_prev_in_buf_pos = 0;
- 		return 0;
-diff --git a/kernel/debug/kdb/kdb_support.c b/kernel/debug/kdb/kdb_support.c
-index b8e6306e7e13..b49b6c3976c7 100644
---- a/kernel/debug/kdb/kdb_support.c
-+++ b/kernel/debug/kdb/kdb_support.c
-@@ -192,7 +192,7 @@ int kallsyms_symbol_complete(char *prefix_name, int max_len)
- 
- 	while ((name = kdb_walk_kallsyms(&pos))) {
- 		if (strncmp(name, prefix_name, prefix_len) == 0) {
--			strscpy(ks_namebuf, name, sizeof(ks_namebuf));
-+			stracpy(ks_namebuf, name);
- 			/* Work out the longest name that matches the prefix */
- 			if (++number == 1) {
- 				prev_len = min_t(int, max_len-1,
-diff --git a/kernel/events/core.c b/kernel/events/core.c
-index 026a14541a38..25bd8c777270 100644
---- a/kernel/events/core.c
-+++ b/kernel/events/core.c
-@@ -7049,7 +7049,7 @@ static void perf_event_comm_event(struct perf_comm_event *comm_event)
- 	unsigned int size;
- 
- 	memset(comm, 0, sizeof(comm));
--	strlcpy(comm, comm_event->task->comm, sizeof(comm));
-+	stracpy(comm, comm_event->task->comm);
- 	size = ALIGN(strlen(comm)+1, sizeof(u64));
- 
- 	comm_event->comm = comm;
-@@ -7394,7 +7394,7 @@ static void perf_event_mmap_event(struct perf_mmap_event *mmap_event)
- 	}
- 
- cpy_name:
--	strlcpy(tmp, name, sizeof(tmp));
-+	stracpy(tmp, name);
- 	name = tmp;
- got_name:
- 	/*
-diff --git a/kernel/module.c b/kernel/module.c
-index 5933395af9a0..39384b0c90b8 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -1021,7 +1021,7 @@ SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
- 	async_synchronize_full();
- 
- 	/* Store the name of the last unloaded module for diagnostic purposes */
--	strlcpy(last_unloaded_module, mod->name, sizeof(last_unloaded_module));
-+	stracpy(last_unloaded_module, mod->name);
- 
- 	free_module(mod);
- 	return 0;
-diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 424abf802f02..029633052be4 100644
---- a/kernel/printk/printk.c
-+++ b/kernel/printk/printk.c
-@@ -2127,7 +2127,7 @@ static int __add_preferred_console(char *name, int idx, char *options,
- 		return -E2BIG;
- 	if (!brl_options)
- 		preferred_console = i;
--	strlcpy(c->name, name, sizeof(c->name));
-+	stracpy(c->name, name);
- 	c->options = options;
- 	braille_set_options(c, brl_options);
- 
-diff --git a/kernel/time/clocksource.c b/kernel/time/clocksource.c
-index fff5f64981c6..f0c833d89ace 100644
---- a/kernel/time/clocksource.c
-+++ b/kernel/time/clocksource.c
-@@ -1203,7 +1203,7 @@ static int __init boot_override_clocksource(char* str)
- {
- 	mutex_lock(&clocksource_mutex);
- 	if (str)
--		strlcpy(override_name, str, sizeof(override_name));
-+		stracpy(override_name, str);
- 	mutex_unlock(&clocksource_mutex);
- 	return 1;
- }
-
-
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogT25kcmVqIE1vc25hY2Vr
+IFttYWlsdG86b21vc25hY2VAcmVkaGF0LmNvbV0NCj4gU2VudDogTW9uZGF5LCBKdWx5IDIyLCAy
+MDE5IDY6NDggUE0NCj4gVG86IEdvdGUsIE5pdGluIFIgPG5pdGluLnIuZ290ZUBpbnRlbC5jb20+
+DQo+IENjOiBLZWVzIENvb2sgPGtlZXNjb29rQGNocm9taXVtLm9yZz47IGtlcm5lbC0NCj4gaGFy
+ZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgUGF1bCBNb29yZSA8cGF1bEBwYXVsLW1vb3JlLmNv
+bT47DQo+IFN0ZXBoZW4gU21hbGxleSA8c2RzQHR5Y2hvLm5zYS5nb3Y+OyBFcmljIFBhcmlzIDxl
+cGFyaXNAcGFyaXNwbGFjZS5vcmc+Ow0KPiBTRWxpbnV4IGxpc3QgPHNlbGludXhAdmdlci5rZXJu
+ZWwub3JnPjsgTGludXgga2VybmVsIG1haWxpbmcgbGlzdCA8bGludXgtDQo+IGtlcm5lbEB2Z2Vy
+Lmtlcm5lbC5vcmc+DQo+IFN1YmplY3Q6IFJlOiBbUEFUQ0hdIHNlbGludXg6IGNvbnZlcnQgc3Ry
+dWN0IHNpZHRhYiBjb3VudCB0byByZWZjb3VudF90DQo+IA0KPiBPbiBNb24sIEp1bCAyMiwgMjAx
+OSBhdCAxOjM1IFBNIE5pdGluR290ZSA8bml0aW4uci5nb3RlQGludGVsLmNvbT4gd3JvdGU6DQo+
+ID4gcmVmY291bnRfdCB0eXBlIGFuZCBjb3JyZXNwb25kaW5nIEFQSSBzaG91bGQgYmUgdXNlZCBp
+bnN0ZWFkIG9mDQo+ID4gYXRvbWljX3Qgd2hlbiB0aGUgdmFyaWFibGUgaXMgdXNlZCBhcyBhIHJl
+ZmVyZW5jZSBjb3VudGVyLiBUaGlzIGFsbG93cw0KPiA+IHRvIGF2b2lkIGFjY2lkZW50YWwgcmVm
+Y291bnRlciBvdmVyZmxvd3MgdGhhdCBtaWdodCBsZWFkIHRvDQo+ID4gdXNlLWFmdGVyLWZyZWUg
+c2l0dWF0aW9ucy4NCj4gPg0KPiA+IFNpZ25lZC1vZmYtYnk6IE5pdGluR290ZSA8bml0aW4uci5n
+b3RlQGludGVsLmNvbT4NCj4gDQo+IE5hY2suDQo+IA0KPiBUaGUgJ2NvdW50JyB2YXJpYWJsZSBp
+cyBub3QgdXNlZCBhcyBhIHJlZmVyZW5jZSBjb3VudGVyIGhlcmUuIEl0IHRyYWNrcyB0aGUNCj4g
+bnVtYmVyIG9mIGVudHJpZXMgaW4gc2lkdGFiLCB3aGljaCBpcyBhIHZlcnkgc3BlY2lmaWMgbG9v
+a3VwIHRhYmxlIHRoYXQgY2FuDQo+IG9ubHkgZ3JvdyAodGhlIGNvdW50IG5ldmVyIGRlY3JlYXNl
+cykuIEkgb25seSBtYWRlIGl0IGF0b21pYyBiZWNhdXNlIHRoZQ0KPiB2YXJpYWJsZSBpcyByZWFk
+IG91dHNpZGUgb2YgdGhlIHNpZHRhYidzIHNwaW4gbG9jayBhbmQgdGh1cyB0aGUgcmVhZHMgYW5k
+DQo+IHdyaXRlcyB0byBpdCBuZWVkIHRvIGJlIGd1YXJhbnRlZWQgdG8gYmUgYXRvbWljLiBUaGUg
+Y291bnRlciBpcyBvbmx5IHVwZGF0ZWQNCj4gdW5kZXIgdGhlIHNwaW4gbG9jaywgc28gaW5zZXJ0
+aW9ucyBkbyBub3QgcmFjZSB3aXRoIGVhY2ggb3RoZXIuDQoNCkFncmVlZC4gVGhhbmtzIGZvciBj
+bGFyaWZpY2F0aW9uLiANCkknbSBnb2luZyB0byBkaXNjb250aW51ZSB0aGlzIHBhdGNoLg0KDQo+
+IA0KPiBZb3VyIHBhdGNoLCBob3dldmVyLCBsZWFkIG1lIHRvIHJlYWxpemUgdGhhdCBJIGZvcmdv
+dCB0byBndWFyZCBhZ2FpbnN0DQo+IG92ZXJmbG93IGFib3ZlIFNJRFRBQl9NQVggd2hlbiBhIG5l
+dyBlbnRyeSBpcyBiZWluZyBpbnNlcnRlZC4gSXQgaXMNCj4gZXh0cmVtZWx5IHVubGlrZWx5IHRv
+IGhhcHBlbiBpbiBwcmFjdGljZSwgYnV0IHNob3VsZCBiZSBmaXhlZCBhbnl3YXkuDQo+IEknbGwg
+c2VuZCBhIHBhdGNoIHNob3J0bHkuDQo+IA0KDQpUaGFuayB5b3UuDQoNCj4gPiAtLS0NCj4gPiAg
+c2VjdXJpdHkvc2VsaW51eC9zcy9zaWR0YWIuYyB8IDE2ICsrKysrKysrLS0tLS0tLS0NCj4gPiBz
+ZWN1cml0eS9zZWxpbnV4L3NzL3NpZHRhYi5oIHwgIDIgKy0NCj4gPiAgMiBmaWxlcyBjaGFuZ2Vk
+LCA5IGluc2VydGlvbnMoKyksIDkgZGVsZXRpb25zKC0pDQo+ID4NCj4gPiBkaWZmIC0tZ2l0IGEv
+c2VjdXJpdHkvc2VsaW51eC9zcy9zaWR0YWIuYw0KPiA+IGIvc2VjdXJpdHkvc2VsaW51eC9zcy9z
+aWR0YWIuYyBpbmRleCBlNjNhOTBmZjI3MjguLjIwZmUyMzVjNmM3MSAxMDA2NDQNCj4gPiAtLS0g
+YS9zZWN1cml0eS9zZWxpbnV4L3NzL3NpZHRhYi5jDQo+ID4gKysrIGIvc2VjdXJpdHkvc2VsaW51
+eC9zcy9zaWR0YWIuYw0KPiA+IEBAIC0yOSw3ICsyOSw3IEBAIGludCBzaWR0YWJfaW5pdChzdHJ1
+Y3Qgc2lkdGFiICpzKQ0KPiA+ICAgICAgICAgZm9yIChpID0gMDsgaSA8IFNFQ0lOSVRTSURfTlVN
+OyBpKyspDQo+ID4gICAgICAgICAgICAgICAgIHMtPmlzaWRzW2ldLnNldCA9IDA7DQo+ID4NCj4g
+PiAtICAgICAgIGF0b21pY19zZXQoJnMtPmNvdW50LCAwKTsNCj4gPiArICAgICAgIHJlZmNvdW50
+X3NldCgmcy0+Y291bnQsIDApOw0KPiA+DQo+ID4gICAgICAgICBzLT5jb252ZXJ0ID0gTlVMTDsN
+Cj4gPg0KPiA+IEBAIC0xMzAsNyArMTMwLDcgQEAgc3RhdGljIHN0cnVjdCBjb250ZXh0ICpzaWR0
+YWJfZG9fbG9va3VwKHN0cnVjdA0KPiA+IHNpZHRhYiAqcywgdTMyIGluZGV4LCBpbnQgYWxsb2Mp
+DQo+ID4NCj4gPiAgc3RhdGljIHN0cnVjdCBjb250ZXh0ICpzaWR0YWJfbG9va3VwKHN0cnVjdCBz
+aWR0YWIgKnMsIHUzMiBpbmRleCkgIHsNCj4gPiAtICAgICAgIHUzMiBjb3VudCA9ICh1MzIpYXRv
+bWljX3JlYWQoJnMtPmNvdW50KTsNCj4gPiArICAgICAgIHUzMiBjb3VudCA9IHJlZmNvdW50X3Jl
+YWQoJnMtPmNvdW50KTsNCj4gPg0KPiA+ICAgICAgICAgaWYgKGluZGV4ID49IGNvdW50KQ0KPiA+
+ICAgICAgICAgICAgICAgICByZXR1cm4gTlVMTDsNCj4gPiBAQCAtMjQ1LDcgKzI0NSw3IEBAIHN0
+YXRpYyBpbnQgc2lkdGFiX3JldmVyc2VfbG9va3VwKHN0cnVjdCBzaWR0YWIgKnMsDQo+IHN0cnVj
+dCBjb250ZXh0ICpjb250ZXh0LA0KPiA+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+IHUzMiAqaW5kZXgpDQo+ID4gIHsNCj4gPiAgICAgICAgIHVuc2lnbmVkIGxvbmcgZmxhZ3M7DQo+
+ID4gLSAgICAgICB1MzIgY291bnQgPSAodTMyKWF0b21pY19yZWFkKCZzLT5jb3VudCk7DQo+ID4g
+KyAgICAgICB1MzIgY291bnQgPSAodTMyKXJlZmNvdW50X3JlYWQoJnMtPmNvdW50KTsNCj4gPiAg
+ICAgICAgIHUzMiBjb3VudF9sb2NrZWQsIGxldmVsLCBwb3M7DQo+ID4gICAgICAgICBzdHJ1Y3Qg
+c2lkdGFiX2NvbnZlcnRfcGFyYW1zICpjb252ZXJ0Ow0KPiA+ICAgICAgICAgc3RydWN0IGNvbnRl
+eHQgKmRzdCwgKmRzdF9jb252ZXJ0Ow0KPiA+IEBAIC0yNzIsNyArMjcyLDcgQEAgc3RhdGljIGlu
+dCBzaWR0YWJfcmV2ZXJzZV9sb29rdXAoc3RydWN0IHNpZHRhYiAqcywNCj4gc3RydWN0IGNvbnRl
+eHQgKmNvbnRleHQsDQo+ID4gICAgICAgICBzcGluX2xvY2tfaXJxc2F2ZSgmcy0+bG9jaywgZmxh
+Z3MpOw0KPiA+DQo+ID4gICAgICAgICBjb252ZXJ0ID0gcy0+Y29udmVydDsNCj4gPiAtICAgICAg
+IGNvdW50X2xvY2tlZCA9ICh1MzIpYXRvbWljX3JlYWQoJnMtPmNvdW50KTsNCj4gPiArICAgICAg
+IGNvdW50X2xvY2tlZCA9ICh1MzIpcmVmY291bnRfcmVhZCgmcy0+Y291bnQpOw0KPiA+ICAgICAg
+ICAgbGV2ZWwgPSBzaWR0YWJfbGV2ZWxfZnJvbV9jb3VudChjb3VudF9sb2NrZWQpOw0KPiA+DQo+
+ID4gICAgICAgICAvKiBpZiBjb3VudCBoYXMgY2hhbmdlZCBiZWZvcmUgd2UgYWNxdWlyZWQgdGhl
+IGxvY2ssIHRoZW4gY2F0Y2ggdXAgKi8NCj4gPiBAQCAtMzE1LDcgKzMxNSw3IEBAIHN0YXRpYyBp
+bnQgc2lkdGFiX3JldmVyc2VfbG9va3VwKHN0cnVjdCBzaWR0YWIgKnMsDQo+IHN0cnVjdCBjb250
+ZXh0ICpjb250ZXh0LA0KPiA+ICAgICAgICAgICAgICAgICB9DQo+ID4NCj4gPiAgICAgICAgICAg
+ICAgICAgLyogYXQgdGhpcyBwb2ludCB3ZSBrbm93IHRoZSBpbnNlcnQgd29uJ3QgZmFpbCAqLw0K
+PiA+IC0gICAgICAgICAgICAgICBhdG9taWNfc2V0KCZjb252ZXJ0LT50YXJnZXQtPmNvdW50LCBj
+b3VudCArIDEpOw0KPiA+ICsgICAgICAgICAgICAgICByZWZjb3VudF9zZXQoJmNvbnZlcnQtPnRh
+cmdldC0+Y291bnQsIGNvdW50ICsgMSk7DQo+ID4gICAgICAgICB9DQo+ID4NCj4gPiAgICAgICAg
+IGlmIChjb250ZXh0LT5sZW4pDQo+ID4gQEAgLTMyOCw3ICszMjgsNyBAQCBzdGF0aWMgaW50IHNp
+ZHRhYl9yZXZlcnNlX2xvb2t1cChzdHJ1Y3Qgc2lkdGFiICpzLA0KPiBzdHJ1Y3QgY29udGV4dCAq
+Y29udGV4dCwNCj4gPiAgICAgICAgIC8qIHdyaXRlIGVudHJpZXMgYmVmb3JlIHdyaXRpbmcgbmV3
+IGNvdW50ICovDQo+ID4gICAgICAgICBzbXBfd21iKCk7DQo+ID4NCj4gPiAtICAgICAgIGF0b21p
+Y19zZXQoJnMtPmNvdW50LCBjb3VudCArIDEpOw0KPiA+ICsgICAgICAgcmVmY291bnRfc2V0KCZz
+LT5jb3VudCwgY291bnQgKyAxKTsNCj4gPg0KPiA+ICAgICAgICAgcmMgPSAwOw0KPiA+ICBvdXRf
+dW5sb2NrOg0KPiA+IEBAIC00MTgsNyArNDE4LDcgQEAgaW50IHNpZHRhYl9jb252ZXJ0KHN0cnVj
+dCBzaWR0YWIgKnMsIHN0cnVjdA0KPiBzaWR0YWJfY29udmVydF9wYXJhbXMgKnBhcmFtcykNCj4g
+PiAgICAgICAgICAgICAgICAgcmV0dXJuIC1FQlVTWTsNCj4gPiAgICAgICAgIH0NCj4gPg0KPiA+
+IC0gICAgICAgY291bnQgPSAodTMyKWF0b21pY19yZWFkKCZzLT5jb3VudCk7DQo+ID4gKyAgICAg
+ICBjb3VudCA9ICh1MzIpcmVmY291bnRfcmVhZCgmcy0+Y291bnQpOw0KPiA+ICAgICAgICAgbGV2
+ZWwgPSBzaWR0YWJfbGV2ZWxfZnJvbV9jb3VudChjb3VudCk7DQo+ID4NCj4gPiAgICAgICAgIC8q
+IGFsbG9jYXRlIGxhc3QgbGVhZiBpbiB0aGUgbmV3IHNpZHRhYiAodG8gYXZvaWQgcmFjZSB3aXRo
+DQo+ID4gQEAgLTQzMSw3ICs0MzEsNyBAQCBpbnQgc2lkdGFiX2NvbnZlcnQoc3RydWN0IHNpZHRh
+YiAqcywgc3RydWN0DQo+IHNpZHRhYl9jb252ZXJ0X3BhcmFtcyAqcGFyYW1zKQ0KPiA+ICAgICAg
+ICAgfQ0KPiA+DQo+ID4gICAgICAgICAvKiBzZXQgY291bnQgaW4gY2FzZSBubyBuZXcgZW50cmll
+cyBhcmUgYWRkZWQgZHVyaW5nIGNvbnZlcnNpb24gKi8NCj4gPiAtICAgICAgIGF0b21pY19zZXQo
+JnBhcmFtcy0+dGFyZ2V0LT5jb3VudCwgY291bnQpOw0KPiA+ICsgICAgICAgcmVmY291bnRfc2V0
+KCZwYXJhbXMtPnRhcmdldC0+Y291bnQsIGNvdW50KTsNCj4gPg0KPiA+ICAgICAgICAgLyogZW5h
+YmxlIGxpdmUgY29udmVydCBvZiBuZXcgZW50cmllcyAqLw0KPiA+ICAgICAgICAgcy0+Y29udmVy
+dCA9IHBhcmFtczsNCj4gPiBkaWZmIC0tZ2l0IGEvc2VjdXJpdHkvc2VsaW51eC9zcy9zaWR0YWIu
+aCBiL3NlY3VyaXR5L3NlbGludXgvc3Mvc2lkdGFiLmgNCj4gPiBpbmRleCBiYmQ1YzBkMWYzYmQu
+LjY4ZGQ5NmE1YmViYSAxMDA2NDQNCj4gPiAtLS0gYS9zZWN1cml0eS9zZWxpbnV4L3NzL3NpZHRh
+Yi5oDQo+ID4gKysrIGIvc2VjdXJpdHkvc2VsaW51eC9zcy9zaWR0YWIuaA0KPiA+IEBAIC03MCw3
+ICs3MCw3IEBAIHN0cnVjdCBzaWR0YWJfY29udmVydF9wYXJhbXMgew0KPiA+DQo+ID4gIHN0cnVj
+dCBzaWR0YWIgew0KPiA+ICAgICAgICAgdW5pb24gc2lkdGFiX2VudHJ5X2lubmVyIHJvb3RzW1NJ
+RFRBQl9NQVhfTEVWRUwgKyAxXTsNCj4gPiAtICAgICAgIGF0b21pY190IGNvdW50Ow0KPiA+ICsg
+ICAgICAgcmVmY291bnRfdCBjb3VudDsNCj4gPiAgICAgICAgIHN0cnVjdCBzaWR0YWJfY29udmVy
+dF9wYXJhbXMgKmNvbnZlcnQ7DQo+ID4gICAgICAgICBzcGlubG9ja190IGxvY2s7DQo+ID4NCj4g
+PiAtLQ0KPiA+IDIuMTcuMQ0KPiA+DQo+IA0KPiBUaGFua3MsDQo+IA0KPiAtLQ0KPiBPbmRyZWog
+TW9zbmFjZWsgPG9tb3NuYWNlIGF0IHJlZGhhdCBkb3QgY29tPg0KPiBTb2Z0d2FyZSBFbmdpbmVl
+ciwgU2VjdXJpdHkgVGVjaG5vbG9naWVzDQo+IFJlZCBIYXQsIEluYy4NCg==
