@@ -1,23 +1,23 @@
-Return-Path: <SRS0=ZWT9=VU=lists.openwall.com=kernel-hardening-return-16566-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ZSGJ=VU=lists.openwall.com=kernel-hardening-return-16567-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8648CC76186
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 22:15:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 11BADC76186
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 22:18:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D0C3122387
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 22:15:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 633F722387
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jul 2019 22:18:09 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="AAitTFh2"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D0C3122387
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="dAZim43y"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 633F722387
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16566-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17907 invoked by uid 550); 23 Jul 2019 22:15:41 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16567-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21645 invoked by uid 550); 23 Jul 2019 22:18:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,81 +25,96 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17865 invoked from network); 23 Jul 2019 22:15:40 -0000
+Received: (qmail 21627 invoked from network); 23 Jul 2019 22:18:03 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=Icfg5DcCCEWimw0gGN65g6qUR7rCNKmXBTgcheDTHT0=;
-        b=AAitTFh2B1QRrWnzVv1syYfrHTyY0naNYdK1DbZWAxXpVZ82DU0Irl3dPPzLxjGCt7
-         luuUN83r3FbCK99c2hnssohgwYEk2pxj1VRGiN1xIRzQT8xC4hSWm2QIcASeTD1gbsUX
-         E0aHWa9Xodhg1vNuqeTUbyoDE69Y4OaK1BCU8=
+        bh=1tRj12XMgs1Y3+O1rqUEapdlbt8lWOQ+IFc7/KZfXPw=;
+        b=dAZim43y7Eol9vmjAIB8BeRHMVgrkO1k/3/F/JV1WYKVM9LWLARy0MvDlAwVL63Flo
+         MlOPIFFQgonzgSA3mtZL/G9iRF2G47QTYenotSsBUZCEI8uwAit9C+Rif4ZqFQQPdnUY
+         8TdVLpPwlPoValbGfPqM1x5pMpvQFl+7gOoEU=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=Icfg5DcCCEWimw0gGN65g6qUR7rCNKmXBTgcheDTHT0=;
-        b=aESHLA0uLlTU6ZZB3O8+WwUYiKiHin6roFXKLMefWPtd0Dvc21eOh6Wtcdwj6t/08g
-         ps2m/CbiH1CzWEkle0ezLPkNTh6cODrRd0uSZJiQsTU7M4sEA5o9QnlEpMSvBd2F3Jut
-         01mhV743HhBQmPdDL0ltZLjIabqF+Unyxbsdh8Sgrf0QPxwEH1QRwNEMZQ/JlsIJFdv8
-         uy5FqleTMkGGiCA9z4AEOoPKMcA6LpTBE5txgydb0DPyJZmrwZxW9F86oMaar1qtKuQV
-         yxwQWOHDGvh24xs/yOyCjUR/BlE1Joxnfn1CpfX6tntafsvFpKpYcIaOvIyjploQA/16
-         3XDQ==
-X-Gm-Message-State: APjAAAXAVzguPmrFKpSXusF9xGpEXBSClG/Vmo8KxH/TitTSYR9++tTB
-	plvRh9KWfajh/gdjU2ESQncgisoqTfk=
-X-Google-Smtp-Source: APXvYqxoNU4NH/h4TE8rzkylhvVL55TyYXlrleqGKlj7SubNJWr2FLU6Gr22QEQzgWsjYYr7scRn5g==
-X-Received: by 2002:a17:902:1129:: with SMTP id d38mr83569879pla.220.1563920129029;
-        Tue, 23 Jul 2019 15:15:29 -0700 (PDT)
-Date: Tue, 23 Jul 2019 15:15:27 -0700
+        bh=1tRj12XMgs1Y3+O1rqUEapdlbt8lWOQ+IFc7/KZfXPw=;
+        b=aQn0SKY+AWO/Y34RMDgMqt7+6tu7afZ2h5pDkh7Ae0Ol+AQz2jkUrcQi7gFCqi+uOq
+         nvyZfrPT4gs/Y2hZ61jF7uiniRXVcdsaY7MQZPTJwTTD7VOx0Afr1rAd3yrlQvZJQcR2
+         tyRFXv8O5U87+jiTpGI7sh3pNubcRClXE0ab8sILm6YRqBkfaPyearYMWuyF+M45FAuL
+         HNQGPLWtpWIsGOaukiqI2G5fc15Zoc/bq6DpY/mzzL6Z7sjJB/hrvJbu4648UaoChmuT
+         EIdu7Ih7FtGLcK9C94U9iLhApnlmi2DmN2232GKdcbXnvL2J5gFIneIP12G34v0Wk5TG
+         9vxg==
+X-Gm-Message-State: APjAAAW7qm6EUpwE5YZRZfmxSaqLDf15HbFgr5iDsBjQP6ei2uUF1xTp
+	MD+Yaks6nhwQHWA0un1gGS6S4A==
+X-Google-Smtp-Source: APXvYqxKDpqoSQmoMeWiZyozdu8jr1jHK0awjq6kY6EUyZIN/fJ86cWjhWRbVYlYok3Jw6Y0JckOvA==
+X-Received: by 2002:a63:5452:: with SMTP id e18mr62112901pgm.232.1563920271498;
+        Tue, 23 Jul 2019 15:17:51 -0700 (PDT)
+Date: Tue, 23 Jul 2019 15:17:49 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Ondrej Mosnacek <omosnace@redhat.com>
-Cc: selinux@vger.kernel.org, Paul Moore <paul@paul-moore.com>,
+To: Jann Horn <jannh@google.com>
+Cc: Ondrej Mosnacek <omosnace@redhat.com>,
 	NitinGote <nitin.r.gote@intel.com>,
-	kernel-hardening@lists.openwall.com,
-	William Roberts <bill.c.roberts@gmail.com>
-Subject: Re: [PATCH v2] selinux: check sidtab limit before adding a new entry
-Message-ID: <201907231515.DCFF5B6582@keescook>
-References: <20190723065059.30101-1-omosnace@redhat.com>
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Paul Moore <paul@paul-moore.com>,
+	Stephen Smalley <sds@tycho.nsa.gov>,
+	Eric Paris <eparis@parisplace.org>,
+	SElinux list <selinux@vger.kernel.org>,
+	Linux kernel mailing list <linux-kernel@vger.kernel.org>
+Subject: Re: [PATCH] selinux: convert struct sidtab count to refcount_t
+Message-ID: <201907231516.11DB47AA@keescook>
+References: <20190722113151.1584-1-nitin.r.gote@intel.com>
+ <CAFqZXNs5vdQwoy2k=_XLiGRdyZCL=n8as6aL01Dw-U62amFREA@mail.gmail.com>
+ <CAG48ez3zRoB7awMdb-koKYJyfP9WifTLevxLxLHioLhH=itZ-A@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190723065059.30101-1-omosnace@redhat.com>
+In-Reply-To: <CAG48ez3zRoB7awMdb-koKYJyfP9WifTLevxLxLHioLhH=itZ-A@mail.gmail.com>
 
-On Tue, Jul 23, 2019 at 08:50:59AM +0200, Ondrej Mosnacek wrote:
-> We need to error out when trying to add an entry above SIDTAB_MAX in
-> sidtab_reverse_lookup() to avoid overflow on the odd chance that this
-> happens.
+On Tue, Jul 23, 2019 at 04:53:47PM +0200, Jann Horn wrote:
+> On Mon, Jul 22, 2019 at 3:44 PM Ondrej Mosnacek <omosnace@redhat.com> wrote:
+> > On Mon, Jul 22, 2019 at 1:35 PM NitinGote <nitin.r.gote@intel.com> wrote:
+> > > refcount_t type and corresponding API should be
+> > > used instead of atomic_t when the variable is used as
+> > > a reference counter. This allows to avoid accidental
+> > > refcounter overflows that might lead to use-after-free
+> > > situations.
+> > >
+> > > Signed-off-by: NitinGote <nitin.r.gote@intel.com>
+> >
+> > Nack.
+> >
+> > The 'count' variable is not used as a reference counter here. It
+> > tracks the number of entries in sidtab, which is a very specific
+> > lookup table that can only grow (the count never decreases). I only
+> > made it atomic because the variable is read outside of the sidtab's
+> > spin lock and thus the reads and writes to it need to be guaranteed to
+> > be atomic. The counter is only updated under the spin lock, so
+> > insertions do not race with each other.
 > 
-> Fixes: ee1a84fdfeed ("selinux: overhaul sidtab to fix bug and improve performance")
-> Signed-off-by: Ondrej Mosnacek <omosnace@redhat.com>
-
-Reviewed-by: Kees Cook <keescook@chromium.org>
-
--Kees
-
-> ---
->  security/selinux/ss/sidtab.c | 5 +++++
->  1 file changed, 5 insertions(+)
+> Probably shouldn't even be atomic_t... quoting Documentation/atomic_t.txt:
 > 
-> diff --git a/security/selinux/ss/sidtab.c b/security/selinux/ss/sidtab.c
-> index e63a90ff2728..1f0a6eaa2d6a 100644
-> --- a/security/selinux/ss/sidtab.c
-> +++ b/security/selinux/ss/sidtab.c
-> @@ -286,6 +286,11 @@ static int sidtab_reverse_lookup(struct sidtab *s, struct context *context,
->  		++count;
->  	}
->  
-> +	/* bail out if we already reached max entries */
-> +	rc = -EOVERFLOW;
-> +	if (count >= SIDTAB_MAX)
-> +		goto out_unlock;
-> +
->  	/* insert context into new entry */
->  	rc = -ENOMEM;
->  	dst = sidtab_do_lookup(s, count, 1);
-> -- 
-> 2.21.0
+> | SEMANTICS
+> | ---------
+> |
+> | Non-RMW ops:
+> |
+> | The non-RMW ops are (typically) regular LOADs and STOREs and are canonically
+> | implemented using READ_ONCE(), WRITE_ONCE(), smp_load_acquire() and
+> | smp_store_release() respectively. Therefore, if you find yourself only using
+> | the Non-RMW operations of atomic_t, you do not in fact need atomic_t at all
+> | and are doing it wrong.
 > 
+> So I think what you actually want here is a plain "int count", and then:
+>  - for unlocked reads, either READ_ONCE()+smp_rmb() or smp_load_acquire()
+>  - for writes, either smp_wmb()+WRITE_ONCE() or smp_store_release()
+> 
+> smp_load_acquire() and smp_store_release() are probably the nicest
+> here, since they are semantically clearer than smp_rmb()/smp_wmb().
+
+Perhaps we need a "statistics" counter type for these kinds of counters?
+"counter_t"? I bet there are a lot of atomic_t uses that are just trying
+to be counters. (likely most of atomic_t that isn't now refcount_t ...)
 
 -- 
 Kees Cook
