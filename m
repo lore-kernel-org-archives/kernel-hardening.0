@@ -1,22 +1,20 @@
-Return-Path: <SRS0=+99M=VV=lists.openwall.com=kernel-hardening-return-16579-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Xeaf=VV=lists.openwall.com=kernel-hardening-return-16580-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 52E11C76186
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 17:31:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 917D0C76186
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 18:18:11 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A161721852
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 17:31:41 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux-foundation.org header.i=@linux-foundation.org header.b="cBh9ReMV"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A161721852
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-foundation.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16579-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30671 invoked by uid 550); 24 Jul 2019 17:31:34 -0000
+	by mail.kernel.org (Postfix) with SMTP id E1C7021926
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 18:18:10 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E1C7021926
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16580-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27970 invoked by uid 550); 24 Jul 2019 18:18:03 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,75 +22,118 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32263 invoked from network); 24 Jul 2019 17:09:26 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linux-foundation.org; s=google;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=U8cl4nVt9icJqK0yFnx5TQc7gNHvGEAy+pPaBq+pmC0=;
-        b=cBh9ReMV8eGmBOSMW8Zb37lV8BeNSV/1KWRwZgRg4j0iO5KN3WnhA2Qu32ZWEKD+eQ
-         EXrde2G7KNiEvgfnjmcRw4+n9RJPOxSJ6KCiK+lXaNn2j190ZQQ0Dnj+r9+0owvXalW+
-         XrJXduBhJmMLWWMH9L/vZIpTPzMtHlHQbeDsE=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=U8cl4nVt9icJqK0yFnx5TQc7gNHvGEAy+pPaBq+pmC0=;
-        b=dIy2slLQfT6nvGuS41fXM/h9F5bKZ6uK5+aBAgwdSCfM/ULu0rGj3JPLMMGup5YhOf
-         uxilWk6DeAdF7xkxdJOfp1hLBLoLuV7a74EFnAMLytzGlloH7Z7N6nDKshL46H0y8YKg
-         xyp9E3xlSlQVDb7xFhsLKSZ7i/QD4ybd8lgUwmyzLHrru96K+hBbEFtRDORsZ0r733AY
-         pXoR3FxCKe5bhiqQl/hN3ncwYdlGbyDKL4fG2r18kAp/8bp/AH0xnXUvHCE2BknMUyMM
-         YetXlkEOHG9sdheCmNznvOd2ROclu9L8D+KpECwqgdohlfU614cE2dja/g2CUwGuFxE8
-         K2WQ==
-X-Gm-Message-State: APjAAAVbHUeSG3mo3Rq33VhIRGg/C/EVbfQC1wcUTMEOVouFOfR4bvoG
-	eXgbf2Ja7bJD1+OBhhIocMi9uu07VxY=
-X-Google-Smtp-Source: APXvYqwqPWYRhgj0qz626CzmsL0L4GB5mZgDB6nR3SDB81xk9nJSiA75fJWrFcXigNnJ49cksvDLYQ==
-X-Received: by 2002:ac2:43bb:: with SMTP id t27mr4174431lfl.187.1563988154939;
-        Wed, 24 Jul 2019 10:09:14 -0700 (PDT)
-X-Received: by 2002:a2e:9bc6:: with SMTP id w6mr44754092ljj.156.1563988153239;
- Wed, 24 Jul 2019 10:09:13 -0700 (PDT)
+Received: (qmail 27919 invoked from network); 24 Jul 2019 18:18:02 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.64,303,1559545200"; 
+   d="scan'208";a="160652656"
+From: "Gote, Nitin R" <nitin.r.gote@intel.com>
+To: Joe Perches <joe@perches.com>, Kees Cook <keescook@chromium.org>
+CC: "corbet@lwn.net" <corbet@lwn.net>, "akpm@linux-foundation.org"
+	<akpm@linux-foundation.org>, "apw@canonical.com" <apw@canonical.com>,
+	"linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>,
+	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: RE: [PATCH v5] Documentation/checkpatch: Prefer strscpy/strscpy_pad
+ over strcpy/strlcpy/strncpy
+Thread-Topic: [PATCH v5] Documentation/checkpatch: Prefer
+ strscpy/strscpy_pad over strcpy/strlcpy/strncpy
+Thread-Index: AQHVPFiM9cWMTc5Km0imVXiG0lTtQKbWkWuAgAAC7gCAAUjQQIACQMYQ
+Date: Wed, 24 Jul 2019 18:17:40 +0000
+Message-ID: <12356C813DFF6F479B608F81178A561587AE45@BGSMSX101.gar.corp.intel.com>
+References: <20190717043005.19627-1-nitin.r.gote@intel.com>
+	 <201907221029.B0CBED4F@keescook>
+ <28404b52d58efa0a3e85ce05ce0b210049ed6050.camel@perches.com>
+ <12356C813DFF6F479B608F81178A561587ABA9@BGSMSX101.gar.corp.intel.com>
+In-Reply-To: <12356C813DFF6F479B608F81178A561587ABA9@BGSMSX101.gar.corp.intel.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+dlp-product: dlpe-windows
+dlp-version: 11.0.600.7
+dlp-reaction: no-action
+x-ctpclassification: CTP_NT
+x-titus-metadata-40: eyJDYXRlZ29yeUxhYmVscyI6IiIsIk1ldGFkYXRhIjp7Im5zIjoiaHR0cDpcL1wvd3d3LnRpdHVzLmNvbVwvbnNcL0ludGVsMyIsImlkIjoiMjBhMDJiYjQtNTEzYy00MzQ5LTlkYTktNTRlZThhY2JhNjhlIiwicHJvcHMiOlt7Im4iOiJDVFBDbGFzc2lmaWNhdGlvbiIsInZhbHMiOlt7InZhbHVlIjoiQ1RQX05UIn1dfV19LCJTdWJqZWN0TGFiZWxzIjpbXSwiVE1DVmVyc2lvbiI6IjE3LjEwLjE4MDQuNDkiLCJUcnVzdGVkTGFiZWxIYXNoIjoiOW9FcGxDcGpvbTJ1eHdcLzRvWURPVXdVWTZ4MDh4OXVpbkFrd2h1WGFjaDg5aUhRYmhJV1g0WkFaNVFJSUkxVTQifQ==
+x-originating-ip: [10.223.10.10]
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-References: <cover.1563841972.git.joe@perches.com> <7ab8957eaf9b0931a59eff6e2bd8c5169f2f6c41.1563841972.git.joe@perches.com>
- <eec901c6-ca51-89e4-1887-1ccab0288bee@rasmusvillemoes.dk> <5ffdbf4f87054b47a2daf23a6afabecf@AcuMS.aculab.com>
- <bc1ad99a420dd842ce3a17c2c38a2f94683dc91c.camel@opteya.com> <396d1eed-8edf-aa77-110b-c50ead3a5fd5@rasmusvillemoes.dk>
-In-Reply-To: <396d1eed-8edf-aa77-110b-c50ead3a5fd5@rasmusvillemoes.dk>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 24 Jul 2019 10:08:57 -0700
-X-Gmail-Original-Message-ID: <CAHk-=whPA-Vv-OHbUe4M5=ygTknQNOasnLAp-E3zSAaq=pue+g@mail.gmail.com>
-Message-ID: <CAHk-=whPA-Vv-OHbUe4M5=ygTknQNOasnLAp-E3zSAaq=pue+g@mail.gmail.com>
-Subject: Re: [PATCH 1/2] string: Add stracpy and stracpy_pad mechanisms
-To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: Yann Droneaud <ydroneaud@opteya.com>, David Laight <David.Laight@aculab.com>, 
-	Joe Perches <joe@perches.com>, 
-	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, 
-	Stephen Kitt <steve@sk2.org>, Kees Cook <keescook@chromium.org>, 
-	Nitin Gote <nitin.r.gote@intel.com>, "jannh@google.com" <jannh@google.com>, 
-	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, 
-	Andrew Morton <akpm@linux-foundation.org>
-Content-Type: text/plain; charset="UTF-8"
 
-On Wed, Jul 24, 2019 at 6:09 AM Rasmus Villemoes
-<linux@rasmusvillemoes.dk> wrote:
+Hi,
+
+> -----Original Message-----
+> From: Gote, Nitin R [mailto:nitin.r.gote@intel.com]
+> Sent: Tuesday, July 23, 2019 2:56 PM
+> To: Joe Perches <joe@perches.com>; Kees Cook <keescook@chromium.org>
+> Cc: corbet@lwn.net; akpm@linux-foundation.org; apw@canonical.com;
+> linux-doc@vger.kernel.org; kernel-hardening@lists.openwall.com
+> Subject: RE: [PATCH v5] Documentation/checkpatch: Prefer
+> strscpy/strscpy_pad over strcpy/strlcpy/strncpy
+>=20
+>=20
+> > -----Original Message-----
+> > From: Joe Perches [mailto:joe@perches.com]
+> > Sent: Monday, July 22, 2019 11:11 PM
+> > To: Kees Cook <keescook@chromium.org>; Gote, Nitin R
+> > <nitin.r.gote@intel.com>
+> > Cc: corbet@lwn.net; akpm@linux-foundation.org; apw@canonical.com;
+> > linux-doc@vger.kernel.org; kernel-hardening@lists.openwall.com
+> > Subject: Re: [PATCH v5] Documentation/checkpatch: Prefer
+> > strscpy/strscpy_pad over strcpy/strlcpy/strncpy
+> >
+> > On Mon, 2019-07-22 at 10:30 -0700, Kees Cook wrote:
+> > > On Wed, Jul 17, 2019 at 10:00:05AM +0530, NitinGote wrote:
+> > > > From: Nitin Gote <nitin.r.gote@intel.com>
+> > > >
+> > > > Added check in checkpatch.pl to
+> > > > 1. Deprecate strcpy() in favor of strscpy().
+> > > > 2. Deprecate strlcpy() in favor of strscpy().
+> > > > 3. Deprecate strncpy() in favor of strscpy() or strscpy_pad().
+> > > >
+> > > > Updated strncpy() section in Documentation/process/deprecated.rst
+> > > > to cover strscpy_pad() case.
+> > > >
+> > > > Signed-off-by: Nitin Gote <nitin.r.gote@intel.com>
+> > >
+> > > Reviewed-by: Kees Cook <keescook@chromium.org>
+> > >
+> > > Joe, does this address your checkpatch concerns?
+> >
+> > Well, kinda.
+> >
+> > strscpy_pad isn't used anywhere in the kernel.
+> >
+> > And
+> >
+> > +        "strncpy"				=3D> "strscpy, strscpy_pad or
+> for non-
+> > NUL-terminated strings, strncpy() can still be used, but destinations
+> > should be marked with __nonstring",
+> >
+> > is a bit verbose.  This could be simply:
+> >
+> > +        "strncpy" =3D> "strscpy - for non-NUL-terminated uses,
+> > + strncpy() dst
+> > should be __nonstring",
+> >
 >
-> The kernel's snprintf() does not behave in a non-standard way, at least
-> not with respect to its return value.
 
-Note that the kernels snprintf() *does* very much protect against the
-overflow case - not by changing the return value, but simply by having
+Could you please give your opinion on below comment.
+=20
+> But, if the destination buffer needs extra NUL-padding for remaining size=
+ of
+> destination, then safe replacement is strscpy_pad().  Right?  If yes, the=
+n what
+> is your opinion on below change :
+>=20
+>         "strncpy" =3D> "strscpy, strcpy_pad - for non-NUL-terminated uses=
+,
+> strncpy() dst should be __nonstring",
+>=20
+>=20
 
-        /* Reject out-of-range values early.  Large positive sizes are
-           used for unknown buffer sizes. */
-        if (WARN_ON_ONCE(size > INT_MAX))
-                return 0;
-
-at the very top.
-
-So you can't actually overflow in the kernel by using the repeated
-
-        offset += vsnprintf( .. size - offset ..);
-
-model.
-
-Yes, it's the wrong thing to do, but it is still _safe_.
-
-              Linus
+If you agree on this, then I will include this change in next patch version=
+.
+=20
+ > -Nitin
