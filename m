@@ -1,20 +1,20 @@
-Return-Path: <SRS0=awIh=VV=lists.openwall.com=kernel-hardening-return-16570-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=w8Hd=VV=lists.openwall.com=kernel-hardening-return-16571-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 90263C7618B
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 11:40:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C7B52C7618B
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 11:41:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DFE6522387
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 11:40:53 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DFE6522387
+	by mail.kernel.org (Postfix) with SMTP id 2D77F229F4
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 11:41:30 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2D77F229F4
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=perches.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16570-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24061 invoked by uid 550); 24 Jul 2019 11:40:46 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16571-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26262 invoked by uid 550); 24 Jul 2019 11:41:24 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,56 +22,58 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24027 invoked from network); 24 Jul 2019 11:40:46 -0000
+Received: (qmail 26229 invoked from network); 24 Jul 2019 11:41:23 -0000
 X-Session-Marker: 6A6F6540706572636865732E636F6D
-X-HE-Tag: shape98_3ee351f3c5a54
-X-Filterd-Recvd-Size: 2144
-Message-ID: <b88ca439f5b2d578888a1cd39b30acb8121d422c.camel@perches.com>
-Subject: Re: [PATCH 1/2] string: Add stracpy and stracpy_pad mechanisms
+X-HE-Tag: boy04_4462ffde4ad0c
+X-Filterd-Recvd-Size: 2574
+Message-ID: <9bb45dcae38b0f9322c0ce033c041ede02f8d7ec.camel@perches.com>
+Subject: Re: [PATCH] checkpatch: Added warnings in favor of strscpy().
 From: Joe Perches <joe@perches.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, 
- linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, Stephen
- Kitt <steve@sk2.org>, Nitin Gote <nitin.r.gote@intel.com>,
- jannh@google.com,  kernel-hardening@lists.openwall.com, Rasmus Villemoes
- <rasmus.villemoes@prevas.dk>, Andrew Morton <akpm@linux-foundation.org>
-Date: Wed, 24 Jul 2019 04:40:30 -0700
-In-Reply-To: <201907231435.FABB1CC@keescook>
-References: <cover.1563841972.git.joe@perches.com>
-	 <7ab8957eaf9b0931a59eff6e2bd8c5169f2f6c41.1563841972.git.joe@perches.com>
-	 <201907231435.FABB1CC@keescook>
+To: Jonathan Corbet <corbet@lwn.net>
+Cc: Stephen Kitt <steve@sk2.org>, Kees Cook <keescook@chromium.org>, Nitin
+ Gote <nitin.r.gote@intel.com>, jannh@google.com,
+ kernel-hardening@lists.openwall.com,  linux-kernel@vger.kernel.org, Rasmus
+ Villemoes <rasmus.villemoes@prevas.dk>
+Date: Wed, 24 Jul 2019 04:41:07 -0700
+In-Reply-To: <20190722162804.754943bc@lwn.net>
+References: <1561722948-28289-1-git-send-email-nitin.r.gote@intel.com>
+	 <20190629181537.7d524f7d@sk2.org> <201907021024.D1C8E7B2D@keescook>
+	 <20190706144204.15652de7@heffalump.sk2.org>
+	 <201907221047.4895D35B30@keescook>
+	 <15f2be3cde69321f4f3a48d60645b303d66a600b.camel@perches.com>
+	 <20190722230102.442137dc@heffalump.sk2.org>
+	 <d96cf801c5cf68e785e8dfd9dba0994fcff20017.camel@perches.com>
+	 <20190722155730.08dfd4e3@lwn.net>
+	 <512d8977fb0d0b3eef7b6ea1753fb4c33fbc43e8.camel@perches.com>
+	 <20190722162804.754943bc@lwn.net>
 Content-Type: text/plain; charset="ISO-8859-1"
 User-Agent: Evolution 3.30.5-0ubuntu0.18.10.1 
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 
-On Tue, 2019-07-23 at 14:36 -0700, Kees Cook wrote:
-> On Mon, Jul 22, 2019 at 05:38:15PM -0700, Joe Perches wrote:
-> > Several uses of strlcpy and strscpy have had defects because the
-> > last argument of each function is misused or typoed.
-> > 
-> > Add macro mechanisms to avoid this defect.
-> > 
-> > stracpy (copy a string to a string array) must have a string
-> > array as the first argument (to) and uses sizeof(to) as the
-> > size.
-> > 
-> > These mechanisms verify that the to argument is an array of
-> > char or other compatible types like u8 or unsigned char.
-> > 
-> > A BUILD_BUG is emitted when the type of to is not compatible.
-> > 
-> > Signed-off-by: Joe Perches <joe@perches.com>
+On Mon, 2019-07-22 at 16:28 -0600, Jonathan Corbet wrote:
+> On Mon, 22 Jul 2019 15:24:33 -0700
+> Joe Perches <joe@perches.com> wrote:
 > 
-> I think Rasmus's suggestion would make sense:
+> > > If the functions themselves are fully defined in the .h file, I'd just add
+> > > the kerneldoc there as well.  That's how it's usually done, and you want
+> > > to keep the documentation and the prototypes together.  
+> > 
+> > In this case, it's a macro and yes, the kernel-doc could
+> > easily be set around the macro in the .h, but my desire
+> > is to keep all the string function kernel-doc output
+> > together so it should be added to lib/string.c
+> > 
+> > Are you suggesting I move all the lib/string.c kernel-doc
+> > to include/linux/string.h ?
 > 
-> 	BUILD_BUG_ON(!__same_type(typeof(to), char[]))
+> If you want the *output* together, just put the kernel-doc directives
+> together in the RST file that pulls it all in.  Or am I missing something
+> here?
 
-I think Rasmus had an excellent suggestion.
-I liked it and submitted it as V2.
+The negative of the kernel-doc separation of prototypes by .h
+and .c files is that the ordering of the functions in the .rst
+outout files doesn't make much logical sense.
 
-> Reviewed-by: Kees Cook <keescook@chromium.org>
-
-Thanks.
-
+stracpy is pretty far away from strscpy in the list of functions.
 
