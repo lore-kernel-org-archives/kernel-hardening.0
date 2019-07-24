@@ -1,20 +1,23 @@
-Return-Path: <SRS0=5Zym=VV=lists.openwall.com=kernel-hardening-return-16577-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=gcPG=VV=lists.openwall.com=kernel-hardening-return-16578-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=no
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1AED7C7618B
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 16:17:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 78689C76186
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 16:56:34 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 71EEF21850
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 16:17:55 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 71EEF21850
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16577-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26568 invoked by uid 550); 24 Jul 2019 16:17:48 -0000
+	by mail.kernel.org (Postfix) with SMTP id C517D21841
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 16:56:33 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Hf5QP/9G"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C517D21841
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16578-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15705 invoked by uid 550); 24 Jul 2019 16:56:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,91 +25,72 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26550 invoked from network); 24 Jul 2019 16:17:48 -0000
+Received: (qmail 15680 invoked from network); 24 Jul 2019 16:56:25 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=lj5VxMT7ytpqUXOYqjV0SKU1nsfCOyOUOiGQpNCaobw=;
+        b=Hf5QP/9Gi6ugQidFc1Hm+WBEJpAQIEtpQ7l4tIiLgRnLmI7Jh7/AM3JX+PtpswSZlp
+         AVuLSWocf3cXjTCleGz9CJ4T1PqEUUx5GTyeHTNGwet7kw8n3MkOxUzEGb8QBrP2j60T
+         gXknXyP8eoQbZ++rJWA2iAhdf2EOi6FDOy/V3xOwcji1yFBFBEIfQfgPI/c57puE0urV
+         2c8fsxHE8iGFEyGVuQpMnRWT5/bLME98JycyzMuLxvp0AEsPpBBw44GwmbYPiBqFCDIl
+         gKoV04gnZcdVMOPmVYmPiFQmgt++jK5QKoW+Yfi4Eb+FAwqch1BhT7IGNsl2BXf1KbSl
+         2qXg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=5IbouPeb+7HfRursxOx2UKgv+yR+yHqFG70l+YmYjuE=;
-        b=QnZl1mHv0jyZxeV+N8I1hMha4WPSgoZJRnn7zHPmXGn4VMR1rOsi0YdO4riKRoCf2+
-         w5LO+PMbGhfbe0HvA4CB7LeGfHmsVvQIlgPScxyKIh8efHIE6J0M11BGdntJ6Q5hB9d/
-         3K/7RkYM9EfE/sOhQsGR8i9SKcS6Rpn2TwUSDXnK+bo2tOdiB42UGJFhkAh0RhesHwEg
-         X4x6y2Z9Cqpxeu2vwDMGYfSNCi1RUcKDXZiYMW/sBHlJ4aLWEdqbuVxCm+TwazQrs1yE
-         E5YipRDZJEdYNYoCScS/pFilYnkyX4hBKsBvbidcr7WYbPytbsEMo9xhytdqSSn8pj7c
-         KBmQ==
-X-Gm-Message-State: APjAAAX1aKtn3+xXUwNSFyyFA7nc7q3pZCst/odnyectA0qbDZneTvyf
-	IbupWxOmSvwEYeCEB45FfMphQKWHMknw5uFkdUVEzA==
-X-Google-Smtp-Source: APXvYqyE0yBH1VD25VM7IVPkkwvYgKvqlMt4PLcQpZA64vAsr+tIlLbieTu94VOj0YIC8J9BVSxYD4KsZheoVpUwems=
-X-Received: by 2002:aca:1c02:: with SMTP id c2mr42243691oic.166.1563985056283;
- Wed, 24 Jul 2019 09:17:36 -0700 (PDT)
+        bh=lj5VxMT7ytpqUXOYqjV0SKU1nsfCOyOUOiGQpNCaobw=;
+        b=kCoXRe2h37rsmblhxe/XD9xGiL9nCjCfA1koiRjeAjLbOs4DsyRU9jzfqfx/PnA1Iy
+         G2hnKxNT1NF5G/ztEN+0e3khrDfaXN9p/xBhbGqnajzVVjsTSnt+xxEekN/P+LuM5sli
+         JM3qNkwcUNtAwOb5KIwTrknXyJNhpLZSfVA8Ss+SVofwfgqfeH9hDnBe7vB3zkQTOHqP
+         HLUrfIouIdVj0pbDCGoIDdlxZvLbqBp2drwd23CqO2zaCqFDALPnx0vB65Y0ftW8RXqC
+         6isZQUNz5gQ3kpV+3P6u4q6ivFfFX+LS3U0Ng/O2I/WsYZXcqgPJSBItmGI2VZuQEXNw
+         z/Ig==
+X-Gm-Message-State: APjAAAXnMr2Ytj+r24CVkMDYnfIIyLC6W3Dl8/+FHv+81NIljdfcFmRW
+	+xRzSSkR/Dv0G3y0AYn34ctd5sSCs4E2SeXohCNYwQ==
+X-Google-Smtp-Source: APXvYqwh6vIcM8Jk1c4NR1KfxKt+DGUENc04BHP7lwI3tYLzzDoMhYrlgtCveTpKvh97oEm0dQAfR9WL3p/kkMmdu68=
+X-Received: by 2002:a9d:774a:: with SMTP id t10mr29134096otl.228.1563987373619;
+ Wed, 24 Jul 2019 09:56:13 -0700 (PDT)
 MIME-Version: 1.0
 References: <20190722113151.1584-1-nitin.r.gote@intel.com> <CAFqZXNs5vdQwoy2k=_XLiGRdyZCL=n8as6aL01Dw-U62amFREA@mail.gmail.com>
  <CAG48ez3zRoB7awMdb-koKYJyfP9WifTLevxLxLHioLhH=itZ-A@mail.gmail.com>
-In-Reply-To: <CAG48ez3zRoB7awMdb-koKYJyfP9WifTLevxLxLHioLhH=itZ-A@mail.gmail.com>
-From: Ondrej Mosnacek <omosnace@redhat.com>
-Date: Wed, 24 Jul 2019 18:17:27 +0200
-Message-ID: <CAFqZXNuhRratpxMke=T4ZXW8e4WLit932iLWb6dR3w9-BYU9Kg@mail.gmail.com>
+ <201907231516.11DB47AA@keescook> <CAG48ez2eXJwE+vS2_ahR9Vuc3qD8O4CDZ5Lh6DcrrOq+7VKOYQ@mail.gmail.com>
+ <201907240852.6D10622B2@keescook>
+In-Reply-To: <201907240852.6D10622B2@keescook>
+From: Jann Horn <jannh@google.com>
+Date: Wed, 24 Jul 2019 18:55:47 +0200
+Message-ID: <CAG48ez3-qdbnJaEooFrhfBT8czyAZNDp5YfkDRcy5mLH4BQy2g@mail.gmail.com>
 Subject: Re: [PATCH] selinux: convert struct sidtab count to refcount_t
-To: Jann Horn <jannh@google.com>
-Cc: NitinGote <nitin.r.gote@intel.com>, Kees Cook <keescook@chromium.org>, 
+To: Kees Cook <keescook@chromium.org>
+Cc: Ondrej Mosnacek <omosnace@redhat.com>, NitinGote <nitin.r.gote@intel.com>, 
 	Kernel Hardening <kernel-hardening@lists.openwall.com>, Paul Moore <paul@paul-moore.com>, 
 	Stephen Smalley <sds@tycho.nsa.gov>, Eric Paris <eparis@parisplace.org>, 
 	SElinux list <selinux@vger.kernel.org>, 
 	Linux kernel mailing list <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Tue, Jul 23, 2019 at 4:54 PM Jann Horn <jannh@google.com> wrote:
-> On Mon, Jul 22, 2019 at 3:44 PM Ondrej Mosnacek <omosnace@redhat.com> wrote:
-> > On Mon, Jul 22, 2019 at 1:35 PM NitinGote <nitin.r.gote@intel.com> wrote:
-> > > refcount_t type and corresponding API should be
-> > > used instead of atomic_t when the variable is used as
-> > > a reference counter. This allows to avoid accidental
-> > > refcounter overflows that might lead to use-after-free
-> > > situations.
-> > >
-> > > Signed-off-by: NitinGote <nitin.r.gote@intel.com>
+On Wed, Jul 24, 2019 at 5:54 PM Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Jul 24, 2019 at 04:28:31PM +0200, Jann Horn wrote:
+> > On Wed, Jul 24, 2019 at 12:17 AM Kees Cook <keescook@chromium.org> wrote:
+> > > Perhaps we need a "statistics" counter type for these kinds of counters?
+> > > "counter_t"? I bet there are a lot of atomic_t uses that are just trying
+> > > to be counters. (likely most of atomic_t that isn't now refcount_t ...)
 > >
-> > Nack.
-> >
-> > The 'count' variable is not used as a reference counter here. It
-> > tracks the number of entries in sidtab, which is a very specific
-> > lookup table that can only grow (the count never decreases). I only
-> > made it atomic because the variable is read outside of the sidtab's
-> > spin lock and thus the reads and writes to it need to be guaranteed to
-> > be atomic. The counter is only updated under the spin lock, so
-> > insertions do not race with each other.
+> > This isn't a statistics counter though; this thing needs ordered
+> > memory accesses, which you wouldn't need for statistics.
 >
-> Probably shouldn't even be atomic_t... quoting Documentation/atomic_t.txt:
->
-> | SEMANTICS
-> | ---------
-> |
-> | Non-RMW ops:
-> |
-> | The non-RMW ops are (typically) regular LOADs and STOREs and are canonically
-> | implemented using READ_ONCE(), WRITE_ONCE(), smp_load_acquire() and
-> | smp_store_release() respectively. Therefore, if you find yourself only using
-> | the Non-RMW operations of atomic_t, you do not in fact need atomic_t at all
-> | and are doing it wrong.
->
-> So I think what you actually want here is a plain "int count", and then:
->  - for unlocked reads, either READ_ONCE()+smp_rmb() or smp_load_acquire()
->  - for writes, either smp_wmb()+WRITE_ONCE() or smp_store_release()
->
-> smp_load_acquire() and smp_store_release() are probably the nicest
-> here, since they are semantically clearer than smp_rmb()/smp_wmb().
+> Okay, it'd be a "very accurate" counter type? It _could_ be used for
+> statistics. I guess what I mean is that there are a lot of places using
+> atomic_t just for upward counting that don't care about wrapping, etc.
 
-Oh yes, I had a hunch that there would be a better way to do it... I
-should have taken the time to read the documentation carefully :)
+(Accurate) statistics counters need RMW ops, don't need memory
+ordering, usually can't be locked against writes, and may not care
+about wrapping.
+This thing doesn't need RMW ops, does need memory ordering, can be
+locked against writes, and definitely shouldn't wrap.
 
-I am on PTO today, but I will be happy to send a patch to convert the
-atomic_t usage to the smp_load_acquire()/smp_store_release() helpers
-tomorrow. It will also allow us to just use u32 directly and to get
-rid of the ugly casts and the INT_MAX limit.
-
-Thanks a lot for the hint, Jann!
-
---
-Ondrej Mosnacek <omosnace at redhat dot com>
-Software Engineer, Security Technologies
-Red Hat, Inc.
+I agree that there are a bunch of statistics counters in the kernel,
+and it's not necessarily a bad idea to use a separate type for them;
+but this is not a statistics counter.
