@@ -1,22 +1,23 @@
-Return-Path: <SRS0=DLdv=VV=lists.openwall.com=kernel-hardening-return-16573-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=O6AQ=VV=lists.openwall.com=kernel-hardening-return-16574-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 198D3C41514
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 13:09:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DEB01C7618B
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 14:29:18 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 69CDB21738
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 13:09:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3B237217F4
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jul 2019 14:29:17 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=rasmusvillemoes.dk header.i=@rasmusvillemoes.dk header.b="P1hm04nm"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 69CDB21738
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=rasmusvillemoes.dk
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16573-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7482 invoked by uid 550); 24 Jul 2019 13:09:24 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Hqv8AC23"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3B237217F4
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16574-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17467 invoked by uid 550); 24 Jul 2019 14:29:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,76 +25,95 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7425 invoked from network); 24 Jul 2019 13:09:23 -0000
+Received: (qmail 17442 invoked from network); 24 Jul 2019 14:29:10 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=rasmusvillemoes.dk; s=google;
-        h=subject:to:cc:references:from:message-id:date:user-agent
-         :mime-version:in-reply-to:content-language:content-transfer-encoding;
-        bh=f4suZrpfhVME9PStBS3l8/qYNB52LjXte4Jp7QV1fJc=;
-        b=P1hm04nmq8167DSE3iTDmBtlSkwmwS0C9IQYXgXAr3bOqgsitm4JZyJpEwjECFSJ3r
-         hVs+wZSxh9IimkkFqfvll8rE1TX6cXYyb3yJrOQ4slWIUZeOdB5qdSQVrQjt4D7xVDlu
-         rrCg74BJef1BmvhakY4s2UB0xlON8LZ++gDkQ=
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=07WBpiUlOYIZ7+P49JY1jjRjsEVdVyLwuxczlg4O6CI=;
+        b=Hqv8AC23ggzMBGj+XNz87q/bwhtAZqBW9K01CFg1Ke4/U1wAGhKmppexKCc4EGZOyl
+         KrTl6bgaWESUyaEOsfnVY1iFH3FefGe2ETp/hGkkAdl3KKTge7AhOe+NAXu6IwCsvfR6
+         beRC9TM/51Cg2MPPRud6dSvT0IKTOFQha/L7UIs1hoB7whP7edTHVyTP6mVie6n/R6Kh
+         YA+NmOmL5PyVoli5LE8MRCrmBDkOjgYnZcy5rHDoGoc9grpRKF8HOLj5QGncs2JshFZo
+         m9vTH0j8dZ47bJeb/1sn59Q6cmVatCE7m+8hwbuPCkLIyKRIVTtoGquFd4SZtWThYaMF
+         223w==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
-         :user-agent:mime-version:in-reply-to:content-language
-         :content-transfer-encoding;
-        bh=f4suZrpfhVME9PStBS3l8/qYNB52LjXte4Jp7QV1fJc=;
-        b=gB3fxFJximfEgm4onUq5aoqUXHjM59WK+b87sje1l/RgAyzzkPFq0I3TKNo6Ml8yg9
-         Pmr3v9AiSGLnHm7/bGxxXux4+1sVPZJVmItCKnYtqEHI6BSY2Yu00ky2DTVFQQZBYzOX
-         G9UG1y5fVWg3WrF81mLdnxpa09QAyosQCtPaH+axZiSI3WYbdWZGl/tspb5gWKH4LDGn
-         cJxkq2XeAtb4je5/EfZHh0LqAh9/4Y9ba4gxt7DaU4fDDhGRCitNNDPKBt6IYGJg0oF7
-         XKvrJf6/hFk75wEvJzJjhluX4Q7Fl2bLulICX5gE77qHDu4YAJeAAm0EmXgnFj+/R1Uc
-         uchQ==
-X-Gm-Message-State: APjAAAUlZaKBi3Icu5ex2/r/7JU5prSqa+4/whAQRjKfY+TpJRd+hIuR
-	M+2ZqkumIkXDuaEzGtOBlKc=
-X-Google-Smtp-Source: APXvYqyvAFqxSWtH3PlfUwSteuCMN+fUFBjvA8cZCWk+4aDvXTvZddDHhQVliHvtjV77g0yqQZzgBg==
-X-Received: by 2002:a2e:93c5:: with SMTP id p5mr41945289ljh.79.1563973752416;
-        Wed, 24 Jul 2019 06:09:12 -0700 (PDT)
-Subject: Re: [PATCH 1/2] string: Add stracpy and stracpy_pad mechanisms
-To: Yann Droneaud <ydroneaud@opteya.com>,
- David Laight <David.Laight@ACULAB.COM>, Joe Perches <joe@perches.com>,
- Linus Torvalds <torvalds@linux-foundation.org>,
- "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-Cc: Jonathan Corbet <corbet@lwn.net>, Stephen Kitt <steve@sk2.org>,
- Kees Cook <keescook@chromium.org>, Nitin Gote <nitin.r.gote@intel.com>,
- "jannh@google.com" <jannh@google.com>,
- "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
- Andrew Morton <akpm@linux-foundation.org>
-References: <cover.1563841972.git.joe@perches.com>
- <7ab8957eaf9b0931a59eff6e2bd8c5169f2f6c41.1563841972.git.joe@perches.com>
- <eec901c6-ca51-89e4-1887-1ccab0288bee@rasmusvillemoes.dk>
- <5ffdbf4f87054b47a2daf23a6afabecf@AcuMS.aculab.com>
- <bc1ad99a420dd842ce3a17c2c38a2f94683dc91c.camel@opteya.com>
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Message-ID: <396d1eed-8edf-aa77-110b-c50ead3a5fd5@rasmusvillemoes.dk>
-Date: Wed, 24 Jul 2019 15:09:10 +0200
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
- Thunderbird/60.7.2
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=07WBpiUlOYIZ7+P49JY1jjRjsEVdVyLwuxczlg4O6CI=;
+        b=M1tMJeOCMuMuW+8/x4ZHH8MmVXd87klMLdvkZ/N+0OEEW9TjUBEQHBAYZX1xyzWiaz
+         pgfgylzmvTvc2A5GynYfvJcu5OxxAePFJArCovYlCnM379jKDq4sheVnb4U3a5ruLXL9
+         fCDmOfXC/qjBR6hTiLYG6BvfI1KQQbFvmJhTXJviCJBgOa/ZUWzQEQoWDGUoMdEJ7x2Q
+         n4WcFm9YgR43MB/hjWCVj9tfEei/Zd7y7NmiSQII7IXrFsaaI96vcve2orTbKVA7CgJp
+         fd0rMOeoeMEbknnTLwM+2J8kJg+EEkRYDKzYILOEYQ7WT0xjNJcigKuwNkKfuvsd9R+p
+         LCoQ==
+X-Gm-Message-State: APjAAAVfBejaiaOHYjr2AHKMXpgqc7WBiPFaWyXK8BKudoOTUt9rlbCI
+	6ype0Fz9Iyx9+G6wJsL/MEjhHDTlV90P3X89UOSCig==
+X-Google-Smtp-Source: APXvYqzqMTdf8CPoruUPhw4URkBpdrabgibucjn8aLFByJaBJKYxxZjQtyWMUVa0kX6ewYeRZEUPdgw0udWGwYfMCyA=
+X-Received: by 2002:aca:3dd7:: with SMTP id k206mr37007062oia.47.1563978537976;
+ Wed, 24 Jul 2019 07:28:57 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <bc1ad99a420dd842ce3a17c2c38a2f94683dc91c.camel@opteya.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+References: <20190722113151.1584-1-nitin.r.gote@intel.com> <CAFqZXNs5vdQwoy2k=_XLiGRdyZCL=n8as6aL01Dw-U62amFREA@mail.gmail.com>
+ <CAG48ez3zRoB7awMdb-koKYJyfP9WifTLevxLxLHioLhH=itZ-A@mail.gmail.com> <201907231516.11DB47AA@keescook>
+In-Reply-To: <201907231516.11DB47AA@keescook>
+From: Jann Horn <jannh@google.com>
+Date: Wed, 24 Jul 2019 16:28:31 +0200
+Message-ID: <CAG48ez2eXJwE+vS2_ahR9Vuc3qD8O4CDZ5Lh6DcrrOq+7VKOYQ@mail.gmail.com>
+Subject: Re: [PATCH] selinux: convert struct sidtab count to refcount_t
+To: Kees Cook <keescook@chromium.org>
+Cc: Ondrej Mosnacek <omosnace@redhat.com>, NitinGote <nitin.r.gote@intel.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Paul Moore <paul@paul-moore.com>, 
+	Stephen Smalley <sds@tycho.nsa.gov>, Eric Paris <eparis@parisplace.org>, 
+	SElinux list <selinux@vger.kernel.org>, 
+	Linux kernel mailing list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On 24/07/2019 14.05, Yann Droneaud wrote:
-> Hi,
-> 
+On Wed, Jul 24, 2019 at 12:17 AM Kees Cook <keescook@chromium.org> wrote:
+> On Tue, Jul 23, 2019 at 04:53:47PM +0200, Jann Horn wrote:
+> > On Mon, Jul 22, 2019 at 3:44 PM Ondrej Mosnacek <omosnace@redhat.com> wrote:
+> > > On Mon, Jul 22, 2019 at 1:35 PM NitinGote <nitin.r.gote@intel.com> wrote:
+> > > > refcount_t type and corresponding API should be
+> > > > used instead of atomic_t when the variable is used as
+> > > > a reference counter. This allows to avoid accidental
+> > > > refcounter overflows that might lead to use-after-free
+> > > > situations.
+> > > >
+> > > > Signed-off-by: NitinGote <nitin.r.gote@intel.com>
+> > >
+> > > Nack.
+> > >
+> > > The 'count' variable is not used as a reference counter here. It
+> > > tracks the number of entries in sidtab, which is a very specific
+> > > lookup table that can only grow (the count never decreases). I only
+> > > made it atomic because the variable is read outside of the sidtab's
+> > > spin lock and thus the reads and writes to it need to be guaranteed to
+> > > be atomic. The counter is only updated under the spin lock, so
+> > > insertions do not race with each other.
+> >
+> > Probably shouldn't even be atomic_t... quoting Documentation/atomic_t.txt:
+> >
+> > | SEMANTICS
+> > | ---------
+> > |
+> > | Non-RMW ops:
+> > |
+> > | The non-RMW ops are (typically) regular LOADs and STOREs and are canonically
+> > | implemented using READ_ONCE(), WRITE_ONCE(), smp_load_acquire() and
+> > | smp_store_release() respectively. Therefore, if you find yourself only using
+> > | the Non-RMW operations of atomic_t, you do not in fact need atomic_t at all
+> > | and are doing it wrong.
+> >
+> > So I think what you actually want here is a plain "int count", and then:
+> >  - for unlocked reads, either READ_ONCE()+smp_rmb() or smp_load_acquire()
+> >  - for writes, either smp_wmb()+WRITE_ONCE() or smp_store_release()
+> >
+> > smp_load_acquire() and smp_store_release() are probably the nicest
+> > here, since they are semantically clearer than smp_rmb()/smp_wmb().
+>
+> Perhaps we need a "statistics" counter type for these kinds of counters?
+> "counter_t"? I bet there are a lot of atomic_t uses that are just trying
+> to be counters. (likely most of atomic_t that isn't now refcount_t ...)
 
-> Beware that snprintf(), per C standard, is supposed to return the
-> length of the formatted string, regarless of the size of the
-> destination buffer.
-> 
-> So encouraging developper to write something like code below because
-> snprintf() in kernel behave in a non-standard way,
-
-The kernel's snprintf() does not behave in a non-standard way, at least
-not with respect to its return value. It doesn't support %n or floating
-point, of course, and there are some quirks regarding precision (see
-lib/test_printf.c for details).
-
-There's the non-standard scnprintf() for getting the length of the
-formatted string, which can safely be used in an append loop. Or one can
-use the seq_buf API.
-
-Rasmus
+This isn't a statistics counter though; this thing needs ordered
+memory accesses, which you wouldn't need for statistics.
