@@ -1,4 +1,4 @@
-Return-Path: <SRS0=IZZZ=VX=lists.openwall.com=kernel-hardening-return-16591-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Pzjs=VX=lists.openwall.com=kernel-hardening-return-16592-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1FF97C7618B
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jul 2019 07:20:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3001BC7618B
+	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jul 2019 07:26:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 79AEC21852
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jul 2019 07:20:58 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 79AEC21852
+	by mail.kernel.org (Postfix) with SMTP id 8B39822BE8
+	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jul 2019 07:26:39 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8B39822BE8
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16591-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21614 invoked by uid 550); 26 Jul 2019 07:20:50 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16592-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27975 invoked by uid 550); 26 Jul 2019 07:26:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,26 +22,32 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21580 invoked from network); 26 Jul 2019 07:20:49 -0000
+Received: (qmail 27937 invoked from network); 26 Jul 2019 07:26:32 -0000
 Subject: Re: [RFC PATCH 00/10] implement KASLR for powerpc/fsl_booke/32
-To: Kees Cook <keescook@chromium.org>
-CC: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<kernel-hardening@lists.openwall.com>, <linux-kernel@vger.kernel.org>,
-	<wangkefeng.wang@huawei.com>, <yebin10@huawei.com>,
-	<thunder.leizhen@huawei.com>, <jingxiangfeng@huawei.com>,
-	<fanchengyang@huawei.com>
+To: Diana Madalina Craciun <diana.craciun@nxp.com>, "mpe@ellerman.id.au"
+	<mpe@ellerman.id.au>, "linuxppc-dev@lists.ozlabs.org"
+	<linuxppc-dev@lists.ozlabs.org>, "christophe.leroy@c-s.fr"
+	<christophe.leroy@c-s.fr>, "benh@kernel.crashing.org"
+	<benh@kernel.crashing.org>, "paulus@samba.org" <paulus@samba.org>,
+	"npiggin@gmail.com" <npiggin@gmail.com>, "keescook@chromium.org"
+	<keescook@chromium.org>, "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>
+CC: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
+	"wangkefeng.wang@huawei.com" <wangkefeng.wang@huawei.com>,
+	"yebin10@huawei.com" <yebin10@huawei.com>, "thunder.leizhen@huawei.com"
+	<thunder.leizhen@huawei.com>, "jingxiangfeng@huawei.com"
+	<jingxiangfeng@huawei.com>, "fanchengyang@huawei.com"
+	<fanchengyang@huawei.com>, Laurentiu Tudor <laurentiu.tudor@nxp.com>
 References: <20190717080621.40424-1-yanaijie@huawei.com>
  <e6ad41bc-5d5a-cf3f-b308-e1863b4fef99@huawei.com>
- <201907251252.0C58037@keescook>
+ <VI1PR0401MB24632CD6AB1C5EDCFF817705FFC00@VI1PR0401MB2463.eurprd04.prod.outlook.com>
 From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <877d818d-b3ec-1cea-d024-4ad6aea7af60@huawei.com>
-Date: Fri, 26 Jul 2019 15:20:26 +0800
+Message-ID: <b50275ae-9eb8-11da-248c-1ad7dbf93469@huawei.com>
+Date: Fri, 26 Jul 2019 15:26:12 +0800
 User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
  Thunderbird/60.5.0
 MIME-Version: 1.0
-In-Reply-To: <201907251252.0C58037@keescook>
+In-Reply-To: <VI1PR0401MB24632CD6AB1C5EDCFF817705FFC00@VI1PR0401MB2463.eurprd04.prod.outlook.com>
 Content-Type: text/plain; charset="utf-8"; format=flowed
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
@@ -50,16 +56,21 @@ X-CFilter-Loop: Reflected
 
 
 
-On 2019/7/26 3:58, Kees Cook wrote:
-> On Thu, Jul 25, 2019 at 03:16:28PM +0800, Jason Yan wrote:
+On 2019/7/26 15:04, Diana Madalina Craciun wrote:
+> Hi Jason,
+> 
+> I have briefly tested yesterday on a P4080 board and did not see any
+> issues. I do not have much expertise on KASLR, but I will take a look
+> over the code.
+> 
+
+Hi Diana, thanks. Looking forward to your suggestions.
+
+> Regards,
+> Diana
+> 
+> On 7/25/2019 10:16 AM, Jason Yan wrote:
 >> Hi all, any comments?
-> 
-> I'm a fan of it, but I don't know ppc internals well enough to sanely
-> review the code. :) Some comments below on design...
-> 
-
-Hi Kees, Thanks for your comments.
-
 >>
 >>
 >> On 2019/7/17 16:06, Jason Yan wrote:
@@ -77,37 +88,11 @@ Hi Kees, Thanks for your comments.
 >>> Entropy is derived from the banner and timer base, which will change every
 >>> build and boot. This not so much safe so additionally the bootloader may
 >>> pass entropy via the /chosen/kaslr-seed node in device tree.
-> 
-> Good: adding kaslr-seed is a good step here. Are there any x86-like
-> RDRAND or RDTSC to use? (Or maybe timer base here is similar to x86
-> RDTSC here?)
-> 
-
-Yes, time base is similar to RDTSC here.
-
 >>>
 >>> We will use the first 512M of the low memory to randomize the kernel
 >>> image. The memory will be split in 64M zones. We will use the lower 8
 >>> bit of the entropy to decide the index of the 64M zone. Then we chose a
 >>> 16K aligned offset inside the 64M zone to put the kernel in.
-> 
-> Does this 16K granularity have any page table performance impact? My
-> understanding was that x86 needed to have 2M granularity due to its page
-> table layouts.
-> 
-
-The fsl booke TLB1 covers the whole low memeory. AFAIK, there is no page 
-table performance impact. But if anyone knows there is any regressions, 
-please let me know.
-
-> Why the 64M zones instead of just 16K granularity across the entire low
-> 512M?
-> 
-
-The boot code only maps one 64M zone at early start. If the kernel 
-crosses two 64M zones, we need to map two 64M zones. Keep the kernel in 
-one 64M saves a lot of complex codes.
-
 >>>
 >>>       KERNELBASE
 >>>
@@ -136,11 +121,30 @@ one 64M saves a lot of complex codes.
 >>>     powerpc/fsl_booke/kaslr: clear the original kernel if randomized
 >>>     powerpc/fsl_booke/kaslr: support nokaslr cmdline parameter
 >>>     powerpc/fsl_booke/kaslr: dump out kernel offset information on panic
+>>>
+>>>    arch/powerpc/Kconfig                          |  11 +
+>>>    arch/powerpc/include/asm/nohash/mmu-book3e.h  |  10 +
+>>>    arch/powerpc/include/asm/page.h               |   7 +
+>>>    arch/powerpc/kernel/Makefile                  |   1 +
+>>>    arch/powerpc/kernel/early_32.c                |   2 +-
+>>>    arch/powerpc/kernel/exceptions-64e.S          |  10 -
+>>>    arch/powerpc/kernel/fsl_booke_entry_mapping.S |  23 +-
+>>>    arch/powerpc/kernel/head_fsl_booke.S          |  61 ++-
+>>>    arch/powerpc/kernel/kaslr_booke.c             | 439 ++++++++++++++++++
+>>>    arch/powerpc/kernel/machine_kexec.c           |   1 +
+>>>    arch/powerpc/kernel/misc_64.S                 |   5 -
+>>>    arch/powerpc/kernel/setup-common.c            |  23 +
+>>>    arch/powerpc/mm/init-common.c                 |   7 +
+>>>    arch/powerpc/mm/init_32.c                     |   5 -
+>>>    arch/powerpc/mm/init_64.c                     |   5 -
+>>>    arch/powerpc/mm/mmu_decl.h                    |  10 +
+>>>    arch/powerpc/mm/nohash/fsl_booke.c            |   8 +-
+>>>    17 files changed, 580 insertions(+), 48 deletions(-)
+>>>    create mode 100644 arch/powerpc/kernel/kaslr_booke.c
+>>>
+>>
 > 
-> Is there anything planned for other fixed-location things, like x86's
-> CONFIG_RANDOMIZE_MEMORY?
 > 
-
-Yes, if this feature can be accepted, I will start to work with 
-powerpc64 KASLR and other things like CONFIG_RANDOMIZE_MEMORY.
+> .
+> 
 
