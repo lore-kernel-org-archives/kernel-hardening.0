@@ -1,4 +1,4 @@
-Return-Path: <SRS0=y/NF=V3=lists.openwall.com=kernel-hardening-return-16651-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=nXi4=V3=lists.openwall.com=kernel-hardening-return-16652-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
 	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9EB4BC0650F
-	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Jul 2019 19:14:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 15089C0650F
+	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Jul 2019 19:15:12 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EC8262064A
-	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Jul 2019 19:14:58 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5DFC72064A
+	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Jul 2019 19:15:11 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="UzfwNipG"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EC8262064A
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="hk0Bac0a"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5DFC72064A
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16651-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28584 invoked by uid 550); 30 Jul 2019 19:13:36 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16652-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28611 invoked by uid 550); 30 Jul 2019 19:13:37 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,51 +25,49 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28551 invoked from network); 30 Jul 2019 19:13:35 -0000
+Received: (qmail 28556 invoked from network); 30 Jul 2019 19:13:35 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=w9qKOvSY58oXoZzqByoYWX1yQMI9BNWXHffy8/37d08=;
-        b=UzfwNipG4HY3slWhmBB4ukvohWeOPP67m+ETT6UkK8qvjgImw05klp/yhBxcCntWO2
-         Ue5RqYysOk+r2ZuO2MoS6akd/tkiuhAyhsDIFONkGYFFIBErMVturE3dLLSfMd4vh1Fz
-         g/7+6diM+H6Lch0wDYcCiTIoZJUM/Ru/YUYHk=
+        bh=aCFi9VKfA/regOH6ME0h7V2OJPrhlZ4OE3HFuZl/Mr4=;
+        b=hk0Bac0aiWQasaW/82OqlXyeS+zRRbeGWMF9iYoYCCjmyk5hKfhbErMAfoM104i7Br
+         TdpwZFEl9pU+frxz1cazoSP6L1BNAC+8jncLJVwuFEsDynqzb3OP7vNis0EU/ikkPW8m
+         /LeN2upB3IFugt/kUzhj6IfHluZI3rXDFFkRA=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=w9qKOvSY58oXoZzqByoYWX1yQMI9BNWXHffy8/37d08=;
-        b=BNH/MG+ZQRJBNtf5r1r0T2LNa3fFefvAMz034aErVgAC5Yb921/A7B6cX2yylrrkUv
-         iU4DAsgOL8EiMYAKZKU0lWsCxKn5H7YPAaZl+LT9oB/qHi+ISIOUOl3nSPHuAsR17yJO
-         BK2LaRbupJb+o40BUFDutp9DSwKu48YnRAOtK8XEX5jMFYtI46Di2AG161u7rYl57kwd
-         qMTG0FL32OjC7QBvi+vr9wO6YfS0y82AFdWQvDNj9D3Kj5o1T5+f8KDDyD1lfd/SkHJF
-         PwBgpfzYKZnX74aaUvfz1SetJNbuekcUQ9p5xTwJjsvterNz0p14g54VY8nzfvKJ9acp
-         tKTA==
-X-Gm-Message-State: APjAAAWvOK9nBEUTNZJyMOKJOt0VgXFZuS2xaP6mpYuxHryqemK02MF6
-	C0eGYZLI260kPqhoDkcSLpBsH8H+qTE=
-X-Google-Smtp-Source: APXvYqy6D4jSuBlQiYSSxJuvYeBUKPk9VGJxOmy0ZoMGLMmWHX1N9VP8jp1Vbly1uFyIRpTQEY74pQ==
-X-Received: by 2002:aa7:8102:: with SMTP id b2mr2027397pfi.105.1564514002619;
-        Tue, 30 Jul 2019 12:13:22 -0700 (PDT)
+        bh=aCFi9VKfA/regOH6ME0h7V2OJPrhlZ4OE3HFuZl/Mr4=;
+        b=oo5Ltfg+7HJL2pSc54dulT8YTyo5Ikmbe8sNR2xs0GilclheBKax2nkMCuWIdmKUQM
+         i4zxjCaeoncxR9RoCX7OM6LHiIauwIQuIcvtM5fRsKFNDYk6AjV2TMDZ0cdNHLsXWhD9
+         etwq+9QpLEAQSTyVEKThXfTrWkhO4rACpMsGGdrfU3Axoa+cAY0qM8Mc97ELj6M9lSWX
+         q7/RJDM6qfItEVPrHVMShN1t8HP3PxizM7k/eVj6lzfPspNy7Jn1DFvVK3BvvB8bF1NT
+         353YBp6F8iM5dBdZQbLWIElw80VnUPxQmaEeqtLd96HrqldtZwqCmMHM6fv2Dv/Q3cY0
+         +Lgg==
+X-Gm-Message-State: APjAAAXOLtdxnXT1DXRpQKfEGzuGEvfuQr9lNXVl4D/g7cld3lRMSETk
+	9i1tWpLHmq7zPZxYqvxNoyiIioZFmA4=
+X-Google-Smtp-Source: APXvYqyTpbQ7f3xITrwKbyFWcIPqfOysYAwjkN9vIf84u+eLPDg/LwjNFZLDtMcMgZUrWQ+iiuxmZg==
+X-Received: by 2002:a65:57ca:: with SMTP id q10mr113599135pgr.52.1564514003446;
+        Tue, 30 Jul 2019 12:13:23 -0700 (PDT)
 From: Thomas Garnier <thgarnie@chromium.org>
 To: kernel-hardening@lists.openwall.com
 Cc: kristen@linux.intel.com,
 	keescook@chromium.org,
 	Thomas Garnier <thgarnie@chromium.org>,
+	Pavel Machek <pavel@ucw.cz>,
+	"Rafael J . Wysocki" <rafael.j.wysocki@intel.com>,
+	"Rafael J. Wysocki" <rjw@rjwysocki.net>,
 	Thomas Gleixner <tglx@linutronix.de>,
 	Ingo Molnar <mingo@redhat.com>,
 	Borislav Petkov <bp@alien8.de>,
 	"H. Peter Anvin" <hpa@zytor.com>,
 	x86@kernel.org,
-	Juergen Gross <jgross@suse.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Boris Ostrovsky <boris.ostrovsky@oracle.com>,
-	Josh Poimboeuf <jpoimboe@redhat.com>,
-	Maran Wilson <maran.wilson@oracle.com>,
-	Feng Tang <feng.tang@intel.com>,
+	linux-pm@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v9 08/11] x86/boot/64: Adapt assembly for PIE support
-Date: Tue, 30 Jul 2019 12:12:52 -0700
-Message-Id: <20190730191303.206365-9-thgarnie@chromium.org>
+Subject: [PATCH v9 09/11] x86/power/64: Adapt assembly for PIE support
+Date: Tue, 30 Jul 2019 12:12:53 -0700
+Message-Id: <20190730191303.206365-10-thgarnie@chromium.org>
 X-Mailer: git-send-email 2.22.0.770.g0f2c4a37fd-goog
 In-Reply-To: <20190730191303.206365-1-thgarnie@chromium.org>
 References: <20190730191303.206365-1-thgarnie@chromium.org>
@@ -79,74 +77,39 @@ Content-Transfer-Encoding: 8bit
 Change the assembly code to use only relative references of symbols for the
 kernel to be PIE compatible.
 
-Early at boot, the kernel is mapped at a temporary address while preparing
-the page table. To know the changes needed for the page table with KASLR,
-the boot code calculate the difference between the expected address of the
-kernel and the one chosen by KASLR. It does not work with PIE because all
-symbols in code are relatives. Instead of getting the future relocated
-virtual address, you will get the current temporary mapping.
-Instructions were changed to have absolute 64-bit references.
-
 Position Independent Executable (PIE) support will allow to extend the
 KASLR randomization range below 0xffffffff80000000.
 
 Signed-off-by: Thomas Garnier <thgarnie@chromium.org>
+Acked-by: Pavel Machek <pavel@ucw.cz>
+Acked-by: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/kernel/head_64.S | 16 ++++++++++------
- 1 file changed, 10 insertions(+), 6 deletions(-)
+ arch/x86/power/hibernate_asm_64.S | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/arch/x86/kernel/head_64.S b/arch/x86/kernel/head_64.S
-index f3d3e9646a99..9a3f96566eb2 100644
---- a/arch/x86/kernel/head_64.S
-+++ b/arch/x86/kernel/head_64.S
-@@ -88,8 +88,10 @@ startup_64:
- 	popq	%rsi
+diff --git a/arch/x86/power/hibernate_asm_64.S b/arch/x86/power/hibernate_asm_64.S
+index a4d5eb0a7ece..796cd19d575b 100644
+--- a/arch/x86/power/hibernate_asm_64.S
++++ b/arch/x86/power/hibernate_asm_64.S
+@@ -23,7 +23,7 @@
+ #include <asm/frame.h>
  
- 	/* Form the CR3 value being sure to include the CR3 modifier */
--	addq	$(early_top_pgt - __START_KERNEL_map), %rax
-+	movabs  $(early_top_pgt - __START_KERNEL_map), %rcx
-+	addq    %rcx, %rax
- 	jmp 1f
-+
- ENTRY(secondary_startup_64)
- 	UNWIND_HINT_EMPTY
- 	/*
-@@ -118,7 +120,8 @@ ENTRY(secondary_startup_64)
- 	popq	%rsi
+ ENTRY(swsusp_arch_suspend)
+-	movq	$saved_context, %rax
++	leaq	saved_context(%rip), %rax
+ 	movq	%rsp, pt_regs_sp(%rax)
+ 	movq	%rbp, pt_regs_bp(%rax)
+ 	movq	%rsi, pt_regs_si(%rax)
+@@ -114,7 +114,7 @@ ENTRY(restore_registers)
+ 	movq	%rax, %cr4;  # turn PGE back on
  
- 	/* Form the CR3 value being sure to include the CR3 modifier */
--	addq	$(init_top_pgt - __START_KERNEL_map), %rax
-+	movabs	$(init_top_pgt - __START_KERNEL_map), %rcx
-+	addq    %rcx, %rax
- 1:
- 
- 	/* Enable PAE mode, PGE and LA57 */
-@@ -136,7 +139,7 @@ ENTRY(secondary_startup_64)
- 	movq	%rax, %cr3
- 
- 	/* Ensure I am executing from virtual addresses */
--	movq	$1f, %rax
-+	movabs  $1f, %rax
- 	ANNOTATE_RETPOLINE_SAFE
- 	jmp	*%rax
- 1:
-@@ -233,11 +236,12 @@ ENTRY(secondary_startup_64)
- 	 *	REX.W + FF /5 JMP m16:64 Jump far, absolute indirect,
- 	 *		address given in m16:64.
- 	 */
--	pushq	$.Lafter_lret	# put return address on stack for unwinder
-+	movabs  $.Lafter_lret, %rax
-+	pushq	%rax		# put return address on stack for unwinder
- 	xorl	%ebp, %ebp	# clear frame pointer
--	movq	initial_code(%rip), %rax
-+	leaq	initial_code(%rip), %rax
- 	pushq	$__KERNEL_CS	# set correct cs
--	pushq	%rax		# target address in negative space
-+	pushq	(%rax)		# target address in negative space
- 	lretq
- .Lafter_lret:
- END(secondary_startup_64)
+ 	/* We don't restore %rax, it must be 0 anyway */
+-	movq	$saved_context, %rax
++	leaq	saved_context(%rip), %rax
+ 	movq	pt_regs_sp(%rax), %rsp
+ 	movq	pt_regs_bp(%rax), %rbp
+ 	movq	pt_regs_si(%rax), %rsi
 -- 
 2.22.0.770.g0f2c4a37fd-goog
 
