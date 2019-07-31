@@ -1,24 +1,23 @@
-Return-Path: <SRS0=CuVy=V4=lists.openwall.com=kernel-hardening-return-16672-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=MExo=V4=lists.openwall.com=kernel-hardening-return-16673-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 69684C433FF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 16:26:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C4E7CC32751
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 18:00:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B7033206B8
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 16:26:08 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 20B7C2067D
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 18:00:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="liCpB+jW"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B7033206B8
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="gu1U/Sf5"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 20B7C2067D
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16672-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21505 invoked by uid 550); 31 Jul 2019 16:26:00 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16673-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5463 invoked by uid 550); 31 Jul 2019 18:00:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,113 +25,61 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20449 invoked from network); 31 Jul 2019 16:25:59 -0000
+Received: (qmail 5429 invoked from network); 31 Jul 2019 18:00:51 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to:user-agent;
-        bh=HfzyoXraaWAQfxsJbxCgGGQbWu65hE2VfQFlsfk64AI=;
-        b=liCpB+jWGUj6AJh/qQp5WSnFQt4+jRBFldNsFR7pAVkiEuDAOXYz3mL542vsI8duy9
-         +J33MzLHkCEtUkrux6BnCfUobDaBB7N7eBbqtanpLBG+YTZb5jMjlCUdtAB0plmrsC0g
-         cbacoMrGglNBmFKHNiRxTzilXSLAF7NdbmEs9VCsBT5bIGVxZlRXWLmgU5Xo5s725SAk
-         i7rVNLKg+ogkL9gCIIDvPiY327B/NwDFS75eZAxZuSksGNsdM3/Pw2XYqdl+7ScYqo1B
-         xlZVmi7W1t3o7srtQSyiGd4+JRtF6QS+1Jbq1LFV7qkyV/w+YET0WXZ+Xq0T7Aybo2Yv
-         92bg==
+        h=date:from:to:cc:subject:message-id:mime-version:content-disposition
+         :user-agent;
+        bh=FRx+uLUc3KZyCAuddc+oPKsXnjik76gQN/gmEXW9OR0=;
+        b=gu1U/Sf5wItTquYMTsWGjxOpKbFvX6G8j8vnPQfr8dIrUzAEdFWOp/doTNqUe/yH4x
+         lmj4cyGkaJpkdDym4wZD2eekDodpvCTLSjn2vvUhsgi8UGbrXHzR9IWpTnynB+LzXllJ
+         S1tuqczMFGVaEGAi89Ij8RpOSUdvbEL7NfV5XoeczdLtgevPRi3EC7tIc6ClAecSVO3X
+         YL0zt7IWfXzCa81eFvv6ZUqQsATbv5UMvlXSw8g1m3HbBOIhM7LfgP4a+jknbGdGeGe5
+         5TsQHmX3Xw+/qPV/I7N4NKJwn0TazchFtfm4ob7IrpasKm+NvGl9Co7GmFphAtMCh5aT
+         hnIg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to:user-agent;
-        bh=HfzyoXraaWAQfxsJbxCgGGQbWu65hE2VfQFlsfk64AI=;
-        b=PSTX9WW0Y1GVrmMhFvNYm+uVfEVoQ4r6Sb9xvtvOm8xue6Cd1Ma5BmFjn1Y5dQG43w
-         fx0lwQYK8kTGasVEmZXD2LRgSKOhGuE5i2Eip47gpXQhS3cG1gYeJTdkgRPSenRlNiw7
-         A730Iaq1yaxAw4xw20X1LWavbfiKuxKctxyR6zruHjrUWn2uzCW4PCqZ9/BmX2WC8jvQ
-         MrUBuqCEDMnOP4NgTwl28EdoUHt1NtDbR1XxjWmLeK0pg6rEnjiJKOu0ODCAzbvAy4d8
-         ZBD7nhvbMOdUV3qYI6KSQ6bKwClPxNPUxDil52qTOjSk0JvtO8hAkBMkD4e8m2SRjMX/
-         6nMg==
-X-Gm-Message-State: APjAAAUFHEna/tKYr4DyBDBZ4K9DwilZfWfpm3vad3KfJYDq3r1sLdf6
-	Zc2AJZmflwjmyrz/zuMrx5Oyq5G2ZKc=
-X-Google-Smtp-Source: APXvYqyFUsIpvTGwvUqrZXOPYF7Qtnqh9Ca+5hAMUC4yGz8HZaole0+Y4bjNzsEIsKcHmMcrY+3FRg==
-X-Received: by 2002:a63:b10f:: with SMTP id r15mr44689474pgf.230.1564590347688;
-        Wed, 31 Jul 2019 09:25:47 -0700 (PDT)
-Date: Thu, 1 Aug 2019 01:25:37 +0900
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:mime-version
+         :content-disposition:user-agent;
+        bh=FRx+uLUc3KZyCAuddc+oPKsXnjik76gQN/gmEXW9OR0=;
+        b=FIvUPIq9zSTU6j+BsPvv2sLVuR26oWP8ZIDHhLlX+e6VxJXI/zsr7Udwrvkt/Ao0x0
+         k2nprFTOp/vwWTqBeu3m0AkcOZRB4VCM0kxPsaaubZ651g2GLXvd8Hk7QbWVyLS5Ldvj
+         AH2tlkJiny0cx69ySQ6lwDkdNttzMn641svKypeGRJXRn5hv+PntXcsNiyzhBehk3VnO
+         45YhM1QyZFpFSxhl4Lq70XlkUi+MzsjSxDOBeR30tehjARb5Vb05/JtgomBvDmjrOjus
+         1CN29GkwkwlGhL/8xA9+lbFVZCUU2dCGmeeUiVE6S5tcoa04Y+ZPq08tO/Q8kQ0pshbd
+         BaJw==
+X-Gm-Message-State: APjAAAV+XNU0c0dpXca4kKH7S9nFtSssUc59VIAeBwZ8u4FsBnWZ8hzL
+	n+HXa6en4w+0xFEcI+yzo1A=
+X-Google-Smtp-Source: APXvYqwZuHT7YK4tM/LtFJdXWvQ1Gru+TpgeeJWZcFRMPf9EjVmIuiH5DPpHS3XrbLf0PXy1ORaxqg==
+X-Received: by 2002:a62:e910:: with SMTP id j16mr50018305pfh.123.1564596039923;
+        Wed, 31 Jul 2019 11:00:39 -0700 (PDT)
+Date: Thu, 1 Aug 2019 03:00:27 +0900
 From: Joonwon Kang <kjw1627@gmail.com>
-To: Kees Cook <keescook@chromium.org>
+To: keescook@chromium.org
 Cc: re.emese@gmail.com, kernel-hardening@lists.openwall.com,
 	linux-kernel@vger.kernel.org, kernel-janitors@vger.kernel.org,
 	jinb.park7@gmail.com
-Subject: Re: [PATCH] randstruct: fix a bug in is_pure_ops_struct()
-Message-ID: <20190731162537.GA23152@host>
-References: <20190727155841.GA13586@host>
- <201907301008.622218EE5@keescook>
+Subject: [PATCH 0/2] fix is_pure_ops_struct()
+Message-ID: <cover.1564595346.git.kjw1627@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <201907301008.622218EE5@keescook>
 User-Agent: Mutt/1.9.4 (2018-02-28)
 
-On Tue, Jul 30, 2019 at 10:11:19AM -0700, Kees Cook wrote:
-> On Sun, Jul 28, 2019 at 12:58:41AM +0900, Joonwon Kang wrote:
-> > Before this, there were false negatives in the case where a struct
-> > contains other structs which contain only function pointers because
-> > of unreachable code in is_pure_ops_struct().
-> 
-> Ah, very true. Something like:
-> 
-> struct internal {
-> 	void (*callback)(void);
-> };
-> 
-> struct wrapper {
-> 	struct internal foo;
-> 	void (*other_callback)(void);
-> };
-> 
-> would have not been detected as is_pure_ops_struct()?
-> 
-> How did you notice this? (Are there cases of this in the kernel?)
+Hello,
 
-When I compiled kernel with allyesconfig, there seemed to be no such cases,
-but I found the bug just by code review and test.
-However, I would like to slightly modify this patch and add one more patch.
-I will send the patch set soon.
+This series fixes unreachable code bug and removes dead code in
+is_pure_ops_struct().
 
-> 
-> > Signed-off-by: Joonwon Kang <kjw1627@gmail.com>
-> 
-> Applied; thanks!
-> 
-> -Kees
-> 
-> > ---
-> >  scripts/gcc-plugins/randomize_layout_plugin.c | 11 +++++------
-> >  1 file changed, 5 insertions(+), 6 deletions(-)
-> > 
-> > diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
-> > index 6d5bbd31db7f..a123282a4fcd 100644
-> > --- a/scripts/gcc-plugins/randomize_layout_plugin.c
-> > +++ b/scripts/gcc-plugins/randomize_layout_plugin.c
-> > @@ -443,13 +443,12 @@ static int is_pure_ops_struct(const_tree node)
-> >  		if (node == fieldtype)
-> >  			continue;
-> >  
-> > -		if (!is_fptr(fieldtype))
-> > -			return 0;
-> > -
-> > -		if (code != RECORD_TYPE && code != UNION_TYPE)
-> > -			continue;
-> > +		if (code == RECORD_TYPE || code == UNION_TYPE) {
-> > +			if (!is_pure_ops_struct(fieldtype))
-> > +				return 0;
-> > +		}
-> >  
-> > -		if (!is_pure_ops_struct(fieldtype))
-> > +		if (!is_fptr(fieldtype))
-> >  			return 0;
-> >  	}
-> >  
-> > -- 
-> > 2.17.1
-> > 
-> 
-> -- 
-> Kees Cook
+Thanks.
+
+Joonwon Kang (2):
+  randstruct: fix a bug in is_pure_ops_struct()
+  randstruct: remove dead code in is_pure_ops_struct()
+
+ scripts/gcc-plugins/randomize_layout_plugin.c | 11 ++++-------
+ 1 file changed, 4 insertions(+), 7 deletions(-)
+
+-- 
+2.17.1
+
