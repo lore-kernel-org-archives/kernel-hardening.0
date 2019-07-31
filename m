@@ -1,21 +1,23 @@
-Return-Path: <SRS0=908W=V4=lists.openwall.com=kernel-hardening-return-16670-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Np13=V4=lists.openwall.com=kernel-hardening-return-16671-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-8.1 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DAF2FC32751
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 09:28:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B5C21C433FF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 12:53:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3D64820449
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 09:28:29 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3D64820449
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16670-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11872 invoked by uid 550); 31 Jul 2019 09:26:43 -0000
+	by mail.kernel.org (Postfix) with SMTP id 10FDB206A3
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 12:53:36 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="oaTRIpZM"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 10FDB206A3
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16671-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22519 invoked by uid 550); 31 Jul 2019 12:53:30 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,110 +25,100 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11766 invoked from network); 31 Jul 2019 09:26:41 -0000
-From: Jason Yan <yanaijie@huawei.com>
-To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
-CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
-	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
-	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
-	<zhaohongjiang@huawei.com>, Jason Yan <yanaijie@huawei.com>
-Subject: [PATCH v3 10/10] powerpc/fsl_booke/kaslr: dump out kernel offset information on panic
-Date: Wed, 31 Jul 2019 17:43:18 +0800
-Message-ID: <20190731094318.26538-11-yanaijie@huawei.com>
-X-Mailer: git-send-email 2.17.2
-In-Reply-To: <20190731094318.26538-1-yanaijie@huawei.com>
-References: <20190731094318.26538-1-yanaijie@huawei.com>
+Received: (qmail 22498 invoked from network); 31 Jul 2019 12:53:29 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
+	:References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:
+	Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:List-Id:
+	List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive;
+	 bh=aeUs+tisL054K/og1W1ep85O/gPdmrMrcRsVDP6dWHA=; b=oaTRIpZMm2SA2ctz/ryJdx5ia
+	/LKWmt439ZZvb35/VbYw9o8t12tJoXD6aI6hksP1Xc+hICCc3+lbHuj2nrT2bZGD1twR9eAYcBLn/
+	E4fayvpXE78Jw5t1qTC2DQir3SQ56cuhq76gfVZUwqhIWVMHnJr4SucdiMqH6GzfyHVgrvLzspEr6
+	JvFKdCyBT4g80kxsamgYcCog1sbUPhjzsmhDI3r3QnLSV/wR0XpPExqeFZbaEJuIgqkq8O0zqND35
+	Ko51GPcra8ktSo4PMvM4DARlpmoUDUTy+UxkL/JmshGg8qarRhlaIOSNQ+vtaaJyNIRbpM938EXsL
+	5GTiOT9LQ==;
+Date: Wed, 31 Jul 2019 14:53:06 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+To: Thomas Garnier <thgarnie@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, kristen@linux.intel.com,
+	keescook@chromium.org, Juergen Gross <jgross@suse.com>,
+	Thomas Hellstrom <thellstrom@vmware.com>,
+	"VMware, Inc." <pv-drivers@vmware.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
+	"H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org,
+	virtualization@lists.linux-foundation.org,
+	linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v9 10/11] x86/paravirt: Adapt assembly for PIE support
+Message-ID: <20190731125306.GU31381@hirez.programming.kicks-ass.net>
+References: <20190730191303.206365-1-thgarnie@chromium.org>
+ <20190730191303.206365-11-thgarnie@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-X-Originating-IP: [10.175.124.28]
-X-CFilter-Loop: Reflected
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190730191303.206365-11-thgarnie@chromium.org>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-When kaslr is enabled, the kernel offset is different for every boot.
-This brings some difficult to debug the kernel. Dump out the kernel
-offset when panic so that we can easily debug the kernel.
+On Tue, Jul 30, 2019 at 12:12:54PM -0700, Thomas Garnier wrote:
+> if PIE is enabled, switch the paravirt assembly constraints to be
+> compatible. The %c/i constrains generate smaller code so is kept by
+> default.
+> 
+> Position Independent Executable (PIE) support will allow to extend the
+> KASLR randomization range below 0xffffffff80000000.
+> 
+> Signed-off-by: Thomas Garnier <thgarnie@chromium.org>
+> Acked-by: Juergen Gross <jgross@suse.com>
+> ---
+>  arch/x86/include/asm/paravirt_types.h | 25 +++++++++++++++++++++----
+>  1 file changed, 21 insertions(+), 4 deletions(-)
+> 
+> diff --git a/arch/x86/include/asm/paravirt_types.h b/arch/x86/include/asm/paravirt_types.h
+> index 70b654f3ffe5..fd7dc37d0010 100644
+> --- a/arch/x86/include/asm/paravirt_types.h
+> +++ b/arch/x86/include/asm/paravirt_types.h
+> @@ -338,9 +338,25 @@ extern struct paravirt_patch_template pv_ops;
+>  #define PARAVIRT_PATCH(x)					\
+>  	(offsetof(struct paravirt_patch_template, x) / sizeof(void *))
+>  
+> +#ifdef CONFIG_X86_PIE
+> +#define paravirt_opptr_call "a"
+> +#define paravirt_opptr_type "p"
+> +
+> +/*
+> + * Alternative patching requires a maximum of 7 bytes but the relative call is
+> + * only 6 bytes. If PIE is enabled, add an additional nop to the call
+> + * instruction to ensure patching is possible.
+> + */
+> +#define PARAVIRT_CALL_POST  "nop;"
 
-Signed-off-by: Jason Yan <yanaijie@huawei.com>
-Cc: Diana Craciun <diana.craciun@nxp.com>
-Cc: Michael Ellerman <mpe@ellerman.id.au>
-Cc: Christophe Leroy <christophe.leroy@c-s.fr>
-Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-Cc: Paul Mackerras <paulus@samba.org>
-Cc: Nicholas Piggin <npiggin@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>
-Reviewed-by: Christophe Leroy <christophe.leroy@c-s.fr>
----
- arch/powerpc/include/asm/page.h     |  5 +++++
- arch/powerpc/kernel/machine_kexec.c |  1 +
- arch/powerpc/kernel/setup-common.c  | 19 +++++++++++++++++++
- 3 files changed, 25 insertions(+)
+I'm confused; where does the 7 come from? The relative call is 6 bytes,
+a normal call is 5 bytes (which is what we normally replace them with),
+and the longest 'native' sequence we seem to have is also 6 bytes
+(.cpu_usergs_sysret64).
 
-diff --git a/arch/powerpc/include/asm/page.h b/arch/powerpc/include/asm/page.h
-index 60a68d3a54b1..cd3ac530e58d 100644
---- a/arch/powerpc/include/asm/page.h
-+++ b/arch/powerpc/include/asm/page.h
-@@ -317,6 +317,11 @@ struct vm_area_struct;
- 
- extern unsigned long kimage_vaddr;
- 
-+static inline unsigned long kaslr_offset(void)
-+{
-+	return kimage_vaddr - KERNELBASE;
-+}
-+
- #include <asm-generic/memory_model.h>
- #endif /* __ASSEMBLY__ */
- #include <asm/slice.h>
-diff --git a/arch/powerpc/kernel/machine_kexec.c b/arch/powerpc/kernel/machine_kexec.c
-index c4ed328a7b96..078fe3d76feb 100644
---- a/arch/powerpc/kernel/machine_kexec.c
-+++ b/arch/powerpc/kernel/machine_kexec.c
-@@ -86,6 +86,7 @@ void arch_crash_save_vmcoreinfo(void)
- 	VMCOREINFO_STRUCT_SIZE(mmu_psize_def);
- 	VMCOREINFO_OFFSET(mmu_psize_def, shift);
- #endif
-+	vmcoreinfo_append_str("KERNELOFFSET=%lx\n", kaslr_offset());
- }
- 
- /*
-diff --git a/arch/powerpc/kernel/setup-common.c b/arch/powerpc/kernel/setup-common.c
-index 1f8db666468d..064075f02837 100644
---- a/arch/powerpc/kernel/setup-common.c
-+++ b/arch/powerpc/kernel/setup-common.c
-@@ -715,12 +715,31 @@ static struct notifier_block ppc_panic_block = {
- 	.priority = INT_MIN /* may not return; must be done last */
- };
- 
-+/*
-+ * Dump out kernel offset information on panic.
-+ */
-+static int dump_kernel_offset(struct notifier_block *self, unsigned long v,
-+			      void *p)
-+{
-+	pr_emerg("Kernel Offset: 0x%lx from 0x%lx\n",
-+		 kaslr_offset(), KERNELBASE);
-+
-+	return 0;
-+}
-+
-+static struct notifier_block kernel_offset_notifier = {
-+	.notifier_call = dump_kernel_offset
-+};
-+
- void __init setup_panic(void)
- {
- 	/* PPC64 always does a hard irq disable in its panic handler */
- 	if (!IS_ENABLED(CONFIG_PPC64) && !ppc_md.panic)
- 		return;
- 	atomic_notifier_chain_register(&panic_notifier_list, &ppc_panic_block);
-+	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE) && kaslr_offset() > 0)
-+		atomic_notifier_chain_register(&panic_notifier_list,
-+					       &kernel_offset_notifier);
- }
- 
- #ifdef CONFIG_CHECK_CACHE_COHERENCY
--- 
-2.17.2
-
+> +#else
+> +#define paravirt_opptr_call "c"
+> +#define paravirt_opptr_type "i"
+> +#define PARAVIRT_CALL_POST  ""
+> +#endif
+> +
+>  #define paravirt_type(op)				\
+>  	[paravirt_typenum] "i" (PARAVIRT_PATCH(op)),	\
+> -	[paravirt_opptr] "i" (&(pv_ops.op))
+> +	[paravirt_opptr] paravirt_opptr_type (&(pv_ops.op))
+>  #define paravirt_clobber(clobber)		\
+>  	[paravirt_clobber] "i" (clobber)
+>  
+> @@ -379,9 +395,10 @@ int paravirt_disable_iospace(void);
+>   * offset into the paravirt_patch_template structure, and can therefore be
+>   * freely converted back into a structure offset.
+>   */
+> -#define PARAVIRT_CALL					\
+> -	ANNOTATE_RETPOLINE_SAFE				\
+> -	"call *%c[paravirt_opptr];"
+> +#define PARAVIRT_CALL						\
+> +	ANNOTATE_RETPOLINE_SAFE					\
+> +	"call *%" paravirt_opptr_call "[paravirt_opptr];"	\
+> +	PARAVIRT_CALL_POST
