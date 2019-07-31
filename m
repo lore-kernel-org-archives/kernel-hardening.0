@@ -1,23 +1,21 @@
-Return-Path: <SRS0=xJB3=V4=lists.openwall.com=kernel-hardening-return-16659-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Gryg=V4=lists.openwall.com=kernel-hardening-return-16660-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CA0B5C433FF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 09:18:39 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4B9C0C433FF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 09:26:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 17BAD2089E
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 09:18:38 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="HS6FKyjK"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 17BAD2089E
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linuxfoundation.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16659-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3349 invoked by uid 550); 31 Jul 2019 09:18:33 -0000
+	by mail.kernel.org (Postfix) with SMTP id A4667206A3
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Jul 2019 09:26:49 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A4667206A3
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16660-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 10235 invoked by uid 550); 31 Jul 2019 09:26:31 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,39 +23,70 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3292 invoked from network); 31 Jul 2019 09:18:32 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1564564700;
-	bh=ktGwNt+CwJ8vHJa23N3cYQHsAYq7kHsNQNIt7YKx9UU=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=HS6FKyjKAnyLX5vcOGCrG3zIXdnLIR4ccNtYPsDX/imntp93Z+9JRTwnpwFNvvB4Q
-	 C04EpuzuqiX2//AqoWS9WS5EeEyaxLuWRPuUlwrhp8VTysIrnggwZwgB6nKtrD84Ty
-	 Za1BaZU48wfRN+Oshb5pkF2APYb07l3OdmwpqwlE=
-Date: Wed, 31 Jul 2019 11:18:18 +0200
-From: Greg KH <gregkh@linuxfoundation.org>
-To: Rick Mark <rickmark@outlook.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Subject: Re: Hello Kernel Hardening
-Message-ID: <20190731091818.GB29294@kroah.com>
-References: <BYAPR07MB5782E8E1F2105AD154035E10DADF0@BYAPR07MB5782.namprd07.prod.outlook.com>
+Received: (qmail 10197 invoked from network); 31 Jul 2019 09:26:31 -0000
+From: Jason Yan <yanaijie@huawei.com>
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
+CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
+	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
+	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
+	<zhaohongjiang@huawei.com>, Jason Yan <yanaijie@huawei.com>
+Subject: [PATCH v3 03/10] powerpc: introduce kimage_vaddr to store the kernel base
+Date: Wed, 31 Jul 2019 17:43:11 +0800
+Message-ID: <20190731094318.26538-4-yanaijie@huawei.com>
+X-Mailer: git-send-email 2.17.2
+In-Reply-To: <20190731094318.26538-1-yanaijie@huawei.com>
+References: <20190731094318.26538-1-yanaijie@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <BYAPR07MB5782E8E1F2105AD154035E10DADF0@BYAPR07MB5782.namprd07.prod.outlook.com>
-User-Agent: Mutt/1.12.1 (2019-06-15)
+Content-Type: text/plain
+X-Originating-IP: [10.175.124.28]
+X-CFilter-Loop: Reflected
 
-On Wed, Jul 31, 2019 at 06:52:04AM +0000, Rick Mark wrote:
-> Per the instructions in the get involved I'm here saying hello.
-> 
-> My name is Rick Mark, currently a security engineer at Dropbox in SF.
-> 
-> I've been toying around with various things I've found in the wild
-> over the years and recently put together this CC Attribution paper
-> 'Security Critical Kernel Object Confidentiality and Integrity'
-> (https://dbx.link/sckoci).
+Now the kernel base is a fixed value - KERNELBASE. To support KASLR, we
+need a variable to store the kernel base.
 
-Link needs permissions to view it :(
+Signed-off-by: Jason Yan <yanaijie@huawei.com>
+Cc: Diana Craciun <diana.craciun@nxp.com>
+Cc: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Christophe Leroy <christophe.leroy@c-s.fr>
+Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Paul Mackerras <paulus@samba.org>
+Cc: Nicholas Piggin <npiggin@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>
+Reviewed-by: Christophe Leroy <christophe.leroy@c-s.fr>
+---
+ arch/powerpc/include/asm/page.h | 2 ++
+ arch/powerpc/mm/init-common.c   | 2 ++
+ 2 files changed, 4 insertions(+)
 
-thanks,
+diff --git a/arch/powerpc/include/asm/page.h b/arch/powerpc/include/asm/page.h
+index 0d52f57fca04..60a68d3a54b1 100644
+--- a/arch/powerpc/include/asm/page.h
++++ b/arch/powerpc/include/asm/page.h
+@@ -315,6 +315,8 @@ void arch_free_page(struct page *page, int order);
+ 
+ struct vm_area_struct;
+ 
++extern unsigned long kimage_vaddr;
++
+ #include <asm-generic/memory_model.h>
+ #endif /* __ASSEMBLY__ */
+ #include <asm/slice.h>
+diff --git a/arch/powerpc/mm/init-common.c b/arch/powerpc/mm/init-common.c
+index 152ae0d21435..d4801ce48dc5 100644
+--- a/arch/powerpc/mm/init-common.c
++++ b/arch/powerpc/mm/init-common.c
+@@ -25,6 +25,8 @@ phys_addr_t memstart_addr = (phys_addr_t)~0ull;
+ EXPORT_SYMBOL_GPL(memstart_addr);
+ phys_addr_t kernstart_addr;
+ EXPORT_SYMBOL_GPL(kernstart_addr);
++unsigned long kimage_vaddr = KERNELBASE;
++EXPORT_SYMBOL_GPL(kimage_vaddr);
+ 
+ static bool disable_kuep = !IS_ENABLED(CONFIG_PPC_KUEP);
+ static bool disable_kuap = !IS_ENABLED(CONFIG_PPC_KUAP);
+-- 
+2.17.2
 
-greg k-h
