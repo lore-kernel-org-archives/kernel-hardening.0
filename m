@@ -1,23 +1,22 @@
-Return-Path: <SRS0=gA9X=V5=lists.openwall.com=kernel-hardening-return-16682-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=L9/5=V5=lists.openwall.com=kernel-hardening-return-16683-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3B6FCC433FF
-	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Aug 2019 01:33:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0011DC19759
+	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Aug 2019 05:54:36 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5B0842067D
-	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Aug 2019 01:33:13 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3BF872089E
+	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Aug 2019 05:54:36 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=outlook.com header.i=@outlook.com header.b="FX6s28Yf"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5B0842067D
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=outlook.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16682-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7434 invoked by uid 550); 1 Aug 2019 01:33:06 -0000
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="Fq+zeya4"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3BF872089E
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linuxfoundation.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16683-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 14266 invoked by uid 550); 1 Aug 2019 05:54:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,131 +24,42 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21710 invoked from network); 31 Jul 2019 20:34:12 -0000
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=EnwSCyDaFXakJD6vM75G9UfcU8+po78To4Ty2iNaPJd6RrqC6SI7dcezdzck7bfr38/OqbubPj0Z4z1U/cf/ZvZCgmGErN1oSLUJyNIDUHDd/lRWlC9Yh2WZMSQ2dQP++ghuPmnP2uzPPX8POhDzkXnw0oO48Xp9LoER2AjQNvGPxbxuu+UlVeeFBgMVK7cdGwBLVTMUOrw/q32ioToDKsVsnqW2yaBvpb4Ln0Fo+u1LQPMo6TcBAKeBwKc7AWbs3ur4fLh5oNVCYOo6/BeR446NM1hpW9v9OTpbQ6KSgVzCTuEuQSYNiLtyZYAtIifgyslVOsM5LkIxt4lzZWyhNw==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=+ksgWLn8i2u8pUddzTn5K1zZ3EeFMOaM2K3F7jSAycQ=;
- b=oHpetbbvX7n/Yc28aTXol6tHrlfk9mAIXhUMzglrHgKzAOqAZ3E56B+XU2omSE8f+YLLLP9uf5ZX2RALmCv1MEGSQycq4/TGvTD+HE9HISdH/Xn18U7ELVcEjO4ZF+uuwPt+H0Ch/JxuADAgakmZXgmXHALPjq7AA5QHIXb7sFjfyzm200XoNb295hn13l4KDbVPnsfPQRWK9XvtYrnR+lqzOtPmSRql/vFHFszVZ0s7PcV2G0V64NIBNueZlUQAnYC7XUFGVuO4EEvwx9WAxbAjaYhEBnP6YoPV2SqBCjEO3WR6sTaufgyjd+Ct8EAN8TtdVv3rQojW3wp85ERGjg==
-ARC-Authentication-Results: i=1; mx.microsoft.com
- 1;spf=none;dmarc=none;dkim=none;arc=none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=outlook.com;
- s=selector1;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=+ksgWLn8i2u8pUddzTn5K1zZ3EeFMOaM2K3F7jSAycQ=;
- b=FX6s28Yfmmi0OEtBDHdMOa4og91y1IR7Osi3L63X3DIwaTRJBNgm/SbPLbTGmygxIQRrfGAUTUyCsGxTj/0XMP2NeczK6v+vZx6tvRAycnDu49rxT0TBcV3PcF0e2TZTM7gKg35UPUu4nLf0i1NL90I2ajjgf7GQeJCM5+YO764bfhWQNO53SjBSykTU5ZI7INaNSHpnm/GiZcnl9Klo18jMvOOoNVtgLNCIPfpAM7t9T8ULyztKn7oAIf31jnSiLjTt32BeLINKpbUG/E0bM+WkH4Ert7408KkE/p3KWoF/Cs03X6kfwaCe7f+5zWNS+GJ9prFH25bTZqar5vKsqA==
-From: Rick Mark <rickmark@outlook.com>
-To: Greg KH <gregkh@linuxfoundation.org>
-CC: "kernel-hardening@lists.openwall.com"
-	<kernel-hardening@lists.openwall.com>
+Received: (qmail 14231 invoked from network); 1 Aug 2019 05:54:28 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1564638856;
+	bh=vPTm0+7/hJa5qvqjNs2fHzMIJZdDsPyySouLphJObn8=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=Fq+zeya4CNUjM3Gmbxdia375Y1Bt7/nmJsV425xelOsoXWJ6pZfHWFI6unosdVn8U
+	 rLqOMFxsz44WOhVYCmdbhm1hetOn5Pn+nOGz/Offl1svoPLB/MFIsk7b4zXJQ9StIF
+	 KF0OHqko2agV1waWYFQJ51pwE1NkclPnG2iWkizY=
+Date: Thu, 1 Aug 2019 07:54:13 +0200
+From: Greg KH <gregkh@linuxfoundation.org>
+To: Rick Mark <rickmark@outlook.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 Subject: Re: Hello Kernel Hardening
-Thread-Topic: Hello Kernel Hardening
-Thread-Index: AQHVR0Nydh2VCNrgZESrXztbaUphuabkc0AAgAC8yYA=
-Date: Wed, 31 Jul 2019 20:33:59 +0000
-Message-ID:
- <BYAPR07MB5782A0925C97FBCB172BD3C0DADF0@BYAPR07MB5782.namprd07.prod.outlook.com>
+Message-ID: <20190801055413.GA24062@kroah.com>
 References: <20190731091818.GB29294@kroah.com>
-In-Reply-To: <20190731091818.GB29294@kroah.com>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach:
-X-MS-TNEF-Correlator:
-x-incomingtopheadermarker:
- OriginalChecksum:59AF9CDEC69DE91F6115EC8F6BA44DFBE245943D9EDEA6D3278D8F9B618B5736;UpperCasedChecksum:5441C5DEA287424A13B9BC74B5C97BBBD31F5D0F3A625BD445FD3C194475BD8F;SizeAsReceived:6699;Count:44
-x-ms-exchange-messagesentrepresentingtype: 1
-x-tmn: [dJ9hrURO0wdChiUul+ojIuxMXVkRF9C9]
-x-ms-publictraffictype: Email
-x-incomingheadercount: 44
-x-eopattributedmessage: 0
-x-microsoft-antispam:
- BCL:0;PCL:0;RULEID:(2390118)(5050001)(7020095)(20181119110)(201702061078)(5061506573)(5061507331)(1603103135)(2017031320274)(2017031322404)(2017031323274)(2017031324274)(1601125500)(1603101475)(1701031045);SRVR:SN1NAM02HT009;
-x-ms-traffictypediagnostic: SN1NAM02HT009:
-x-ms-exchange-purlcount: 1
-x-microsoft-antispam-message-info:
- Kx/3zEWzg29ZN6b8zW2zvsIUBYqHoKM/f3k5RWlTbnIlvTg4gTp9Lk/PhCTR4JCRpkHwP9Zjz7VriwWuf2ahIUNAch2eE0kjQJ92ZSem9gVlXoQLtoC6aK/seIJkuuwDj8MpLRd2YlB/T5s/rtwhr6c63agbKq8Kjcsw669FUpl8qfLRGg1MfKjrWKbBTuqD
-Content-Type: multipart/alternative;
-	boundary="_000_BYAPR07MB5782A0925C97FBCB172BD3C0DADF0BYAPR07MB5782namp_"
+ <BYAPR07MB5782A0925C97FBCB172BD3C0DADF0@BYAPR07MB5782.namprd07.prod.outlook.com>
 MIME-Version: 1.0
-X-OriginatorOrg: outlook.com
-X-MS-Exchange-CrossTenant-RMS-PersistedConsumerOrg: 00000000-0000-0000-0000-000000000000
-X-MS-Exchange-CrossTenant-Network-Message-Id: 567711ed-284e-45dc-156b-08d715f66b30
-X-MS-Exchange-CrossTenant-rms-persistedconsumerorg: 00000000-0000-0000-0000-000000000000
-X-MS-Exchange-CrossTenant-originalarrivaltime: 31 Jul 2019 20:33:59.9776
- (UTC)
-X-MS-Exchange-CrossTenant-fromentityheader: Internet
-X-MS-Exchange-CrossTenant-id: 84df9e7f-e9f6-40af-b435-aaaaaaaaaaaa
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: SN1NAM02HT009
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <BYAPR07MB5782A0925C97FBCB172BD3C0DADF0@BYAPR07MB5782.namprd07.prod.outlook.com>
+User-Agent: Mutt/1.12.1 (2019-06-15)
 
---_000_BYAPR07MB5782A0925C97FBCB172BD3C0DADF0BYAPR07MB5782namp_
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+On Wed, Jul 31, 2019 at 08:33:59PM +0000, Rick Mark wrote:
+> Sorry, didn’t realize the Dropbox link shortener required login.  Full link:
+> 
+> 
+> https://paper.dropbox.com/doc/Security-Critical-Kernel-Object-Confidentiality-and-Integrity-akFs9yNQ8YxLKP3BEaHZ8
 
-U29ycnksIGRpZG7igJl0IHJlYWxpemUgdGhlIERyb3Bib3ggbGluayBzaG9ydGVuZXIgcmVxdWly
-ZWQgbG9naW4uICBGdWxsIGxpbms6DQoNCg0KaHR0cHM6Ly9wYXBlci5kcm9wYm94LmNvbS9kb2Mv
-U2VjdXJpdHktQ3JpdGljYWwtS2VybmVsLU9iamVjdC1Db25maWRlbnRpYWxpdHktYW5kLUludGVn
-cml0eS1ha0ZzOXlOUThZeExLUDNCRWFIWjgNCg0KDQpTZW50IGZyb20gbXkgaVBhZA0KDQpPbiBK
-dWwgMzEsIDIwMTksIGF0IDI6MTggQU0sIEdyZWcgS0ggPGdyZWdraEBsaW51eGZvdW5kYXRpb24u
-b3JnPiB3cm90ZToNCg0K77u/T24gV2VkLCBKdWwgMzEsIDIwMTkgYXQgMDY6NTI6MDRBTSArMDAw
-MCwgUmljayBNYXJrIHdyb3RlOg0KUGVyIHRoZSBpbnN0cnVjdGlvbnMgaW4gdGhlIGdldCBpbnZv
-bHZlZCBJJ20gaGVyZSBzYXlpbmcgaGVsbG8uDQoNCk15IG5hbWUgaXMgUmljayBNYXJrLCBjdXJy
-ZW50bHkgYSBzZWN1cml0eSBlbmdpbmVlciBhdCBEcm9wYm94IGluIFNGLg0KDQpJJ3ZlIGJlZW4g
-dG95aW5nIGFyb3VuZCB3aXRoIHZhcmlvdXMgdGhpbmdzIEkndmUgZm91bmQgaW4gdGhlIHdpbGQN
-Cm92ZXIgdGhlIHllYXJzIGFuZCByZWNlbnRseSBwdXQgdG9nZXRoZXIgdGhpcyBDQyBBdHRyaWJ1
-dGlvbiBwYXBlcg0KJ1NlY3VyaXR5IENyaXRpY2FsIEtlcm5lbCBPYmplY3QgQ29uZmlkZW50aWFs
-aXR5IGFuZCBJbnRlZ3JpdHknDQooaHR0cHM6Ly9ldXIwNC5zYWZlbGlua3MucHJvdGVjdGlvbi5v
-dXRsb29rLmNvbS8/dXJsPWh0dHBzJTNBJTJGJTJGZGJ4LmxpbmslMkZzY2tvY2kmYW1wO2RhdGE9
-MDIlN0MwMSU3QyU3QzBjMjgxOTdkZjBiYjRlYzE5MGNjMDhkNzE1OTgwOGRhJTdDODRkZjllN2Zl
-OWY2NDBhZmI0MzVhYWFhYWFhYWFhYWElN0MxJTdDMCU3QzYzNzAwMTYxNTAzNjAzNjE3NyZhbXA7
-c2RhdGE9d21RSkhSTDl0TndGVmRlbjlQMlRycnlTU1FYJTJGNFVrZDNlS25ZZlRDVVRNJTNEJmFt
-cDtyZXNlcnZlZD0wKS4NCg0KTGluayBuZWVkcyBwZXJtaXNzaW9ucyB0byB2aWV3IGl0IDooDQoN
-CnRoYW5rcywNCg0KZ3JlZyBrLWgNCg==
+That works better, thanks!
 
---_000_BYAPR07MB5782A0925C97FBCB172BD3C0DADF0BYAPR07MB5782namp_
-Content-Type: text/html; charset="utf-8"
-Content-ID:
- <9FEBF44803BF5D4B8A4DFB93CB9C746D@sct-15-20-2032-17-msonline-outlook-4ba63.templateTenant>
-Content-Transfer-Encoding: base64
+As always, why not knock up a working prototype of your idea first and
+post it?  That's how we work with kernel development.  Lots of people
+have random ideas, but to see if they actually work you need a working
+patch.
 
-PGh0bWw+DQo8aGVhZD4NCjxtZXRhIGh0dHAtZXF1aXY9IkNvbnRlbnQtVHlwZSIgY29udGVudD0i
-dGV4dC9odG1sOyBjaGFyc2V0PXV0Zi04Ij4NCjwvaGVhZD4NCjxib2R5IGRpcj0iYXV0byIgcm9s
-ZT0idGV4dGJveCIgYXJpYS1sYWJlbD0iTWVzc2FnZSBCb2R5Ij4NClNvcnJ5LCBkaWRu4oCZdCBy
-ZWFsaXplIHRoZSBEcm9wYm94IGxpbmsgc2hvcnRlbmVyIHJlcXVpcmVkIGxvZ2luLiAmbmJzcDtG
-dWxsIGxpbms6DQo8ZGl2Pjxicj4NCjwvZGl2Pg0KPGRpdj48YnI+DQo8YSBocmVmPSJodHRwczov
-L3BhcGVyLmRyb3Bib3guY29tL2RvYy9TZWN1cml0eS1Dcml0aWNhbC1LZXJuZWwtT2JqZWN0LUNv
-bmZpZGVudGlhbGl0eS1hbmQtSW50ZWdyaXR5LWFrRnM5eU5ROFl4TEtQM0JFYUhaOCI+aHR0cHM6
-Ly9wYXBlci5kcm9wYm94LmNvbS9kb2MvU2VjdXJpdHktQ3JpdGljYWwtS2VybmVsLU9iamVjdC1D
-b25maWRlbnRpYWxpdHktYW5kLUludGVncml0eS1ha0ZzOXlOUThZeExLUDNCRWFIWjg8L2E+PC9k
-aXY+DQo8ZGl2Pjxicj4NCjwvZGl2Pg0KPGRpdj48YnI+DQo8ZGl2IGRpcj0ibHRyIj5TZW50IGZy
-b20gbXkgaVBhZDwvZGl2Pg0KPGRpdiBkaXI9Imx0ciI+PGJyPg0KPGJsb2NrcXVvdGUgdHlwZT0i
-Y2l0ZSI+T24gSnVsIDMxLCAyMDE5LCBhdCAyOjE4IEFNLCBHcmVnIEtIICZsdDtncmVna2hAbGlu
-dXhmb3VuZGF0aW9uLm9yZyZndDsgd3JvdGU6PGJyPg0KPGJyPg0KPC9ibG9ja3F1b3RlPg0KPC9k
-aXY+DQo8YmxvY2txdW90ZSB0eXBlPSJjaXRlIj4NCjxkaXYgZGlyPSJsdHIiPu+7vzxzcGFuPk9u
-IFdlZCwgSnVsIDMxLCAyMDE5IGF0IDA2OjUyOjA0QU0gJiM0MzswMDAwLCBSaWNrIE1hcmsgd3Jv
-dGU6PC9zcGFuPjxicj4NCjxibG9ja3F1b3RlIHR5cGU9ImNpdGUiPjxzcGFuPlBlciB0aGUgaW5z
-dHJ1Y3Rpb25zIGluIHRoZSBnZXQgaW52b2x2ZWQgSSdtIGhlcmUgc2F5aW5nIGhlbGxvLjwvc3Bh
-bj48YnI+DQo8L2Jsb2NrcXVvdGU+DQo8YmxvY2txdW90ZSB0eXBlPSJjaXRlIj48c3Bhbj48L3Nw
-YW4+PGJyPg0KPC9ibG9ja3F1b3RlPg0KPGJsb2NrcXVvdGUgdHlwZT0iY2l0ZSI+PHNwYW4+TXkg
-bmFtZSBpcyBSaWNrIE1hcmssIGN1cnJlbnRseSBhIHNlY3VyaXR5IGVuZ2luZWVyIGF0IERyb3Bi
-b3ggaW4gU0YuPC9zcGFuPjxicj4NCjwvYmxvY2txdW90ZT4NCjxibG9ja3F1b3RlIHR5cGU9ImNp
-dGUiPjxzcGFuPjwvc3Bhbj48YnI+DQo8L2Jsb2NrcXVvdGU+DQo8YmxvY2txdW90ZSB0eXBlPSJj
-aXRlIj48c3Bhbj5JJ3ZlIGJlZW4gdG95aW5nIGFyb3VuZCB3aXRoIHZhcmlvdXMgdGhpbmdzIEkn
-dmUgZm91bmQgaW4gdGhlIHdpbGQ8L3NwYW4+PGJyPg0KPC9ibG9ja3F1b3RlPg0KPGJsb2NrcXVv
-dGUgdHlwZT0iY2l0ZSI+PHNwYW4+b3ZlciB0aGUgeWVhcnMgYW5kIHJlY2VudGx5IHB1dCB0b2dl
-dGhlciB0aGlzIENDIEF0dHJpYnV0aW9uIHBhcGVyPC9zcGFuPjxicj4NCjwvYmxvY2txdW90ZT4N
-CjxibG9ja3F1b3RlIHR5cGU9ImNpdGUiPjxzcGFuPidTZWN1cml0eSBDcml0aWNhbCBLZXJuZWwg
-T2JqZWN0IENvbmZpZGVudGlhbGl0eSBhbmQgSW50ZWdyaXR5Jzwvc3Bhbj48YnI+DQo8L2Jsb2Nr
-cXVvdGU+DQo8YmxvY2txdW90ZSB0eXBlPSJjaXRlIj48c3Bhbj4oaHR0cHM6Ly9ldXIwNC5zYWZl
-bGlua3MucHJvdGVjdGlvbi5vdXRsb29rLmNvbS8/dXJsPWh0dHBzJTNBJTJGJTJGZGJ4Lmxpbmsl
-MkZzY2tvY2kmYW1wO2FtcDtkYXRhPTAyJTdDMDElN0MlN0MwYzI4MTk3ZGYwYmI0ZWMxOTBjYzA4
-ZDcxNTk4MDhkYSU3Qzg0ZGY5ZTdmZTlmNjQwYWZiNDM1YWFhYWFhYWFhYWFhJTdDMSU3QzAlN0M2
-MzcwMDE2MTUwMzYwMzYxNzcmYW1wO2FtcDtzZGF0YT13bVFKSFJMOXROd0ZWZGVuOVAyVHJyeVNT
-UVglMkY0VWtkM2VLbllmVENVVE0lM0QmYW1wO2FtcDtyZXNlcnZlZD0wKS48L3NwYW4+PGJyPg0K
-PC9ibG9ja3F1b3RlPg0KPHNwYW4+PC9zcGFuPjxicj4NCjxzcGFuPkxpbmsgbmVlZHMgcGVybWlz
-c2lvbnMgdG8gdmlldyBpdCA6KDwvc3Bhbj48YnI+DQo8c3Bhbj48L3NwYW4+PGJyPg0KPHNwYW4+
-dGhhbmtzLDwvc3Bhbj48YnI+DQo8c3Bhbj48L3NwYW4+PGJyPg0KPHNwYW4+Z3JlZyBrLWg8L3Nw
-YW4+PGJyPg0KPC9kaXY+DQo8L2Jsb2NrcXVvdGU+DQo8L2Rpdj4NCjwvYm9keT4NCjwvaHRtbD4N
-Cg==
+good luck!
 
---_000_BYAPR07MB5782A0925C97FBCB172BD3C0DADF0BYAPR07MB5782namp_--
+greg k-h
