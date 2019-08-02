@@ -1,23 +1,20 @@
-Return-Path: <SRS0=D5e1=V5=lists.openwall.com=kernel-hardening-return-16691-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Qo1z=V6=lists.openwall.com=kernel-hardening-return-16692-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6E75EC19759
-	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Aug 2019 20:26:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C1410C19759
+	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Aug 2019 00:49:16 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BB2662087E
-	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Aug 2019 20:25:59 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="m6r5BoZC"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BB2662087E
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linuxfoundation.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16691-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 10114 invoked by uid 550); 1 Aug 2019 20:25:53 -0000
+	by mail.kernel.org (Postfix) with SMTP id 25D0F2084C
+	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Aug 2019 00:49:15 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 25D0F2084C
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16692-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13942 invoked by uid 550); 2 Aug 2019 00:49:08 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,58 +22,53 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 10082 invoked from network); 1 Aug 2019 20:25:53 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1564691141;
-	bh=6WH2vwf20NpWqVWIo2ROGaN3O0fKC92RWC72jcj+LH8=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=m6r5BoZCHfshMdO1KzkhRDvwqRtMa6LUht6fFpiUzdluYGSVtGjyzWdQdOYIW6Xl1
-	 823hceehwH8Fo/LqgyolgrRh36COU3Mfv2U7v0pa0XAP0uPf8kQQASRuqhi/9OQWWG
-	 ixtJ2bTxw94JtHOsVfkFGbWWMRoLOivYAlCbCDf4=
-Date: Thu, 1 Aug 2019 22:25:38 +0200
-From: Greg KH <gregkh@linuxfoundation.org>
-To: Rick Mark <rickmark@outlook.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
-	"keescook@chromium.org" <keescook@chromium.org>
-Subject: Re: Hello Kernel Hardening
-Message-ID: <20190801202538.GA4383@kroah.com>
-References: <20190731091818.GB29294@kroah.com>
- <BYAPR07MB5782A0925C97FBCB172BD3C0DADF0@BYAPR07MB5782.namprd07.prod.outlook.com>
- <20190801055413.GA24062@kroah.com>
- <BYAPR07MB57828912977C33ABC45E4E10DADE0@BYAPR07MB5782.namprd07.prod.outlook.com>
+Received: (qmail 13910 invoked from network); 2 Aug 2019 00:49:07 -0000
+Subject: Re: [PATCH v3 00/10] implement KASLR for powerpc/fsl_booke/32
+To: Diana Madalina Craciun <diana.craciun@nxp.com>, "mpe@ellerman.id.au"
+	<mpe@ellerman.id.au>, "linuxppc-dev@lists.ozlabs.org"
+	<linuxppc-dev@lists.ozlabs.org>, "christophe.leroy@c-s.fr"
+	<christophe.leroy@c-s.fr>, "benh@kernel.crashing.org"
+	<benh@kernel.crashing.org>, "paulus@samba.org" <paulus@samba.org>,
+	"npiggin@gmail.com" <npiggin@gmail.com>, "keescook@chromium.org"
+	<keescook@chromium.org>, "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>
+CC: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
+	"wangkefeng.wang@huawei.com" <wangkefeng.wang@huawei.com>,
+	"yebin10@huawei.com" <yebin10@huawei.com>, "thunder.leizhen@huawei.com"
+	<thunder.leizhen@huawei.com>, "jingxiangfeng@huawei.com"
+	<jingxiangfeng@huawei.com>, "fanchengyang@huawei.com"
+	<fanchengyang@huawei.com>, "zhaohongjiang@huawei.com"
+	<zhaohongjiang@huawei.com>
+References: <20190731094318.26538-1-yanaijie@huawei.com>
+ <VI1PR0401MB2463844DD4A35EB3F0959C22FFDE0@VI1PR0401MB2463.eurprd04.prod.outlook.com>
+From: Jason Yan <yanaijie@huawei.com>
+Message-ID: <bc30b426-d7c6-c839-ebd2-a404465079a3@huawei.com>
+Date: Fri, 2 Aug 2019 08:48:44 +0800
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
+ Thunderbird/60.5.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <BYAPR07MB57828912977C33ABC45E4E10DADE0@BYAPR07MB5782.namprd07.prod.outlook.com>
-User-Agent: Mutt/1.12.1 (2019-06-15)
+In-Reply-To: <VI1PR0401MB2463844DD4A35EB3F0959C22FFDE0@VI1PR0401MB2463.eurprd04.prod.outlook.com>
+Content-Type: text/plain; charset="utf-8"; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-Originating-IP: [10.177.96.203]
+X-CFilter-Loop: Reflected
 
 
-A: Because it messes up the order in which people normally read text.
-Q: Why is top-posting such a bad thing?
-A: Top-posting.
-Q: What is the most annoying thing in e-mail?
 
-A: No.
-Q: Should I include quotations after my reply?
-
-http://daringfireball.net/2007/07/on_top
-
-On Thu, Aug 01, 2019 at 08:00:33PM +0000, Rick Mark wrote:
-> Awesome,
+On 2019/8/1 22:36, Diana Madalina Craciun wrote:
+> Hi Jason,
 > 
-> Thanks Greg for the advice and welcome.
+> I have tested these series on a P4080 platform.
+> 
+> Regards,
+> Diana
 
-A bit more advice above on how the kernel developers handle email :)
+Diana, thank you so much.
 
-> I'm already starting to put together one with Linaro / OP-TEE cross
-> compiled for QEMU ARMv8.  I'll send it back out when it's working /
-> not shameful enough to actually `git push` to a fork.
+So can you take a look at the code of this version and give a 
+Reviewed-by or Tested-by?
 
-I would recommend reading the kernel development process documentation
-as well, in the kernel source tree.  That will give you a good idea as
-to how we work and how we handle reviewing patches (hint, we don't use
-git trees for review).
+Thanks,
+Jason
 
-good luck!
-
-greg k-h
