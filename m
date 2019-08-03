@@ -1,22 +1,20 @@
-Return-Path: <SRS0=tmE2=V6=lists.openwall.com=kernel-hardening-return-16694-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=hCOi=V7=lists.openwall.com=kernel-hardening-return-16695-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 654ECC433FF
-	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Aug 2019 12:37:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D2DD8C31E40
+	for <kernel-hardening@archiver.kernel.org>; Sat,  3 Aug 2019 18:57:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5E14220657
-	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Aug 2019 12:37:08 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=nxp.com header.i=@nxp.com header.b="MBqHuJND"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5E14220657
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=nxp.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16694-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24139 invoked by uid 550); 2 Aug 2019 12:36:56 -0000
+	by mail.kernel.org (Postfix) with SMTP id F29DD2087C
+	for <kernel-hardening@archiver.kernel.org>; Sat,  3 Aug 2019 18:57:44 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F29DD2087C
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16695-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5148 invoked by uid 550); 3 Aug 2019 18:57:35 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,176 +22,240 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30296 invoked from network); 2 Aug 2019 08:48:23 -0000
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=O6eNdhB4pFae1GAxXzoLguI6+Zf7gMKusRdW8W7v7QoLeTHpyPRYxHc0UWEA0U27jxWUUIkMTUQhZg2NQzTMIOVRJlmcYxIsUMrxnNCiL5rGPRFJNr1fzZANyLj0FOD/COuymKw7ZvaENQUxdSYKeyAOj/S8BEPAbzeLqTyx1Ys5ziXWeb8nyW7/JO84fZ22DTLsfYIzquCrGoApygwYg6UeY1Sc5QRbxRsa98f3dBGsOzwM8ErPp+MjdQbpcGDCR4oyXIYFo7cAEMLJBapXp9mqMNUmKiDCwXNNZKiUk1vrYC+4+qOheepv9kUbTUC7Rz0CURfil5Kf4BBaNH/uuQ==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=lxRdiLzB/7t67WpVjbo9iz9TYpfjet5bWNCCoQuxccM=;
- b=oeehMASACEbrfozQNN0ZEvRIxQpZGFa1vWjSfTp9McLC65AqEV6tPM5615se+mOZTYBvBT1Hirm8YSNOEA6cOcFK7oEPCI2mYXgCDRyHh5G0Zca9mBa9bm7Rnz8tHG37Ko0tBKHlSl1LMmZZ9ho1S3BJbdyO4m/b9cre/lAcRbsvyMTM0/xhQdfvQpwpw7HMab1ZVqLOBjtHJN3CoBolK9HmfNRcnsws6j+v7I6p0lqKiDmx+jl/xYsCO6/r7cR+Mbxw9wemdMZG0HGY60C0gx3oBiRkqG1GM++SAnKy3dsT72cP+A8XeR2uvkrzpFDCz9slsxdmO2W7NlJYL7K/jg==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1;spf=pass
- smtp.mailfrom=nxp.com;dmarc=pass action=none header.from=nxp.com;dkim=pass
- header.d=nxp.com;arc=none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nxp.com; s=selector2;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=lxRdiLzB/7t67WpVjbo9iz9TYpfjet5bWNCCoQuxccM=;
- b=MBqHuJNDnge64xFWlcdjbhSsxgw0kewMIm83XfrZGUBewgNAO61mJ8hc4DR4aK0bU2/Hg5QGj4OezlwpkSnSOTWXkJICQG07oQC/5gjqq/8Bn0KrKDDhXfvuLYlCqozEQJ9W+gmTiKXhWMGJtmfAofJ9lrVaPxYn6SkBugYYT8M=
-From: Diana Madalina Craciun <diana.craciun@nxp.com>
-To: Jason Yan <yanaijie@huawei.com>, "mpe@ellerman.id.au"
-	<mpe@ellerman.id.au>, "linuxppc-dev@lists.ozlabs.org"
-	<linuxppc-dev@lists.ozlabs.org>, "christophe.leroy@c-s.fr"
-	<christophe.leroy@c-s.fr>, "benh@kernel.crashing.org"
-	<benh@kernel.crashing.org>, "paulus@samba.org" <paulus@samba.org>,
-	"npiggin@gmail.com" <npiggin@gmail.com>, "keescook@chromium.org"
-	<keescook@chromium.org>, "kernel-hardening@lists.openwall.com"
-	<kernel-hardening@lists.openwall.com>
-CC: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
-	"wangkefeng.wang@huawei.com" <wangkefeng.wang@huawei.com>,
-	"yebin10@huawei.com" <yebin10@huawei.com>, "thunder.leizhen@huawei.com"
-	<thunder.leizhen@huawei.com>, "jingxiangfeng@huawei.com"
-	<jingxiangfeng@huawei.com>, "fanchengyang@huawei.com"
-	<fanchengyang@huawei.com>, "zhaohongjiang@huawei.com"
-	<zhaohongjiang@huawei.com>
-Subject: Re: [PATCH v3 00/10] implement KASLR for powerpc/fsl_booke/32
-Thread-Topic: [PATCH v3 00/10] implement KASLR for powerpc/fsl_booke/32
-Thread-Index: AQHVR4IOWsHaCjD120G4pOTxFRhTEA==
-Date: Fri, 2 Aug 2019 08:48:10 +0000
-Message-ID:
- <VI1PR0401MB246349AD76C09D009BB8B5A4FFD90@VI1PR0401MB2463.eurprd04.prod.outlook.com>
-References: <20190731094318.26538-1-yanaijie@huawei.com>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach:
-X-MS-TNEF-Correlator:
-authentication-results: spf=none (sender IP is )
- smtp.mailfrom=diana.craciun@nxp.com; 
-x-originating-ip: [212.146.100.6]
-x-ms-publictraffictype: Email
-x-ms-office365-filtering-correlation-id: f8580ecb-d6a3-4e09-1fcf-08d71726259b
-x-ms-office365-filtering-ht: Tenant
-x-microsoft-antispam:
- BCL:0;PCL:0;RULEID:(2390118)(7020095)(4652040)(8989299)(4534185)(4627221)(201703031133081)(201702281549075)(8990200)(5600148)(711020)(4605104)(1401327)(4618075)(2017052603328)(7193020);SRVR:VI1PR0401MB2638;
-x-ms-traffictypediagnostic: VI1PR0401MB2638:
-x-microsoft-antispam-prvs:
- <VI1PR0401MB2638CF4CFD18FC2D07CD8303FFD90@VI1PR0401MB2638.eurprd04.prod.outlook.com>
-x-ms-oob-tlc-oobclassifiers: OLM:8273;
-x-forefront-prvs: 011787B9DD
-x-forefront-antispam-report:
- SFV:NSPM;SFS:(10009020)(4636009)(346002)(39860400002)(366004)(376002)(136003)(396003)(189003)(199004)(99286004)(3846002)(14454004)(6116002)(305945005)(71200400001)(476003)(33656002)(478600001)(8676002)(68736007)(81166006)(7736002)(66066001)(25786009)(5660300002)(8936002)(4326008)(71190400001)(2201001)(74316002)(81156014)(86362001)(52536014)(76176011)(7696005)(14444005)(53936002)(486006)(6246003)(91956017)(256004)(26005)(316002)(2906002)(76116006)(446003)(66446008)(102836004)(66946007)(229853002)(6506007)(7416002)(53546011)(66476007)(64756008)(9686003)(110136005)(2501003)(54906003)(66556008)(55016002)(6436002)(186003);DIR:OUT;SFP:1101;SCL:1;SRVR:VI1PR0401MB2638;H:VI1PR0401MB2463.eurprd04.prod.outlook.com;FPR:;SPF:None;LANG:en;PTR:InfoNoRecords;MX:1;A:1;
-received-spf: None (protection.outlook.com: nxp.com does not designate
- permitted sender hosts)
-x-ms-exchange-senderadcheck: 1
-x-microsoft-antispam-message-info:
- FBxON3gONiO0j3V98Ojb3ldPdouon7x3reTtDPguoRSMNT3+t2EwEZrC4UDa5DmR+mg8zfZZPPO1Wz/zYWuQWpJWFxv7Z+MWObi1Ia6v5eDU5rmXOcW6m05jmgAqW6A1rUXPLogYyz5XSDji36nQE8Ayi/XqWo3vt33A7BZ43CguNqDAhj/NuW+15yXidTArhwLy8jdWWOHuD/FuZrPa0+X/HgKtcanAYXYeSQ7p29xNJAkjRQORk6ulDR0ZAmJhY4ioGzp6ZpKSgbp96xquYczQnZuz9Vo8qZowyocDmEJQrvX08qm8lNy4nVRKPxeIaoekoxn0nTnj2yg4fWL0pUKJHPXbsxOUC8RD6ndCupI6sC3GoHZqe6oAm/3DBXsI2OzhW2YO4hv3IUpMELHJ3qcbMCWgbuMS1rqAEpdL/X0=
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+Received: (qmail 4092 invoked from network); 3 Aug 2019 18:57:34 -0000
+From: "Christopher M. Riedl" <cmr@informatik.wtf>
+To: linuxppc-dev@ozlabs.org,
+	kernel-hardening@lists.openwall.com
+Cc: dja@axtens.net,
+	mjg59@google.com,
+	Andrew Donnellan <ajd@linux.ibm.com>
+Subject: [RFC PATCH v3] powerpc/xmon: Restrict when kernel is locked down
+Date: Sat,  3 Aug 2019 14:00:40 -0500
+Message-Id: <20190803190040.8103-1-cmr@informatik.wtf>
+X-Mailer: git-send-email 2.22.0
 MIME-Version: 1.0
-X-OriginatorOrg: nxp.com
-X-MS-Exchange-CrossTenant-Network-Message-Id: f8580ecb-d6a3-4e09-1fcf-08d71726259b
-X-MS-Exchange-CrossTenant-originalarrivaltime: 02 Aug 2019 08:48:10.1312
- (UTC)
-X-MS-Exchange-CrossTenant-fromentityheader: Hosted
-X-MS-Exchange-CrossTenant-id: 686ea1d3-bc2b-4c6f-a92c-d99c5c301635
-X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
-X-MS-Exchange-CrossTenant-userprincipalname: diana.craciun@nxp.com
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: VI1PR0401MB2638
+Content-Transfer-Encoding: 8bit
+X-Virus-Scanned: ClamAV using ClamSMTP
 
-Except for one comment in patch 06/10: Reviewed-by: Diana Craciun=0A=
-<diana.craciun@nxp.com>=0A=
-And also: Tested-by: Diana Craciun <diana.craciun@nxp.com>=0A=
-=0A=
-Regards,=0A=
-Diana=0A=
-=0A=
-On 7/31/2019 12:26 PM, Jason Yan wrote:=0A=
-> This series implements KASLR for powerpc/fsl_booke/32, as a security=0A=
-> feature that deters exploit attempts relying on knowledge of the location=
-=0A=
-> of kernel internals.=0A=
->=0A=
-> Since CONFIG_RELOCATABLE has already supported, what we need to do is=0A=
-> map or copy kernel to a proper place and relocate. Freescale Book-E=0A=
-> parts expect lowmem to be mapped by fixed TLB entries(TLB1). The TLB1=0A=
-> entries are not suitable to map the kernel directly in a randomized=0A=
-> region, so we chose to copy the kernel to a proper place and restart to=
-=0A=
-> relocate.=0A=
->=0A=
-> Entropy is derived from the banner and timer base, which will change ever=
-y=0A=
-> build and boot. This not so much safe so additionally the bootloader may=
-=0A=
-> pass entropy via the /chosen/kaslr-seed node in device tree.=0A=
->=0A=
-> We will use the first 512M of the low memory to randomize the kernel=0A=
-> image. The memory will be split in 64M zones. We will use the lower 8=0A=
-> bit of the entropy to decide the index of the 64M zone. Then we chose a=
-=0A=
-> 16K aligned offset inside the 64M zone to put the kernel in.=0A=
->=0A=
->     KERNELBASE=0A=
->=0A=
->         |-->   64M   <--|=0A=
->         |               |=0A=
->         +---------------+    +----------------+---------------+=0A=
->         |               |....|    |kernel|    |               |=0A=
->         +---------------+    +----------------+---------------+=0A=
->         |                         |=0A=
->         |----->   offset    <-----|=0A=
->=0A=
->                               kimage_vaddr=0A=
->=0A=
-> We also check if we will overlap with some areas like the dtb area, the=
-=0A=
-> initrd area or the crashkernel area. If we cannot find a proper area,=0A=
-> kaslr will be disabled and boot from the original kernel.=0A=
->=0A=
-> Changes since v2:=0A=
->  - Remove unnecessary #ifdef=0A=
->  - Use SZ_64M instead of0x4000000=0A=
->  - Call early_init_dt_scan_chosen() to init boot_command_line=0A=
->  - Rename kaslr_second_init() to kaslr_late_init()=0A=
->=0A=
-> Changes since v1:=0A=
->  - Remove some useless 'extern' keyword.=0A=
->  - Replace EXPORT_SYMBOL with EXPORT_SYMBOL_GPL=0A=
->  - Improve some assembly code=0A=
->  - Use memzero_explicit instead of memset=0A=
->  - Use boot_command_line and remove early_command_line=0A=
->  - Do not print kaslr offset if kaslr is disabled=0A=
->=0A=
-> Jason Yan (10):=0A=
->   powerpc: unify definition of M_IF_NEEDED=0A=
->   powerpc: move memstart_addr and kernstart_addr to init-common.c=0A=
->   powerpc: introduce kimage_vaddr to store the kernel base=0A=
->   powerpc/fsl_booke/32: introduce create_tlb_entry() helper=0A=
->   powerpc/fsl_booke/32: introduce reloc_kernel_entry() helper=0A=
->   powerpc/fsl_booke/32: implement KASLR infrastructure=0A=
->   powerpc/fsl_booke/32: randomize the kernel image offset=0A=
->   powerpc/fsl_booke/kaslr: clear the original kernel if randomized=0A=
->   powerpc/fsl_booke/kaslr: support nokaslr cmdline parameter=0A=
->   powerpc/fsl_booke/kaslr: dump out kernel offset information on panic=0A=
->=0A=
->  arch/powerpc/Kconfig                          |  11 +=0A=
->  arch/powerpc/include/asm/nohash/mmu-book3e.h  |  10 +=0A=
->  arch/powerpc/include/asm/page.h               |   7 +=0A=
->  arch/powerpc/kernel/Makefile                  |   1 +=0A=
->  arch/powerpc/kernel/early_32.c                |   2 +-=0A=
->  arch/powerpc/kernel/exceptions-64e.S          |  10 -=0A=
->  arch/powerpc/kernel/fsl_booke_entry_mapping.S |  23 +-=0A=
->  arch/powerpc/kernel/head_fsl_booke.S          |  55 ++-=0A=
->  arch/powerpc/kernel/kaslr_booke.c             | 427 ++++++++++++++++++=
-=0A=
->  arch/powerpc/kernel/machine_kexec.c           |   1 +=0A=
->  arch/powerpc/kernel/misc_64.S                 |   5 -=0A=
->  arch/powerpc/kernel/setup-common.c            |  19 +=0A=
->  arch/powerpc/mm/init-common.c                 |   7 +=0A=
->  arch/powerpc/mm/init_32.c                     |   5 -=0A=
->  arch/powerpc/mm/init_64.c                     |   5 -=0A=
->  arch/powerpc/mm/mmu_decl.h                    |  10 +=0A=
->  arch/powerpc/mm/nohash/fsl_booke.c            |   8 +-=0A=
->  17 files changed, 558 insertions(+), 48 deletions(-)=0A=
->  create mode 100644 arch/powerpc/kernel/kaslr_booke.c=0A=
->=0A=
-=0A=
+Xmon should be either fully or partially disabled depending on the
+kernel lockdown state.
+
+Put xmon into read-only mode for lockdown=integrity and completely
+disable xmon when lockdown=confidentiality. Xmon checks the lockdown
+state and takes appropriate action:
+
+ (1) during xmon_setup to prevent early xmon'ing
+
+ (2) when triggered via sysrq
+
+ (3) when toggled via debugfs
+
+ (4) when triggered via a previously enabled breakpoint
+
+The following lockdown state transitions are handled:
+
+ (1) lockdown=none -> lockdown=integrity
+     set xmon read-only mode
+
+ (2) lockdown=none -> lockdown=confidentiality
+     clear all breakpoints, set xmon read-only mode,
+     prevent re-entry into xmon
+
+ (3) lockdown=integrity -> lockdown=confidentiality
+     clear all breakpoints, set xmon read-only mode,
+     prevent re-entry into xmon
+
+Suggested-by: Andrew Donnellan <ajd@linux.ibm.com>
+Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
+---
+Changes since v1:
+ - Rebased onto v36 of https://patchwork.kernel.org/cover/11049461/
+   (based on: f632a8170a6b667ee4e3f552087588f0fe13c4bb)
+ - Do not clear existing breakpoints when transitioning from
+   lockdown=none to lockdown=integrity
+ - Remove line continuation and dangling quote (confuses checkpatch.pl)
+   from the xmon command help/usage string
+
+ arch/powerpc/xmon/xmon.c     | 59 ++++++++++++++++++++++++++++++++++--
+ include/linux/security.h     |  2 ++
+ security/lockdown/lockdown.c |  2 ++
+ 3 files changed, 60 insertions(+), 3 deletions(-)
+
+diff --git a/arch/powerpc/xmon/xmon.c b/arch/powerpc/xmon/xmon.c
+index d0620d762a5a..1a5e43d664ca 100644
+--- a/arch/powerpc/xmon/xmon.c
++++ b/arch/powerpc/xmon/xmon.c
+@@ -25,6 +25,7 @@
+ #include <linux/nmi.h>
+ #include <linux/ctype.h>
+ #include <linux/highmem.h>
++#include <linux/security.h>
+ 
+ #include <asm/debugfs.h>
+ #include <asm/ptrace.h>
+@@ -187,6 +188,9 @@ static void dump_tlb_44x(void);
+ static void dump_tlb_book3e(void);
+ #endif
+ 
++static void clear_all_bpt(void);
++static void xmon_init(int);
++
+ #ifdef CONFIG_PPC64
+ #define REG		"%.16lx"
+ #else
+@@ -283,10 +287,41 @@ Commands:\n\
+ "  U	show uptime information\n"
+ "  ?	help\n"
+ "  # n	limit output to n lines per page (for dp, dpa, dl)\n"
+-"  zr	reboot\n\
+-  zh	halt\n"
++"  zr	reboot\n"
++"  zh	halt\n"
+ ;
+ 
++#ifdef CONFIG_SECURITY
++static bool xmon_is_locked_down(void)
++{
++	static bool lockdown;
++
++	if (!lockdown) {
++		lockdown = !!security_locked_down(LOCKDOWN_XMON_RW);
++		if (lockdown) {
++			printf("xmon: Disabled due to kernel lockdown\n");
++			xmon_is_ro = true;
++			xmon_on = 0;
++			xmon_init(0);
++			clear_all_bpt();
++		}
++	}
++
++	if (!xmon_is_ro) {
++		xmon_is_ro = !!security_locked_down(LOCKDOWN_XMON_WR);
++		if (xmon_is_ro)
++			printf("xmon: Read-only due to kernel lockdown\n");
++	}
++
++	return lockdown;
++}
++#else /* CONFIG_SECURITY */
++static inline bool xmon_is_locked_down(void)
++{
++	return false;
++}
++#endif
++
+ static struct pt_regs *xmon_regs;
+ 
+ static inline void sync(void)
+@@ -704,6 +739,9 @@ static int xmon_bpt(struct pt_regs *regs)
+ 	struct bpt *bp;
+ 	unsigned long offset;
+ 
++	if (xmon_is_locked_down())
++		return 0;
++
+ 	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+ 		return 0;
+ 
+@@ -735,6 +773,9 @@ static int xmon_sstep(struct pt_regs *regs)
+ 
+ static int xmon_break_match(struct pt_regs *regs)
+ {
++	if (xmon_is_locked_down())
++		return 0;
++
+ 	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+ 		return 0;
+ 	if (dabr.enabled == 0)
+@@ -745,6 +786,9 @@ static int xmon_break_match(struct pt_regs *regs)
+ 
+ static int xmon_iabr_match(struct pt_regs *regs)
+ {
++	if (xmon_is_locked_down())
++		return 0;
++
+ 	if ((regs->msr & (MSR_IR|MSR_PR|MSR_64BIT)) != (MSR_IR|MSR_64BIT))
+ 		return 0;
+ 	if (iabr == NULL)
+@@ -3741,6 +3785,9 @@ static void xmon_init(int enable)
+ #ifdef CONFIG_MAGIC_SYSRQ
+ static void sysrq_handle_xmon(int key)
+ {
++	if (xmon_is_locked_down())
++		return;
++
+ 	/* ensure xmon is enabled */
+ 	xmon_init(1);
+ 	debugger(get_irq_regs());
+@@ -3762,7 +3809,6 @@ static int __init setup_xmon_sysrq(void)
+ device_initcall(setup_xmon_sysrq);
+ #endif /* CONFIG_MAGIC_SYSRQ */
+ 
+-#ifdef CONFIG_DEBUG_FS
+ static void clear_all_bpt(void)
+ {
+ 	int i;
+@@ -3784,8 +3830,12 @@ static void clear_all_bpt(void)
+ 	printf("xmon: All breakpoints cleared\n");
+ }
+ 
++#ifdef CONFIG_DEBUG_FS
+ static int xmon_dbgfs_set(void *data, u64 val)
+ {
++	if (xmon_is_locked_down())
++		return 0;
++
+ 	xmon_on = !!val;
+ 	xmon_init(xmon_on);
+ 
+@@ -3844,6 +3894,9 @@ early_param("xmon", early_parse_xmon);
+ 
+ void __init xmon_setup(void)
+ {
++	if (xmon_is_locked_down())
++		return;
++
+ 	if (xmon_on)
+ 		xmon_init(1);
+ 	if (xmon_early)
+diff --git a/include/linux/security.h b/include/linux/security.h
+index 807dc0d24982..379b74b5d545 100644
+--- a/include/linux/security.h
++++ b/include/linux/security.h
+@@ -116,12 +116,14 @@ enum lockdown_reason {
+ 	LOCKDOWN_MODULE_PARAMETERS,
+ 	LOCKDOWN_MMIOTRACE,
+ 	LOCKDOWN_DEBUGFS,
++	LOCKDOWN_XMON_WR,
+ 	LOCKDOWN_INTEGRITY_MAX,
+ 	LOCKDOWN_KCORE,
+ 	LOCKDOWN_KPROBES,
+ 	LOCKDOWN_BPF_READ,
+ 	LOCKDOWN_PERF,
+ 	LOCKDOWN_TRACEFS,
++	LOCKDOWN_XMON_RW,
+ 	LOCKDOWN_CONFIDENTIALITY_MAX,
+ };
+ 
+diff --git a/security/lockdown/lockdown.c b/security/lockdown/lockdown.c
+index f6c74cf6a798..79d1799a62ca 100644
+--- a/security/lockdown/lockdown.c
++++ b/security/lockdown/lockdown.c
+@@ -31,12 +31,14 @@ static char *lockdown_reasons[LOCKDOWN_CONFIDENTIALITY_MAX+1] = {
+ 	[LOCKDOWN_MODULE_PARAMETERS] = "unsafe module parameters",
+ 	[LOCKDOWN_MMIOTRACE] = "unsafe mmio",
+ 	[LOCKDOWN_DEBUGFS] = "debugfs access",
++	[LOCKDOWN_XMON_WR] = "xmon write access",
+ 	[LOCKDOWN_INTEGRITY_MAX] = "integrity",
+ 	[LOCKDOWN_KCORE] = "/proc/kcore access",
+ 	[LOCKDOWN_KPROBES] = "use of kprobes",
+ 	[LOCKDOWN_BPF_READ] = "use of bpf to read kernel RAM",
+ 	[LOCKDOWN_PERF] = "unsafe use of perf",
+ 	[LOCKDOWN_TRACEFS] = "use of tracefs",
++	[LOCKDOWN_XMON_RW] = "xmon read and write access",
+ 	[LOCKDOWN_CONFIDENTIALITY_MAX] = "confidentiality",
+ };
+ 
+-- 
+2.22.0
+
