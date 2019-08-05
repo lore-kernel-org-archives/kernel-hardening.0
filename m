@@ -1,20 +1,20 @@
-Return-Path: <SRS0=36h2=WB=lists.openwall.com=kernel-hardening-return-16698-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=LsAw=WB=lists.openwall.com=kernel-hardening-return-16699-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BDF57C433FF
-	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 05:40:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 95FF2C41514
+	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 06:27:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 258D920B1F
-	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 05:40:57 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 258D920B1F
+	by mail.kernel.org (Postfix) with SMTP id F2C1620B1F
+	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 06:27:04 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F2C1620B1F
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16698-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17704 invoked by uid 550); 5 Aug 2019 05:40:50 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16699-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19936 invoked by uid 550); 5 Aug 2019 06:26:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,70 +22,112 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17672 invoked from network); 5 Aug 2019 05:40:49 -0000
-Subject: Re: [PATCH v3 06/10] powerpc/fsl_booke/32: implement KASLR
- infrastructure
-To: Diana Madalina Craciun <diana.craciun@nxp.com>, "mpe@ellerman.id.au"
-	<mpe@ellerman.id.au>, "linuxppc-dev@lists.ozlabs.org"
-	<linuxppc-dev@lists.ozlabs.org>, "christophe.leroy@c-s.fr"
-	<christophe.leroy@c-s.fr>, "benh@kernel.crashing.org"
-	<benh@kernel.crashing.org>, "paulus@samba.org" <paulus@samba.org>,
-	"npiggin@gmail.com" <npiggin@gmail.com>, "keescook@chromium.org"
-	<keescook@chromium.org>, "kernel-hardening@lists.openwall.com"
-	<kernel-hardening@lists.openwall.com>
-CC: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
-	"wangkefeng.wang@huawei.com" <wangkefeng.wang@huawei.com>,
-	"yebin10@huawei.com" <yebin10@huawei.com>, "thunder.leizhen@huawei.com"
-	<thunder.leizhen@huawei.com>, "jingxiangfeng@huawei.com"
-	<jingxiangfeng@huawei.com>, "fanchengyang@huawei.com"
-	<fanchengyang@huawei.com>, "zhaohongjiang@huawei.com"
-	<zhaohongjiang@huawei.com>
-References: <20190731094318.26538-1-yanaijie@huawei.com>
- <20190731094318.26538-7-yanaijie@huawei.com>
- <VI1PR0401MB24637B79618C29684168D831FFD90@VI1PR0401MB2463.eurprd04.prod.outlook.com>
+Received: (qmail 19899 invoked from network); 5 Aug 2019 06:26:44 -0000
 From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <356a9697-8208-3a63-8358-77422be482b2@huawei.com>
-Date: Mon, 5 Aug 2019 13:40:27 +0800
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
- Thunderbird/60.5.0
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
+CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
+	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
+	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
+	<zhaohongjiang@huawei.com>, Jason Yan <yanaijie@huawei.com>
+Subject: [PATCH v4 00/10] implement KASLR for powerpc/fsl_booke/32
+Date: Mon, 5 Aug 2019 14:43:25 +0800
+Message-ID: <20190805064335.19156-1-yanaijie@huawei.com>
+X-Mailer: git-send-email 2.17.2
 MIME-Version: 1.0
-In-Reply-To: <VI1PR0401MB24637B79618C29684168D831FFD90@VI1PR0401MB2463.eurprd04.prod.outlook.com>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-Originating-IP: [10.177.96.203]
+Content-Type: text/plain
+X-Originating-IP: [10.175.124.28]
 X-CFilter-Loop: Reflected
 
-Hi Diana,
+This series implements KASLR for powerpc/fsl_booke/32, as a security
+feature that deters exploit attempts relying on knowledge of the location
+of kernel internals.
 
-On 2019/8/2 16:41, Diana Madalina Craciun wrote:
->> diff --git a/arch/powerpc/kernel/fsl_booke_entry_mapping.S b/arch/powerpc/kernel/fsl_booke_entry_mapping.S
->> index de0980945510..6d2967673ac7 100644
->> --- a/arch/powerpc/kernel/fsl_booke_entry_mapping.S
->> +++ b/arch/powerpc/kernel/fsl_booke_entry_mapping.S
->> @@ -161,17 +161,16 @@ skpinv:	addi	r6,r6,1				/* Increment */
->>   	lis	r6,(MAS1_VALID|MAS1_IPROT)@h
->>   	ori	r6,r6,(MAS1_TSIZE(BOOK3E_PAGESZ_64M))@l
->>   	mtspr	SPRN_MAS1,r6
->> -	lis	r6,MAS2_VAL(PAGE_OFFSET, BOOK3E_PAGESZ_64M, M_IF_NEEDED)@h
->> -	ori	r6,r6,MAS2_VAL(PAGE_OFFSET, BOOK3E_PAGESZ_64M, M_IF_NEEDED)@l
->> -	mtspr	SPRN_MAS2,r6
->> +	lis     r6,MAS2_EPN_MASK(BOOK3E_PAGESZ_64M)@h
->> +	ori     r6,r6,MAS2_EPN_MASK(BOOK3E_PAGESZ_64M)@l
->> +	and     r6,r6,r20
->> +	ori	r6,r6,M_IF_NEEDED@l
->> +	mtspr   SPRN_MAS2,r6
->>   	mtspr	SPRN_MAS3,r8
->>   	tlbwe
->>   
->>   /* 7. Jump to KERNELBASE mapping */
-> The code has changed, but the comment reflects the old code (it no
-> longer jumps to KERNELBASE, but to kimage_vaddr). This is true for step
-> 6 as well.
-> 
+Since CONFIG_RELOCATABLE has already supported, what we need to do is
+map or copy kernel to a proper place and relocate. Freescale Book-E
+parts expect lowmem to be mapped by fixed TLB entries(TLB1). The TLB1
+entries are not suitable to map the kernel directly in a randomized
+region, so we chose to copy the kernel to a proper place and restart to
+relocate.
 
-Good catch, I will update the comment.
+Entropy is derived from the banner and timer base, which will change every
+build and boot. This not so much safe so additionally the bootloader may
+pass entropy via the /chosen/kaslr-seed node in device tree.
 
-Thanks,
-Jason
+We will use the first 512M of the low memory to randomize the kernel
+image. The memory will be split in 64M zones. We will use the lower 8
+bit of the entropy to decide the index of the 64M zone. Then we chose a
+16K aligned offset inside the 64M zone to put the kernel in.
+
+    KERNELBASE
+
+        |-->   64M   <--|
+        |               |
+        +---------------+    +----------------+---------------+
+        |               |....|    |kernel|    |               |
+        +---------------+    +----------------+---------------+
+        |                         |
+        |----->   offset    <-----|
+
+                              kimage_vaddr
+
+We also check if we will overlap with some areas like the dtb area, the
+initrd area or the crashkernel area. If we cannot find a proper area,
+kaslr will be disabled and boot from the original kernel.
+
+Changes since v3:
+ - Add Reviewed-by and Tested-by tag from Diana
+ - Change the comment in fsl_booke_entry_mapping.S to be consistent
+   with the new code.
+
+Changes since v2:
+ - Remove unnecessary #ifdef
+ - Use SZ_64M instead of0x4000000
+ - Call early_init_dt_scan_chosen() to init boot_command_line
+ - Rename kaslr_second_init() to kaslr_late_init()
+
+Changes since v1:
+ - Remove some useless 'extern' keyword.
+ - Replace EXPORT_SYMBOL with EXPORT_SYMBOL_GPL
+ - Improve some assembly code
+ - Use memzero_explicit instead of memset
+ - Use boot_command_line and remove early_command_line
+ - Do not print kaslr offset if kaslr is disabled
+
+Jason Yan (10):
+  powerpc: unify definition of M_IF_NEEDED
+  powerpc: move memstart_addr and kernstart_addr to init-common.c
+  powerpc: introduce kimage_vaddr to store the kernel base
+  powerpc/fsl_booke/32: introduce create_tlb_entry() helper
+  powerpc/fsl_booke/32: introduce reloc_kernel_entry() helper
+  powerpc/fsl_booke/32: implement KASLR infrastructure
+  powerpc/fsl_booke/32: randomize the kernel image offset
+  powerpc/fsl_booke/kaslr: clear the original kernel if randomized
+  powerpc/fsl_booke/kaslr: support nokaslr cmdline parameter
+  powerpc/fsl_booke/kaslr: dump out kernel offset information on panic
+
+ arch/powerpc/Kconfig                          |  11 +
+ arch/powerpc/include/asm/nohash/mmu-book3e.h  |  10 +
+ arch/powerpc/include/asm/page.h               |   7 +
+ arch/powerpc/kernel/Makefile                  |   1 +
+ arch/powerpc/kernel/early_32.c                |   2 +-
+ arch/powerpc/kernel/exceptions-64e.S          |  10 -
+ arch/powerpc/kernel/fsl_booke_entry_mapping.S |  27 +-
+ arch/powerpc/kernel/head_fsl_booke.S          |  55 ++-
+ arch/powerpc/kernel/kaslr_booke.c             | 427 ++++++++++++++++++
+ arch/powerpc/kernel/machine_kexec.c           |   1 +
+ arch/powerpc/kernel/misc_64.S                 |   5 -
+ arch/powerpc/kernel/setup-common.c            |  19 +
+ arch/powerpc/mm/init-common.c                 |   7 +
+ arch/powerpc/mm/init_32.c                     |   5 -
+ arch/powerpc/mm/init_64.c                     |   5 -
+ arch/powerpc/mm/mmu_decl.h                    |  10 +
+ arch/powerpc/mm/nohash/fsl_booke.c            |   8 +-
+ 17 files changed, 560 insertions(+), 50 deletions(-)
+ create mode 100644 arch/powerpc/kernel/kaslr_booke.c
+
+-- 
+2.17.2
 
