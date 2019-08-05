@@ -1,21 +1,20 @@
-Return-Path: <SRS0=aJdA=WB=lists.openwall.com=kernel-hardening-return-16701-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=lClT=WB=lists.openwall.com=kernel-hardening-return-16702-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 90D10C433FF
-	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 06:27:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BF085C0650F
+	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 06:27:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EE21B217F4
-	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 06:27:18 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EE21B217F4
+	by mail.kernel.org (Postfix) with SMTP id 247DC217D9
+	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Aug 2019 06:27:26 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 247DC217D9
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16701-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21529 invoked by uid 550); 5 Aug 2019 06:26:50 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16702-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21575 invoked by uid 550); 5 Aug 2019 06:26:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20343 invoked from network); 5 Aug 2019 06:26:48 -0000
+Received: (qmail 20351 invoked from network); 5 Aug 2019 06:26:49 -0000
 From: Jason Yan <yanaijie@huawei.com>
 To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
 	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
@@ -33,9 +32,9 @@ CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
 	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
 	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
 	<zhaohongjiang@huawei.com>, Jason Yan <yanaijie@huawei.com>
-Subject: [PATCH v4 01/10] powerpc: unify definition of M_IF_NEEDED
-Date: Mon, 5 Aug 2019 14:43:26 +0800
-Message-ID: <20190805064335.19156-2-yanaijie@huawei.com>
+Subject: [PATCH v4 02/10] powerpc: move memstart_addr and kernstart_addr to init-common.c
+Date: Mon, 5 Aug 2019 14:43:27 +0800
+Message-ID: <20190805064335.19156-3-yanaijie@huawei.com>
 X-Mailer: git-send-email 2.17.2
 In-Reply-To: <20190805064335.19156-1-yanaijie@huawei.com>
 References: <20190805064335.19156-1-yanaijie@huawei.com>
@@ -44,7 +43,8 @@ Content-Type: text/plain
 X-Originating-IP: [10.175.124.28]
 X-CFilter-Loop: Reflected
 
-M_IF_NEEDED is defined too many times. Move it to a common place.
+These two variables are both defined in init_32.c and init_64.c. Move
+them to init-common.c.
 
 Signed-off-by: Jason Yan <yanaijie@huawei.com>
 Cc: Diana Craciun <diana.craciun@nxp.com>
@@ -58,91 +58,59 @@ Reviewed-by: Christophe Leroy <christophe.leroy@c-s.fr>
 Reviewed-by: Diana Craciun <diana.craciun@nxp.com>
 Tested-by: Diana Craciun <diana.craciun@nxp.com>
 ---
- arch/powerpc/include/asm/nohash/mmu-book3e.h  | 10 ++++++++++
- arch/powerpc/kernel/exceptions-64e.S          | 10 ----------
- arch/powerpc/kernel/fsl_booke_entry_mapping.S | 10 ----------
- arch/powerpc/kernel/misc_64.S                 |  5 -----
- 4 files changed, 10 insertions(+), 25 deletions(-)
+ arch/powerpc/mm/init-common.c | 5 +++++
+ arch/powerpc/mm/init_32.c     | 5 -----
+ arch/powerpc/mm/init_64.c     | 5 -----
+ 3 files changed, 5 insertions(+), 10 deletions(-)
 
-diff --git a/arch/powerpc/include/asm/nohash/mmu-book3e.h b/arch/powerpc/include/asm/nohash/mmu-book3e.h
-index 4c9777d256fb..0877362e48fa 100644
---- a/arch/powerpc/include/asm/nohash/mmu-book3e.h
-+++ b/arch/powerpc/include/asm/nohash/mmu-book3e.h
-@@ -221,6 +221,16 @@
- #define TLBILX_T_CLASS2			6
- #define TLBILX_T_CLASS3			7
+diff --git a/arch/powerpc/mm/init-common.c b/arch/powerpc/mm/init-common.c
+index a84da92920f7..152ae0d21435 100644
+--- a/arch/powerpc/mm/init-common.c
++++ b/arch/powerpc/mm/init-common.c
+@@ -21,6 +21,11 @@
+ #include <asm/pgtable.h>
+ #include <asm/kup.h>
  
-+/*
-+ * The mapping only needs to be cache-coherent on SMP, except on
-+ * Freescale e500mc derivatives where it's also needed for coherent DMA.
-+ */
-+#if defined(CONFIG_SMP) || defined(CONFIG_PPC_E500MC)
-+#define M_IF_NEEDED	MAS2_M
-+#else
-+#define M_IF_NEEDED	0
-+#endif
++phys_addr_t memstart_addr = (phys_addr_t)~0ull;
++EXPORT_SYMBOL_GPL(memstart_addr);
++phys_addr_t kernstart_addr;
++EXPORT_SYMBOL_GPL(kernstart_addr);
 +
- #ifndef __ASSEMBLY__
- #include <asm/bug.h>
+ static bool disable_kuep = !IS_ENABLED(CONFIG_PPC_KUEP);
+ static bool disable_kuap = !IS_ENABLED(CONFIG_PPC_KUAP);
  
-diff --git a/arch/powerpc/kernel/exceptions-64e.S b/arch/powerpc/kernel/exceptions-64e.S
-index 1cfb3da4a84a..fd49ec07ce4a 100644
---- a/arch/powerpc/kernel/exceptions-64e.S
-+++ b/arch/powerpc/kernel/exceptions-64e.S
-@@ -1342,16 +1342,6 @@ skpinv:	addi	r6,r6,1				/* Increment */
- 	sync
- 	isync
+diff --git a/arch/powerpc/mm/init_32.c b/arch/powerpc/mm/init_32.c
+index b04896a88d79..872df48ae41b 100644
+--- a/arch/powerpc/mm/init_32.c
++++ b/arch/powerpc/mm/init_32.c
+@@ -56,11 +56,6 @@
+ phys_addr_t total_memory;
+ phys_addr_t total_lowmem;
  
--/*
-- * The mapping only needs to be cache-coherent on SMP, except on
-- * Freescale e500mc derivatives where it's also needed for coherent DMA.
-- */
--#if defined(CONFIG_SMP) || defined(CONFIG_PPC_E500MC)
--#define M_IF_NEEDED	MAS2_M
--#else
--#define M_IF_NEEDED	0
--#endif
+-phys_addr_t memstart_addr = (phys_addr_t)~0ull;
+-EXPORT_SYMBOL(memstart_addr);
+-phys_addr_t kernstart_addr;
+-EXPORT_SYMBOL(kernstart_addr);
 -
- /* 6. Setup KERNELBASE mapping in TLB[0]
-  *
-  * r3 = MAS0 w/TLBSEL & ESEL for the entry we started in
-diff --git a/arch/powerpc/kernel/fsl_booke_entry_mapping.S b/arch/powerpc/kernel/fsl_booke_entry_mapping.S
-index ea065282b303..de0980945510 100644
---- a/arch/powerpc/kernel/fsl_booke_entry_mapping.S
-+++ b/arch/powerpc/kernel/fsl_booke_entry_mapping.S
-@@ -153,16 +153,6 @@ skpinv:	addi	r6,r6,1				/* Increment */
- 	tlbivax 0,r9
- 	TLBSYNC
+ #ifdef CONFIG_RELOCATABLE
+ /* Used in __va()/__pa() */
+ long long virt_phys_offset;
+diff --git a/arch/powerpc/mm/init_64.c b/arch/powerpc/mm/init_64.c
+index a44f6281ca3a..c836f1269ee7 100644
+--- a/arch/powerpc/mm/init_64.c
++++ b/arch/powerpc/mm/init_64.c
+@@ -63,11 +63,6 @@
  
--/*
-- * The mapping only needs to be cache-coherent on SMP, except on
-- * Freescale e500mc derivatives where it's also needed for coherent DMA.
-- */
--#if defined(CONFIG_SMP) || defined(CONFIG_PPC_E500MC)
--#define M_IF_NEEDED	MAS2_M
--#else
--#define M_IF_NEEDED	0
--#endif
+ #include <mm/mmu_decl.h>
+ 
+-phys_addr_t memstart_addr = ~0;
+-EXPORT_SYMBOL_GPL(memstart_addr);
+-phys_addr_t kernstart_addr;
+-EXPORT_SYMBOL_GPL(kernstart_addr);
 -
- #if defined(ENTRY_MAPPING_BOOT_SETUP)
- 
- /* 6. Setup KERNELBASE mapping in TLB1[0] */
-diff --git a/arch/powerpc/kernel/misc_64.S b/arch/powerpc/kernel/misc_64.S
-index b55a7b4cb543..26074f92d4bc 100644
---- a/arch/powerpc/kernel/misc_64.S
-+++ b/arch/powerpc/kernel/misc_64.S
-@@ -432,11 +432,6 @@ kexec_create_tlb:
- 	rlwimi	r9,r10,16,4,15		/* Setup MAS0 = TLBSEL | ESEL(r9) */
- 
- /* Set up a temp identity mapping v:0 to p:0 and return to it. */
--#if defined(CONFIG_SMP) || defined(CONFIG_PPC_E500MC)
--#define M_IF_NEEDED	MAS2_M
--#else
--#define M_IF_NEEDED	0
--#endif
- 	mtspr	SPRN_MAS0,r9
- 
- 	lis	r9,(MAS1_VALID|MAS1_IPROT)@h
+ #ifdef CONFIG_SPARSEMEM_VMEMMAP
+ /*
+  * Given an address within the vmemmap, determine the pfn of the page that
 -- 
 2.17.2
 
