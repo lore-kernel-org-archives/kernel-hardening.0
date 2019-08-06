@@ -1,23 +1,22 @@
-Return-Path: <SRS0=IAad=WC=lists.openwall.com=kernel-hardening-return-16720-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=wB7R=WC=lists.openwall.com=kernel-hardening-return-16721-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.1 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 561D6C31E40
-	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Aug 2019 07:59:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4BEB2C31E40
+	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Aug 2019 08:31:02 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A5E5F21743
-	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Aug 2019 07:59:45 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9AB93206A2
+	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Aug 2019 08:31:01 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=c-s.fr header.i=@c-s.fr header.b="KFxQJm9j"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A5E5F21743
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=c-s.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16720-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21775 invoked by uid 550); 6 Aug 2019 07:59:39 -0000
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="hgwNVBPR"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9AB93206A2
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16721-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11269 invoked by uid 550); 6 Aug 2019 08:30:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,100 +24,55 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21738 invoked from network); 6 Aug 2019 07:59:39 -0000
-Authentication-Results: localhost; dkim=pass
-	reason="1024-bit key; insecure key"
-	header.d=c-s.fr header.i=@c-s.fr header.b=KFxQJm9j; dkim-adsp=pass;
-	dkim-atps=neutral
-X-Virus-Scanned: Debian amavisd-new at c-s.fr
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=c-s.fr; s=mail;
-	t=1565078366; bh=5YDv6dgHqzqllJC8kOdquh3d9tD4kkNE+Dq/5rv/yKs=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=KFxQJm9jm+lxXqyhh6dliy3lQUqobK1qGDV7RjvFSl3PoKQSYuhWGF/pKMVIMfMdW
-	 /pqEOIY6pXA1umTwCLQafvpwujltnxD7WzRA3bC5bWspTt4n4pzeq//6UBzXjt4prz
-	 2MiJS42SMHOtAlHV37pdB+evxeLnlJIC3jFcBrIU=
-X-Virus-Scanned: amavisd-new at c-s.fr
-Subject: Re: [PATCH v4 09/10] powerpc/fsl_booke/kaslr: support nokaslr cmdline
- parameter
-To: Jason Yan <yanaijie@huawei.com>, mpe@ellerman.id.au,
- linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com,
- benh@kernel.crashing.org, paulus@samba.org, npiggin@gmail.com,
- keescook@chromium.org, kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org, wangkefeng.wang@huawei.com,
- yebin10@huawei.com, thunder.leizhen@huawei.com, jingxiangfeng@huawei.com,
- fanchengyang@huawei.com, zhaohongjiang@huawei.com
-References: <20190805064335.19156-1-yanaijie@huawei.com>
- <20190805064335.19156-10-yanaijie@huawei.com>
-From: Christophe Leroy <christophe.leroy@c-s.fr>
-Message-ID: <e7703798-c2e2-c75f-1001-46c01db88238@c-s.fr>
-Date: Tue, 6 Aug 2019 09:59:26 +0200
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
- Thunderbird/60.8.0
+Received: (qmail 10219 invoked from network); 6 Aug 2019 08:30:53 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
+	:References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:
+	Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:List-Id:
+	List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive;
+	 bh=/s8wUNloiVZ/r39DkCHiVqmnKOfRol4hev9m4wU/nnw=; b=hgwNVBPR8xl0odZWuchrJVQcX
+	3su7RZX0frEguJeRnZ6+3h3hvReZRGEX8N700MrQbaje4yl7A0T40cVnOl7nP5xYmATfSy+tHccMP
+	PQIdIJ5WCCTkFOiGak6iDAaFKfqYG6qeDqggPdEnar6XDbJN31SXBieGI5mJT1qJB5BcIiMENIq6E
+	MOKBO2UxvOBl8YodIUuxMf/I3ANstalAfJHbXDUUCfC8VAc49vwsQarrFSdOH+SJ8MygukczTc/jN
+	Vv2nT3PfK5pkb5OItnNSg1qDrdoEWSW+Q8r6oHU7XbIKJEasF45ShptwDOBIGu79w1t1lViBAlHK6
+	lESRTSSdg==;
+Date: Tue, 6 Aug 2019 10:30:32 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+To: Borislav Petkov <bp@alien8.de>
+Cc: Thomas Garnier <thgarnie@chromium.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Kristen Carlson Accardi <kristen@linux.intel.com>,
+	Kees Cook <keescook@chromium.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>,
+	the arch/x86 maintainers <x86@kernel.org>,
+	LKML <linux-kernel@vger.kernel.org>
+Subject: Re: [PATCH v9 04/11] x86/entry/64: Adapt assembly for PIE support
+Message-ID: <20190806083032.GN2332@hirez.programming.kicks-ass.net>
+References: <20190730191303.206365-1-thgarnie@chromium.org>
+ <20190730191303.206365-5-thgarnie@chromium.org>
+ <20190805172854.GF18785@zn.tnic>
+ <CAJcbSZGedSfZZ5rveH2+_3q7pvmMyDGLxmZU41Nno=ZBX8kN=w@mail.gmail.com>
+ <20190806050851.GA25897@zn.tnic>
 MIME-Version: 1.0
-In-Reply-To: <20190805064335.19156-10-yanaijie@huawei.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: fr
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190806050851.GA25897@zn.tnic>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-
-
-Le 05/08/2019 à 08:43, Jason Yan a écrit :
-> One may want to disable kaslr when boot, so provide a cmdline parameter
-> 'nokaslr' to support this.
+On Tue, Aug 06, 2019 at 07:08:51AM +0200, Borislav Petkov wrote:
+> On Mon, Aug 05, 2019 at 10:50:30AM -0700, Thomas Garnier wrote:
+> > I saw that %rdx was used for temporary usage and restored before the
+> > end so I assumed that it was not an option.
 > 
-> Signed-off-by: Jason Yan <yanaijie@huawei.com>
-> Cc: Diana Craciun <diana.craciun@nxp.com>
-> Cc: Michael Ellerman <mpe@ellerman.id.au>
-> Cc: Christophe Leroy <christophe.leroy@c-s.fr>
-> Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-> Cc: Paul Mackerras <paulus@samba.org>
-> Cc: Nicholas Piggin <npiggin@gmail.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Reviewed-by: Diana Craciun <diana.craciun@nxp.com>
-> Tested-by: Diana Craciun <diana.craciun@nxp.com>
+> PUSH_AND_CLEAR_REGS saves all regs earlier so I think you should be
+> able to use others. Like SAVE_AND_SWITCH_TO_KERNEL_CR3/RESTORE_CR3, for
+> example, uses %r15 and %r14.
 
-Reviewed-by: Christophe Leroy <christophe.leroy@c-s.fr>
+AFAICT the CONFIG_DEBUG_ENTRY thing he's changing is before we setup
+pt_regs.
 
-Tiny comment below.
-
-> ---
->   arch/powerpc/kernel/kaslr_booke.c | 14 ++++++++++++++
->   1 file changed, 14 insertions(+)
-> 
-> diff --git a/arch/powerpc/kernel/kaslr_booke.c b/arch/powerpc/kernel/kaslr_booke.c
-> index 4b3f19a663fc..7c3cb41e7122 100644
-> --- a/arch/powerpc/kernel/kaslr_booke.c
-> +++ b/arch/powerpc/kernel/kaslr_booke.c
-> @@ -361,6 +361,18 @@ static unsigned long __init kaslr_choose_location(void *dt_ptr, phys_addr_t size
->   	return kaslr_offset;
->   }
->   
-> +static inline __init bool kaslr_disabled(void)
-> +{
-> +	char *str;
-> +
-> +	str = strstr(boot_command_line, "nokaslr");
-> +	if ((str == boot_command_line) ||
-> +	    (str > boot_command_line && *(str - 1) == ' '))
-> +		return true;
-
-I don't think additional () are needed for the left part 'str == 
-boot_command_line'
-
-> +
-> +	return false;
-> +}
-> +
->   /*
->    * To see if we need to relocate the kernel to a random offset
->    * void *dt_ptr - address of the device tree
-> @@ -376,6 +388,8 @@ notrace void __init kaslr_early_init(void *dt_ptr, phys_addr_t size)
->   	kernel_sz = (unsigned long)_end - KERNELBASE;
->   
->   	kaslr_get_cmdline(dt_ptr);
-> +	if (kaslr_disabled())
-> +		return;
->   
->   	offset = kaslr_choose_location(dt_ptr, size, kernel_sz);
->   
-> 
+Also consider the UNWIND hint that's in there, it states we only have
+the IRET frame on stack, not a full regs set.
