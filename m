@@ -1,21 +1,21 @@
-Return-Path: <SRS0=sE3+=WC=lists.openwall.com=kernel-hardening-return-16729-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Bc0X=WD=lists.openwall.com=kernel-hardening-return-16730-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.8 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 28C4FC31E40
-	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Aug 2019 16:42:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0E284C31E40
+	for <kernel-hardening@archiver.kernel.org>; Wed,  7 Aug 2019 03:18:23 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7D8B720B1F
-	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Aug 2019 16:42:10 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7D8B720B1F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16729-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17601 invoked by uid 550); 6 Aug 2019 16:42:02 -0000
+	by mail.kernel.org (Postfix) with SMTP id 61B2C214C6
+	for <kernel-hardening@archiver.kernel.org>; Wed,  7 Aug 2019 03:18:22 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 61B2C214C6
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16730-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32394 invoked by uid 550); 7 Aug 2019 03:18:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,120 +23,158 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17576 invoked from network); 6 Aug 2019 16:42:02 -0000
-Subject: Re: [RFC PATCH v1 1/5] fs: Add support for an O_MAYEXEC flag on
- sys_open()
-To: Andy Lutomirski <luto@kernel.org>, Jan Kara <jack@suse.cz>,
-        Song Liu <songliubraving@fb.com>, Alexei Starovoitov <ast@kernel.org>,
-        Daniel Borkmann <daniel@iogearbox.net>
-Cc: LKML <linux-kernel@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>,
-        James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>,
-        Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>,
-        Michael Kerrisk <mtk.manpages@gmail.com>,
-        =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
-        Mimi Zohar <zohar@linux.ibm.com>,
-        =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-        Shuah Khan <shuah@kernel.org>,
-        Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-        Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-        Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>,
-        Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        Linux API <linux-api@vger.kernel.org>,
-        LSM List <linux-security-module@vger.kernel.org>,
-        Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-        Steve Grubb <sgrubb@redhat.com>,
-        Matthew Bobrowski <mbobrowski@mbobrowski.org>,
-        Aleksa Sarai <cyphar@cyphar.com>,
-        Sean Christopherson <sean.j.christopherson@intel.com>
-References: <20181212081712.32347-1-mic@digikod.net>
- <20181212081712.32347-2-mic@digikod.net>
- <20181212144306.GA19945@quack2.suse.cz>
- <CALCETrVeZ0eufFXwfhtaG_j+AdvbzEWE0M3wjXMWVEO7pj+xkw@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Openpgp: preference=signencrypt
-Message-ID: <0a16e842-d636-60ac-427a-3500224f4f8d@digikod.net>
-Date: Tue, 6 Aug 2019 18:40:48 +0200
-User-Agent:
+Received: (qmail 32356 invoked from network); 7 Aug 2019 03:18:04 -0000
+Subject: Re: [PATCH v4 07/10] powerpc/fsl_booke/32: randomize the kernel image
+ offset
+To: Christophe Leroy <christophe.leroy@c-s.fr>, <mpe@ellerman.id.au>,
+	<linuxppc-dev@lists.ozlabs.org>, <diana.craciun@nxp.com>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
+CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
+	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
+	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
+	<zhaohongjiang@huawei.com>
+References: <20190805064335.19156-1-yanaijie@huawei.com>
+ <20190805064335.19156-8-yanaijie@huawei.com>
+ <3edec35b-8d61-07ff-558d-2d7e0c28a0e2@c-s.fr>
+From: Jason Yan <yanaijie@huawei.com>
+Message-ID: <16e058a4-9794-6998-46e4-0e63b9fce7e3@huawei.com>
+Date: Wed, 7 Aug 2019 11:16:19 +0800
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
+ Thunderbird/60.5.0
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVeZ0eufFXwfhtaG_j+AdvbzEWE0M3wjXMWVEO7pj+xkw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
+In-Reply-To: <3edec35b-8d61-07ff-558d-2d7e0c28a0e2@c-s.fr>
+Content-Type: text/plain; charset="utf-8"; format=flowed
 Content-Language: en-US
 Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
+X-Originating-IP: [10.177.96.203]
+X-CFilter-Loop: Reflected
 
 
-On 05/08/2019 01:55, Andy Lutomirski wrote:
-> On Wed, Dec 12, 2018 at 6:43 AM Jan Kara <jack@suse.cz> wrote:
->>
->> On Wed 12-12-18 09:17:08, Mickaël Salaün wrote:
->>> When the O_MAYEXEC flag is passed, sys_open() may be subject to
->>> additional restrictions depending on a security policy implemented by an
->>> LSM through the inode_permission hook.
->>>
->>> The underlying idea is to be able to restrict scripts interpretation
->>> according to a policy defined by the system administrator.  For this to
->>> be possible, script interpreters must use the O_MAYEXEC flag
->>> appropriately.  To be fully effective, these interpreters also need to
->>> handle the other ways to execute code (for which the kernel can't help):
->>> command line parameters (e.g., option -e for Perl), module loading
->>> (e.g., option -m for Python), stdin, file sourcing, environment
->>> variables, configuration files...  According to the threat model, it may
->>> be acceptable to allow some script interpreters (e.g. Bash) to interpret
->>> commands from stdin, may it be a TTY or a pipe, because it may not be
->>> enough to (directly) perform syscalls.
->>>
->>> A simple security policy implementation is available in a following
->>> patch for Yama.
->>>
->>> This is an updated subset of the patch initially written by Vincent
->>> Strubel for CLIP OS:
->>> https://github.com/clipos-archive/src_platform_clip-patches/blob/f5cb330d6b684752e403b4e41b39f7004d88e561/1901_open_mayexec.patch
->>> This patch has been used for more than 10 years with customized script
->>> interpreters.  Some examples can be found here:
->>> https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC
->>>
->>> Signed-off-by: Mickaël Salaün <mic@digikod.net>
->>> Signed-off-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
->>> Signed-off-by: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
->>> Reviewed-by: Philippe Trébuchet <philippe.trebuchet@ssi.gouv.fr>
->>> Cc: Al Viro <viro@zeniv.linux.org.uk>
->>> Cc: Kees Cook <keescook@chromium.org>
->>> Cc: Mickaël Salaün <mickael.salaun@ssi.gouv.fr>
->>
->> ...
->>
->>> diff --git a/fs/open.c b/fs/open.c
->>> index 0285ce7dbd51..75479b79a58f 100644
->>> --- a/fs/open.c
->>> +++ b/fs/open.c
->>> @@ -974,6 +974,10 @@ static inline int build_open_flags(int flags, umode_t mode, struct open_flags *o
->>>       if (flags & O_APPEND)
->>>               acc_mode |= MAY_APPEND;
->>>
->>> +     /* Check execution permissions on open. */
->>> +     if (flags & O_MAYEXEC)
->>> +             acc_mode |= MAY_OPENEXEC;
->>> +
->>>       op->acc_mode = acc_mode;
->>>
->>>       op->intent = flags & O_PATH ? 0 : LOOKUP_OPEN;
->>
->> I don't feel experienced enough in security to tell whether we want this
->> functionality or not. But if we do this, shouldn't we also set FMODE_EXEC
->> on the resulting struct file? That way also security_file_open() can be
->> used to arbitrate such executable opens and in particular
->> fanotify permission event FAN_OPEN_EXEC will get properly generated which I
->> guess is desirable (support for it is sitting in my tree waiting for the
->> merge window) - adding some audit people involved in FAN_OPEN_EXEC to
->> CC. Just an idea...
->>
+
+On 2019/8/6 15:56, Christophe Leroy wrote:
 > 
-> I would really like to land this patch.  I'm fiddling with making
-> bpffs handle permissions intelligently, and the lack of a way to say
-> "hey, I want to open this bpf program so that I can run it" is
-> annoying.
+> 
+> Le 05/08/2019 à 08:43, Jason Yan a écrit :
+>> After we have the basic support of relocate the kernel in some
+>> appropriate place, we can start to randomize the offset now.
+>>
+>> Entropy is derived from the banner and timer, which will change every
+>> build and boot. This not so much safe so additionally the bootloader may
+>> pass entropy via the /chosen/kaslr-seed node in device tree.
+>>
+>> We will use the first 512M of the low memory to randomize the kernel
+>> image. The memory will be split in 64M zones. We will use the lower 8
+>> bit of the entropy to decide the index of the 64M zone. Then we chose a
+>> 16K aligned offset inside the 64M zone to put the kernel in.
+>>
+>>      KERNELBASE
+>>
+>>          |-->   64M   <--|
+>>          |               |
+>>          +---------------+    +----------------+---------------+
+>>          |               |....|    |kernel|    |               |
+>>          +---------------+    +----------------+---------------+
+>>          |                         |
+>>          |----->   offset    <-----|
+>>
+>>                                kimage_vaddr
+>>
+>> We also check if we will overlap with some areas like the dtb area, the
+>> initrd area or the crashkernel area. If we cannot find a proper area,
+>> kaslr will be disabled and boot from the original kernel.
+>>
+>> Signed-off-by: Jason Yan <yanaijie@huawei.com>
+>> Cc: Diana Craciun <diana.craciun@nxp.com>
+>> Cc: Michael Ellerman <mpe@ellerman.id.au>
+>> Cc: Christophe Leroy <christophe.leroy@c-s.fr>
+>> Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+>> Cc: Paul Mackerras <paulus@samba.org>
+>> Cc: Nicholas Piggin <npiggin@gmail.com>
+>> Cc: Kees Cook <keescook@chromium.org>
+>> Reviewed-by: Diana Craciun <diana.craciun@nxp.com>
+>> Tested-by: Diana Craciun <diana.craciun@nxp.com>
+> 
+> Reviewed-by: Christophe Leroy <christophe.leroy@c-s.fr>
+> 
 
-Are you OK with this series? What about Aleksa's work on openat2(), and
-Sean's work on SGX/noexec? Is it time to send a new patch series (with a
-dedicated LSM instead of Yama)?
+Thanks for your help,
+
+> One small comment below
+> 
+>> ---
+>>   arch/powerpc/kernel/kaslr_booke.c | 322 +++++++++++++++++++++++++++++-
+>>   1 file changed, 320 insertions(+), 2 deletions(-)
+>>
+>> diff --git a/arch/powerpc/kernel/kaslr_booke.c 
+>> b/arch/powerpc/kernel/kaslr_booke.c
+>> index 30f84c0321b2..97250cad71de 100644
+>> --- a/arch/powerpc/kernel/kaslr_booke.c
+>> +++ b/arch/powerpc/kernel/kaslr_booke.c
+>> @@ -23,6 +23,8 @@
+>>   #include <linux/delay.h>
+>>   #include <linux/highmem.h>
+>>   #include <linux/memblock.h>
+>> +#include <linux/libfdt.h>
+>> +#include <linux/crash_core.h>
+>>   #include <asm/pgalloc.h>
+>>   #include <asm/prom.h>
+>>   #include <asm/io.h>
+>> @@ -34,15 +36,329 @@
+>>   #include <asm/machdep.h>
+>>   #include <asm/setup.h>
+>>   #include <asm/paca.h>
+>> +#include <asm/kdump.h>
+>>   #include <mm/mmu_decl.h>
+>> +#include <generated/compile.h>
+>> +#include <generated/utsrelease.h>
+>> +
+>> +#ifdef DEBUG
+>> +#define DBG(fmt...) printk(KERN_ERR fmt)
+>> +#else
+>> +#define DBG(fmt...)
+>> +#endif
+>> +
+>> +struct regions {
+>> +    unsigned long pa_start;
+>> +    unsigned long pa_end;
+>> +    unsigned long kernel_size;
+>> +    unsigned long dtb_start;
+>> +    unsigned long dtb_end;
+>> +    unsigned long initrd_start;
+>> +    unsigned long initrd_end;
+>> +    unsigned long crash_start;
+>> +    unsigned long crash_end;
+>> +    int reserved_mem;
+>> +    int reserved_mem_addr_cells;
+>> +    int reserved_mem_size_cells;
+>> +};
+>>   extern int is_second_reloc;
+>> +/* Simplified build-specific string for starting entropy. */
+>> +static const char build_str[] = UTS_RELEASE " (" LINUX_COMPILE_BY "@"
+>> +        LINUX_COMPILE_HOST ") (" LINUX_COMPILER ") " UTS_VERSION;
+>> +
+>> +static __init void kaslr_get_cmdline(void *fdt)
+>> +{
+>> +    int node = fdt_path_offset(fdt, "/chosen");
+>> +
+>> +    early_init_dt_scan_chosen(node, "chosen", 1, boot_command_line);
+>> +}
+>> +
+>> +static unsigned long __init rotate_xor(unsigned long hash, const void 
+>> *area,
+>> +                       size_t size)
+>> +{
+>> +    size_t i;
+>> +    unsigned long *ptr = (unsigned long *)area;
+> 
+> As area is a void *, this cast shouldn't be necessary. Or maybe it is 
+> necessary because it discards the const ?
+> 
+
+It's true the cast is not necessary. The ptr can be made const and then 
+remove the cast.
+
+> Christophe
+> 
+
