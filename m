@@ -1,20 +1,23 @@
-Return-Path: <SRS0=ROE5=WE=lists.openwall.com=kernel-hardening-return-16758-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=a3zq=WE=lists.openwall.com=kernel-hardening-return-16759-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 28071C0650F
-	for <kernel-hardening@archiver.kernel.org>; Thu,  8 Aug 2019 08:40:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7FD59C433FF
+	for <kernel-hardening@archiver.kernel.org>; Thu,  8 Aug 2019 15:48:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3C993217F4
-	for <kernel-hardening@archiver.kernel.org>; Thu,  8 Aug 2019 08:40:00 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3C993217F4
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16758-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 31933 invoked by uid 550); 8 Aug 2019 08:39:53 -0000
+	by mail.kernel.org (Postfix) with SMTP id CC8472173E
+	for <kernel-hardening@archiver.kernel.org>; Thu,  8 Aug 2019 15:48:03 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="elH74zUd"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CC8472173E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16759-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1391 invoked by uid 550); 8 Aug 2019 15:47:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,111 +25,111 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 31855 invoked from network); 8 Aug 2019 08:39:51 -0000
-Subject: Re: [PATCH v5 10/10] powerpc/fsl_booke/kaslr: dump out kernel offset
- information on panic
-To: Michael Ellerman <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
-CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
-	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
-	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
-	<zhaohongjiang@huawei.com>
-References: <20190807065706.11411-1-yanaijie@huawei.com>
- <20190807065706.11411-11-yanaijie@huawei.com>
- <87zhklt9eg.fsf@concordia.ellerman.id.au>
-From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <9113cc5b-0e89-f423-712a-79220af82b92@huawei.com>
-Date: Thu, 8 Aug 2019 16:39:26 +0800
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
- Thunderbird/60.5.0
+Received: (qmail 1356 invoked from network); 8 Aug 2019 15:47:53 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc:content-transfer-encoding;
+        bh=qOGCEMCpTn5ZQE0V+/AO3HHpR9O4Ss/GAPyVSzlV65w=;
+        b=elH74zUdEUMqB/Kjg2gw/5z8oNJcRqhoTTbOrQ9s/j3hXPA2gK8LCPdVKMIrscmdJa
+         HOZgq904M9+/kf75EH2Wg9jH9Pav/kD2yAgbuIZvvLIlSzeUNYa64JWql1uk0SIN+99K
+         HrI7RD9n+xYZhzcZd+f9Cs+QvpUTCaQWlALAJhu3h5azMmaMoUaCU7LTWwoxpZi6p0po
+         8R3w5czmhF9vfj+OKKvx9xauv1gwRLOF4mLfEe+psGzLizXuEdcAPw62VJFm69uEzefR
+         zc5n98fbvLJl3y4eX4xDnp3PXwrFEi/VpneOY50RRWhqqrwPVTqiQ+V3kOfnDDYkapjQ
+         DPBw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=qOGCEMCpTn5ZQE0V+/AO3HHpR9O4Ss/GAPyVSzlV65w=;
+        b=Wb7eSs+15sNb1haltIwfA3NSBy8ffIEiqkCl8RpvLD12E4PgkA8qC1ULG9I3IOUD30
+         QZrkjBozsm3WUQ/YLJml3iAAzyIAVe8bzIrXZlmyvt8W55aim9t/xZme92f+BfH3oxqf
+         uuc63aZ4unY34xXO9cUIcKrFJqJrijwEc6ljWOZjJwcnLp/xsAz8yDUa9oy/InUcF49v
+         5Ar//iUD/uFKGnHEo6fN+w7Hl9zqHeSpanaaR6Ap2FeFv0slWQwo4Y3FRghyde/WQeji
+         AUF3UCKQXQ8PM2N1yhKViMzxx/Ub7J3A5j/lWxajBZ0vPHTDauV6ROluqAJeJUG5qnDI
+         9ntA==
+X-Gm-Message-State: APjAAAUOeL6dxgZQ499/KpaAgN2WfHKR8bpEdnIRK8XAiMthNmWFylrR
+	aQltqPaSww8ZquzhlUrdLWUVirtQxw/eDeEVdHQ=
+X-Google-Smtp-Source: APXvYqx4DvesM6HDnzJ2tXu8yTkQMHLf+lldf/SI6RjEcmrxAz/K+2p/dYN6KBs4FieuZQcZhBN7iMLPwXolkJc/DEI=
+X-Received: by 2002:a63:60a:: with SMTP id 10mr13136234pgg.381.1565279261623;
+ Thu, 08 Aug 2019 08:47:41 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <87zhklt9eg.fsf@concordia.ellerman.id.au>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-Originating-IP: [10.177.96.203]
-X-CFilter-Loop: Reflected
+References: <CABgxDoJzu-Pfq78AYJmf61KqJ2A3YXNJ7jMSS6p3kCzhFox0=w@mail.gmail.com>
+ <201907020849.FB210CA@keescook> <CABgxDoJ6ra4DoPzEk8w25e0iTSHtNuYanHT-s+30JSzjfWestQ@mail.gmail.com>
+ <201907031513.8E342FF@keescook> <CABgxDoLz76_nTqpdqMMH6+i1ia3k2bgiHkTV4Gc9X7vCe=CKRA@mail.gmail.com>
+ <201907221017.F61AFC08E@keescook> <CABgxDo+FSk0Tkvu=uFd5tjd+6TnnkwxwrP1a0QLBSkhhJ4CqUw@mail.gmail.com>
+In-Reply-To: <CABgxDo+FSk0Tkvu=uFd5tjd+6TnnkwxwrP1a0QLBSkhhJ4CqUw@mail.gmail.com>
+From: Romain Perier <romain.perier@gmail.com>
+Date: Thu, 8 Aug 2019 17:47:29 +0200
+Message-ID: <CABgxDo+ys-84ifkAMQp2Snv2PV4yTEYwi+3Jj9aGARn0hbhuWQ@mail.gmail.com>
+Subject: Re: refactor tasklets to avoid unsigned long argument
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	Shyam Saini <mayhs11saini@gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hi !
+
+Work is in progress (that's an hobby not full time). I am testing the
+build with "allyesconfig".
+Do you think it is acceptable to change
+drivers/mmc/host/renesas_sdhi_internal_dmac.c  to add a pointer to the
+"struct device" or to the "host", so
+renesas_sdhi_internal_dmac_complete_tasklet_fn() could access "host"
+from the tasklet parameter
+because currently, it is not possible.
+from the tasklet you can access "dma_priv", from "dma_priv" you can
+access "priv", then from "priv", you're blocked :)
 
 
+This is what I have done for now  :
+https://salsa.debian.org/rperier-guest/linux-tree/commit/a0e5735129b4118a1d=
+f55b02fead6fa9b7996520
+   (separately)
 
-On 2019/8/7 21:03, Michael Ellerman wrote:
-> Jason Yan <yanaijie@huawei.com> writes:
->> When kaslr is enabled, the kernel offset is different for every boot.
->> This brings some difficult to debug the kernel. Dump out the kernel
->> offset when panic so that we can easily debug the kernel.
-> 
-> Some of this is taken from the arm64 version right? Please say so when
-> you copy other people's code.
-> 
+Then the handler would be something like:
+https://salsa.debian.org/rperier-guest/linux-tree/commit/5fe1eaeb45060a7df1=
+0d166cc96e0bdcf0024368
+  (scroll down to renesas_sdhi_internal_dmac_complete_tasklet_fn() ).
 
-No problem. Architectures like x86 or arm64 or s390 both have this
-similar code. I guess x86 is the first one.
+What do you think ?
 
->> diff --git a/arch/powerpc/kernel/machine_kexec.c b/arch/powerpc/kernel/machine_kexec.c
->> index c4ed328a7b96..078fe3d76feb 100644
->> --- a/arch/powerpc/kernel/machine_kexec.c
->> +++ b/arch/powerpc/kernel/machine_kexec.c
->> @@ -86,6 +86,7 @@ void arch_crash_save_vmcoreinfo(void)
->>   	VMCOREINFO_STRUCT_SIZE(mmu_psize_def);
->>   	VMCOREINFO_OFFSET(mmu_psize_def, shift);
->>   #endif
->> +	vmcoreinfo_append_str("KERNELOFFSET=%lx\n", kaslr_offset());
->>   }
-> 
-> There's no mention of that in the commit log.
-> 
-> Please split it into a separate patch and describe what you're doing and
-> why.
+Regards,
+Romain
 
-OK
-
-> 
->> diff --git a/arch/powerpc/kernel/setup-common.c b/arch/powerpc/kernel/setup-common.c
->> index 1f8db666468d..064075f02837 100644
->> --- a/arch/powerpc/kernel/setup-common.c
->> +++ b/arch/powerpc/kernel/setup-common.c
->> @@ -715,12 +715,31 @@ static struct notifier_block ppc_panic_block = {
->>   	.priority = INT_MIN /* may not return; must be done last */
->>   };
->>   
->> +/*
->> + * Dump out kernel offset information on panic.
->> + */
->> +static int dump_kernel_offset(struct notifier_block *self, unsigned long v,
->> +			      void *p)
->> +{
->> +	pr_emerg("Kernel Offset: 0x%lx from 0x%lx\n",
->> +		 kaslr_offset(), KERNELBASE);
->> +
->> +	return 0;
->> +}
->> +
->> +static struct notifier_block kernel_offset_notifier = {
->> +	.notifier_call = dump_kernel_offset
->> +};
->> +
->>   void __init setup_panic(void)
->>   {
->>   	/* PPC64 always does a hard irq disable in its panic handler */
->>   	if (!IS_ENABLED(CONFIG_PPC64) && !ppc_md.panic)
->>   		return;
->>   	atomic_notifier_chain_register(&panic_notifier_list, &ppc_panic_block);
-> 
->> +	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE) && kaslr_offset() > 0)
->> +		atomic_notifier_chain_register(&panic_notifier_list,
->> +					       &kernel_offset_notifier);
-> 
-> Don't you want to do that before the return above?
-> 
-
-Eagle eye. This should not affected by the conditions above.
-
->>   }
-> 
-> cheers
-> 
-> .
-> 
-
+Le mar. 23 juil. 2019 =C3=A0 10:15, Romain Perier <romain.perier@gmail.com>=
+ a =C3=A9crit :
+>
+> Le lun. 22 juil. 2019 =C3=A0 19:19, Kees Cook <keescook@chromium.org> a =
+=C3=A9crit :
+> >
+> > On Sun, Jul 21, 2019 at 07:55:33PM +0200, Romain Perier wrote:
+> > > Ok, thanks for these explanations.
+> >
+> > (Reminder: please use inline-context email replies instead of
+> > top-posting, this makes threads much easier to read.)
+>
+> Arf, good point. My bad :)
+>
+> >
+> >
+> > Looks good! I wonder if you're able to use Coccinelle to generate the
+> > conversion patch? There appear to be just under 400 callers of
+> > tasklet_init(), which is a lot to type by hand. :)
+>
+> Mmmhhh, I did not thought *at all* to coccinelle for this, good idea.
+> I am gonna to read some docs about the tool
+>
+> >
+> > Also, have you found any other tasklet users that are NOT using
+> > tasklet_init()? The timer_struct conversion had about three ways
+> > to do initialization. :(
+>
+> This is what I was looking before you give me details about the task.
+> It seems, there
+> is only one way to init a tasklet. I have just re-checked, it seems ok.
+>
+> Thanks for your feedbacks,
+> Regards,
+> Romain
