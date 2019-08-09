@@ -1,21 +1,20 @@
-Return-Path: <SRS0=VEzb=WF=lists.openwall.com=kernel-hardening-return-16772-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ox6N=WF=lists.openwall.com=kernel-hardening-return-16773-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F3F7FC31E40
-	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Aug 2019 09:54:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5541AC433FF
+	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Aug 2019 09:54:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 591622166E
-	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Aug 2019 09:54:36 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 591622166E
+	by mail.kernel.org (Postfix) with SMTP id ADC222166E
+	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Aug 2019 09:54:49 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org ADC222166E
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16772-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14244 invoked by uid 550); 9 Aug 2019 09:52:29 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16773-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15489 invoked by uid 550); 9 Aug 2019 09:52:31 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14092 invoked from network); 9 Aug 2019 09:52:27 -0000
+Received: (qmail 15388 invoked from network); 9 Aug 2019 09:52:30 -0000
 From: Jason Yan <yanaijie@huawei.com>
 To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
 	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
@@ -33,9 +32,9 @@ CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
 	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
 	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
 	<zhaohongjiang@huawei.com>, Jason Yan <yanaijie@huawei.com>
-Subject: [PATCH v6 09/12] powerpc/fsl_booke/kaslr: support nokaslr cmdline parameter
-Date: Fri, 9 Aug 2019 18:07:57 +0800
-Message-ID: <20190809100800.5426-10-yanaijie@huawei.com>
+Subject: [PATCH v6 08/12] powerpc/fsl_booke/kaslr: clear the original kernel if randomized
+Date: Fri, 9 Aug 2019 18:07:56 +0800
+Message-ID: <20190809100800.5426-9-yanaijie@huawei.com>
 X-Mailer: git-send-email 2.17.2
 In-Reply-To: <20190809100800.5426-1-yanaijie@huawei.com>
 References: <20190809100800.5426-1-yanaijie@huawei.com>
@@ -44,8 +43,7 @@ Content-Type: text/plain
 X-Originating-IP: [10.175.124.28]
 X-CFilter-Loop: Reflected
 
-One may want to disable kaslr when boot, so provide a cmdline parameter
-'nokaslr' to support this.
+The original kernel still exists in the memory, clear it now.
 
 Signed-off-by: Jason Yan <yanaijie@huawei.com>
 Cc: Diana Craciun <diana.craciun@nxp.com>
@@ -55,37 +53,60 @@ Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
 Cc: Paul Mackerras <paulus@samba.org>
 Cc: Nicholas Piggin <npiggin@gmail.com>
 Cc: Kees Cook <keescook@chromium.org>
+Reviewed-by: Christophe Leroy <christophe.leroy@c-s.fr>
 Reviewed-by: Diana Craciun <diana.craciun@nxp.com>
 Tested-by: Diana Craciun <diana.craciun@nxp.com>
-Reviewed-by: Christophe Leroy <christophe.leroy@c-s.fr>
 ---
- arch/powerpc/kernel/kaslr_booke.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ arch/powerpc/kernel/kaslr_booke.c  | 11 +++++++++++
+ arch/powerpc/mm/mmu_decl.h         |  2 ++
+ arch/powerpc/mm/nohash/fsl_booke.c |  1 +
+ 3 files changed, 14 insertions(+)
 
 diff --git a/arch/powerpc/kernel/kaslr_booke.c b/arch/powerpc/kernel/kaslr_booke.c
-index 9a360b6124ed..fd32ae10c218 100644
+index 51a0b3749724..9a360b6124ed 100644
 --- a/arch/powerpc/kernel/kaslr_booke.c
 +++ b/arch/powerpc/kernel/kaslr_booke.c
-@@ -334,6 +334,11 @@ static unsigned long __init kaslr_choose_location(void *dt_ptr, phys_addr_t size
- 	return kaslr_offset;
+@@ -373,3 +373,14 @@ notrace void __init kaslr_early_init(void *dt_ptr, phys_addr_t size)
+ 
+ 	reloc_kernel_entry(dt_ptr, kernstart_virt_addr);
  }
- 
-+static inline __init bool kaslr_disabled(void)
-+{
-+	return strstr(boot_command_line, "nokaslr") != NULL;
-+}
 +
- /*
-  * To see if we need to relocate the kernel to a random offset
-  * void *dt_ptr - address of the device tree
-@@ -349,6 +354,8 @@ notrace void __init kaslr_early_init(void *dt_ptr, phys_addr_t size)
- 	kernel_sz = (unsigned long)_end - KERNELBASE;
++void __init kaslr_late_init(void)
++{
++	/* If randomized, clear the original kernel */
++	if (kernstart_virt_addr != KERNELBASE) {
++		unsigned long kernel_sz;
++
++		kernel_sz = (unsigned long)_end - kernstart_virt_addr;
++		memzero_explicit((void *)KERNELBASE, kernel_sz);
++	}
++}
+diff --git a/arch/powerpc/mm/mmu_decl.h b/arch/powerpc/mm/mmu_decl.h
+index 213997d69729..64b2ac8a5343 100644
+--- a/arch/powerpc/mm/mmu_decl.h
++++ b/arch/powerpc/mm/mmu_decl.h
+@@ -151,8 +151,10 @@ extern void loadcam_multi(int first_idx, int num, int tmp_idx);
  
- 	kaslr_get_cmdline(dt_ptr);
-+	if (kaslr_disabled())
-+		return;
+ #ifdef CONFIG_RANDOMIZE_BASE
+ void kaslr_early_init(void *dt_ptr, phys_addr_t size);
++void kaslr_late_init(void);
+ #else
+ static inline void kaslr_early_init(void *dt_ptr, phys_addr_t size) {}
++static inline void kaslr_late_init(void) {}
+ #endif
  
- 	offset = kaslr_choose_location(dt_ptr, size, kernel_sz);
+ struct tlbcam {
+diff --git a/arch/powerpc/mm/nohash/fsl_booke.c b/arch/powerpc/mm/nohash/fsl_booke.c
+index 2dc27cf88add..b4eb06ceb189 100644
+--- a/arch/powerpc/mm/nohash/fsl_booke.c
++++ b/arch/powerpc/mm/nohash/fsl_booke.c
+@@ -269,6 +269,7 @@ notrace void __init relocate_init(u64 dt_ptr, phys_addr_t start)
+ 	kernstart_addr = start;
+ 	if (is_second_reloc) {
+ 		virt_phys_offset = PAGE_OFFSET - memstart_addr;
++		kaslr_late_init();
+ 		return;
+ 	}
  
 -- 
 2.17.2
