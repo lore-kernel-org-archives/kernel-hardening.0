@@ -1,4 +1,4 @@
-Return-Path: <SRS0=XoTh=WT=lists.openwall.com=kernel-hardening-return-16797-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=kVod=WT=lists.openwall.com=kernel-hardening-return-16798-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,17 +8,17 @@ X-Spam-Status: No, score=-9.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CF4C1C3A5A2
-	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Aug 2019 12:17:45 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F0979C3A5A2
+	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Aug 2019 12:38:39 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F30DC233A0
-	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Aug 2019 12:17:44 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1EA3921848
+	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Aug 2019 12:38:38 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=yandex.com header.i=@yandex.com header.b="xKm6CFbe"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F30DC233A0
+	dkim=pass (1024-bit key) header.d=yandex.com header.i=@yandex.com header.b="JUawa5iy"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1EA3921848
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=yandex.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16797-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3138 invoked by uid 550); 23 Aug 2019 12:17:35 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16798-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18412 invoked by uid 550); 23 Aug 2019 12:38:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,20 +26,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23704 invoked from network); 23 Aug 2019 11:11:25 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yandex.com; s=mail; t=1566558673;
-	bh=aIMtKPvtOA4JKs3oqqbbhmM1kkt4Hr+atU7ZXFdK22I=;
-	h=Date:Subject:To:From:Message-Id;
-	b=xKm6CFbe/xPfJ+hReBvqYcuDqXXkKBfIQ0hLp+/zNpe5AM0KKM5mE/+/I2KThnqgv
-	 kc/a6q0LZs2NGl0YM/xU21GpfLisMa+GQmFWnDQWVydFlHnUHu+nz7ZV92mWNKRksV
-	 6tddFx+/Qp5W4wNdL+LH9H77MbedveND6NAphIko=
-Authentication-Results: mxback5o.mail.yandex.net; dkim=pass header.i=@yandex.com
+Received: (qmail 18378 invoked from network); 23 Aug 2019 12:38:31 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yandex.com; s=mail; t=1566563900;
+	bh=28jkd9f3MKETkOetYghCA+TJq2jAh6UPaB+hKBb85eE=;
+	h=Subject:To:From:Date:Message-Id;
+	b=JUawa5iyQQlxA034+kkNk5g+L1CgMgrV5J6IG9zbY/+mg5B9BeZc8cO3X0am1qvIu
+	 GQmhBxLX+IwzzZzvKH0w5qAU3oytpmMHlVXYPphyEiDxhtGBbSGAVs591/qkomQPX8
+	 qDs4FMOvdBf0eJjffAPkRSIZa3099+AbjD/cZXZY=
+Authentication-Results: mxback29g.mail.yandex.net; dkim=pass header.i=@yandex.com
 From: Lev Olshvang <levonshe@yandex.com>
 To: kernel-hardening@lists.openwall.com
-Subject: [RFC] Refuse write to read_only pages of a target process. Target process is not a current process. It is foreign process. Typically  debuggers,such as gdb,  write to read-only code[text] sections of target. kernel hardening configuration option will stop attacks modifying code or jump tables. New logic denies to accept page fault caused by page protection violation.
-Date: Fri, 23 Aug 2019 07:11:07 -0400
-Message-Id: <1566558667-1678-1-git-send-email-levonshe@yandex.com>
+Subject: [RFC] security hardening: block write to read_only pages of a target process.
+Date: Fri, 23 Aug 2019 08:38:15 -0400
+Message-Id: <1566563895-2081-1-git-send-email-levonshe@yandex.com>
 X-Mailer: git-send-email 2.7.4
+
+Target process is not a current process.
+It is a foreign process in the terminogy of page fault handler.
+
+Typically debuggers, such as gdb, write to read-only code [text]
+sections of target process.
+This patch introduce kernel hardening configuration option.
+When enabled, it will stop attacks modifying code or jump tables.
+
+Onky Code of arch_vma_access_permitted() function was extended to
+check foreign vma vm_flags.
+
+New logic denies to accept page fault caused by page protection violation.
 
 Separatly applied for x86,powerpc and unicore32
 arch_vma_access_permitted() function is not referenced in unicore32 and um
