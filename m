@@ -1,23 +1,20 @@
-Return-Path: <SRS0=e1RG=WU=lists.openwall.com=kernel-hardening-return-16803-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=E4q9=WX=lists.openwall.com=kernel-hardening-return-16804-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BF128C3A59E
-	for <kernel-hardening@archiver.kernel.org>; Sat, 24 Aug 2019 15:43:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E5EE8C3A59F
+	for <kernel-hardening@archiver.kernel.org>; Tue, 27 Aug 2019 00:40:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E09CF21670
-	for <kernel-hardening@archiver.kernel.org>; Sat, 24 Aug 2019 15:43:46 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="JphlNMXP"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E09CF21670
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.co.uk
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16803-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15497 invoked by uid 550); 24 Aug 2019 15:43:36 -0000
+	by mail.kernel.org (Postfix) with SMTP id 20D6A20850
+	for <kernel-hardening@archiver.kernel.org>; Tue, 27 Aug 2019 00:40:09 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 20D6A20850
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16804-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1920 invoked by uid 550); 27 Aug 2019 00:40:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,148 +22,159 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5888 invoked from network); 24 Aug 2019 15:31:16 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1566660664;
-	bh=w3QHDnO4t6DArQfKiVUGUZ2ReXOLSwfgei12ZqKuUtc=;
-	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
-	b=JphlNMXP032vbZsSw+MBeNxK8wuMVj5Ze0m4Au4vnOgwq52R+BzKAJIv4U8ZQ9M88
-	 JsaFbdvrPryKO2U7C2SVniQ2zewj+/DVvimtFaiguP84M93JJGAi6ofSEq16d1/Drc
-	 m9i4nTFNJhOqFX/VzPAx/izvPqdjDiGy1q3FfsOM=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-From: Alex Dewar <alex.dewar@gmx.co.uk>
-To: keescook@chromium.org,
-	re.emese@gmail.com
-Cc: kernel-hardening@lists.openwall.com,
-	linux-kernel@vger.kernel.org,
-	Alex Dewar <alex.dewar@gmx.co.uk>
-Subject: [PATCH RESEND v3] scripts/gcc-plugins: Add SPDX header for files without
-Date: Sat, 24 Aug 2019 16:30:37 +0100
-Message-Id: <20190824153036.21394-1-alex.dewar@gmx.co.uk>
-X-Mailer: git-send-email 2.23.0
+Received: (qmail 1885 invoked from network); 27 Aug 2019 00:40:00 -0000
+Subject: Re: [PATCH v6 00/12] implement KASLR for powerpc/fsl_booke/32
+From: Jason Yan <yanaijie@huawei.com>
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
+CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
+	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
+	<jingxiangfeng@huawei.com>, <fanchengyang@huawei.com>,
+	<zhaohongjiang@huawei.com>
+References: <20190809100800.5426-1-yanaijie@huawei.com>
+ <ed96199d-715c-3f1c-39db-10a569ba6601@huawei.com>
+Message-ID: <529fd908-42d6-f96f-daa2-9010f3035879@huawei.com>
+Date: Tue, 27 Aug 2019 08:39:38 +0800
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
+ Thunderbird/60.5.0
 MIME-Version: 1.0
-X-Provags-ID: V03:K1:+OeUbvhP6ghkuw/Cz1TmzatsnmeDKLWUJEHR5WtzX3qB17nmbZu
- e5J7vHxXlZFrpBpUxLDzqHix10YbaNTs0R3KLXZLd5D9U3uxSF8feScWTy7dSWFaRTH1nc1
- 921Ye4wfm2mG3bRR5yEBfyJ+Py2/QkoxNlz7dshKs6ZLWJVKGxNgcgTgs1ZyCx6brxwtqop
- 6K2se7DJ1n+5lYjwUioeA==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:g5OQ1OMXWI8=:+GU8VXMIyalyZjpyHJc5fG
- 4TNfuTUm3ewwR6/tJoNCW6GrW+Wk3wSuuWBwOFVj60GNWsygiXj4Xx8GVawWJPkY7r7WLeFTN
- 6aymTdGGytAKpEB6aQDpHOU1muslj3BzYFcSnLK2cAPJnRKNXr+G44S9BRSmk34R8bDEWcaXE
- exD7+ZRJ5K7SpkLAULNfP3l1gR0e0BRlOXSxbuWLz6soboaeJVNW5Ts89gSzPZ5LB6dDouj11
- Sugml3cZG2TjqB2p6Vxk904uZlCxp/aXyZfVpdDXIFpdi9rU8jwhC2dFVmeyiQLdUecRErOyf
- eixyBCkmnt/IBRCzfXkKOdEdBjOYeaiCqs5CWQ4+DdgDeN7Tt4NbQY5+ikXFYgmVBfSiTxcif
- NYHcpcBubMuvwTFaLh6yME/yo4QtGfBmddjQ3NyIR5ka4KZrkawKfirhMOEJk7ObxrRJ1xzM+
- O0brxOqIkJGPZmRBoxwmUE/yin59RGs1krkvg5x0Tn1xdYVgOTiCMqXRkScbB7RrqHcBMEGtp
- iaoWmqKlrwI7v/IaOXYT9l0Z8/M4m+p0UmtiFpcImdkxZdWCnf4FJvNztf3uJmjE1gUKtPTnH
- 2z03q2WKP2Xe1WG7FwWGgIrxoYFXoqAmZ7cHd4lHtnDxJgao0kddxfFyFTrdoHO7S5Bv1fVQO
- rnoCko+EXQtTA3pJfbEzKGMhhLdMWwCRmN6k3JSkaoLdmd0lKvyNF/6wb0z/BX5b1s9f/otVt
- +HCH1GTH+i61scY2m4eopmTjWlTul2dJTYtHpwfGdrVzoX3kaen/N/QntEbhLYNpoW7CPOK3r
- iMv2vnloB+nL2w8XSsFbTh7AH6KssvDcR/sX2D3Bnqtz88nXk6B8P0tigxbQ5Qm9ZZT9IaZzz
- mJRPyzreHYpjpxZZTJCgub0PFRlRnLxE+OhLQKvkuZioFlxGysKzpHUnYI+8vfI0tQ97Eovou
- WhwdqnvstXSYthSWD01Lc39zwJoA+qNu8DPjgr764XfwBrLHRoo/GoK58dt989oJH9RtAmVcX
- N+MtoemTt2F5VyzFSNHSBdhajOy+QRYLaOoKUptRlv2HjeqwM9jMiBEk1l0p7bE5Z94/6aOOf
- CXATsF+NXodWKupoN9MLjAoRdex9leEBmfaE7oeA22nC14i9t6eu3G+Kg==
+In-Reply-To: <ed96199d-715c-3f1c-39db-10a569ba6601@huawei.com>
+Content-Type: text/plain; charset="utf-8"; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
+X-Originating-IP: [10.177.96.203]
+X-CFilter-Loop: Reflected
 
-Replace boilerplate with approproate SPDX header. Vim also auto-trimmed
-whitespace from one line.
+A polite ping :)
 
-Ignore the previous emails. I'm still trying to get the hang of the
-tools. Really sorry!
+What else should I do now?
 
-Signed-off-by: Alex Dewar <alex.dewar@gmx.co.uk>
----
- scripts/gcc-plugins/cyc_complexity_plugin.c   | 2 +-
- scripts/gcc-plugins/latent_entropy_plugin.c   | 2 +-
- scripts/gcc-plugins/randomize_layout_plugin.c | 4 ++--
- scripts/gcc-plugins/sancov_plugin.c           | 2 +-
- scripts/gcc-plugins/stackleak_plugin.c        | 2 +-
- scripts/gcc-plugins/structleak_plugin.c       | 2 +-
- 6 files changed, 7 insertions(+), 7 deletions(-)
+Thanks
 
-diff --git a/scripts/gcc-plugins/cyc_complexity_plugin.c b/scripts/gcc-plugins/cyc_complexity_plugin.c
-index 1909ec617431..870266f36b5c 100644
---- a/scripts/gcc-plugins/cyc_complexity_plugin.c
-+++ b/scripts/gcc-plugins/cyc_complexity_plugin.c
-@@ -1,6 +1,6 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
- /*
-  * Copyright 2011-2016 by Emese Revfy <re.emese@gmail.com>
-- * Licensed under the GPL v2, or (at your option) v3
-  *
-  * Homepage:
-  * https://github.com/ephox-gcc-plugins/cyclomatic_complexity
-diff --git a/scripts/gcc-plugins/latent_entropy_plugin.c b/scripts/gcc-plugins/latent_entropy_plugin.c
-index cbe1d6c4b1a5..c693ac27ddf1 100644
---- a/scripts/gcc-plugins/latent_entropy_plugin.c
-+++ b/scripts/gcc-plugins/latent_entropy_plugin.c
-@@ -1,7 +1,7 @@
-+// SPDX-License-Identifier: GPL-2.0
- /*
-  * Copyright 2012-2016 by the PaX Team <pageexec@freemail.hu>
-  * Copyright 2016 by Emese Revfy <re.emese@gmail.com>
-- * Licensed under the GPL v2
-  *
-  * Note: the choice of the license means that the compilation process is
-  *       NOT 'eligible' as defined by gcc's library exception to the GPL v3,
-diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
-index bd29e4e7a524..f46d049da26c 100644
---- a/scripts/gcc-plugins/randomize_layout_plugin.c
-+++ b/scripts/gcc-plugins/randomize_layout_plugin.c
-@@ -1,7 +1,7 @@
-+// SPDX-License-Identifier: GPL-2.0
- /*
-  * Copyright 2014-2016 by Open Source Security, Inc., Brad Spengler <spender@grsecurity.net>
-  *                   and PaX Team <pageexec@freemail.hu>
-- * Licensed under the GPL v2
-  *
-  * Note: the choice of the license means that the compilation process is
-  *       NOT 'eligible' as defined by gcc's library exception to the GPL v3,
-@@ -909,7 +909,7 @@ static unsigned int find_bad_casts_execute(void)
- 			} else {
- 				const_tree ssa_name_var = SSA_NAME_VAR(rhs1);
- 				/* skip bogus type casts introduced by container_of */
--				if (ssa_name_var != NULL_TREE && DECL_NAME(ssa_name_var) &&
-+				if (ssa_name_var != NULL_TREE && DECL_NAME(ssa_name_var) &&
- 				    !strcmp((const char *)DECL_NAME_POINTER(ssa_name_var), "__mptr"))
- 					continue;
- #ifndef __DEBUG_PLUGIN
-diff --git a/scripts/gcc-plugins/sancov_plugin.c b/scripts/gcc-plugins/sancov_plugin.c
-index 0f98634c20a0..9845ad67a7d8 100644
---- a/scripts/gcc-plugins/sancov_plugin.c
-+++ b/scripts/gcc-plugins/sancov_plugin.c
-@@ -1,6 +1,6 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
- /*
-  * Copyright 2011-2016 by Emese Revfy <re.emese@gmail.com>
-- * Licensed under the GPL v2, or (at your option) v3
-  *
-  * Homepage:
-  * https://github.com/ephox-gcc-plugins/sancov
-diff --git a/scripts/gcc-plugins/stackleak_plugin.c b/scripts/gcc-plugins/stackleak_plugin.c
-index dbd37460c573..3abaea274651 100644
---- a/scripts/gcc-plugins/stackleak_plugin.c
-+++ b/scripts/gcc-plugins/stackleak_plugin.c
-@@ -1,7 +1,7 @@
-+// SPDX-License-Identifier: GPL-2.0
- /*
-  * Copyright 2011-2017 by the PaX Team <pageexec@freemail.hu>
-  * Modified by Alexander Popov <alex.popov@linux.com>
-- * Licensed under the GPL v2
-  *
-  * Note: the choice of the license means that the compilation process is
-  * NOT 'eligible' as defined by gcc's library exception to the GPL v3,
-diff --git a/scripts/gcc-plugins/structleak_plugin.c b/scripts/gcc-plugins/structleak_plugin.c
-index e89be8f5c859..708d21f5392b 100644
---- a/scripts/gcc-plugins/structleak_plugin.c
-+++ b/scripts/gcc-plugins/structleak_plugin.c
-@@ -1,6 +1,6 @@
-+// SPDX-License-Identifier: GPL-2.0
- /*
-  * Copyright 2013-2017 by PaX Team <pageexec@freemail.hu>
-- * Licensed under the GPL v2
-  *
-  * Note: the choice of the license means that the compilation process is
-  *       NOT 'eligible' as defined by gcc's library exception to the GPL v3,
---
-2.23.0
+On 2019/8/19 14:12, Jason Yan wrote:
+> Hi Michael,
+> 
+> Is there anything more I should do to get this feature meeting the 
+> requirements of the mainline?
+> 
+> Thanks,
+> Jason
+> 
+> On 2019/8/9 18:07, Jason Yan wrote:
+>> This series implements KASLR for powerpc/fsl_booke/32, as a security
+>> feature that deters exploit attempts relying on knowledge of the location
+>> of kernel internals.
+>>
+>> Since CONFIG_RELOCATABLE has already supported, what we need to do is
+>> map or copy kernel to a proper place and relocate. Freescale Book-E
+>> parts expect lowmem to be mapped by fixed TLB entries(TLB1). The TLB1
+>> entries are not suitable to map the kernel directly in a randomized
+>> region, so we chose to copy the kernel to a proper place and restart to
+>> relocate.
+>>
+>> Entropy is derived from the banner and timer base, which will change 
+>> every
+>> build and boot. This not so much safe so additionally the bootloader may
+>> pass entropy via the /chosen/kaslr-seed node in device tree.
+>>
+>> We will use the first 512M of the low memory to randomize the kernel
+>> image. The memory will be split in 64M zones. We will use the lower 8
+>> bit of the entropy to decide the index of the 64M zone. Then we chose a
+>> 16K aligned offset inside the 64M zone to put the kernel in.
+>>
+>>      KERNELBASE
+>>
+>>          |-->   64M   <--|
+>>          |               |
+>>          +---------------+    +----------------+---------------+
+>>          |               |....|    |kernel|    |               |
+>>          +---------------+    +----------------+---------------+
+>>          |                         |
+>>          |----->   offset    <-----|
+>>
+>>                                kernstart_virt_addr
+>>
+>> We also check if we will overlap with some areas like the dtb area, the
+>> initrd area or the crashkernel area. If we cannot find a proper area,
+>> kaslr will be disabled and boot from the original kernel.
+>>
+>> Changes since v5:
+>>   - Rename M_IF_NEEDED to MAS2_M_IF_NEEDED
+>>   - Define some global variable as __ro_after_init
+>>   - Replace kimage_vaddr with kernstart_virt_addr
+>>   - Depend on RELOCATABLE, not select it
+>>   - Modify the comment block below the SPDX tag
+>>   - Remove some useless headers in kaslr_booke.c and move is_second_reloc
+>>     declarationto mmu_decl.h
+>>   - Remove DBG() and use pr_debug() and rewrite comment above 
+>> get_boot_seed().
+>>   - Add a patch to document the KASLR implementation.
+>>   - Split a patch from patch #10 which exports kaslr offset in 
+>> VMCOREINFO ELF notes.
+>>   - Remove extra logic around finding nokaslr string in cmdline.
+>>   - Make regions static global and __initdata
+>>
+>> Changes since v4:
+>>   - Add Reviewed-by tag from Christophe
+>>   - Remove an unnecessary cast
+>>   - Remove unnecessary parenthesis
+>>   - Fix checkpatch warning
+>>
+>> Changes since v3:
+>>   - Add Reviewed-by and Tested-by tag from Diana
+>>   - Change the comment in fsl_booke_entry_mapping.S to be consistent
+>>     with the new code.
+>>
+>> Changes since v2:
+>>   - Remove unnecessary #ifdef
+>>   - Use SZ_64M instead of0x4000000
+>>   - Call early_init_dt_scan_chosen() to init boot_command_line
+>>   - Rename kaslr_second_init() to kaslr_late_init()
+>>
+>> Changes since v1:
+>>   - Remove some useless 'extern' keyword.
+>>   - Replace EXPORT_SYMBOL with EXPORT_SYMBOL_GPL
+>>   - Improve some assembly code
+>>   - Use memzero_explicit instead of memset
+>>   - Use boot_command_line and remove early_command_line
+>>   - Do not print kaslr offset if kaslr is disabled
+>>
+>> Jason Yan (12):
+>>    powerpc: unify definition of M_IF_NEEDED
+>>    powerpc: move memstart_addr and kernstart_addr to init-common.c
+>>    powerpc: introduce kernstart_virt_addr to store the kernel base
+>>    powerpc/fsl_booke/32: introduce create_tlb_entry() helper
+>>    powerpc/fsl_booke/32: introduce reloc_kernel_entry() helper
+>>    powerpc/fsl_booke/32: implement KASLR infrastructure
+>>    powerpc/fsl_booke/32: randomize the kernel image offset
+>>    powerpc/fsl_booke/kaslr: clear the original kernel if randomized
+>>    powerpc/fsl_booke/kaslr: support nokaslr cmdline parameter
+>>    powerpc/fsl_booke/kaslr: dump out kernel offset information on panic
+>>    powerpc/fsl_booke/kaslr: export offset in VMCOREINFO ELF notes
+>>    powerpc/fsl_booke/32: Document KASLR implementation
+>>
+>>   Documentation/powerpc/kaslr-booke32.rst       |  42 ++
+>>   arch/powerpc/Kconfig                          |  11 +
+>>   arch/powerpc/include/asm/nohash/mmu-book3e.h  |  10 +
+>>   arch/powerpc/include/asm/page.h               |   7 +
+>>   arch/powerpc/kernel/Makefile                  |   1 +
+>>   arch/powerpc/kernel/early_32.c                |   2 +-
+>>   arch/powerpc/kernel/exceptions-64e.S          |  12 +-
+>>   arch/powerpc/kernel/fsl_booke_entry_mapping.S |  27 +-
+>>   arch/powerpc/kernel/head_fsl_booke.S          |  55 ++-
+>>   arch/powerpc/kernel/kaslr_booke.c             | 393 ++++++++++++++++++
+>>   arch/powerpc/kernel/machine_kexec.c           |   1 +
+>>   arch/powerpc/kernel/misc_64.S                 |   7 +-
+>>   arch/powerpc/kernel/setup-common.c            |  20 +
+>>   arch/powerpc/mm/init-common.c                 |   7 +
+>>   arch/powerpc/mm/init_32.c                     |   5 -
+>>   arch/powerpc/mm/init_64.c                     |   5 -
+>>   arch/powerpc/mm/mmu_decl.h                    |  11 +
+>>   arch/powerpc/mm/nohash/fsl_booke.c            |   8 +-
+>>   18 files changed, 572 insertions(+), 52 deletions(-)
+>>   create mode 100644 Documentation/powerpc/kaslr-booke32.rst
+>>   create mode 100644 arch/powerpc/kernel/kaslr_booke.c
+>>
 
