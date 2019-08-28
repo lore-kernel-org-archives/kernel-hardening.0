@@ -1,23 +1,21 @@
-Return-Path: <SRS0=9w8r=WY=lists.openwall.com=kernel-hardening-return-16810-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=eltW=WY=lists.openwall.com=kernel-hardening-return-16811-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 37124C3A5A1
-	for <kernel-hardening@archiver.kernel.org>; Wed, 28 Aug 2019 05:48:12 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 83B73C3A5A1
+	for <kernel-hardening@archiver.kernel.org>; Wed, 28 Aug 2019 11:03:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 77E5D22CF8
-	for <kernel-hardening@archiver.kernel.org>; Wed, 28 Aug 2019 05:48:11 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=c-s.fr header.i=@c-s.fr header.b="H7d56jgp"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 77E5D22CF8
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=c-s.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16810-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18072 invoked by uid 550); 28 Aug 2019 05:48:04 -0000
+	by mail.kernel.org (Postfix) with SMTP id A28A522CF8
+	for <kernel-hardening@archiver.kernel.org>; Wed, 28 Aug 2019 11:03:44 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A28A522CF8
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16811-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28060 invoked by uid 550); 28 Aug 2019 11:03:36 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,45 +23,35 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18040 invoked from network); 28 Aug 2019 05:48:04 -0000
-Authentication-Results: localhost; dkim=pass
-	reason="1024-bit key; insecure key"
-	header.d=c-s.fr header.i=@c-s.fr header.b=H7d56jgp; dkim-adsp=pass;
-	dkim-atps=neutral
-X-Virus-Scanned: Debian amavisd-new at c-s.fr
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=c-s.fr; s=mail;
-	t=1566971271; bh=AmYiAtB5pIcz/P08jhfTvi4CrbWmoulSdtRcuEa5sPo=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=H7d56jgpyX5Kf4QbM6cOYjGTtGYEwWLMazu8whUO3pJSpS7PdHbz4EGeBXDBEe9Xg
-	 y9UEbe15Q5czkyEHzO6+CdBmqGkICEFK2lKF64ns1NY/fMeiERw4Zg9l5vu7t1geOs
-	 +LfAGJuFdSBnpaaHCG3qCgdFe19/Lc9CcmNrX6Mw=
-X-Virus-Scanned: amavisd-new at c-s.fr
+Received: (qmail 28020 invoked from network); 28 Aug 2019 11:03:35 -0000
 Subject: Re: [PATCH v6 06/12] powerpc/fsl_booke/32: implement KASLR
  infrastructure
-To: Scott Wood <oss@buserror.net>, Jason Yan <yanaijie@huawei.com>
-Cc: mpe@ellerman.id.au, linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com,
- benh@kernel.crashing.org, paulus@samba.org, npiggin@gmail.com,
- keescook@chromium.org, kernel-hardening@lists.openwall.com,
- wangkefeng.wang@huawei.com, linux-kernel@vger.kernel.org,
- jingxiangfeng@huawei.com, zhaohongjiang@huawei.com,
- thunder.leizhen@huawei.com, fanchengyang@huawei.com, yebin10@huawei.com
+To: Scott Wood <oss@buserror.net>
+CC: <wangkefeng.wang@huawei.com>, <keescook@chromium.org>,
+	<kernel-hardening@lists.openwall.com>, <thunder.leizhen@huawei.com>,
+	<linux-kernel@vger.kernel.org>, <npiggin@gmail.com>,
+	<jingxiangfeng@huawei.com>, <diana.craciun@nxp.com>, <paulus@samba.org>,
+	<zhaohongjiang@huawei.com>, <fanchengyang@huawei.com>,
+	<linuxppc-dev@lists.ozlabs.org>, <yebin10@huawei.com>
 References: <20190809100800.5426-1-yanaijie@huawei.com>
  <20190809100800.5426-7-yanaijie@huawei.com>
  <20190828045454.GB17757@home.buserror.net>
-From: Christophe Leroy <christophe.leroy@c-s.fr>
-Message-ID: <2db76c55-df5f-5ca8-f0a6-bcee75b8edaa@c-s.fr>
-Date: Wed, 28 Aug 2019 07:47:51 +0200
+From: Jason Yan <yanaijie@huawei.com>
+Message-ID: <de603506-5c4e-4ca3-bd77-e3a69af9faef@huawei.com>
+Date: Wed, 28 Aug 2019 19:03:11 +0800
 User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
- Thunderbird/60.8.0
+ Thunderbird/60.5.0
 MIME-Version: 1.0
 In-Reply-To: <20190828045454.GB17757@home.buserror.net>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: fr
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset="utf-8"; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-Originating-IP: [10.177.96.203]
+X-CFilter-Loop: Reflected
 
 
 
-Le 28/08/2019 à 06:54, Scott Wood a écrit :
+On 2019/8/28 12:54, Scott Wood wrote:
 > On Fri, Aug 09, 2019 at 06:07:54PM +0800, Jason Yan wrote:
 >> This patch add support to boot kernel from places other than KERNELBASE.
 >> Since CONFIG_RELOCATABLE has already supported, what we need to do is
@@ -98,8 +86,66 @@ Le 28/08/2019 à 06:54, Scott Wood a écrit :
 >>   8 files changed, 105 insertions(+), 15 deletions(-)
 >>   create mode 100644 arch/powerpc/kernel/kaslr_booke.c
 >>
+>> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
+>> index 77f6ebf97113..710c12ef7159 100644
+>> --- a/arch/powerpc/Kconfig
+>> +++ b/arch/powerpc/Kconfig
+>> @@ -548,6 +548,17 @@ config RELOCATABLE
+>>   	  setting can still be useful to bootwrappers that need to know the
+>>   	  load address of the kernel (eg. u-boot/mkimage).
+>>   
+>> +config RANDOMIZE_BASE
+>> +	bool "Randomize the address of the kernel image"
+>> +	depends on (FSL_BOOKE && FLATMEM && PPC32)
+>> +	depends on RELOCATABLE
+>> +	help
+>> +	  Randomizes the virtual address at which the kernel image is
+>> +	  loaded, as a security feature that deters exploit attempts
+>> +	  relying on knowledge of the location of kernel internals.
+>> +
+>> +	  If unsure, say N.
+>> +
+> 
+> Why is N the safe default (other than concerns about code maturity,
+> though arm64 and mips don't seem to have updated this recommendation
+> after several years)?  On x86 this defaults to Y.
+> 
 
-[...]
+Actually I would like to set this default Y. I was just wondering if
+people like this feature or not at the beginning so I had to be more
+careful.
+
+>> diff --git a/arch/powerpc/kernel/fsl_booke_entry_mapping.S b/arch/powerpc/kernel/fsl_booke_entry_mapping.S
+>> index f4d3eaae54a9..641920d4f694 100644
+>> --- a/arch/powerpc/kernel/fsl_booke_entry_mapping.S
+>> +++ b/arch/powerpc/kernel/fsl_booke_entry_mapping.S
+>> @@ -155,23 +155,22 @@ skpinv:	addi	r6,r6,1				/* Increment */
+>>   
+>>   #if defined(ENTRY_MAPPING_BOOT_SETUP)
+>>   
+>> -/* 6. Setup KERNELBASE mapping in TLB1[0] */
+>> +/* 6. Setup kernstart_virt_addr mapping in TLB1[0] */
+>>   	lis	r6,0x1000		/* Set MAS0(TLBSEL) = TLB1(1), ESEL = 0 */
+>>   	mtspr	SPRN_MAS0,r6
+>>   	lis	r6,(MAS1_VALID|MAS1_IPROT)@h
+>>   	ori	r6,r6,(MAS1_TSIZE(BOOK3E_PAGESZ_64M))@l
+>>   	mtspr	SPRN_MAS1,r6
+>> -	lis	r6,MAS2_VAL(PAGE_OFFSET, BOOK3E_PAGESZ_64M, MAS2_M_IF_NEEDED)@h
+>> -	ori	r6,r6,MAS2_VAL(PAGE_OFFSET, BOOK3E_PAGESZ_64M, MAS2_M_IF_NEEDED)@l
+>> -	mtspr	SPRN_MAS2,r6
+>> +	lis     r6,MAS2_EPN_MASK(BOOK3E_PAGESZ_64M)@h
+>> +	ori     r6,r6,MAS2_EPN_MASK(BOOK3E_PAGESZ_64M)@l
+>> +	and     r6,r6,r20
+>> +	ori	r6,r6,MAS2_M_IF_NEEDED@l
+>> +	mtspr   SPRN_MAS2,r6
+> 
+> Please use tabs rather than spaces between the mnemonic and the
+> arguments.
+> 
+> It looks like that was the last user of MAS2_VAL so let's remove it.
+> 
+
+OK.
 
 >> diff --git a/arch/powerpc/kernel/kaslr_booke.c b/arch/powerpc/kernel/kaslr_booke.c
 >> new file mode 100644
@@ -125,6 +171,9 @@ Le 28/08/2019 à 06:54, Scott Wood a écrit :
 > 
 > Why KERNELBASE and not kernstart_addr?
 > 
+
+Did you mean kernstart_virt_addr? It should be kernstart_virt_addr.
+
 >> +
 >> +	offset = kaslr_choose_location(dt_ptr, size, kernel_sz);
 >> +
@@ -143,8 +192,7 @@ Le 28/08/2019 à 06:54, Scott Wood a écrit :
 > If kernstart_addr wasn't 64M-aligned before adding offset, then "offset
 >> = SZ_64M" is not necessarily going to detect when you've crossed a
 > mapping boundary.
-> 
->> +
+> >> +
 >> +		/* Create kernel map to relocate in */
 >> +		create_tlb_entry(tlb_phys, tlb_virt, 1);
 >> +	}
@@ -156,8 +204,50 @@ Le 28/08/2019 à 06:54, Scott Wood a écrit :
 >> +}
 > 
 > After copying, call flush_icache_range() on the destination.
+> 
 
-Function copy_and_flush() does the copy and the flush. I think it should 
-be used instead of memcpy() + flush_icache_range()
+OK
 
-Christophe
+>> diff --git a/arch/powerpc/mm/nohash/fsl_booke.c b/arch/powerpc/mm/nohash/fsl_booke.c
+>> index 556e3cd52a35..2dc27cf88add 100644
+>> --- a/arch/powerpc/mm/nohash/fsl_booke.c
+>> +++ b/arch/powerpc/mm/nohash/fsl_booke.c
+>> @@ -263,7 +263,8 @@ void setup_initial_memory_limit(phys_addr_t first_memblock_base,
+>>   int __initdata is_second_reloc;
+>>   notrace void __init relocate_init(u64 dt_ptr, phys_addr_t start)
+>>   {
+>> -	unsigned long base = KERNELBASE;
+>> +	unsigned long base = kernstart_virt_addr;
+>> +	phys_addr_t size;
+>>   
+>>   	kernstart_addr = start;
+>>   	if (is_second_reloc) {
+>> @@ -291,7 +292,7 @@ notrace void __init relocate_init(u64 dt_ptr, phys_addr_t start)
+>>   	start &= ~0x3ffffff;
+>>   	base &= ~0x3ffffff;
+>>   	virt_phys_offset = base - start;
+>> -	early_get_first_memblock_info(__va(dt_ptr), NULL);
+>> +	early_get_first_memblock_info(__va(dt_ptr), &size);
+>>   	/*
+>>   	 * We now get the memstart_addr, then we should check if this
+>>   	 * address is the same as what the PAGE_OFFSET map to now. If
+>> @@ -316,6 +317,8 @@ notrace void __init relocate_init(u64 dt_ptr, phys_addr_t start)
+>>   		/* We should never reach here */
+>>   		panic("Relocation error");
+>>   	}
+>> +
+>> +	kaslr_early_init(__va(dt_ptr), size);
+> 
+> Are you assuming that available memory starts at physical address zero?
+> This isn't true of some partitioning scenarios, or in a kdump crash
+> kernel.
+> 
+
+I'm not assuming that but I haven't tested that case for now. I will 
+reconsider and test these scenarios and fix all bugs.
+
+> -Scott
+> 
+> .
+> 
+
