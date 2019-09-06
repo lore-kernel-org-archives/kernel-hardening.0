@@ -1,23 +1,23 @@
-Return-Path: <SRS0=2/KP=XB=lists.openwall.com=kernel-hardening-return-16846-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Qizx=XB=lists.openwall.com=kernel-hardening-return-16847-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-2.4 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7185BC43331
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 16:06:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9C88EC43331
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 17:14:36 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A9CE02070C
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 16:06:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A369320842
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 17:14:35 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=ssi.gouv.fr header.i=@ssi.gouv.fr header.b="rvdNIvMb"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A9CE02070C
+	dkim=pass (2048-bit key) header.d=ssi.gouv.fr header.i=@ssi.gouv.fr header.b="FxaYGxPo"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A369320842
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=ssi.gouv.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16846-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3890 invoked by uid 550); 6 Sep 2019 16:06:40 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16847-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 8178 invoked by uid 550); 6 Sep 2019 17:14:27 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,21 +25,21 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3868 invoked from network); 6 Sep 2019 16:06:39 -0000
+Received: (qmail 8160 invoked from network); 6 Sep 2019 17:14:26 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=ssi.gouv.fr;
-	s=20160407; t=1567785987;
-	bh=FwyTlVCqm8aP3xoN7suXSpGig40n/ST/gCqz/6H+pJg=;
+	s=20160407; t=1567790055;
+	bh=cLdOiE54zKyAjOHLoAwzZPgDyl0aVvM/gUvpCeq4S7g=;
 	h=Subject:To:CC:References:From:Date:In-Reply-To:From:Subject;
-	b=rvdNIvMbXElr2pL5DlaPYCAoEQ4gCJcigMVtxhzkc9XgVjWGP5lDlgpwyRzEDC11D
-	 ozsDEfHCHPNwt6IIN/rFneyehInkshXlhaj88Mm7rEZ6fa3os/yGNCRaPfZzGt3Oe0
-	 QG1Ercf9tHLDWoaBsG6/ukDLiBPrjB5Myyg4MBP0oz1q31qbtXmyp88E1gnMvKcFw2
-	 LvEYL4upJAai1Aciu/tyNFtf0ptWrKOyzgVkh3LWlh6EfljZ3aS6z8I8elg+KYIquS
-	 4AEBbUxmUEW87/C2ueqmJvbBNuMEWI5F+APrdwiTW9qYjGwMROhUju0SOQsCZt9+br
-	 fhTtuqPfDzn2Q==
+	b=FxaYGxPomU3H6XZ3g9gaFaWPW3F6a/Yn38emhmc3YLQXr9bsQzK0Jfo88sUl0z/il
+	 HS7+Z7kORFesl0y4ZjpYo5aaKLoMZ/OIJWz1iuqDcjAM8XkR8luHMLNgkLcDPsbRHG
+	 OSo6l4mrrCUaiEJvRgJxuQqbw7n4xVxKZLmhP/H+47q48e7OyIDCMNkWdIhAOulvWP
+	 t9mk7IK8G3/E71JHC2cXmRAlYuOkcQeZJWRpB9RqMeF7dSARiOHT/iO1+VKaYUl2xR
+	 KElwe8V2DtWOWSx4NqUbBZsPxOIwPTmta+EHU/8O3rlPzuE6Ey3Ak9yTlS0TJabKWK
+	 CZm8Tw6ByN6hw==
 Subject: Re: [PATCH v2 1/5] fs: Add support for an O_MAYEXEC flag on
  sys_open()
-To: Florian Weimer <fweimer@redhat.com>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?=
-	<mic@digikod.net>
+To: Jeff Layton <jlayton@kernel.org>, Florian Weimer <fweimer@redhat.com>,
+	=?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
 CC: <linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, Alexei
  Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Andy
  Lutomirski <luto@kernel.org>, Christian Heimes <christian@python.org>, Daniel
@@ -61,48 +61,94 @@ CC: <linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, Alexei
 References: <20190906152455.22757-1-mic@digikod.net>
  <20190906152455.22757-2-mic@digikod.net>
  <87ef0te7v3.fsf@oldenburg2.str.redhat.com>
+ <75442f3b-a3d8-12db-579a-2c5983426b4d@ssi.gouv.fr>
+ <f53ec45fd253e96d1c8d0ea6f9cca7f68afa51e3.camel@kernel.org>
 From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
-Message-ID: <75442f3b-a3d8-12db-579a-2c5983426b4d@ssi.gouv.fr>
-Date: Fri, 6 Sep 2019 18:06:25 +0200
+Message-ID: <1fbf54f6-7597-3633-a76c-11c4b2481add@ssi.gouv.fr>
+Date: Fri, 6 Sep 2019 19:14:13 +0200
 User-Agent: Mozilla/5.0 (X11; Linux i686; rv:52.0) Gecko/20100101
  Thunderbird/52.9.0
 MIME-Version: 1.0
-In-Reply-To: <87ef0te7v3.fsf@oldenburg2.str.redhat.com>
+In-Reply-To: <f53ec45fd253e96d1c8d0ea6f9cca7f68afa51e3.camel@kernel.org>
 Content-Type: text/plain; charset="utf-8"
 Content-Language: en-US
 Content-Transfer-Encoding: quoted-printable
 
 
-On 06/09/2019 17:56, Florian Weimer wrote:
-> Let's assume I want to add support for this to the glibc dynamic loader,
-> while still being able to run on older kernels.
+On 06/09/2019 18:48, Jeff Layton wrote:
+> On Fri, 2019-09-06 at 18:06 +0200, Micka=C3=ABl Sala=C3=BCn wrote:
+>> On 06/09/2019 17:56, Florian Weimer wrote:
+>>> Let's assume I want to add support for this to the glibc dynamic loader=
+,
+>>> while still being able to run on older kernels.
+>>>
+>>> Is it safe to try the open call first, with O_MAYEXEC, and if that fail=
+s
+>>> with EINVAL, try again without O_MAYEXEC?
+>>
+>> The kernel ignore unknown open(2) flags, so yes, it is safe even for
+>> older kernel to use O_MAYEXEC.
+>>
 >
-> Is it safe to try the open call first, with O_MAYEXEC, and if that fails
-> with EINVAL, try again without O_MAYEXEC?
+> Well...maybe. What about existing programs that are sending down bogus
+> open flags? Once you turn this on, they may break...or provide a way to
+> circumvent the protections this gives.
 
-The kernel ignore unknown open(2) flags, so yes, it is safe even for
-older kernel to use O_MAYEXEC.
-
->
-> Or do I risk disabling this security feature if I do that?
-
-It is only a security feature if the kernel support it, otherwise it is
-a no-op.
+Well, I don't think we should nor could care about bogus programs that
+do not conform to the Linux ABI.
 
 >
-> Do we need a different way for recognizing kernel support.  (Note that
-> we cannot probe paths in /proc for various reasons.)
+> Maybe this should be a new flag that is only usable in the new openat2()
+> syscall that's still under discussion? That syscall will enforce that
+> all flags are recognized. You presumably wouldn't need the sysctl if you
+> went that route too.
 
-There is no need to probe for kernel support.
+Here is a thread about a new syscall:
+https://lore.kernel.org/lkml/1544699060.6703.11.camel@linux.ibm.com/
+
+I don't think it fit well with auditing nor integrity. Moreover using
+the current open(2) behavior of ignoring unknown flags fit well with the
+usage of O_MAYEXEC (because it is only a hint to the kernel about the
+use of the *opened* file).
 
 >
-> Thanks,
-> Florian
+> Anyone that wants to use this will have to recompile anyway. If the
+> kernel doesn't support openat2 or if the flag is rejected then you know
+> that you have no O_MAYEXEC support and can decide what to do.
+
+If we want to enforce a security policy, we need to either be the system
+administrator or the distro developer. If a distro ship interpreters
+using this flag, we don't need to recompile anything, but we need to be
+able to control the enforcement according to the mount point
+configuration (or an advanced MAC, or an IMA config). I don't see why an
+userspace process should check if this flag is supported or not, it
+should simply use it, and the sysadmin will enable an enforcement if it
+makes sense for the whole system.
+
 >
+>>> Or do I risk disabling this security feature if I do that?
+>>
+>> It is only a security feature if the kernel support it, otherwise it is
+>> a no-op.
+>>
+>
+> With a security feature, I think we really want userland to aware of
+> whether it works.
 
---
-Micka=C3=ABl Sala=C3=BCn
+If userland would like to enforce something, it can already do it
+without any kernel modification. The goal of the O_MAYEXEC flag is to
+enable the kernel, hence sysadmins or system designers, to enforce a
+global security policy that makes sense.
 
+>
+>>> Do we need a different way for recognizing kernel support.  (Note that
+>>> we cannot probe paths in /proc for various reasons.)
+>>
+>> There is no need to probe for kernel support.
+>>
+>>> Thanks,
+>>> Florian
+>>>
 Les donn=C3=A9es =C3=A0 caract=C3=A8re personnel recueillies et trait=C3=A9=
 es dans le cadre de cet =C3=A9change, le sont =C3=A0 seule fin d=E2=80=99ex=
 =C3=A9cution d=E2=80=99une relation professionnelle et s=E2=80=99op=C3=A8re=
