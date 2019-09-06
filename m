@@ -1,21 +1,21 @@
-Return-Path: <SRS0=knqY=XB=lists.openwall.com=kernel-hardening-return-16843-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Bxwi=XB=lists.openwall.com=kernel-hardening-return-16844-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.7 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 43C65C43331
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 15:27:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A3679C43331
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 15:27:19 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8F432214E0
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 15:27:06 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8F432214E0
+	by mail.kernel.org (Postfix) with SMTP id 8874120838
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Sep 2019 15:27:18 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8874120838
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16843-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21548 invoked by uid 550); 6 Sep 2019 15:26:21 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16844-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21563 invoked by uid 550); 6 Sep 2019 15:26:22 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20264 invoked from network); 6 Sep 2019 15:26:18 -0000
+Received: (qmail 20219 invoked from network); 6 Sep 2019 15:26:17 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -50,9 +50,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
         Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>,
         kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
         linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Subject: [PATCH v2 5/5] doc: Add documentation for the fs.open_mayexec_enforce sysctl
-Date: Fri,  6 Sep 2019 17:24:55 +0200
-Message-Id: <20190906152455.22757-6-mic@digikod.net>
+Subject: [PATCH v2 4/5] selftest/exec: Add tests for O_MAYEXEC enforcing
+Date: Fri,  6 Sep 2019 17:24:54 +0200
+Message-Id: <20190906152455.22757-5-mic@digikod.net>
 X-Mailer: git-send-email 2.23.0.rc1
 In-Reply-To: <20190906152455.22757-1-mic@digikod.net>
 References: <20190906152455.22757-1-mic@digikod.net>
@@ -62,80 +62,399 @@ Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
+Test propagation of noexec mount points or file executability through
+files open with or without O_MAYEXEC.
+
 Changes since v1:
-* move from LSM/Yama to sysctl/fs
+* move tests from yama to exec
+* fix _GNU_SOURCE in kselftest_harness.h
+* add a new test sysctl_access_write to check if CAP_MAC_ADMIN is taken
+  into account
+* test directory execution which is always forbidden since commit
+  73601ea5b7b1 ("fs/open.c: allow opening only regular files during
+  execve()"), and also check that even the root user can not bypass file
+  execution checks
+* make sure delete_workspace() always as enough right to succeed
+* cosmetic cleanup
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Reviewed-by: Philippe Trébuchet <philippe.trebuchet@ssi.gouv.fr>
-Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Cc: Jonathan Corbet <corbet@lwn.net>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Mickaël Salaün <mickael.salaun@ssi.gouv.fr>
+Cc: Shuah Khan <shuah@kernel.org>
 ---
- Documentation/admin-guide/sysctl/fs.rst | 43 +++++++++++++++++++++++++
- 1 file changed, 43 insertions(+)
+ tools/testing/selftests/exec/.gitignore     |   1 +
+ tools/testing/selftests/exec/Makefile       |   4 +-
+ tools/testing/selftests/exec/omayexec.c     | 317 ++++++++++++++++++++
+ tools/testing/selftests/kselftest_harness.h |   3 +
+ 4 files changed, 324 insertions(+), 1 deletion(-)
+ create mode 100644 tools/testing/selftests/exec/omayexec.c
 
-diff --git a/Documentation/admin-guide/sysctl/fs.rst b/Documentation/admin-guide/sysctl/fs.rst
-index 2a45119e3331..f2f5bbe428d6 100644
---- a/Documentation/admin-guide/sysctl/fs.rst
-+++ b/Documentation/admin-guide/sysctl/fs.rst
-@@ -37,6 +37,7 @@ Currently, these files are in /proc/sys/fs:
- - inode-nr
- - inode-state
- - nr_open
-+- open_mayexec_enforce
- - overflowuid
- - overflowgid
- - pipe-user-pages-hard
-@@ -165,6 +166,48 @@ system needs to prune the inode list instead of allocating
- more.
+diff --git a/tools/testing/selftests/exec/.gitignore b/tools/testing/selftests/exec/.gitignore
+index b02279da6fa1..78487c987c07 100644
+--- a/tools/testing/selftests/exec/.gitignore
++++ b/tools/testing/selftests/exec/.gitignore
+@@ -1,3 +1,4 @@
++/omayexec
+ subdir*
+ script*
+ execveat
+diff --git a/tools/testing/selftests/exec/Makefile b/tools/testing/selftests/exec/Makefile
+index 33339e31e365..a62b9ca306e7 100644
+--- a/tools/testing/selftests/exec/Makefile
++++ b/tools/testing/selftests/exec/Makefile
+@@ -3,7 +3,7 @@ CFLAGS = -Wall
+ CFLAGS += -Wno-nonnull
+ CFLAGS += -D_GNU_SOURCE
  
+-TEST_GEN_PROGS := execveat
++TEST_GEN_PROGS := execveat omayexec
+ TEST_GEN_FILES := execveat.symlink execveat.denatured script subdir
+ # Makefile is a run-time dependency, since it's accessed by the execveat test
+ TEST_FILES := Makefile
+@@ -26,3 +26,5 @@ $(OUTPUT)/execveat.denatured: $(OUTPUT)/execveat
+ 	cp $< $@
+ 	chmod -x $@
  
-+open_mayexec_enforce
-+--------------------
++$(OUTPUT)/omayexec: omayexec.c ../kselftest_harness.h
++	$(CC) $(CFLAGS) -Wl,-no-as-needed $(LDFLAGS) -lcap $< -o $@
+diff --git a/tools/testing/selftests/exec/omayexec.c b/tools/testing/selftests/exec/omayexec.c
+new file mode 100644
+index 000000000000..e4307b5a5417
+--- /dev/null
++++ b/tools/testing/selftests/exec/omayexec.c
+@@ -0,0 +1,317 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * O_MAYEXEC tests
++ *
++ * Copyright © 2018-2019 ANSSI
++ *
++ * Author: Mickaël Salaün <mic@digikod.net>
++ */
 +
-+The ``O_MAYEXEC`` flag can be passed to :manpage:`open(2)` to only open regular
-+files that are expected to be executable.  If the file is not identified as
-+executable, then the syscall returns -EACCES.  This may allow a script
-+interpreter to check executable permission before reading commands from a file.
-+One interesting use case is to enforce a "write xor execute" policy through
-+interpreters.
++#include <errno.h>
++#include <fcntl.h> /* O_CLOEXEC */
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h> /* strlen */
++#include <sys/capability.h>
++#include <sys/mount.h>
++#include <sys/stat.h> /* mkdir */
++#include <unistd.h> /* unlink, rmdir */
 +
-+Thanks to this flag, it is possible to enforce the ``noexec`` mount option
-+(i.e.  the underlying mount point of the file is mounted with MNT_NOEXEC or its
-+underlying superblock is SB_I_NOEXEC) not only on ELF binaries but also on
-+scripts.  This may be possible thanks to script interpreters using the
-+``O_MAYEXEC`` flag.  The executable permission is then checked before reading
-+commands from a file, and thus can enforce the ``noexec`` at the interpreter
-+level by propagating this security policy to the scripts.  To be fully
-+effective, these interpreters also need to handle the other ways to execute
-+code (for which the kernel can't help): command line parameters (e.g., option
-+``-e`` for Perl), module loading (e.g., option ``-m`` for Python), stdin, file
-+sourcing, environment variables, configuration files...  According to the
-+threat model, it may be acceptable to allow some script interpreters (e.g.
-+Bash) to interpret commands from stdin, may it be a TTY or a pipe, because it
-+may not be enough to (directly) perform syscalls.
++#include "../kselftest_harness.h"
 +
-+There is two complementary security policies: enforce the ``noexec`` mount
-+option, or enforce executable file permission.  These policies are handled by
-+the ``fs.open_mayexec_enforce`` sysctl (writable only with ``CAP_MAC_ADMIN``)
-+as a bitmask:
++#ifndef O_MAYEXEC
++#define O_MAYEXEC      040000000
++#endif
 +
-+1 - mount restriction:
-+    check that the mount options for the underlying VFS mount do not prevent
-+    execution.
++#define SYSCTL_MAYEXEC	"/proc/sys/fs/open_mayexec_enforce"
 +
-+2 - file permission restriction:
-+    check that the to-be-opened file is marked as executable for the current
-+    process (e.g., POSIX permissions).
++#define BIN_DIR		"./test-mount"
++#define BIN_PATH	BIN_DIR "/file"
++#define DIR_PATH	BIN_DIR "/directory"
 +
-+Code samples can be found in tools/testing/selftests/exec/omayexec.c and
-+https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC .
++#define ALLOWED		1
++#define DENIED		0
 +
++static void ignore_dac(struct __test_metadata *_metadata, int override)
++{
++	cap_t caps;
++	const cap_value_t cap_val[2] = {
++		CAP_DAC_OVERRIDE,
++		CAP_DAC_READ_SEARCH,
++	};
 +
- overflowgid & overflowuid
- -------------------------
++	caps = cap_get_proc();
++	ASSERT_TRUE(!!caps);
++	ASSERT_FALSE(cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_val,
++				override ? CAP_SET : CAP_CLEAR));
++	ASSERT_FALSE(cap_set_proc(caps));
++	EXPECT_FALSE(cap_free(caps));
++}
++
++static void ignore_mac(struct __test_metadata *_metadata, int override)
++{
++	cap_t caps;
++	const cap_value_t cap_val[1] = {
++		CAP_MAC_ADMIN,
++	};
++
++	caps = cap_get_proc();
++	ASSERT_TRUE(!!caps);
++	ASSERT_FALSE(cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_val,
++				override ? CAP_SET : CAP_CLEAR));
++	ASSERT_FALSE(cap_set_proc(caps));
++	EXPECT_FALSE(cap_free(caps));
++}
++
++static void test_omx(struct __test_metadata *_metadata,
++		const char *const path, const int exec_allowed)
++{
++	int fd;
++
++	/* without O_MAYEXEC */
++	fd = open(path, O_RDONLY | O_CLOEXEC);
++	ASSERT_NE(-1, fd);
++	EXPECT_FALSE(close(fd));
++
++	/* with O_MAYEXEC */
++	fd = open(path, O_RDONLY | O_CLOEXEC | O_MAYEXEC);
++	if (exec_allowed) {
++		/* open should succeed */
++		ASSERT_NE(-1, fd);
++		EXPECT_FALSE(close(fd));
++	} else {
++		/* open should return EACCES */
++		ASSERT_EQ(-1, fd);
++		ASSERT_EQ(EACCES, errno);
++	}
++}
++
++static void test_omx_dir_file(struct __test_metadata *_metadata,
++		const char *const dir_path, const char *const file_path,
++		const int exec_allowed)
++{
++	/*
++	 * directory execution is always denied since commit 73601ea5b7b1
++	 * ("fs/open.c: allow opening only regular files during execve()")
++	 */
++	test_omx(_metadata, dir_path, DENIED);
++	test_omx(_metadata, file_path, exec_allowed);
++}
++
++static void test_dir_file(struct __test_metadata *_metadata,
++		const char *const dir_path, const char *const file_path,
++		const int exec_allowed)
++{
++	/* test as root */
++	ignore_dac(_metadata, 1);
++	test_omx_dir_file(_metadata, dir_path, file_path, exec_allowed);
++
++	/* test without bypass */
++	ignore_dac(_metadata, 0);
++	test_omx_dir_file(_metadata, dir_path, file_path, exec_allowed);
++}
++
++static void sysctl_write(struct __test_metadata *_metadata,
++		const char *path, const char *value)
++{
++	int fd;
++	size_t len_value;
++	ssize_t len_wrote;
++
++	fd = open(path, O_WRONLY | O_CLOEXEC);
++	ASSERT_NE(-1, fd);
++	len_value = strlen(value);
++	len_wrote = write(fd, value, len_value);
++	ASSERT_EQ(len_wrote, len_value);
++	EXPECT_FALSE(close(fd));
++}
++
++static void create_workspace(struct __test_metadata *_metadata,
++		int mount_exec, int file_exec)
++{
++	int fd;
++
++	/*
++	 * Cleanup previous workspace if any error previously happened (don't
++	 * check errors).
++	 */
++	umount(BIN_DIR);
++	rmdir(BIN_DIR);
++
++	/* create a clean mount point */
++	ASSERT_FALSE(mkdir(BIN_DIR, 00700));
++	ASSERT_FALSE(mount("test", BIN_DIR, "tmpfs",
++				MS_MGC_VAL | (mount_exec ? 0 : MS_NOEXEC),
++				"mode=0700,size=4k"));
++
++	/* create a test file */
++	fd = open(BIN_PATH, O_CREAT | O_RDONLY | O_CLOEXEC,
++			file_exec ? 00500 : 00400);
++	ASSERT_NE(-1, fd);
++	EXPECT_NE(-1, close(fd));
++
++	/* create a test directory */
++	ASSERT_FALSE(mkdir(DIR_PATH, file_exec ? 00500 : 00400));
++}
++
++static void delete_workspace(struct __test_metadata *_metadata)
++{
++	ignore_mac(_metadata, 1);
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "0");
++
++	/* no need to unlink BIN_PATH nor DIR_PATH */
++	ASSERT_FALSE(umount(BIN_DIR));
++	ASSERT_FALSE(rmdir(BIN_DIR));
++}
++
++FIXTURE_DATA(mount_exec_file_exec) { };
++
++FIXTURE_SETUP(mount_exec_file_exec)
++{
++	create_workspace(_metadata, 1, 1);
++}
++
++FIXTURE_TEARDOWN(mount_exec_file_exec)
++{
++	delete_workspace(_metadata);
++}
++
++TEST_F(mount_exec_file_exec, mount)
++{
++	/* enforce mount exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "1");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, ALLOWED);
++}
++
++TEST_F(mount_exec_file_exec, file)
++{
++	/* enforce file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "2");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, ALLOWED);
++}
++
++TEST_F(mount_exec_file_exec, mount_file)
++{
++	/* enforce mount and file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "3");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, ALLOWED);
++}
++
++FIXTURE_DATA(mount_exec_file_noexec) { };
++
++FIXTURE_SETUP(mount_exec_file_noexec)
++{
++	create_workspace(_metadata, 1, 0);
++}
++
++FIXTURE_TEARDOWN(mount_exec_file_noexec)
++{
++	delete_workspace(_metadata);
++}
++
++TEST_F(mount_exec_file_noexec, mount)
++{
++	/* enforce mount exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "1");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, ALLOWED);
++}
++
++TEST_F(mount_exec_file_noexec, file)
++{
++	/* enforce file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "2");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, DENIED);
++}
++
++TEST_F(mount_exec_file_noexec, mount_file)
++{
++	/* enforce mount and file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "3");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, DENIED);
++}
++
++FIXTURE_DATA(mount_noexec_file_exec) { };
++
++FIXTURE_SETUP(mount_noexec_file_exec)
++{
++	create_workspace(_metadata, 0, 1);
++}
++
++FIXTURE_TEARDOWN(mount_noexec_file_exec)
++{
++	delete_workspace(_metadata);
++}
++
++TEST_F(mount_noexec_file_exec, mount)
++{
++	/* enforce mount exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "1");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, DENIED);
++}
++
++TEST_F(mount_noexec_file_exec, file)
++{
++	/* enforce file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "2");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, ALLOWED);
++}
++
++TEST_F(mount_noexec_file_exec, mount_file)
++{
++	/* enforce mount and file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "3");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, DENIED);
++}
++
++FIXTURE_DATA(mount_noexec_file_noexec) { };
++
++FIXTURE_SETUP(mount_noexec_file_noexec)
++{
++	create_workspace(_metadata, 0, 0);
++}
++
++FIXTURE_TEARDOWN(mount_noexec_file_noexec)
++{
++	delete_workspace(_metadata);
++}
++
++TEST_F(mount_noexec_file_noexec, mount)
++{
++	/* enforce mount exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "1");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, DENIED);
++}
++
++TEST_F(mount_noexec_file_noexec, file)
++{
++	/* enforce file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "2");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, DENIED);
++}
++
++TEST_F(mount_noexec_file_noexec, mount_file)
++{
++	/* enforce mount and file exec check */
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "3");
++	test_dir_file(_metadata, DIR_PATH, BIN_PATH, DENIED);
++}
++
++TEST(sysctl_access_write)
++{
++	int fd;
++	ssize_t len_wrote;
++
++	ignore_mac(_metadata, 1);
++	sysctl_write(_metadata, SYSCTL_MAYEXEC, "0");
++
++	ignore_mac(_metadata, 0);
++	fd = open(SYSCTL_MAYEXEC, O_WRONLY | O_CLOEXEC);
++	ASSERT_NE(-1, fd);
++	len_wrote = write(fd, "0", 1);
++	ASSERT_EQ(len_wrote, -1);
++	EXPECT_FALSE(close(fd));
++
++	ignore_mac(_metadata, 1);
++}
++
++TEST_HARNESS_MAIN
+diff --git a/tools/testing/selftests/kselftest_harness.h b/tools/testing/selftests/kselftest_harness.h
+index 5336b26506ab..6ae816fa2f62 100644
+--- a/tools/testing/selftests/kselftest_harness.h
++++ b/tools/testing/selftests/kselftest_harness.h
+@@ -50,7 +50,10 @@
+ #ifndef __KSELFTEST_HARNESS_H
+ #define __KSELFTEST_HARNESS_H
  
++#ifndef _GNU_SOURCE
+ #define _GNU_SOURCE
++#endif
++
+ #include <asm/types.h>
+ #include <errno.h>
+ #include <stdbool.h>
 -- 
 2.23.0
 
