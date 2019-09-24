@@ -1,20 +1,20 @@
-Return-Path: <SRS0=AwyS=XT=lists.openwall.com=kernel-hardening-return-16926-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=BRaX=XT=lists.openwall.com=kernel-hardening-return-16927-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 83EC9C432C1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Sep 2019 13:07:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 070A0C432C2
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Sep 2019 13:08:48 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A77032146E
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Sep 2019 13:07:27 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A77032146E
+	by mail.kernel.org (Postfix) with SMTP id 17AF4214AF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Sep 2019 13:08:46 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 17AF4214AF
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16926-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1825 invoked by uid 550); 24 Sep 2019 13:07:19 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16927-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3666 invoked by uid 550); 24 Sep 2019 13:08:40 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,33 +22,35 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1793 invoked from network); 24 Sep 2019 13:07:18 -0000
+Received: (qmail 3634 invoked from network); 24 Sep 2019 13:08:39 -0000
 X-Amp-Result: UNKNOWN
 X-Amp-Original-Verdict: FILE UNKNOWN
 X-Amp-File-Uploaded: False
 X-ExtLoop1: 1
 X-IronPort-AV: E=Sophos;i="5.64,544,1559545200"; 
-   d="scan'208";a="218619963"
-Date: Tue, 24 Sep 2019 18:30:46 +0530
+   d="scan'208";a="200899811"
+Date: Tue, 24 Sep 2019 18:32:06 +0530
 From: "Bharadiya,Pankaj" <pankaj.laxminarayan.bharadiya@intel.com>
-To: kernel-hardening@lists.openwall.com, keescook@chromium.org,
+To: pankaj.bharadiya@gmail.com, andriy.shevchenko@linux.intel.com,
+	kernel-hardening@lists.openwall.com, keescook@chromium.org,
 	akpm@linux-foundation.org, mayhs11saini@gmail.com
 Subject: Re: [PATCH 0/5] Add and use sizeof_member macro to bring uniformity
-Message-ID: <20190924130046.GA112306@pktinlab>
-References: <20190924081439.15219-1-pankaj.laxminarayan.bharadiya@intel.com>
+Message-ID: <20190924130206.GB112306@pktinlab>
+References: <20190924105114.110535-1-pankaj.laxminarayan.bharadiya@intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190924081439.15219-1-pankaj.laxminarayan.bharadiya@intel.com>
+In-Reply-To: <20190924105114.110535-1-pankaj.laxminarayan.bharadiya@intel.com>
 User-Agent: Mutt/1.9.4 (2018-02-28)
 
 I accidentally sent this patch series multiple times.
-Please ignore this series. Sorry for spamming your mailbox :(.
+Please ignore this series. Sorry for spamming your mailbox :(. 
+Kindly review latest one.
 
 Thanks,
 Pankaj
 
-On Tue, Sep 24, 2019 at 01:44:34PM +0530, Pankaj Bharadiya wrote:
+On Tue, Sep 24, 2019 at 04:21:09PM +0530, Pankaj Bharadiya wrote:
 > This topic has been discussed on the kernel hardening mailing list [1]
 > few months back. Thanks to Shyam for initiating work on this.
 > 
