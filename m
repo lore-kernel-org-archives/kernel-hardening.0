@@ -1,23 +1,21 @@
-Return-Path: <SRS0=fKM0=XT=lists.openwall.com=kernel-hardening-return-16931-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=hG4t=XU=lists.openwall.com=kernel-hardening-return-16932-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-13.2 required=3.0
+	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3F9E7C432C1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Sep 2019 23:12:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C7105C432C1
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Sep 2019 04:35:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 84881214DA
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Sep 2019 23:12:40 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="fzh7+9Ja"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 84881214DA
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16931-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19952 invoked by uid 550); 24 Sep 2019 23:12:33 -0000
+	by mail.kernel.org (Postfix) with SMTP id 2146D20640
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Sep 2019 04:35:58 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2146D20640
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16932-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16374 invoked by uid 550); 25 Sep 2019 04:35:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,87 +23,100 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19920 invoked from network); 24 Sep 2019 23:12:32 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=/lrZtmQbGIRTXfA+Mejz4sJGfMjNvVkkNvaZuUAIn8s=;
-        b=fzh7+9JaETp1Gb4AK4AmcbQlX5hZjzGY0ixkCTU28D7evVaVMh7COgruixXAYTy6LT
-         fFFX0wEdrcCnlVRd1FzPQDWGk5hdwkg+4/OyDSIY4KWpv1XUdBuKstuYI6eL1xanRTKq
-         IAZM6Br9ZGb3yMfBTq77oZnSJe2FZMGxEjYF8=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=/lrZtmQbGIRTXfA+Mejz4sJGfMjNvVkkNvaZuUAIn8s=;
-        b=nJnzqmBtoikNEYxa8L9HI61fgfdnAbUMrTRT2SxsiYx4c7HHVFT5UDx9wXDGDy+IEU
-         wsNERHUrzpcEVJ9M8xH1qJmiv43fcrSlMeCeZVVBbeOpRtg0MizStofJc23GDoAkqsIt
-         KqoDmryOzYGtvFUer1CT1GWYiNj1+8FZ6Q5a9E5HxW197JkAnviCqYyfnIXW654/NUhQ
-         5/xSeE40HDu+JeB8qF36HfsQGvWRhfN7eB/1G+R0uNxDLAED6ily6lQoZnpKE+KpfdHT
-         ZqVgVlCfisjJ/poGVGG5/10FLQqhWJLiJtYRI58pkokCPbhetJjdpxj4GlLftpq8RIrm
-         dnng==
-X-Gm-Message-State: APjAAAWhjnJOOIlmqwU5mnH4ySybMaX/Uc3MDpsBt8lymvEmSSnGqCzA
-	8XzCVQapUAmqAYenCqXUFn3qkg==
-X-Google-Smtp-Source: APXvYqx6L3tghYkhOwbSTKd4lmWbxTHqV6YWLTae0UI9YzNKuKauwmhbsSNSoVOvd7r0n46/v6zSsw==
-X-Received: by 2002:a17:902:76c9:: with SMTP id j9mr5364975plt.187.1569366740550;
-        Tue, 24 Sep 2019 16:12:20 -0700 (PDT)
-Date: Tue, 24 Sep 2019 16:12:18 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Tianlin Li <tli@digitalocean.com>
-Cc: kernel-hardening@lists.openwall.com
-Subject: Re: Introduction and get involved
-Message-ID: <201909241604.C4B6686@keescook>
-References: <19962016-19D9-40F8-A2A0-B7188614A263@digitalocean.com>
+Received: (qmail 16342 invoked from network); 25 Sep 2019 04:35:50 -0000
+X-Amp-Result: UNKNOWN
+X-Amp-Original-Verdict: FILE UNKNOWN
+X-Amp-File-Uploaded: False
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.64,546,1559545200"; 
+   d="scan'208";a="203528751"
+Date: Wed, 25 Sep 2019 09:59:18 +0530
+From: "Bharadiya,Pankaj" <pankaj.laxminarayan.bharadiya@intel.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: pankaj.bharadiya@gmail.com, andriy.shevchenko@linux.intel.com,
+	kernel-hardening@lists.openwall.com, akpm@linux-foundation.org,
+	mayhs11saini@gmail.com, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH 1/5] linux/kernel.h: Add sizeof_member macro
+Message-ID: <20190925042917.GA83131@pktinlab>
+References: <20190924105839.110713-1-pankaj.laxminarayan.bharadiya@intel.com>
+ <20190924105839.110713-2-pankaj.laxminarayan.bharadiya@intel.com>
+ <201909240920.AE3CD67E87@keescook>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <19962016-19D9-40F8-A2A0-B7188614A263@digitalocean.com>
+In-Reply-To: <201909240920.AE3CD67E87@keescook>
+User-Agent: Mutt/1.9.4 (2018-02-28)
 
-On Fri, Sep 20, 2019 at 01:59:57PM -0500, Tianlin Li wrote:
-> Hello everyone,
+On Tue, Sep 24, 2019 at 09:22:10AM -0700, Kees Cook wrote:
+> On Tue, Sep 24, 2019 at 04:28:35PM +0530, Pankaj Bharadiya wrote:
+> > At present we have 3 different macros to calculate the size of a
+> > member of a struct:
+> >   - SIZEOF_FIELD
+> >   - FIELD_SIZEOF
+> >   - sizeof_field
+> > 
+> > To bring uniformity in entire kernel source tree let's add
+> > sizeof_member macro.
+> > 
+> > Replace all occurrences of above 3 macro's with sizeof_member in
+> > future patches.
+> > 
+> > Signed-off-by: Pankaj Bharadiya <pankaj.laxminarayan.bharadiya@intel.com>
+> > ---
+> >  include/linux/kernel.h | 9 +++++++++
+> >  1 file changed, 9 insertions(+)
+> 
+> Since stddef.h ends up needing this macro, and kernel.h includes
+> stddef.h, why not put this macro in stddef.h instead? Then the
+> open-coded version of it in stddef (your last patch) can use
+> sizeof_member()?
+> 
 
-Hello!
+If I understood correctly, Andrew suggested to add such macros in kernel.h
+https://www.openwall.com/lists/kernel-hardening/2019/06/11/5
 
-> My name is Tina. I am working at DigitalOcean Systems/kernel team, focusing on kernel security. I would like to get involved with Kernel Self Protection Project. 
-> As a new hire, I don’t have much industry experience yet. But I have some research experience about memory virtualization. 
+Moreover similar type of other macros (like typeof_member & ARRAY_SIZE)
+are defined in kernel.h
+But as you pointed out, looks like stddef.h is the right place for this macro.
 
-What kinds of things keep you up at night? :) Or rather, what have you
-seen that you think needs fixing?
+> Otherwise, yes, looks good. (Though I might re-order the patches so the
+> last patch is the tree-wide swap -- then you don't need the exclusions,
+> I think?)
+>
 
-What exactly do you mean by "memory virtualization"? That seems like it
-could be a lot of stuff. :) As far as the kernel's memory management
-system goes, there's lots of areas to poke at. Is there any portion
-you're specifically interested in?
+I went through your tree. 
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/sizeof_member/full
+Thank you for reordering the patches.
 
-> Is there any initial task that I can start with? 
-> It is going to be a learning exercise for me at the beginning, but I will learn fast and start contributing value to the project. 
+Thanks,
+Pankaj
 
-There has been some recent work on trying to replace dangerous (or
-easily misused) APIs in the kernel with safer alternatives. (See the
-recent stracpy() API that was proposed[1].)
-
-[1] https://www.openwall.com/lists/kernel-hardening/2019/07/23/16
-
-I've been keeping a (rather terse) TODO list here:
-https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work#Specific_TODO_Items
-
-But I'd like to turn that into an actual bug list on github or the like.
-
-I wonder if working on something like this:
-- set_memory_*() needs __must_check and/or atomicity
-would be interesting?
-
-The idea there is that set_memory_*() calls can fail, so callers should
-likely be handling errors correctly. Adding the "__must_check" attribute
-and fixing all the callers would be nice (and certainly touches the
-memory management code!)
-
-Welcome!
-
--Kees
-
--- 
-Kees Cook
+> -Kees
+> 
+> > 
+> > diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+> > index 4fa360a13c1e..0b80d8bb3978 100644
+> > --- a/include/linux/kernel.h
+> > +++ b/include/linux/kernel.h
+> > @@ -79,6 +79,15 @@
+> >   */
+> >  #define round_down(x, y) ((x) & ~__round_mask(x, y))
+> >  
+> > +/**
+> > + * sizeof_member - get the size of a struct's member
+> > + * @T: the target struct
+> > + * @m: the target struct's member
+> > + * Return: the size of @m in the struct definition without having a
+> > + * declared instance of @T.
+> > + */
+> > +#define sizeof_member(T, m) (sizeof(((T *)0)->m))
+> > +
+> >  /**
+> >   * FIELD_SIZEOF - get the size of a struct's field
+> >   * @t: the target struct
+> > -- 
+> > 2.17.1
+> > 
+> 
+> -- 
+> Kees Cook
