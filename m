@@ -1,21 +1,23 @@
-Return-Path: <SRS0=hG4t=XU=lists.openwall.com=kernel-hardening-return-16932-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=uRau=XU=lists.openwall.com=kernel-hardening-return-16933-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.2 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C7105C432C1
-	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Sep 2019 04:35:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6E816C432C2
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Sep 2019 21:02:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2146D20640
-	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Sep 2019 04:35:58 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2146D20640
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16932-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16374 invoked by uid 550); 25 Sep 2019 04:35:51 -0000
+	by mail.kernel.org (Postfix) with SMTP id 8423321D7A
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Sep 2019 21:02:56 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="PhYrdbXF"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8423321D7A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16933-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11957 invoked by uid 550); 25 Sep 2019 21:02:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,100 +25,175 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16342 invoked from network); 25 Sep 2019 04:35:50 -0000
-X-Amp-Result: UNKNOWN
-X-Amp-Original-Verdict: FILE UNKNOWN
-X-Amp-File-Uploaded: False
-X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="5.64,546,1559545200"; 
-   d="scan'208";a="203528751"
-Date: Wed, 25 Sep 2019 09:59:18 +0530
-From: "Bharadiya,Pankaj" <pankaj.laxminarayan.bharadiya@intel.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: pankaj.bharadiya@gmail.com, andriy.shevchenko@linux.intel.com,
-	kernel-hardening@lists.openwall.com, akpm@linux-foundation.org,
-	mayhs11saini@gmail.com, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH 1/5] linux/kernel.h: Add sizeof_member macro
-Message-ID: <20190925042917.GA83131@pktinlab>
-References: <20190924105839.110713-1-pankaj.laxminarayan.bharadiya@intel.com>
- <20190924105839.110713-2-pankaj.laxminarayan.bharadiya@intel.com>
- <201909240920.AE3CD67E87@keescook>
+Received: (qmail 11934 invoked from network); 25 Sep 2019 21:02:47 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:mime-version:content-disposition
+         :content-transfer-encoding;
+        bh=7xhrP95QBYJiSF2YxdsM/vyNYpW4G7L9q0PwFgts0Eg=;
+        b=PhYrdbXFW7DxjoTBihqkbscUj3ihaM+7AY9Uko1qzd/uFoRL8eCcWcrRFhuukFI+Oz
+         tHzDS4E8nYIttCuj/nMIfyN+ttt8eZInD6Ld0sgEK6AuJlEQGAUO5CV2x0pMB6curxMS
+         NQeJZM+/oKiZHqo7s+oNvkBKelSGTUnca6lg8=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:mime-version
+         :content-disposition:content-transfer-encoding;
+        bh=7xhrP95QBYJiSF2YxdsM/vyNYpW4G7L9q0PwFgts0Eg=;
+        b=ezks/dUjFpam1IPQPKHLt8IXTMM6LP6WXCANBsxB45sbNMMY6ZZDsf86PIRw26UmYO
+         p5yO4XABHJ/tKshOt9JvrUiM2hmcolwLBhEK6F41LIMOK5tjr/PYI8asDmaUPQZM615S
+         aA4eJnNrv8r74gNO2IXBaxc3z4dP5w+5qNLZbgUN/nV9RIDh9WKJfYPecKNwyQ77viaV
+         /UTR7r7WRIzjr0K3PqRjWt22tCmJPsBT7u0aQxSD77FrrY8ds8cn9OHcV8Lwpr5zY4FH
+         oZlxrLj5WCwFi6TFSetO3CZpRGJKSBl+4uX6tGUskp9FXWotH2uDBiUZ69TiwEvPy/F2
+         ohSw==
+X-Gm-Message-State: APjAAAXimKnSQicrp035TGA98wpiVT1gvtLebtGGNdejBTOO4e0kXJiu
+	pWJC0xtUXVG7hVg/jfZ5IYi6pQ==
+X-Google-Smtp-Source: APXvYqy8enN66HCBAXgdyj2WiN3UN+3QBv7218MOZV3xhCqI5u1BW3NXe4CmUibg81qEWdaXeJbpZA==
+X-Received: by 2002:a17:90a:8c14:: with SMTP id a20mr8916240pjo.45.1569445355367;
+        Wed, 25 Sep 2019 14:02:35 -0700 (PDT)
+Date: Wed, 25 Sep 2019 14:02:33 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Paul Moore <paul@paul-moore.com>
+Cc: linux-kernel@vger.kernel.org,
+	=?iso-8859-1?Q?J=E9r=E9mie?= Galarneau <jeremie.galarneau@efficios.com>,
+	s.mesoraca16@gmail.com, viro@zeniv.linux.org.uk,
+	dan.carpenter@oracle.com, akpm@linux-foundation.org,
+	Mathieu Desnoyers <mathieu.desnoyers@efficios.com>,
+	kernel-hardening@lists.openwall.com, linux-audit@redhat.com,
+	torvalds@linux-foundation.org
+Subject: [PATCH] audit: Report suspicious O_CREAT usage
+Message-ID: <201909251348.A1542A52@keescook>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
-In-Reply-To: <201909240920.AE3CD67E87@keescook>
-User-Agent: Mutt/1.9.4 (2018-02-28)
+Content-Transfer-Encoding: 8bit
 
-On Tue, Sep 24, 2019 at 09:22:10AM -0700, Kees Cook wrote:
-> On Tue, Sep 24, 2019 at 04:28:35PM +0530, Pankaj Bharadiya wrote:
-> > At present we have 3 different macros to calculate the size of a
-> > member of a struct:
-> >   - SIZEOF_FIELD
-> >   - FIELD_SIZEOF
-> >   - sizeof_field
-> > 
-> > To bring uniformity in entire kernel source tree let's add
-> > sizeof_member macro.
-> > 
-> > Replace all occurrences of above 3 macro's with sizeof_member in
-> > future patches.
-> > 
-> > Signed-off-by: Pankaj Bharadiya <pankaj.laxminarayan.bharadiya@intel.com>
-> > ---
-> >  include/linux/kernel.h | 9 +++++++++
-> >  1 file changed, 9 insertions(+)
-> 
-> Since stddef.h ends up needing this macro, and kernel.h includes
-> stddef.h, why not put this macro in stddef.h instead? Then the
-> open-coded version of it in stddef (your last patch) can use
-> sizeof_member()?
-> 
+This renames the very specific audit_log_link_denied() to
+audit_log_path_denied() and adds the AUDIT_* type as an argument. This
+allows for the creation of the new AUDIT_ANOM_CREAT that can be used to
+report the fifo/regular file creation restrictions that were introduced
+in commit 30aba6656f61 ("namei: allow restricted O_CREAT of FIFOs and
+regular files"). Without this change, discovering that the restriction
+is enabled can be very challenging:
+https://lore.kernel.org/lkml/CA+jJMxvkqjXHy3DnV5MVhFTL2RUhg0WQ-XVFW3ngDQOdkFq0PA@mail.gmail.com
 
-If I understood correctly, Andrew suggested to add such macros in kernel.h
-https://www.openwall.com/lists/kernel-hardening/2019/06/11/5
+Reported-by: Jérémie Galarneau <jeremie.galarneau@efficios.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+This is not a complete fix because reporting was broken in commit
+15564ff0a16e ("audit: make ANOM_LINK obey audit_enabled and
+audit_dummy_context")
+which specifically goes against the intention of these records: they
+should _always_ be reported. If auditing isn't enabled, they should be
+ratelimited.
 
-Moreover similar type of other macros (like typeof_member & ARRAY_SIZE)
-are defined in kernel.h
-But as you pointed out, looks like stddef.h is the right place for this macro.
+Instead of using audit, should this just go back to using
+pr_ratelimited()?
+---
+ fs/namei.c                 |  7 +++++--
+ include/linux/audit.h      |  5 +++--
+ include/uapi/linux/audit.h |  1 +
+ kernel/audit.c             | 11 ++++++-----
+ 4 files changed, 15 insertions(+), 9 deletions(-)
 
-> Otherwise, yes, looks good. (Though I might re-order the patches so the
-> last patch is the tree-wide swap -- then you don't need the exclusions,
-> I think?)
->
+diff --git a/fs/namei.c b/fs/namei.c
+index 671c3c1a3425..0e60f81e1d5a 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -925,7 +925,7 @@ static inline int may_follow_link(struct nameidata *nd)
+ 		return -ECHILD;
+ 
+ 	audit_inode(nd->name, nd->stack[0].link.dentry, 0);
+-	audit_log_link_denied("follow_link");
++	audit_log_path_denied(AUDIT_ANOM_LINK, "follow_link");
+ 	return -EACCES;
+ }
+ 
+@@ -993,7 +993,7 @@ static int may_linkat(struct path *link)
+ 	if (safe_hardlink_source(inode) || inode_owner_or_capable(inode))
+ 		return 0;
+ 
+-	audit_log_link_denied("linkat");
++	audit_log_path_denied(AUDIT_ANOM_LINK, "linkat");
+ 	return -EPERM;
+ }
+ 
+@@ -1031,6 +1031,9 @@ static int may_create_in_sticky(struct dentry * const dir,
+ 	    (dir->d_inode->i_mode & 0020 &&
+ 	     ((sysctl_protected_fifos >= 2 && S_ISFIFO(inode->i_mode)) ||
+ 	      (sysctl_protected_regular >= 2 && S_ISREG(inode->i_mode))))) {
++		audit_log_path_denied(AUDIT_ANOM_CREAT,
++				      S_ISFIFO(inode->i_mode) ? "fifo"
++							      : "regular");
+ 		return -EACCES;
+ 	}
+ 	return 0;
+diff --git a/include/linux/audit.h b/include/linux/audit.h
+index aee3dc9eb378..b3715e2ee1c5 100644
+--- a/include/linux/audit.h
++++ b/include/linux/audit.h
+@@ -156,7 +156,8 @@ extern void		    audit_log_d_path(struct audit_buffer *ab,
+ 					     const struct path *path);
+ extern void		    audit_log_key(struct audit_buffer *ab,
+ 					  char *key);
+-extern void		    audit_log_link_denied(const char *operation);
++extern void		    audit_log_path_denied(int type,
++						  const char *operation);
+ extern void		    audit_log_lost(const char *message);
+ 
+ extern int audit_log_task_context(struct audit_buffer *ab);
+@@ -217,7 +218,7 @@ static inline void audit_log_d_path(struct audit_buffer *ab,
+ { }
+ static inline void audit_log_key(struct audit_buffer *ab, char *key)
+ { }
+-static inline void audit_log_link_denied(const char *string)
++static inline void audit_log_path_denied(int type, const char *string);
+ { }
+ static inline int audit_log_task_context(struct audit_buffer *ab)
+ {
+diff --git a/include/uapi/linux/audit.h b/include/uapi/linux/audit.h
+index c89c6495983d..3ad935527177 100644
+--- a/include/uapi/linux/audit.h
++++ b/include/uapi/linux/audit.h
+@@ -143,6 +143,7 @@
+ #define AUDIT_ANOM_PROMISCUOUS      1700 /* Device changed promiscuous mode */
+ #define AUDIT_ANOM_ABEND            1701 /* Process ended abnormally */
+ #define AUDIT_ANOM_LINK		    1702 /* Suspicious use of file links */
++#define AUDIT_ANOM_CREAT	    1703 /* Suspicious file creation */
+ #define AUDIT_INTEGRITY_DATA	    1800 /* Data integrity verification */
+ #define AUDIT_INTEGRITY_METADATA    1801 /* Metadata integrity verification */
+ #define AUDIT_INTEGRITY_STATUS	    1802 /* Integrity enable status */
+diff --git a/kernel/audit.c b/kernel/audit.c
+index da8dc0db5bd3..ed7402ac81b6 100644
+--- a/kernel/audit.c
++++ b/kernel/audit.c
+@@ -2155,18 +2155,19 @@ void audit_log_task_info(struct audit_buffer *ab)
+ EXPORT_SYMBOL(audit_log_task_info);
+ 
+ /**
+- * audit_log_link_denied - report a link restriction denial
+- * @operation: specific link operation
++ * audit_log_path_denied - report a path restriction denial
++ * @type: audit message type (AUDIT_ANOM_LINK, AUDIT_ANOM_CREAT, etc)
++ * @operation: specific operation name
+  */
+-void audit_log_link_denied(const char *operation)
++void audit_log_path_denied(int type, const char *operation)
+ {
+ 	struct audit_buffer *ab;
+ 
+ 	if (!audit_enabled || audit_dummy_context())
+ 		return;
+ 
+-	/* Generate AUDIT_ANOM_LINK with subject, operation, outcome. */
+-	ab = audit_log_start(audit_context(), GFP_KERNEL, AUDIT_ANOM_LINK);
++	/* Generate log with subject, operation, outcome. */
++	ab = audit_log_start(audit_context(), GFP_KERNEL, type);
+ 	if (!ab)
+ 		return;
+ 	audit_log_format(ab, "op=%s", operation);
+-- 
+2.17.1
 
-I went through your tree. 
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/sizeof_member/full
-Thank you for reordering the patches.
 
-Thanks,
-Pankaj
-
-> -Kees
-> 
-> > 
-> > diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-> > index 4fa360a13c1e..0b80d8bb3978 100644
-> > --- a/include/linux/kernel.h
-> > +++ b/include/linux/kernel.h
-> > @@ -79,6 +79,15 @@
-> >   */
-> >  #define round_down(x, y) ((x) & ~__round_mask(x, y))
-> >  
-> > +/**
-> > + * sizeof_member - get the size of a struct's member
-> > + * @T: the target struct
-> > + * @m: the target struct's member
-> > + * Return: the size of @m in the struct definition without having a
-> > + * declared instance of @T.
-> > + */
-> > +#define sizeof_member(T, m) (sizeof(((T *)0)->m))
-> > +
-> >  /**
-> >   * FIELD_SIZEOF - get the size of a struct's field
-> >   * @t: the target struct
-> > -- 
-> > 2.17.1
-> > 
-> 
-> -- 
-> Kees Cook
+-- 
+Kees Cook
