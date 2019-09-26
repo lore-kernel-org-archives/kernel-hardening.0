@@ -1,23 +1,23 @@
-Return-Path: <SRS0=AGNw=XV=lists.openwall.com=kernel-hardening-return-16939-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=skYZ=XV=lists.openwall.com=kernel-hardening-return-16940-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.7 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A4066C432C2
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Sep 2019 05:58:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EF316C432C2
+	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Sep 2019 07:30:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C432B222C5
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Sep 2019 05:58:04 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1699F206E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Sep 2019 07:30:06 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="XoAnc0BE"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C432B222C5
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16939-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26315 invoked by uid 550); 26 Sep 2019 05:57:57 -0000
+	dkim=pass (1024-bit key) header.d=rasmusvillemoes.dk header.i=@rasmusvillemoes.dk header.b="J3o94sis"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1699F206E0
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=rasmusvillemoes.dk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16940-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1158 invoked by uid 550); 26 Sep 2019 07:29:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,82 +25,231 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1024 invoked from network); 25 Sep 2019 20:17:22 -0000
+Received: (qmail 1126 invoked from network); 26 Sep 2019 07:29:58 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:from:date:message-id:subject:to:cc
-         :content-transfer-encoding;
-        bh=J/s5UzAqezbutC2oi9AdlFVsV79wc1mf153fqreYkJA=;
-        b=XoAnc0BEr4KHsLAuzeHQBerOL8lPo77zoG87AKkcm6jIrLTJwywECfIyo5boErAtWS
-         91dT7Bw6TTfD0lTbD33dFgUVtjxVhH926ISFxggsUo1OMZ70Cyrpe5sKtIHLzl3OIVpI
-         hQ2wWjw1EwzlbPlyaHbAnNh4CvOHpTzDO7rsOtFTESAnFWgNa++TKlX3n2RCYZgopNi0
-         PcMXjeRWKJPVng8GjExZOfTfXW3fDbwTp2orQmx3sEbFxH8ALeEnFP7HatVCuEVggdam
-         o5/aYPurmcLgVIFaEH1L/PbC3vyU8B0UpEfmfjV24fn5a4/uVGcq7ULN3wps313OTUGk
-         SADg==
+        d=rasmusvillemoes.dk; s=google;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-language:content-transfer-encoding;
+        bh=pJTO0N8Sa0OjT2LYEstW960eNH5uDM9/jv6gM9eT9gk=;
+        b=J3o94sis5s/AYYVg7jGtj9MzSdpCVQdRTONoyIFY7CEKI2KIXbaQLLeaIbtvfJL552
+         BlCa507AkXEB5mH6xjWQsszs+kgZnvIo+z97Bra9cKV7k0dStzC8YVZoDqdbuw3GiUMy
+         KE6XQTmLah8yDAhp0YIvXDEIpZO/yR9BX7F94=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:from:date:message-id:subject:to:cc
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
          :content-transfer-encoding;
-        bh=J/s5UzAqezbutC2oi9AdlFVsV79wc1mf153fqreYkJA=;
-        b=KGFcvaUEQ0wELWSWxNZ4eUPKACwsMgBCq/V88Zi+bEk5Xk7Yz+iG5fNmkr97xShP2R
-         ni8919dJ8MYpDKJOmHbWkbgj0OQATwg1rySnEpQSf8jM+6TuO+esg5zEAadS27q+4kg7
-         tHdjE41rMHM0BmPL8iKYsqHL9X0dLyudFVa1kYeDX2tuKMAJHRmoY3RyAZac6tnYSpVg
-         k+JZzW7rFpy/WR28nVFJeYkBJ861ewNrncIHvJ3zu6gcdeEpULju7JQ3VHQrMD00GTnW
-         nRunbq1TUfNs5LszfVOm4BFtjOhZCHqcQw2TjiMTgulII0FODc5BZVqvNnMD+/C81MRT
-         ewLQ==
-X-Gm-Message-State: APjAAAUwLhcn6wjb1bFMuN7Lhn0rNXqZzZAlnnp707Lg6Y94YfyOHtsU
-	R9qW6nCHvk/NwaCD4TaZH7iIj6TFWpOOBI8qVD9l/mHP
-X-Google-Smtp-Source: APXvYqyd+8rxxjJwXPgJRd0jPcCUyfx+W6Y+lSjoktiQDjrnhtDxLZG9EakMZjeaZ5WjHOCaYY5TPggbrX2H4Cjjc+Y=
-X-Received: by 2002:aca:39c1:: with SMTP id g184mr6134186oia.128.1569442630589;
- Wed, 25 Sep 2019 13:17:10 -0700 (PDT)
+        bh=pJTO0N8Sa0OjT2LYEstW960eNH5uDM9/jv6gM9eT9gk=;
+        b=dDpLZLpD6ATFWyqdnfoMAV923HYD60AAieI/420CNdTppxegYQZ2XU3V7XKF+TvI43
+         1WnYo4BgzYzmU117FNxngkCTH2C2k4etj3EsVKf0qckN9DBnq/nB68j39rnmOkApJ7XK
+         c/6G44Y0PBD/RLcEHiD1B0WUTIGhCuB0QOSwkuR63cJ9WnoSJ6eDzGlnbNHit6oAWi16
+         91YusLrMDgNlbvuRVl+OsOytFscim/ZGAtkUb8HL1HbDN3GFCV0GD2lElRPBPl6XKLDw
+         g/wHsI2454/vLZ8S1W7b+1EnwssadOdt3oyxPCv/haWczbupFJPzgIujyTGWEdMImJEh
+         fqiQ==
+X-Gm-Message-State: APjAAAWAeEtVIkZqBQh3G0mUKRozVjpzudj95IDkPs38kjxVKSLtY4Oc
+	7g0AbkHn1kU3yjINAsWqt++SIA==
+X-Google-Smtp-Source: APXvYqyP569ICpixYUvJYQnR5u2apBlb1tDGok6Cnvn7xn3RTAxSkBeEco+NWAzp56OMmHMILdHM/w==
+X-Received: by 2002:a05:6512:304:: with SMTP id t4mr1276805lfp.15.1569482986729;
+        Thu, 26 Sep 2019 00:29:46 -0700 (PDT)
+Subject: Re: [PATCH V2 1/2] string: Add stracpy and stracpy_pad mechanisms
+To: Stephen Kitt <steve@sk2.org>, Andrew Morton <akpm@linux-foundation.org>
+Cc: Joe Perches <joe@perches.com>,
+ Linus Torvalds <torvalds@linux-foundation.org>,
+ linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>,
+ Kees Cook <keescook@chromium.org>, Nitin Gote <nitin.r.gote@intel.com>,
+ jannh@google.com, kernel-hardening@lists.openwall.com,
+ Takashi Iwai <tiwai@suse.com>, Clemens Ladisch <clemens@ladisch.de>,
+ alsa-devel@alsa-project.org
+References: <cover.1563889130.git.joe@perches.com>
+ <ed4611a4a96057bf8076856560bfbf9b5e95d390.1563889130.git.joe@perches.com>
+ <20190925145011.c80c89b56fcee3060cf87773@linux-foundation.org>
+ <c0c2b8f6ac9f257b102b5a1a4b4dc949@sk2.org>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <8039728c-b41d-123c-e1ed-b35daac68fd3@rasmusvillemoes.dk>
+Date: Thu, 26 Sep 2019 09:29:44 +0200
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+ Thunderbird/60.8.0
 MIME-Version: 1.0
-From: Muni Sekhar <munisekharrms@gmail.com>
-Date: Thu, 26 Sep 2019 01:47:00 +0530
-Message-ID: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
-Subject: How to get the crash dump if system hangs?
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <c0c2b8f6ac9f257b102b5a1a4b4dc949@sk2.org>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
 
-Hi All,
+On 26/09/2019 02.01, Stephen Kitt wrote:
+> Le 25/09/2019 23:50, Andrew Morton a écrit :
+>> On Tue, 23 Jul 2019 06:51:36 -0700 Joe Perches <joe@perches.com> wrote:
+>>
+>>> Several uses of strlcpy and strscpy have had defects because the
+>>> last argument of each function is misused or typoed.
+>>>
+>>> Add macro mechanisms to avoid this defect.
+>>>
+>>> stracpy (copy a string to a string array) must have a string
+>>> array as the first argument (dest) and uses sizeof(dest) as the
+>>> count of bytes to copy.
+>>>
+>>> These mechanisms verify that the dest argument is an array of
+>>> char or other compatible types like u8 or s8 or equivalent.
+>>>
+>>> A BUILD_BUG is emitted when the type of dest is not compatible.
+>>>
+>>
+>> I'm still reluctant to merge this because we don't have code in -next
+>> which *uses* it.  You did have a patch for that against v1, I believe?
+>> Please dust it off and send it along?
+> 
+> Joe had a Coccinelle script to mass-convert strlcpy and strscpy.
+> Here's a different patch which converts some of ALSA's strcpy calls to
+> stracpy:
 
-I looked at the available tests with "cat
-/sys/kernel/debug/provoke-crash/DIRECT", from this I=E2=80=99d like to know
-which test causes system hang? I could not find any test case for
-deadlock, is any reason for this?
+Please don't. At least not for the cases where the source is a string
+literal - that just gives worse code generation (because gcc doesn't
+know anything about strscpy or strlcpy), and while a run-time (silent)
+truncation is better than a run-time buffer overflow, wouldn't it be
+even better with a build time error?
 
-I=E2=80=99m having a Linux system, I=E2=80=99m seeing it gets hung during c=
-ertain
-tests. When it hung, it does not even respond for SYSRQ button, only
-way to recover is power-button-only.  Does no response for SYSRQ
-button means kernel crashed?
+Something like
 
-After reboot I looked at the kern.log and most of the times it has
-=E2=80=9C^@^@^@^ ...=E2=80=9C line just before reboot. Can someone clarify =
-me what the
-kernel log entry =E2=80=9C^@^@^@^ ...=E2=80=9C means? I suspect kernel is c=
-rashed, but
-it does give any crashdump in kern.log.
+/** static_strcpy - run-time version of static initialization
+ *
+ * @d: destination array, must be array of char of known size
+ * @s: source, must be a string literal
+ *
+ * This is a simple wrapper for strcpy(d, s), which checks at build-time
+that the strcpy() won't overflow. In most cases (for short strings), gcc
+won't even emit a call to strcpy but rather just do a few immediate
+stores into the destination, e.g.
 
-Later I enabled the kernel crash dump(sudo apt install
-linux-crashdump) and rerun the test but still nothing copied to the
-disk(/var/crash/). I don=E2=80=99t have onboard serial port in my machine, =
-so
-I tried get the crash dump via netconsole, but this method also does
-not able to catch the crash dump.
+   0:   c7 07 66 6f 6f 00       movl   $0x6f6f66,(%rdi)
 
-Can someone help me how to debug in this scenario?
+ * for strcpy(d->name, "foo").
+ */
 
-And I'd like to know what other options available to get the crash
-dump? Can someone please clarify me on this?
+#define static_strcpy(d, s) ({ \
+  static_assert(__same_type(d, char[]), "destination must be char array"); \
+  static_assert(__same_type(s, const char[], "source must be a string
+literal"); \
+  static_assert(sizeof(d) >= sizeof("" s ""), "source does not fit in
+destination"); \
+  strcpy(d, s); \
+})
 
-Also , does the crash dump fails if incase deadlock occurs?
+The "" s "" trick guarantees that s is a string literal - it probably
+doesn't give a very nice error message, but that's why I added the
+redundant type comparison to a const char[] which should hopefully give
+a better clue.
 
-Any help will be greatly appreciated.
+Rasmus
 
+PS: Yes, we already have a fortified strcpy(), but for some reason it
+doesn't catch the common case where we're populating a char[] member of
+some struct. So this
 
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index e78017a3e1bd..3b0c5ae9f49e 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -3420,3 +3420,14 @@ int sscanf(const char *buf, const char *fmt, ...)
+        return i;
+ }
+ EXPORT_SYMBOL(sscanf);
++
++struct s { char name[4]; };
++char buf[4];
++void f3(void)
++{
++       strcpy(buf, "long");
++}
++void f4(struct s *s)
++{
++       strcpy(s->name, "long");
++}
 
---=20
-Thanks,
-Sekhar
+with CONFIG_FORTIFY_SOURCE=y complains about f3(), but f4() is just fine...
+
+PPS: A quick test of static_strcpy():
+
+// ss.c
+#include <errno.h>
+#include <string.h>
+#include <assert.h>
+
+#define __same_type(x, y) __builtin_types_compatible_p(typeof(x), typeof(y))
+
+#define static_strcpy(d, s) ({						\
+  static_assert(__same_type(d, char[]), "destination must be char array"); \
+  static_assert(__same_type(s, const char[]), "source must be a string
+literal"); \
+  static_assert(sizeof(d) >= sizeof("" s ""), "source does not fit in
+destination"); \
+  strcpy(d, s); \
+})
+
+struct s { char name[4]; };
+
+void f0(struct s *s) { static_strcpy(s->name, "foo"); }
+#if 1
+void f1(struct s *s) { static_strcpy(s->name, strerror(EIO)); }
+void f2(struct s *s) { static_strcpy(s->name, "long"); }
+void f3(char *d) { static_strcpy(d, "foo"); }
+void f4(char *d) { static_strcpy(d, strerror(EIO)); }
+#endif
+
+// gcc -Wall -O2 -o ss.o -c ss.c
+In file included from ss.c:3:0:
+ss.c: In function ‘f1’:
+ss.c:9:3: error: static assertion failed: "source must be a string literal"
+   static_assert(__same_type(s, const char[]), "source must be a string
+literal"); \
+   ^
+ss.c:18:24: note: in expansion of macro ‘static_strcpy’
+ void f1(struct s *s) { static_strcpy(s->name, strerror(EIO)); }
+                        ^~~~~~~~~~~~~
+ss.c:18:47: error: expected ‘)’ before ‘strerror’
+ void f1(struct s *s) { static_strcpy(s->name, strerror(EIO)); }
+                                               ^
+ss.c:10:40: note: in definition of macro ‘static_strcpy’
+   static_assert(sizeof(d) >= sizeof("" s ""), "source does not fit in
+destination"); \
+                                        ^
+In file included from ss.c:3:0:
+ss.c: In function ‘f2’:
+ss.c:10:3: error: static assertion failed: "source does not fit in
+destination"
+   static_assert(sizeof(d) >= sizeof("" s ""), "source does not fit in
+destination"); \
+   ^
+ss.c:19:24: note: in expansion of macro ‘static_strcpy’
+ void f2(struct s *s) { static_strcpy(s->name, "long"); }
+                        ^~~~~~~~~~~~~
+ss.c: In function ‘f3’:
+ss.c:8:3: error: static assertion failed: "destination must be char array"
+   static_assert(__same_type(d, char[]), "destination must be char
+array"); \
+   ^
+ss.c:20:20: note: in expansion of macro ‘static_strcpy’
+ void f3(char *d) { static_strcpy(d, "foo"); }
+                    ^~~~~~~~~~~~~
+ss.c: In function ‘f4’:
+ss.c:8:3: error: static assertion failed: "destination must be char array"
+   static_assert(__same_type(d, char[]), "destination must be char
+array"); \
+   ^
+ss.c:21:20: note: in expansion of macro ‘static_strcpy’
+ void f4(char *d) { static_strcpy(d, strerror(EIO)); }
+                    ^~~~~~~~~~~~~
+ss.c:9:3: error: static assertion failed: "source must be a string literal"
+   static_assert(__same_type(s, const char[]), "source must be a string
+literal"); \
+   ^
+ss.c:21:20: note: in expansion of macro ‘static_strcpy’
+ void f4(char *d) { static_strcpy(d, strerror(EIO)); }
+                    ^~~~~~~~~~~~~
+ss.c:21:37: error: expected ‘)’ before ‘strerror’
+ void f4(char *d) { static_strcpy(d, strerror(EIO)); }
+                                     ^
+ss.c:10:40: note: in definition of macro ‘static_strcpy’
+   static_assert(sizeof(d) >= sizeof("" s ""), "source does not fit in
+destination"); \
+                                        ^
+
