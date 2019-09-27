@@ -1,4 +1,4 @@
-Return-Path: <SRS0=vC3r=XW=lists.openwall.com=kernel-hardening-return-16948-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=DVRE=XW=lists.openwall.com=kernel-hardening-return-16949-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
 	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1936EC4360C
-	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Sep 2019 12:57:53 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DDCC8C4360C
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Sep 2019 13:22:46 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6C53E21906
-	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Sep 2019 12:57:52 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6C53E21906
+	by mail.kernel.org (Postfix) with SMTP id 3E716217D9
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Sep 2019 13:22:46 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3E716217D9
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=lip6.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16948-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15832 invoked by uid 550); 27 Sep 2019 12:57:44 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16949-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26401 invoked by uid 550); 27 Sep 2019 13:22:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,10 +22,10 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15800 invoked from network); 27 Sep 2019 12:57:44 -0000
+Received: (qmail 26367 invoked from network); 27 Sep 2019 13:22:39 -0000
 X-IronPort-AV: E=Sophos;i="5.64,555,1559512800"; 
-   d="scan'208";a="403686033"
-Date: Fri, 27 Sep 2019 05:57:28 -0700 (PDT)
+   d="scan'208";a="320867595"
+Date: Fri, 27 Sep 2019 06:22:17 -0700 (PDT)
 From: Julia Lawall <julia.lawall@lip6.fr>
 X-X-Sender: julia@hadrien
 To: Joe Perches <joe@perches.com>
@@ -38,7 +38,7 @@ cc: Andrew Morton <akpm@linux-foundation.org>,
     Rasmus Villemoes <rasmus.villemoes@prevas.dk>
 Subject: Re: [PATCH V2 1/2] string: Add stracpy and stracpy_pad mechanisms
 In-Reply-To: <56dc4de7e0db153cb10954ac251cb6c27c33da4a.camel@perches.com>
-Message-ID: <alpine.DEB.2.21.1909270555030.2143@hadrien>
+Message-ID: <alpine.DEB.2.21.1909270620480.2143@hadrien>
 References: <cover.1563889130.git.joe@perches.com>  <ed4611a4a96057bf8076856560bfbf9b5e95d390.1563889130.git.joe@perches.com>  <20190925145011.c80c89b56fcee3060cf87773@linux-foundation.org> <56dc4de7e0db153cb10954ac251cb6c27c33da4a.camel@perches.com>
 User-Agent: Alpine 2.21 (DEB 202 2017-01-01)
 MIME-Version: 1.0
@@ -105,11 +105,9 @@ On Thu, 26 Sep 2019, Joe Perches wrote:
 > still not quite correct as it required intermediate
 > compilation for verification of specified lengths.
 
-The problem seems to be detecting whether the string can reach user level
-and knowing whether padding is needed.  There are many cases where the
-copied string is a constant and can easily be checked to fit into the
-destination.  But without further investigation that I am not able to do
-at the moment, it's not clear how to address the user level issue.
+The script works fine without compilation, but uses compilation as an
+extra sanity check.  When there is only one possible declaration of a
+given buffer, then the compilation is not really needed.
 
 julia
 
