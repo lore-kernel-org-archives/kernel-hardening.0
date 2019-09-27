@@ -1,23 +1,20 @@
-Return-Path: <SRS0=POWj=XV=lists.openwall.com=kernel-hardening-return-16947-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=vC3r=XW=lists.openwall.com=kernel-hardening-return-16948-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C5ED9C4360C
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Sep 2019 22:10:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1936EC4360C
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Sep 2019 12:57:53 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1762C20640
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Sep 2019 22:10:27 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="F1vtVsaO"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1762C20640
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16947-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21845 invoked by uid 550); 26 Sep 2019 22:10:20 -0000
+	by mail.kernel.org (Postfix) with SMTP id 6C53E21906
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Sep 2019 12:57:52 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6C53E21906
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=lip6.fr
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16948-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15832 invoked by uid 550); 27 Sep 2019 12:57:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,83 +22,139 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21811 invoked from network); 26 Sep 2019 22:10:19 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=PNc3FQWs5ve2GC9BQ0Qy5UNIDu+ZgkCg5Eg7XW8Sm7g=;
-        b=F1vtVsaOm8n3p9meHteTZoKcuYWokC9j9xTngdIYFWwKAshSYlbqwCe7K7xJnbLaGQ
-         aMAx4X1HaqRFo1QP/o0IXS5UVMSZfTghVXN9hmW1Wc1POmXYWcKFgJMT+kDyNh/tGrhY
-         4ODJtUa+37f3yT3oizRBV4T2STSFDcl82gWD4=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=PNc3FQWs5ve2GC9BQ0Qy5UNIDu+ZgkCg5Eg7XW8Sm7g=;
-        b=m/xDDXtBD+TQI7tK1HKvqUAMIrAp5J9UBa/2YhaNu1Sb+5yydgFlV2fBhPVBblvv5g
-         gEmKO/7nZ2hc/Hg0fW6Vvr5ubEkR2gY71xoCOak1Wkhkpjn9p/ydML+G1AG3JhIH+IVm
-         dH/7x2gedCJvYjfZXbPvh7I4puY4JIxxONP61Q7PPSD7OOL0nPEHnR4ZmgVP+NzpMTt/
-         wBY7z6wWIl7t0wMTtXynKXqOj/6IQ4ZFO8G5beK4ujSOGH65n4Gu+0Et4pn5kNKoM0oc
-         wEiuswC5ETn9Ph/pKoi4tyVSqik0JOQUseZSrWrwDSp5pg7FB8ZoPrk7lr06LPGh0UzA
-         TeTQ==
-X-Gm-Message-State: APjAAAWO9YsquevmPl7nIHSyXdP0CcJ/pOlK0fJsbTQcnrxKWMCjKwti
-	fho9lqxVZxpF4GGy2+c0BVPLCw==
-X-Google-Smtp-Source: APXvYqzXerZDMKGIkud8dDJEspd735Wg21P8AYxg5tkjJjzsWyPPeu05Qooby0wOeWp85PvOveWkJg==
-X-Received: by 2002:a17:90a:8404:: with SMTP id j4mr6132727pjn.143.1569535807306;
-        Thu, 26 Sep 2019 15:10:07 -0700 (PDT)
-Date: Thu, 26 Sep 2019 15:10:05 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Tianlin Li <tli@digitalocean.com>
-Cc: kernel-hardening@lists.openwall.com
-Subject: Re: Introduction and get involved
-Message-ID: <201909261505.9A58F60D@keescook>
-References: <19962016-19D9-40F8-A2A0-B7188614A263@digitalocean.com>
- <201909241604.C4B6686@keescook>
- <7D98C4BB-62FA-4393-B24A-E213FB340A94@digitalocean.com>
+Received: (qmail 15800 invoked from network); 27 Sep 2019 12:57:44 -0000
+X-IronPort-AV: E=Sophos;i="5.64,555,1559512800"; 
+   d="scan'208";a="403686033"
+Date: Fri, 27 Sep 2019 05:57:28 -0700 (PDT)
+From: Julia Lawall <julia.lawall@lip6.fr>
+X-X-Sender: julia@hadrien
+To: Joe Perches <joe@perches.com>
+cc: Andrew Morton <akpm@linux-foundation.org>, 
+    Linus Torvalds <torvalds@linux-foundation.org>, 
+    linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, 
+    Stephen Kitt <steve@sk2.org>, Kees Cook <keescook@chromium.org>, 
+    Nitin Gote <nitin.r.gote@intel.com>, jannh@google.com, 
+    kernel-hardening@lists.openwall.com, 
+    Rasmus Villemoes <rasmus.villemoes@prevas.dk>
+Subject: Re: [PATCH V2 1/2] string: Add stracpy and stracpy_pad mechanisms
+In-Reply-To: <56dc4de7e0db153cb10954ac251cb6c27c33da4a.camel@perches.com>
+Message-ID: <alpine.DEB.2.21.1909270555030.2143@hadrien>
+References: <cover.1563889130.git.joe@perches.com>  <ed4611a4a96057bf8076856560bfbf9b5e95d390.1563889130.git.joe@perches.com>  <20190925145011.c80c89b56fcee3060cf87773@linux-foundation.org> <56dc4de7e0db153cb10954ac251cb6c27c33da4a.camel@perches.com>
+User-Agent: Alpine 2.21 (DEB 202 2017-01-01)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <7D98C4BB-62FA-4393-B24A-E213FB340A94@digitalocean.com>
+Content-Type: text/plain; charset=US-ASCII
 
-On Thu, Sep 26, 2019 at 09:57:58AM -0500, Tianlin Li wrote:
-> > On Sep 24, 2019, at 6:12 PM, Kees Cook <keescook@chromium.org> wrote:
-> > I've been keeping a (rather terse) TODO list here:
-> > https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work#Specific_TODO_Items
-> > 
-> > But I'd like to turn that into an actual bug list on github or the like.
 
-I've (slowly) started this process now:
-https://github.com/KSPP/linux/issues/
 
-> > I wonder if working on something like this:
-> > - set_memory_*() needs __must_check and/or atomicity
-> > would be interesting?
-> > 
-> > The idea there is that set_memory_*() calls can fail, so callers should
-> > likely be handling errors correctly. Adding the "__must_check" attribute
-> > and fixing all the callers would be nice (and certainly touches the
-> > memory management code!)
-> 
-> This is a great starting task for me. So for this task, basically I need to add __must_check attribute to set_memory_*() functions and fix all the callers to make sure they check the return values. Do I understand correctly?
+On Thu, 26 Sep 2019, Joe Perches wrote:
 
-Yup, that's right. I've added that issue with some more details now:
-https://github.com/KSPP/linux/issues/7
+> On Wed, 2019-09-25 at 14:50 -0700, Andrew Morton wrote:
+> > On Tue, 23 Jul 2019 06:51:36 -0700 Joe Perches <joe@perches.com> wrote:
+> >
+> > > Several uses of strlcpy and strscpy have had defects because the
+> > > last argument of each function is misused or typoed.
+> > >
+> > > Add macro mechanisms to avoid this defect.
+> > >
+> > > stracpy (copy a string to a string array) must have a string
+> > > array as the first argument (dest) and uses sizeof(dest) as the
+> > > count of bytes to copy.
+> > >
+> > > These mechanisms verify that the dest argument is an array of
+> > > char or other compatible types like u8 or s8 or equivalent.
+> > >
+> > > A BUILD_BUG is emitted when the type of dest is not compatible.
+> > >
+> >
+> > I'm still reluctant to merge this because we don't have code in -next
+> > which *uses* it.  You did have a patch for that against v1, I believe?
+> > Please dust it off and send it along?
+>
+> https://lore.kernel.org/lkml/CAHk-=wgqQKoAnhmhGE-2PBFt7oQs9LLAATKbYa573UO=DPBE0Q@mail.gmail.com/
+>
+> I gave up, especially after the snark from Linus
+> where he wrote I don't understand this stuff.
+>
+> He's just too full of himself here merely using
+> argument from authority.
+>
+> Creating and using a function like copy_string with
+> both source and destination lengths specified is
+> is also potentially a large source of defects where
+> the stracpy macro atop strscpy does not have a
+> defect path other than the src not being a string
+> at all.
+>
+> I think the analysis of defects in string function
+> in the kernel is overly difficult today given the
+> number of possible uses of pointer and length in
+> strcpy/strncpy/strlcpy/stracpy.
+>
+> I think also that there is some sense in what he
+> wrote against the "word salad" use of str<foo>cpy,
+> but using stracpy as a macro when possible instead
+> of strscpy also makes the analysis of defects rather
+> simpler.
+>
+> The trivial script cocci I posted works well for the
+> simple cases.
+>
+> https://lore.kernel.org/cocci/66fcdbf607d7d0bea41edb39e5579d63b62b7d84.camel@perches.com/
+>
+> The more complicated cocci script Julia posted is
+> still not quite correct as it required intermediate
+> compilation for verification of specified lengths.
 
-> Also I have some other questions:
-> Is there any requirement for the patches? e.g. based on which kernel version? how many individual patches?
+The problem seems to be detecting whether the string can reach user level
+and knowing whether padding is needed.  There are many cases where the
+copied string is a constant and can easily be checked to fit into the
+destination.  But without further investigation that I am not able to do
+at the moment, it's not clear how to address the user level issue.
 
-I recommend basing your patches on either the last full release (v5.3
-currently) or, if you need something newer, on the -rc2 of the next
-release (v5.4-rc2). We are, however, in the middle of the merge window,
-so -rc2 doesn't exist yet. :)
+julia
 
-The general details on submitting patches apply:
-https://www.kernel.org/doc/html/latest/process/submitting-patches.html
-
-Feel free to post "RFC" patches here to this list first if you want some
-initial feedback. (Though I recommend still including maintainers in Cc
-to get their feedback too.)
-
--- 
-Kees Cook
+>
+> https://lkml.org/lkml/2019/7/25/1406
+>
+> Tell me again if you still want it and maybe the
+> couple conversions that mm/ would get.
+>
+> via:
+>
+> $ spatch --all-includes --in-place -sp-file str.cpy.cocci mm
+> $ git diff --stat -p mm
+> --
+>  mm/dmapool.c | 2 +-
+>  mm/zswap.c   | 2 +-
+>  2 files changed, 2 insertions(+), 2 deletions(-)
+>
+> diff --git a/mm/dmapool.c b/mm/dmapool.c
+> index fe5d33060415..b3a4feb423f8 100644
+> --- a/mm/dmapool.c
+> +++ b/mm/dmapool.c
+> @@ -158,7 +158,7 @@ struct dma_pool *dma_pool_create(const char *name, struct device *dev,
+>  	if (!retval)
+>  		return retval;
+>
+> -	strlcpy(retval->name, name, sizeof(retval->name));
+> +	stracpy(retval->name, name);
+>
+>  	retval->dev = dev;
+>
+> diff --git a/mm/zswap.c b/mm/zswap.c
+> index 08b6cefae5d8..c6cd38de185a 100644
+> --- a/mm/zswap.c
+> +++ b/mm/zswap.c
+> @@ -533,7 +533,7 @@ static struct zswap_pool *zswap_pool_create(char *type, char *compressor)
+>  	}
+>  	pr_debug("using %s zpool\n", zpool_get_type(pool->zpool));
+>
+> -	strlcpy(pool->tfm_name, compressor, sizeof(pool->tfm_name));
+> +	stracpy(pool->tfm_name, compressor);
+>  	pool->tfm = alloc_percpu(struct crypto_comp *);
+>  	if (!pool->tfm) {
+>  		pr_err("percpu alloc failed\n");
+>
+>
+>
+>
