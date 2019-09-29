@@ -1,4 +1,4 @@
-Return-Path: <SRS0=8bU4=XY=lists.openwall.com=kernel-hardening-return-16953-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=fCwZ=XY=lists.openwall.com=kernel-hardening-return-16954-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,17 +8,17 @@ X-Spam-Status: No, score=-9.7 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2A807C4360C
-	for <kernel-hardening@archiver.kernel.org>; Sun, 29 Sep 2019 16:31:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 81DFAC4360C
+	for <kernel-hardening@archiver.kernel.org>; Sun, 29 Sep 2019 16:31:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 73124217F5
-	for <kernel-hardening@archiver.kernel.org>; Sun, 29 Sep 2019 16:31:30 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C9C69217F5
+	for <kernel-hardening@archiver.kernel.org>; Sun, 29 Sep 2019 16:31:40 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="NzYq+lt8"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 73124217F5
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="E8pWc1ym"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C9C69217F5
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16953-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21882 invoked by uid 550); 29 Sep 2019 16:30:56 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16954-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22067 invoked by uid 550); 29 Sep 2019 16:30:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,90 +26,87 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21799 invoked from network); 29 Sep 2019 16:30:55 -0000
+Received: (qmail 21973 invoked from network); 29 Sep 2019 16:30:57 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=fjVch9LRt2ejbJ91rcWtAg0Nw/eSiIJNJLlwVd04KNA=;
-        b=NzYq+lt85LayRmCrcgVTesFYaHFQnL1zp4Mk1u+mGdAWnn0eWLABobuCliO8wafBfV
-         ZG7f3doYAOJtQExdxS6af0/iZp6wwRhPIEsHxo8eogAx2OKnV2wH1fpKSWluuwMU6Kp4
-         F9KvJKzZO+LD/5sqlfmZ8v6+cS53FiytWyQpAZPyQPv8ivvHRjaU5UHHC/TdgwvBCUJ7
-         T7R3fIO3AS0GOJsSRSD5kN7PN4nnsm8urmiNOGnA1e7pU9l0Iqj+NlXBIhHh1vqyc0/P
-         NaYVHShiPAJQ8UtHNuCkslfS/KWVL6gLt9JrmHK2mcicpZyYzXhZ970jHW+xRQ6YfrnW
-         eRcQ==
+        bh=CW9SpO3BnroQsvnvmxPFFfeIhkRcu5C+hK4Vkk6u/pE=;
+        b=E8pWc1ymsW1QHAGSaq7C4tuuHuJ8f0U1jDgQ5EJ7n0bR6LHgjYV9uKTuV0qTIOzdka
+         P0NaO4cq17trXdf/4GtJkJFqtt48fBKfkCHVOi+Ag6AtuGIxxYcBFclUVfi5tSDa/jiH
+         Fz70tDqtNmso32RldyEmv/p2epMdtH8R482E08JwjXaMmPuboR+Kuv6X1N69WjYBp2Eb
+         8eLYV1s/+sZsIOrHjrZErt5dR884atGaLbnVyk5HJUEwAAcj+JWonr6jHKWwcv0vusfv
+         ngu8TNEack3wci7rPDh18MA8hRSN9SJh3pC7Yt6Uawq1Ve4dZzmAUTWcOAh1DrEvVXen
+         zNgg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=fjVch9LRt2ejbJ91rcWtAg0Nw/eSiIJNJLlwVd04KNA=;
-        b=ADQEyzagk/gQFgwhDYqx1q12LpnlJjoe+WGMmuneIwcOZ/5qsM+ML//by7Pp6abm4d
-         s6J15AWu683Sq18+BbSFTs8iXzFowRYoV+4TstRtE5N8NXsEjEV7Xh2Xn69egX1T4uvJ
-         TMOFsbBewMN6wN55qhwUlhHZk0f5e/lY1thdC/P/20oFIyaYRF+CvwFXDiYF0ooyj74k
-         6lOtk8n+8T5Zxsf+s7ytta0zNs9ACzepnb+KtSjPGe+o/vAa/mQ3J6zkfuxRY+NYyDgQ
-         AIVKXD9IXL3rfCHh7zh0FfBbthGRtCqm+xUicXgVVEILMzMx4125CfkYCCTd8kV7yuDb
-         AiBw==
-X-Gm-Message-State: APjAAAXDOcjALU+pwaFr398Rppu/JJrDswV6qKQ/k83+36yE/B+buQjo
-	d7jvC7PAMGsrjfZqBCm7iA8=
-X-Google-Smtp-Source: APXvYqz//bKP+ahAdZw2i6WI9XnI6lgdyqABk1QAmrnYQWaT9Zt6fHI670r4aAxC6k69/jjFDiIJbw==
-X-Received: by 2002:a1c:1d85:: with SMTP id d127mr14955906wmd.14.1569774643923;
-        Sun, 29 Sep 2019 09:30:43 -0700 (PDT)
+        bh=CW9SpO3BnroQsvnvmxPFFfeIhkRcu5C+hK4Vkk6u/pE=;
+        b=CilEzkl1I7YPCO15qiNJO5iK+HXy9IerY3IX0zotlhywYdLSoZWXCZHjW50CfpGVKP
+         kIePKHyVzC4Bwvm5a7OfG19DDFeG5DWdZWjDKnOAN2go+M+sPGh1mvrEyRIibQSvLwWm
+         U7uiGS8a0J4FqOlvL3Yl7eJpjZ7NZZXRlzWKOKyA0KwWEvOX9jR3K0pBEYGIzBl2GkEl
+         KIbjTxpW73aMgIvTy9WwB3f7Xxd2328fv82Tw1AMuF+rf7ga8+Ddu5euYmM3iKUdfZ/e
+         tEdkGwg+7dkWz+vR2G+nXlG+a7MbXwZefDv0FpfEBVjpxVoeDinEyFJ2LG+jCWEPp8bt
+         TmdA==
+X-Gm-Message-State: APjAAAVEBPNsrtVFiajhUN9fimbNSDlZGjBGbEvdlkp7Kz9aQIsp5HGf
+	kqIkSDfEbfuc4gOeqN+g71A=
+X-Google-Smtp-Source: APXvYqwhmXUBlJUL4bFWqJca0BL9lQQRQ+kkAUiW5qxhKzE0pc15QBr29p4i8E0a102MJB3wBH745Q==
+X-Received: by 2002:a5d:40d2:: with SMTP id b18mr9834794wrq.4.1569774645871;
+        Sun, 29 Sep 2019 09:30:45 -0700 (PDT)
 From: Romain Perier <romain.perier@gmail.com>
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>,
-	Romain Perier <romain.perier@gmail.com>,
-	Romain Perier <romain.perier@viveris.fr>
-Subject: [PRE-REVIEW PATCH 03/16] mmc: renesas_sdhi: Prepare to use the new tasklet API
-Date: Sun, 29 Sep 2019 18:30:15 +0200
-Message-Id: <20190929163028.9665-4-romain.perier@gmail.com>
+	Romain Perier <romain.perier@gmail.com>
+Subject: [PRE-REVIEW PATCH 04/16] net: liquidio: Prepare to use the new tasklet API
+Date: Sun, 29 Sep 2019 18:30:16 +0200
+Message-Id: <20190929163028.9665-5-romain.perier@gmail.com>
 X-Mailer: git-send-email 2.23.0
 In-Reply-To: <20190929163028.9665-1-romain.perier@gmail.com>
 References: <20190929163028.9665-1-romain.perier@gmail.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-From: Romain Perier <romain.perier@viveris.fr>
-
 The future tasklet API will no longer allow to pass an arbitrary
 "unsigned long" data parameter. The tasklet data structure will need to
 be embedded into a data structure that will be retrieved from the tasklet
-handler. Then, all other data structure that must be retrieved from the
-handler (by using the tasklet as root object) must be retrievable via
-container_of(). This commits adds a field to get the address of the
-device binded to this driver, so the corresponding platform_device and
-its drvdata can be retrieved from the tasklet handler.
+handler. Currently, the private driver data structure "struct
+octeon_priv" is retrievable from the tasklet (by using container_of),
+howerver it is not the case for the "struct octeon_device" (the field
+"priv" is a pointer and cannot be used in container_of). This commit
+adds a new field in the private data structure, so we can easily get a
+pointer to the main device from the private context.
 
 Signed-off-by: Romain Perier <romain.perier@gmail.com>
 ---
- drivers/mmc/host/renesas_sdhi.h      | 1 +
- drivers/mmc/host/renesas_sdhi_core.c | 2 ++
- 2 files changed, 3 insertions(+)
+ drivers/net/ethernet/cavium/liquidio/lio_main.c    | 1 +
+ drivers/net/ethernet/cavium/liquidio/octeon_main.h | 1 +
+ 2 files changed, 2 insertions(+)
 
-diff --git a/drivers/mmc/host/renesas_sdhi.h b/drivers/mmc/host/renesas_sdhi.h
-index c0504aa90857..01ef8ff5b525 100644
---- a/drivers/mmc/host/renesas_sdhi.h
-+++ b/drivers/mmc/host/renesas_sdhi.h
-@@ -42,6 +42,7 @@ struct tmio_mmc_dma {
+diff --git a/drivers/net/ethernet/cavium/liquidio/lio_main.c b/drivers/net/ethernet/cavium/liquidio/lio_main.c
+index 7f3b2e3b0868..283e1461257d 100644
+--- a/drivers/net/ethernet/cavium/liquidio/lio_main.c
++++ b/drivers/net/ethernet/cavium/liquidio/lio_main.c
+@@ -4326,6 +4326,7 @@ static int octeon_device_init(struct octeon_device *octeon_dev)
+ 	complete(&handshake[octeon_dev->octeon_id].init);
+ 
+ 	atomic_set(&octeon_dev->status, OCT_DEV_HOST_OK);
++	oct_priv->dev = octeon_dev;
+ 
+ 	return 0;
+ }
+diff --git a/drivers/net/ethernet/cavium/liquidio/octeon_main.h b/drivers/net/ethernet/cavium/liquidio/octeon_main.h
+index 073d0647b439..5b4cb725f60f 100644
+--- a/drivers/net/ethernet/cavium/liquidio/octeon_main.h
++++ b/drivers/net/ethernet/cavium/liquidio/octeon_main.h
+@@ -39,6 +39,7 @@ struct octeon_device_priv {
+ 	/** Tasklet structures for this device. */
+ 	struct tasklet_struct droq_tasklet;
+ 	unsigned long napi_mask;
++	struct octeon_device *dev;
  };
  
- struct renesas_sdhi {
-+	struct platform_device *pdev;
- 	struct clk *clk;
- 	struct clk *clk_cd;
- 	struct tmio_mmc_data mmc_data;
-diff --git a/drivers/mmc/host/renesas_sdhi_core.c b/drivers/mmc/host/renesas_sdhi_core.c
-index d4ada5cca2d1..ceb3b0af1470 100644
---- a/drivers/mmc/host/renesas_sdhi_core.c
-+++ b/drivers/mmc/host/renesas_sdhi_core.c
-@@ -843,6 +843,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
- 		goto eirq;
- 	}
- 
-+	priv->pdev = pdev;
-+
- 	dev_info(&pdev->dev, "%s base at 0x%08lx max clock rate %u MHz\n",
- 		 mmc_hostname(host->mmc), (unsigned long)
- 		 (platform_get_resource(pdev, IORESOURCE_MEM, 0)->start),
+ /** This structure is used by NIC driver to store information required
 -- 
 2.23.0
 
