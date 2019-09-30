@@ -1,4 +1,4 @@
-Return-Path: <SRS0=tJq9=XZ=lists.openwall.com=kernel-hardening-return-16976-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=u7BN=XZ=lists.openwall.com=kernel-hardening-return-16977-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,17 +6,17 @@ X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
 	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EE50CC32792
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Sep 2019 23:07:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3C12AC35280
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Sep 2019 23:51:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 433642086A
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Sep 2019 23:07:13 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 8881320842
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Sep 2019 23:51:24 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="hUuH4bQ5"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 433642086A
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="dcK7ybFV"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8881320842
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16976-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3661 invoked by uid 550); 30 Sep 2019 23:07:06 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16977-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20215 invoked by uid 550); 30 Sep 2019 23:51:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,112 +24,89 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3624 invoked from network); 30 Sep 2019 23:07:05 -0000
+Received: (qmail 20183 invoked from network); 30 Sep 2019 23:51:17 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=Cr3eQPwLdTJ6o27POy2W2qtLAUu+UzKXjcAxLDLJlM8=;
-        b=hUuH4bQ5gqcS2zRF4VYLrd+qWM6VbFgE5j2apvBbkqomZR5bo7ooi4tjkYiW+0rsMW
-         eLtb3MeUdCIinocF4VRCXZl0iF569LTdKCXu5GADWvSN79p0odRg7U/jsHRWFd0pgg6S
-         c3JglgwyfdN7Hb0FKJNT9/C5Y5PUrvKUphuHs=
+         :content-disposition:content-transfer-encoding:in-reply-to;
+        bh=uoUPfoqpvGGg+NGeSbdIvAS95caQRNPvjfk9skLTIZo=;
+        b=dcK7ybFV81yNhSvCIxEePaWh3avBUdt7R4EmBjpoJ3lMjkC4HkVfKD7NZfTUAvRy4Q
+         wp/3xTxP4XjGrUcj0XV4P48DByttP8j5dQMTBPC0pTYxyhJqyjwfYA1EKriHvkf50F3R
+         M1Ek+LuC/6Wvzze+9NXSOLl0FvS5sJAYsh6J8=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=Cr3eQPwLdTJ6o27POy2W2qtLAUu+UzKXjcAxLDLJlM8=;
-        b=oGiwtyYLsFsuPqghyr7dQS7RDuDmxZAq3dqvwwpW5efMGtPxT8Geh50+lO5QZS2E30
-         qawFCcu7NFFdLDfabDxxKd9485Y1F1Trp542aGb3R/eLOMqccd9H4pBCPvwbm7Q1MR3F
-         STqmJUKquwXmb5/6WsMAGyfx38uL1D/PmqtJPc3zlfeOx/bIYbPA2/hIPc/cTMetADZD
-         5UsMq5NfDeL+LJ6epyMmtz4ldyad05CdRMbTWwP68nokwCtMDyreKdRnHM+ZrTsj9VTS
-         U4N9vEGFLfJB2JFckdMBn6aQJEJsjewBjrwi1hy5aPdMcz1lMaS78t7lJtuULB3yyONB
-         hZdg==
-X-Gm-Message-State: APjAAAUcfYL4TGpxUt+L3tfSn1Xo66RXLnWUhf/n9tQt+JzEgY3Zedz5
-	9vow0DsHcLwuaznWKb6Fy1zr/n+HJ0M=
-X-Google-Smtp-Source: APXvYqwMXQfOIXk9Jai0fxdNyvssXP61Rt6SMFNIBoBxJg3WGq+GJTekSkbtuKDHQTqrvSV3ArCMHQ==
-X-Received: by 2002:a17:902:a9cb:: with SMTP id b11mr2576241plr.340.1569884813889;
-        Mon, 30 Sep 2019 16:06:53 -0700 (PDT)
-Date: Mon, 30 Sep 2019 16:06:50 -0700
+         :mime-version:content-disposition:content-transfer-encoding
+         :in-reply-to;
+        bh=uoUPfoqpvGGg+NGeSbdIvAS95caQRNPvjfk9skLTIZo=;
+        b=pFx7XVfHRsGwDk47FojlFuoSKbkH9mIFrPYRxVNjO8mAHkDZE/5xZ8mM6Y4qM1Zzzr
+         njpC8Z/h/ofSPR2TcCB718u8PGqZM2LJDU0tDfrV2f+qvEYwRYc9RVJABJum7S6aEqpU
+         3HSXS5uEpMDoMLbhFyNzwnU8yvSTPaAZmFr5nZdVZ6WbCAtiQDLCyavuh6BUmPrcH//S
+         LPoEH3YROZKfKrtz37QBEERI+4sJ+mBQ6gJPcemqx0y/N+GdYIYtGcQN8upnkogGZ4RS
+         BOGnWbwJpV3hpClN12pNfzY1pupdjvff0A9agDxB56CmiuzYFEB18FM07utoXTIgnGNm
+         yk3g==
+X-Gm-Message-State: APjAAAUmf6DfDP9dRoVp1MwjGPDdvR3GXlj3gOMWcT/cxKoOuwhsq8+g
+	rqo+1ddiqDY32NXNylMIZPEkvw==
+X-Google-Smtp-Source: APXvYqz9DAx7FOwoVxfLxM5ugMI2ttJNNFfbLXEMuWWuV1gsmrzqAePPZhR4xMOzFLLjZRKVzy//hQ==
+X-Received: by 2002:a17:902:209:: with SMTP id 9mr22325332plc.1.1569887465675;
+        Mon, 30 Sep 2019 16:51:05 -0700 (PDT)
+Date: Mon, 30 Sep 2019 16:51:03 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Romain Perier <romain.perier@gmail.com>
+To: Muni Sekhar <munisekharrms@gmail.com>
 Cc: kernel-hardening@lists.openwall.com
-Subject: Re: [PRE-REVIEW PATCH 00/16] Modernize the tasklet API
-Message-ID: <201909301552.4AAB4D4@keescook>
-References: <20190929163028.9665-1-romain.perier@gmail.com>
+Subject: Re: How to get the crash dump if system hangs?
+Message-ID: <201909301645.5FA44A4@keescook>
+References: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <20190929163028.9665-1-romain.perier@gmail.com>
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
 
-On Sun, Sep 29, 2019 at 06:30:12PM +0200, Romain Perier wrote:
-> Hello,
+On Thu, Sep 26, 2019 at 01:47:00AM +0530, Muni Sekhar wrote:
+> I looked at the available tests with "cat
+> /sys/kernel/debug/provoke-crash/DIRECT", from this I’d like to know
+> which test causes system hang? I could not find any test case for
+> deadlock, is any reason for this?
+
+The various *LOCKUP tests will hang a CPU or task (though SPINLOCKUP
+needs to be called twice). You could keep calling HARDLOCKUP until
+you're out of CPUs, for example. :)
+
+What kind of deadlock do you want to test?
+
+> I’m having a Linux system, I’m seeing it gets hung during certain
+> tests. When it hung, it does not even respond for SYSRQ button, only
+> way to recover is power-button-only.  Does no response for SYSRQ
+> button means kernel crashed?
+
+That's an impressive hang! :(
+
+> After reboot I looked at the kern.log and most of the times it has
+> “^@^@^@^ ...“ line just before reboot. Can someone clarify me what the
+> kernel log entry “^@^@^@^ ...“ means? I suspect kernel is crashed, but
+> it does give any crashdump in kern.log.
+
+That's a zero byte. I would suggest using something like pstore to
+capture this in RAM instead of hoping it makes it to disk.
+
+> Later I enabled the kernel crash dump(sudo apt install
+> linux-crashdump) and rerun the test but still nothing copied to the
+> disk(/var/crash/). I don’t have onboard serial port in my machine, so
+> I tried get the crash dump via netconsole, but this method also does
+> not able to catch the crash dump.
 > 
-> Nowadays, modern kernel subsystems that use callbacks pass the data
-> structure associated with a given callback as argument to the callback.
-> The data structure specific to the driver or subsystem that uses this
-> callback framework is usually "derivated" from the data structure that
-> is passed as argument to the callback.
+> Can someone help me how to debug in this scenario?
 > 
-> The tasklet subsystem remains the one to pass callback argument as an
-> arbitrary unsigned long argument (This has several issues that are
-> explained in the first commit).
+> And I'd like to know what other options available to get the crash
+> dump? Can someone please clarify me on this?
 > 
-> This series aims to improve the tasklet API and converts all the code
-> that is using it. It is based on the series for timer_list at [1].
+> Also , does the crash dump fails if incase deadlock occurs?
 > 
-> 1. https://lore.kernel.org/patchwork/patch/835464
-> 
-> 
-> Romain Perier (16):
->   tasklet: Prepare to change tasklet callback argument type
->   crypto: ccp - Prepare to use the new tasklet API
->   mmc: renesas_sdhi: Prepare to use the new tasklet API
->   net: liquidio: Prepare to use the new tasklet API
->   chelsio: Prepare to use the new tasklet API
->   net: mvpp2: Prepare to use the new tasklet API
->   qed: Prepare to use the new tasklet API
->   isdn: Prepare to use the new tasklet API
->   scsi: pm8001: Prepare to use the new tasklet API
->   scsi: pmcraid: Prepare to use the new tasklet API
->   treewide: Globally replace tasklet_init() by tasklet_setup()
->   tasklet: Pass tasklet_struct pointer as .data in DECLARE_TASKLET
->   tasklet: Pass tasklet_struct pointer to callbacks unconditionally
->   tasklet: Remove the data argument from DECLARE_TASKLET() macros
->   tasklet: convert callbacks prototype for using struct tasklet_struct *
->     arguments
->   tasklet: Add the new initialization function permanently
+> Any help will be greatly appreciated.
 
-This is looking really good; thank you! I think for easier review it
-would make sense to break out the "special" cases (where you're changing
-structures, etc) into their own patches (and not as a bulk change --
-they need review by different subsystem maintainers, etc).
-
-Then the patch phases can be:
-
-1) Introduce new APIs and casts
-2) Convert special cases include passing the tasklet as their .data
-   (while also changing the prototypes and replacing tasklet_init() with
-    tasklet_setup())
-3) Convert DECLARE_TASKLET() users to the same
-4) Manual one-off conversions of tasklet_init() -> tasklet_setup()
-5) Mechanical mass conversion of tasklet_init() -> tasklet_setup()
-6) Mass removal of .data argument from DECLARE_TASKLET()
-7) tasklet API internal swap and removal of .data
-8) tasklet_init() and helper cast removals.
-
-Step 1 needs to happen in an -rc1 (e.g. v5.5-rc1).
-
-Then steps 2, 3, and 4 can happen simultaneously across all the
-maintainers that need to be aware of it and land in the next release
-(the linux-next for v5.6).
-
-Finally steps 5, 6, 7, and 8 happen in the next release's -rc1
-(v5.6-rc1).
-
-If we can get the "phase 1" patch ready quick, maybe we can get into
--rc2 for v5.4 and move things up by a release...
-
--Kees
+If you really need to hard-power your system to get it back, pstore may
+only work if you're really quick and likely enable software ECC.
 
 -- 
 Kees Cook
