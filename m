@@ -1,22 +1,22 @@
-Return-Path: <SRS0=u7BN=XZ=lists.openwall.com=kernel-hardening-return-16977-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ONf/=X2=lists.openwall.com=kernel-hardening-return-16978-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3C12AC35280
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Sep 2019 23:51:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 33441C388F3
+	for <kernel-hardening@archiver.kernel.org>; Tue,  1 Oct 2019 05:31:51 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8881320842
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Sep 2019 23:51:24 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 7E80621783
+	for <kernel-hardening@archiver.kernel.org>; Tue,  1 Oct 2019 05:31:50 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="dcK7ybFV"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8881320842
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16977-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20215 invoked by uid 550); 30 Sep 2019 23:51:18 -0000
+	dkim=pass (2048-bit key) header.d=paul-moore-com.20150623.gappssmtp.com header.i=@paul-moore-com.20150623.gappssmtp.com header.b="azESaA0r"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7E80621783
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=paul-moore.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16978-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27832 invoked by uid 550); 1 Oct 2019 05:31:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,89 +24,128 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20183 invoked from network); 30 Sep 2019 23:51:17 -0000
+Received: (qmail 27814 invoked from network); 1 Oct 2019 05:31:42 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=uoUPfoqpvGGg+NGeSbdIvAS95caQRNPvjfk9skLTIZo=;
-        b=dcK7ybFV81yNhSvCIxEePaWh3avBUdt7R4EmBjpoJ3lMjkC4HkVfKD7NZfTUAvRy4Q
-         wp/3xTxP4XjGrUcj0XV4P48DByttP8j5dQMTBPC0pTYxyhJqyjwfYA1EKriHvkf50F3R
-         M1Ek+LuC/6Wvzze+9NXSOLl0FvS5sJAYsh6J8=
+        d=paul-moore-com.20150623.gappssmtp.com; s=20150623;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc:content-transfer-encoding;
+        bh=SaFoYhmwuNCCe0dxD4a30Zl6Go0ZxpMOGqzzubMUHdw=;
+        b=azESaA0rdcy9GMB3FE8I4/zNalw7ysfkd8tfzjgj0RmnGawU5l6mzRJjHXNAt4IEyV
+         wy9qVNdmmcOgGESFc3PXu9o5lOAVD8PNRdHmmwtMPqkOCowpNOH1ZwnKZ4cMbCKxzWFk
+         32kbYx/D+sDYwixF1TtIg0L2ChdH/rsPBcJuO4AlNhlaigIWk68u0LZ4GJiHi35pEaV3
+         yUXj0FmfrNF7QeT/p4m119G4iN4IhZq3+oylQ55x8rv4IxA/iKr+DPFlVc5zlSLoU1TJ
+         wWeja5LAMc/L+1lHON5BZkGiXmIridIuk4ZepjpHGQpgE85tvZp5HOTo5c8QL0/opDhu
+         Bv1w==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=uoUPfoqpvGGg+NGeSbdIvAS95caQRNPvjfk9skLTIZo=;
-        b=pFx7XVfHRsGwDk47FojlFuoSKbkH9mIFrPYRxVNjO8mAHkDZE/5xZ8mM6Y4qM1Zzzr
-         njpC8Z/h/ofSPR2TcCB718u8PGqZM2LJDU0tDfrV2f+qvEYwRYc9RVJABJum7S6aEqpU
-         3HSXS5uEpMDoMLbhFyNzwnU8yvSTPaAZmFr5nZdVZ6WbCAtiQDLCyavuh6BUmPrcH//S
-         LPoEH3YROZKfKrtz37QBEERI+4sJ+mBQ6gJPcemqx0y/N+GdYIYtGcQN8upnkogGZ4RS
-         BOGnWbwJpV3hpClN12pNfzY1pupdjvff0A9agDxB56CmiuzYFEB18FM07utoXTIgnGNm
-         yk3g==
-X-Gm-Message-State: APjAAAUmf6DfDP9dRoVp1MwjGPDdvR3GXlj3gOMWcT/cxKoOuwhsq8+g
-	rqo+1ddiqDY32NXNylMIZPEkvw==
-X-Google-Smtp-Source: APXvYqz9DAx7FOwoVxfLxM5ugMI2ttJNNFfbLXEMuWWuV1gsmrzqAePPZhR4xMOzFLLjZRKVzy//hQ==
-X-Received: by 2002:a17:902:209:: with SMTP id 9mr22325332plc.1.1569887465675;
-        Mon, 30 Sep 2019 16:51:05 -0700 (PDT)
-Date: Mon, 30 Sep 2019 16:51:03 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Muni Sekhar <munisekharrms@gmail.com>
-Cc: kernel-hardening@lists.openwall.com
-Subject: Re: How to get the crash dump if system hangs?
-Message-ID: <201909301645.5FA44A4@keescook>
-References: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=SaFoYhmwuNCCe0dxD4a30Zl6Go0ZxpMOGqzzubMUHdw=;
+        b=KxnWN7NmbWQ/OUuLrqkufh4iAL8610WaErrBkeBAbTOqScTJuI+D8FGoQlCQuvNnHQ
+         MngNFoH1dfDVuFaN1WEuwmvAyLnTmiUOzzJ/opdKAC2iCk+pK2l7Dh0n/fP+JYPUlbPk
+         0AdXo/ECwknV+mIkCl5CQZ5q57qqMJKM+zgk1pHbi6ya+mDiuNGRGKFROkEbup2ecuap
+         5uLm9v5EO1kJ2Sp31DruGbDHu/itslTvTvL7ECgCrJkD9TYSIW5fVLLQgh27K4HUshoU
+         LlDyyaQr9VAlMndJa5HkDNUNilRaj00kHcNkb1HaL2Vk/AuzPV8lobYWWvfCBNoJM1OC
+         XgXg==
+X-Gm-Message-State: APjAAAVos3a49X9kOqD3+BvzTaE6nCbpRazu9farT9Pux5iz/73FxGFa
+	evUTnGscymX3ovhPyiG1Q25/aPYxXW/NCccUGj1e
+X-Google-Smtp-Source: APXvYqxzu/y3a+l/E1zfJ1GOYAu4oXQyAYURFEX7eRMkz3mjRmcinntM7JzqNurwlxoUk87hd8Bu9ZzmdAjySpJiO8k=
+X-Received: by 2002:a05:6512:202:: with SMTP id a2mr13379491lfo.175.1569907890668;
+ Mon, 30 Sep 2019 22:31:30 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
+References: <201909251348.A1542A52@keescook> <CAHC9VhRNmWw1__-haD1ZEekADTho3EJyXQMd6ETpOv4c8Qn9nw@mail.gmail.com>
+ <2065829.xbNJnTdZ4q@x2> <201909301128.5951C390@keescook>
+In-Reply-To: <201909301128.5951C390@keescook>
+From: Paul Moore <paul@paul-moore.com>
+Date: Tue, 1 Oct 2019 01:31:19 -0400
+Message-ID: <CAHC9VhR-3CkARf7mVOCW1vLDgygjspcw_JEcteBBrdpxpdBY7g@mail.gmail.com>
+Subject: Re: [PATCH] audit: Report suspicious O_CREAT usage
+To: Kees Cook <keescook@chromium.org>
+Cc: Steve Grubb <sgrubb@redhat.com>, linux-kernel@vger.kernel.org, 
+	=?UTF-8?Q?J=C3=A9r=C3=A9mie_Galarneau?= <jeremie.galarneau@efficios.com>, 
+	s.mesoraca16@gmail.com, viro@zeniv.linux.org.uk, dan.carpenter@oracle.com, 
+	akpm@linux-foundation.org, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, 
+	kernel-hardening@lists.openwall.com, linux-audit@redhat.com, 
+	Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-On Thu, Sep 26, 2019 at 01:47:00AM +0530, Muni Sekhar wrote:
-> I looked at the available tests with "cat
-> /sys/kernel/debug/provoke-crash/DIRECT", from this I’d like to know
-> which test causes system hang? I could not find any test case for
-> deadlock, is any reason for this?
+On Mon, Sep 30, 2019 at 2:29 PM Kees Cook <keescook@chromium.org> wrote:
+> On Mon, Sep 30, 2019 at 09:50:00AM -0400, Steve Grubb wrote:
+> > On Thursday, September 26, 2019 11:31:32 AM EDT Paul Moore wrote:
+> > > On Wed, Sep 25, 2019 at 5:02 PM Kees Cook <keescook@chromium.org> wro=
+te:
+> > > > This renames the very specific audit_log_link_denied() to
+> > > > audit_log_path_denied() and adds the AUDIT_* type as an argument. T=
+his
+> > > > allows for the creation of the new AUDIT_ANOM_CREAT that can be use=
+d to
+> > > > report the fifo/regular file creation restrictions that were introd=
+uced
+> > > > in commit 30aba6656f61 ("namei: allow restricted O_CREAT of FIFOs a=
+nd
+> > > > regular files"). Without this change, discovering that the restrict=
+ion
+> > > > is enabled can be very challenging:
+> > > > https://lore.kernel.org/lkml/CA+jJMxvkqjXHy3DnV5MVhFTL2RUhg0WQ-XVFW=
+3ngDQO
+> > > > dkFq0PA@mail.gmail.com
+> > > >
+> > > > Reported-by: J=C3=A9r=C3=A9mie Galarneau <jeremie.galarneau@efficio=
+s.com>
+> > > > Signed-off-by: Kees Cook <keescook@chromium.org>
+> > > > ---
+> > > > This is not a complete fix because reporting was broken in commit
+> > > > 15564ff0a16e ("audit: make ANOM_LINK obey audit_enabled and
+> > > > audit_dummy_context")
+> > > > which specifically goes against the intention of these records: the=
+y
+> > > > should _always_ be reported. If auditing isn't enabled, they should=
+ be
+> > > > ratelimited.
+> > > >
+> > > > Instead of using audit, should this just go back to using
+> > > > pr_ratelimited()?
+> > >
+> > > I'm going to ignore the rename and other aspects of this patch for th=
+e
+> > > moment so we can focus on the topic of if/when/how these records
+> > > should be emitted by the kernel.
+> > >
+> > > Unfortunately, people tend to get very upset if audit emits *any*
+> > > records when they haven't explicitly enabled audit, the significance
+> > > of the record doesn't seem to matter, which is why you see patches
+> > > like 15564ff0a16e ("audit: make ANOM_LINK obey audit_enabled and
+> > > audit_dummy_context").  We could consider converting some records to
+> > > printk()s, rate-limited or not, but we need to balance this with the
+> > > various security certifications which audit was created to satisfy.
+> > > In some cases a printk() isn't sufficient.
+> > >
+> > > Steve is probably the only one who really keeps track of the various
+> > > auditing requirements of the different security certifications; what
+> > > say you Steve on this issue with ANOM_CREAT records?
+> >
+> > Common Criteria and other security standards I track do not call out fo=
+r
+> > anomoly detection. So, there are no requirements on this. That said, we=
+ do
+> > have other anomaly detections because they give early warning that some=
+thing
+> > strange is happening. I think adding this event is a nice improvement a=
+s long
+> > as it obeys audit_enabled before emitting an event - for example, look =
+at the
+> > AUDIT_ANOM_ABEND event.
+>
+> Okay, so the patch is good as-is? (The "report things always" issue I
+> will deal with separately. For now I'd just like to gain this anomaly
+> detection corner case...)
+>
+> Paul, what do you see as next steps here?
 
-The various *LOCKUP tests will hang a CPU or task (though SPINLOCKUP
-needs to be called twice). You could keep calling HARDLOCKUP until
-you're out of CPUs, for example. :)
+I'll reply back on the original post so I can more easily comment on
+the details of patch.
 
-What kind of deadlock do you want to test?
-
-> I’m having a Linux system, I’m seeing it gets hung during certain
-> tests. When it hung, it does not even respond for SYSRQ button, only
-> way to recover is power-button-only.  Does no response for SYSRQ
-> button means kernel crashed?
-
-That's an impressive hang! :(
-
-> After reboot I looked at the kern.log and most of the times it has
-> “^@^@^@^ ...“ line just before reboot. Can someone clarify me what the
-> kernel log entry “^@^@^@^ ...“ means? I suspect kernel is crashed, but
-> it does give any crashdump in kern.log.
-
-That's a zero byte. I would suggest using something like pstore to
-capture this in RAM instead of hoping it makes it to disk.
-
-> Later I enabled the kernel crash dump(sudo apt install
-> linux-crashdump) and rerun the test but still nothing copied to the
-> disk(/var/crash/). I don’t have onboard serial port in my machine, so
-> I tried get the crash dump via netconsole, but this method also does
-> not able to catch the crash dump.
-> 
-> Can someone help me how to debug in this scenario?
-> 
-> And I'd like to know what other options available to get the crash
-> dump? Can someone please clarify me on this?
-> 
-> Also , does the crash dump fails if incase deadlock occurs?
-> 
-> Any help will be greatly appreciated.
-
-If you really need to hard-power your system to get it back, pstore may
-only work if you're really quick and likely enable software ECC.
-
--- 
-Kees Cook
+--=20
+paul moore
+www.paul-moore.com
