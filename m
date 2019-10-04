@@ -1,22 +1,23 @@
-Return-Path: <SRS0=NYVR=X4=lists.openwall.com=kernel-hardening-return-16988-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=hIgG=X5=lists.openwall.com=kernel-hardening-return-16989-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
+	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A5E1BC10F14
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Oct 2019 21:36:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 46C24C47404
+	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Oct 2019 13:34:34 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EC1682133F
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Oct 2019 21:36:29 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 94262222C0
+	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Oct 2019 13:34:33 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="mZW7Sgt5"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EC1682133F
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16988-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1177 invoked by uid 550); 3 Oct 2019 21:36:22 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="SsSQMBTT"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 94262222C0
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16989-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1860 invoked by uid 550); 4 Oct 2019 13:34:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,107 +25,119 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1142 invoked from network); 3 Oct 2019 21:36:21 -0000
+Received: (qmail 30666 invoked from network); 4 Oct 2019 13:26:14 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=kqOYKHKNUC13kHadGlANh1RJE237NSBnH9JSUC2Q9B8=;
-        b=mZW7Sgt56JQ03FlRP1y/Z+Sgr39HCXVbo9AusuZKgffE/oEi6rd00b2JhixZPXime0
-         nYr1H9JLQ/lmJUQdnz1LpAY4K86PhKOW0l40P6hV0JOmMBLcYPkS4jqB6tg/uv7MhNWx
-         46tiO14AAqVbHsLNrJQW+fmmQdyB4/f1TUcTE=
+        d=google.com; s=20161025;
+        h=date:message-id:mime-version:subject:from:to:cc;
+        bh=GVHCzrg5aWfdjBlvLj9MYI2lYCOnNMg5uvSXdM3+TzE=;
+        b=SsSQMBTTYizI5qI0BSu+IiCrsXqCqRd81yCDa8fzJLCceaGzy95YWXA+A9Eu43vK1X
+         KFwr7w2uflGE5E14QZs0iYRSxN+6BdqajQTs4joicH9ItFxIWML7+AirG2yJMe5Q747k
+         Ip6VqxqQGOuqBLFt+Ti9gGWrvYb6OoUuEtJ++/q/5NkFaAGNaqmvGxdcbV4p6UVE69Tg
+         0GnE0nmvDxIst3FAwpsHIjmbH2cw6Hwq0oEcG1+ZnZg/h+kvvy1TpeV+1O+tlQsbOB0n
+         310hvdgqkmq385JYCzwb6omFGEqvIRDtFG2MxNN4kvD8ukPQzT174pVv0HpOHhSyidrO
+         +bIA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=kqOYKHKNUC13kHadGlANh1RJE237NSBnH9JSUC2Q9B8=;
-        b=Ab8EAUTXaK/dmAVHM4gCKqQC6Sx579yHUV+NKxViCpiyOMRKiHXCA5vCu5XhkKhMv1
-         Gzbogwprkn5x4wwDOOpMrZQE9UicEu1rNhw3fali3ffbtAypx5fUMV6JrvRr0VAa/QMo
-         8AynMq/R222yKrvv0hVKsMj/XAa7BrYTUB1YximFVQXzMFEu9pU+gKjCczpyMw3UCItn
-         L4e23NqYhdyXyvoX4dA6PAibPMtCY4OwZ+ijtkR8I1OwUOB1pYonl9jv75HnRT1fuO5r
-         KH49nKhtP3jhh2Yy+7SMkkDAmsGeFig2aYVDOmzpcjWyef/FB9uCN56IAVWBm+UepnDi
-         8Wtg==
-X-Gm-Message-State: APjAAAW01k+7FZ+2HQ+8+i1fjTasa1S2Lp7b1B+72TOTQcNRm5ZwEhNm
-	hRooLgfkFfo9Qv1cCRnqrZv4AA==
-X-Google-Smtp-Source: APXvYqzbcD3PFGZrtDmhCMglRZt6aOa8c4NClWxRAUxX0QDenmZZ5ed5Khuzi31Xuami1Ss72VJ37g==
-X-Received: by 2002:a17:90a:c8a:: with SMTP id v10mr12592864pja.6.1570138569548;
-        Thu, 03 Oct 2019 14:36:09 -0700 (PDT)
-Date: Thu, 3 Oct 2019 14:36:07 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Muni Sekhar <munisekharrms@gmail.com>
+        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
+        bh=GVHCzrg5aWfdjBlvLj9MYI2lYCOnNMg5uvSXdM3+TzE=;
+        b=ZjgYgJ46YEvhcciJbED9wlFZz077hEvWUEF92Zn6D5Y0JDTDaIG9mIcUT23JdombXR
+         A6A/UyMwmYcWBxLISQ9G1iqN190WZhJGHUC2WuvAGGKi9xji3Nn4uwxBrsYF5UZBjFvc
+         M9sAMe2Isp1YmUBAKJxx2Eo82Q44h1C7xSKoU8iBlehz+tViGINQZcMXDs3+KZx6+Axv
+         tCMZ42dc0bG1bnoFkshQ3DDONwzyUFwT5lNpMpa8x7rxfpdQQc0MP88EErotnorTqt32
+         yCROXr7gp1yLACMDEhl7xxfTDZXDOmqlgkipzgSvr/cPdo4LgKSWqlp43aDC3+P/sW2m
+         kScw==
+X-Gm-Message-State: APjAAAVw7owRBxyWIKOIEZKTQCCfRavT21zyR4aC4HBMTTf7QyBmnqzB
+	HXvh8LpQkU5Xovi/lNrb+4JN/OFF8yo=
+X-Google-Smtp-Source: APXvYqzH2Bqrc6KpwbpAS0ASdf5kHMXJcm41OrYbCmvSOjgQMNFVuYuFC+kQDrRyPbcaOawdhCgwTzByuTU=
+X-Received: by 2002:a05:6122:9e:: with SMTP id r30mr7847880vka.10.1570195561944;
+ Fri, 04 Oct 2019 06:26:01 -0700 (PDT)
+Date: Fri,  4 Oct 2019 15:25:54 +0200
+Message-Id: <20191004132555.202973-1-glider@google.com>
+Mime-Version: 1.0
+X-Mailer: git-send-email 2.23.0.581.g78d2f28ef7-goog
+Subject: [PATCH v1 1/2] mm: slub: init_on_free=1 should wipe freelist ptr for
+ bulk allocations
+From: Alexander Potapenko <glider@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>
+Cc: Alexander Potapenko <glider@google.com>, Thibaut Sautereau <thibaut@sautereau.fr>, 
+	Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, linux-mm@kvack.org, 
+	kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset="UTF-8"
+
+slab_alloc_node() already zeroed out the freelist pointer if
+init_on_free was on.
+Thibaut Sautereau noticed that the same needs to be done for
+kmem_cache_alloc_bulk(), which performs the allocations separately.
+
+kmem_cache_alloc_bulk() is currently used in two places in the kernel,
+so this change is unlikely to have a major performance impact.
+
+SLAB doesn't require a similar change, as auto-initialization makes the
+allocator store the freelist pointers off-slab.
+
+Reported-by: Thibaut Sautereau <thibaut@sautereau.fr>
+Reported-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Alexander Potapenko <glider@google.com>
+Fixes: 6471384af2a6 ("mm: security: introduce init_on_alloc=1 and init_on_free=1 boot options")
+To: Andrew Morton <akpm@linux-foundation.org>
+To: Christoph Lameter <cl@linux.com>
+Cc: Laura Abbott <labbott@redhat.com>
+Cc: linux-mm@kvack.org
 Cc: kernel-hardening@lists.openwall.com
-Subject: Re: How to get the crash dump if system hangs?
-Message-ID: <201910031417.2AEEE7B@keescook>
-References: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
- <201909301645.5FA44A4@keescook>
- <CAHhAz+jyZmLBsFBxLG_XmZRBrprrxa49T+07NhcrsH4Yi6jp6A@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAHhAz+jyZmLBsFBxLG_XmZRBrprrxa49T+07NhcrsH4Yi6jp6A@mail.gmail.com>
+---
+ mm/slub.c | 21 +++++++++++++++------
+ 1 file changed, 15 insertions(+), 6 deletions(-)
 
-On Thu, Oct 03, 2019 at 10:18:48PM +0530, Muni Sekhar wrote:
-> Thanks a lot for letting me know about pstore, will try this option.
-> It will be helpful if you can share some pointers on 'how to enable
-> software ECC'?
-
-When I boot with pstore, I use a bunch of command line arguments to test
-all its feature:
-
-ramoops.mem_size=1048576
-ramoops.ecc=1
-ramoops.mem_address=0x440000000
-ramoops.console_size=16384
-ramoops.ftrace_size=16384
-ramoops.pmsg_size=16384
-ramoops.record_size=32768
-
-but I'm using pmem driver to reserve the 1MB of memory at 0x440000000.
-
-To do a RAM reservation on a regular system, you'll need to do something
-like boot with:
-
-memmap=1M!1023M
-
-which says, reserve 1MB of memory at the 1023M offset. So this depends
-on how much physical memory you have, etc, but you'll be able to see the
-reservation after booting in /proc/iomem. e.g. for me, before:
-
-...
-00100000-bffd9fff : System RAM
-...
-
-with memmap:
-
-...
-00100000-3fefffff : System RAM
-3ff00000-3fffffff : Persistent Memory (legacy)
-40000000-bffd9fff : System RAM
-...
-
-So in that example, the address you'd want is 0x3ff00000
-
-memmap=1M!1023M
-ramoops.mem_size=1048576
-ramoops.ecc=1
-ramoops.mem_address=0x3ff00000
-ramoops.console_size=16384
-ramoops.ftrace_size=16384
-ramoops.pmsg_size=16384
-ramoops.record_size=32768
-
-In dmesg you should see:
-
-[    0.868818] pstore: Registered ramoops as persistent store backend
-[    0.869713] ramoops: using 0x100000@0x3ff00000, ecc: 16
-
-And if that address lines up with the "Persistent Memory (legacy)" line
-in /proc/iomem you should be good to go.
-
-Just mount /sys/fs/pstore and see if the console dump updates between
-warm boots, then try some cold boots, see if the ECC works, etc.
-
-Good luck!
-
+diff --git a/mm/slub.c b/mm/slub.c
+index 8834563cdb4b..fe90bed40eb3 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -2669,6 +2669,16 @@ static void *__slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
+ 	return p;
+ }
+ 
++/*
++ * If the object has been wiped upon free, make sure it's fully initialized by
++ * zeroing out freelist pointer.
++ */
++static __always_inline maybe_wipe_obj_freeptr(struct kmem_cache *s, void *obj)
++{
++	if (unlikely(slab_want_init_on_free(s)) && obj)
++		memset((void *)((char *)obj + s->offset), 0, sizeof(void *));
++}
++
+ /*
+  * Inlined fastpath so that allocation functions (kmalloc, kmem_cache_alloc)
+  * have the fastpath folded into their functions. So no function call
+@@ -2757,12 +2767,8 @@ static __always_inline void *slab_alloc_node(struct kmem_cache *s,
+ 		prefetch_freepointer(s, next_object);
+ 		stat(s, ALLOC_FASTPATH);
+ 	}
+-	/*
+-	 * If the object has been wiped upon free, make sure it's fully
+-	 * initialized by zeroing out freelist pointer.
+-	 */
+-	if (unlikely(slab_want_init_on_free(s)) && object)
+-		memset(object + s->offset, 0, sizeof(void *));
++
++	maybe_wipe_obj_freeptr(s, object);
+ 
+ 	if (unlikely(slab_want_init_on_alloc(gfpflags, s)) && object)
+ 		memset(object, 0, s->object_size);
+@@ -3176,10 +3182,13 @@ int kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t size,
+ 				goto error;
+ 
+ 			c = this_cpu_ptr(s->cpu_slab);
++			maybe_wipe_obj_freeptr(s, p[i]);
++
+ 			continue; /* goto for-loop */
+ 		}
+ 		c->freelist = get_freepointer(s, object);
+ 		p[i] = object;
++		maybe_wipe_obj_freeptr(s, p[i]);
+ 	}
+ 	c->tid = next_tid(c->tid);
+ 	local_irq_enable();
 -- 
-Kees Cook
+2.23.0.581.g78d2f28ef7-goog
+
