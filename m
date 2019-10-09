@@ -1,23 +1,20 @@
-Return-Path: <SRS0=N6xK=YA=lists.openwall.com=kernel-hardening-return-16995-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=O+TW=YC=lists.openwall.com=kernel-hardening-return-16996-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,GAPPY_SUBJECT,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0056DC47404
-	for <kernel-hardening@archiver.kernel.org>; Mon,  7 Oct 2019 12:41:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 602A4C47404
+	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Oct 2019 06:11:03 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4308521655
-	for <kernel-hardening@archiver.kernel.org>; Mon,  7 Oct 2019 12:40:59 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="dDiR8orV"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4308521655
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16995-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26076 invoked by uid 550); 7 Oct 2019 12:40:52 -0000
+	by mail.kernel.org (Postfix) with SMTP id 827C720679
+	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Oct 2019 06:11:02 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 827C720679
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16996-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3418 invoked by uid 550); 9 Oct 2019 06:10:55 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,83 +22,174 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26044 invoked from network); 7 Oct 2019 12:40:51 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=4omqkgEsOa3d7dDrSHEj0fGIcb4u6Z71IZA7jxrxpXA=;
-        b=dDiR8orVa3DeLfGPRt48FE0G85MRTPusWnInVoCHTm00UIfVXwiV/+Te1Locr2IaNc
-         MzWbl8tv0imbIGqQtxu0ALEcZC1N9Or2EThj5AmzPSVpmoDMVs1i8SsmJ9wVcwlzZkYN
-         qBxVgOHEYzZGQe/JFirWQ3b6bW9Kri0w3T2G2dSxfyxekUK0in8Zjncbv0YSi1etbce0
-         JUNEKfAP/FqN5fdqbNVuyaE9cVFfymuJwKGB1Puf/w4zhnazPVVK+ecB9rVjdHkGy5Kq
-         ofuDjgblAoF8uO+Q0NR67UqHDMKQh/+YhcweREO6rBJatoR9tulV3qfPcv/ObTO73w60
-         Slmw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=4omqkgEsOa3d7dDrSHEj0fGIcb4u6Z71IZA7jxrxpXA=;
-        b=LlnDLsFK9y0t6WArx8PFgaad4rd+V3UktPdyO9m+Jtxh1DlyV+j3opwlOmS8q0SjGo
-         ikAszPW6gyrhx+JEGs60a3askLezqY2E4vWXnRPHHH1NBI6vqyVBy6hyZewDQPV/mRe1
-         m8L3ooviC5jD2m2g46CP4j5JprLoAiJac1XZWWsaxxiKtdJhQYBpEZ3Izj+HPIbJYHg8
-         0QsZaXW5ZN5NjGfpsInz5XfzaoqaQQYyqinUHp9a0MpLlVAagZCrCYKFEXyEznRP8EWT
-         ACs62qMAqQkxmmY2VpGCbyaQNaLfVbFOCMSce4ZSWZR+sr5T4UkRQcq4ArLSrDPqrhIV
-         or2Q==
-X-Gm-Message-State: APjAAAUHa1gA1PErscp4iOvBYXcE6GA+3RUD1+CKywczwvpaRSk57ooL
-	4J6N7oB15zkJi1NBXeJ7xeG1Yl0v527vUChoHiPyUg==
-X-Google-Smtp-Source: APXvYqwhR+z+UIZ4jgopakgOCjtQfQIV/2FB/mG9OzRVEd9xbqmcvQS251+v4BMhDWqCxWTMsQGJ/FkT4gtdl54+U4k=
-X-Received: by 2002:aca:ed52:: with SMTP id l79mr17312662oih.47.1570452039482;
- Mon, 07 Oct 2019 05:40:39 -0700 (PDT)
+Received: (qmail 3386 invoked from network); 9 Oct 2019 06:10:54 -0000
+Subject: Re: [PATCH v7 00/12] implement KASLR for powerpc/fsl_booke/32
+From: Jason Yan <yanaijie@huawei.com>
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>,
+	<oss@buserror.net>
+CC: <linux-kernel@vger.kernel.org>, <wangkefeng.wang@huawei.com>,
+	<yebin10@huawei.com>, <thunder.leizhen@huawei.com>,
+	<jingxiangfeng@huawei.com>, <zhaohongjiang@huawei.com>
+References: <20190920094546.44948-1-yanaijie@huawei.com>
+ <9c2dd2a8-83f2-983c-383e-956e19a7803a@huawei.com>
+Message-ID: <c4769b34-95f6-81b9-4856-50459630aa0d@huawei.com>
+Date: Wed, 9 Oct 2019 14:10:27 +0800
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
+ Thunderbird/60.5.0
 MIME-Version: 1.0
-References: <1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com>
- <1562410493-8661-5-git-send-email-s.mesoraca16@gmail.com> <CAG48ez35oJhey5WNzMQR14ko6RPJUJp+nCuAHVUJqX7EPPPokA@mail.gmail.com>
- <CAJHCu1+35GhGJY8jDMPEU8meYhJTVgvzY5sJgVCuLrxCoGgHEg@mail.gmail.com> <CAJHCu1JobL7aj51=4gvaoXPfWH8aNdYXgcBDq90wV4_jN2iUfw@mail.gmail.com>
-In-Reply-To: <CAJHCu1JobL7aj51=4gvaoXPfWH8aNdYXgcBDq90wV4_jN2iUfw@mail.gmail.com>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 7 Oct 2019 14:40:13 +0200
-Message-ID: <CAG48ez3v4dpCGBUc16FQDbGEAXtnDDvTq2GQpVax0rLgHEM3_g@mail.gmail.com>
-Subject: Re: [PATCH v5 04/12] S.A.R.A.: generic DFA for string matching
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: kernel list <linux-kernel@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, 
-	linux-security-module <linux-security-module@vger.kernel.org>, 
-	Alexander Viro <viro@zeniv.linux.org.uk>, Brad Spengler <spender@grsecurity.net>, 
-	Casey Schaufler <casey@schaufler-ca.com>, Christoph Hellwig <hch@infradead.org>, 
-	Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, 
-	"Serge E. Hallyn" <serge@hallyn.com>, Thomas Gleixner <tglx@linutronix.de>, James Morris <jmorris@namei.org>, 
-	John Johansen <john.johansen@canonical.com>
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <9c2dd2a8-83f2-983c-383e-956e19a7803a@huawei.com>
+Content-Type: text/plain; charset="utf-8"; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
+X-Originating-IP: [10.177.96.203]
+X-CFilter-Loop: Reflected
 
-On Sun, Oct 6, 2019 at 6:49 PM Salvatore Mesoraca
-<s.mesoraca16@gmail.com> wrote:
-> Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
-> > Jann Horn <jannh@google.com> wrote:
-> > > On Sat, Jul 6, 2019 at 12:55 PM Salvatore Mesoraca
-> > > <s.mesoraca16@gmail.com> wrote:
-> > > > Creation of a generic Discrete Finite Automata implementation
-> > > > for string matching. The transition tables have to be produced
-> > > > in user-space.
-> > > > This allows us to possibly support advanced string matching
-> > > > patterns like regular expressions, but they need to be supported
-> > > > by user-space tools.
-> > >
-> > > AppArmor already has a DFA implementation that takes a DFA machine
-> > > from userspace and runs it against file paths; see e.g.
-> > > aa_dfa_match(). Did you look into whether you could move their DFA to
-> > > some place like lib/ and reuse it instead of adding yet another
-> > > generic rule interface to the kernel?
-> >
-> > Yes, using AppArmor DFA cloud be a possibility.
-> > Though, I didn't know how AppArmor's maintainers feel about this.
-> > I thought that was easier to just implement my own.
-> > Anyway I understand that re-using that code would be the optimal solution.
-> > I'm adding in CC AppArmor's maintainers, let's see what they think about this.
->
-> I don't want this to prevent SARA from being up-streamed.
-> Do you think that having another DFA here could be acceptable anyway?
-> Would it be better if I just drop the DFA an go back to simple string
-> matching to speed up things?
+Hi Scott,
 
-While I think that it would be nicer not to have yet another
-implementation of the same thing, I don't feel strongly about it.
+Would you please take sometime to test this?
+
+Thank you so much.
+
+On 2019/9/24 13:52, Jason Yan wrote:
+> Hi Scott,
+> 
+> Can you test v7 to see if it works to load a kernel at a non-zero address?
+> 
+> Thanks,
+> 
+> On 2019/9/20 17:45, Jason Yan wrote:
+>> This series implements KASLR for powerpc/fsl_booke/32, as a security
+>> feature that deters exploit attempts relying on knowledge of the location
+>> of kernel internals.
+>>
+>> Since CONFIG_RELOCATABLE has already supported, what we need to do is
+>> map or copy kernel to a proper place and relocate. Freescale Book-E
+>> parts expect lowmem to be mapped by fixed TLB entries(TLB1). The TLB1
+>> entries are not suitable to map the kernel directly in a randomized
+>> region, so we chose to copy the kernel to a proper place and restart to
+>> relocate.
+>>
+>> Entropy is derived from the banner and timer base, which will change 
+>> every
+>> build and boot. This not so much safe so additionally the bootloader may
+>> pass entropy via the /chosen/kaslr-seed node in device tree.
+>>
+>> We will use the first 512M of the low memory to randomize the kernel
+>> image. The memory will be split in 64M zones. We will use the lower 8
+>> bit of the entropy to decide the index of the 64M zone. Then we chose a
+>> 16K aligned offset inside the 64M zone to put the kernel in.
+>>
+>>      KERNELBASE
+>>
+>>          |-->   64M   <--|
+>>          |               |
+>>          +---------------+    +----------------+---------------+
+>>          |               |....|    |kernel|    |               |
+>>          +---------------+    +----------------+---------------+
+>>          |                         |
+>>          |----->   offset    <-----|
+>>
+>>                                kernstart_virt_addr
+>>
+>> We also check if we will overlap with some areas like the dtb area, the
+>> initrd area or the crashkernel area. If we cannot find a proper area,
+>> kaslr will be disabled and boot from the original kernel.
+>>
+>> Changes since v6:
+>>   - Rename create_tlb_entry() to create_kaslr_tlb_entry()
+>>   - Remove MAS2_VAL since there is no more users.
+>>   - Move kaslr_booke.c to arch/powerpc/mm/nohash.
+>>   - Call flush_icache_range() after copying the kernel.
+>>   - Warning if no kaslr-seed provided by the bootloader
+>>   - Use the right physical address when checking if the new position 
+>> will overlap with other regions.
+>>   - Do not clear bss for the second pass because some global variables 
+>> will not be initialized again
+>>   - Use tabs instead of spaces between the mnemonic and the 
+>> arguments(in fsl_booke_entry_mapping.S).
+>>
+>> Changes since v5:
+>>   - Rename M_IF_NEEDED to MAS2_M_IF_NEEDED
+>>   - Define some global variable as __ro_after_init
+>>   - Replace kimage_vaddr with kernstart_virt_addr
+>>   - Depend on RELOCATABLE, not select it
+>>   - Modify the comment block below the SPDX tag
+>>   - Remove some useless headers in kaslr_booke.c and move is_second_reloc
+>>     declarationto mmu_decl.h
+>>   - Remove DBG() and use pr_debug() and rewrite comment above 
+>> get_boot_seed().
+>>   - Add a patch to document the KASLR implementation.
+>>   - Split a patch from patch #10 which exports kaslr offset in 
+>> VMCOREINFO ELF notes.
+>>   - Remove extra logic around finding nokaslr string in cmdline.
+>>   - Make regions static global and __initdata
+>>
+>> Changes since v4:
+>>   - Add Reviewed-by tag from Christophe
+>>   - Remove an unnecessary cast
+>>   - Remove unnecessary parenthesis
+>>   - Fix checkpatch warning
+>>
+>> Changes since v3:
+>>   - Add Reviewed-by and Tested-by tag from Diana
+>>   - Change the comment in fsl_booke_entry_mapping.S to be consistent
+>>     with the new code.
+>>
+>> Changes since v2:
+>>   - Remove unnecessary #ifdef
+>>   - Use SZ_64M instead of0x4000000
+>>   - Call early_init_dt_scan_chosen() to init boot_command_line
+>>   - Rename kaslr_second_init() to kaslr_late_init()
+>>
+>> Changes since v1:
+>>   - Remove some useless 'extern' keyword.
+>>   - Replace EXPORT_SYMBOL with EXPORT_SYMBOL_GPL
+>>   - Improve some assembly code
+>>   - Use memzero_explicit instead of memset
+>>   - Use boot_command_line and remove early_command_line
+>>   - Do not print kaslr offset if kaslr is disabled
+>>
+>> Jason Yan (12):
+>>    powerpc: unify definition of M_IF_NEEDED
+>>    powerpc: move memstart_addr and kernstart_addr to init-common.c
+>>    powerpc: introduce kernstart_virt_addr to store the kernel base
+>>    powerpc/fsl_booke/32: introduce create_kaslr_tlb_entry() helper
+>>    powerpc/fsl_booke/32: introduce reloc_kernel_entry() helper
+>>    powerpc/fsl_booke/32: implement KASLR infrastructure
+>>    powerpc/fsl_booke/32: randomize the kernel image offset
+>>    powerpc/fsl_booke/kaslr: clear the original kernel if randomized
+>>    powerpc/fsl_booke/kaslr: support nokaslr cmdline parameter
+>>    powerpc/fsl_booke/kaslr: dump out kernel offset information on panic
+>>    powerpc/fsl_booke/kaslr: export offset in VMCOREINFO ELF notes
+>>    powerpc/fsl_booke/32: Document KASLR implementation
+>>
+>>   Documentation/powerpc/kaslr-booke32.rst       |  42 ++
+>>   arch/powerpc/Kconfig                          |  11 +
+>>   arch/powerpc/include/asm/nohash/mmu-book3e.h  |  11 +-
+>>   arch/powerpc/include/asm/page.h               |   7 +
+>>   arch/powerpc/kernel/early_32.c                |   5 +-
+>>   arch/powerpc/kernel/exceptions-64e.S          |  12 +-
+>>   arch/powerpc/kernel/fsl_booke_entry_mapping.S |  25 +-
+>>   arch/powerpc/kernel/head_fsl_booke.S          |  61 ++-
+>>   arch/powerpc/kernel/machine_kexec.c           |   1 +
+>>   arch/powerpc/kernel/misc_64.S                 |   7 +-
+>>   arch/powerpc/kernel/setup-common.c            |  20 +
+>>   arch/powerpc/mm/init-common.c                 |   7 +
+>>   arch/powerpc/mm/init_32.c                     |   5 -
+>>   arch/powerpc/mm/init_64.c                     |   5 -
+>>   arch/powerpc/mm/mmu_decl.h                    |  11 +
+>>   arch/powerpc/mm/nohash/Makefile               |   1 +
+>>   arch/powerpc/mm/nohash/fsl_booke.c            |   8 +-
+>>   arch/powerpc/mm/nohash/kaslr_booke.c          | 401 ++++++++++++++++++
+>>   18 files changed, 587 insertions(+), 53 deletions(-)
+>>   create mode 100644 Documentation/powerpc/kaslr-booke32.rst
+>>   create mode 100644 arch/powerpc/mm/nohash/kaslr_booke.c
+>>
+> 
+> 
+> .
+> 
+
