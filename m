@@ -1,20 +1,24 @@
-Return-Path: <SRS0=4og2=YC=lists.openwall.com=kernel-hardening-return-16999-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=JPrR=YD=lists.openwall.com=kernel-hardening-return-17000-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_2 autolearn=no
+X-Spam-Status: No, score=-9.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BC264ECE58C
-	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Oct 2019 18:53:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 21F9DC4360C
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Oct 2019 10:32:38 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1845020679
-	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Oct 2019 18:53:43 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1845020679
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=buserror.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-16999-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12184 invoked by uid 550); 9 Oct 2019 18:53:37 -0000
+	by mail.kernel.org (Postfix) with SMTP id 696FF2190F
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Oct 2019 10:32:37 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="HMxQ4i0I"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 696FF2190F
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17000-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5798 invoked by uid 550); 10 Oct 2019 10:32:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,86 +26,97 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12152 invoked from network); 9 Oct 2019 18:53:36 -0000
-Message-ID: <34ef1980887c8a6d635c20bdaf748bb0548e51b5.camel@buserror.net>
-From: Scott Wood <oss@buserror.net>
-To: Jason Yan <yanaijie@huawei.com>, mpe@ellerman.id.au, 
- linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com,
- christophe.leroy@c-s.fr,  benh@kernel.crashing.org, paulus@samba.org,
- npiggin@gmail.com,  keescook@chromium.org,
- kernel-hardening@lists.openwall.com
-Cc: wangkefeng.wang@huawei.com, linux-kernel@vger.kernel.org, 
- jingxiangfeng@huawei.com, zhaohongjiang@huawei.com,
- thunder.leizhen@huawei.com,  yebin10@huawei.com
-Date: Wed, 09 Oct 2019 13:46:38 -0500
-In-Reply-To: <90bb659a-bde4-3b8e-8f01-bf22d7534f44@huawei.com>
-References: <20190920094546.44948-1-yanaijie@huawei.com>
-	 <9c2dd2a8-83f2-983c-383e-956e19a7803a@huawei.com>
-	 <c4769b34-95f6-81b9-4856-50459630aa0d@huawei.com>
-	 <38141b946f3376ce471e46eaf065e357ac540354.camel@buserror.net>
-	 <90bb659a-bde4-3b8e-8f01-bf22d7534f44@huawei.com>
-Organization: Red Hat
-Content-Type: text/plain; charset="UTF-8"
-X-Mailer: Evolution 3.28.5-0ubuntu0.18.04.1 
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-X-SA-Exim-Connect-IP: 2601:449:8480:af0:12bf:48ff:fe84:c9a0
-X-SA-Exim-Rcpt-To: yanaijie@huawei.com, mpe@ellerman.id.au, linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com, christophe.leroy@c-s.fr, benh@kernel.crashing.org, paulus@samba.org, npiggin@gmail.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, wangkefeng.wang@huawei.com, linux-kernel@vger.kernel.org, jingxiangfeng@huawei.com, zhaohongjiang@huawei.com, thunder.leizhen@huawei.com, yebin10@huawei.com
-X-SA-Exim-Mail-From: oss@buserror.net
-Subject: Re: [PATCH v7 00/12] implement KASLR for powerpc/fsl_booke/32
-X-SA-Exim-Version: 4.2.1 (built Tue, 02 Aug 2016 21:08:31 +0000)
-X-SA-Exim-Scanned: Yes (on baldur.buserror.net)
+Received: (qmail 5766 invoked from network); 10 Oct 2019 10:32:29 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=RSjz+SbNpmgCV+3FzbFoV2yt94hm0wG2AzV6rp22O6g=;
+        b=HMxQ4i0Im6LYKIthqzBBSfaCgngtd704sC6sFGRxR3exF0/CgK20vro0YnSgI73vzm
+         jjUzTQcTte0R7WLQ+Bsc3CKoO8To576CWjQKuNbEiO5FN0ezV2OTLVFbcs8xd6hm6h0+
+         Dk2JwmhdOxq9mh7OjuYL3g/L5NhnLzbiO4s6fwU5C1+Sq5IEtlcKCHUY45LzTLXdyuHJ
+         L7ouUE8eSLwxXx5fq74AAHdB/Sd0hKjzRM1Cey0ZSOfQRT1tKHrub32GSWmzRPn1fK+T
+         RHYVOjWhv6D9QAMRN5/K/0/x3NKH/2lkzapHzJSVisDPnjmMRaCeUTyyloY77mrGZ0Wa
+         hU1w==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=RSjz+SbNpmgCV+3FzbFoV2yt94hm0wG2AzV6rp22O6g=;
+        b=cf3O8dyiqDhhDkxPU0mppvYFXVnMpWAmPJJ0Yc3nq7WO2Cu/vleOUaZvTtsl43Tdno
+         6zGIkA3D204Xnt/CCM5j7K4jQl04sRrMkfLMeOg7SeDbvzLiAhzXkIYQmOnaduVSPZ5Z
+         rMxTOWShjxUZzEOqnMAjc5zowv0Jkp4NN8UlQLaiJq6WfDrpUF7wk5PuXZDORkz7BhCe
+         vzIXEBFr5NI7/CiXmgdOUCSSFyEac2NsPP2riIA5m5oqVaJE0hZUUg3MEr+KUmdpPDw/
+         4VLbeH0LCoKrbqIWoUdxD1/FvgeYkgd2mnJkqESFZ60a3perWc/qc9sxyl0rvWgMikQy
+         nPsA==
+X-Gm-Message-State: APjAAAUi32sqiUMFZcFnlc34qA3s4+aoGkU4xyI8cv0Ubbrrky+z76+G
+	r1f/qUzDuHp9EMCFMus0pGY=
+X-Google-Smtp-Source: APXvYqy3V9I1kVy5NtClOiZV3gl2KQC9Uu45Nw4MfeY2ZcGVohcZRtX5s99wQJtTQrrMmva1qdfvQQ==
+X-Received: by 2002:a63:e750:: with SMTP id j16mr10628926pgk.30.1570703536762;
+        Thu, 10 Oct 2019 03:32:16 -0700 (PDT)
+From: Shyam Saini <mayhs11saini@gmail.com>
+To: linux-mm@kvack.org
+Cc: kernel-hardening@lists.openwall.com,
+	Shyam Saini <mayhs11saini@gmail.com>,
+	Matthew Wilcox <willy@infradead.org>,
+	Christopher Lameter <cl@linux.com>,
+	Kees Cook <keescook@chromium.org>
+Subject: [PATCH] slab: Redefine ZERO_SIZE_PTR to include ERR_PTR range
+Date: Thu, 10 Oct 2019 16:01:51 +0530
+Message-Id: <20191010103151.7708-1-mayhs11saini@gmail.com>
+X-Mailer: git-send-email 2.20.1
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
 
-On Wed, 2019-10-09 at 16:41 +0800, Jason Yan wrote:
-> Hi Scott,
-> 
-> On 2019/10/9 15:13, Scott Wood wrote:
-> > On Wed, 2019-10-09 at 14:10 +0800, Jason Yan wrote:
-> > > Hi Scott,
-> > > 
-> > > Would you please take sometime to test this?
-> > > 
-> > > Thank you so much.
-> > > 
-> > > On 2019/9/24 13:52, Jason Yan wrote:
-> > > > Hi Scott,
-> > > > 
-> > > > Can you test v7 to see if it works to load a kernel at a non-zero
-> > > > address?
-> > > > 
-> > > > Thanks,
-> > 
-> > Sorry for the delay.  Here's the output:
-> > 
-> 
-> Thanks for the test.
-> 
-> > ## Booting kernel from Legacy Image at 10000000 ...
-> >     Image Name:   Linux-5.4.0-rc2-00050-g8ac2cf5b4
-> >     Image Type:   PowerPC Linux Kernel Image (gzip compressed)
-> >     Data Size:    7521134 Bytes = 7.2 MiB
-> >     Load Address: 04000000
-> >     Entry Point:  04000000
-> >     Verifying Checksum ... OK
-> > ## Flattened Device Tree blob at 1fc00000
-> >     Booting using the fdt blob at 0x1fc00000
-> >     Uncompressing Kernel Image ... OK
-> >     Loading Device Tree to 07fe0000, end 07fff65c ... OK
-> > KASLR: No safe seed for randomizing the kernel base.
-> > OF: reserved mem: initialized node qman-fqd, compatible id fsl,qman-fqd
-> > OF: reserved mem: initialized node qman-pfdr, compatible id fsl,qman-pfdr
-> > OF: reserved mem: initialized node bman-fbpr, compatible id fsl,bman-fbpr
-> > Memory CAM mapping: 64/64/64 Mb, residual: 12032Mb
-> 
-> When boot from 04000000, the max CAM value is 64M. And
-> you have a board with 12G memory, CONFIG_LOWMEM_CAM_NUM=3 means only
-> 192M memory is mapped and when kernel is randomized at the middle of 
-> this 192M memory, we will not have enough continuous memory for node map.
-> 
-> Can you set CONFIG_LOWMEM_CAM_NUM=8 and see if it works?
+Currently kfree does not accept ERR_PTR range so redefine ZERO_SIZE_PTR
+to include this and also change ZERO_OR_NULL_PTR macro to check this new
+range. With this change kfree will skip and behave as no-ops when ERR_PTR
+is passed.
 
-OK, that worked.
+This will help error related to ERR_PTR stand out better.
 
--Scott
+After this, we don't need to reset any ERR_PTR variable to NULL before
+being passed to any kfree or related wrappers calls, as everything would
+be handled by ZERO_SIZE_PTR itself.
 
+This patch is verbatim from Brad Spengler/PaX Team's code in the last
+public patch of grsecurity/PaX based on my understanding of the code.
+Changes or omissions from the original code are mine and don't reflect the
+original grsecurity/PaX code.
+
+Cc: Matthew Wilcox <willy@infradead.org>
+Cc: Christopher Lameter <cl@linux.com>
+Cc: Kees Cook <keescook@chromium.org>
+Signed-off-by: Shyam Saini <mayhs11saini@gmail.com>
+---
+ include/linux/slab.h | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/include/linux/slab.h b/include/linux/slab.h
+index 877a95c6a2d2..8ffdabd218f8 100644
+--- a/include/linux/slab.h
++++ b/include/linux/slab.h
+@@ -127,11 +127,16 @@
+  *
+  * ZERO_SIZE_PTR can be passed to kfree though in the same way that NULL can.
+  * Both make kfree a no-op.
++ * Note: ZERO_SIZE_PTR also cover ERR_PTR Range.
+  */
+-#define ZERO_SIZE_PTR ((void *)16)
+-
+-#define ZERO_OR_NULL_PTR(x) ((unsigned long)(x) <= \
+-				(unsigned long)ZERO_SIZE_PTR)
++#define ZERO_SIZE_PTR				\
++({						\
++	BUILD_BUG_ON(!(MAX_ERRNO & ~PAGE_MASK));\
++	(void *)(-MAX_ERRNO-1L);		\
++})
++
++#define ZERO_OR_NULL_PTR(x) ((unsigned long)(x) - 1 >= \
++		(unsigned long)ZERO_SIZE_PTR - 1)
+ 
+ #include <linux/kasan.h>
+ 
+-- 
+2.20.1
 
