@@ -1,22 +1,23 @@
-Return-Path: <SRS0=nGaG=YD=lists.openwall.com=kernel-hardening-return-17009-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=LUY9=YE=lists.openwall.com=kernel-hardening-return-17010-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1DE7FC4360C
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Oct 2019 22:34:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BB863ECE58C
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Oct 2019 14:04:12 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 64DC721835
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Oct 2019 22:34:50 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 14C4B214E0
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Oct 2019 14:04:11 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="VvF+VL6z"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 64DC721835
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17009-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30533 invoked by uid 550); 10 Oct 2019 22:34:44 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ZMU//ZSO"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 14C4B214E0
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17010-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32131 invoked by uid 550); 11 Oct 2019 14:04:03 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,84 +25,113 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30501 invoked from network); 10 Oct 2019 22:34:44 -0000
+Received: (qmail 32094 invoked from network); 11 Oct 2019 14:04:03 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=gxB184ffpeOi6SR8F9J3qHRwveMXWowqSzNDOa6l0L8=;
-        b=VvF+VL6zVmRte4cxRYP0Ekxoaecs0yWe23v1R3BuS5nq4wE+mYaVzj10XmXhgtkQPL
-         xto84UCyFHPSzTLeTCaAxXXBakGf11pBhYbrI7njJN9mlr88vxxu/7iIs+lCfTAPcrJS
-         crfVaXbHBmEkGniuduR9XF5DdfpzYWlWaWAQs=
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=qLKPKRGYsWe2LV9feXXSxEVMb4o9FMaaiM9B0N1Xmkg=;
+        b=ZMU//ZSO/ORdlfd+RmY9p6kVfciAI9jtv2PKCNwsuCYK/SXTxr3/qm7xCjI5oXl9RS
+         Gv+TBdGCNnY/LWloGh9h6txsenW3VTUMI5QrYnAS1dhR+sC4Sg+ObOz9pY78fr8ZQkIP
+         AX4jEiZ1++VJNYTdZrYy045YGmSn2uiowR0VkLVhwDDJVplCsQeN4qORGZpVmXAJwh5t
+         udhKZMcwYbZkSjGIAAsPggg3ZJzB7cv/SiA7AlNR2vepPgu5ctumDeiXE7PmYW1TYgjb
+         YxkXjdsxbtSVRLqEq8GWn2f1MlZbPtK97pd8PJMafNcWvAT22O9eY2rp/Qw/h2Tzu0pK
+         6KEA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=gxB184ffpeOi6SR8F9J3qHRwveMXWowqSzNDOa6l0L8=;
-        b=ZamgifEIh5zvY6gGWNY08EqjG9Q8OVut1ubN4mBDbiv+jQVSf5LpoXtU4fEav0VBC/
-         5UazyEDfVq9S1zvvm3qEb548oSxSGL+l9ce8Imbx0OVXqkYKBHU1OWxNtN24bJFD8rq5
-         cEON1SvwiCV4v+2b/MDIKCZJqTH2R+bse5Wm3oMgZgHrlgI+tRr9ko5vepqR86hLkXbT
-         b6Y3ByIsf+Lecbm5AzLjnXrv5PhOg/WNcSuPNeJG4xprp9nnctR/2xGbkqR9RPao5UiC
-         pej86nBErUhk6oYU9AXXAOTDfHAX7YXs7MXNxvXia0Xjta7s+RzHvF4O9Up6r+LUvBvG
-         jYCQ==
-X-Gm-Message-State: APjAAAWSKAm+trayHlFfSo8olV6IRUMyPEED8PAwPovNmtOL1bB6N6bc
-	8xYOYKk87tQcR3mafkr/6cEI0w==
-X-Google-Smtp-Source: APXvYqwJvEhbeWJWcNCLseBCX1j5Krp4aMW9luaCF6oN25WOAT0HDLJdmd1oHz/ee4hx5FLRjGe4qA==
-X-Received: by 2002:aa7:86d6:: with SMTP id h22mr13185136pfo.72.1570746871978;
-        Thu, 10 Oct 2019 15:34:31 -0700 (PDT)
-Date: Thu, 10 Oct 2019 15:34:30 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Romain Perier <romain.perier@gmail.com>
-Cc: kernel-hardening@lists.openwall.com
-Subject: Re: [PRE-REVIEW PATCH 00/16] Modernize the tasklet API
-Message-ID: <201910101531.482D28315@keescook>
-References: <20190929163028.9665-1-romain.perier@gmail.com>
- <201909301552.4AAB4D4@keescook>
- <20191001174752.GD2748@debby.home>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=qLKPKRGYsWe2LV9feXXSxEVMb4o9FMaaiM9B0N1Xmkg=;
+        b=cIL6R96BZAyCblMP0IeZRPR7+a5i7RvanHmsyIOMbfrARHymELmsFQDkuT04TTwcz1
+         lwax1dXR6UNrXRQ6i6yghyWsrcpTPmeo3q0+4MGT89yqkMJnDESg9XKG/QQ5X2+eZPQ7
+         Y0tO/Yb2ETs6ZfRZzLrN1zZ67nDG3kgUpcuyAemclD8LYFLvbRKc+fZsZogqi+sO1z8w
+         TweWaZXVuxmD4w2CKQPWazqKBB4o8E8Q4xQL6DugOjQ3almuqQ7bxP2jPuGseI2Q7//u
+         N+tGtGAwoWqa1tyuflfb0qIdND+fMHweOhtfU+b4YvQWmFQQXI/WaDsHxpJAvUJKYvHn
+         GZ6w==
+X-Gm-Message-State: APjAAAUJ9ARI0Mrnlo2Vi8yVna0rR8cbcjih/Uf/Hoq0HvtQNcZHrpgR
+	o2Vha1y8JXbuh3VEHQZo4p/NuCudr16R+wgCMdo=
+X-Google-Smtp-Source: APXvYqy7r1uh0ASgmB4F0b6aSaWniIcpiEYPxQ6n979GmK5Aaxvjo8JAffurrAOCfBJye9jb/HY9ga6gM43upT2m/l0=
+X-Received: by 2002:aca:dcd6:: with SMTP id t205mr12439954oig.128.1570802630804;
+ Fri, 11 Oct 2019 07:03:50 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20191001174752.GD2748@debby.home>
+References: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
+ <201909301645.5FA44A4@keescook> <CAHhAz+jyZmLBsFBxLG_XmZRBrprrxa49T+07NhcrsH4Yi6jp6A@mail.gmail.com>
+ <201910031417.2AEEE7B@keescook> <CAHhAz+iUOum7EV1g9W=vFHZ0kq9US7L4CJFX4=QbSExrgBX7yg@mail.gmail.com>
+ <201910100950.5179A62E2@keescook> <CAHhAz+j9oaAY9_sn16J2c=U+iidZKu3mp0pRpPZAvu4dJPetkg@mail.gmail.com>
+ <201910101106.9ACB5DB@keescook>
+In-Reply-To: <201910101106.9ACB5DB@keescook>
+From: Muni Sekhar <munisekharrms@gmail.com>
+Date: Fri, 11 Oct 2019 19:33:38 +0530
+Message-ID: <CAHhAz+hw251beDeaWRFV7oShngSQ_KAACXAzb45EZRBdZ3kbSg@mail.gmail.com>
+Subject: Re: How to get the crash dump if system hangs?
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset="UTF-8"
 
-On Tue, Oct 01, 2019 at 07:47:52PM +0200, Romain Perier wrote:
-> 	=> So, one commit per driver for preparing the data structure to
-> 	own a sub "struct tasklet_struct" + tasklet_init() ->
-> 	tasklet_setup() with use of "from_tasklet" in the same commit.
-> 	Right ?
-> 
-> 	For example:
-> 	the commit "[PRE-REVIEW PATCH 03/16] mmc:
-> 	renesas_sdhi: Prepare to use the new tasklet API"
-> 
-> 	would contain changes for preparing the driver to use a
-> 	"struct tasklet_struct" correctly + convert the driver to
-> 	the new API (tasklet_init() -> tasklet_setup())
-> 
-> 	Same for commit "[PRE-REVIEW PATCH 04/16] net: liquidio: Prepare
-> 	to use the new tasklet API".
-> 
-> 	This is what you had in mind ?
+On Fri, Oct 11, 2019 at 12:01 AM Kees Cook <keescook@chromium.org> wrote:
+>
+> On Thu, Oct 10, 2019 at 10:45:21PM +0530, Muni Sekhar wrote:
+> > I'm using Ubuntu distro, ran "reboot" command but after reboot
+> > console-ramoops-0 is not present in /sys/fs/pstore
+>
+> Hmpf. Well, then, I guess your boot firmware is pretty aggressive about
+> wiping RAM across boots. :(
+>
+> There was a patch set to store to disk, but I haven't seen a recent
+> version of it, if you want to go that route[1].
+>
+> -Kees
+>
+> [1] https://lore.kernel.org/lkml/1551922630-27548-1-git-send-email-liaoweixiong@allwinnertech.com/
+Thanks I will check it out.
 
-Right -- the commit would be complete from a "touch-once" perspective.
-The one commit completely swaps to the new API and nothing will ever
-have to poke this file again. (The exception being any explicit casts
-that might be rarely needed for weird direct initialization, etc: most
-patches should be entirely self-contained, though they depend on the new
-API from patch #1.)
+While loading ramoops I see "persistent_ram: uncorrectable error in
+header", is this harmful?
 
-> > 3) Convert DECLARE_TASKLET() users to the same
-> 
-> Yeah, this is what you explain in reply to "[PRE-REVIEW PATCH 12/16]
-> tasklet: Pass tasklet_struct pointer as .data in DECLARE_TASKLET", right
-> ?
+[  270.864969] ramoops: using module parameters
+[  270.866651] persistent_ram: uncorrectable error in header
+[  270.867252] persistent_ram: uncorrectable error in header
+[  270.867728] persistent_ram: uncorrectable error in header
+[  270.868067] persistent_ram: uncorrectable error in header
+[  270.868492] persistent_ram: uncorrectable error in header
+[  270.868839] persistent_ram: uncorrectable error in header
+[  270.869209] persistent_ram: uncorrectable error in header
+[  270.869681] persistent_ram: uncorrectable error in header
+[  270.870026] persistent_ram: uncorrectable error in header
+[  270.870430] persistent_ram: uncorrectable error in header
+[  270.870774] persistent_ram: uncorrectable error in header
+[  270.871110] persistent_ram: uncorrectable error in header
+[  270.871687] persistent_ram: uncorrectable error in header
+[  270.872055] persistent_ram: uncorrectable error in header
+[  270.872567] persistent_ram: uncorrectable error in header
+[  270.872910] persistent_ram: uncorrectable error in header
+[  270.873243] persistent_ram: uncorrectable error in header
+[  270.873592] persistent_ram: uncorrectable error in header
+[  270.873932] persistent_ram: uncorrectable error in header
+[  270.874267] persistent_ram: uncorrectable error in header
+[  270.874614] persistent_ram: uncorrectable error in header
+[  270.874958] persistent_ram: uncorrectable error in header
+[  270.875300] persistent_ram: uncorrectable error in header
+[  270.875686] persistent_ram: uncorrectable error in header
+[  270.876028] persistent_ram: uncorrectable error in header
+[  270.876462] persistent_ram: uncorrectable error in header
+[  270.876808] persistent_ram: uncorrectable error in header
+[  270.877144] persistent_ram: uncorrectable error in header
+[  270.877519] persistent_ram: uncorrectable error in header
+[  270.877860] persistent_ram: uncorrectable error in header
+[  270.878199] persistent_ram: uncorrectable error in header
+[  270.878565] persistent_ram: uncorrectable error in header
+[  270.878916] persistent_ram: uncorrectable error in header
+[  270.881129] console [pstore-1] enabled
+[  270.884817] pstore: Registered ramoops as persistent store backend
+[  270.885232] ramoops: attached 0x100000@0x3ff00000, ecc: 16/0
 
-Right -- after all the other stuff, do the the DECLARE_TASKLET changes,
-with a final mechanical patch that drops the unused .data argument from
-all the users.
+>
+> --
+> Kees Cook
 
-This is all a normally thankless set of patches, so I'll go out of my
-way to say again: thank you for working on this! I know how tedious it
-can be from when I did timer_struct. :)
+
 
 -- 
-Kees Cook
+Thanks,
+Sekhar
