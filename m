@@ -1,4 +1,4 @@
-Return-Path: <SRS0=HFob=YL=lists.openwall.com=kernel-hardening-return-17030-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Zx3/=YL=lists.openwall.com=kernel-hardening-return-17031-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
 	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4850FCA9EA9
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 16:15:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 97AAACA9EA0
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 16:15:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8DAD821D7C
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 16:15:27 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id DFB6A222BD
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 16:15:39 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="JytSfSIK"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8DAD821D7C
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="NSG0XzUq"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DFB6A222BD
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17030-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20062 invoked by uid 550); 18 Oct 2019 16:14:32 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17031-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20245 invoked by uid 550); 18 Oct 2019 16:14:35 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,41 +25,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 10021 invoked from network); 18 Oct 2019 16:11:27 -0000
+Received: (qmail 10062 invoked from network); 18 Oct 2019 16:11:30 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=O8IkwU6sBVUF8FqvV1I5skAqoYbhLBF9oLtPiANlCGQ=;
-        b=JytSfSIKC9plsUuL7Anvr6QOhk8r1uFIhvXpVGgpoIt+Pceeda3VIOzbcA7+0/BsI2
-         zIOFDZDlBlALPUkKw3QeckVXjlO15PINjv6We8JOgEFa99U5KrlSx7XXOz6Nx0YB48ik
-         JUIvMysSkaZBaFFzF9YCNL6v7dsTQWajujUMHj1WzB/oICg2lLsquw3Vw81wZ9YrRh+I
-         eqZjR6qEmEq1xmlqn4gPhCaDAzL6Ck5jxkdyZpOLHnnw7A9jN+Xtb/99WqHJGyBIz0eH
-         RHpYhCrhAeYHu1mm3FYIj4Y1yIWOuV3/oL+MaGiwsAiiSjet6tZhPh7Y20s53JxWp6Uo
-         RIpw==
+        bh=fICIDxFYsM9a9Ff5jMCA2HNdKL4X15DyG8HPfHVUdX4=;
+        b=NSG0XzUqxk2+63gPHHlONBw5Q4nS2y744Eo1rGIDmimGan5ZvchrFconEmIXiVv79S
+         0SiQYCOcKQncsgO+OjD18O6E+2SSMSAk43T8F4SPII5CwYW5Z2DpjcXEvu90lABe0T7d
+         54pDxZVczkH9+W6UKw5BGz/1SAtjmaCTeJP9IigFW7/8iSrzVXwx+vaItOIgEL2NFpn8
+         PCwsy3taMFVH2Is9tZDbWuOIcT/YBmZIupi5pgO/dSJwAnrHQ+9LRhx/mZ3aQl1rS+Hn
+         PYSAfr/54k98LWSAkxuS0/kkDyQ70rjvHFcfVRO0CwmtYXN/ED4JgjMIrSHGnZhfeFY/
+         nwUQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=O8IkwU6sBVUF8FqvV1I5skAqoYbhLBF9oLtPiANlCGQ=;
-        b=o1H30Fo8IollhFs+uxMtsBxPFF40A0wgre28id8v61ivjT581BOKBU+vYnm7Ro6q+Z
-         Dn9QlWfnB36fjY7WGUg1kotTc//HNsJ1fX0/D62PA8XBol+3izVko5y7f4txDptZsgV0
-         DRzMSfyPh4ED5aD9TnyrHSxdi03P9GZY92ltCYiXNYsaSDXqQJM/cfC2ImUCI6tgi6Bm
-         +fsncEfCE9nzLOdKOj1P2W72nFnfv/qCgVcbVXnpiBuJExcnw98Cda6HUODwINB3pyn/
-         LjtehKjl7jAMppNftgu5E19/5iWrkmDBCXSGDoCLX7+VQPQhRer9Zsd5EJMQfpQT0w8r
-         KmGA==
-X-Gm-Message-State: APjAAAWttPvBGQ207M9snYIM7U8OpYR6bT6UwGYgKkz+FVFW57lzU5Qj
-	tYGSH6vq75qtHjyizfL3DU00sh92GXtrIBoBDZE=
-X-Google-Smtp-Source: APXvYqxCc4imQBOuO4slIZxb1lJUVZnQFeO3XHf/hzNVQOpLbC+EVQgHSML0nT8J+/sJkR2vVeisW1XnmtFkqXhxt3k=
-X-Received: by 2002:a65:68c1:: with SMTP id k1mr11253965pgt.286.1571415075496;
- Fri, 18 Oct 2019 09:11:15 -0700 (PDT)
-Date: Fri, 18 Oct 2019 09:10:25 -0700
+        bh=fICIDxFYsM9a9Ff5jMCA2HNdKL4X15DyG8HPfHVUdX4=;
+        b=OgdurX8tHWlBZj+SZDlairvVWaofteGoQf5yowWe+mpChJIx2XsXzh5iLLeOf2t2p6
+         VgnQHwa/jKmfZDbSUfCnRY6b9OYaZBBhzAwCbg7vYcuEC9BW3mDRnFpJkg446ykdXuIE
+         sq8n47gAX4fNQj+dEMDTLetf5R2xa+w/nMF9edUkIroYYAKyPm7B83teKdI+eC3K6Kns
+         aRDqcYAKreT5jBIc/GJIH9/xE6u61GbkVzB22zdH9rD9uP6DVM8VxEokSaWaoP//70va
+         EL7UFvyWhZPZYO6KV4V39pNiWf/yBCRBUNjTyogBlCVo1wjpVKTsC2SFilwAfTspJgdS
+         Ywng==
+X-Gm-Message-State: APjAAAX8uF0kRvITK5dLujIrtMne890JOicWEYj0LSudG7odGtfc4EG3
+	QrFD26PSGsjNauqlmTcn+6BLkdOrxnNhpfMDcBw=
+X-Google-Smtp-Source: APXvYqy2IPmHgVzSQFLWH/l27Qtv31FYTpjwXUbB8shECHuqpnU1nIwwQdz+u4oVI6rxTnp6d2Le2ZcdmFuior/slJo=
+X-Received: by 2002:a65:6092:: with SMTP id t18mr11012516pgu.418.1571415077997;
+ Fri, 18 Oct 2019 09:11:17 -0700 (PDT)
+Date: Fri, 18 Oct 2019 09:10:26 -0700
 In-Reply-To: <20191018161033.261971-1-samitolvanen@google.com>
-Message-Id: <20191018161033.261971-11-samitolvanen@google.com>
+Message-Id: <20191018161033.261971-12-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.23.0.866.gb869b98d4c-goog
-Subject: [PATCH 10/18] kprobes: fix compilation without CONFIG_KRETPROBES
+Subject: [PATCH 11/18] kprobes: disable kretprobes with SCS
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
@@ -70,70 +70,28 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-kprobe_on_func_entry and arch_kprobe_on_func_entry need to be available
-even if CONFIG_KRETPROBES is not selected.
+With CONFIG_KRETPROBES, function return addresses are modified to
+redirect control flow to kretprobe_trampoline. This is incompatible with
+return address protection.
 
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 ---
- kernel/kprobes.c | 38 +++++++++++++++++++-------------------
- 1 file changed, 19 insertions(+), 19 deletions(-)
+ arch/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/kernel/kprobes.c b/kernel/kprobes.c
-index 53534aa258a6..b5e20a4669b8 100644
---- a/kernel/kprobes.c
-+++ b/kernel/kprobes.c
-@@ -1829,6 +1829,25 @@ unsigned long __weak arch_deref_entry_point(void *entry)
- 	return (unsigned long)entry;
- }
+diff --git a/arch/Kconfig b/arch/Kconfig
+index a222adda8130..4646e3b34925 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -171,7 +171,7 @@ config ARCH_USE_BUILTIN_BSWAP
  
-+bool __weak arch_kprobe_on_func_entry(unsigned long offset)
-+{
-+	return !offset;
-+}
-+
-+bool kprobe_on_func_entry(kprobe_opcode_t *addr, const char *sym, unsigned long offset)
-+{
-+	kprobe_opcode_t *kp_addr = _kprobe_addr(addr, sym, offset);
-+
-+	if (IS_ERR(kp_addr))
-+		return false;
-+
-+	if (!kallsyms_lookup_size_offset((unsigned long)kp_addr, NULL, &offset) ||
-+						!arch_kprobe_on_func_entry(offset))
-+		return false;
-+
-+	return true;
-+}
-+
- #ifdef CONFIG_KRETPROBES
- /*
-  * This kprobe pre_handler is registered with every kretprobe. When probe
-@@ -1885,25 +1904,6 @@ static int pre_handler_kretprobe(struct kprobe *p, struct pt_regs *regs)
- }
- NOKPROBE_SYMBOL(pre_handler_kretprobe);
+ config KRETPROBES
+ 	def_bool y
+-	depends on KPROBES && HAVE_KRETPROBES
++	depends on KPROBES && HAVE_KRETPROBES && ROP_PROTECTION_NONE
  
--bool __weak arch_kprobe_on_func_entry(unsigned long offset)
--{
--	return !offset;
--}
--
--bool kprobe_on_func_entry(kprobe_opcode_t *addr, const char *sym, unsigned long offset)
--{
--	kprobe_opcode_t *kp_addr = _kprobe_addr(addr, sym, offset);
--
--	if (IS_ERR(kp_addr))
--		return false;
--
--	if (!kallsyms_lookup_size_offset((unsigned long)kp_addr, NULL, &offset) ||
--						!arch_kprobe_on_func_entry(offset))
--		return false;
--
--	return true;
--}
--
- int register_kretprobe(struct kretprobe *rp)
- {
- 	int ret = 0;
+ config USER_RETURN_NOTIFIER
+ 	bool
 -- 
 2.23.0.866.gb869b98d4c-goog
 
