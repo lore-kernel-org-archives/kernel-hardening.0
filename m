@@ -1,23 +1,23 @@
-Return-Path: <SRS0=7dGK=YL=lists.openwall.com=kernel-hardening-return-17052-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=isdz=YL=lists.openwall.com=kernel-hardening-return-17053-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 706E7CA9EA9
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 17:55:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5403DCA9EA9
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 17:55:12 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B8D0921835
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 17:55:00 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A04F121835
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Oct 2019 17:55:11 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="NFaKn8K/"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B8D0921835
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="vsQmN/Ap"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A04F121835
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17052-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13416 invoked by uid 550); 18 Oct 2019 17:54:37 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17053-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13753 invoked by uid 550); 18 Oct 2019 17:54:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,75 +25,79 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23949 invoked from network); 18 Oct 2019 17:11:39 -0000
+Received: (qmail 26540 invoked from network); 18 Oct 2019 17:19:03 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=XATsmiiQ65kT4ODqJ8G67gOZ75F3gzeYi1y9XLQaIlM=;
-        b=NFaKn8K/6s2O1InStTL9sLz1AskGb0puzLhWcn2tdgY8ZmCLY7XOJRYveX8vbFZU0f
-         AivKBQvkf/pODzLL5A4lcri/koO4kVh6iykeyqn4iKMkTaY1LVSs0gwEl9DJOigy8q8Q
-         WPtHpYV0+uIe6amcTjkQLuADzSGPUx4rs/QmPrhO0WC+aS/VPjA8tDxGnOE6xkLGpQLv
-         lTimTCE/K9U0RF4C039OIDi0j2iIowkJYeW6TPrBZBYFSBCJ9uXp+uP1gTWL63kz/VIn
-         F7pEhz3ucREkKYmQDI91cCQ4B4+VGr1SMl0Byq8KA2sUVL6ZDahv6K/J2fUilePUK8ER
-         3UWw==
+        bh=0HIzf5D0wGbvpmxHvIyOvn+49UWE2lHPyTZCg3y02sw=;
+        b=vsQmN/ApjkODa5g1BT612x/4GGL20gZVZE8EGaFhwsXbdCcFD/fycGlyho4gxOJTFH
+         UNt9ub/I4P/h809X5D4yAx7rCwQfs1BEVFWXiVYtxsoUMxjlzIEJPcfVyB8tF344B2aC
+         FjFd1SH8THaH/Pw81yxXP9FQn01T7I+/YsrNyL9mssL2T1CuwuFiQluKl0/fFUrg4HLq
+         GlWt1dVIFhyf7eCqu7QIp5RVLWS2ZUOsoD7wzE3W1jtwUAY4NHDTbaS0+XPgu0S1K6/l
+         VhJ5hk4oAgFzg9fAGqgifT4d4FsvndIJvJc42Q3EHtKExcLFN4z8Qliw6bt6wkdvd8lR
+         FnJw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=XATsmiiQ65kT4ODqJ8G67gOZ75F3gzeYi1y9XLQaIlM=;
-        b=p+QIgNfrrsiM28r2O3rVCGKmbE8jwV4LZVi5C91PeN6U7DrVCp6FSeNSeUkQyRIGUW
-         la3osIvfA49lSC/hCk/T+IlOqcVBJhuqqfdLwqORivk9FU7cOTW9P4FoZI2mftrxqlqG
-         d7Rq2FKbBupisaozp3cMd3lUInOvpXyxukReTWHyaQIK9JIDH4xmb64UmdJnhAMJWccx
-         kdMSL6XEzujQ9SOa+lClOzVl/ZpN23RXQWNWgjKFlwR4XGYmy0PaOIzjmRqRZh4vdPfO
-         eA7YNSk3ZF5a1yv/ZuaFAtjCXOfU8Icod2X9Xx4LFhoKfMjRm9lmehW/bjK5a3ueYq2V
-         rVCg==
-X-Gm-Message-State: APjAAAW9NFyn8lghHI59dM5TaYuNSOF/pBnyYKhGX7T8Dn23q5yQ/P13
-	qVl3IZRw/zuni/18JzD3bdvP5sDnnC9bc3BuV9Rpcw==
-X-Google-Smtp-Source: APXvYqxbFqx52fMmsudugE6XC0yz5SmZysXaFv9YWU7egAQ4sBR35UABj4n5x4ayDTqcJ+9yTIIHMtatlqnJPxGnKEw=
-X-Received: by 2002:a67:ed8b:: with SMTP id d11mr6025118vsp.104.1571418687239;
- Fri, 18 Oct 2019 10:11:27 -0700 (PDT)
+        bh=0HIzf5D0wGbvpmxHvIyOvn+49UWE2lHPyTZCg3y02sw=;
+        b=ZNKranOj1EHzul61xMHbomJ6+ZtPZVZEWzs971jMNZLGX4wBJZclEP9FoBRGqsFNwj
+         T0wHt95xiq7Z16Qwl8rAhfArMAl1MHhVD+9aTmObiB+Qol6jnk5u2myXQHI4eh3gVXoO
+         hfvnARsTskZYF5SgGGDUc0DyXFTJFG3Rqe3SJ1VQXBwYmjayEw+jb12TAEzqWk5pCmJR
+         Ped3IT0g15SXoN8PwcrmMMuctOzKOJ2hTXGMq5mUktgzNsp1iyypKWs0ZIAOyOZ2on3n
+         e5uHi8xn3oHEM3YFAXRVxGDGlDRukJ2qRBSy2BxgnveZGT+qGhh7l6w9PWsMl4HgKwPo
+         Getg==
+X-Gm-Message-State: APjAAAV7nq0/yH67ZbeqBAsnAkvBnzH9u2xOefy/mAMzVA6DncM39lo2
+	8vnVcu50F4Be0Vd5pih8yKCxaZ2ZhoVS+xVGpfPFYw==
+X-Google-Smtp-Source: APXvYqz95u8SOpZ8CKpbA/DJiP9eST+uXrcgaIItAAur7JD+mN8MzKVC12sI0+N58LUhcO4C5kYwuTsqYm/TbJd/HRQ=
+X-Received: by 2002:ab0:6387:: with SMTP id y7mr6108565uao.110.1571419131321;
+ Fri, 18 Oct 2019 10:18:51 -0700 (PDT)
 MIME-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com>
- <20191018161033.261971-7-samitolvanen@google.com> <CAKwvOd=z3RxvJeNV1sBE=Y1b6HgXdnT4M9bwMrUNZcvcSOqwTw@mail.gmail.com>
-In-Reply-To: <CAKwvOd=z3RxvJeNV1sBE=Y1b6HgXdnT4M9bwMrUNZcvcSOqwTw@mail.gmail.com>
+ <20191018161033.261971-19-samitolvanen@google.com> <CAG48ez2Z8=0__eoQ+Ekp=EApawZXR4ec_xd2TVPQExLoyMwtRQ@mail.gmail.com>
+In-Reply-To: <CAG48ez2Z8=0__eoQ+Ekp=EApawZXR4ec_xd2TVPQExLoyMwtRQ@mail.gmail.com>
 From: Sami Tolvanen <samitolvanen@google.com>
-Date: Fri, 18 Oct 2019 10:11:16 -0700
-Message-ID: <CABCJKud6+F=yhTo6xTXkHhtLWcSE99K=NcfKW_5E4swS4seKMw@mail.gmail.com>
-Subject: Re: [PATCH 06/18] add support for Clang's Shadow Call Stack (SCS)
-To: Nick Desaulniers <ndesaulniers@google.com>
+Date: Fri, 18 Oct 2019 10:18:40 -0700
+Message-ID: <CABCJKudM-Jupwj9eMMjg3rb1=6rTDBEcWi-KkzPSeSGd8tSxGg@mail.gmail.com>
+Subject: Re: [PATCH 18/18] arm64: implement Shadow Call Stack
+To: Jann Horn <jannh@google.com>
 Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, 
 	Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>, 
 	Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, 
+	Nick Desaulniers <ndesaulniers@google.com>, 
 	clang-built-linux <clang-built-linux@googlegroups.com>, 
 	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	Linux ARM <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, 
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
+	kernel list <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Fri, Oct 18, 2019 at 10:08 AM 'Nick Desaulniers' via Clang Built
-Linux <clang-built-linux@googlegroups.com> wrote:
-> > diff --git a/include/linux/compiler-clang.h b/include/linux/compiler-clang.h
-> > index 333a6695a918..9af08391f205 100644
-> > --- a/include/linux/compiler-clang.h
-> > +++ b/include/linux/compiler-clang.h
-> > @@ -42,3 +42,5 @@
-> >   * compilers, like ICC.
-> >   */
-> >  #define barrier() __asm__ __volatile__("" : : : "memory")
-> > +
-> > +#define __noscs                __attribute__((no_sanitize("shadow-call-stack")))
->
-> It looks like this attribute, (and thus a requirement to use this
-> feature), didn't exist until Clang 7.0: https://godbolt.org/z/p9u1we
-> (as noted above)
->
-> I think it's better to put __noscs behind a __has_attribute guard in
-> include/linux/compiler_attributes.h.  Otherwise, what will happen when
-> Clang 6.0 sees __noscs, for example? (-Wunknown-sanitizers will
-> happen).
+On Fri, Oct 18, 2019 at 10:13 AM Jann Horn <jannh@google.com> wrote:
+> These things should probably be __always_inline or something like
+> that? If the compiler decides not to inline them (e.g. when called
+> from scs_thread_switch()), stuff will blow up, right?
 
-Good point, I'll fix this in v2. Thanks.
+Correct. I'll change these to __always_inline in v2. I think there
+might be other places in the kernel where not inlining a static inline
+function would break things, but there's no need to add more.
+
+> This is different from the intended protection level according to
+> <https://clang.llvm.org/docs/ShadowCallStack.html#security>, which
+> talks about "a runtime that avoids exposing the address of the shadow
+> call stack to attackers that can read arbitrary memory". Of course,
+> that's extremely hard to implement in the context of the kernel, where
+> you can see all the memory management data structures and all physical
+> memory.
+
+Yes, the security guarantees in the kernel are different as hiding
+shadow stack pointers is more challenging.
+
+> You might want to write something in the cover letter about what the
+> benefits of this mechanism compared to STACKPROTECTOR are in the
+> context of the kernel, including a specific description of which types
+> of attacker capabilities this is supposed to defend against.
+
+Sure, I'll add something about that in v2. Thanks.
 
 Sami
