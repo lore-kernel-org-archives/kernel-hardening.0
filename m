@@ -1,23 +1,23 @@
-Return-Path: <SRS0=qvJS=YN=lists.openwall.com=kernel-hardening-return-17065-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=aGLK=YN=lists.openwall.com=kernel-hardening-return-17066-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
-X-Spam-Level: *
-X-Spam-Status: No, score=1.2 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
-	DKIM_INVALID,DKIM_SIGNED,FAKE_REPLY_A1,FREEMAIL_FORGED_FROMDOMAIN,
-	FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Level: 
+X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 041AFCA9EA0
-	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 19:25:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8C46ECA9EA0
+	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 19:31:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 448C721929
-	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 19:25:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id CF43021929
+	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 19:31:20 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=fail reason="signature verification failed" (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="Y8IUdhps"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 448C721929
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="UV8sNPMW"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CF43021929
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17065-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22011 invoked by uid 550); 20 Oct 2019 19:25:40 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17066-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25828 invoked by uid 550); 20 Oct 2019 19:31:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,40 +25,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13370 invoked from network); 20 Oct 2019 19:02:12 -0000
+Received: (qmail 25788 invoked from network); 20 Oct 2019 19:31:14 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
-        h=to:cc:reply-to:from:subject:message-id:date:user-agent:mime-version
-         :content-transfer-encoding:content-language;
+        h=in-reply-to:to:cc:from:subject:message-id:date:user-agent
+         :mime-version:content-transfer-encoding:content-language;
         bh=MQO0yS1C5u3Vz5QrUXBas962jxMsl9zmhNl24X0oxMM=;
-        b=Y8IUdhpsSbZADFQzMtu0F/zoSeSNoc6Nu4j9+ubIZTnhbk4QXFDL89uq2bOIwAvEmZ
-         4ARtW1EFGIm5m8BgQcIdmwdyuoiUUwiMANNg8LKVjUCy3RzXiRB1CAWak5OFNs2nD7Ze
-         rHif7q/E4Rzt7AcY852EIPwNq76Gw/6fOIR5mFZoDajJuwuItn5WTUKPerVW0Ok4Ahye
-         z6Mwi9oHFOMpwcQf+5ZZcu4gnBrWys3ZjFhtCSJl+HIIfhMsyRQeZVvA0XPNlFVEqvpD
-         dOiv5kDU/RToIOURB7qWHmj0hQYQ3jNzYHR4Tt5Zg59j7GeY1rfZvKba4P3OoJAR+Q4u
-         Ah7g==
+        b=UV8sNPMWYq/Fen3iyVbJHpCyPztiXQvnkHceWP5heWBbuE2SHe22tqem72u8LP9NFh
+         aihLNvZwdp4WlO9v+qT2yyyxAZQyTfmfUFJROzQh3/abNYXfD94en2JnvKauxCLYtvZU
+         +lxgmkjZiFi0ZTdM8bqFm7pboku3Ou7uLlIgECnjFUWqSXqMTsGb+D4bfakGrAdrwOxO
+         BSMlipFEg5prKrFTp0mZOLW0Cx4k03wbpPfNx0KWhler4fGlp4/9o/8xd+of4uEOeV8x
+         Y7R0mzwMn99M6ScHm5h4KnFwhE+JxYZdE52S+sIQ5vSeWF290SOIoLiVngwVt+fUUaRo
+         wN8A==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:to:cc:reply-to:from:subject:message-id:date
+        h=x-gm-message-state:in-reply-to:to:cc:from:subject:message-id:date
          :user-agent:mime-version:content-transfer-encoding:content-language;
         bh=MQO0yS1C5u3Vz5QrUXBas962jxMsl9zmhNl24X0oxMM=;
-        b=HG0IBtpoLoZ6rl2h1cmQgtrThScP6oZ3dx3+k2MXFgK7hb5Lpu+PTtrzPvcGJuP5Zq
-         baxxAY7/dn0fsrPJ/JNJVRQcEdzn1K4v3Rldl3FXAC3ym0XlRzjoZbps36U0NOOUDMB0
-         n/mGbqKlgGVoItFJimQ4fMkWg+UQ+PgG0+QDk3OfaCJeQXgWnUrZ/qW9bAB1OVtLocZJ
-         zxbbTr/P1rMn7BmFO6QGFTOUrff94V21AgNtlWVhlJY6mkpMJJu8g47nQLM7FfCwKVUs
-         TEy/7RcuZOA05c7h56cVc3Na+WWnXuoiUsx5OXdSXB1tv3yxA46FdRvrOL2ZRH8N/0af
-         cTfw==
-X-Gm-Message-State: APjAAAWde8mSKeAXkqrzXnhl+4PrXWToZzFoZkdu1E2VBeaLtMUyD5T4
-	l4uIu9lTi/IoTooXnc9JiBk=
-X-Google-Smtp-Source: APXvYqzWEGg50KXCmv2LSXigmVdNjIf821/hZz311ShqrcJA89dgkEjF0HLMmzRQuYEhYSUJCMqd4g==
-X-Received: by 2002:a17:902:7207:: with SMTP id ba7mr10721376plb.172.1571598120891;
-        Sun, 20 Oct 2019 12:02:00 -0700 (PDT)
+        b=i9iWZHm2KsL3gknF6XFZIfw+3OIlG4wB0waSKUOGFkMbcaFZYAk/LQ2jprnVXzcvUs
+         7f98XFsw1/tfeyLvWsJ7xr2tCKsLshNa1MaQ7lJngENtSw5+rvzAIZNZqfLORwP5JYit
+         sTFGjAVbSEOM+yjInpLuiByCN4fc3VqvywK2TCP6Vz2ybcdmEShCMu4ZAfYKJA5UD3Zg
+         W2JpwT2V+PHkizhHs12pZ1iunk4KoaZA3CRf/ol5UtHnpQ10zyo+zuVeJ/92cQtC5MGH
+         v50PTBlGuglTu0QJkmuK/QaFW3VTvEvuc8Skn4ncM3822fs+thLsMUJf1YgW4gTrNyNV
+         fnzQ==
+X-Gm-Message-State: APjAAAUZxpJZm/jL5rzT51bY2mlYte0hgkMLPqfefpYjcjsiNno1gO6x
+	hGKHSnP9TvkoU18bptJv7yg=
+X-Google-Smtp-Source: APXvYqxPN12GTfsfpAmMwvB7wsk97LFP6T1Q0YYvoiFoxg4TkajeYyOhviR2UWcIo2uxpmfyTL+mww==
+X-Received: by 2002:a17:902:6acb:: with SMTP id i11mr21520243plt.16.1571599862312;
+        Sun, 20 Oct 2019 12:31:02 -0700 (PDT)
+In-Reply-To:
 To: keescook@chromium.org
 Cc: kernel-hardening@lists.openwall.com, munisekharrms@gmail.com
 From: youling257 <youling257@gmail.com>
 Subject: Re: How to get the crash dump if system hangs?
-Message-ID: <2e2a3d3c-872e-3d07-5585-92734a532ef2@gmail.com>
-Date: Mon, 21 Oct 2019 03:01:59 +0800
+Message-ID: <c4ef59df-2546-f548-a305-6b3e0e96a6b6@gmail.com>
+Date: Mon, 21 Oct 2019 03:31:02 +0800
 User-Agent: Mozilla/5.0 (X11; Linux i686; rv:68.0) Gecko/20100101
  Thunderbird/68.1.2
 MIME-Version: 1.0
