@@ -1,23 +1,23 @@
-Return-Path: <SRS0=Bjsb=YN=lists.openwall.com=kernel-hardening-return-17063-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=lDsZ=YN=lists.openwall.com=kernel-hardening-return-17064-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 70251CA9EA0
-	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 06:07:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8C40CCA9EA0
+	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 15:39:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B8B7E222C3
-	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 06:07:14 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id D2B3921928
+	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 15:39:05 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="Wy52xd07"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B8B7E222C3
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17063-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22296 invoked by uid 550); 20 Oct 2019 06:07:07 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="PfhdEfvC"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D2B3921928
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17064-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7360 invoked by uid 550); 20 Oct 2019 15:38:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,72 +25,83 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22262 invoked from network); 20 Oct 2019 06:07:07 -0000
+Received: (qmail 7325 invoked from network); 20 Oct 2019 15:38:57 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
+        d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=YCK09w6PWU3uSu7DLwK1iOj9r8NGNR+mR7i729KtO90=;
-        b=Wy52xd07pgpnE6lyPI6PxBww3Zh9ymaVHCiql7MqKwXaQ7SgMR2MNOhWrT9dPupoDs
-         NZ50DC7P0cDNGGGyE0T7iWOMI5eZhFmtT2L+hk7LylL6LaIlxTIDgWlUAeUFwoUA7p+j
-         i4DGkxX03Tct9YSIb42M3v6pWb/6/9yGsDCkm852oX/Ic2A+OPdUrBCZizlaxCGKmv1F
-         QilyEiqE33EfzX+n8ZTSUuKHAffANTDDVHiU1ZeE6jfu48v95mKBGFCSGiTBJidaETiR
-         94Iv0c9pOy2YAQhlA9Na9rmZVMzpi3Vuj7DoAi3P8v7kcz1AEnVnZgybM0Foe8e03OTc
-         hGyg==
+        bh=mRKy+IWzvzoLPClP3yhD30q6JByK0BPaIiWb8PRJQAo=;
+        b=PfhdEfvCMBof5ZUzcbAPFqLfkObIBPJip8RLrfEuFDZ/WqGtCEFg9Pmu3ytQ9uJaaq
+         IIHXOkUADJoEq3ZY38zOSt5IOFVADL4vla5A5x2pD/RGlMJN+PjtlHe6CwtcvTwkExBE
+         GnCb5qIKASGZo8dULKxhd70mxPNRaLnsxqDNkVagXFhXj2myO/+fmO/0ZK9tDodZA1SU
+         0h8YfxemV3asDpFXP2z28W5e/pxywWqUSr6sCYEqg1YaHqpTrLNq2d98i+6ZcklSBuh7
+         40NsXAQtIATlpGedjj8H+KaZzDbXPP7u2pI2/phWADy6UJPjsYKlajCLfdDVr8OryiWR
+         pxSg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=YCK09w6PWU3uSu7DLwK1iOj9r8NGNR+mR7i729KtO90=;
-        b=enliqJhjCxlVAYrU09ZCQqMz7dwtq7KIsBrf3cVhwkpqQ2/gJ2BTXwCKyB/OHMnSn1
-         MHD3BkyOPvwzu6k942WcFruyNL8o1f47nkxckht6J6QeQQ+Mza1lAlwXOyP3WTvMx4pf
-         5NH+ts/dNrjerazDgnS0LdfzC4RH5ktyqw7pkeAfPZgT8Hh8DK6TepirCTeVByiOQd/j
-         66kq4zTHgrKtsrpWh+SrQGx3b7rlqGEk1tAqquzdmfobqBQt7thmtU0YlCJ9QSVYlnQv
-         5ayXLCWkYkTIpBlc4odytqu0MOqF7qem6ltWxKbzcwBl1A/KR97rm5zkjC4MgyVI/9Qz
-         h2uw==
-X-Gm-Message-State: APjAAAUxqjiNROA1UtULwfAOg9UnTvYaQ93K4ESC3RFK8cOEhF95YiaM
-	eoIAF5jkL2CM2d1K3MF825RFWUa6SgiNVf6Er2Q=
-X-Google-Smtp-Source: APXvYqwJE3ZvYgE+VEd+R8rFhmp8PG/+65EdbgKNxRUva5Hj0LB2yjJy3dvKhuHxAWhHWtsjyKyBfDqZCeuA3uyqYK0=
-X-Received: by 2002:a05:6830:58:: with SMTP id d24mr14372911otp.128.1571551614997;
- Sat, 19 Oct 2019 23:06:54 -0700 (PDT)
+        bh=mRKy+IWzvzoLPClP3yhD30q6JByK0BPaIiWb8PRJQAo=;
+        b=N7KD5DUkp6XzwuJAEuSjveVw4vs4TEMhJifzcPgAIFlaTx/HZ1bB/xaCY7bf1Ysv7G
+         lMM5oM49b3Ox99nc4YT9d0gTkfIn2DVdRfK0CFsKtQmNZ5bXDIRRrvQzdIcNA9WdhinT
+         pKXSVo4nc3E3sTv4bbln7KUoZCZmuYDYnMKDWiLDBBOislFMxA9+DOYyRlfD/ce1B5Cm
+         QuwU9K2oM2D1cvU4c4UAz8pPkKQTA77XsUC4GpjcYGr9YePO52qiL1d0SfHOpR2qbyYw
+         hyhx4ZesXwM3Y/nldPQRUde9QMX0fQij4FeFehtGOoOtzemcQDA69f0l9lE1pIODQAbf
+         QTug==
+X-Gm-Message-State: APjAAAWRD3uKHPY1mRMZwYh/f8teeMkPpMrXrvNHw20BrHx+x/sIca0m
+	MY9ujFvHxpw0ldusjS+8aLTZy9zBiubXQ/cLuCS0jg==
+X-Google-Smtp-Source: APXvYqxg1PG73Cc6ECoXvluBvp1fUYof2t+xr75WXa6OJ/A1CqQonms20lyXd0D9udZkKxOPeXQGh+w13z7UlOtUjuc=
+X-Received: by 2002:a05:6830:10cc:: with SMTP id z12mr15593442oto.110.1571585925113;
+ Sun, 20 Oct 2019 08:38:45 -0700 (PDT)
 MIME-Version: 1.0
-References: <20191010103151.7708-1-mayhs11saini@gmail.com> <alpine.DEB.2.21.1910101418500.27284@www.lameter.com>
- <20191010174413.GT32665@bombadil.infradead.org>
-In-Reply-To: <20191010174413.GT32665@bombadil.infradead.org>
-From: Shyam Saini <mayhs11saini@gmail.com>
-Date: Sun, 20 Oct 2019 11:36:42 +0530
-Message-ID: <CAOfkYf765S3sef+gdN7h34iSCzxXxU6ifTb9572WksCqNXo0WA@mail.gmail.com>
+References: <20191010103151.7708-1-mayhs11saini@gmail.com>
+In-Reply-To: <20191010103151.7708-1-mayhs11saini@gmail.com>
+From: Jann Horn <jannh@google.com>
+Date: Sun, 20 Oct 2019 17:38:18 +0200
+Message-ID: <CAG48ez05QVn6_gQ2TBrRa1a_DWQoaSSYubUsu5YMWxx-gqMijQ@mail.gmail.com>
 Subject: Re: [PATCH] slab: Redefine ZERO_SIZE_PTR to include ERR_PTR range
-To: Matthew Wilcox <willy@infradead.org>, Christopher Lameter <cl@linux.com>
-Cc: linux-mm <linux-mm@kvack.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>
+To: Shyam Saini <mayhs11saini@gmail.com>
+Cc: Linux-MM <linux-mm@kvack.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Matthew Wilcox <willy@infradead.org>, 
+	Christopher Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset="UTF-8"
 
-Hi Matthew, Christopher,
+On Thu, Oct 10, 2019 at 12:32 PM Shyam Saini <mayhs11saini@gmail.com> wrote:
+> Currently kfree does not accept ERR_PTR range so redefine ZERO_SIZE_PTR
+> to include this and also change ZERO_OR_NULL_PTR macro to check this new
+> range. With this change kfree will skip and behave as no-ops when ERR_PTR
+> is passed.
+>
+> This will help error related to ERR_PTR stand out better.
 
-> > > This will help error related to ERR_PTR stand out better.
-> >
-> > Maybe make ZERO_SIZE_PTR an ERRNO value instead? Then allow ERR_PTRs to be
-> > used instead of ZERO_SIZE_PTRs
-> >
-> > ERRNO_ZERO_OBJECT
-> >
-> > or something like that?
->
-> I was wondering about something like that too, but allocating zero bytes
-> isn't actually an error, and if we have code that does something like:
->
->         void *p = my_funky_alloc(size, ...);
->
->         if (IS_ERR(p))
->                 return PTR_ERR(p);
->
-> then we might get this errno returned to userspace.
->
-> The change is definitely worth thinking about.
+What do you mean by "stand out better"? To me it sounds like before,
+the kernel would probably blow up in some way if you passed an error
+pointer into kfree(), and with this change, it will silently ignore it
+instead, right? If you actually wanted this kind of error to stand
+out, wouldn't it make more sense to add something like "if
+(WARN_ON(IS_ERR(x))) return;" to the implementations of kfree()?
+I would prefer that, since "kfree(<error pointer>)" probably indicates
+that someone messed up their error handling jumps.
 
-Any further comments on this ?
+> After this, we don't need to reset any ERR_PTR variable to NULL before
+> being passed to any kfree or related wrappers calls, as everything would
+> be handled by ZERO_SIZE_PTR itself.
 
-Please let me know.
+With the caveat that you still can't do it in code that might be
+stable-backported, otherwise it will blow up occasionally in the rare
+case where the error path is hit?
 
-Thanks!!
+[...]
+> +#define ZERO_SIZE_PTR                          \
+> +({                                             \
+> +       BUILD_BUG_ON(!(MAX_ERRNO & ~PAGE_MASK));\
+> +       (void *)(-MAX_ERRNO-1L);                \
+> +})
+> +
+> +#define ZERO_OR_NULL_PTR(x) ((unsigned long)(x) - 1 >= \
+> +               (unsigned long)ZERO_SIZE_PTR - 1)
+
+If you do go through with this change, you'll probably want to adjust
+the message in check_bogus_address() - "null address" really isn't an
+appropriate error message for an address near the end of the address
+space.
