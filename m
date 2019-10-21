@@ -1,23 +1,20 @@
-Return-Path: <SRS0=aGLK=YN=lists.openwall.com=kernel-hardening-return-17066-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=nQ1C=YO=lists.openwall.com=kernel-hardening-return-17067-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8C46ECA9EA0
-	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 19:31:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0F96FCA9EAB
+	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Oct 2019 03:35:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CF43021929
-	for <kernel-hardening@archiver.kernel.org>; Sun, 20 Oct 2019 19:31:20 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="UV8sNPMW"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CF43021929
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17066-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25828 invoked by uid 550); 20 Oct 2019 19:31:15 -0000
+	by mail.kernel.org (Postfix) with SMTP id 627882190F
+	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Oct 2019 03:35:32 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 627882190F
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17067-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21633 invoked by uid 550); 21 Oct 2019 03:35:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,251 +22,99 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25788 invoked from network); 20 Oct 2019 19:31:14 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=in-reply-to:to:cc:from:subject:message-id:date:user-agent
-         :mime-version:content-transfer-encoding:content-language;
-        bh=MQO0yS1C5u3Vz5QrUXBas962jxMsl9zmhNl24X0oxMM=;
-        b=UV8sNPMWYq/Fen3iyVbJHpCyPztiXQvnkHceWP5heWBbuE2SHe22tqem72u8LP9NFh
-         aihLNvZwdp4WlO9v+qT2yyyxAZQyTfmfUFJROzQh3/abNYXfD94en2JnvKauxCLYtvZU
-         +lxgmkjZiFi0ZTdM8bqFm7pboku3Ou7uLlIgECnjFUWqSXqMTsGb+D4bfakGrAdrwOxO
-         BSMlipFEg5prKrFTp0mZOLW0Cx4k03wbpPfNx0KWhler4fGlp4/9o/8xd+of4uEOeV8x
-         Y7R0mzwMn99M6ScHm5h4KnFwhE+JxYZdE52S+sIQ5vSeWF290SOIoLiVngwVt+fUUaRo
-         wN8A==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:in-reply-to:to:cc:from:subject:message-id:date
-         :user-agent:mime-version:content-transfer-encoding:content-language;
-        bh=MQO0yS1C5u3Vz5QrUXBas962jxMsl9zmhNl24X0oxMM=;
-        b=i9iWZHm2KsL3gknF6XFZIfw+3OIlG4wB0waSKUOGFkMbcaFZYAk/LQ2jprnVXzcvUs
-         7f98XFsw1/tfeyLvWsJ7xr2tCKsLshNa1MaQ7lJngENtSw5+rvzAIZNZqfLORwP5JYit
-         sTFGjAVbSEOM+yjInpLuiByCN4fc3VqvywK2TCP6Vz2ybcdmEShCMu4ZAfYKJA5UD3Zg
-         W2JpwT2V+PHkizhHs12pZ1iunk4KoaZA3CRf/ol5UtHnpQ10zyo+zuVeJ/92cQtC5MGH
-         v50PTBlGuglTu0QJkmuK/QaFW3VTvEvuc8Skn4ncM3822fs+thLsMUJf1YgW4gTrNyNV
-         fnzQ==
-X-Gm-Message-State: APjAAAUZxpJZm/jL5rzT51bY2mlYte0hgkMLPqfefpYjcjsiNno1gO6x
-	hGKHSnP9TvkoU18bptJv7yg=
-X-Google-Smtp-Source: APXvYqxPN12GTfsfpAmMwvB7wsk97LFP6T1Q0YYvoiFoxg4TkajeYyOhviR2UWcIo2uxpmfyTL+mww==
-X-Received: by 2002:a17:902:6acb:: with SMTP id i11mr21520243plt.16.1571599862312;
-        Sun, 20 Oct 2019 12:31:02 -0700 (PDT)
-In-Reply-To:
-To: keescook@chromium.org
-Cc: kernel-hardening@lists.openwall.com, munisekharrms@gmail.com
-From: youling257 <youling257@gmail.com>
-Subject: Re: How to get the crash dump if system hangs?
-Message-ID: <c4ef59df-2546-f548-a305-6b3e0e96a6b6@gmail.com>
-Date: Mon, 21 Oct 2019 03:31:02 +0800
-User-Agent: Mozilla/5.0 (X11; Linux i686; rv:68.0) Gecko/20100101
- Thunderbird/68.1.2
+Received: (qmail 21601 invoked from network); 21 Oct 2019 03:35:24 -0000
+Subject: Re: [PATCH v7 00/12] implement KASLR for powerpc/fsl_booke/32
+To: Scott Wood <oss@buserror.net>, <mpe@ellerman.id.au>,
+	<linuxppc-dev@lists.ozlabs.org>, <diana.craciun@nxp.com>,
+	<christophe.leroy@c-s.fr>, <benh@kernel.crashing.org>, <paulus@samba.org>,
+	<npiggin@gmail.com>, <keescook@chromium.org>,
+	<kernel-hardening@lists.openwall.com>
+CC: <wangkefeng.wang@huawei.com>, <linux-kernel@vger.kernel.org>,
+	<jingxiangfeng@huawei.com>, <zhaohongjiang@huawei.com>,
+	<thunder.leizhen@huawei.com>, <yebin10@huawei.com>
+References: <20190920094546.44948-1-yanaijie@huawei.com>
+ <9c2dd2a8-83f2-983c-383e-956e19a7803a@huawei.com>
+ <c4769b34-95f6-81b9-4856-50459630aa0d@huawei.com>
+ <38141b946f3376ce471e46eaf065e357ac540354.camel@buserror.net>
+ <90bb659a-bde4-3b8e-8f01-bf22d7534f44@huawei.com>
+ <34ef1980887c8a6d635c20bdaf748bb0548e51b5.camel@buserror.net>
+From: Jason Yan <yanaijie@huawei.com>
+Message-ID: <0543af6f-df4a-81ff-41fe-c81959568859@huawei.com>
+Date: Mon, 21 Oct 2019 11:34:59 +0800
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
+ Thunderbird/60.5.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <34ef1980887c8a6d635c20bdaf748bb0548e51b5.camel@buserror.net>
+Content-Type: text/plain; charset="utf-8"; format=flowed
 Content-Language: en-US
-
-I don't know my ramoops.mem_address, please help me.
-
-what is ramoops.mem_address?
-
-# cat /proc/iomem
-
-00000000-00000fff : Reserved
-
-00001000-0008efff : System RAM
-
-0008f000-0008ffff : ACPI Non-volatile Storage
-
-00090000-0009dfff : System RAM
-
-0009e000-0009ffff : Reserved
-
-000a0000-000bffff : PCI Bus 0000:00
-
-000c0000-000dffff : PCI Bus 0000:00
-
-000e0000-000fffff : PCI Bus 0000:00
-
-   000f0000-000fffff : System ROM
-
-00100000-1fffffff : System RAM
-
-20000000-201fffff : Reserved
-
-   20000000-201fffff : 80860F28:00
-
-20200000-779c5fff : System RAM
-
-   4c800000-4d401150 : Kernel code
-
-   4d401151-4dd1fb3f : Kernel data
-
-   4e212000-4e3fffff : Kernel bss
-
-779c6000-77a12fff : Reserved
-
-77a13000-77a1bfff : Unknown E820 type
-
-77a1c000-77afffff : Reserved
-
-77b00000-7bb6dfff : System RAM
-
-7bb6e000-7bbcdfff : Unknown E820 type
-
-7bbce000-7bdcdfff : Reserved
-
-7bdce000-7bdcefff : System RAM
-
-7bdcf000-7bdcffff : Reserved
-
-7bdd0000-7bdd1fff : System RAM
-
-7bdd2000-7bdd2fff : Reserved
-
-7bdd3000-7c7fffff : System RAM
-
-7c800000-7cbfffff : RAM buffer
-
-7cc00000-7cc3afff : System RAM
-
-7cc3b000-7cc47fff : Reserved
-
-7cc48000-7ccb7fff : ACPI Non-volatile Storage
-
-7ccb8000-7ccf7fff : ACPI Tables
-
-7ccf8000-7ccfffff : System RAM
-
-7cd00000-7cefffff : RAM buffer
-
-7cf00000-7ef00000 : Reserved
-
-   7cf00001-7ef00000 : PCI Bus 0000:00
-
-     7cf00001-7eeffffe : Graphics Stolen Memory
-
-7ef00001-7fefffff : RAM buffer
-
-7ff00000-7ff00fff : MSFT0101:00
-
-7ff01000-7fffffff : RAM buffer
-
-80000000-90affffe : PCI Bus 0000:00
-
-   80000000-8fffffff : 0000:00:02.0
-
-   90000000-903fffff : 0000:00:02.0
-
-     901e5000-901e5fff : hdmi-lpe-audio-mmio
-
-   90400000-905fffff : dwc_usb3
-
-     90400000-905fffff : 0000:00:16.0
-
-       9040c100-905fffff : dwc3.3.auto
-
-   90800000-908fffff : 0000:00:1a.0
-
-   90900000-909fffff : 0000:00:1a.0
-
-   90a00000-90a0ffff : 0000:00:14.0
-
-     90a00000-90a0ffff : xhci-hcd
-
-   90a2c000-90a2cfff : 0000:00:16.0
-
-90b00000-90b00fff : 80860F28:00
-
-90b01000-90b01fff : INT33BB:00
-
-   90b01000-90b01fff : INT33BB:00
-
-90b04000-90b07fff : INTL9C60:01
-
-   90b04000-90b07fff : INTL9C60:01
-
-90b08000-90b08fff : 80860F41:00
-
-   90b08000-90b08fff : 80860F41:00
-
-90b0a000-90b0afff : 80860F41:01
-
-   90b0a000-90b0afff : 80860F41:01
-
-90b0c000-90b0cfff : 80860F41:02
-
-   90b0c000-90b0cfff : 80860F41:02
-
-90b0e000-90b0efff : 80860F41:03
-
-   90b0e000-90b0efff : 80860F41:03
-
-90b10000-90b10fff : 80860F41:04
-
-   90b10000-90b10fff : 80860F41:04
-
-90b13000-90b13fff : 80860F09:00
-
-   90b13000-90b13fff : 80860F09:00
-
-90b14000-90b17fff : INTL9C60:00
-
-   90b14000-90b17fff : INTL9C60:00
-
-90b19000-90b19fff : 80860F0A:00
-
-   90b19000-90b1901f : serial
-
-90b1b000-90b1bfff : 80860F0A:01
-
-   90b1b000-90b1b01f : serial
-
-90b1d000-90b1dfff : 80860F14:02
-
-   90b1d000-90b1dfff : 80860F14:02
-
-90b1f000-90b1ffff : 80860F14:00
-
-   90b1f000-90b1ffff : 80860F14:00
-
-90c00000-90ffffff : PCI Bus 0000:00
-
-91000000-911fffff : 80860F28:00
-
-e00000d0-e00000db : INT33BD:00
-
-e00f8000-e00f8fff : Reserved
-
-fec00000-fec003ff : IOAPIC 0
-
-fed00000-fed003ff : HPET 0
-
-   fed00000-fed003ff : PNP0103:00
-
-fed01000-fed01fff : Reserved
-
-   fed01000-fed011ff : intel-spi
-
-fed03008-fed0300c : iTCO_wdt.2.auto
-
-fed05000-fed057ff : INT3401:00
-
-fed0c000-fed0cfff : INT33FC:00
-
-   fed0c000-fed0cfff : INT33FC:00
-
-fed0d000-fed0dfff : INT33FC:01
-
-   fed0d000-fed0dfff : INT33FC:01
-
-fed0e000-fed0efff : INT33FC:02
-
-   fed0e000-fed0efff : INT33FC:02
-
-fed40000-fed40fff : PCI Bus 0000:00
-
-fee00000-fee00fff : Local APIC
-
-ff000000-ffffffff : INT0800:00
-
-   ffd00000-ffffffff : Reserved
+Content-Transfer-Encoding: 7bit
+X-Originating-IP: [10.177.96.203]
+X-CFilter-Loop: Reflected
+
+
+
+On 2019/10/10 2:46, Scott Wood wrote:
+> On Wed, 2019-10-09 at 16:41 +0800, Jason Yan wrote:
+>> Hi Scott,
+>>
+>> On 2019/10/9 15:13, Scott Wood wrote:
+>>> On Wed, 2019-10-09 at 14:10 +0800, Jason Yan wrote:
+>>>> Hi Scott,
+>>>>
+>>>> Would you please take sometime to test this?
+>>>>
+>>>> Thank you so much.
+>>>>
+>>>> On 2019/9/24 13:52, Jason Yan wrote:
+>>>>> Hi Scott,
+>>>>>
+>>>>> Can you test v7 to see if it works to load a kernel at a non-zero
+>>>>> address?
+>>>>>
+>>>>> Thanks,
+>>>
+>>> Sorry for the delay.  Here's the output:
+>>>
+>>
+>> Thanks for the test.
+>>
+>>> ## Booting kernel from Legacy Image at 10000000 ...
+>>>      Image Name:   Linux-5.4.0-rc2-00050-g8ac2cf5b4
+>>>      Image Type:   PowerPC Linux Kernel Image (gzip compressed)
+>>>      Data Size:    7521134 Bytes = 7.2 MiB
+>>>      Load Address: 04000000
+>>>      Entry Point:  04000000
+>>>      Verifying Checksum ... OK
+>>> ## Flattened Device Tree blob at 1fc00000
+>>>      Booting using the fdt blob at 0x1fc00000
+>>>      Uncompressing Kernel Image ... OK
+>>>      Loading Device Tree to 07fe0000, end 07fff65c ... OK
+>>> KASLR: No safe seed for randomizing the kernel base.
+>>> OF: reserved mem: initialized node qman-fqd, compatible id fsl,qman-fqd
+>>> OF: reserved mem: initialized node qman-pfdr, compatible id fsl,qman-pfdr
+>>> OF: reserved mem: initialized node bman-fbpr, compatible id fsl,bman-fbpr
+>>> Memory CAM mapping: 64/64/64 Mb, residual: 12032Mb
+>>
+>> When boot from 04000000, the max CAM value is 64M. And
+>> you have a board with 12G memory, CONFIG_LOWMEM_CAM_NUM=3 means only
+>> 192M memory is mapped and when kernel is randomized at the middle of
+>> this 192M memory, we will not have enough continuous memory for node map.
+>>
+>> Can you set CONFIG_LOWMEM_CAM_NUM=8 and see if it works?
+> 
+> OK, that worked.
+> 
+
+Hi Scott, any more cases should be tested or any more comments?
+What else need to be done before this feature can be merged?
+
+Thanks,
+Jason
+
+> -Scott
+> 
+> 
+> 
+> .
+> 
 
