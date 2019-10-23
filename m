@@ -1,20 +1,23 @@
-Return-Path: <SRS0=xsVT=YP=lists.openwall.com=kernel-hardening-return-17095-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=tuIl=YQ=lists.openwall.com=kernel-hardening-return-17096-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_2 autolearn=no
+X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BF2A2CA9EA0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 22 Oct 2019 23:29:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A076ECA9EB6
+	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Oct 2019 16:59:42 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1D75F2086D
-	for <kernel-hardening@archiver.kernel.org>; Tue, 22 Oct 2019 23:29:50 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1D75F2086D
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=buserror.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17095-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9582 invoked by uid 550); 22 Oct 2019 23:29:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id E832021925
+	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Oct 2019 16:59:41 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="NQgD49Nz"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E832021925
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17096-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9398 invoked by uid 550); 23 Oct 2019 16:59:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,101 +25,78 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9550 invoked from network); 22 Oct 2019 23:29:43 -0000
-Message-ID: <51ee13bc7ced50c3aa1a7ac9335bea16651db684.camel@buserror.net>
-From: Scott Wood <oss@buserror.net>
-To: Jason Yan <yanaijie@huawei.com>, mpe@ellerman.id.au, 
- linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com,
- christophe.leroy@c-s.fr,  benh@kernel.crashing.org, paulus@samba.org,
- npiggin@gmail.com,  keescook@chromium.org,
- kernel-hardening@lists.openwall.com
-Cc: wangkefeng.wang@huawei.com, linux-kernel@vger.kernel.org, 
- jingxiangfeng@huawei.com, zhaohongjiang@huawei.com,
- thunder.leizhen@huawei.com,  yebin10@huawei.com
-Date: Tue, 22 Oct 2019 18:22:47 -0500
-In-Reply-To: <0543af6f-df4a-81ff-41fe-c81959568859@huawei.com>
-References: <20190920094546.44948-1-yanaijie@huawei.com>
-	 <9c2dd2a8-83f2-983c-383e-956e19a7803a@huawei.com>
-	 <c4769b34-95f6-81b9-4856-50459630aa0d@huawei.com>
-	 <38141b946f3376ce471e46eaf065e357ac540354.camel@buserror.net>
-	 <90bb659a-bde4-3b8e-8f01-bf22d7534f44@huawei.com>
-	 <34ef1980887c8a6d635c20bdaf748bb0548e51b5.camel@buserror.net>
-	 <0543af6f-df4a-81ff-41fe-c81959568859@huawei.com>
-Organization: Red Hat
+Received: (qmail 9377 invoked from network); 23 Oct 2019 16:59:34 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=oiXTugK+glDXdJjZWJtXYSMgUR2uLVi/MAVMaB3F35U=;
+        b=NQgD49Nz1FMbQT18HMLMCXz8AgV0WCkf006/YUznJf+3Ipz7NMjqeC2D/k5EAlN0/t
+         nJVzfXQMkmOEB0gib3vBf8erowFTJOm5qjJaOs1Eb/RW6pzbK2BDP79mM6rksf9Y8+aj
+         BJ0DPjReMffW5qFqvs/6b+ugvel1yOtCyIGIh/ClbZONxGCVxVbdNSXeTSCweh3hL9cu
+         Vz0voRu/R6+IY98n6jLUZeKwAjG1FEibO0VIHstd/fmjmeYU0EmyWqWiyBvrGV7Tdguu
+         n+UiY/XMLvkLH23E9uESUscCmkQ47unt7KrZbMWIK40hjbUz+Z7oCm/X+x38XKXz8RBw
+         +LyA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=oiXTugK+glDXdJjZWJtXYSMgUR2uLVi/MAVMaB3F35U=;
+        b=NsQGsTJa5LVmIpLfYmBgyjgQvpbHuTj3kOGeYEr0nRNdu/hZz7JT/WHbW/DCqm0YBV
+         XmfxnBGsGFwvi0qhrrdVP18eRY6vJurD6oQgpPH4i/povkO1VgXnaGnRcT5YSB0BjGpc
+         RyBEUUPyziN5hZ1UwkCglwZONVzuJOHMinugtQGLLecos39gbwqmFeeKZThz9W4pmvaQ
+         zJahdb/74P8zAVjA5mV5sf4tiMPg7b8jVmI2fWdzfU6Nag1LumOUs2kRqDMLW7wLgLX4
+         plGl0Geohy9wyx+54zNzH1Q6US/FNh9OvWDh2Ip2atNSq1iSx/cRDfxj4Em0t2yD1XNf
+         7M4g==
+X-Gm-Message-State: APjAAAUWy2pdRODQc8401Sn4ad3YE/akFgJpN5gGV9TicBlQxV4gSEXi
+	RoywP3wQ6/Di7vNpJlUFr6kWCX04OHHuopQBinzwOA==
+X-Google-Smtp-Source: APXvYqwpR9GdHU5UA4nzyjfo+qvuhnpsktbqKSujsET0zjiSwqQ8iK3jjEiXPXLcBxBc59n7vUzXDYX4PbBLe56acZ4=
+X-Received: by 2002:a1f:b202:: with SMTP id b2mr6005570vkf.59.1571849961694;
+ Wed, 23 Oct 2019 09:59:21 -0700 (PDT)
+MIME-Version: 1.0
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20191018161033.261971-7-samitolvanen@google.com> <20191022162826.GC699@lakrids.cambridge.arm.com>
+In-Reply-To: <20191022162826.GC699@lakrids.cambridge.arm.com>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Wed, 23 Oct 2019 09:59:09 -0700
+Message-ID: <CABCJKudsD6jghk4i8Tp4aJg0d7skt6sU=gQ3JXqW8sjkUuX7vA@mail.gmail.com>
+Subject: Re: [PATCH 06/18] add support for Clang's Shadow Call Stack (SCS)
+To: Mark Rutland <mark.rutland@arm.com>, Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
+	Steven Rostedt <rostedt@goodmis.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, 
+	Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>, 
+	Laura Abbott <labbott@redhat.com>, Nick Desaulniers <ndesaulniers@google.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
-X-Mailer: Evolution 3.28.5-0ubuntu0.18.04.1 
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-X-SA-Exim-Connect-IP: 2601:449:8480:af0:12bf:48ff:fe84:c9a0
-X-SA-Exim-Rcpt-To: yanaijie@huawei.com, mpe@ellerman.id.au, linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com, christophe.leroy@c-s.fr, benh@kernel.crashing.org, paulus@samba.org, npiggin@gmail.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, wangkefeng.wang@huawei.com, linux-kernel@vger.kernel.org, jingxiangfeng@huawei.com, zhaohongjiang@huawei.com, thunder.leizhen@huawei.com, yebin10@huawei.com
-X-SA-Exim-Mail-From: oss@buserror.net
-Subject: Re: [PATCH v7 00/12] implement KASLR for powerpc/fsl_booke/32
-X-SA-Exim-Version: 4.2.1 (built Tue, 02 Aug 2016 21:08:31 +0000)
-X-SA-Exim-Scanned: Yes (on baldur.buserror.net)
 
-On Mon, 2019-10-21 at 11:34 +0800, Jason Yan wrote:
-> 
-> On 2019/10/10 2:46, Scott Wood wrote:
-> > On Wed, 2019-10-09 at 16:41 +0800, Jason Yan wrote:
-> > > Hi Scott,
-> > > 
-> > > On 2019/10/9 15:13, Scott Wood wrote:
-> > > > On Wed, 2019-10-09 at 14:10 +0800, Jason Yan wrote:
-> > > > > Hi Scott,
-> > > > > 
-> > > > > Would you please take sometime to test this?
-> > > > > 
-> > > > > Thank you so much.
-> > > > > 
-> > > > > On 2019/9/24 13:52, Jason Yan wrote:
-> > > > > > Hi Scott,
-> > > > > > 
-> > > > > > Can you test v7 to see if it works to load a kernel at a non-zero
-> > > > > > address?
-> > > > > > 
-> > > > > > Thanks,
-> > > > 
-> > > > Sorry for the delay.  Here's the output:
-> > > > 
-> > > 
-> > > Thanks for the test.
-> > > 
-> > > > ## Booting kernel from Legacy Image at 10000000 ...
-> > > >      Image Name:   Linux-5.4.0-rc2-00050-g8ac2cf5b4
-> > > >      Image Type:   PowerPC Linux Kernel Image (gzip compressed)
-> > > >      Data Size:    7521134 Bytes = 7.2 MiB
-> > > >      Load Address: 04000000
-> > > >      Entry Point:  04000000
-> > > >      Verifying Checksum ... OK
-> > > > ## Flattened Device Tree blob at 1fc00000
-> > > >      Booting using the fdt blob at 0x1fc00000
-> > > >      Uncompressing Kernel Image ... OK
-> > > >      Loading Device Tree to 07fe0000, end 07fff65c ... OK
-> > > > KASLR: No safe seed for randomizing the kernel base.
-> > > > OF: reserved mem: initialized node qman-fqd, compatible id fsl,qman-
-> > > > fqd
-> > > > OF: reserved mem: initialized node qman-pfdr, compatible id fsl,qman-
-> > > > pfdr
-> > > > OF: reserved mem: initialized node bman-fbpr, compatible id fsl,bman-
-> > > > fbpr
-> > > > Memory CAM mapping: 64/64/64 Mb, residual: 12032Mb
-> > > 
-> > > When boot from 04000000, the max CAM value is 64M. And
-> > > you have a board with 12G memory, CONFIG_LOWMEM_CAM_NUM=3 means only
-> > > 192M memory is mapped and when kernel is randomized at the middle of
-> > > this 192M memory, we will not have enough continuous memory for node
-> > > map.
-> > > 
-> > > Can you set CONFIG_LOWMEM_CAM_NUM=8 and see if it works?
-> > 
-> > OK, that worked.
-> > 
-> 
-> Hi Scott, any more cases should be tested or any more comments?
-> What else need to be done before this feature can be merged?
+On Tue, Oct 22, 2019 at 9:28 AM Mark Rutland <mark.rutland@arm.com> wrote:
+> I think it would be preferable to follow the example of CC_FLAGS_FTRACE
+> so that this can be filtered out, e.g.
+>
+> ifdef CONFIG_SHADOW_CALL_STACK
+> CFLAGS_SCS := -fsanitize=shadow-call-stack
+> KBUILD_CFLAGS += $(CFLAGS_SCS)
+> export CC_FLAGS_SCS
+> endif
+>
+> ... with removal being:
+>
+> CFLAGS_REMOVE := $(CC_FLAGS_SCS)
+>
+> ... or:
+>
+> CFLAGS_REMOVE_obj.o := $(CC_FLAGS_SCS)
+>
+> That way you only need to define the flags once, so the enable and
+> disable falgs remain in sync by construction.
 
-I've just applied it and sent a pull request.
+CFLAGS_REMOVE appears to be only implemented for objects, which means
+there's no convenient way to filter out flags for everything in
+arch/arm64/kvm/hyp, for example. I could add a CFLAGS_REMOVE
+separately for each object file, or we could add something like
+ccflags-remove-y to complement ccflags-y, which should be relatively
+simple. Masahiro, do you have any suggestions?
 
--Scott
-
-
+Sami
