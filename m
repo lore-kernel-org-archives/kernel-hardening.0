@@ -1,22 +1,23 @@
-Return-Path: <SRS0=+cPq=YR=lists.openwall.com=kernel-hardening-return-17100-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=jEfg=YR=lists.openwall.com=kernel-hardening-return-17101-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.7 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 62F48CA9EAF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Oct 2019 14:39:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 163E0CA9EBB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Oct 2019 22:17:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AC22320679
-	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Oct 2019 14:39:16 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5D81820663
+	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Oct 2019 22:17:39 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="Wsq8rdKb"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AC22320679
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=socionext.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17100-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3899 invoked by uid 550); 24 Oct 2019 14:39:08 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="u1/fHDmx"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5D81820663
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17101-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 10026 invoked by uid 550); 24 Oct 2019 22:17:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,94 +25,63 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3879 invoked from network); 24 Oct 2019 14:39:07 -0000
-DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-04.nifty.com x9OEcio6009139
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
-	s=dec2015msa; t=1571927925;
-	bh=5VDOJqWr1P/8RpUKJUiUUgzqRYMuViQTbISV22/DfcM=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=Wsq8rdKbjufD8xDQo9TYn/vVPfLqU8CWHsul4oOcXL2+aXPYpencUJWWwSK3e35D2
-	 r1rM9S/WmrTYaz2BZmvK3Q++Ya6W+X/E7doaUDPGpJqtcrfyTmXmvYas9LC6dtz7c6
-	 +Wp7bga0LwmkjxC7bnK3lfeIWZErlsOVJtEDo2V3S2VPEdRk6duBPk4lRsrsWbDSL/
-	 STw5curdVNiU7mM8M4A4aCs4z+NHeoPxk0Ve0g/XI+teLFDGPSgtiQYnJpzl/UW1DT
-	 /q3CPziyC8B8u7V6ef2AEzLzPC2Ud+TpShsgQS4VnFZCerdl+NYBUp2z94XzY4M3Fp
-	 7AXuq/dNyMwFA==
-X-Nifty-SrcIP: [209.85.217.44]
-X-Gm-Message-State: APjAAAVcA3XhRBSCl0Ka7wX3fuXyVuW5WXoWf2YUcR2wcr7BaObb+bI5
-	NEyNA6AsHp44RJTdk3OA0q/jVUbYxJKe+y/Y17Y=
-X-Google-Smtp-Source: APXvYqzTx9f4+sdDvCmM/G0tcS16/98SXXq+GzkLjkICnXwW7kaMiC+gdVtM0Mg1KgO8XJEVHwsWres9Ec0jaj70OCs=
-X-Received: by 2002:a67:e290:: with SMTP id g16mr6201871vsf.54.1571927924100;
- Thu, 24 Oct 2019 07:38:44 -0700 (PDT)
+Received: (qmail 10006 invoked from network); 24 Oct 2019 22:17:32 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=qHNXsthwregcyrL2BKVfLqYllW87y6QVnA+Lbr5Rgec=;
+        b=u1/fHDmx2F03gUdsJoRaJfl7aP6BcoOTQj7WuOKplTSdf6uXX1E0Rf1hGTjZ93euSU
+         NJGI0hMli675V4W1F5aGYPIB6vXEndENuc9l4uQvSvWlXKnpA/Q0fOf41lKCkzVymcMj
+         vSAvJbnieQzBs39rOqmCk2ja2JZ+n2tLqqkQvWScrAsxpi7g4yEkQAJHTgbS1XIOEKGc
+         ZIEUfghKoKXuOS8kPtcMk4jtp/voE4nzOI5nX/zgK6dajQqfV49v6nb1hfQWLq1Yey8y
+         KbnrEILxVOYi9Z6E2nmjX/uSwH9bskxev0otzP5fbZ4T6AZwWHNu+W94Q+UntLXVb7q4
+         mXtg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=qHNXsthwregcyrL2BKVfLqYllW87y6QVnA+Lbr5Rgec=;
+        b=XeMYmySnQDZPjqWuKy35JzO3ZHJabL8KUaMx/X6adaKMzy77pQpB91vubG/ubXrSQd
+         GTavMRm76GUINLkuiMWB6mSoQlq9+ECe59F0Q4eKUGRFlGa5EeJQdd9DEDHK5zgBGkIP
+         nLyfAIIVROfDzljv52wrSjwk/K/bnvibPyBWdu4f9xVKjAL5IVHNkakNH9vJhJ34mN8+
+         no9PVZGwribYBRTypk+gcwiou7n1aK6EbuJCTY03Rxd0kcIUTMaouu5NbXuzROQj5jVm
+         +8oa31h78Z5j8fRzOm62uI1Yp2FLr97rVb3Icg1UmLnjW87MlvXmymWxt9wQD6I7N9BZ
+         eKDA==
+X-Gm-Message-State: APjAAAXj4lfzhL7iVrHIONB/bryAkAQxVBZatEYXLWSHHB1q2WGiW2VZ
+	YibcV+obowuuciB8RwwfxIcol1r9RZF+1AEAFTy81g==
+X-Google-Smtp-Source: APXvYqyC5R+J94HY0QZwShcMklCS8zj2eZiTO4Hh3KIgdjFp8g8gOvA8xc0s1anKvCDkBcvEQB2MlCQ7jEx4vRyMG+k=
+X-Received: by 2002:a05:6102:36a:: with SMTP id f10mr324969vsa.44.1571955439473;
+ Thu, 24 Oct 2019 15:17:19 -0700 (PDT)
 MIME-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com>
  <20191018161033.261971-7-samitolvanen@google.com> <20191022162826.GC699@lakrids.cambridge.arm.com>
- <CABCJKudxvS9Eehr0dEFUR4H44K-PUULbjrh0i=pP_r5MGrKptA@mail.gmail.com> <20191024132832.GG4300@lakrids.cambridge.arm.com>
-In-Reply-To: <20191024132832.GG4300@lakrids.cambridge.arm.com>
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Date: Thu, 24 Oct 2019 23:38:07 +0900
-X-Gmail-Original-Message-ID: <CAK7LNAQWjq0DoTD6LkQfRSMz6sS6_SFapd5YzKjz2U1ZmFEm9w@mail.gmail.com>
-Message-ID: <CAK7LNAQWjq0DoTD6LkQfRSMz6sS6_SFapd5YzKjz2U1ZmFEm9w@mail.gmail.com>
+ <CABCJKudsD6jghk4i8Tp4aJg0d7skt6sU=gQ3JXqW8sjkUuX7vA@mail.gmail.com> <20191024080418.35423b36@gandalf.local.home>
+In-Reply-To: <20191024080418.35423b36@gandalf.local.home>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Thu, 24 Oct 2019 15:17:08 -0700
+Message-ID: <CABCJKueb=xZzXBegc58aWRqPq6eCOpBf7uyyzVyNMujDSHhm1g@mail.gmail.com>
 Subject: Re: [PATCH 06/18] add support for Clang's Shadow Call Stack (SCS)
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Sami Tolvanen <samitolvanen@google.com>, Will Deacon <will@kernel.org>,
-        Catalin Marinas <catalin.marinas@arm.com>,
-        Steven Rostedt <rostedt@goodmis.org>,
-        Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-        Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
-        Laura Abbott <labbott@redhat.com>,
-        Nick Desaulniers <ndesaulniers@google.com>,
-        clang-built-linux <clang-built-linux@googlegroups.com>,
-        Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
-        LKML <linux-kernel@vger.kernel.org>
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, 
+	Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Dave Martin <Dave.Martin@arm.com>, 
+	Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, 
+	Nick Desaulniers <ndesaulniers@google.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Thu, Oct 24, 2019 at 10:28 PM Mark Rutland <mark.rutland@arm.com> wrote:
+On Thu, Oct 24, 2019 at 5:04 AM Steven Rostedt <rostedt@goodmis.org> wrote:
+> You can remove a CFLAGS for a whole directory. lib, kernel/trace and
+> others do this. Look at kernel/trace/Makefile, we have:
 >
-> On Tue, Oct 22, 2019 at 12:26:02PM -0700, Sami Tolvanen wrote:
-> > On Tue, Oct 22, 2019 at 9:28 AM Mark Rutland <mark.rutland@arm.com> wrote:
->
-> > > > +config SHADOW_CALL_STACK
-> > > > +     bool "Clang Shadow Call Stack"
-> > > > +     depends on ARCH_SUPPORTS_SHADOW_CALL_STACK
-> > > > +     depends on CC_IS_CLANG && CLANG_VERSION >= 70000
-> > >
-> > > Is there a reason for an explicit version check rather than a
-> > > CC_HAS_<feature> check? e.g. was this available but broken in prior
-> > > versions of clang?
-> >
-> > No, this feature was added in Clang 7. However,
-> > -fsanitize=shadow-call-stack might require architecture-specific
-> > flags, so a simple $(cc-option, -fsanitize=shadow-call-stack) in
-> > arch/Kconfig is not going to work. I could add something like this to
-> > arch/arm64/Kconfig though:
-> >
-> > select ARCH_SUPPORTS_SHADOW_CALL_STACK if CC_HAVE_SHADOW_CALL_STACK
-> > ...
-> > config CC_HAVE_SHADOW_CALL_STACK
-> >        def_bool $(cc-option, -fsanitize=shadow-call-stack -ffixed-x18)
-> >
-> > And then drop CC_IS_CLANG and version check entirely. Thoughts?
->
-> That sounds good to me, yes!
->
-> Thanks,
-> Mark.
+> ORIG_CFLAGS := $(KBUILD_CFLAGS)
+> KBUILD_CFLAGS = $(subst $(CC_FLAGS_FTRACE),,$(ORIG_CFLAGS))
 
+That definitely looks less invasive in this case than adding
+ccflags-remove-y, since we only really need this for one directory.
+I'll use this in v2. Thanks, Steven.
 
-If you use cc-option, please add a comment like
-
-    # supported by Clang 7 or later.
-
-
-I do not know the minimal supported clang version.
-When we bump the minimal version to clang 7,
-we can drop the cc-option test entirely.
-
-
-
-
-
---
-Best Regards
-Masahiro Yamada
+Sami
