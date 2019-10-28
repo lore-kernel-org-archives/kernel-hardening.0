@@ -1,4 +1,4 @@
-Return-Path: <SRS0=8nq9=YV=lists.openwall.com=kernel-hardening-return-17139-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=BlEs=YV=lists.openwall.com=kernel-hardening-return-17140-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,17 +6,17 @@ X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
 	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2DCEECA9EC0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 19:23:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4B87BCA9EC0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 19:58:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7EB6621721
-	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 19:23:17 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9720F214B2
+	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 19:58:03 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="brI1TRWD"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7EB6621721
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="O0yZqC1v"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9720F214B2
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17139-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22129 invoked by uid 550); 28 Oct 2019 19:23:10 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17140-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1211 invoked by uid 550); 28 Oct 2019 19:57:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,83 +24,96 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22094 invoked from network); 28 Oct 2019 19:23:09 -0000
+Received: (qmail 1190 invoked from network); 28 Oct 2019 19:57:56 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=DjF/eNvkGdaDeX7wOk+AYNOQrW66dThZabixiWsapkU=;
-        b=brI1TRWDsIZBjI7b4p2HXPWwsbosgEcDNEaZeRPmu2zo3oYzeSXz7bz4Zdq9iGPtqm
-         L8wlHG1a6QFtRHIFoSpZ44cFImA6eTeGV1kXtWoqefGEIbKvw4jYJP2ua2NuBmV4Zb4a
-         Z9X8XhRM8Om6fLW1H+JLe/5X18tAgkUK6EtWc=
+         :content-disposition:in-reply-to;
+        bh=+wOJCmH0g8vAxxe+FcShlh+2/nEo9CAjIamY0wkPKUQ=;
+        b=O0yZqC1vKJdTDSM5n1ypj42P6mUYqFnfIcgablhmOvhVLjS1Ybl9gj4HXCMp/vZ/Jg
+         IlXkNeniJ714HLUGdQmrikkPN3FAzyra+IIBoiYFS+hSOqqXECKH+9kL8TmBRqTz+il7
+         BXn0qi51LmPYcG+sXB1pj3nora5+8WYXfasYo=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=DjF/eNvkGdaDeX7wOk+AYNOQrW66dThZabixiWsapkU=;
-        b=T8WMUHAEcyM2+5u6lNFu4E2WNn7PWdBjy87+OpGrjJmMgo4k1zdRBQ7bC+/ZKO7HQZ
-         Xt/Yiso1mO5WMFLnM6T9BWJO4bV7seupLbyACf62axUZNix71N9cl4LYFuDXRxlikgks
-         z2TK+EuO+R33ouXRm7X4wsGHFhWcHMaC482hCzJmlSXwg3vv3yPbkhNECIs1IZFIPHLI
-         hGDdNQUcM+ibTeoZCKqYW7HEL9Ply0erL+JEvCSOG/1XF/QSoFpeGH1wQgdcEq/6uar2
-         jE5HzBrDs1Tcimz7YsLR0HSxUVU7HIreX3hLlg7IXLGapPt1w6w75klrp20YdWN3Hrys
-         HZ9g==
-X-Gm-Message-State: APjAAAXn2W6yKyekYgaCI7uDlF9n0Uvn/LJqD9OvBXhkliH/m6Gkb2by
-	WXujs/812vWXvMNRt1y+T9RLKw==
-X-Google-Smtp-Source: APXvYqxtsUFXcTPTM+iV3+5SaYyNwo1Ir3mDhCcQnW9ccD9CRa8DG6kE9oTdn2X7xF85a+5Ww2VWlw==
-X-Received: by 2002:a63:1c24:: with SMTP id c36mr19598598pgc.292.1572290577563;
-        Mon, 28 Oct 2019 12:22:57 -0700 (PDT)
-Date: Mon, 28 Oct 2019 12:22:55 -0700
+         :mime-version:content-disposition:in-reply-to;
+        bh=+wOJCmH0g8vAxxe+FcShlh+2/nEo9CAjIamY0wkPKUQ=;
+        b=iF91rQash8zz8551WFR6at3VM9dQBjjDVlTEiR4NJaEcPNVoUo9kGa50OZiiD2E/vo
+         TZsWibppEtf8tlDZhsmVdJ5qYb/yu4BMKKXAswhI+e8qlDOC8oo3gu0Ywa2tS4M2lj0C
+         B0Wo3uscVEtXRXFPTTGs3+ismcuBiw8036SuQ20tAGs8v0DNAVL+IpX4mh2sgRqaZpyu
+         EADvd83L3lAyA1I78OtSTy71AvRRUZ3KIXv/GdlqXO9wn1e9JrDgJ4CGvbxKwjeJTIeh
+         r8wLdqLSZAvofU18ncIbWU4CYd2/ip5UW+734uMhZ/NHOErnkjM3iOBUO6FAde6Vckrt
+         3Ajw==
+X-Gm-Message-State: APjAAAW2cdjg6LDz3yKF1rcXRiJf0i/QQ2xCdReTQy85YaLchYBMf8OK
+	jGXJL+rnkh9sINvgW50mVrHaPg==
+X-Google-Smtp-Source: APXvYqyKAiln1b5mOZI7AcApDWWXQnpclGuce0+3km3MXnlFB0MT9wWVjjgen/Fg+kiLaMYGZZoRxg==
+X-Received: by 2002:a62:e10c:: with SMTP id q12mr13396875pfh.248.1572292664956;
+        Mon, 28 Oct 2019 12:57:44 -0700 (PDT)
+Date: Mon, 28 Oct 2019 12:57:42 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Muni Sekhar <munisekharrms@gmail.com>
-Cc: kernel-hardening@lists.openwall.com
-Subject: Re: How to get the crash dump if system hangs?
-Message-ID: <201910281220.D2ABC01B@keescook>
-References: <CAHhAz+htpQewAZcpGWD567KLksorc+arA3Mu=hkUX+y6567jGA@mail.gmail.com>
- <201909301645.5FA44A4@keescook>
- <CAHhAz+jyZmLBsFBxLG_XmZRBrprrxa49T+07NhcrsH4Yi6jp6A@mail.gmail.com>
- <201910031417.2AEEE7B@keescook>
- <CAHhAz+iUOum7EV1g9W=vFHZ0kq9US7L4CJFX4=QbSExrgBX7yg@mail.gmail.com>
- <201910100950.5179A62E2@keescook>
- <CAHhAz+j9oaAY9_sn16J2c=U+iidZKu3mp0pRpPZAvu4dJPetkg@mail.gmail.com>
- <201910101106.9ACB5DB@keescook>
- <CAHhAz+hw251beDeaWRFV7oShngSQ_KAACXAzb45EZRBdZ3kbSg@mail.gmail.com>
- <CAHhAz+g6RBPKfUMne6Me_ha3FwUWj6a_pA=dYshyjAtOuu+SfA@mail.gmail.com>
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Sami Tolvanen <samitolvanen@google.com>, Will Deacon <will@kernel.org>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Dave Martin <Dave.Martin@arm.com>,
+	Laura Abbott <labbott@redhat.com>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	Jann Horn <jannh@google.com>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	Masahiro Yamada <yamada.masahiro@socionext.com>,
+	clang-built-linux <clang-built-linux@googlegroups.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
+	LKML <linux-kernel@vger.kernel.org>
+Subject: Re: [PATCH v2 05/17] add support for Clang's Shadow Call Stack (SCS)
+Message-ID: <201910281250.25FBA8533@keescook>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20191024225132.13410-1-samitolvanen@google.com>
+ <20191024225132.13410-6-samitolvanen@google.com>
+ <20191025105643.GD40270@lakrids.cambridge.arm.com>
+ <CABCJKuc+XiDRdqfvjwCF7y=1wX3QO0MCUpeu4Gdcz91+nmnEAQ@mail.gmail.com>
+ <20191028163532.GA52213@lakrids.cambridge.arm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAHhAz+g6RBPKfUMne6Me_ha3FwUWj6a_pA=dYshyjAtOuu+SfA@mail.gmail.com>
+In-Reply-To: <20191028163532.GA52213@lakrids.cambridge.arm.com>
 
-On Fri, Oct 25, 2019 at 07:40:58AM +0530, Muni Sekhar wrote:
-> After loading the ramoops module, I see it generates dmesg and console logs.
+On Mon, Oct 28, 2019 at 04:35:33PM +0000, Mark Rutland wrote:
+> On Fri, Oct 25, 2019 at 01:49:21PM -0700, Sami Tolvanen wrote:
+> > To keep the address of the currently active shadow stack out of
+> > memory, the arm64 implementation clears this field when it loads x18
+> > and saves the current value before a context switch. The generic code
+> > doesn't expect the arch code to necessarily do so, but does allow it.
+> > This requires us to use __scs_base() when accessing the base pointer
+> > and to reset it in idle tasks before they're reused, hence
+> > scs_task_reset().
+> 
+> Ok. That'd be worth a comment somewhere, since it adds a number of
+> things which would otherwise be unnecessary.
+> 
+> IIUC this assumes an adversary who knows the address of a task's
+> thread_info, and has an arbitrary-read (to extract the SCS base from
+> thead_info) and an arbitrary-write (to modify the SCS area).
+> 
+> Assuming that's the case, I don't think this buys much. If said
+> adversary controls two userspace threads A and B, they only need to wait
+> until A is context-switched out or in userspace, and read A's SCS base
+> using B.
+> 
+> Given that, I'd rather always store the SCS base in the thread_info, and
+> simplify the rest of the code manipulating it.
 
-Excellent!
-
-> I’ve a actual test case where my system gets frozen  so have no
-> software control. I executed this test case and as expected my system
-> has frozen and recovered it by powering it on(cold boot?) and then
-> loaded the ramoops but this time no files present in /sys/fs/pstore.
-
-I wonder if you could use a hardware watchdog driver of some kind to
-trigger the soft reboot?
-
-> If you restart a PC in cold(hard) boot, is it possible to see the RAM
-> memory(previous boot) still? I really I don’t know how it works.
-
-It depends a lot on your chipset and RAM. It sounds like your system
-very quickly wipes its RAM contents on a cold reset.
-
-> So, is there a  way to automatically reboot the Linux system when it
-> freezes? I set “kernel.softlockup_panic = 1, kernel.unknown_nmi_panic
-> = 1, kernel.softlockup_all_cpu_backtrace = 1, kernel.panic = 1,
-> kernel.panic_on_io_nmi = 1, kernel.panic_on_oops = 1,
-> kernel.panic_on_stackoverflow = 1, kernel.panic_on_unrecovered_nmi =
-> 1”, but it does not helped to reboot when it freezes.
-
-See if Documentation/nmi_watchdog.txt helps?
-
-Good luck!
+I'd like to keep this as-is since it provides a temporal protection.
+Having arbitrary kernel read and write at arbitrary time is a very
+powerful attack primitive, and is, IMO, not very common. Many attacks
+tend to be chains of bugs that give attackers narrow visibility in to the
+kernel at specific moments. I would say this design is more about stopping
+"current" from dumping thread_info (as there are many more opportunities
+for current to see its own thread_info compared to arbitrary addresses
+or another task's thread_info). As such, I think it's a reasonable
+precaution to take.
 
 -- 
 Kees Cook
