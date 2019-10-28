@@ -1,23 +1,20 @@
-Return-Path: <SRS0=XpEX=YV=lists.openwall.com=kernel-hardening-return-17137-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=NPEY=YV=lists.openwall.com=kernel-hardening-return-17138-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7AFC6CA9EC0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 16:15:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 64C57CA9EC0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 16:36:01 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C4B0E208C0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 16:15:31 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="cRlJ8go8"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C4B0E208C0
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17137-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7931 invoked by uid 550); 28 Oct 2019 16:15:25 -0000
+	by mail.kernel.org (Postfix) with SMTP id B02C921744
+	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Oct 2019 16:35:59 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B02C921744
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=arm.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17138-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18116 invoked by uid 550); 28 Oct 2019 16:35:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,65 +22,108 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7913 invoked from network); 28 Oct 2019 16:15:24 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=NAeDGv4mmTdcJjmFC/Y5EqwPqrlxkNMDKmTxGtNGkZY=;
-        b=cRlJ8go8Gwg5sHkB7ZS3FAbbXtnMD/tbE+zSlh/I1r1/OC/G4k2GVu3K4ZQIVtSesK
-         qWj5vEzyZr/kwqbQ/BTQz27rlFGtYiadnB4BjwV9Aanq9y6mIcNlZgE0TDCUZmzdfMAK
-         pYXldXOHSP6bQqOp2tqseN1pN+uwLR+zn/EQU53d0ejxptXvTV4EloD/dPmL0glR+KIS
-         nM5OLYggHmVr1GJPpWaCLHPpHehzf5Xxk2CL48eRGzuTedh2dhf7I58eB/9um9Q2ykj/
-         fH8V56DN6X6u8meTksQpmCSDkwZZFwfBU/9m+m5LLJy37fUNh5yE52TZE9xDBcF8G6ck
-         eKDg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=NAeDGv4mmTdcJjmFC/Y5EqwPqrlxkNMDKmTxGtNGkZY=;
-        b=RnOAzu2Qsah3uwse3aqnOsy7sxSy8Oo7whhvVd2ZtdgOPevAYl6gWqqVnRtuiaTwyO
-         nyQt8FSZ4lEvYooy/ueWsO4fSOKBTpCjbavASXa/JYe5+OOX5QXOh6sG8WYBbNsC36Rp
-         3wJuAGe5T9dQi7jgv2rK1xmqjP9VDj+S/Yb2Fz6iJulsyMTkEQCpQlGC9r8KbBFzGlks
-         rax74IoNoLKo2AajrAArYWvz8KpBEfJv2rR0x2J5NBKzwng4KH0tGfHA5uwdXcwg/TsQ
-         ZpJFINtFUSGfytRZa8J7r5ON44zBqkmfbxAjuIo5s1oFknJc5NUUlKB9zt2kGh62LCQQ
-         lSKA==
-X-Gm-Message-State: APjAAAV7X6EN/xPnfCX07C2vWQjN0WehQKq//+RYAvkLhFF1c8VrquLN
-	6fnXX/xuQAkSF4wo8QSiKEWmWdCiinjHYnb+WDJgdg==
-X-Google-Smtp-Source: APXvYqyErnDNeReEYHXLOlOQvJxZB1LCeRqzFRFTtzuu+yjPbfij2oddf0msvyrSOjimXhfQmIZ/10I+XmQJOMeVmmI=
-X-Received: by 2002:a67:ffc7:: with SMTP id w7mr9278938vsq.15.1572279312128;
- Mon, 28 Oct 2019 09:15:12 -0700 (PDT)
-MIME-Version: 1.0
-References: <20191018161033.261971-1-samitolvanen@google.com>
- <20191024225132.13410-1-samitolvanen@google.com> <20191024225132.13410-6-samitolvanen@google.com>
- <2c13c39acb55df5dbb0d40c806bb1d7dc4bde2ae.camel@perches.com>
- <CABCJKucUR=reCaOh_n8XGSZixmsckNtFXoaq_NOdB+iw-5UxMA@mail.gmail.com> <CANiq72n4o16TB53s6nLLrLCw6v0Brn8GAhKvdzzN7v1tNontCQ@mail.gmail.com>
-In-Reply-To: <CANiq72n4o16TB53s6nLLrLCw6v0Brn8GAhKvdzzN7v1tNontCQ@mail.gmail.com>
-From: Sami Tolvanen <samitolvanen@google.com>
-Date: Mon, 28 Oct 2019 09:15:00 -0700
-Message-ID: <CABCJKuexT3-AMiziJdDjKgW2iBW-aBuBJCTRFLK71wvpBkZ5Qg@mail.gmail.com>
+Received: (qmail 18098 invoked from network); 28 Oct 2019 16:35:51 -0000
+Date: Mon, 28 Oct 2019 16:35:33 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Will Deacon <will@kernel.org>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Dave Martin <Dave.Martin@arm.com>,
+	Kees Cook <keescook@chromium.org>,
+	Laura Abbott <labbott@redhat.com>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	Jann Horn <jannh@google.com>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	Masahiro Yamada <yamada.masahiro@socionext.com>,
+	clang-built-linux <clang-built-linux@googlegroups.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
+	LKML <linux-kernel@vger.kernel.org>
 Subject: Re: [PATCH v2 05/17] add support for Clang's Shadow Call Stack (SCS)
-To: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, 
-	Dave Martin <Dave.Martin@arm.com>, Jann Horn <jannh@google.com>, Joe Perches <joe@perches.com>, 
-	Kees Cook <keescook@chromium.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, 
-	Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, 
-	Masahiro Yamada <yamada.masahiro@socionext.com>, Masami Hiramatsu <mhiramat@kernel.org>, 
-	Nick Desaulniers <ndesaulniers@google.com>, Steven Rostedt <rostedt@goodmis.org>, 
-	Will Deacon <will@kernel.org>, clang-built-linux <clang-built-linux@googlegroups.com>, 
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
-Content-Type: text/plain; charset="UTF-8"
+Message-ID: <20191028163532.GA52213@lakrids.cambridge.arm.com>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20191024225132.13410-1-samitolvanen@google.com>
+ <20191024225132.13410-6-samitolvanen@google.com>
+ <20191025105643.GD40270@lakrids.cambridge.arm.com>
+ <CABCJKuc+XiDRdqfvjwCF7y=1wX3QO0MCUpeu4Gdcz91+nmnEAQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CABCJKuc+XiDRdqfvjwCF7y=1wX3QO0MCUpeu4Gdcz91+nmnEAQ@mail.gmail.com>
+User-Agent: Mutt/1.11.1+11 (2f07cb52) (2018-12-01)
 
-On Mon, Oct 28, 2019 at 8:31 AM Miguel Ojeda
-<miguel.ojeda.sandonis@gmail.com> wrote:
-> We decided to do it like that when I introduced compiler_attributes.h.
->
-> Given it is hidden behind a definition, we don't care about which one we use internally; therefore the idea was to avoid clashes as much as possible with other names/definitions/etc.
->
-> The syntax is supported in the compilers we care about (for docs on attributes, the best reference is GCC's by the way).
+On Fri, Oct 25, 2019 at 01:49:21PM -0700, Sami Tolvanen wrote:
+> On Fri, Oct 25, 2019 at 3:56 AM Mark Rutland <mark.rutland@arm.com> wrote:
+> > > +#define SCS_END_MAGIC        0xaf0194819b1635f6UL
+> >
+> > Keyboard smash? ... or is there a prize for whoever figures out the
+> > secret? ;)
+> 
+> It's a random number, so if someone figures out a secret in it,
+> they'll definitely deserve a prize. :)
 
-Got it, thank you for explaining. I'll change this to __no_sanitize__
-in v3 since Clang seems to be happy with either version.
+I'll Cc some treasure hunters. :)
 
-Sami
+> > > diff --git a/kernel/fork.c b/kernel/fork.c
+> > > index bcdf53125210..ae7ebe9f0586 100644
+> > > --- a/kernel/fork.c
+> > > +++ b/kernel/fork.c
+> > > @@ -94,6 +94,7 @@
+> > >  #include <linux/livepatch.h>
+> > >  #include <linux/thread_info.h>
+> > >  #include <linux/stackleak.h>
+> > > +#include <linux/scs.h>
+> >
+> > Nit: alphabetical order, please (this should come before stackleak.h).
+> 
+> The includes in kernel/fork.c aren't in alphabetical order, so I just
+> added this to the end here.
+
+Fair enough. It looked otherwise in the context, and we generally aim
+for that as a soft rule.
+
+[...]
+
+> > > +static inline void *__scs_base(struct task_struct *tsk)
+> > > +{
+> > > +     return (void *)((uintptr_t)task_scs(tsk) & ~(SCS_SIZE - 1));
+> > > +}
+> >
+> > We only ever assign the base to task_scs(tsk), with the current live
+> > value being in a register that we don't read. Are we expecting arch code
+> > to keep this up-to-date with the register value?
+> >
+> > I would have expected that we just leave this as the base (as we do for
+> > the regular stack in the task struct), and it's down to arch code to
+> > save/restore the current value where necessary.
+> >
+> > Am I missing some caveat with that approach?
+> 
+> To keep the address of the currently active shadow stack out of
+> memory, the arm64 implementation clears this field when it loads x18
+> and saves the current value before a context switch. The generic code
+> doesn't expect the arch code to necessarily do so, but does allow it.
+> This requires us to use __scs_base() when accessing the base pointer
+> and to reset it in idle tasks before they're reused, hence
+> scs_task_reset().
+
+Ok. That'd be worth a comment somewhere, since it adds a number of
+things which would otherwise be unnecessary.
+
+IIUC this assumes an adversary who knows the address of a task's
+thread_info, and has an arbitrary-read (to extract the SCS base from
+thead_info) and an arbitrary-write (to modify the SCS area).
+
+Assuming that's the case, I don't think this buys much. If said
+adversary controls two userspace threads A and B, they only need to wait
+until A is context-switched out or in userspace, and read A's SCS base
+using B.
+
+Given that, I'd rather always store the SCS base in the thread_info, and
+simplify the rest of the code manipulating it.
+
+Thanks,
+Mark.
