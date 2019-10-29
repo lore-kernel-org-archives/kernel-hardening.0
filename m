@@ -1,23 +1,23 @@
-Return-Path: <SRS0=fTW3=YW=lists.openwall.com=kernel-hardening-return-17151-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=mmQm=YW=lists.openwall.com=kernel-hardening-return-17152-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0C073CA9EAE
-	for <kernel-hardening@archiver.kernel.org>; Tue, 29 Oct 2019 20:36:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C6724CA9EAE
+	for <kernel-hardening@archiver.kernel.org>; Tue, 29 Oct 2019 21:30:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4483B208E3
-	for <kernel-hardening@archiver.kernel.org>; Tue, 29 Oct 2019 20:36:13 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 18A2F21734
+	for <kernel-hardening@archiver.kernel.org>; Tue, 29 Oct 2019 21:30:24 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="XRKGIdWY"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4483B208E3
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17151-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21588 invoked by uid 550); 29 Oct 2019 20:36:06 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="PrZ2AGRr"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 18A2F21734
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17152-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 6029 invoked by uid 550); 29 Oct 2019 21:30:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,76 +25,92 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21570 invoked from network); 29 Oct 2019 20:36:06 -0000
+Received: (qmail 6006 invoked from network); 29 Oct 2019 21:30:18 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
+        d=chromium.org; s=google;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=weRnPR6zYa479NAUpF9JwnzdoXArAq5BeasxBvL84nU=;
-        b=XRKGIdWYXO3m1hY8XbcF6besNQxUfY5HowLorvgI06Il0r949+pXWQMiusqg7NW4bL
-         n2NNmRL5tJyfSXfLwXr7irLEBpOMOdlwG+QXG7l00owKxPoCqxcVFS0Co7+QZnEhVhrx
-         8hiqpPhiSobeO+7koU+UUdkIE7/OsB5eKgyfPEVzdKPlXsOqaBn4iJSkUSLvWYoQRQxk
-         Si4ZeOrG1j0q/fl6GMEuuIYbz7P9KayVlQXJtPP+aorYT7EgrEvU87GvMYFOphF00Zmr
-         DOXx0aTrS6kWE9mtAAA1s6aRq1rObI7RobGaMi6KzHKBxk/qXKTL4MMQ3U1t5+oBZe1Y
-         +2PA==
+        bh=TqdJq1f/qIhweQts5AB1HeIVb9O7ywkFDNZusrXv0ac=;
+        b=PrZ2AGRroeNtw796hVMPeML+80GYP6QyWEsnxgND+dc9gtx/OHg/KPAYFlRg85KJB2
+         ZrrwSetq2naXw50GkCSuX6vr2qTerRqUQrvbdlAbZ7OpLfmXRmRnVUmKMOZGBMfYn7il
+         34bQ7dLn6c6ccLIfSOQk8ypMzkskCSknF9H20=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=weRnPR6zYa479NAUpF9JwnzdoXArAq5BeasxBvL84nU=;
-        b=EWARHbiDYvgVT9TcaeB7W/MHITiE/uqCUk6o1xIVE6aTmahlEso+alBrAjqDcnLdjM
-         eM2R6qOre2RzGiOnguOgVj/kO5c2h9eDhDWChI08fvmmhycPZqNTKGwY8k84J+DFP27Y
-         5aIK622rIZXySVP/eZ66ejB4fvgKB93w2lKz1UNh4z+cVQ2ReJBwaD6t5iNGv1Y2cmvr
-         2cMjRUY/uEPw5M5cJIuy/a50NxhaWwQ0TIlZEAQ2o3NZjbk9SfclwT3Kkopuhch5WM9m
-         4Ehl4FLuLRSb6d0p1L+p+voiRRDaYcPCAl0R/AjV5MPDrAdsmoJdo1CdBaMukGFFX+kk
-         kqeQ==
-X-Gm-Message-State: APjAAAVcdczyg/JEH/8qeOpSjbnJr7y3UBN/eITL7CbrUTszisorcos2
-	vhGHXOsO8du71SYZhhc5/yPUTypYsUzKLnDHFnpNJg==
-X-Google-Smtp-Source: APXvYqw1QuYaZCWaZyhSYUpbUd82Cb158qMxFhGB8aJGfza75ZBKXzYxqXPG4i32Epk41OS84e6p4SgzgoHmtzZc06g=
-X-Received: by 2002:a17:902:9b83:: with SMTP id y3mr579601plp.179.1572381353386;
- Tue, 29 Oct 2019 13:35:53 -0700 (PDT)
+        bh=TqdJq1f/qIhweQts5AB1HeIVb9O7ywkFDNZusrXv0ac=;
+        b=cuZ24h9oKVqq8oUTEK5AWWlTCwnJ8QEmV4Pgt0L67zPo6Md8uEdm7OdjX85OnVve/H
+         iBGB75qGK0NwxWAu1aM52aXxV4/O6Ti2KC25aJAZJ1kHElJDo/VVy+QxE4ZsY6HmR9xN
+         tcs+Ihikr+4wJEHiJVlvV+6XgusaQDGVAVmV6KXyXZJFrtsqeCknGL2WsopiNQ+ZpGB3
+         3ImU11LTZBs1VDEYWf6SmLRSkwm1d23SQ40Bi+ZNXT4YlEYLba6qykaO/vPnANM2Gj+2
+         7Yjk5REdczmpFLzYX/C8GKA0Ptw+4LM0RCuUMtT2DLzhTmOPWM+9W8bTdu0UAM6XP57g
+         13sg==
+X-Gm-Message-State: APjAAAVVEOxOANjQdbnRVXUgeExnSn5a06AoeArtOgzfCqPavS5hCVV6
+	LG/M88/BFP6HflneDPWaMkoofmyxn6E=
+X-Google-Smtp-Source: APXvYqxnTu1TcbtvdQdCP8dDQXvWLSU1MHUroIgPJ3u8A3RsMXd94/dCLAk7L1VxfE53GVj9vbR5Bw==
+X-Received: by 2002:a17:906:2989:: with SMTP id x9mr5534079eje.318.1572384606367;
+        Tue, 29 Oct 2019 14:30:06 -0700 (PDT)
+X-Received: by 2002:a1c:28d4:: with SMTP id o203mr6068671wmo.147.1572384604588;
+ Tue, 29 Oct 2019 14:30:04 -0700 (PDT)
 MIME-Version: 1.0
-References: <20191018161033.261971-1-samitolvanen@google.com>
- <20191024225132.13410-1-samitolvanen@google.com> <20191024225132.13410-10-samitolvanen@google.com>
- <20191025110313.GE40270@lakrids.cambridge.arm.com> <CABCJKud1xYEx_GVgfBHUuwNGKMxX+uVaE5TR6DEqo7CoSJJnNA@mail.gmail.com>
-In-Reply-To: <CABCJKud1xYEx_GVgfBHUuwNGKMxX+uVaE5TR6DEqo7CoSJJnNA@mail.gmail.com>
-From: Nick Desaulniers <ndesaulniers@google.com>
-Date: Tue, 29 Oct 2019 13:35:40 -0700
-Message-ID: <CAKwvOdkxrYB=HTmtQ6sejPmWZh-mwJ-gyWRGgtZDrUOjBMftzg@mail.gmail.com>
-Subject: Re: [PATCH v2 09/17] arm64: disable function graph tracing with SCS
-To: Mark Rutland <mark.rutland@arm.com>, Kristof Beyls <Kristof.Beyls@arm.com>
-Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
-	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Dave Martin <Dave.Martin@arm.com>, 
-	Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, 
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
-	Masahiro Yamada <yamada.masahiro@socionext.com>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, 
-	Sami Tolvanen <samitolvanen@google.com>
+References: <20190730191303.206365-1-thgarnie@chromium.org>
+ <20190730191303.206365-9-thgarnie@chromium.org> <20190809173003.GG2152@zn.tnic>
+In-Reply-To: <20190809173003.GG2152@zn.tnic>
+From: Thomas Garnier <thgarnie@chromium.org>
+Date: Tue, 29 Oct 2019 14:29:53 -0700
+X-Gmail-Original-Message-ID: <CAJcbSZGfHDthCz4h_h19zGN5Mb9yC+2FCfKs7-rfCuF=G9rP3w@mail.gmail.com>
+Message-ID: <CAJcbSZGfHDthCz4h_h19zGN5Mb9yC+2FCfKs7-rfCuF=G9rP3w@mail.gmail.com>
+Subject: Re: [PATCH v9 08/11] x86/boot/64: Adapt assembly for PIE support
+To: Borislav Petkov <bp@alien8.de>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	Kristen Carlson Accardi <kristen@linux.intel.com>, Kees Cook <keescook@chromium.org>, 
+	Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, 
+	"the arch/x86 maintainers" <x86@kernel.org>, Juergen Gross <jgross@suse.com>, Peter Zijlstra <peterz@infradead.org>, 
+	Boris Ostrovsky <boris.ostrovsky@oracle.com>, Josh Poimboeuf <jpoimboe@redhat.com>, 
+	Maran Wilson <maran.wilson@oracle.com>, Feng Tang <feng.tang@intel.com>, 
+	LKML <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Tue, Oct 29, 2019 at 10:45 AM Sami Tolvanen <samitolvanen@google.com> wrote:
+On Fri, Aug 9, 2019 at 10:29 AM Borislav Petkov <bp@alien8.de> wrote:
 >
-> On Fri, Oct 25, 2019 at 4:03 AM Mark Rutland <mark.rutland@arm.com> wrote:
-> > We have a similar issue with pointer authentication, and we're solving
-> > that with -fpatchable-function-entry, which allows us to hook the
-> > callsite before it does anything with the return address. IIUC we could
-> > use the same mechanism here (and avoid introducing a third).
+> chOn Tue, Jul 30, 2019 at 12:12:52PM -0700, Thomas Garnier wrote:
+> > Change the assembly code to use only relative references of symbols for the
+> > kernel to be PIE compatible.
 > >
-> > Are there plans to implement -fpatchable-function-entry on the clang
-> > side?
+> > Early at boot, the kernel is mapped at a temporary address while preparing
+> > the page table. To know the changes needed for the page table with KASLR,
 >
-> I'm not sure if there are plans at the moment, but if this feature is
-> needed for PAC, adding it to clang shouldn't be a problem. Nick, did
-> you have any thoughts on this?
+> These manipulations need to be done regardless of whether KASLR is
+> enabled or not. You're basically accomodating them to PIE.
+>
+> > the boot code calculate the difference between the expected address of the
+>
+> calculates
+>
+> > kernel and the one chosen by KASLR. It does not work with PIE because all
+> > symbols in code are relatives. Instead of getting the future relocated
+> > virtual address, you will get the current temporary mapping.
+>
+> Please avoid "you", "we" etc personal pronouns in commit messages.
+>
+> > Instructions were changed to have absolute 64-bit references.
+>
+> From Documentation/process/submitting-patches.rst:
+>
+>  "Describe your changes in imperative mood, e.g. "make xyzzy do frotz"
+>   instead of "[This patch] makes xyzzy do frotz" or "[I] changed xyzzy
+>   to do frotz", as if you are giving orders to the codebase to change
+>   its behaviour."
 
-I didn't see anything explicitly in LLVM's issue tracker.  I also
-didn't see -fpatchable-function-entry currently in -next other than
-under arch/parisc.  Are there patches I can look at?
+Sorry for the late reply, busy couple months.
 
-Has ARM's kernel team expressed the need to ARM's LLVM team?
--- 
-Thanks,
-~Nick Desaulniers
+I will integrate your feedback in v10. Thanks.
+
+>
+> Thx.
+>
+> --
+> Regards/Gruss,
+>     Boris.
+>
+> Good mailing practices for 400: avoid top-posting and trim the reply.
