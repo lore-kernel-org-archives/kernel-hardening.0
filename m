@@ -1,22 +1,20 @@
-Return-Path: <SRS0=N7kC=YX=lists.openwall.com=kernel-hardening-return-17168-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=zd5q=YX=lists.openwall.com=kernel-hardening-return-17169-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7AC5ACA9EC5
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Oct 2019 12:58:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 02374CA9EC5
+	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Oct 2019 14:04:02 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C0DB72087E
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Oct 2019 12:58:30 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=linaro.org header.i=@linaro.org header.b="rTgsJpzW"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C0DB72087E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linaro.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17168-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30617 invoked by uid 550); 30 Oct 2019 12:58:23 -0000
+	by mail.kernel.org (Postfix) with SMTP id E9F1920856
+	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Oct 2019 14:04:00 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E9F1920856
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17169-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1478 invoked by uid 550); 30 Oct 2019 14:03:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,112 +22,332 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24455 invoked from network); 30 Oct 2019 12:45:46 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linaro.org; s=google;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=Z/lBvgj2tEa3ewK9stecrJwWbqYMjUJzw11XHWG5FOU=;
-        b=rTgsJpzWI5VRDYzYA8OK+NMiiwUWn+nXQxhEXl702L+YTP/w8CrLC81P0JJEIstmBR
-         1CwT5RWxJkiYre2CpQ3vgohfeSR+vd0HmESrAN+Pc8K3Pp+ldKsr2ITBANimBtbruOqp
-         fUhw/5Pu/rRI1CsSEc/1avDvKOGppY2Pvel+6OsYVyIp4EpQ1rlJS3APYLqEY/MrQ4PJ
-         gvOlJloA0E5eSPhtgMyesfaO9SmwcFsZxjHpurmfcKYl8F7mt4tS0gGLKD2vDi3aWhPZ
-         zF8mfNYh1u7i3D+o/kdwc53E/0Fsr57dp+xD9DqF4w6uJlx8zqhDNoxTgpbYTFpqAQ+w
-         x8cw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=Z/lBvgj2tEa3ewK9stecrJwWbqYMjUJzw11XHWG5FOU=;
-        b=TpatHAzDlZg+wx6A9V5yPE0clWcLoGBxposWMOoI/To4QKZilJaUj4NmC+PvoagZ/7
-         upmT3zFa2ZyTVgqIRP2lXYhbgSvHLSd08G4t6HUcEPVLN+FcrZqfv25WvGOJI0Lg3ki0
-         GxuCyZEbb4m6fPB/hMd5id29rTVvnqM1wrXY9roaLMYqx/CTpXOp5OLn1SgG8jyPp2Is
-         wshHPKrfdEX+Su19HQWdNQFfa2DeK8s5lwXU28tPoUJp+LVW0xYI5XY6yOD2oggu3PoM
-         A0MDYpqbfkhN9qM8/V6oz4QTtvv0cg6B2SqZB5G3RSqspsbEd5fevLbxhI/w2kH3ut6o
-         NSKA==
-X-Gm-Message-State: APjAAAX17Kimdcll7uvG7neW17SN47BFPrpe0YThVI++LQTEM3RekB8S
-	w5QY6iCQMEtDXAN78YzNMgrjRgClwd4pzINsNzvm/w==
-X-Google-Smtp-Source: APXvYqzCnpzso0Psg3jJulXH2mRfwtdawfmefqJGiB+XfZIOBEFwhCwPfWOmE5n9Iqbz9Ejbwbc6JT9xQ6haKiRivgw=
-X-Received: by 2002:a19:3f0a:: with SMTP id m10mr6181421lfa.67.1572439534595;
- Wed, 30 Oct 2019 05:45:34 -0700 (PDT)
+Received: (qmail 1443 invoked from network); 30 Oct 2019 14:03:52 -0000
+Subject: Re: [PATCH bpf-next v11 2/7] landlock: Add the management of domains
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
+        Andy Lutomirski <luto@amacapital.net>,
+        Casey Schaufler <casey@schaufler-ca.com>,
+        Daniel Borkmann <daniel@iogearbox.net>,
+        David Drysdale
+ <drysdale@google.com>,
+        Florent Revest <revest@chromium.org>, James Morris <jmorris@namei.org>,
+        Jann Horn <jann@thejh.net>,
+        John Johansen <john.johansen@canonical.com>,
+        Jonathan Corbet
+ <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
+        KP Singh <kpsingh@chromium.org>,
+        Michael Kerrisk <mtk.manpages@gmail.com>,
+        =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
+        Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
+        Shuah Khan <shuah@kernel.org>, Stephen Smalley <sds@tycho.nsa.gov>,
+        Tejun Heo <tj@kernel.org>,
+        Tetsuo Handa
+ <penguin-kernel@I-love.SAKURA.ne.jp>,
+        Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>,
+        bpf@vger.kernel.org, kernel-hardening@lists.openwall.com,
+        linux-api@vger.kernel.org, linux-security-module@vger.kernel.org
+References: <20191029171505.6650-1-mic@digikod.net>
+ <20191029171505.6650-3-mic@digikod.net>
+ <20191030025621.GA27626@mail.hallyn.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Openpgp: preference=signencrypt
+Message-ID: <e6c59db1-0fb5-704d-6693-335fa199101c@digikod.net>
+Date: Wed, 30 Oct 2019 15:03:10 +0100
+User-Agent:
 MIME-Version: 1.0
-References: <20190405015859.32755-1-tobin@kernel.org> <20190405015859.32755-3-tobin@kernel.org>
-In-Reply-To: <20190405015859.32755-3-tobin@kernel.org>
-From: Naresh Kamboju <naresh.kamboju@linaro.org>
-Date: Wed, 30 Oct 2019 18:15:22 +0530
-Message-ID: <CA+G9fYsfJpXQvOvHdjtg8z4a89dSStOQZOKa9zMjjQgWKng1aw@mail.gmail.com>
-Subject: Re: [PATCH v4 2/6] kselftest: Add test runner creation script
-To: "Tobin C. Harding" <tobin@kernel.org>
-Cc: Shuah Khan <shuah@kernel.org>, Kees Cook <keescook@chromium.org>, 
-	Jann Horn <jannh@google.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, 
-	Randy Dunlap <rdunlap@infradead.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, 
-	Stephen Rothwell <sfr@canb.auug.org.au>, Andy Lutomirski <luto@amacapital.net>, 
-	Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, 
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
-	"Gustavo A. R. Silva" <gustavo@embeddedor.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	Alexander Shishkin <alexander.shishkin@linux.intel.com>, kernel-hardening@lists.openwall.com, 
-	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <20191030025621.GA27626@mail.hallyn.com>
+Content-Type: text/plain; charset=iso-8859-15
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-Hi Tobin,
 
-On Fri, 5 Apr 2019 at 07:30, Tobin C. Harding <tobin@kernel.org> wrote:
->
-> Currently if we wish to use kselftest to run tests within a kernel
-> module we write a small script to load/unload and do error reporting.
-> There are a bunch of these under tools/testing/selftests/lib/ that are
-> all identical except for the test name.  We can reduce code duplication
-> and improve maintainability if we have one version of this.  However
-> kselftest requires an executable for each test.  We can move all the
-> script logic to a central script then have each individual test script
-> call the main script.
->
-> Oneliner to call kselftest_module.sh courtesy of Kees, thanks!
->
-> Add test runner creation script.  Convert
-> tools/testing/selftests/lib/*.sh to use new test creation script.
->
-> Testing
-> -------
->
-> Configure kselftests for lib/ then build and boot kernel.  Then run
-> kselftests as follows:
->
->   $ cd /path/to/kernel/tree
->   $ sudo make O=$output_path -C tools/testing/selftests TARGETS="lib" run_tests
+On 30/10/2019 03:56, Serge E. Hallyn wrote:
+> On Tue, Oct 29, 2019 at 06:15:00PM +0100, Mickaël Salaün wrote:
+>> A Landlock domain is a set of eBPF programs.  There is a list for each
+>> different program types that can be run on a specific Landlock hook
+>> (e.g. ptrace).  A domain is tied to a set of subjects (i.e. tasks).  A
+>> Landlock program should not try (nor be able) to infer which subject is
+>> currently enforced, but to have a unique security policy for all
+>> subjects tied to the same domain.  This make the reasoning much easier
+>> and help avoid pitfalls.
+>>
+>> The next commits tie a domain to a task's credentials thanks to
+>> seccomp(2), but we could use cgroups or a security file-system to
+>> enforce a sysadmin-defined policy .
+>>
+>> Signed-off-by: Mickaël Salaün <mic@digikod.net>
+>> Cc: Alexei Starovoitov <ast@kernel.org>
+>> Cc: Andy Lutomirski <luto@amacapital.net>
+>> Cc: Daniel Borkmann <daniel@iogearbox.net>
+>> Cc: James Morris <jmorris@namei.org>
+>> Cc: Kees Cook <keescook@chromium.org>
+>> Cc: Serge E. Hallyn <serge@hallyn.com>
+>> Cc: Will Drewry <wad@chromium.org>
+>> ---
+>>
+>> Changes since v10:
+>> * rename files and names to clearly define a domain
+>> * create a standalone patch to ease review
+>> ---
+> 
+> [...]
+> 
+>> +/**
+>> + * store_landlock_prog - prepend and deduplicate a Landlock prog_list
+>> + *
+>> + * Prepend @prog to @init_domain while ignoring @prog if they are already in
+>> + * @ref_domain.  Whatever is the result of this function call, you can call
+>> + * bpf_prog_put(@prog) after.
+>> + *
+>> + * @init_domain: empty domain to prepend to
+>> + * @ref_domain: domain to check for duplicate programs
+>> + * @prog: program to prepend
+>> + *
+>> + * Return -errno on error or 0 if @prog was successfully stored.
+>> + */
+>> +static int store_landlock_prog(struct landlock_domain *init_domain,
+>> +		const struct landlock_domain *ref_domain,
+>> +		struct bpf_prog *prog)
+>> +{
+>> +	struct landlock_prog_list *tmp_list = NULL;
+>> +	int err;
+>> +	size_t hook;
+>> +	enum landlock_hook_type last_type;
+>> +	struct bpf_prog *new = prog;
+>> +
+>> +	/* allocate all the memory we need */
+>> +	struct landlock_prog_list *new_list;
+>> +
+>> +	last_type = get_hook_type(new);
+>> +
+>> +	/* ignore duplicate programs */
+> 
+> This comment should be "don't allow" rather than "ignore", right?
 
-We are missing "kselftest_module.sh" file when we do "make install"
-and followed by generating a tar file "gen_kselftest_tar.sh" and
-copying that on to target device and running tests by using
-"run_kselftest.sh" script file on the target.
+Exactly, fixed.
 
-Could you install the supporting script file "kselftest_module.sh" ?
+> 
+>> +	if (ref_domain) {
+>> +		struct landlock_prog_list *ref;
+>> +
+>> +		hook = get_hook_index(get_hook_type(new));
+>> +		for (ref = ref_domain->programs[hook]; ref;
+>> +				ref = ref->prev) {
+>> +			if (ref->prog == new)
+>> +				return -EINVAL;
+>> +		}
+>> +	}
+>> +
+>> +	new = bpf_prog_inc(new);
+>> +	if (IS_ERR(new)) {
+>> +		err = PTR_ERR(new);
+>> +		goto put_tmp_list;
+>> +	}
+>> +	new_list = kzalloc(sizeof(*new_list), GFP_KERNEL);
+>> +	if (!new_list) {
+>> +		bpf_prog_put(new);
+>> +		err = -ENOMEM;
+>> +		goto put_tmp_list;
+>> +	}
+>> +	/* ignore Landlock types in this tmp_list */
+>> +	new_list->prog = new;
+>> +	new_list->prev = tmp_list;
+>> +	refcount_set(&new_list->usage, 1);
+>> +	tmp_list = new_list;
+>> +
+>> +	if (!tmp_list)
+>> +		/* inform user space that this program was already added */
+> 
+> I'm not following this.  You just kzalloc'd new_list, pointed
+> tmp_list to new_list, so how could tmp_list be NULL?  Was there
+> a bad code reorg here, or am i being dense?
 
-Error log,
--------------
-# selftests lib printf.sh
-lib: printf.sh_ #
-# ./printf.sh line 4 ./../kselftest_module.sh No such file or directory
-line: 4_./../kselftest_module.sh #
-[FAIL] 1 selftests lib printf.sh # exit=127
-selftests: lib_printf.sh [FAIL]
-# selftests lib bitmap.sh
-lib: bitmap.sh_ #
-# ./bitmap.sh line 3 ./../kselftest_module.sh No such file or directory
-line: 3_./../kselftest_module.sh #
-[FAIL] 2 selftests lib bitmap.sh # exit=127
-selftests: lib_bitmap.sh [FAIL]
-# selftests lib prime_numbers.sh
-lib: prime_numbers.sh_ #
-# ./prime_numbers.sh line 4 ./../kselftest_module.sh No such file or directory
-line: 4_./../kselftest_module.sh #
-[FAIL] 3 selftests lib prime_numbers.sh # exit=127
-selftests: lib_prime_numbers.sh [FAIL]
-# selftests lib strscpy.sh
-lib: strscpy.sh_ #
-# ./strscpy.sh line 3 ./../kselftest_module.sh No such file or directory
-line: 3_./../kselftest_module.sh #
-[FAIL] 4 selftests lib strscpy.sh # exit=127
-selftests: lib_strscpy.sh [FAIL]
+Indeed, this was introduce with a code refactoring (while removing a
+program "chaining" concept) where this code snippet was in a loop, hence
+the weird use of tmp_list. I'm cleaning this up (and simplifying this
+whole code), and replacing the -EINVAL for the duplicate program check
+with the -EEXIST.
 
-- Naresh
+Thanks!
+
+
+> 
+>> +		return -EEXIST;
+>> +
+>> +	/* properly store the list (without error cases) */
+>> +	while (tmp_list) {
+>> +		struct landlock_prog_list *new_list;
+>> +
+>> +		new_list = tmp_list;
+>> +		tmp_list = tmp_list->prev;
+>> +		/* do not increment the previous prog list usage */
+>> +		hook = get_hook_index(get_hook_type(new_list->prog));
+>> +		new_list->prev = init_domain->programs[hook];
+>> +		/* no need to add from the last program to the first because
+>> +		 * each of them are a different Landlock type */
+>> +		smp_store_release(&init_domain->programs[hook], new_list);
+>> +	}
+>> +	return 0;
+>> +
+>> +put_tmp_list:
+>> +	put_landlock_prog_list(tmp_list);
+>> +	return err;
+>> +}
+>> +
+>> +/* limit Landlock programs set to 256KB */
+>> +#define LANDLOCK_PROGRAMS_MAX_PAGES (1 << 6)
+>> +
+>> +/**
+>> + * landlock_prepend_prog - attach a Landlock prog_list to @current_domain
+>> + *
+>> + * Whatever is the result of this function call, you can call
+>> + * bpf_prog_put(@prog) after.
+>> + *
+>> + * @current_domain: landlock_domain pointer, must be (RCU-)locked (if needed)
+>> + *                  to prevent a concurrent put/free. This pointer must not be
+>> + *                  freed after the call.
+>> + * @prog: non-NULL Landlock prog_list to prepend to @current_domain. @prog will
+>> + *        be owned by landlock_prepend_prog() and freed if an error happened.
+>> + *
+>> + * Return @current_domain or a new pointer when OK. Return a pointer error
+>> + * otherwise.
+>> + */
+>> +struct landlock_domain *landlock_prepend_prog(
+>> +		struct landlock_domain *current_domain,
+>> +		struct bpf_prog *prog)
+>> +{
+>> +	struct landlock_domain *new_domain = current_domain;
+>> +	unsigned long pages;
+>> +	int err;
+>> +	size_t i;
+>> +	struct landlock_domain tmp_domain = {};
+>> +
+>> +	if (prog->type != BPF_PROG_TYPE_LANDLOCK_HOOK)
+>> +		return ERR_PTR(-EINVAL);
+>> +
+>> +	/* validate memory size allocation */
+>> +	pages = prog->pages;
+>> +	if (current_domain) {
+>> +		size_t i;
+>> +
+>> +		for (i = 0; i < ARRAY_SIZE(current_domain->programs); i++) {
+>> +			struct landlock_prog_list *walker_p;
+>> +
+>> +			for (walker_p = current_domain->programs[i];
+>> +					walker_p; walker_p = walker_p->prev)
+>> +				pages += walker_p->prog->pages;
+>> +		}
+>> +		/* count a struct landlock_domain if we need to allocate one */
+>> +		if (refcount_read(&current_domain->usage) != 1)
+>> +			pages += round_up(sizeof(*current_domain), PAGE_SIZE)
+>> +				/ PAGE_SIZE;
+>> +	}
+>> +	if (pages > LANDLOCK_PROGRAMS_MAX_PAGES)
+>> +		return ERR_PTR(-E2BIG);
+>> +
+>> +	/* ensure early that we can allocate enough memory for the new
+>> +	 * prog_lists */
+>> +	err = store_landlock_prog(&tmp_domain, current_domain, prog);
+>> +	if (err)
+>> +		return ERR_PTR(err);
+>> +
+>> +	/*
+>> +	 * Each task_struct points to an array of prog list pointers.  These
+>> +	 * tables are duplicated when additions are made (which means each
+>> +	 * table needs to be refcounted for the processes using it). When a new
+>> +	 * table is created, all the refcounters on the prog_list are bumped
+>> +	 * (to track each table that references the prog). When a new prog is
+>> +	 * added, it's just prepended to the list for the new table to point
+>> +	 * at.
+>> +	 *
+>> +	 * Manage all the possible errors before this step to not uselessly
+>> +	 * duplicate current_domain and avoid a rollback.
+>> +	 */
+>> +	if (!new_domain) {
+>> +		/*
+>> +		 * If there is no Landlock domain used by the current task,
+>> +		 * then create a new one.
+>> +		 */
+>> +		new_domain = new_landlock_domain();
+>> +		if (IS_ERR(new_domain))
+>> +			goto put_tmp_lists;
+>> +	} else if (refcount_read(&current_domain->usage) > 1) {
+>> +		/*
+>> +		 * If the current task is not the sole user of its Landlock
+>> +		 * domain, then duplicate it.
+>> +		 */
+>> +		new_domain = new_landlock_domain();
+>> +		if (IS_ERR(new_domain))
+>> +			goto put_tmp_lists;
+>> +		for (i = 0; i < ARRAY_SIZE(new_domain->programs); i++) {
+>> +			new_domain->programs[i] =
+>> +				READ_ONCE(current_domain->programs[i]);
+>> +			if (new_domain->programs[i])
+>> +				refcount_inc(&new_domain->programs[i]->usage);
+>> +		}
+>> +
+>> +		/*
+>> +		 * Landlock domain from the current task will not be freed here
+>> +		 * because the usage is strictly greater than 1. It is only
+>> +		 * prevented to be freed by another task thanks to the caller
+>> +		 * of landlock_prepend_prog() which should be locked if needed.
+>> +		 */
+>> +		landlock_put_domain(current_domain);
+>> +	}
+>> +
+>> +	/* prepend tmp_domain to new_domain */
+>> +	for (i = 0; i < ARRAY_SIZE(tmp_domain.programs); i++) {
+>> +		/* get the last new list */
+>> +		struct landlock_prog_list *last_list =
+>> +			tmp_domain.programs[i];
+>> +
+>> +		if (last_list) {
+>> +			while (last_list->prev)
+>> +				last_list = last_list->prev;
+>> +			/* no need to increment usage (pointer replacement) */
+>> +			last_list->prev = new_domain->programs[i];
+>> +			new_domain->programs[i] = tmp_domain.programs[i];
+>> +		}
+>> +	}
+>> +	return new_domain;
+>> +
+>> +put_tmp_lists:
+>> +	for (i = 0; i < ARRAY_SIZE(tmp_domain.programs); i++)
+>> +		put_landlock_prog_list(tmp_domain.programs[i]);
+>> +	return new_domain;
+>> +}
+>> diff --git a/security/landlock/domain_manage.h b/security/landlock/domain_manage.h
+>> new file mode 100644
+>> index 000000000000..5b5b49f6e3e8
+>> --- /dev/null
+>> +++ b/security/landlock/domain_manage.h
+>> @@ -0,0 +1,23 @@
+>> +/* SPDX-License-Identifier: GPL-2.0-only */
+>> +/*
+>> + * Landlock LSM - domain management headers
+>> + *
+>> + * Copyright © 2016-2019 Mickaël Salaün <mic@digikod.net>
+>> + * Copyright © 2018-2019 ANSSI
+>> + */
+>> +
+>> +#ifndef _SECURITY_LANDLOCK_DOMAIN_MANAGE_H
+>> +#define _SECURITY_LANDLOCK_DOMAIN_MANAGE_H
+>> +
+>> +#include <linux/filter.h>
+>> +
+>> +#include "common.h"
+>> +
+>> +void landlock_get_domain(struct landlock_domain *dom);
+>> +void landlock_put_domain(struct landlock_domain *dom);
+>> +
+>> +struct landlock_domain *landlock_prepend_prog(
+>> +		struct landlock_domain *current_domain,
+>> +		struct bpf_prog *prog);
+>> +
+>> +#endif /* _SECURITY_LANDLOCK_DOMAIN_MANAGE_H */
+>> -- 
+>> 2.23.0
+> 
