@@ -1,23 +1,23 @@
-Return-Path: <SRS0=FUug=YX=lists.openwall.com=kernel-hardening-return-17174-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=QACG=YY=lists.openwall.com=kernel-hardening-return-17175-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0E9D7CA9EC5
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Oct 2019 19:28:39 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3FF3ECA9EC7
+	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 00:06:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4F08320717
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Oct 2019 19:28:38 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 8715A20856
+	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 00:06:23 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=c-s.fr header.i=@c-s.fr header.b="TrJAltYS"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F08320717
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=c-s.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17174-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25705 invoked by uid 550); 30 Oct 2019 19:28:30 -0000
+	dkim=pass (1024-bit key) header.d=jms.id.au header.i=@jms.id.au header.b="AnCAfDD6"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8715A20856
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=jms.id.au
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17175-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25828 invoked by uid 550); 31 Oct 2019 00:06:14 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,84 +25,70 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25669 invoked from network); 30 Oct 2019 19:28:30 -0000
-Authentication-Results: localhost; dkim=pass
-	reason="1024-bit key; insecure key"
-	header.d=c-s.fr header.i=@c-s.fr header.b=TrJAltYS; dkim-adsp=pass;
-	dkim-atps=neutral
-X-Virus-Scanned: Debian amavisd-new at c-s.fr
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=c-s.fr; s=mail;
-	t=1572463698; bh=ETokkupD46fOqlNm37kOMe+hG1J9xpIjHaEC+LfiVeY=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=TrJAltYSIt4J02S1w/Mp4rD1r8mebAnu7YyWhYjgDw3eJ74nOa6jTB1PVKY7/BSfr
-	 kPMowTuZeTwMxpwoFdyQYhtzf5g9XwqAc2INQ2OSu8do83JzS/TjO4EUWDhndJdPUZ
-	 r3Yt3G+byPB+HhmB0cZuEPwv1Tx3HiAK7Szz6n3E=
-X-Virus-Scanned: amavisd-new at c-s.fr
-Subject: Re: [PATCH v5 0/5] Implement STRICT_MODULE_RWX for powerpc
-To: Kees Cook <keescook@chromium.org>
-Cc: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org,
- joel@jms.id.au, mpe@ellerman.id.au, ajd@linux.ibm.com, dja@axtens.net,
- npiggin@gmail.com, kernel-hardening@lists.openwall.com
-References: <20191030073111.140493-1-ruscur@russell.cc>
- <53461d29-ec0c-4401-542e-6d575545da38@c-s.fr>
- <201910301128.E7552CDD@keescook>
-From: Christophe Leroy <christophe.leroy@c-s.fr>
-Message-ID: <776c0722-eb8c-622a-a70b-f19ae07c1dc3@c-s.fr>
-Date: Wed, 30 Oct 2019 20:28:17 +0100
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
- Thunderbird/60.9.0
+Received: (qmail 25794 invoked from network); 31 Oct 2019 00:06:14 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=jms.id.au; s=google;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=0li8VzqpFsQ/b63Xcg1C+N/uk9Yevq8DwZDh1ZCAyPg=;
+        b=AnCAfDD6kapseXRPfRWQDvND9gyAVElPT6h62DxuGk1VF6vrQbrA1sXw/bMHkt9ycY
+         yp6kuNymmX/ATYi8WGP7tfxs+V64ZKBAO+hQs6KWYth2G9QLwIs2F2puS+R4kOFZi8+j
+         g9J/M23rZ39yYeXas5iRE8U/lSWKuIqe/XmdY=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=0li8VzqpFsQ/b63Xcg1C+N/uk9Yevq8DwZDh1ZCAyPg=;
+        b=LPXcg5WCLSqJFadS/FOwN3eytk33tpRE4jUwCxEaK8dFS61XZ8Y3Ghw36VzHdzZrZQ
+         3EfMOZNRPaRiNaH0Vo/xSMF99QFd0ig0FN9dELh48KE2Y1UKy8UfJPbjo/NIzNngxIr2
+         F7Dke1uhqmO5qOj11dWyb/pklhg8w0XOp0Ivc8b0Z2h/rA0rBLWC7qEf/cxe0yBk3Kq+
+         8NKJy6JZAN1e54wZM0lLKWQHstA/dQp4ahLUf1wM+AiqvhNq3Ll6EeFTKG/8kDgnjy9Y
+         bs0i8XUYvfQfkxbAQtLdnS0B+H1VlnG9Ut1VirkZ7SrFgzd3Qw76XVRxYfIuDnhizAFw
+         G7Cw==
+X-Gm-Message-State: APjAAAWGXbY3YDG/qELVxHlrDPu7UGpikqDkj2Wn9LpO6wXmr/AdN1FC
+	CWM49uIhwiNAW9kj5KsZf7KpfV+mjXIR2Tzo7Uc=
+X-Google-Smtp-Source: APXvYqxp1tJqDjfdpxPoNT94F1nQa51ElslA+sMSYvW++gja95tY+RNagmDf2v3YySCW1F3BZflwcasyPdjX/DYa0WE=
+X-Received: by 2002:a05:620a:1244:: with SMTP id a4mr2740405qkl.208.1572480361858;
+ Wed, 30 Oct 2019 17:06:01 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <201910301128.E7552CDD@keescook>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: fr
-Content-Transfer-Encoding: 8bit
+References: <20191030073111.140493-1-ruscur@russell.cc> <20191030073111.140493-6-ruscur@russell.cc>
+In-Reply-To: <20191030073111.140493-6-ruscur@russell.cc>
+From: Joel Stanley <joel@jms.id.au>
+Date: Thu, 31 Oct 2019 00:05:49 +0000
+Message-ID: <CACPK8XfOLfpq6Em7nPe7ef-5D2U-feN4A5u_+K=RrBGX2x=5ew@mail.gmail.com>
+Subject: Re: [PATCH v5 5/5] powerpc/configs: Enable STRICT_MODULE_RWX in skiroot_defconfig
+To: Russell Currey <ruscur@russell.cc>
+Cc: linuxppc-dev@lists.ozlabs.org, Christophe LEROY <christophe.leroy@c-s.fr>, 
+	Michael Ellerman <mpe@ellerman.id.au>, ajd@linux.ibm.com, Daniel Axtens <dja@axtens.net>, 
+	Nicholas Piggin <npiggin@gmail.com>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset="UTF-8"
 
+On Wed, 30 Oct 2019 at 07:31, Russell Currey <ruscur@russell.cc> wrote:
+>
+> skiroot_defconfig is the only powerpc defconfig with STRICT_KERNEL_RWX
+> enabled, and if you want memory protection for kernel text you'd want it
+> for modules too, so enable STRICT_MODULE_RWX there.
+>
+> Signed-off-by: Russell Currey <ruscur@russell.cc>
 
+Acked-by: Joel Stanley <joel@jms.id.au>
 
-Le 30/10/2019 à 19:30, Kees Cook a écrit :
-> On Wed, Oct 30, 2019 at 09:58:19AM +0100, Christophe Leroy wrote:
->>
->>
->> Le 30/10/2019 à 08:31, Russell Currey a écrit :
->>> v4 cover letter: https://lists.ozlabs.org/pipermail/linuxppc-dev/2019-October/198268.html
->>> v3 cover letter: https://lists.ozlabs.org/pipermail/linuxppc-dev/2019-October/198023.html
->>>
->>> Changes since v4:
->>> 	[1/5]: Addressed review comments from Michael Ellerman (thanks!)
->>> 	[4/5]: make ARCH_HAS_STRICT_MODULE_RWX depend on
->>> 	       ARCH_HAS_STRICT_KERNEL_RWX to simplify things and avoid
->>> 	       STRICT_MODULE_RWX being *on by default* in cases where
->>> 	       STRICT_KERNEL_RWX is *unavailable*
->>> 	[5/5]: split skiroot_defconfig changes out into its own patch
->>>
->>> The whole Kconfig situation is really weird and confusing, I believe the
->>> correct resolution is to change arch/Kconfig but the consequences are so
->>> minor that I don't think it's worth it, especially given that I expect
->>> powerpc to have mandatory strict RWX Soon(tm).
->>
->> I'm not such strict RWX can be made mandatory due to the impact it has on
->> some subarches:
->> - On the 8xx, unless all areas are 8Mbytes aligned, there is a significant
->> overhead on TLB misses. And Aligning everthing to 8M is a waste of RAM which
->> is not acceptable on systems having very few RAM.
->> - On hash book3s32, we are able to map the kernel BATs. With a few alignment
->> constraints, we are able to provide STRICT_KERNEL_RWX. But we are unable to
->> provide exec protection on page granularity. Only on 256Mbytes segments. So
->> for modules, we have to have the vmspace X. It is also not possible to have
->> a kernel area RO. Only user areas can be made RO.
-> 
-> As I understand it, the idea was for it to be mandatory (or at least
-> default-on) only for the subarches where it wasn't totally insane to
-> accomplish. :) (I'm not familiar with all the details on the subarchs,
-> but it sounded like the more modern systems would be the targets for
-> this?)
-> 
-
-Yes I guess so.
-
-I was just afraid by "I expect powerpc to have mandatory strict RWX"
-
-By the way, we have an open issue #223 namely 'Make strict kernel RWX 
-the default on 64-bit', so no worry as 32-bit is aside for now.
-
-Christophe
+> ---
+>  arch/powerpc/configs/skiroot_defconfig | 1 +
+>  1 file changed, 1 insertion(+)
+>
+> diff --git a/arch/powerpc/configs/skiroot_defconfig b/arch/powerpc/configs/skiroot_defconfig
+> index 1253482a67c0..719d899081b3 100644
+> --- a/arch/powerpc/configs/skiroot_defconfig
+> +++ b/arch/powerpc/configs/skiroot_defconfig
+> @@ -31,6 +31,7 @@ CONFIG_PERF_EVENTS=y
+>  CONFIG_SLAB_FREELIST_HARDENED=y
+>  CONFIG_JUMP_LABEL=y
+>  CONFIG_STRICT_KERNEL_RWX=y
+> +CONFIG_STRICT_MODULE_RWX=y
+>  CONFIG_MODULES=y
+>  CONFIG_MODULE_UNLOAD=y
+>  CONFIG_MODULE_SIG=y
+> --
+> 2.23.0
+>
