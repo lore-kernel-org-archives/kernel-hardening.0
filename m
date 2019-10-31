@@ -1,20 +1,20 @@
-Return-Path: <SRS0=lZMs=YY=lists.openwall.com=kernel-hardening-return-17178-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=lZ/E=YY=lists.openwall.com=kernel-hardening-return-17179-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 578A9CA9ECB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:46:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 24178CA9ECB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:46:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5057E20873
-	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:46:10 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5057E20873
+	by mail.kernel.org (Postfix) with SMTP id 1FD8B20873
+	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:46:19 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1FD8B20873
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17178-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3362 invoked by uid 550); 31 Oct 2019 16:45:48 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17179-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3490 invoked by uid 550); 31 Oct 2019 16:45:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3238 invoked from network); 31 Oct 2019 16:45:46 -0000
+Received: (qmail 3239 invoked from network); 31 Oct 2019 16:45:46 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -45,336 +45,232 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
         Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>,
         bpf@vger.kernel.org, kernel-hardening@lists.openwall.com,
         linux-api@vger.kernel.org, linux-security-module@vger.kernel.org
-Subject: [PATCH bpf-next v12 2/7] landlock: Add the management of domains
-Date: Thu, 31 Oct 2019 17:44:40 +0100
-Message-Id: <20191031164445.29426-3-mic@digikod.net>
+Subject: [PATCH bpf-next v12 0/7] Landlock LSM
+Date: Thu, 31 Oct 2019 17:44:38 +0100
+Message-Id: <20191031164445.29426-1-mic@digikod.net>
 X-Mailer: git-send-email 2.24.0.rc1
-In-Reply-To: <20191031164445.29426-1-mic@digikod.net>
-References: <20191031164445.29426-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
-A Landlock domain is a set of eBPF programs.  There is a list for each
-different program types that can be run on a specific Landlock hook
-(e.g. ptrace).  A domain is tied to a set of subjects (i.e. tasks).  A
-Landlock program should not try (nor be able) to infer which subject is
-currently enforced, but to have a unique security policy for all
-subjects tied to the same domain.  This make the reasoning much easier
-and help avoid pitfalls.
+Hi,
 
-The next commits tie a domain to a task's credentials thanks to
-seccomp(2), but we could use cgroups or a security file-system to
-enforce a sysadmin-defined policy .
+Following the previous series [1], this twelfth series mainly rework the
+domain management in response to Serge E. Hallyn's review.  Some minor
+fixes are also included.
 
-Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Cc: Alexei Starovoitov <ast@kernel.org>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Daniel Borkmann <daniel@iogearbox.net>
-Cc: James Morris <jmorris@namei.org>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Serge E. Hallyn <serge@hallyn.com>
-Cc: Will Drewry <wad@chromium.org>
----
+This is the first step of the roadmap discussed at LPC [2].  While the
+intended final goal is to allow unprivileged (or non-root) users to use
+Landlock, this series allows only a process with global CAP_SYS_ADMIN to
+load and enforce a rule.  This may help to get feedback and avoid
+unexpected behaviors.
 
-Changes since v11:
-* remove old code from previous refactoring (removing the program
-  chaining concept) and simplify program prepending (reported by Serge
-  E. Hallyn):
-  * simplify landlock_prepend_prog() and merge it with
-    store_landlock_prog()
-  * add new_prog_list() and rework new_landlock_domain()
-  * remove the extra page allocation checks, only rely on the eBPF
-    program checks
-* replace the -EINVAL for the duplicate program check with the -EEXIST
+This series can be applied on top of bpf-next, commit e93d99180abd
+("selftests/bpf: Restore $(OUTPUT)/test_stub.o rule").  This can be
+tested with CONFIG_BPF_SYSCALL, CONFIG_SECCOMP_FILTER and
+CONFIG_SECURITY_LANDLOCK.  This patch series can be found in a Git
+repository here:
+https://github.com/landlock-lsm/linux/commits/landlock-v11
+I would really appreciate constructive comments on the design and the
+code.
 
-Changes since v10:
-* rename files and names to clearly define a domain
-* create a standalone patch to ease review
----
- security/landlock/Makefile        |   3 +-
- security/landlock/common.h        |  38 +++++++
- security/landlock/domain_manage.c | 173 ++++++++++++++++++++++++++++++
- security/landlock/domain_manage.h |  23 ++++
- 4 files changed, 236 insertions(+), 1 deletion(-)
+
+# Landlock LSM
+
+Landlock is a stackable LSM [3] intended to be used as a low-level
+framework to build custom access-control/audit systems or safe endpoint
+security agents.  There is currently one Landlock hook dedicated to
+check ptrace(2).  This hook accepts a dedicated eBPF program, called a
+Landlock program, which can currently compare its position in the
+hierarchy of similar programs tied to other processes.  This enables to
+enforce programmatic scoped ptrace restrictions.
+
+The final goal of this new Linux Security Module (LSM) called Landlock
+is to allow any process, including unprivileged ones, to create powerful
+security sandboxes comparable to XNU Sandbox, FreeBSD Capsicum or
+OpenBSD Pledge (which could be implemented with Landlock).  This kind of
+sandbox is expected to help mitigate the security impact of bugs or
+unexpected/malicious behaviors in user-space applications.
+
+The use of seccomp and Landlock is more suitable with the help of a
+user-space library (e.g.  libseccomp) that could help to specify a
+high-level language to express a security policy instead of raw eBPF
+programs.  Moreover, thanks to the LLVM front-end, it is quite easy to
+write an eBPF program with a subset of the C language.
+
+The documentation patch contains some kernel documentation, explanations
+on how to use Landlock and a FAQ.  The compiled documentation and some
+talks can be found here: https://landlock.io
+
+
+# Frequently asked questions
+
+## Why is seccomp-bpf not enough?
+
+A seccomp filter can access only raw syscall arguments (i.e. the
+register values) which means that it is not possible to filter according
+to the value pointed to by an argument, such as a file pathname. As an
+embryonic Landlock version demonstrated (i.e. seccomp-object), filtering
+at the syscall level is complicated (e.g. need to take care of race
+conditions). This is mainly because the access control checkpoints of
+the kernel are not at this high-level but more underneath, at the
+LSM-hook level. The LSM hooks are designed to handle this kind of
+checks.  Landlock abstracts this approach to leverage the ability of
+unprivileged users to limit themselves.
+
+Cf. section "What it isn't?" in
+Documentation/userspace-api/seccomp_filter.rst
+
+
+## Why use the seccomp(2) syscall?
+
+Landlock use the same semantic as seccomp to apply access rule
+restrictions. It add a new layer of security for the current process
+which is inherited by its children. It makes sense to use an unique
+access-restricting syscall (that should be allowed by seccomp filters)
+which can only drop privileges. Moreover, a Landlock rule could come
+from outside a process (e.g.  passed through a UNIX socket). It is then
+useful to differentiate the creation/load of Landlock eBPF programs via
+bpf(2), from rule enforcement via seccomp(2).
+
+
+## Why a new LSM? Are SELinux, AppArmor, Smack and Tomoyo not good
+   enough?
+
+The current access control LSMs are fine for their purpose which is to
+give the *root* the ability to enforce a security policy for the
+*system*. What is missing is a way to enforce a security policy for any
+application by its developer and *unprivileged user* as seccomp can do
+for raw syscall filtering.
+
+Differences from other (access control) LSMs:
+* not only dedicated to administrators (i.e. no_new_priv);
+* limited kernel attack surface (e.g. policy parsing);
+* constrained policy rules (no DoS: deterministic execution time);
+* do not leak more information than the loader process can legitimately
+  have access to (minimize metadata inference).
+
+
+# Changes since v11
+
+* rework domain management
+* minor fixes
+
+
+# Changes since v10
+
+* remove all the file system related features: program types, inode
+  map and expected_attach_triggers
+* replace the static ptrace security policy with a new and simpler
+  ptrace program (attached) type and a task_landlock_ptrace_ancestor()
+  eBPF helper
+* do not rely on seccomp internal structure but use stacked credentials
+  insdead
+* extend ptrace tests
+* add more documentation
+* split and rename files/patches
+* miscellaneous fixes
+
+
+Previous changes can be found in a previous cover-letter [4].
+
+
+[1] https://lore.kernel.org/lkml/20191029171505.6650-1-mic@digikod.net/
+[2] https://lore.kernel.org/lkml/5828776A.1010104@digikod.net/
+[3] https://lore.kernel.org/lkml/50db058a-7dde-441b-a7f9-f6837fe8b69f@schaufler-ca.com/
+[4] https://lore.kernel.org/lkml/20190721213116.23476-1-mic@digikod.net/
+
+Regards,
+
+Mickaël Salaün (7):
+  bpf,landlock: Define an eBPF program type for Landlock hooks
+  landlock: Add the management of domains
+  landlock,seccomp: Load Landlock programs per process hierarchy
+  landlock: Add ptrace LSM hooks
+  bpf,landlock: Add task_landlock_ptrace_ancestor() helper
+  bpf,landlock: Add tests for the Landlock ptrace program type
+  landlock: Add user and kernel documentation for Landlock
+
+ Documentation/security/index.rst              |   1 +
+ Documentation/security/landlock/index.rst     |  22 ++
+ Documentation/security/landlock/kernel.rst    | 139 ++++++++++++
+ Documentation/security/landlock/user.rst      | 142 ++++++++++++
+ MAINTAINERS                                   |   9 +
+ include/linux/bpf.h                           |   3 +
+ include/linux/bpf_types.h                     |   3 +
+ include/linux/landlock.h                      |  25 ++
+ include/linux/lsm_hooks.h                     |   1 +
+ include/uapi/linux/bpf.h                      |  23 +-
+ include/uapi/linux/landlock.h                 |  39 ++++
+ include/uapi/linux/seccomp.h                  |   1 +
+ kernel/bpf/syscall.c                          |   9 +
+ kernel/bpf/verifier.c                         |  11 +
+ kernel/seccomp.c                              |   4 +
+ scripts/bpf_helpers_doc.py                    |   1 +
+ security/Kconfig                              |   1 +
+ security/Makefile                             |   2 +
+ security/landlock/Kconfig                     |  19 ++
+ security/landlock/Makefile                    |   6 +
+ security/landlock/bpf_ptrace.c                |  98 ++++++++
+ security/landlock/bpf_ptrace.h                |  17 ++
+ security/landlock/bpf_run.c                   |  62 +++++
+ security/landlock/bpf_run.h                   |  25 ++
+ security/landlock/bpf_verify.c                |  87 +++++++
+ security/landlock/common.h                    |  84 +++++++
+ security/landlock/domain_manage.c             | 173 ++++++++++++++
+ security/landlock/domain_manage.h             |  23 ++
+ security/landlock/domain_syscall.c            |  87 +++++++
+ security/landlock/hooks_cred.c                |  47 ++++
+ security/landlock/hooks_cred.h                |  14 ++
+ security/landlock/hooks_ptrace.c              | 114 ++++++++++
+ security/landlock/hooks_ptrace.h              |  19 ++
+ security/landlock/init.c                      |  32 +++
+ security/security.c                           |  15 ++
+ tools/include/uapi/linux/bpf.h                |  23 +-
+ tools/include/uapi/linux/landlock.h           |  22 ++
+ tools/lib/bpf/libbpf_probes.c                 |   3 +
+ tools/testing/selftests/bpf/config            |   3 +
+ tools/testing/selftests/bpf/test_verifier.c   |   1 +
+ .../testing/selftests/bpf/verifier/landlock.c |  56 +++++
+ tools/testing/selftests/landlock/.gitignore   |   5 +
+ tools/testing/selftests/landlock/Makefile     |  27 +++
+ tools/testing/selftests/landlock/config       |   5 +
+ tools/testing/selftests/landlock/test.h       |  48 ++++
+ tools/testing/selftests/landlock/test_base.c  |  24 ++
+ .../testing/selftests/landlock/test_ptrace.c  | 214 ++++++++++++++++++
+ 47 files changed, 1787 insertions(+), 2 deletions(-)
+ create mode 100644 Documentation/security/landlock/index.rst
+ create mode 100644 Documentation/security/landlock/kernel.rst
+ create mode 100644 Documentation/security/landlock/user.rst
+ create mode 100644 include/linux/landlock.h
+ create mode 100644 include/uapi/linux/landlock.h
+ create mode 100644 security/landlock/Kconfig
+ create mode 100644 security/landlock/Makefile
+ create mode 100644 security/landlock/bpf_ptrace.c
+ create mode 100644 security/landlock/bpf_ptrace.h
+ create mode 100644 security/landlock/bpf_run.c
+ create mode 100644 security/landlock/bpf_run.h
+ create mode 100644 security/landlock/bpf_verify.c
+ create mode 100644 security/landlock/common.h
  create mode 100644 security/landlock/domain_manage.c
  create mode 100644 security/landlock/domain_manage.h
+ create mode 100644 security/landlock/domain_syscall.c
+ create mode 100644 security/landlock/hooks_cred.c
+ create mode 100644 security/landlock/hooks_cred.h
+ create mode 100644 security/landlock/hooks_ptrace.c
+ create mode 100644 security/landlock/hooks_ptrace.h
+ create mode 100644 security/landlock/init.c
+ create mode 100644 tools/include/uapi/linux/landlock.h
+ create mode 100644 tools/testing/selftests/bpf/verifier/landlock.c
+ create mode 100644 tools/testing/selftests/landlock/.gitignore
+ create mode 100644 tools/testing/selftests/landlock/Makefile
+ create mode 100644 tools/testing/selftests/landlock/config
+ create mode 100644 tools/testing/selftests/landlock/test.h
+ create mode 100644 tools/testing/selftests/landlock/test_base.c
+ create mode 100644 tools/testing/selftests/landlock/test_ptrace.c
 
-diff --git a/security/landlock/Makefile b/security/landlock/Makefile
-index 682b798c6b76..dd5f70185778 100644
---- a/security/landlock/Makefile
-+++ b/security/landlock/Makefile
-@@ -1,4 +1,5 @@
- obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
- 
- landlock-y := \
--	bpf_verify.o bpf_ptrace.o
-+	bpf_verify.o bpf_ptrace.o \
-+	domain_manage.o
-diff --git a/security/landlock/common.h b/security/landlock/common.h
-index 0234c4bc4acd..fb2990eb5fb4 100644
---- a/security/landlock/common.h
-+++ b/security/landlock/common.h
-@@ -11,11 +11,49 @@
- 
- #include <linux/bpf.h>
- #include <linux/filter.h>
-+#include <linux/refcount.h>
- 
- enum landlock_hook_type {
- 	LANDLOCK_HOOK_PTRACE = 1,
- };
- 
-+#define _LANDLOCK_HOOK_LAST LANDLOCK_HOOK_PTRACE
-+
-+struct landlock_prog_list {
-+	struct landlock_prog_list *prev;
-+	struct bpf_prog *prog;
-+	refcount_t usage;
-+};
-+
-+/**
-+ * struct landlock_domain - Landlock programs enforced on a set of tasks
-+ *
-+ * When prepending a new program, if &struct landlock_domain is shared with
-+ * other tasks, then duplicate it and prepend the program to this new &struct
-+ * landlock_domain.
-+ *
-+ * @usage: reference count to manage the object lifetime. When a task needs to
-+ *	   add Landlock programs and if @usage is greater than 1, then the
-+ *	   task must duplicate &struct landlock_domain to not change the
-+ *	   children's programs as well.
-+ * @programs: array of non-NULL &struct landlock_prog_list pointers
-+ */
-+struct landlock_domain {
-+	struct landlock_prog_list *programs[_LANDLOCK_HOOK_LAST];
-+	refcount_t usage;
-+};
-+
-+/**
-+ * get_hook_index - get an index for the programs of struct landlock_prog_set
-+ *
-+ * @type: a Landlock hook type
-+ */
-+static inline size_t get_hook_index(enum landlock_hook_type type)
-+{
-+	/* type ID > 0 for loaded programs */
-+	return type - 1;
-+}
-+
- static inline enum landlock_hook_type get_hook_type(const struct bpf_prog *prog)
- {
- 	switch (prog->expected_attach_type) {
-diff --git a/security/landlock/domain_manage.c b/security/landlock/domain_manage.c
-new file mode 100644
-index 000000000000..8b7ce988a221
---- /dev/null
-+++ b/security/landlock/domain_manage.c
-@@ -0,0 +1,173 @@
-+// SPDX-License-Identifier: GPL-2.0-only
-+/*
-+ * Landlock LSM - domain management
-+ *
-+ * Copyright © 2016-2019 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2018-2019 ANSSI
-+ */
-+
-+#include <linux/err.h>
-+#include <linux/errno.h>
-+#include <linux/refcount.h>
-+#include <linux/slab.h>
-+#include <linux/spinlock.h>
-+
-+#include "common.h"
-+#include "domain_manage.h"
-+
-+void landlock_get_domain(struct landlock_domain *dom)
-+{
-+	if (!dom)
-+		return;
-+	refcount_inc(&dom->usage);
-+}
-+
-+static void put_prog_list(struct landlock_prog_list *prog_list)
-+{
-+	struct landlock_prog_list *orig = prog_list;
-+
-+	/* clean up single-reference branches iteratively */
-+	while (orig && refcount_dec_and_test(&orig->usage)) {
-+		struct landlock_prog_list *freeme = orig;
-+
-+		if (orig->prog)
-+			bpf_prog_put(orig->prog);
-+		orig = orig->prev;
-+		kfree(freeme);
-+	}
-+}
-+
-+void landlock_put_domain(struct landlock_domain *domain)
-+{
-+	if (domain && refcount_dec_and_test(&domain->usage)) {
-+		size_t i;
-+
-+		for (i = 0; i < ARRAY_SIZE(domain->programs); i++)
-+			put_prog_list(domain->programs[i]);
-+		kfree(domain);
-+	}
-+}
-+
-+static struct landlock_prog_list *new_prog_list(struct bpf_prog *prog)
-+{
-+	struct landlock_prog_list *new_list;
-+
-+	if (WARN_ON(IS_ERR_OR_NULL(prog)))
-+		return ERR_PTR(-EFAULT);
-+	if (prog->type != BPF_PROG_TYPE_LANDLOCK_HOOK)
-+		return ERR_PTR(-EINVAL);
-+	prog = bpf_prog_inc(prog);
-+	if (IS_ERR(prog))
-+		return ERR_CAST(prog);
-+	new_list = kzalloc(sizeof(*new_list), GFP_KERNEL);
-+	if (!new_list) {
-+		bpf_prog_put(prog);
-+		return ERR_PTR(-ENOMEM);
-+	}
-+	new_list->prog = prog;
-+	refcount_set(&new_list->usage, 1);
-+	return new_list;
-+}
-+
-+/* @prog can legitimately be NULL */
-+static struct landlock_domain *new_landlock_domain(struct bpf_prog *prog)
-+{
-+	struct landlock_domain *new_domain;
-+	struct landlock_prog_list *new_list;
-+	size_t hook;
-+
-+	/* programs[] filled with NULL values */
-+	new_domain = kzalloc(sizeof(*new_domain), GFP_KERNEL);
-+	if (!new_domain)
-+		return ERR_PTR(-ENOMEM);
-+	refcount_set(&new_domain->usage, 1);
-+	if (!prog)
-+		return new_domain;
-+	new_list = new_prog_list(prog);
-+	if (IS_ERR(new_list)) {
-+		kfree(new_domain);
-+		return ERR_CAST(new_list);
-+	}
-+	hook = get_hook_index(get_hook_type(prog));
-+	new_domain->programs[hook] = new_list;
-+	return new_domain;
-+}
-+
-+/**
-+ * landlock_prepend_prog - attach a Landlock program to @current_domain
-+ *
-+ * Prepend @prog to @current_domain if @prog is not already in @current_domain.
-+ *
-+ * @current_domain: landlock_domain pointer which is garantee to not be
-+ *                  modified elsewhere. This pointer should not be used nor
-+ *                  put/freed after the call.
-+ * @prog: non-NULL Landlock program to prepend to @current_domain. @prog will
-+ *        be owned by landlock_prepend_prog(). You can then call
-+ *        bpf_prog_put(@prog) after.
-+ *
-+ * Return @current_domain or a new pointer when OK. Return a pointer error
-+ * otherwise.
-+ */
-+struct landlock_domain *landlock_prepend_prog(
-+		struct landlock_domain *current_domain,
-+		struct bpf_prog *prog)
-+{
-+	struct landlock_domain *oneref_domain;
-+	struct landlock_prog_list *new_list, *walker;
-+	size_t hook;
-+
-+	if (WARN_ON(!prog))
-+		return ERR_PTR(-EFAULT);
-+	if (prog->type != BPF_PROG_TYPE_LANDLOCK_HOOK)
-+		return ERR_PTR(-EINVAL);
-+
-+	/*
-+	 * Each domain contains an array of prog_list pointers.  If a domain is
-+	 * used by more than one credential, then this domain is first
-+	 * duplicated and then @prog is prepended to this new domain.  We then
-+	 * have the garantee that a domain is immutable when shared, and it can
-+	 * only be modified if it is referenced only once (by the modifier).
-+	 */
-+	if (!current_domain)
-+		return new_landlock_domain(prog);
-+
-+	hook = get_hook_index(get_hook_type(prog));
-+	/* check for similar program */
-+	for (walker = current_domain->programs[hook]; walker;
-+			walker = walker->prev) {
-+		/* don't allow duplicate programs */
-+		if (prog == walker->prog)
-+			return ERR_PTR(-EEXIST);
-+	}
-+
-+	new_list = new_prog_list(prog);
-+	if (IS_ERR(new_list))
-+		return ERR_CAST(new_list);
-+
-+	/* duplicate the domain if not referenced only once */
-+	if (refcount_read(&current_domain->usage) == 1) {
-+		oneref_domain = current_domain;
-+	} else {
-+		size_t i;
-+
-+		oneref_domain = new_landlock_domain(NULL);
-+		if (IS_ERR(oneref_domain)) {
-+			put_prog_list(new_list);
-+			return oneref_domain;
-+		}
-+		for (i = 0; i < ARRAY_SIZE(oneref_domain->programs); i++) {
-+			oneref_domain->programs[i] =
-+				current_domain->programs[i];
-+			if (oneref_domain->programs[i])
-+				refcount_inc(&oneref_domain->programs[i]->usage);
-+		}
-+		landlock_put_domain(current_domain);
-+		/* @current_domain may be a dangling pointer now */
-+		current_domain = NULL;
-+	}
-+
-+	/* no need to increment usage (pointer replacement) */
-+	new_list->prev = oneref_domain->programs[hook];
-+	oneref_domain->programs[hook] = new_list;
-+	return oneref_domain;
-+}
-diff --git a/security/landlock/domain_manage.h b/security/landlock/domain_manage.h
-new file mode 100644
-index 000000000000..5b5b49f6e3e8
---- /dev/null
-+++ b/security/landlock/domain_manage.h
-@@ -0,0 +1,23 @@
-+/* SPDX-License-Identifier: GPL-2.0-only */
-+/*
-+ * Landlock LSM - domain management headers
-+ *
-+ * Copyright © 2016-2019 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2018-2019 ANSSI
-+ */
-+
-+#ifndef _SECURITY_LANDLOCK_DOMAIN_MANAGE_H
-+#define _SECURITY_LANDLOCK_DOMAIN_MANAGE_H
-+
-+#include <linux/filter.h>
-+
-+#include "common.h"
-+
-+void landlock_get_domain(struct landlock_domain *dom);
-+void landlock_put_domain(struct landlock_domain *dom);
-+
-+struct landlock_domain *landlock_prepend_prog(
-+		struct landlock_domain *current_domain,
-+		struct bpf_prog *prog);
-+
-+#endif /* _SECURITY_LANDLOCK_DOMAIN_MANAGE_H */
 -- 
 2.23.0
 
