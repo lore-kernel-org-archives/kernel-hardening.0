@@ -1,4 +1,4 @@
-Return-Path: <SRS0=7sv9=YY=lists.openwall.com=kernel-hardening-return-17188-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=r8T1=YY=lists.openwall.com=kernel-hardening-return-17189-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,17 +8,17 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B1664CA9ECB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:59:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4FB42CA9ECB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:59:39 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CB1072086D
-	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:59:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 91CE1216F4
+	for <kernel-hardening@archiver.kernel.org>; Thu, 31 Oct 2019 16:59:38 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="VeV07+y/"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CB1072086D
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="DwFMzJZ+"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 91CE1216F4
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17188-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 27654 invoked by uid 550); 31 Oct 2019 16:59:00 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17189-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28223 invoked by uid 550); 31 Oct 2019 16:59:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,41 +26,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13622 invoked from network); 31 Oct 2019 16:47:03 -0000
+Received: (qmail 13776 invoked from network); 31 Oct 2019 16:47:06 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=FBkL0U7+mf5tcaSnPbZxQ7YN9ZSyYOV+Z9+Nl88/ERI=;
-        b=VeV07+y/vZQMBPIGrWmEcN17NfUoL03xMkxy1CCe4nlsSpjdC/P/A7pU1PaSQAoaC4
-         yhQxR7V5Sze8M+kndBe6LqPB2aAkSx435gMvCe5Xr+ZmLLya44v9PAdlRVnM1C+6wl+V
-         S1wNwAHn7FYnyQVpaOZ07mIDdFzL9vScqpX65tU2wxXwD52a54e9I+3cEH64o/Xmc3+r
-         xr3Jgbe/jKwXa/SmooBBrjDK/CP2axgvDd8BrIAAVZXVKYEewhczgFi97fa/8ggAWFSs
-         i4iLoSFfavLDhRxy2EtVhvkwWNU5Zc/SvzvXnZ4t1GlXrCZoOIf8AsyK/9x2BQE7Cb/J
-         EKDg==
+        bh=aHKOoX9zJAla15qSwjd99c+7iNT/pdKXHfBAM0TSbiA=;
+        b=DwFMzJZ+kUlOAWN2GvdIrb0spmd3RCFaXXrjuk+n93RrGiHVTkKIE8QVClddg7kBDe
+         7IeZak8mKqDEsiR3pvG5D58rS+2OmcCl2VoAJ8fblz+yYSO2P8d24syfdwx60D462Dgh
+         XCr3cWY+P9lvUhF8i41PfwSmLeFuaKf2xbTVnm6vK5gGs924c4E8sqG7J+640Cc4jSv1
+         COp3Hpg8QTv21PL1iF/DfTs8X6WtTvBta9g6udg3ODicYi1TP2epIsbDEj+VXTpASGOq
+         p/A+gt82BwR62uCobShpcPv4dkr4CW0qj8ti60vpOnCzk1mJe/Au4gEO3Ke231E6vBr6
+         8IJA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=FBkL0U7+mf5tcaSnPbZxQ7YN9ZSyYOV+Z9+Nl88/ERI=;
-        b=cVEdL7+yuihT0MT37uLYu18t7YzEegcfNdDKFNbcve/oz3Emn8KJtgx5avvRi+4Vql
-         YoPZyRKP8xQ1GtstScAJI4VgqzvNTtta3Qbhnb8RwN4rIgsj8xna9L+Mik09r6v0RBxJ
-         QqbLnGU4ejGrYP+8R5MTF/pH9PhJcSYbFNb0ehSJuvX9R1duuhNd6nLaiBREvCEYMRBW
-         lA/l/QrVbPXjcT3GV0gmSxeswhrS/HtmITOWorjj/sqweeBNRQp0+N78MfHXoNRpzUe2
-         K3RMA1bDOwDOAp08ytq/0vPzbY5dOcbZRBX7hTOJAJuX+nhsOePPCfdChfSp/FMskfjR
-         hD/Q==
-X-Gm-Message-State: APjAAAVxDR8X6uNXAUSZnxtC8mH/UyoSmW/FAp7rVaaHmXNSjRMaKFc+
-	UweArBq+SyMd+Cz6uw+AMUNxJAMWFyUe4kqqvys=
-X-Google-Smtp-Source: APXvYqwvSAzK7+rkcq2jVtKJglETlc7GpzZ/DLe6JRtqcrszDVQGnwVjheehlI36t6UkuGM2430j8oW3UHk8cjBajIM=
-X-Received: by 2002:a63:cf18:: with SMTP id j24mr8035896pgg.406.1572540411406;
- Thu, 31 Oct 2019 09:46:51 -0700 (PDT)
-Date: Thu, 31 Oct 2019 09:46:23 -0700
+        bh=aHKOoX9zJAla15qSwjd99c+7iNT/pdKXHfBAM0TSbiA=;
+        b=ku9GTJF6y8ATthL/en2l0JQlArBe3WTi4TbjYU9OGVaG8mreZrRM8XDSFqZUF0iBIg
+         lDORcEvp7+mfMFrMowBv/nEmSWqAvM0PLZlkGCEvRL/YktKqYtJp5iq8cQi/oNamDF4g
+         f4M/yYdWXtwOHT0aHtCQnUgySdqPUhpDXu0gxyjFrPr/mw9wK9N2OBUF2DIiDEz0zQ92
+         Hv5GV3rzT5nz4seAS1Hhl/D4CqL/eGchVaqXz83CTtAA+Ee2/xI11/8pJzHHrhoS8xpb
+         R3LWAnIK7Tzr2qxFD/ElkCGYCbKoZVpVKbcuCTJQxJf68r9upr33liY1nrO+5TjQMIKi
+         LqxA==
+X-Gm-Message-State: APjAAAVKHI3k0B76a+ujrFpeUUfkHmM9ukXfIxZ0/KyckwolhykaAuzH
+	z11DuW9j0qFMX7Ikss08WhCdUwLZopy0rHwsZf0=
+X-Google-Smtp-Source: APXvYqzWKFl/JealEA2qBs8OC840r89CQ5kizTD5lUFGsTusSG0GdYwJSJp9KVbGkb+yd42ZvImlbPdCOavSDAkzBMQ=
+X-Received: by 2002:a63:1904:: with SMTP id z4mr7825364pgl.413.1572540414204;
+ Thu, 31 Oct 2019 09:46:54 -0700 (PDT)
+Date: Thu, 31 Oct 2019 09:46:24 -0700
 In-Reply-To: <20191031164637.48901-1-samitolvanen@google.com>
-Message-Id: <20191031164637.48901-4-samitolvanen@google.com>
+Message-Id: <20191031164637.48901-5-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20191031164637.48901-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.24.0.rc0.303.g954a862665-goog
-Subject: [PATCH v3 03/17] arm64: kvm: stop treating register x18 as caller save
+Subject: [PATCH v3 04/17] arm64: kernel: avoid x18 __cpu_soft_restart
 From: samitolvanen@google.com
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -74,116 +74,37 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-In preparation of reserving x18, stop treating it as caller save in
-the KVM guest entry/exit code. Currently, the code assumes there is
-no need to preserve it for the host, given that it would have been
-assumed clobbered anyway by the function call to __guest_enter().
-Instead, preserve its value and restore it upon return.
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-Link: https://patchwork.kernel.org/patch/9836891/
-Co-developed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-[ updated commit message, switched from x18 to x29 for the guest context ]
+The code in __cpu_soft_restart() uses x18 as an arbitrary temp register,
+which will shortly be disallowed. So use x8 instead.
+
+Link: https://patchwork.kernel.org/patch/9836877/
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 ---
- arch/arm64/kvm/hyp/entry.S | 41 +++++++++++++++++++-------------------
- 1 file changed, 20 insertions(+), 21 deletions(-)
+ arch/arm64/kernel/cpu-reset.S | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/arch/arm64/kvm/hyp/entry.S b/arch/arm64/kvm/hyp/entry.S
-index e5cc8d66bf53..c3c2d842c609 100644
---- a/arch/arm64/kvm/hyp/entry.S
-+++ b/arch/arm64/kvm/hyp/entry.S
-@@ -23,6 +23,7 @@
- 	.pushsection	.hyp.text, "ax"
+diff --git a/arch/arm64/kernel/cpu-reset.S b/arch/arm64/kernel/cpu-reset.S
+index 6ea337d464c4..32c7bf858dd9 100644
+--- a/arch/arm64/kernel/cpu-reset.S
++++ b/arch/arm64/kernel/cpu-reset.S
+@@ -42,11 +42,11 @@ ENTRY(__cpu_soft_restart)
+ 	mov	x0, #HVC_SOFT_RESTART
+ 	hvc	#0				// no return
  
- .macro save_callee_saved_regs ctxt
-+	str	x18,      [\ctxt, #CPU_XREG_OFFSET(18)]
- 	stp	x19, x20, [\ctxt, #CPU_XREG_OFFSET(19)]
- 	stp	x21, x22, [\ctxt, #CPU_XREG_OFFSET(21)]
- 	stp	x23, x24, [\ctxt, #CPU_XREG_OFFSET(23)]
-@@ -32,6 +33,8 @@
- .endm
+-1:	mov	x18, x1				// entry
++1:	mov	x8, x1				// entry
+ 	mov	x0, x2				// arg0
+ 	mov	x1, x3				// arg1
+ 	mov	x2, x4				// arg2
+-	br	x18
++	br	x8
+ ENDPROC(__cpu_soft_restart)
  
- .macro restore_callee_saved_regs ctxt
-+	// We assume \ctxt is not x18-x28
-+	ldr	x18,      [\ctxt, #CPU_XREG_OFFSET(18)]
- 	ldp	x19, x20, [\ctxt, #CPU_XREG_OFFSET(19)]
- 	ldp	x21, x22, [\ctxt, #CPU_XREG_OFFSET(21)]
- 	ldp	x23, x24, [\ctxt, #CPU_XREG_OFFSET(23)]
-@@ -48,7 +51,7 @@ ENTRY(__guest_enter)
- 	// x0: vcpu
- 	// x1: host context
- 	// x2-x17: clobbered by macros
--	// x18: guest context
-+	// x29: guest context
- 
- 	// Store the host regs
- 	save_callee_saved_regs x1
-@@ -67,31 +70,28 @@ alternative_else_nop_endif
- 	ret
- 
- 1:
--	add	x18, x0, #VCPU_CONTEXT
-+	add	x29, x0, #VCPU_CONTEXT
- 
- 	// Macro ptrauth_switch_to_guest format:
- 	// 	ptrauth_switch_to_guest(guest cxt, tmp1, tmp2, tmp3)
- 	// The below macro to restore guest keys is not implemented in C code
- 	// as it may cause Pointer Authentication key signing mismatch errors
- 	// when this feature is enabled for kernel code.
--	ptrauth_switch_to_guest x18, x0, x1, x2
-+	ptrauth_switch_to_guest x29, x0, x1, x2
- 
- 	// Restore guest regs x0-x17
--	ldp	x0, x1,   [x18, #CPU_XREG_OFFSET(0)]
--	ldp	x2, x3,   [x18, #CPU_XREG_OFFSET(2)]
--	ldp	x4, x5,   [x18, #CPU_XREG_OFFSET(4)]
--	ldp	x6, x7,   [x18, #CPU_XREG_OFFSET(6)]
--	ldp	x8, x9,   [x18, #CPU_XREG_OFFSET(8)]
--	ldp	x10, x11, [x18, #CPU_XREG_OFFSET(10)]
--	ldp	x12, x13, [x18, #CPU_XREG_OFFSET(12)]
--	ldp	x14, x15, [x18, #CPU_XREG_OFFSET(14)]
--	ldp	x16, x17, [x18, #CPU_XREG_OFFSET(16)]
--
--	// Restore guest regs x19-x29, lr
--	restore_callee_saved_regs x18
--
--	// Restore guest reg x18
--	ldr	x18,      [x18, #CPU_XREG_OFFSET(18)]
-+	ldp	x0, x1,   [x29, #CPU_XREG_OFFSET(0)]
-+	ldp	x2, x3,   [x29, #CPU_XREG_OFFSET(2)]
-+	ldp	x4, x5,   [x29, #CPU_XREG_OFFSET(4)]
-+	ldp	x6, x7,   [x29, #CPU_XREG_OFFSET(6)]
-+	ldp	x8, x9,   [x29, #CPU_XREG_OFFSET(8)]
-+	ldp	x10, x11, [x29, #CPU_XREG_OFFSET(10)]
-+	ldp	x12, x13, [x29, #CPU_XREG_OFFSET(12)]
-+	ldp	x14, x15, [x29, #CPU_XREG_OFFSET(14)]
-+	ldp	x16, x17, [x29, #CPU_XREG_OFFSET(16)]
-+
-+	// Restore guest regs x18-x29, lr
-+	restore_callee_saved_regs x29
- 
- 	// Do not touch any register after this!
- 	eret
-@@ -114,7 +114,7 @@ ENTRY(__guest_exit)
- 	// Retrieve the guest regs x0-x1 from the stack
- 	ldp	x2, x3, [sp], #16	// x0, x1
- 
--	// Store the guest regs x0-x1 and x4-x18
-+	// Store the guest regs x0-x1 and x4-x17
- 	stp	x2, x3,   [x1, #CPU_XREG_OFFSET(0)]
- 	stp	x4, x5,   [x1, #CPU_XREG_OFFSET(4)]
- 	stp	x6, x7,   [x1, #CPU_XREG_OFFSET(6)]
-@@ -123,9 +123,8 @@ ENTRY(__guest_exit)
- 	stp	x12, x13, [x1, #CPU_XREG_OFFSET(12)]
- 	stp	x14, x15, [x1, #CPU_XREG_OFFSET(14)]
- 	stp	x16, x17, [x1, #CPU_XREG_OFFSET(16)]
--	str	x18,      [x1, #CPU_XREG_OFFSET(18)]
- 
--	// Store the guest regs x19-x29, lr
-+	// Store the guest regs x18-x29, lr
- 	save_callee_saved_regs x1
- 
- 	get_host_ctxt	x2, x3
+ .popsection
 -- 
 2.24.0.rc0.303.g954a862665-goog
 
