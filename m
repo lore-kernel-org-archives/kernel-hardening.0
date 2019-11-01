@@ -1,4 +1,4 @@
-Return-Path: <SRS0=E+6G=YZ=lists.openwall.com=kernel-hardening-return-17216-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=bSp2=YZ=lists.openwall.com=kernel-hardening-return-17217-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 35440CA9EC9
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:55:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6B1CFCA9EC9
+	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:56:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8294F208CB
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:55:45 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B3D09208CB
+	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:56:31 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="DGvNnz+G"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8294F208CB
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="CCX57PXe"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B3D09208CB
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17216-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28188 invoked by uid 550); 1 Nov 2019 03:55:39 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17217-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29994 invoked by uid 550); 1 Nov 2019 03:56:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,32 +25,32 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28168 invoked from network); 1 Nov 2019 03:55:39 -0000
+Received: (qmail 29974 invoked from network); 1 Nov 2019 03:56:25 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=YiqPN73/qfLoGFPAaCK046WeDsIyHq2v7vxAoPf2Hxg=;
-        b=DGvNnz+GeHeNfKZ6f7YLJzc3HABEEC30I8/B/IBZTbAoWTqYDEBA+PWjh7ne14xEji
-         PE2FdEWksdLdMt2PKYPe0QSMEXkBcV49KFClWQ42/xFPVspDKk4kFzSNVn/0QiVKU0Hk
-         Z4vIKb88INGDp/qLR22O2YTnuCwiKgJmJAvqs=
+        bh=Z+nYmbiX+N1St4EAeF06ZLBIc22exSOWn82chVWgQ58=;
+        b=CCX57PXeSP8raTIa7stPdOtMkXfDOMY7T1F5hUmVdwgHt3jJlYyT6pDYvyD+nZPnjd
+         RDynOfkryq8ctGOLHdv/HhV7WAh/aJmiBALoqt5gki6zK0lyCCvj+8TBwx4BlVd4ZsYn
+         QlzmEfXTcWlJFOzLS3MwRZqKvvLzEB2qTfEAY=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=YiqPN73/qfLoGFPAaCK046WeDsIyHq2v7vxAoPf2Hxg=;
-        b=PQ0SSy3xSebldE/jmd2KZlmQRUQ71O8sX6QjeGDg615EHBT4SGJFrsJy44DSyuR8Au
-         uGHGN5lTGH3tiNFaGD1iyVzaMNQyWJtdGQO7URDMF3uFA9kmaZ5F5VJdoV9CvoVZr+pw
-         WPFYjKSQWlYr2tfzKj9sHhWThPUPNTkXTGOHdKJY9Kp3tMbHKeFZJEFy7ysy2wc/D7xu
-         1CGlSZjWrP9HtB2WGrWovEIKRdc36kzj4KuZTvxL6x+oVDvPSe1aUqLpu6lti7rXpO3p
-         8c8Zmy20+RNBrXP/SjcNW3Gl8fVhM50qJAsiiqLU2gI7uxDUPawAGKepp59+WDvCeHav
-         xOuQ==
-X-Gm-Message-State: APjAAAU6X96TEUGGg+TJ3mXQ8Lx1V0j9b2dmrCU3QXyKrzrez/aCHq2+
-	UeZY4QvKE2DMJj9ZfACSP40QBw==
-X-Google-Smtp-Source: APXvYqxD7MNY1jVYOjRfhYGo3ogwiiuExle/jPXGM0/pINsljnFcAcPtUzMI8R27pVSvoSzQhhOLJg==
-X-Received: by 2002:a17:90a:f310:: with SMTP id ca16mr5852511pjb.20.1572580527358;
-        Thu, 31 Oct 2019 20:55:27 -0700 (PDT)
-Date: Thu, 31 Oct 2019 20:55:25 -0700
+        bh=Z+nYmbiX+N1St4EAeF06ZLBIc22exSOWn82chVWgQ58=;
+        b=V81FXWWqICLafDtv1E5PQK4Q054N1EoElmM4yp63TsAuMhl7JeqlkiAR8+sagUQ6W5
+         QsyMpW6CN1Jup3cqxF9Bb+UXOiabELOTkCdOvYiVWYBEdVDizF0LW7nxE6V9fLwUrCVH
+         yqiKskOMYW3Hnx3vtefUjvRk5FuA6TgqxLdq/OnPwzmZSLB2uGymAfSN7U/9UxFnECgN
+         PN+CmhsTIy93Tlu79o98YbdsBqyyIvgFTdRF2nCEEDfXo+rC1oh/kYEV/aK7GEz/2vGF
+         /qC0q1CHCjdX46/414MlSReKABmAgHQ+1ag3pwxyWya1utH+MSNvN6hIZ37udZDdA87N
+         /9fg==
+X-Gm-Message-State: APjAAAUT2C6tpOgRpHoBXrYqG6rBpbTX/1L0cEejWtj60a6BdF2T6zp9
+	mzAryTwjNT2VZH8sXpPRTCLI7PaZWYs=
+X-Google-Smtp-Source: APXvYqzjbJ7PTCwR8dbLX9yGoruNQd+AcfmNqc/IOeBXJ7CEpc7/rFxnCKUJlN4CgjbHYqxLA44oZA==
+X-Received: by 2002:a17:902:988d:: with SMTP id s13mr10329146plp.335.1572580573736;
+        Thu, 31 Oct 2019 20:56:13 -0700 (PDT)
+Date: Thu, 31 Oct 2019 20:56:11 -0700
 From: Kees Cook <keescook@chromium.org>
 To: samitolvanen@google.com
 Cc: Will Deacon <will@kernel.org>,
@@ -68,90 +68,53 @@ Cc: Will Deacon <will@kernel.org>,
 	clang-built-linux@googlegroups.com,
 	kernel-hardening@lists.openwall.com,
 	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v3 08/17] kprobes: fix compilation without
+Subject: Re: [PATCH v3 09/17] arm64: kprobes: fix kprobes without
  CONFIG_KRETPROBES
-Message-ID: <201910312055.B551A6CB4@keescook>
+Message-ID: <201910312055.BD31A966DB@keescook>
 References: <20191018161033.261971-1-samitolvanen@google.com>
  <20191031164637.48901-1-samitolvanen@google.com>
- <20191031164637.48901-9-samitolvanen@google.com>
+ <20191031164637.48901-10-samitolvanen@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20191031164637.48901-9-samitolvanen@google.com>
+In-Reply-To: <20191031164637.48901-10-samitolvanen@google.com>
 
-On Thu, Oct 31, 2019 at 09:46:28AM -0700, samitolvanen@google.com wrote:
-> kprobe_on_func_entry and arch_kprobe_on_func_entry need to be available
-> even if CONFIG_KRETPROBES is not selected.
+On Thu, Oct 31, 2019 at 09:46:29AM -0700, samitolvanen@google.com wrote:
+> This allows CONFIG_KRETPROBES to be disabled without disabling
+> kprobes entirely.
 > 
 > Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 
-FWIW:
+Is this worth folding this into the prior kprobes patch? Regardless:
 
 Reviewed-by: Kees Cook <keescook@chromium.org>
 
 -Kees
 
-> Acked-by: Masami Hiramatsu <mhiramat@kernel.org>
 > ---
->  kernel/kprobes.c | 38 +++++++++++++++++++-------------------
->  1 file changed, 19 insertions(+), 19 deletions(-)
+>  arch/arm64/kernel/probes/kprobes.c | 2 ++
+>  1 file changed, 2 insertions(+)
 > 
-> diff --git a/kernel/kprobes.c b/kernel/kprobes.c
-> index 53534aa258a6..b5e20a4669b8 100644
-> --- a/kernel/kprobes.c
-> +++ b/kernel/kprobes.c
-> @@ -1829,6 +1829,25 @@ unsigned long __weak arch_deref_entry_point(void *entry)
->  	return (unsigned long)entry;
+> diff --git a/arch/arm64/kernel/probes/kprobes.c b/arch/arm64/kernel/probes/kprobes.c
+> index c4452827419b..98230ae979ca 100644
+> --- a/arch/arm64/kernel/probes/kprobes.c
+> +++ b/arch/arm64/kernel/probes/kprobes.c
+> @@ -551,6 +551,7 @@ void __kprobes __used *trampoline_probe_handler(struct pt_regs *regs)
+>  	return (void *)orig_ret_address;
 >  }
 >  
-> +bool __weak arch_kprobe_on_func_entry(unsigned long offset)
-> +{
-> +	return !offset;
-> +}
-> +
-> +bool kprobe_on_func_entry(kprobe_opcode_t *addr, const char *sym, unsigned long offset)
-> +{
-> +	kprobe_opcode_t *kp_addr = _kprobe_addr(addr, sym, offset);
-> +
-> +	if (IS_ERR(kp_addr))
-> +		return false;
-> +
-> +	if (!kallsyms_lookup_size_offset((unsigned long)kp_addr, NULL, &offset) ||
-> +						!arch_kprobe_on_func_entry(offset))
-> +		return false;
-> +
-> +	return true;
-> +}
-> +
->  #ifdef CONFIG_KRETPROBES
->  /*
->   * This kprobe pre_handler is registered with every kretprobe. When probe
-> @@ -1885,25 +1904,6 @@ static int pre_handler_kretprobe(struct kprobe *p, struct pt_regs *regs)
->  }
->  NOKPROBE_SYMBOL(pre_handler_kretprobe);
->  
-> -bool __weak arch_kprobe_on_func_entry(unsigned long offset)
-> -{
-> -	return !offset;
-> -}
-> -
-> -bool kprobe_on_func_entry(kprobe_opcode_t *addr, const char *sym, unsigned long offset)
-> -{
-> -	kprobe_opcode_t *kp_addr = _kprobe_addr(addr, sym, offset);
-> -
-> -	if (IS_ERR(kp_addr))
-> -		return false;
-> -
-> -	if (!kallsyms_lookup_size_offset((unsigned long)kp_addr, NULL, &offset) ||
-> -						!arch_kprobe_on_func_entry(offset))
-> -		return false;
-> -
-> -	return true;
-> -}
-> -
->  int register_kretprobe(struct kretprobe *rp)
+> +#ifdef CONFIG_KRETPROBES
+>  void __kprobes arch_prepare_kretprobe(struct kretprobe_instance *ri,
+>  				      struct pt_regs *regs)
 >  {
->  	int ret = 0;
+> @@ -564,6 +565,7 @@ int __kprobes arch_trampoline_kprobe(struct kprobe *p)
+>  {
+>  	return 0;
+>  }
+> +#endif
+>  
+>  int __init arch_init_kprobes(void)
+>  {
 > -- 
 > 2.24.0.rc0.303.g954a862665-goog
 > 
