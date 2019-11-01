@@ -1,23 +1,23 @@
-Return-Path: <SRS0=tP5X=YZ=lists.openwall.com=kernel-hardening-return-17214-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Br8J=YZ=lists.openwall.com=kernel-hardening-return-17215-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B7898CA9EC9
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:53:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 808FBCA9EC9
+	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:55:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id ADBD32083E
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:53:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id CBFAE2083E
+	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 03:55:24 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="gWLZxKI+"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org ADBD32083E
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="gdpHWq36"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CBFAE2083E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17214-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24320 invoked by uid 550); 1 Nov 2019 03:52:59 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17215-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26441 invoked by uid 550); 1 Nov 2019 03:55:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,32 +25,32 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24298 invoked from network); 1 Nov 2019 03:52:57 -0000
+Received: (qmail 26421 invoked from network); 1 Nov 2019 03:55:17 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=gpLAkkycQDbDSOC/PvJc50WAQNQl23mAQ5YOyKoCOKQ=;
-        b=gWLZxKI+6uMuqF40oThzg5PiQfqKMClcPLLmmIBAaR/wDZwWjVijkJEPF2sNBmIV9i
-         nbhYZRcBYedLAs1ObXvZI/Okuk9JFPb0HVSronSamG3Tn5t+wO/JGam+3rhKDB6IcVCm
-         h3TDS+boW/VYKcZb32f4zY+kqosE4Bztz0cUs=
+        bh=zSoUcnGkSf7yfDdI4UPFWole6s3LI6NqVWKcqfKw3S8=;
+        b=gdpHWq36NRa5kgf+gRe/MKxYGjAw3bBoglJCiCxqDG/Z5bLWefay/odv1qRX70dC6u
+         xEQoc/cnbPdiJcOxSIkOgyhVuljqbWzwmQF4cqReWLlUHB1iREij3Bw5hMnU19ZGaFou
+         2x2RfVCm1NB8MMDbP9OX8d28IFnaJuv0SjjDk=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=gpLAkkycQDbDSOC/PvJc50WAQNQl23mAQ5YOyKoCOKQ=;
-        b=ui+PRwAsyfpfn8o7Ln/W7UvCaVg/t0acm/HO7fv9v8ynElcG1fFNZzAJMdc1xZpoJl
-         ozjkLFEJhYXld1l82yXn583en14SU2GAHMH+b4u5Z4y4b+j9aOj38J9rx0xmn3X5eYHU
-         qQZm4BMy+vP6Izxw5p5cAb6GCykR8+NpVW4xaQU0AqIO1HTDBJm1qTiLtiFPAWuMoYKQ
-         JiiCWws0iZlxb8nrLwRAQUAmo8tiWHfeb6y/kERkJlQI0u1OKXh7CsZIAbJb8t4iANNd
-         kOaZeHTeDXHU7OWSbZQv1Fz7TKof5DzlGTwxz1FqGjdxhhj/am6XuqQHakRJTzykuT+0
-         q+VA==
-X-Gm-Message-State: APjAAAWloK6w4GAwVJdwYqREi5iiPocCAfV60uouV+0GSTBeQcOXlqMi
-	R2hRwBTCDCMbY3SEEGwIbHrkuA==
-X-Google-Smtp-Source: APXvYqw6XqTv8yGHR0KsVVwCNMe9mcWfZe/TNMu5crisql/X0YT5TGuvZ2U2c5cD7WTUXY1GQs1CEA==
-X-Received: by 2002:a17:902:b604:: with SMTP id b4mr10080726pls.219.1572580366145;
-        Thu, 31 Oct 2019 20:52:46 -0700 (PDT)
-Date: Thu, 31 Oct 2019 20:52:44 -0700
+        bh=zSoUcnGkSf7yfDdI4UPFWole6s3LI6NqVWKcqfKw3S8=;
+        b=oqVcaBIL5YLP8AQ2ns9pK3Q25jCKNt1UatUg4+5u0F3EcnYKm6fEw/gNB3TFm4wqg+
+         Z7a3Om1HAhIRBajFzfNPA0vN9BmEh2mUvtubjxoYegk8v38ybD6BqPfsgUjzDrmkfRHG
+         Nvgi3RlTF667wOFeXigumHFZs+K+77INdrJFCbFFzB0SVb75XiXuRUfmOzs3RzFmGAgp
+         Zu7JH7zrBT2bruxm0nmS0rfZFKzCo8oIdfJtopEYbaCjJpvSHVEAS5iZPI0mQ2blZ2iN
+         KAHTAlBS4W40148m/RTrPpvCbNePeMPnRqd3DJXtoAS3/+5Tc7MAeS3NosqZ/w7zUpaD
+         gcpQ==
+X-Gm-Message-State: APjAAAWHpi4TKjnYXNNqDXUWvHxyjyy8exmWlfJ8Mo8vhKxfbbXVUoDS
+	RewGyFEKmiJQTs/1D+JiClMlZw==
+X-Google-Smtp-Source: APXvYqx5k7aF99T5w9h4PpSwUM81mxoH0R6qDLQkK0BR3TP2j37wYiYVIHIkontT/DEGLXmTTHNH0A==
+X-Received: by 2002:a17:90a:bb0b:: with SMTP id u11mr12349099pjr.94.1572580505585;
+        Thu, 31 Oct 2019 20:55:05 -0700 (PDT)
+Date: Thu, 31 Oct 2019 20:55:03 -0700
 From: Kees Cook <keescook@chromium.org>
 To: samitolvanen@google.com
 Cc: Will Deacon <will@kernel.org>,
@@ -68,192 +68,89 @@ Cc: Will Deacon <will@kernel.org>,
 	clang-built-linux@googlegroups.com,
 	kernel-hardening@lists.openwall.com,
 	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v3 06/17] scs: add accounting
-Message-ID: <201910312052.0ADF21F@keescook>
+Subject: Re: [PATCH v3 07/17] scs: add support for stack usage debugging
+Message-ID: <201910312054.3064999E@keescook>
 References: <20191018161033.261971-1-samitolvanen@google.com>
  <20191031164637.48901-1-samitolvanen@google.com>
- <20191031164637.48901-7-samitolvanen@google.com>
+ <20191031164637.48901-8-samitolvanen@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20191031164637.48901-7-samitolvanen@google.com>
+In-Reply-To: <20191031164637.48901-8-samitolvanen@google.com>
 
-On Thu, Oct 31, 2019 at 09:46:26AM -0700, samitolvanen@google.com wrote:
-> This change adds accounting for the memory allocated for shadow stacks.
-> 
-> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+On Thu, Oct 31, 2019 at 09:46:27AM -0700, samitolvanen@google.com wrote:
+> Implements CONFIG_DEBUG_STACK_USAGE for shadow stacks.
 
-A nice bit of stats to have.
-
-Reviewed-by: Kees Cook <keescook@chromium.org>
+Did I miss it, or is there no Kconfig section for this? I just realized
+I can't find it. I was going to say "this commit log should explain
+why/when this option is used", but then figured it might be explained in
+the Kconfig ... but I couldn't find it. ;)
 
 -Kees
 
-> ---
->  drivers/base/node.c    |  6 ++++++
->  fs/proc/meminfo.c      |  4 ++++
->  include/linux/mmzone.h |  3 +++
->  kernel/scs.c           | 19 +++++++++++++++++++
->  mm/page_alloc.c        |  6 ++++++
->  mm/vmstat.c            |  3 +++
->  6 files changed, 41 insertions(+)
 > 
-> diff --git a/drivers/base/node.c b/drivers/base/node.c
-> index 296546ffed6c..111e58ec231e 100644
-> --- a/drivers/base/node.c
-> +++ b/drivers/base/node.c
-> @@ -415,6 +415,9 @@ static ssize_t node_read_meminfo(struct device *dev,
->  		       "Node %d AnonPages:      %8lu kB\n"
->  		       "Node %d Shmem:          %8lu kB\n"
->  		       "Node %d KernelStack:    %8lu kB\n"
-> +#ifdef CONFIG_SHADOW_CALL_STACK
-> +		       "Node %d ShadowCallStack:%8lu kB\n"
-> +#endif
->  		       "Node %d PageTables:     %8lu kB\n"
->  		       "Node %d NFS_Unstable:   %8lu kB\n"
->  		       "Node %d Bounce:         %8lu kB\n"
-> @@ -438,6 +441,9 @@ static ssize_t node_read_meminfo(struct device *dev,
->  		       nid, K(node_page_state(pgdat, NR_ANON_MAPPED)),
->  		       nid, K(i.sharedram),
->  		       nid, sum_zone_node_page_state(nid, NR_KERNEL_STACK_KB),
-> +#ifdef CONFIG_SHADOW_CALL_STACK
-> +		       nid, sum_zone_node_page_state(nid, NR_KERNEL_SCS_BYTES) / 1024,
-> +#endif
->  		       nid, K(sum_zone_node_page_state(nid, NR_PAGETABLE)),
->  		       nid, K(node_page_state(pgdat, NR_UNSTABLE_NFS)),
->  		       nid, K(sum_zone_node_page_state(nid, NR_BOUNCE)),
-> diff --git a/fs/proc/meminfo.c b/fs/proc/meminfo.c
-> index 8c1f1bb1a5ce..49768005a79e 100644
-> --- a/fs/proc/meminfo.c
-> +++ b/fs/proc/meminfo.c
-> @@ -103,6 +103,10 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
->  	show_val_kb(m, "SUnreclaim:     ", sunreclaim);
->  	seq_printf(m, "KernelStack:    %8lu kB\n",
->  		   global_zone_page_state(NR_KERNEL_STACK_KB));
-> +#ifdef CONFIG_SHADOW_CALL_STACK
-> +	seq_printf(m, "ShadowCallStack:%8lu kB\n",
-> +		   global_zone_page_state(NR_KERNEL_SCS_BYTES) / 1024);
-> +#endif
->  	show_val_kb(m, "PageTables:     ",
->  		    global_zone_page_state(NR_PAGETABLE));
->  
-> diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
-> index bda20282746b..fcb8c1708f9e 100644
-> --- a/include/linux/mmzone.h
-> +++ b/include/linux/mmzone.h
-> @@ -200,6 +200,9 @@ enum zone_stat_item {
->  	NR_MLOCK,		/* mlock()ed pages found and moved off LRU */
->  	NR_PAGETABLE,		/* used for pagetables */
->  	NR_KERNEL_STACK_KB,	/* measured in KiB */
-> +#if IS_ENABLED(CONFIG_SHADOW_CALL_STACK)
-> +	NR_KERNEL_SCS_BYTES,	/* measured in bytes */
-> +#endif
->  	/* Second 128 byte cacheline */
->  	NR_BOUNCE,
->  #if IS_ENABLED(CONFIG_ZSMALLOC)
+> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+> ---
+>  kernel/scs.c | 39 +++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 39 insertions(+)
+> 
 > diff --git a/kernel/scs.c b/kernel/scs.c
-> index 7c1a40020754..7780fc4e29ac 100644
+> index 7780fc4e29ac..67c43af627d1 100644
 > --- a/kernel/scs.c
 > +++ b/kernel/scs.c
-> @@ -11,6 +11,7 @@
->  #include <linux/scs.h>
->  #include <linux/slab.h>
->  #include <linux/vmalloc.h>
-> +#include <linux/vmstat.h>
->  #include <asm/scs.h>
->  
->  static inline void *__scs_base(struct task_struct *tsk)
-> @@ -74,6 +75,11 @@ static void scs_free(void *s)
->  	vfree_atomic(s);
->  }
->  
-> +static struct page *__scs_page(struct task_struct *tsk)
-> +{
-> +	return vmalloc_to_page(__scs_base(tsk));
-> +}
-> +
->  static int scs_cleanup(unsigned int cpu)
->  {
->  	int i;
-> @@ -107,6 +113,11 @@ static inline void scs_free(void *s)
->  	kmem_cache_free(scs_cache, s);
->  }
->  
-> +static struct page *__scs_page(struct task_struct *tsk)
-> +{
-> +	return virt_to_page(__scs_base(tsk));
-> +}
-> +
->  void __init scs_init(void)
->  {
->  	scs_cache = kmem_cache_create("scs_cache", SCS_SIZE, SCS_SIZE,
-> @@ -135,6 +146,12 @@ void scs_task_reset(struct task_struct *tsk)
->  	task_set_scs(tsk, __scs_base(tsk));
->  }
->  
-> +static void scs_account(struct task_struct *tsk, int account)
-> +{
-> +	mod_zone_page_state(page_zone(__scs_page(tsk)), NR_KERNEL_SCS_BYTES,
-> +		account * SCS_SIZE);
-> +}
-> +
->  int scs_prepare(struct task_struct *tsk, int node)
->  {
->  	void *s;
-> @@ -145,6 +162,7 @@ int scs_prepare(struct task_struct *tsk, int node)
->  
->  	task_set_scs(tsk, s);
->  	scs_set_magic(tsk);
-> +	scs_account(tsk, 1);
->  
+> @@ -167,6 +167,44 @@ int scs_prepare(struct task_struct *tsk, int node)
 >  	return 0;
 >  }
-> @@ -164,6 +182,7 @@ void scs_release(struct task_struct *tsk)
+>  
+> +#ifdef CONFIG_DEBUG_STACK_USAGE
+> +static inline unsigned long scs_used(struct task_struct *tsk)
+> +{
+> +	unsigned long *p = __scs_base(tsk);
+> +	unsigned long *end = scs_magic(tsk);
+> +	uintptr_t s = (uintptr_t)p;
+> +
+> +	while (p < end && *p)
+> +		p++;
+> +
+> +	return (uintptr_t)p - s;
+> +}
+> +
+> +static void scs_check_usage(struct task_struct *tsk)
+> +{
+> +	static DEFINE_SPINLOCK(lock);
+> +	static unsigned long highest;
+> +	unsigned long used = scs_used(tsk);
+> +
+> +	if (used <= highest)
+> +		return;
+> +
+> +	spin_lock(&lock);
+> +
+> +	if (used > highest) {
+> +		pr_info("%s: highest shadow stack usage %lu bytes\n",
+> +			__func__, used);
+> +		highest = used;
+> +	}
+> +
+> +	spin_unlock(&lock);
+> +}
+> +#else
+> +static inline void scs_check_usage(struct task_struct *tsk)
+> +{
+> +}
+> +#endif
+> +
+>  bool scs_corrupted(struct task_struct *tsk)
+>  {
+>  	return *scs_magic(tsk) != SCS_END_MAGIC;
+> @@ -181,6 +219,7 @@ void scs_release(struct task_struct *tsk)
+>  		return;
 >  
 >  	WARN_ON(scs_corrupted(tsk));
+> +	scs_check_usage(tsk);
 >  
-> +	scs_account(tsk, -1);
+>  	scs_account(tsk, -1);
 >  	task_set_scs(tsk, NULL);
->  	scs_free(s);
->  }
-> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-> index ecc3dbad606b..fe17d69d98a7 100644
-> --- a/mm/page_alloc.c
-> +++ b/mm/page_alloc.c
-> @@ -5361,6 +5361,9 @@ void show_free_areas(unsigned int filter, nodemask_t *nodemask)
->  			" managed:%lukB"
->  			" mlocked:%lukB"
->  			" kernel_stack:%lukB"
-> +#ifdef CONFIG_SHADOW_CALL_STACK
-> +			" shadow_call_stack:%lukB"
-> +#endif
->  			" pagetables:%lukB"
->  			" bounce:%lukB"
->  			" free_pcp:%lukB"
-> @@ -5382,6 +5385,9 @@ void show_free_areas(unsigned int filter, nodemask_t *nodemask)
->  			K(zone_managed_pages(zone)),
->  			K(zone_page_state(zone, NR_MLOCK)),
->  			zone_page_state(zone, NR_KERNEL_STACK_KB),
-> +#ifdef CONFIG_SHADOW_CALL_STACK
-> +			zone_page_state(zone, NR_KERNEL_SCS_BYTES) / 1024,
-> +#endif
->  			K(zone_page_state(zone, NR_PAGETABLE)),
->  			K(zone_page_state(zone, NR_BOUNCE)),
->  			K(free_pcp),
-> diff --git a/mm/vmstat.c b/mm/vmstat.c
-> index 6afc892a148a..9fe4afe670fe 100644
-> --- a/mm/vmstat.c
-> +++ b/mm/vmstat.c
-> @@ -1118,6 +1118,9 @@ const char * const vmstat_text[] = {
->  	"nr_mlock",
->  	"nr_page_table_pages",
->  	"nr_kernel_stack",
-> +#if IS_ENABLED(CONFIG_SHADOW_CALL_STACK)
-> +	"nr_shadow_call_stack_bytes",
-> +#endif
->  	"nr_bounce",
->  #if IS_ENABLED(CONFIG_ZSMALLOC)
->  	"nr_zspages",
 > -- 
 > 2.24.0.rc0.303.g954a862665-goog
 > 
