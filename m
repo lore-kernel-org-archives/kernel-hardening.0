@@ -1,4 +1,4 @@
-Return-Path: <SRS0=90It=YZ=lists.openwall.com=kernel-hardening-return-17227-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=lQqO=YZ=lists.openwall.com=kernel-hardening-return-17228-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AFA47CA9ECF
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 16:28:53 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1EB2FCA9ECF
+	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 16:33:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0775221897
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 16:28:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 66119217D9
+	for <kernel-hardening@archiver.kernel.org>; Fri,  1 Nov 2019 16:33:23 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ai3N6Ic4"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0775221897
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="mVdZ7udl"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 66119217D9
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17227-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13887 invoked by uid 550); 1 Nov 2019 16:28:46 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17228-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17416 invoked by uid 550); 1 Nov 2019 16:33:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,43 +25,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13864 invoked from network); 1 Nov 2019 16:28:45 -0000
+Received: (qmail 16372 invoked from network); 1 Nov 2019 16:33:17 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=cugJW9F3kTAr1l84/vLpT5yr86XijpMcBnCXxXWK4UA=;
-        b=ai3N6Ic4RRGuSAsXlls5IzMaslA5Wbr/HVntf4UgHRgBb1znSgpSqTQDhgWkXAk5oM
-         H0TMkU5NqeJqmaviuucs+F/wv2mYGbxw4p/TlWjmTA7nxtnYoIewy1UZepA7s1zvqFi+
-         J0gxVuzM5VGToU0Rd8Mze3tyCLh7RZ7qRdkeI4u+x2bACiJuZjdPOS6PF5wclT402Cyl
-         E4V47Z+G3JNyTOeTMcNM9nltwL7iNcdGY46YKNmZkjxzRh51T0x1vup1917ckL2zPFgG
-         WhafP3q/o/Aolmq4VvLO1/E0Za4fVCa/z+d1jFfQQJXZNS7+zE2mjM1J0A4RaF2Z5bp3
-         En0Q==
+        bh=j5WHWvyJ9Hz5kosmku4ReDEqbYSNCjtYvPAtQ8gov0w=;
+        b=mVdZ7udliBm1Ah/0SRYlDf6bwEJ6TL7x3JmnofXlcyZOXqi5Q9VBuiMbpvt9qFtviY
+         O1dg12Mx/ZqNCdmPnMehixCUQwwDXQwkP8easpaC7ETmB8M+bGzkf5mtTCIfXJepYgXQ
+         UpEXv0+Y/8IRh6Bt9tXSt5I5dm6Naa/8+P0Gfr7zVhf9zJ0enNNpTxkLjpUS3Y3FM1TQ
+         K14mAw/P1HzmMF2Q3lOwbI6KFmRqbDNTH4h5du1QpSKj0tUoB4V/KntCBftt2t3ivGyo
+         CvnopvuGe8ctEsWcfBzhSVdFtD8ECLxaPGft365BahwUkKRXVOufpCDz3m9fqW+WiVMo
+         c2IA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=cugJW9F3kTAr1l84/vLpT5yr86XijpMcBnCXxXWK4UA=;
-        b=QaSOKCKIObLDOnOoqW830cV4xXL9Lq38/nAB5++daaajaNuEqP/9auC+19gnlraKMR
-         MtBeD/opk0Bdk1TyJBw4OtcauR552d/4RGWBT6rAEK6tMEgoTNoPqK4k0/Mom65TV52I
-         H3KhYC4TNaZzHt8TCR7fxYpF4plStoqpTvJcRw/IUBbNm07kxD5L7UAXl5DePRQLcaNx
-         OQqL6mzJudh9/kRPhcn5qZjeH9NvdsoNbN8EZoAogUqA7DRkoexxNHF5CfMVTuXVvH6C
-         aA8xBUSOIu7GRAxywLCB+N6tqwYjjNgtOuIu93Sw08tVhspE+RqQBgyEh8zi0M74Qjqm
-         EN0A==
-X-Gm-Message-State: APjAAAUM2Oh0Yy+rXJwJw16a+bWSJ7dLFYphg72hvQAj/CoMf1UoFZXi
-	kqgq+Y2TgUu3a5xtdZEbxoBrfBIyQKyoybieeBf0bQ==
-X-Google-Smtp-Source: APXvYqz0PMfInUZYTnVA7QuGr/acGPXLqC8RP/nrNkyeFglf9nt3ZmPDMS4W5mUNYn60Yk/KFVXZFpuxRp6NFZg7Kqc=
-X-Received: by 2002:ab0:2381:: with SMTP id b1mr5975220uan.106.1572625713398;
- Fri, 01 Nov 2019 09:28:33 -0700 (PDT)
+        bh=j5WHWvyJ9Hz5kosmku4ReDEqbYSNCjtYvPAtQ8gov0w=;
+        b=BHFqY0CjJtwpYJqQ2J7s2UXHBYO+0iUgsSwY8x6qQpHXZJOXvY4gmDvAfVD7rH+4wV
+         SVQ+Hp8HcoSBwFA7h8YzBlJU5cMPAMOjVTjmJavDLauYQR4D/O/REti4dZ2I1aDFzEhU
+         C0dMyXWPrkXTNZkCBIfTd4qz0KIuDUizUeE9uE7SS4R90XdVomVRAIYmo/B08tKo/q8B
+         sMnP8U9yLn/+GVRWN8J53HcFhfOClUtvvjUdARLaRIbYc0/AhAkkSML1rqMvUVAK0nMl
+         kHuQqkK/8N28mcNcA27X84JWpzSLRzFAF4aYqSTnQZivB8FUeaeBPnRLT0SXNeTQptjs
+         mntQ==
+X-Gm-Message-State: APjAAAURet70wvJq8Hlbr/0NZVFnsT90/7EemOR4AHeftg5JbRPi929U
+	6HkmIEuPQ4f/emJW+fgc8YUssnGIEOZjAMe/cGpDDw==
+X-Google-Smtp-Source: APXvYqyUC2VNoK3kn3nz3vybeugE+sMvvcm2WU0gwrr3Eljqv0y0V3sHBklXl+ihwCVizGZj+lsXZashNS/ogzG8fqQ=
+X-Received: by 2002:a05:6102:36a:: with SMTP id f10mr1696654vsa.44.1572625985166;
+ Fri, 01 Nov 2019 09:33:05 -0700 (PDT)
 MIME-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com>
- <20191031164637.48901-1-samitolvanen@google.com> <20191031164637.48901-6-samitolvanen@google.com>
- <201910312050.C538F8F3@keescook>
-In-Reply-To: <201910312050.C538F8F3@keescook>
+ <20191031164637.48901-1-samitolvanen@google.com> <20191031164637.48901-8-samitolvanen@google.com>
+ <201910312054.3064999E@keescook>
+In-Reply-To: <201910312054.3064999E@keescook>
 From: Sami Tolvanen <samitolvanen@google.com>
-Date: Fri, 1 Nov 2019 09:28:21 -0700
-Message-ID: <CABCJKueLtOJsq+k-ywyUCOU+QCqxjKN2bO76Te4U43g0Xp9g-A@mail.gmail.com>
-Subject: Re: [PATCH v3 05/17] add support for Clang's Shadow Call Stack (SCS)
+Date: Fri, 1 Nov 2019 09:32:54 -0700
+Message-ID: <CABCJKueAf3f-rHw8AXJKKi=kfnh+nBMpJP2Vb2DVqLUWZVmFqQ@mail.gmail.com>
+Subject: Re: [PATCH v3 07/17] scs: add support for stack usage debugging
 To: Kees Cook <keescook@chromium.org>
 Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -75,14 +75,16 @@ Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>,
 	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Thu, Oct 31, 2019 at 8:51 PM Kees Cook <keescook@chromium.org> wrote:
-> > +/* A random number to mark the end of the shadow stack. */
-> > +#define SCS_END_MAGIC        0xaf0194819b1635f6UL
+On Thu, Oct 31, 2019 at 8:55 PM Kees Cook <keescook@chromium.org> wrote:
 >
-> Is 0xaf.... non-canonical for arm64? While "random", it should also
-> likely be an "impossible" value to find on the call stack.
+> On Thu, Oct 31, 2019 at 09:46:27AM -0700, samitolvanen@google.com wrote:
+> > Implements CONFIG_DEBUG_STACK_USAGE for shadow stacks.
+>
+> Did I miss it, or is there no Kconfig section for this? I just realized
+> I can't find it. I was going to say "this commit log should explain
+> why/when this option is used", but then figured it might be explained in
+> the Kconfig ... but I couldn't find it. ;)
 
-Agreed, and yes, this is non-canonical for arm64 and AFAIK all 64-bit
-architectures the kernel supports. I'll add a note about it.
+It's in lib/Kconfig.debug. But yes, I will add a commit message in v4.
 
 Sami
