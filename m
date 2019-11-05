@@ -1,23 +1,23 @@
-Return-Path: <SRS0=2uw9=Y5=lists.openwall.com=kernel-hardening-return-17298-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=XV29=Y5=lists.openwall.com=kernel-hardening-return-17300-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 27DF1C5DF60
-	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 22:32:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5DB08C5DF61
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 23:56:36 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DD219214D8
-	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 22:32:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 4DDE421A49
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 23:56:35 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=yahoo.com header.i=@yahoo.com header.b="EthnUynl"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DD219214D8
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=schaufler-ca.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17298-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7508 invoked by uid 550); 5 Nov 2019 22:32:46 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="scmM5jNf"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4DDE421A49
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17300-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20340 invoked by uid 550); 5 Nov 2019 23:56:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,248 +25,205 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7470 invoked from network); 5 Nov 2019 22:32:45 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yahoo.com; s=s2048; t=1572993153; bh=CEqNC2OZLKhyTZ7Hb0wmLJu9sTXB7Mqxnyl1A+S6+TQ=; h=Subject:To:Cc:References:From:Date:In-Reply-To:From:Subject; b=EthnUynlV3IADcJoG7UBd/VTNjzZ7I/WBRXx6R0tOfBu/digqcE9CI8gdRu4aZr81P6OpLwRgnsT25ySQipCfZU0BCUBdunGTXIHoP+PiOZEXdNdmK/jzMYw31lw1aWnh+f0jvUliA4etie2rv1S8EhZBKrzcIFeSDaSgHhTRkQiofew4SCwhWp4p/S+ewHGXd5jG48seSE9Q8ekCTB1PysumwFLXyZ7ON6SQtrPWuquqyU1XdnBQRthU8iDf07Nc+Jf9Cx5lPriaeGI15bo9cmQp+2Yv5ziEAgxf3TDPWz7oqNpGzhXXoxXgig9U+3swL3t2ALLrz9/qUbBzRJ4DQ==
-X-YMail-OSG: rfffkqUVM1mtWPHBkSEHkDFHFeeok1ZQg00bzBb3.jZv4O1lGgzzwpgqdePX6OZ
- 2wiCCfIXfku9bdJSJPbuC.uynz.UKpEKMLq9A90N7FxSs0vvCrkYuLeI70vP.HS1qbFbLZxLoajv
- APnAf4lVryLPORh3ehRfo2ecxYWFpMrxhvyTWIdDz03dy6Ef1c1NB.0nkrIWlOKcty1bHlCKneSY
- WnZ0E8bCeBSnRqJ05Ax1rCB1nMK8WGCru7aWWqvkUuAt3Njz.TmcgHd0DVnDx28jXCmgSKBVYl07
- m_XBbabPZhajs8CoG22v2CvI0XY1.0gD0xPQYH9Wkpkgt8.3Fl1fm7Ab26myjUSniEKVOX0mITx_
- utGnqfzQFR0tQxUw942fQ9Ln.Uki88TS_xdGYRY6xBmRhh6QQuS_hJARlFgdzVNM69yNqLlAPdCM
- vxs__Drt50TIiEJidaazHPgbdURbt4tlCTCQfW4R0k3Lc9QRQqOUA5VGloJDp96t1z3IQ4I2k_Ut
- d2I52vQLMyVMwiGRpofQDYCSeCN7wCdopOKtSC6m04PZZ.G6Tw5qekGrY_gRioO0LULq3ttBJNBH
- ta.ZQfw2OGEltEGS7fJe6Q5GBgHChDEpd4D5GHhEeBiFORQs4bEApBqlYJDXbATHHF0cvLftCKN.
- V4Xp_sHk5ZTTn9f.R4ZhZuj1hgZz2WfmGoKwrjJflvsmk3CJOvGqtsR3HUx7HM53uJl21eY568oj
- r8i9nUBhhfRyFH5W46EMgkTRqHeujpdWsFoz47Np4_lvvCI4q9nuazIdcN.ciDf8jNdNDBha.IVW
- zi3s385lyLENv56IQ7oUn7SImMDPqVQnccSpbQXLK9KHeKn9_NZCECl8TgJIzn54oc6mMmNTcKkh
- MRHnN12UltF_zAUrICz9lppvlYdbwWVssaUiGqmlqygOPjylAHuxbPkKCiyvpuYcrTzzIDZOftAH
- Ekh5Wv1AXnGjOR5eknJrn9Bq6g30FAOIzzz0A3uQOkmM47RtfkCTL5f4ixxWu3EUzDcTKB5A2mbL
- nFyOykPouTuB4zQnOoaIOrRj824trFx5ngqZ5td.U9Aq5UadVbcGBNQFXT9QPD5NxbGxTcGGCUPF
- xE9wLpuGoPxyaFT7fkr.W_K.bgvYCaiHqtT3DuyR1e72jMGWplZanzmUdATo560PH3BtmBVM98Ut
- ehb4TiYD65TKWNWNJcVA.v2lOk4lMztf6q1ITLePRFKgIFmhDjTSriwk8vMv7s.83TIYS1vV9Ehm
- uHxzGDVUvP9pAPtI3VoDH2AonmYyP1fV1WU_VH_THikFCxytq.lMkxAHl..nDFzsTSbO5.iEa.0e
- ocAWJvlJ4R22IBVYY4zPXn4OM7Anqm4yw2CRf7QmHCEERMHm6ohw8TrFdTEb76pPLZ4FGKFEiNOe
- 2MceryyCTaRZyLV59o2o4ViUkEJ8DLuG1H3XoMQ--
-Subject: Re: [PATCH bpf-next v13 4/7] landlock: Add ptrace LSM hooks
-To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Cc: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>,
- linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
- Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann
- <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>,
- Florent Revest <revest@chromium.org>, James Morris <jmorris@namei.org>,
- Jann Horn <jann@thejh.net>, John Johansen <john.johansen@canonical.com>,
- Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
- KP Singh <kpsingh@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Stephen Smalley <sds@tycho.nsa.gov>, Tejun Heo <tj@kernel.org>,
- Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
- Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>,
- bpf@vger.kernel.org, kernel-hardening@lists.openwall.com,
- linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
- netdev@vger.kernel.org, casey@schaufler-ca.com
-References: <20191104172146.30797-1-mic@digikod.net>
- <20191104172146.30797-5-mic@digikod.net>
- <20191105171824.dfve44gjiftpnvy7@ast-mbp.dhcp.thefacebook.com>
- <c5c6b433-7e6a-c8f8-f063-e704c3df4cc6@schaufler-ca.com>
- <20191105193130.qam2eafnmgvrvjwk@ast-mbp.dhcp.thefacebook.com>
- <637736ef-c48e-ac3b-3eef-8a6a095a96f1@schaufler-ca.com>
- <20191105215453.szhdkrvuekwfz6le@ast-mbp.dhcp.thefacebook.com>
-From: Casey Schaufler <casey@schaufler-ca.com>
-Openpgp: preference=signencrypt
-Autocrypt: addr=casey@schaufler-ca.com; keydata=
- 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
- abzjfg==
-Message-ID: <93f53bdd-a499-6425-111c-ab90d81874d7@schaufler-ca.com>
-Date: Tue, 5 Nov 2019 14:32:27 -0800
-User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101
- Thunderbird/60.9.0
-MIME-Version: 1.0
-In-Reply-To: <20191105215453.szhdkrvuekwfz6le@ast-mbp.dhcp.thefacebook.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Content-Language: en-US
-X-Mailer: WebService/1.1.14680 hermes Apache-HttpAsyncClient/4.1.4 (Java/1.8.0_181)
+Received: (qmail 20318 invoked from network); 5 Nov 2019 23:56:27 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
+         :cc;
+        bh=K/shn7Sj8cjIAOcXeYGvWEwPxEjEzE6xK48ExW4epXg=;
+        b=scmM5jNfsbmI1H0pQPntZXD8LPbBpqRfakltnLei5h9YsMHeXjM/EGk00HpoE6cYTg
+         VQf6iXzdwyf+Oy0UVVLceLsds613nQiGW62kKoYvVLXYPW0EksJkPcLWO+XeSxg5b73K
+         wo22X8XBXCZFQwLrzrk4tv+wA42+R9fGmYrMvAVb/MRA1841Vf+6qkVw8JXWCpJ11d+k
+         yxjNM092v8ZX8aWDYuLn8/I5lfvwBu10uXojn1YEIutgnHZ8/y1ipn7RvJ1xnFuUQGkX
+         RVtc4ltq2u0sK97Y6a6qoISgZPreVnLNCQRBhIw6tI/SGtXIIiKZb4OR48PON9w0i386
+         p8nA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=K/shn7Sj8cjIAOcXeYGvWEwPxEjEzE6xK48ExW4epXg=;
+        b=V/o4CC7bTTi+PxpZGbla6czYrIGGK0+48f1sVDrYM5cHR/44HzaSmJElc/j2UlMPOz
+         gYmka/au5Qxpq+Y949WC1/8LX/5yOqhlFd7kcxcAtpieZBTnNFTTzvV08UaVVJvdvCff
+         8iNgagMS8Xpb3Kzf1XwSvqh3IaJkZHW4CGHpl3exevX/o88KASiL6K+rCyQnHCQrnMJQ
+         k+DRRXGIPwgh3fzw8OaJGlpgTKm28galzVbECzfef0Oikj0B2LG3XDZkEg78fyVQVkQv
+         HGf7KLoHr9ZKWvg1ILXEvFffWfdopYXjIZD2+F/pMxWGirdzNd79WvAI/8DYMZ3lScCP
+         8wow==
+X-Gm-Message-State: APjAAAVtx1gFoNZM8k42wkGuieGnNi8HQc6v14+Q+J66rJbc/QvK1uQ5
+	aNNmJK/vW5UjpsQqBIW36p18NEdYUOdTK5MuoIA=
+X-Google-Smtp-Source: APXvYqzDvL9Cb+QocxQ8O+qyvISrwwwXj191VtLuOK+ABTmwCtckO5qR2k4WDa2FsTgm/ty6HatvhV0O82L9xTyWK8c=
+X-Received: by 2002:a63:5960:: with SMTP id j32mr39727761pgm.281.1572998174570;
+ Tue, 05 Nov 2019 15:56:14 -0800 (PST)
+Date: Tue,  5 Nov 2019 15:55:54 -0800
+In-Reply-To: <20191018161033.261971-1-samitolvanen@google.com>
+Message-Id: <20191105235608.107702-1-samitolvanen@google.com>
+Mime-Version: 1.0
+References: <20191018161033.261971-1-samitolvanen@google.com>
+X-Mailer: git-send-email 2.24.0.rc1.363.gb1bccd3e3d-goog
+Subject: [PATCH v5 00/14] add support for Clang's Shadow Call Stack
+From: Sami Tolvanen <samitolvanen@google.com>
+To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
+	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>, 
+	Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Marc Zyngier <maz@kernel.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, Jann Horn <jannh@google.com>, 
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
+	Masahiro Yamada <yamada.masahiro@socionext.com>, clang-built-linux@googlegroups.com, 
+	kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, 
+	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On 11/5/2019 1:54 PM, Alexei Starovoitov wrote:
-> On Tue, Nov 05, 2019 at 11:55:17AM -0800, Casey Schaufler wrote:
->> On 11/5/2019 11:31 AM, Alexei Starovoitov wrote:
->>> On Tue, Nov 05, 2019 at 09:55:42AM -0800, Casey Schaufler wrote:
->>>> On 11/5/2019 9:18 AM, Alexei Starovoitov wrote:
->>>>> On Mon, Nov 04, 2019 at 06:21:43PM +0100, Micka=C3=ABl Sala=C3=BCn =
-wrote:
->>>>>> Add a first Landlock hook that can be used to enforce a security p=
-olicy
->>>>>> or to audit some process activities.  For a sandboxing use-case, i=
-t is
->>>>>> needed to inform the kernel if a task can legitimately debug anoth=
-er.
->>>>>> ptrace(2) can also be used by an attacker to impersonate another t=
-ask
->>>>>> and remain undetected while performing malicious activities.
->>>>>>
->>>>>> Using ptrace(2) and related features on a target process can lead =
-to a
->>>>>> privilege escalation.  A sandboxed task must then be able to tell =
-the
->>>>>> kernel if another task is more privileged, via ptrace_may_access()=
-=2E
->>>>>>
->>>>>> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
->>>>> ...
->>>>>> +static int check_ptrace(struct landlock_domain *domain,
->>>>>> +		struct task_struct *tracer, struct task_struct *tracee)
->>>>>> +{
->>>>>> +	struct landlock_hook_ctx_ptrace ctx_ptrace =3D {
->>>>>> +		.prog_ctx =3D {
->>>>>> +			.tracer =3D (uintptr_t)tracer,
->>>>>> +			.tracee =3D (uintptr_t)tracee,
->>>>>> +		},
->>>>>> +	};
->>>>> So you're passing two kernel pointers obfuscated as u64 into bpf pr=
-ogram
->>>>> yet claiming that the end goal is to make landlock unprivileged?!
->>>>> The most basic security hole in the tool that is aiming to provide =
-security.
->>>>>
->>>>> I think the only way bpf-based LSM can land is both landlock and KR=
-SI
->>>>> developers work together on a design that solves all use cases. BPF=
- is capable
->>>>> to be a superset of all existing LSMs
->>>> I can't agree with this. Nope. There are many security models
->>>> for which BPF introduces excessive complexity. You don't need
->>>> or want the generality of a general purpose programming language
->>>> to implement Smack or TOMOYO. Or a simple Bell & LaPadula for
->>>> that matter. SELinux? I can't imagine anyone trying to do that
->>>> in eBPF, although I'm willing to be surprised. Being able to
->>>> enforce a policy isn't the only criteria for an LSM.=20
->>> what are the other criteria?
->> They include, but are not limited to, performance impact
->> and the ability to be analyzed.=20
-> Right and BPF is the only thing that exists in the kernel where the ver=
-ifier
-> knows precisely the number of instructions the critical path through th=
-e
-> program will take. Currently we don't quantify this cost for bpf helper=
-s, but
-> it's easy to add. Can you do this for smack? Can you tell upfront the l=
-ongest
-> execution time for all security rules?
+This patch series adds support for Clang's Shadow Call Stack
+(SCS) mitigation, which uses a separately allocated shadow stack
+to protect against return address overwrites. More information
+can be found here:
 
-There's much more to analyze than number of instructions.
-There's also completion of policy enforcement. There are
-lots of tools for measuring performance within the kernel.
+  https://clang.llvm.org/docs/ShadowCallStack.html
 
->> It has to be fast, or the networking people are
->> going to have fits. You can't require the addition
->> of a pointer into the skb because it'll get rejected
->> out of hand. You can't completely refactor the vfs locking
->> to accommodate you needs.
-> I'm not sure why you got such impression. I'm not proposing to refactor=
- vfs or
-> add fields to skb.
+SCS provides better protection against traditional buffer
+overflows than CONFIG_STACKPROTECTOR_*, but it should be noted
+that SCS security guarantees in the kernel differ from the ones
+documented for user space. The kernel must store addresses of
+shadow stacks used by inactive tasks and interrupt handlers in
+memory, which means an attacker capable reading and writing
+arbitrary memory may be able to locate them and hijack control
+flow by modifying shadow stacks that are not currently in use.
 
-I'm not saying you did. Those are examples of things you would
-have trouble with.
+SCS is currently supported only on arm64, where the compiler
+requires the x18 register to be reserved for holding the current
+task's shadow stack pointer. Because of this, the series includes
+patches from Ard to remove x18 usage from assembly code.
 
->  Once we have equivalent to smack policy implemented in
-> bpf-based lsm let's do performance benchmarking and compare actual numb=
-ers
-> instead of hypothesizing about them. Which policy do you think would be=
+With -fsanitize=shadow-call-stack, the compiler injects
+instructions to all non-leaf C functions to store the return
+address to the shadow stack, and unconditionally load it again
+before returning. As a result, SCS is currently incompatible
+with features that rely on modifying function return addresses
+in the kernel stack to alter control flow, such as function
+graph tracing, although it may be possible to later change these
+features to modify the shadow stack instead. A copy of the return
+address is still kept in the kernel stack for compatibility with
+stack unwinding, for example.
 
-> the most representative of smack use case?
+SCS has a minimal performance overhead, but allocating
+shadow stacks increases kernel memory usage. The feature is
+therefore mostly useful on hardware that lacks support for PAC
+instructions.
 
-The Tizen3 Three domain model will do just fine.
-https://wiki.tizen.org/Security:SmackThreeDomainModel
+Changes in v5:
+ - Updated the comment in __scs_base() to Mark's suggestion
+ - Changed all instances of uintptr_t to unsigned long
+ - Added allocation poisoning for KASAN to catch unintentional
+   shadow stack accesses; moved set_set_magic before poisoning
+   and switched scs_used() and scs_corrupted() to access the
+   buffer using READ_ONCE_NOCHECK() instead
+ - Changed scs_free() to check for NULL instead of zero
+ - Renamed SCS_CACHE_SIZE to NR_CACHED_SCS
+ - Added a warning if cpuhp_setup_state fails in scs_init()
+ - Dropped patches disabling kretprobes after confirming there's
+   no functional conflict with SCS instrumentation
+ - Added an explanation to the commit message why function graph
+   tracing and SCS are incompatible
+ - Removed the ifdefs from arch/arm64/mm/proc.S and added
+   comments explaining why we are saving and restoring x18
+ - Updated scs_check_usage format to include process information
+
+Changes in v4:
+ - Fixed authorship for Ard's patches
+ - Added missing commit messages
+ - Commented code that clears SCS from thread_info
+ - Added a comment about SCS_END_MAGIC being non-canonical
+
+Changes in v3:
+ - Switched to filter-out for removing SCS flags in Makefiles
+ - Changed the __noscs attribute to use __no_sanitize__("...")
+   instead of no_sanitize("...")
+ - Cleaned up inline function definitions and moved task_scs()
+   into a macro
+ - Cleaned up scs_free() and scs_magic()
+ - Moved SCS initialization into dup_task_struct() and removed
+   the now unused scs_task_init()
+ - Added comments to __scs_base() and scs_task_reset() to better
+   document design choices
+ - Changed copy_page to make the offset and bias explicit
+
+Changes in v2:
+ - Changed Ard's KVM patch to use x29 instead of x18 for the
+   guest context, which makes restore_callee_saved_regs cleaner
+ - Updated help text (and commit messages) to point out
+   differences in security properties compared to user space SCS
+ - Cleaned up config options: removed the ROP protection choice,
+   replaced the CC_IS_CLANG dependency with an arch-specific
+   cc-option test, and moved disabling of incompatible config
+   options to an arch-specific Kconfig
+ - Added CC_FLAGS_SCS, which are filtered out where needed
+   instead of using DISABLE_SCS
+ - Added a __has_feature guard around __noscs for older clang
+   versions
 
 
->
->>>> I see many issues with a BPF <-> vfs interface.
->>> There is no such interface today. What do you have in mind?
->> You can't implement SELinux or Smack using BPF without a way
->> to manipulate inode data.
-> Are you talking about inode->i_security ? That's not manipulating inode=
- data.
+Ard Biesheuvel (3):
+  arm64/lib: copy_page: avoid x18 register in assembler code
+  arm64: kvm: stop treating register x18 as caller save
+  arm64: kernel: avoid x18 in __cpu_soft_restart
 
-Poppycock.
+Sami Tolvanen (11):
+  arm64: mm: avoid x18 in idmap_kpti_install_ng_mappings
+  add support for Clang's Shadow Call Stack (SCS)
+  scs: add accounting
+  scs: add support for stack usage debugging
+  arm64: disable function graph tracing with SCS
+  arm64: reserve x18 from general allocation with SCS
+  arm64: preserve x18 when CPU is suspended
+  arm64: efi: restore x18 if it was corrupted
+  arm64: vdso: disable Shadow Call Stack
+  arm64: disable SCS for hypervisor code
+  arm64: implement Shadow Call Stack
 
-> It's attaching extra metadata to inode object without changing inode it=
-self.
+ Makefile                             |   6 +
+ arch/Kconfig                         |  33 ++++
+ arch/arm64/Kconfig                   |   7 +-
+ arch/arm64/Makefile                  |   4 +
+ arch/arm64/include/asm/scs.h         |  37 ++++
+ arch/arm64/include/asm/stacktrace.h  |   4 +
+ arch/arm64/include/asm/suspend.h     |   2 +-
+ arch/arm64/include/asm/thread_info.h |   3 +
+ arch/arm64/kernel/Makefile           |   1 +
+ arch/arm64/kernel/asm-offsets.c      |   3 +
+ arch/arm64/kernel/cpu-reset.S        |   4 +-
+ arch/arm64/kernel/efi-rt-wrapper.S   |   7 +-
+ arch/arm64/kernel/entry.S            |  28 +++
+ arch/arm64/kernel/head.S             |   9 +
+ arch/arm64/kernel/irq.c              |   2 +
+ arch/arm64/kernel/process.c          |   2 +
+ arch/arm64/kernel/scs.c              |  39 +++++
+ arch/arm64/kernel/smp.c              |   4 +
+ arch/arm64/kernel/vdso/Makefile      |   2 +-
+ arch/arm64/kvm/hyp/Makefile          |   3 +
+ arch/arm64/kvm/hyp/entry.S           |  45 ++---
+ arch/arm64/lib/copy_page.S           |  38 ++---
+ arch/arm64/mm/proc.S                 |  77 +++++----
+ drivers/base/node.c                  |   6 +
+ fs/proc/meminfo.c                    |   4 +
+ include/linux/compiler-clang.h       |   6 +
+ include/linux/compiler_types.h       |   4 +
+ include/linux/mmzone.h               |   3 +
+ include/linux/scs.h                  |  57 +++++++
+ init/init_task.c                     |   8 +
+ kernel/Makefile                      |   1 +
+ kernel/fork.c                        |   9 +
+ kernel/sched/core.c                  |   2 +
+ kernel/scs.c                         | 246 +++++++++++++++++++++++++++
+ mm/page_alloc.c                      |   6 +
+ mm/vmstat.c                          |   3 +
+ 36 files changed, 638 insertions(+), 77 deletions(-)
+ create mode 100644 arch/arm64/include/asm/scs.h
+ create mode 100644 arch/arm64/kernel/scs.c
+ create mode 100644 include/linux/scs.h
+ create mode 100644 kernel/scs.c
 
-Where I come from, we call that inode object data.
 
-> BPF can do it already via hash maps. It's not as fast as direct pointer=
- access,
-
-Then you're not listening. Performance MATTERS!
-
-> but for many use cases it's good enough. If it turns out to be a perfor=
-mance
-> limiting factor we will accelerate it.
-
-How many times have I heard that bit of rubbish?
-No. You can't start with a bad design and tweak it to acceptability later=
-=2E
-
-
->>>> the mechanisms needed for the concerns of the day. Ideally,
->>>> we should be able to drop mechanisms when we decide that they
->>>> no longer add value.
->>> Exactly. bpf-based lsm must not add to kernel abi.
->> Huh? I have no idea where that came from.
-> It sounds to me that some folks in the community got wrong impression t=
-hat
-> anything that BPF accesses is magically turning that thing into stable =
-kernel
-> ABI. That is not true. BPF progs had access _all_ kernel data pointers =
-and
-> structures for years without turning the whole kernel into stable ABI. =
-I want
-> to make sure that this part is understood. This is also a requirement f=
-or
-> bpf-based LSM. It must not make LSM hooks into stable ABI.
->
+base-commit: 26bc672134241a080a83b2ab9aa8abede8d30e1c
+-- 
+2.24.0.rc1.363.gb1bccd3e3d-goog
 
