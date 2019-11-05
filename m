@@ -1,4 +1,4 @@
-Return-Path: <SRS0=9oIe=Y5=lists.openwall.com=kernel-hardening-return-17307-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=HKob=Y5=lists.openwall.com=kernel-hardening-return-17308-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,17 +8,17 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 68BE9C47E49
-	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 23:57:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B0973C5DF60
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 23:57:42 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8784F2178F
-	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 23:57:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id CBF9E206B8
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 Nov 2019 23:57:41 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="TKd2so4t"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8784F2178F
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="MkeBlqOT"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CBF9E206B8
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17307-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24525 invoked by uid 550); 5 Nov 2019 23:56:48 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17308-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25771 invoked by uid 550); 5 Nov 2019 23:56:50 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,41 +26,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24420 invoked from network); 5 Nov 2019 23:56:47 -0000
+Received: (qmail 25678 invoked from network); 5 Nov 2019 23:56:49 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=rtGYhrlT+v4glRCgBr5KwA8OmlbDFJXwY4ztX1r8N4Y=;
-        b=TKd2so4t7KdR/7IGrMM7dl1XICyaB7Ep2xb2K+L1YFpFhAdGCuA+QVKoOX+2nBhRS1
-         PbhJFwrDkZsuR4g7Ll5jibhYYSoSbj6Qsk2MbBrD3K/3RVFYn3Ze4sq2kV7P6t82dOWN
-         zANq01dIUJjLIJAHUFq7xMVXaYxiN41idA7UoNEeJpkXFp/ZWlp+zSbMC4BIJqBb48KR
-         4Yz6i7rx8RTibsrTijP0CrOXXl43bw03Swi1hDDM7ENVWaU1ch5tyPwrarZdzghv3p22
-         6EIfdhBRrf+kmU4AHHY+5aG/aq0yLasD+4SyCQWE2lPdStxSTwo8liAyHr/FcLSygxFM
-         ArVQ==
+        bh=m4cUlF+6BFA5FNFSy/SkP+A5WQosIpsKOuqRDiNS4Fs=;
+        b=MkeBlqOT1wtRB47pSUzDXD8m2gj/abIK7oOlbgO8kye4NcSoywAeU5ZtSxATJfMS2n
+         sLQRqxnA5iMAtD4OVyCqAKV61xGoMEiKHHv5WZLdZGpXH5vTzfmZlcB9JqF0UIw0+fxi
+         c3v/IzYD4RKwck3PyJuzlC7Jvs44fd+x/pfQVweb8C0DMCYwaLsC3QIombbYFjvnDAcI
+         6fAyLaVNPBEmDJx0XgWILXvjSQ16pLXXh8OX20eaMdKqUAUb/IPjwkwA5StaodCgnT6k
+         fOX3eGQKvjofeZjc0oKfmlzFJBlDBOoEIoLe2boRm/0W+bt6Nlx8c29PhG3Gh4cKijCZ
+         KWjw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=rtGYhrlT+v4glRCgBr5KwA8OmlbDFJXwY4ztX1r8N4Y=;
-        b=jFdOehIYh4XJGB76NxWzQ5f5dJ+P/VQ+jLWSSxTlqAFBg33iBDPJNnrV6ciRmT0MlF
-         Orm4lUzUgJEQaYQEoqciN/KA4pvQF62P8Wq9P5R9bpen1D4yzR34T7ZTDJMEOVTu5FyX
-         wn/ZGBo9pO+oqEre1J9nb4grwNn6YOXA3277NvICiHaJkV/ckd4MilKFHWvx2D/OW/bs
-         8tshXNzPuee9sAl6+WybgP2sKIjhLgUiqifUg1Yh97rWiohQUQdpJWNMA3pXoF+xs+e9
-         chlMrriNt8yuUjjWDTeiN8+M9t0lITr2grgXZBfajL+VUPcvtrwLcdLvucsWV2DAf22K
-         SGVA==
-X-Gm-Message-State: APjAAAW1VJUFEXDwawqiI4BtbpVOg0PCwxZgi2tfrJ72Jl2Gk9LhYobA
-	+GTehniLANJkM1pfchVDS/IGRvlmxcGfh6a3Ogw=
-X-Google-Smtp-Source: APXvYqyeiXNhg0SMmYGCzlPE1MJNPVlZmSKCnBjsXssOcDuiJaeCfp0JdeBqZLhwpNQMgciNZVJzMgpXUPeRRsEDFOQ=
-X-Received: by 2002:a65:6149:: with SMTP id o9mr5335991pgv.228.1572998195111;
- Tue, 05 Nov 2019 15:56:35 -0800 (PST)
-Date: Tue,  5 Nov 2019 15:56:01 -0800
+        bh=m4cUlF+6BFA5FNFSy/SkP+A5WQosIpsKOuqRDiNS4Fs=;
+        b=tyGkmoT8CqQ4BFVr8ZR5wOlKLP7yMmIwi8TlHfLow1E/rUBSgxfpr7jC84FF2JZm0i
+         UFi46Ybpshy6nSPi/HzmlMH7/ct4BMiSgdzQ31x2kq3unKRz3ghXF1VykEUjgLQS+tUS
+         Lhh6GYLH86/41XfWTtwECnmrrAYEXRNeg1OImYW3OitwcFpH6A84i8IeZ3zKfmSl7z0p
+         HbjhJYbhSQhJ1GBHoEG3VDK8jk9slEFJt3CsezCf64Eh4ookaH2ax3/prmjmdfMnNzKn
+         4bcItwg2LYzQPolQD4LqUgiDc4yDd1t8X8kyss0q1isUFnfyTrt2uLkuPXxrWHkka+JV
+         Db+A==
+X-Gm-Message-State: APjAAAWJOAC6+hV6b/OI/EP2HW6ediJB3RMBfz2xnpTDWzR0M7XRGtDM
+	V2tIaCV/+W3aP6NeSBETYLnmxIgYYBN4CkeWY5Y=
+X-Google-Smtp-Source: APXvYqym75lPAYmcFoKuMCRVIb2Z6qedUXVgqze3G/7tmrBj7VQss4UHqbqav7+LM2z+KkYxzkxHGz+pJ9MZsn3n848=
+X-Received: by 2002:a63:c40e:: with SMTP id h14mr39330366pgd.254.1572998197596;
+ Tue, 05 Nov 2019 15:56:37 -0800 (PST)
+Date: Tue,  5 Nov 2019 15:56:02 -0800
 In-Reply-To: <20191105235608.107702-1-samitolvanen@google.com>
-Message-Id: <20191105235608.107702-8-samitolvanen@google.com>
+Message-Id: <20191105235608.107702-9-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20191105235608.107702-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.24.0.rc1.363.gb1bccd3e3d-goog
-Subject: [PATCH v5 07/14] scs: add support for stack usage debugging
+Subject: [PATCH v5 08/14] arm64: disable function graph tracing with SCS
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -74,72 +74,33 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Implements CONFIG_DEBUG_STACK_USAGE for shadow stacks. When enabled,
-also prints out the highest shadow stack usage per process.
+The graph tracer hooks returns by modifying frame records on the
+(regular) stack, but with SCS the return address is taken from the
+shadow stack, and the value in the frame record has no effect. As we
+don't currently have a mechanism to determine the corresponding slot
+on the shadow stack (and to pass this through the ftrace
+infrastructure), for now let's disable the graph tracer when SCS is
+enabled.
 
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
 ---
- kernel/scs.c | 39 +++++++++++++++++++++++++++++++++++++++
- 1 file changed, 39 insertions(+)
+ arch/arm64/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/kernel/scs.c b/kernel/scs.c
-index 4f5774b6f27d..a47fae33efdc 100644
---- a/kernel/scs.c
-+++ b/kernel/scs.c
-@@ -184,6 +184,44 @@ int scs_prepare(struct task_struct *tsk, int node)
- 	return 0;
- }
- 
-+#ifdef CONFIG_DEBUG_STACK_USAGE
-+static inline unsigned long scs_used(struct task_struct *tsk)
-+{
-+	unsigned long *p = __scs_base(tsk);
-+	unsigned long *end = scs_magic(p);
-+	unsigned long s = (unsigned long)p;
-+
-+	while (p < end && READ_ONCE_NOCHECK(*p))
-+		p++;
-+
-+	return (unsigned long)p - s;
-+}
-+
-+static void scs_check_usage(struct task_struct *tsk)
-+{
-+	static DEFINE_SPINLOCK(lock);
-+	static unsigned long highest;
-+	unsigned long used = scs_used(tsk);
-+
-+	if (used <= highest)
-+		return;
-+
-+	spin_lock(&lock);
-+
-+	if (used > highest) {
-+		pr_info("%s (%d): highest shadow stack usage: %lu bytes\n",
-+			tsk->comm, task_pid_nr(tsk), used);
-+		highest = used;
-+	}
-+
-+	spin_unlock(&lock);
-+}
-+#else
-+static inline void scs_check_usage(struct task_struct *tsk)
-+{
-+}
-+#endif
-+
- bool scs_corrupted(struct task_struct *tsk)
- {
- 	unsigned long *magic = scs_magic(__scs_base(tsk));
-@@ -200,6 +238,7 @@ void scs_release(struct task_struct *tsk)
- 		return;
- 
- 	WARN_ON(scs_corrupted(tsk));
-+	scs_check_usage(tsk);
- 
- 	scs_account(tsk, -1);
- 	task_set_scs(tsk, NULL);
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 3f047afb982c..8cda176dad9a 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -148,7 +148,7 @@ config ARM64
+ 	select HAVE_FTRACE_MCOUNT_RECORD
+ 	select HAVE_FUNCTION_TRACER
+ 	select HAVE_FUNCTION_ERROR_INJECTION
+-	select HAVE_FUNCTION_GRAPH_TRACER
++	select HAVE_FUNCTION_GRAPH_TRACER if !SHADOW_CALL_STACK
+ 	select HAVE_GCC_PLUGINS
+ 	select HAVE_HW_BREAKPOINT if PERF_EVENTS
+ 	select HAVE_IRQ_TIME_ACCOUNTING
 -- 
 2.24.0.rc1.363.gb1bccd3e3d-goog
 
