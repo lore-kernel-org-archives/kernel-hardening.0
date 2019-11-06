@@ -1,20 +1,23 @@
-Return-Path: <SRS0=jHP9=Y6=lists.openwall.com=kernel-hardening-return-17319-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Kkvp=Y6=lists.openwall.com=kernel-hardening-return-17320-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-14.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BE24AC5DF63
-	for <kernel-hardening@archiver.kernel.org>; Wed,  6 Nov 2019 16:59:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 22E00C5DF63
+	for <kernel-hardening@archiver.kernel.org>; Wed,  6 Nov 2019 20:39:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1D2612187F
-	for <kernel-hardening@archiver.kernel.org>; Wed,  6 Nov 2019 16:59:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1D2612187F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17319-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5778 invoked by uid 550); 6 Nov 2019 16:59:26 -0000
+	by mail.kernel.org (Postfix) with SMTP id 686B621848
+	for <kernel-hardening@archiver.kernel.org>; Wed,  6 Nov 2019 20:39:46 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="CrBxheWL"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 686B621848
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17320-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7567 invoked by uid 550); 6 Nov 2019 20:39:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,93 +25,127 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5741 invoked from network); 6 Nov 2019 16:59:26 -0000
-Subject: Re: [PATCH bpf-next v13 4/7] landlock: Add ptrace LSM hooks
-To: KP Singh <kpsingh@chromium.org>
-Cc: Alexei Starovoitov <alexei.starovoitov@gmail.com>,
-        linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
-        Andy Lutomirski <luto@amacapital.net>,
-        Casey Schaufler <casey@schaufler-ca.com>,
-        Daniel Borkmann <daniel@iogearbox.net>,
-        David Drysdale
- <drysdale@google.com>,
-        Florent Revest <revest@chromium.org>, James Morris <jmorris@namei.org>,
-        Jann Horn <jann@thejh.net>,
-        John Johansen <john.johansen@canonical.com>,
-        Jonathan Corbet
- <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-        Michael Kerrisk <mtk.manpages@gmail.com>,
-        =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
-        Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
-        "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
-        Stephen Smalley <sds@tycho.nsa.gov>, Tejun Heo <tj@kernel.org>,
-        Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
-        Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>,
-        bpf@vger.kernel.org, kernel-hardening@lists.openwall.com,
-        linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
-        netdev@vger.kernel.org
-References: <20191104172146.30797-1-mic@digikod.net>
- <20191104172146.30797-5-mic@digikod.net>
- <20191105171824.dfve44gjiftpnvy7@ast-mbp.dhcp.thefacebook.com>
- <23acf523-dbc4-855b-ca49-2bbfa5e7117e@digikod.net>
- <20191106101558.GA19467@chromium.org>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Openpgp: preference=signencrypt
-Message-ID: <026b6f3f-d17a-d50e-4793-a76e6719cc1f@digikod.net>
-Date: Wed, 6 Nov 2019 17:58:46 +0100
-User-Agent:
+Received: (qmail 7541 invoked from network); 6 Nov 2019 20:39:38 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=Bp86L5fucSA+9Bwlt84/eQbHaJRbEE/iIVDIU2TrYmM=;
+        b=CrBxheWL+VkOfPX3aTBccoLvNQF92thO3oi5LNHeY04/wZsBJ5+Awp3yG38gVaW419
+         EwFnyiPDR1gnnZmr8ul0W/yKVfgIK5xZNdfgklRC9owvzvrb5YtTfIJlYj3tqqOBxrYA
+         puDhDKyZABgAkq3XZb5IJ/rCNzuAn76ZWc52ybg9wLNMg+z+ZgcGsKJOYHhRkT6tP0wM
+         ec8iwNatVcZ1mqzjbPOeUiHln+ne0fBBsTlHbQGoAkvksK/Txg3rLgikXk+7vSpyZ9Zz
+         Pee10GCisuUq4SYMJ+mByVVfZzuStCOWn9eeJ1oEBMVnENoJixSlbPeRYZP5cyGdf0TZ
+         UunA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=Bp86L5fucSA+9Bwlt84/eQbHaJRbEE/iIVDIU2TrYmM=;
+        b=DXMo55s6+sTrrRu1f4szF6wiIDkxZGF+SLIMfeWjB8mIBiGqSSMkUhZkjYQHiI2nZU
+         W+nZdvn0J3C8GUTVsZnd5hZP/+vJZuMr0j8s7WXZO4728JzNNkm9m9E+rodwY3FRO5xL
+         QSPI8O45AGY5Z8Fed43JuFCRDwQKuNIwJCCyCd20b21HpYwRPmEeu1TvNV9+vYWksxwZ
+         SuIL554+/HrNI7k/2SEW01d6i15u/UdSgO+cUfaIS9HkaFf2TiLcP+l7QY03rH2lwFOn
+         ceBAePFUa40vjM5VR8vVkQw3FWYh5AbuXhn8nVGJFdUZ3qmSjlUS9hb+V88IG+nsjEDA
+         Tbzg==
+X-Gm-Message-State: APjAAAWE2xqwDAzc+V3DU5GrFL+1wGv7ITsvp+fcIJiyUYTifdY81CKr
+	7bbvVD2G6jiP1crYv2I3PcPNMWSY6WwAPqfQIMCX5g==
+X-Google-Smtp-Source: APXvYqzpFAhempBHWwl6LQCKUCJ19FjjZGAWA1oF9chpT593c5XiKJbvgs2xxIRCQukRs4o+FH4Rat+2Sk/7ytURtoo=
+X-Received: by 2002:aa7:8e56:: with SMTP id d22mr5854475pfr.3.1573072766085;
+ Wed, 06 Nov 2019 12:39:26 -0800 (PST)
 MIME-Version: 1.0
-In-Reply-To: <20191106101558.GA19467@chromium.org>
-Content-Type: text/plain; charset=iso-8859-15
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20191105235608.107702-1-samitolvanen@google.com> <20191105235608.107702-11-samitolvanen@google.com>
+In-Reply-To: <20191105235608.107702-11-samitolvanen@google.com>
+From: Nick Desaulniers <ndesaulniers@google.com>
+Date: Wed, 6 Nov 2019 12:39:14 -0800
+Message-ID: <CAKwvOdkGUn+X2HCnV7zM8ruCPYBsRi_UD8JY4VW4FbuOam8Pmg@mail.gmail.com>
+Subject: Re: [PATCH v5 10/14] arm64: preserve x18 when CPU is suspended
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
+	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Dave Martin <Dave.Martin@arm.com>, 
+	Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, 
+	Mark Rutland <mark.rutland@arm.com>, Marc Zyngier <maz@kernel.org>, Jann Horn <jannh@google.com>, 
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
+	Masahiro Yamada <yamada.masahiro@socionext.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	Linux ARM <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
+
+On Tue, Nov 5, 2019 at 3:56 PM Sami Tolvanen <samitolvanen@google.com> wrote:
+>
+> Don't lose the current task's shadow stack when the CPU is suspended.
+>
+> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+> Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
+
+Re-LGTM
+
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> ---
+>  arch/arm64/include/asm/suspend.h |  2 +-
+>  arch/arm64/mm/proc.S             | 14 ++++++++++++++
+>  2 files changed, 15 insertions(+), 1 deletion(-)
+>
+> diff --git a/arch/arm64/include/asm/suspend.h b/arch/arm64/include/asm/suspend.h
+> index 8939c87c4dce..0cde2f473971 100644
+> --- a/arch/arm64/include/asm/suspend.h
+> +++ b/arch/arm64/include/asm/suspend.h
+> @@ -2,7 +2,7 @@
+>  #ifndef __ASM_SUSPEND_H
+>  #define __ASM_SUSPEND_H
+>
+> -#define NR_CTX_REGS 12
+> +#define NR_CTX_REGS 13
+>  #define NR_CALLEE_SAVED_REGS 12
+>
+>  /*
+> diff --git a/arch/arm64/mm/proc.S b/arch/arm64/mm/proc.S
+> index fdabf40a83c8..5c8219c55948 100644
+> --- a/arch/arm64/mm/proc.S
+> +++ b/arch/arm64/mm/proc.S
+> @@ -49,6 +49,8 @@
+>   * cpu_do_suspend - save CPU registers context
+>   *
+>   * x0: virtual address of context pointer
+> + *
+> + * This must be kept in sync with struct cpu_suspend_ctx in <asm/suspend.h>.
+>   */
+>  ENTRY(cpu_do_suspend)
+>         mrs     x2, tpidr_el0
+> @@ -73,6 +75,11 @@ alternative_endif
+>         stp     x8, x9, [x0, #48]
+>         stp     x10, x11, [x0, #64]
+>         stp     x12, x13, [x0, #80]
+> +       /*
+> +        * Save x18 as it may be used as a platform register, e.g. by shadow
+> +        * call stack.
+> +        */
+> +       str     x18, [x0, #96]
+>         ret
+>  ENDPROC(cpu_do_suspend)
+>
+> @@ -89,6 +96,13 @@ ENTRY(cpu_do_resume)
+>         ldp     x9, x10, [x0, #48]
+>         ldp     x11, x12, [x0, #64]
+>         ldp     x13, x14, [x0, #80]
+> +       /*
+> +        * Restore x18, as it may be used as a platform register, and clear
+> +        * the buffer to minimize the risk of exposure when used for shadow
+> +        * call stack.
+> +        */
+> +       ldr     x18, [x0, #96]
+> +       str     xzr, [x0, #96]
+>         msr     tpidr_el0, x2
+>         msr     tpidrro_el0, x3
+>         msr     contextidr_el1, x4
+> --
+> 2.24.0.rc1.363.gb1bccd3e3d-goog
+>
 
 
-On 06/11/2019 11:15, KP Singh wrote:
-> On 05-Nov 19:01, Mickaël Salaün wrote:
->> On 05/11/2019 18:18, Alexei Starovoitov wrote:
-
-[...]
-
->>>
->>> I think the only way bpf-based LSM can land is both landlock and KRSI
->>> developers work together on a design that solves all use cases.
->>
->> As I said in a previous cover letter [1], that would be great. I think
->> that the current Landlock bases (almost everything from this series
->> except the seccomp interface) should meet both needs, but I would like
->> to have the point of view of the KRSI developers.
-> 
-> As I mentioned we are willing to collaborate but the current landlock
-> patches does not meet the needs for KRSI:
-> 
-> * One program type per use-case (eg. LANDLOCK_PROG_PTRACE) as opposed to
->   a single program type. This is something that KRSI proposed in it's
->   initial design [1] and the new common "eBPF + LSM" based approach
->   [2] would maintain as well.
-
-As ask in my previous email [1], I don't see how KRSI would efficiently
-deal with other LSM hooks with a unique program (attach) type.
-
-[1]
-https://lore.kernel.org/lkml/813cedde-8ed7-2d3b-883d-909efa978d41@digikod.net/
-
-> 
-> * Landlock chooses to have multiple LSM hooks per landlock hook which is
->   more restrictive. It's not easy to write precise MAC and Audit
->   policies for a privileged LSM based on this and this ends up bloating
->   the context that needs to be maintained and requires avoidable
->   boilerplate work in the kernel.
-
-Why do you think it is more restrictive or it adds boilerplate work? How
-does KRSI will deal with more complex hooks than execve-like with
-multiple kernel objects?
-
-
-> 
-> [1] https://lore.kernel.org/patchwork/project/lkml/list/?series=410101
-> [2] https://lore.kernel.org/bpf/20191106100655.GA18815@chromium.org/T/#u
-> 
-> - KP Singh
+-- 
+Thanks,
+~Nick Desaulniers
