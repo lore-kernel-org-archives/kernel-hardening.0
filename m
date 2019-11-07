@@ -1,24 +1,22 @@
-Return-Path: <SRS0=441M=Y7=lists.openwall.com=kernel-hardening-return-17322-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=9wdC=Y7=lists.openwall.com=kernel-hardening-return-17323-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.7 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5BF01C5DF61
-	for <kernel-hardening@archiver.kernel.org>; Thu,  7 Nov 2019 07:30:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 56ED1C5DF61
+	for <kernel-hardening@archiver.kernel.org>; Thu,  7 Nov 2019 10:52:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A382C2187F
-	for <kernel-hardening@archiver.kernel.org>; Thu,  7 Nov 2019 07:30:12 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9B482214D8
+	for <kernel-hardening@archiver.kernel.org>; Thu,  7 Nov 2019 10:52:08 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="mOxiMcdD"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A382C2187F
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17322-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30128 invoked by uid 550); 7 Nov 2019 07:30:04 -0000
+	dkim=pass (2048-bit key) header.d=linaro.org header.i=@linaro.org header.b="HKwEOayk"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B482214D8
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linaro.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17323-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29906 invoked by uid 550); 7 Nov 2019 10:52:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,116 +24,70 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30094 invoked from network); 7 Nov 2019 07:30:04 -0000
+Received: (qmail 29884 invoked from network); 7 Nov 2019 10:52:01 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
+        d=linaro.org; s=google;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc:content-transfer-encoding;
-        bh=j9qPcLC3XJcMt8r8uz4qYlErk9ILRTu/rJI6OW5PhYM=;
-        b=mOxiMcdDlGxe07nH9pkXd2fEGOvMVxz55gBSQUMdJTxhWAkHa3G3w4OieNMuzVY7mk
-         IlntwMkyL8mC8dY8tVhTAED1sRa1eCx6VJ4qfWkNnyktU+gbgmn/jHlEH9DVVSJhteQm
-         YP+5DdLsWdl38jw8prWeuLDn6cHGBOoSENXqzYDrx4a9J7DqGwhGZjhz5OC54eCMxxVG
-         9IDgCoKYUztyaDwRDoc2IOsJ8qNKCBLSljOtLskbolao/R7/MxmYAK4+oxazD5nOsBfu
-         CxioqN+ZkCMmmJ5Da4uTqZ76GpVXkumL5vBp9d96Y4psXznuWOU3/oiR+oaIXx0Y1mse
-         +gnQ==
+         :cc;
+        bh=OvMY+y9t+JrwQeXlyarqTJXF9VkquzjWewr7iQbYsdg=;
+        b=HKwEOaykRl1GaA5HUx+9TcTEGGb7oNvHt2Y9owJSyCUoyem7fwAkvwQBHkQI2FPvWP
+         uD0rulX0IgiMsrRSKmb0gtmwI0JV854FA+6gSUC796H6UFIZXFzBZJ2xOUivRHTVQ7hz
+         7wCtkr90dGCFRE9MIxHYuABRTVM2CaXJ2g8zZntLAHf9IB+LEKPFIzPuvH4ZT93oEQRw
+         CkmsEypotk24LHmyt9u5PQ+ufkPLAAuWaKVGxSQQlNXe6maf3XOUhitNWnifjM/Y/KdZ
+         9bZxWAB3xnwJN98FAhenJ2RmIObgbkD+CCxooE1AqOAT7pNw5Zsa/8pH6e9bXw4Thfeb
+         Hl0g==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc:content-transfer-encoding;
-        bh=j9qPcLC3XJcMt8r8uz4qYlErk9ILRTu/rJI6OW5PhYM=;
-        b=I3tg5E1XGVfSfVQrSd6G21RjgJ9f0FD9gONZ/CKBods6kRnjHjF3imLqczccJ5Lhj2
-         eKc8otLLEHqUkTaBmTXD1HUVAIBviH2rBjwHCCZz5G8LVN87LsKp0Jlk4VuXwCxM1t/G
-         P8s2jlZLjWrCfIjEYf/kZp6Eh6roDHqmgn+y4PSTgN+AwreOxJjdJ8QCU+t9B2N5A1Ii
-         2P0f7SniIxiLL7knQ4ErEogGdB4140pMGqWnXrVIQCRa/fdgkA2OsJ47jQQIqnkxUA6T
-         nbNk3iOBr76E6sPE0eGEjtVs4mlbw8XKSssSjTMl4eSyXOIllnZC+GceYSjNBOETZq+A
-         MrYQ==
-X-Gm-Message-State: APjAAAWHPz82Oid479YZTzIRYkgz5eKt2E8QyphZFPQY3pLUkSCoTCTG
-	FsvtN1kpsM3Z+VQ7tk//vKzQeoJwbgvRn/kRqLs=
-X-Google-Smtp-Source: APXvYqxd1Y67LiRutTeJOGSWVnApvG11YX3b7o2lWxnSEBVgM6OjJf/kfqa/4JFPpeDbCK+JB7YXkyCu/ydA2VMAxl0=
-X-Received: by 2002:a5d:8987:: with SMTP id m7mr2063496iol.104.1573111791998;
- Wed, 06 Nov 2019 23:29:51 -0800 (PST)
+         :message-id:subject:to:cc;
+        bh=OvMY+y9t+JrwQeXlyarqTJXF9VkquzjWewr7iQbYsdg=;
+        b=NMSGqON5gDjo6OsvVSKqe1NTSCS/WD9D/fPCEbYdmg4YtoHnatreezxvwuTHpTg3TC
+         8ToakNtpmXgI6X3Bndu3Yd3N9c05KSZzjQDjjwj9zJRq4F4e5jm9ErALjhKivF0nHwrI
+         01kSaz9xb3cOhfF2U+3u53v8K5xMJiGwiW3nt6m1kuoOFsvmfiWA2SVWIEDaEQ0aAD14
+         Kz6NSTGe8dwVZImUGrn/njgfS+v+n3Nl7BWFrcs1Se40cxsS5UvGBomMvS24vOrUk/om
+         Ssav5YpJd9p5JsGSEdJPxvEyM0qVn13rD0qZ+vOY+lKNs2G0ZFNodQrrNm8y1lu8lCy/
+         ACpA==
+X-Gm-Message-State: APjAAAU+7LXdQpE5Bt8TOTKOykGlb64cUYnTc8JPrf0icRmlJ2r20CTN
+	QjTcWd/OCn6SFVpbirG3RfNTZne/BwQEmbVtxKV7Uw==
+X-Google-Smtp-Source: APXvYqxZvEiiT90pDsnYPJdaxTdcxJka6vY+KKCUJ0OKpqIG88pZzG10bA4lVqLf/rqLW8X5UhbBGNpzEr6t7euuMFw=
+X-Received: by 2002:a1c:b1c3:: with SMTP id a186mr2297717wmf.10.1573123909498;
+ Thu, 07 Nov 2019 02:51:49 -0800 (PST)
 MIME-Version: 1.0
-References: <20190929163028.9665-1-romain.perier@gmail.com>
- <201909301552.4AAB4D4@keescook> <20191001174752.GD2748@debby.home>
- <201910101531.482D28315@keescook> <CAOMdWSKyAH80dp1JRZ70FarZ4H+=+c8hRDWVOtc=5CXfag9irw@mail.gmail.com>
-In-Reply-To: <CAOMdWSKyAH80dp1JRZ70FarZ4H+=+c8hRDWVOtc=5CXfag9irw@mail.gmail.com>
-From: Romain Perier <romain.perier@gmail.com>
-Date: Thu, 7 Nov 2019 08:29:40 +0100
-Message-ID: <CABgxDoLbEci9oS3sAmuiZdbBjgxEVbrnrpiqO64zfZDMCF9fvw@mail.gmail.com>
-Subject: Re: [PRE-REVIEW PATCH 00/16] Modernize the tasklet API
-To: Allen <allen.lkml@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20191105235608.107702-1-samitolvanen@google.com> <20191105235608.107702-12-samitolvanen@google.com>
+ <CANiq72mZC-G_R_RJjapZS+NvkQcrjdiri0NyHUgesFzUpe-MDg@mail.gmail.com>
+In-Reply-To: <CANiq72mZC-G_R_RJjapZS+NvkQcrjdiri0NyHUgesFzUpe-MDg@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu, 7 Nov 2019 11:51:38 +0100
+Message-ID: <CAKv+Gu9DD12BPV_jNv9Hjw4oSiZvtdiVVjB-B8WLXCoPL4CA9Q@mail.gmail.com>
+Subject: Re: [PATCH v5 11/14] arm64: efi: restore x18 if it was corrupted
+To: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>
+Cc: Sami Tolvanen <samitolvanen@google.com>, Will Deacon <will@kernel.org>, 
+	Catalin Marinas <catalin.marinas@arm.com>, Steven Rostedt <rostedt@goodmis.org>, 
+	Masami Hiramatsu <mhiramat@kernel.org>, Dave Martin <Dave.Martin@arm.com>, 
+	Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, 
+	Mark Rutland <mark.rutland@arm.com>, Marc Zyngier <maz@kernel.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, Jann Horn <jannh@google.com>, 
+	Masahiro Yamada <yamada.masahiro@socionext.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
+	linux-kernel <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
 
-Le mer. 30 oct. 2019 =C3=A0 09:21, Allen <allen.lkml@gmail.com> a =C3=A9cri=
-t :
+On Wed, 6 Nov 2019 at 05:46, Miguel Ojeda
+<miguel.ojeda.sandonis@gmail.com> wrote:
 >
-> Romain,
+> On Wed, Nov 6, 2019 at 12:56 AM Sami Tolvanen <samitolvanen@google.com> wrote:
 > >
+> > If we detect a corrupted x18 and SCS is enabled, restore the register
+> > before jumping back to instrumented code. This is safe, because the
+> > wrapper is called with preemption disabled and a separate shadow stack
+> > is used for interrupt handling.
 >
->  First of all Romain, nice work. I started working on this
-> set a few months back, but could only carve out limited time.
+> In case you do v6: I think putting the explanation about why this is
+> safe in the existing comment would be best given it is justifying a
+> subtlety of the code rather than the change itself. Ard?
 >
->   I sent out RFC for this sometime in May[1]. And my approach
-> was a little different when compared to what you have sent on the
-> list.
->
->  Well, I have pushed my work to github[2], only thing I could
-> think of as an improvement in your patch set it to break it down
-> into smaller chunk so that it's easier to review. I have made each
-> occurrence of tasklet_init() into a commit[3] which I thought would
-> make it easier to review. I'll leave that decision to you and kees.
->
-> Let me know if I could help in any way.
->
-> [1] https://www.openwall.com/lists/kernel-hardening/2019/05/06/1
-> [2] https://github.com/allenpais/tasklet
-> [3] Sample list of patches:
-> 5d0b728649b6 atm/solos-pci: Convert tasklets to use new tasklet_init API
-> e5144c3c16d8 atm: Convert tasklets to use new tasklet_init API
-> 71028976d3ed arch/um: Convert tasklets to use new tasklet_init API
-> c9a39c23b78c xfrm: Convert tasklets to use new tasklet_init API
-> 91d93fe12bbc mac80211: Convert tasklets to use new tasklet_init API
-> d68f1e9e4531 ipv4: Convert tasklets to use new tasklet_init API
-> 4f9379dcd8ad sound/timer: Convert tasklets to use new tasklet_init API
-> b4519111b75e drivers/usb: Convert tasklets to use new tasklet_init API
-> 52f04bf54a5a drivers:vt/keyboard: Convert tasklets to use new tasklet_ini=
-t API
-> 295de7c9812c dma/virt-dma: Convert tasklets to use new tasklet_init API
-> 6c713c83b58f dma/dw: Convert tasklets to use new tasklet_init API
-> eaaaaba8a4a7 debug:Convert tasklets to use new tasklet_init API
-> b23f4ff5021b tasklet: prepare to change tasklet API
 
-From experience, this is better to group bunch of commits like we
-currently do with Kees on this series, instead to have one commit per
-change (I mean for huge patchset)
-Mainly because you have too much replacements with this API change,
-and it will be really complicated to merge.
-
-Last time I have proposed an API change for removing "pci_pool" , it
-was a patchset of 20 commits (something like this), it tooks 6 months
-to be merged :) (with a fine grain granularity on each commit)
-
-This is better to be the more atomic as possible. If we split the "one
-massive tasklet_init replacement" commit into many commit, I am sure
-that we find old tasklet API for months in the kernel... it is not
-something we want , imho.  + treewide commits are common in the kernel
-tree, for important API changes :)
-
-@Kees: agreed ?
-
-I think that the timer_list approach is good. You can help by
-providing feedbacks and by testing if you want.
-
-
-Regards,
-Romain
-
-
-
-
->
-> Thanks,
-> - Allen
+Agreed, but only if you have to respin for other reasons.
