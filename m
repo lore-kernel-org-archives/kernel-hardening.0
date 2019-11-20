@@ -1,23 +1,23 @@
-Return-Path: <SRS0=yFvW=ZM=lists.openwall.com=kernel-hardening-return-17406-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pWjV=ZM=lists.openwall.com=kernel-hardening-return-17407-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E62C5C432C0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 20 Nov 2019 01:07:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8C050C432C3
+	for <kernel-hardening@archiver.kernel.org>; Wed, 20 Nov 2019 09:58:36 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3BEDD2245C
-	for <kernel-hardening@archiver.kernel.org>; Wed, 20 Nov 2019 01:07:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A5E1621D7A
+	for <kernel-hardening@archiver.kernel.org>; Wed, 20 Nov 2019 09:58:35 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="GjW65mTR"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3BEDD2245C
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17406-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26020 invoked by uid 550); 20 Nov 2019 01:06:58 -0000
+	dkim=pass (1024-bit key) header.d=alien8.de header.i=@alien8.de header.b="jFjecU/K"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A5E1621D7A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=alien8.de
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17407-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25999 invoked by uid 550); 20 Nov 2019 09:58:27 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,151 +25,178 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25793 invoked from network); 20 Nov 2019 01:06:56 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=cO8TBOltsH4skyCZjRFi1jjLHEcJb6wGQF3Nty2AFlw=;
-        b=GjW65mTRpHcwke1tPpXJc+tEroqq+/c02L1weluBXv2HYDmUvuJroQHtjQB47mZ+Dq
-         XrKKO4SSKAvPWN92dzPW6/GSh6v84X+1ecqKm5cP0W3j1AZS9WEFrXlA9digFiGFRewB
-         KhiECAt/oiWz0Q2+iz92oxoX7RzTYeQrdzJTo=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references;
-        bh=cO8TBOltsH4skyCZjRFi1jjLHEcJb6wGQF3Nty2AFlw=;
-        b=Klu8EFKd70LrRc0VHyGe6tqhpFFuTFoEzchVq3FApjpNl7agzBvR1+NGvqczKv34kV
-         BtbpSTmW9ToFbyNIzP28X1JE6bglIsI9Wg10tmf2MPJrZN/MJM2d+mptovatZ8f8G97c
-         DDFCgxOuRXrTmLnEpy520465fpo8OWv/26DXzcoPn8jNnH8Qk8sLpp2enYJTVDjLenNS
-         dnRpcWYAHnp6iZb3AJ+sYKHegenoTouWW+Fnn/FgeTfWrh8YOedH1Y1Uw9Uyi008aTpX
-         8lupWVf/2f88xPCVtAhoN9YpXjfbCcLZHg9DviTaLk8yYB5PrNMn3E+lX29b7eEBXwHp
-         dHYQ==
-X-Gm-Message-State: APjAAAUJzGl3isCVXiZfOc1YBcXDU8AbbfHC9IOHhX0DQ0RAY7nHXf9i
-	LPxdjUoriOYXUe8Qw9T7ZKFMGA==
-X-Google-Smtp-Source: APXvYqyASvZYvBQ/e7CI9HnVv6bkAWB/563LT5YKo0qEsvHWgg7DJbmwdBC/nFhsf8xhjPvdZtXPKw==
-X-Received: by 2002:aa7:9f89:: with SMTP id z9mr651850pfr.123.1574212004404;
-        Tue, 19 Nov 2019 17:06:44 -0800 (PST)
-From: Kees Cook <keescook@chromium.org>
-To: Andrey Ryabinin <aryabinin@virtuozzo.com>
-Cc: Kees Cook <keescook@chromium.org>,
-	Elena Petrova <lenaptr@google.com>,
-	Alexander Potapenko <glider@google.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Dan Carpenter <dan.carpenter@oracle.com>,
-	"Gustavo A. R. Silva" <gustavo@embeddedor.com>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	kasan-dev@googlegroups.com,
-	linux-kernel@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: [PATCH 1/3] ubsan: Add trap instrumentation option
-Date: Tue, 19 Nov 2019 17:06:34 -0800
-Message-Id: <20191120010636.27368-2-keescook@chromium.org>
-X-Mailer: git-send-email 2.17.1
-In-Reply-To: <20191120010636.27368-1-keescook@chromium.org>
-References: <20191120010636.27368-1-keescook@chromium.org>
+Received: (qmail 25979 invoked from network); 20 Nov 2019 09:58:26 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=alien8.de; s=dkim;
+	t=1574243891;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 content-transfer-encoding:in-reply-to:in-reply-to:  references:references;
+	bh=K6XtfsmuOWVyvNSkl/OwZZStrOVOUJCeIR1iP8qeEBg=;
+	b=jFjecU/KcYAyQAmdJjS4m4iM2zQx67FlcwDS2d9V7uxQNfBxxTtg14h+CqHyk89+aAYhfR
+	hm/eJUuwUhSLH8h61Q4XLBaac/6Ouo6kE48Li12NtkFOP54MAmYTifuDuQzghMyAjK2wtp
+	ui+APoH39yhjpKgheiq03scykvJi9Yo=
+Date: Wed, 20 Nov 2019 10:58:04 +0100
+From: Borislav Petkov <bp@alien8.de>
+To: Tianlin Li <tli@digitalocean.com>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>,
+	Russell King <linux@armlinux.org.uk>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Will Deacon <will@kernel.org>, Greentime Hu <green.hu@gmail.com>,
+	Vincent Chen <deanbo422@gmail.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	"H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org,
+	Jessica Yu <jeyu@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>,
+	Jiri Kosina <jikos@kernel.org>, Miroslav Benes <mbenes@suse.cz>,
+	Petr Mladek <pmladek@suse.com>,
+	Joe Lawrence <joe.lawrence@redhat.com>
+Subject: Re: [RFC PATCH] kernel/module: have the callers of set_memory_*()
+ check the return value
+Message-ID: <20191120095804.GB2634@zn.tnic>
+References: <20191119155149.20396-1-tli@digitalocean.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <20191119155149.20396-1-tli@digitalocean.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-The Undefined Behavior Sanitizer can operate in two modes: warning
-reporting mode via lib/ubsan.c handler calls, or trap mode, which uses
-__builtin_trap() as the handler. Using lib/ubsan.c means the kernel
-image is about 5% larger (due to all the debugging text and reporting
-structures to capture details about the warning conditions). Using the
-trap mode, the image size changes are much smaller, though at the loss
-of the "warning only" mode.
+On Tue, Nov 19, 2019 at 09:51:49AM -0600, Tianlin Li wrote:
+> Right now several architectures allow their set_memory_*() family of 
+> functions to fail, but callers may not be checking the return values. We 
+> need to fix the callers and add the __must_check attribute.
 
-In order to give greater flexibility to system builders that want
-minimal changes to image size and are prepared to deal with kernel
-threads being killed, this introduces CONFIG_UBSAN_TRAP. The resulting
-image sizes comparison:
+Please formulate commit messages in passive tone. "we" is ambiguous.
 
-   text    data     bss       dec       hex     filename
-19533663   6183037  18554956  44271656  2a38828 vmlinux.stock
-19991849   7618513  18874448  46484810  2c54d4a vmlinux.ubsan
-19712181   6284181  18366540  44362902  2a4ec96 vmlinux.ubsan-trap
+From Documentation/process/submitting-patches.rst:
 
-CONFIG_UBSAN=y:      image +4.8% (text +2.3%, data +18.9%)
-CONFIG_UBSAN_TRAP=y: image +0.2% (text +0.9%, data +1.6%)
+ "Describe your changes in imperative mood, e.g. "make xyzzy do frotz"
+  instead of "[This patch] makes xyzzy do frotz" or "[I] changed xyzzy
+  to do frotz", as if you are giving orders to the codebase to change
+  its behaviour."
 
-Suggested-by: Elena Petrova <lenaptr@google.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- lib/Kconfig.ubsan      | 15 +++++++++++++--
- lib/Makefile           |  2 ++
- scripts/Makefile.ubsan |  9 +++++++--
- 3 files changed, 22 insertions(+), 4 deletions(-)
+Also, you could add a high-level summary of the failure case from:
 
-diff --git a/lib/Kconfig.ubsan b/lib/Kconfig.ubsan
-index 0e04fcb3ab3d..d69e8b21ebae 100644
---- a/lib/Kconfig.ubsan
-+++ b/lib/Kconfig.ubsan
-@@ -5,12 +5,23 @@ config ARCH_HAS_UBSAN_SANITIZE_ALL
- config UBSAN
- 	bool "Undefined behaviour sanity checker"
- 	help
--	  This option enables undefined behaviour sanity checker
-+	  This option enables undefined behaviour sanity checker.
- 	  Compile-time instrumentation is used to detect various undefined
--	  behaviours in runtime. Various types of checks may be enabled
-+	  behaviours at runtime. Various types of checks may be enabled
- 	  via boot parameter ubsan_handle
- 	  (see: Documentation/dev-tools/ubsan.rst).
- 
-+config UBSAN_TRAP
-+	bool "On Sanitizer warnings, stop the offending kernel thread"
-+	depends on UBSAN
-+	depends on $(cc-option, -fsanitize-undefined-trap-on-error)
-+	help
-+	  Building kernels with Sanitizer features enabled tends to grow
-+	  the kernel size by over 5%, due to adding all the debugging
-+	  text on failure paths. To avoid this, Sanitizer instrumentation
-+	  can just issue a trap. This reduces the kernel size overhead but
-+	  turns all warnings into full thread-killing exceptions.
-+
- config UBSAN_SANITIZE_ALL
- 	bool "Enable instrumentation for the entire kernel"
- 	depends on UBSAN
-diff --git a/lib/Makefile b/lib/Makefile
-index c5892807e06f..bc498bf0f52d 100644
---- a/lib/Makefile
-+++ b/lib/Makefile
-@@ -272,7 +272,9 @@ quiet_cmd_build_OID_registry = GEN     $@
- clean-files	+= oid_registry_data.c
- 
- obj-$(CONFIG_UCS2_STRING) += ucs2_string.o
-+ifneq ($(CONFIG_UBSAN_TRAP),y)
- obj-$(CONFIG_UBSAN) += ubsan.o
-+endif
- 
- UBSAN_SANITIZE_ubsan.o := n
- KASAN_SANITIZE_ubsan.o := n
-diff --git a/scripts/Makefile.ubsan b/scripts/Makefile.ubsan
-index 019771b845c5..668a91510bfe 100644
---- a/scripts/Makefile.ubsan
-+++ b/scripts/Makefile.ubsan
-@@ -1,5 +1,10 @@
- # SPDX-License-Identifier: GPL-2.0
- ifdef CONFIG_UBSAN
-+
-+ifdef CONFIG_UBSAN_ALIGNMENT
-+      CFLAGS_UBSAN += $(call cc-option, -fsanitize=alignment)
-+endif
-+
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=shift)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=integer-divide-by-zero)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=unreachable)
-@@ -9,8 +14,8 @@ ifdef CONFIG_UBSAN
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=bool)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=enum)
- 
--ifdef CONFIG_UBSAN_ALIGNMENT
--      CFLAGS_UBSAN += $(call cc-option, -fsanitize=alignment)
-+ifdef CONFIG_UBSAN_TRAP
-+      CFLAGS_UBSAN += $(call cc-option, -fsanitize-undefined-trap-on-error)
- endif
- 
-       # -fsanitize=* options makes GCC less smart than usual and
+https://lore.kernel.org/netdev/20180628213459.28631-4-daniel@iogearbox.net/
+
+as a more real-life, convincing justification for this.
+
+> They also may not provide any level of atomicity, in the sense that
+> the memory protections may be left incomplete on failure.
+> This issue likely has a few 
+> steps on effects architectures[1]:
+> 1)Have all callers of set_memory_*() helpers check the return value.
+> 2)Add __much_check to all set_memory_*() helpers so that new uses do not 
+
+__must_check
+
+> ignore the return value.
+> 3)Add atomicity to the calls so that the memory protections aren't left in 
+> a partial state.
+> 
+> Ideally, the failure of set_memory_*() should be passed up the call stack, 
+> and callers should examine the failure and deal with it. But currently, 
+> some callers just have void return type.
+> 
+> We need to fix the callers to handle the return all the way to the top of 
+> stack, and it will require a large series of patches to finish all the three 
+> steps mentioned above. I start with kernel/module, and will move onto other 
+> subsystems. I am not entirely sure about the failure modes for each caller. 
+> So I would like to get some comments before I move forward. This single 
+> patch is just for fixing the return value of set_memory_*() function in 
+> kernel/module, and also the related callers. Any feedback would be greatly 
+> appreciated.
+> 
+> [1]:https://github.com/KSPP/linux/issues/7
+> 
+> Signed-off-by: Tianlin Li <tli@digitalocean.com>
+> ---
+>  arch/arm/kernel/ftrace.c   |   8 +-
+>  arch/arm64/kernel/ftrace.c |   6 +-
+>  arch/nds32/kernel/ftrace.c |   6 +-
+>  arch/x86/kernel/ftrace.c   |  13 ++-
+>  include/linux/module.h     |  16 ++--
+>  kernel/livepatch/core.c    |  15 +++-
+>  kernel/module.c            | 170 +++++++++++++++++++++++++++----------
+>  kernel/trace/ftrace.c      |  15 +++-
+>  8 files changed, 175 insertions(+), 74 deletions(-)
+
+Yeah, general idea makes sense but you'd need to redo your patch ontop
+of linux-next because there are some changes in flight in ftrace-land at
+least and your patch won't apply anymore after next week, when the merge
+window opens.
+
+Also, you should use checkpatch before sending a patch as sometimes it makes
+sense what it complains about:
+
+WARNING: Missing a blank line after declarations
+#79: FILE: arch/arm/kernel/ftrace.c:68:
++       int ret;
++       ret = set_all_modules_text_ro();
+
+WARNING: Missing a blank line after declarations
+#150: FILE: arch/x86/kernel/ftrace.c:61:
++       int ret;
++       ret = set_all_modules_text_ro();
+
+WARNING: trailing semicolon indicates no statements, indent implies otherwise
+#203: FILE: kernel/livepatch/core.c:731:
++               if (module_enable_ro(patch->mod, true));
++                       pr_err("module_enable_ro failed.\n");
+
+ERROR: trailing statements should be on next line
+#203: FILE: kernel/livepatch/core.c:731:
++               if (module_enable_ro(patch->mod, true));
+
+WARNING: Missing a blank line after declarations
+#451: FILE: kernel/module.c:2091:
++       int ret;
++       ret = frob_text(&mod->core_layout, set_memory_x);
+
+WARNING: Missing a blank line after declarations
+#511: FILE: kernel/trace/ftrace.c:5819:
++               int ret = ftrace_arch_code_modify_prepare();
++               if (ret) {
+
+WARNING: Missing a blank line after declarations
+#527: FILE: kernel/trace/ftrace.c:5864:
++               int ret = ftrace_arch_code_modify_post_process();
++               FTRACE_WARN_ON(ret);
+
+> diff --git a/kernel/livepatch/core.c b/kernel/livepatch/core.c
+> index c4ce08f43bd6..39bfc0685854 100644
+> --- a/kernel/livepatch/core.c
+> +++ b/kernel/livepatch/core.c
+> @@ -721,16 +721,25 @@ static int klp_init_object_loaded(struct klp_patch *patch,
+>  
+>  	mutex_lock(&text_mutex);
+>  
+> -	module_disable_ro(patch->mod);
+> +	ret = module_disable_ro(patch->mod);
+> +	if (ret) {
+> +		mutex_unlock(&text_mutex);
+> +		return ret;
+> +	}
+>  	ret = klp_write_object_relocations(patch->mod, obj);
+>  	if (ret) {
+> -		module_enable_ro(patch->mod, true);
+> +		if (module_enable_ro(patch->mod, true));
+		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+and if you look at its output above closely, it might even help you
+catch the bug you've added.
+
+ [ Don't worry, happens to the best of us. :-) ]
+
+Also, what would help review is if you split your patch:
+
+patch 1: Change functions to return a retval
+patch 2-n: Change call sites to handle retval properly
+
+Thx.
+
 -- 
-2.17.1
+Regards/Gruss,
+    Boris.
 
+https://people.kernel.org/tglx/notes-about-netiquette
