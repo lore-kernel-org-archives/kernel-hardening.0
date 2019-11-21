@@ -1,4 +1,4 @@
-Return-Path: <SRS0=R/LT=ZN=lists.openwall.com=kernel-hardening-return-17419-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=J/tB=ZN=lists.openwall.com=kernel-hardening-return-17420-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A8D05C432C0
-	for <kernel-hardening@archiver.kernel.org>; Thu, 21 Nov 2019 22:57:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7BDDCC432C0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 21 Nov 2019 23:14:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F0470206CB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 21 Nov 2019 22:57:12 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id BEF5D206B6
+	for <kernel-hardening@archiver.kernel.org>; Thu, 21 Nov 2019 23:14:39 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="Dgq75UxQ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F0470206CB
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="ePy4Igu7"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BEF5D206B6
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17419-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14179 invoked by uid 550); 21 Nov 2019 22:57:06 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17420-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21862 invoked by uid 550); 21 Nov 2019 23:14:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,33 +25,32 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14142 invoked from network); 21 Nov 2019 22:57:05 -0000
+Received: (qmail 21825 invoked from network); 21 Nov 2019 23:14:33 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=51ePzUa5LZhbNRRNHcVyQNi+kbgLjJEObJHSIPI8Few=;
-        b=Dgq75UxQKQ+n9NET5W+fmhvBZkoxdKTqUAfv3i6EjHKXau+tH7dXyJCOd7sKPCaReG
-         mW+skl8fu0KzoLICwdl5cbOATztar7BuOO58zM+WbsOC3XwhVy+cspC+GMHTITXCjWS5
-         q90o67NXvsAtLjPhEVq7UsaPuAI4gyTiehSBs=
+         :content-disposition:in-reply-to;
+        bh=2veRivAEh/Lpdr/ITAgILE86AAw5jcwe/4mpzH2NlJY=;
+        b=ePy4Igu7gMSF9I7sxcFxsVtHYtvJJ2SEnYiHowKoYYz0JdW1fbVLxfCsr5NiQNFD96
+         S75Onl+RseVnFfQwCk0TEvq7bo+71LX5nid4yXpkidBnjdfT7azrp8iUcU0eXKuqqqAj
+         Z8aCyx+1mc7qCC6QTIDXBUcAMy2pYNzJnxWQo=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=51ePzUa5LZhbNRRNHcVyQNi+kbgLjJEObJHSIPI8Few=;
-        b=nXQohRJG9cvQalZI6br/K0KjXeiEJNA4OoZmD9Moq2+5txbZTYpu0Mru4dGvGY9vx7
-         vcEaufh5uOI02/3nB6ljYYDHNkYG4AYwFPrA19wB/nhVbdC47bXZBNXESjQ/bydY3sP3
-         jJXyNGXsnL72igcx4eqWMrzv9mEPJ4CsPq4HNYrJSGTEgF5ltGH0n2gqOnZDkZhUTDYa
-         2RZSMBGFz7DmpnuOfgXvbBZgb8bZjhywcWdREPwT/hp2R/8DlGGnd329fthH6PoF/TQZ
-         D6b1g7gnS5Ml3ol1MXckNmXalo7LvNsoDPISP4HNd+d2SiYwB2JF65SlaImA5oCdiuwp
-         F6jw==
-X-Gm-Message-State: APjAAAUrgiAWX1LjuYitvmHq0Fktdg3xTdZ47o98dKSxNwRN3eBdeDPS
-	tWLD1l7OHJM2iGD3GMmJ64Z1Qg==
-X-Google-Smtp-Source: APXvYqyrHq4Mzk/fXpSWa5CCvgYUBoBsGM3Wwaxzr2MePcj67iCvIBaWCtGswXTvktiZaLE7kazz1w==
-X-Received: by 2002:a63:2003:: with SMTP id g3mr12417392pgg.359.1574377013170;
-        Thu, 21 Nov 2019 14:56:53 -0800 (PST)
-Date: Thu, 21 Nov 2019 14:56:50 -0800
+         :mime-version:content-disposition:in-reply-to;
+        bh=2veRivAEh/Lpdr/ITAgILE86AAw5jcwe/4mpzH2NlJY=;
+        b=fQvd/QR57P0D+g2AJl98f1YNwl6BZi7xhYaN9hQmz7cF6jtGQQv9glfXvY1LBZ8K4Y
+         mwcGJ4AT7GQJ2fp639SECQQ/P4wKNk0n26Etn7pFHREiuJsf/YPh8tgyd15kwBNTo5rY
+         vbfKTi0Bdlh5cvDRxeBWFjXzKLjHVQCku6Zyz99vQg4/OmjS3RD6XdsLRX04YJo7LsWI
+         MCLAhBC4ddUCWkBykPtw717ZEfCCPaM7jIyhlkNgtfF79Xy+Kcmca1LWBV3qFY8Xqv/9
+         D74WKRyWikzZqpUTDGCv1o2oNCjLVOhW1QfHi6xjYprUJNDgKVd0JyOLf6mtr8r0ji4g
+         th/Q==
+X-Gm-Message-State: APjAAAXGZcSwXiHivb9SVieLkAB16k1nd+YYlIK5D3o0+zUnvbvNBL+T
+	BTsSKY/R9GHhEozLrz/iZS6XdA==
+X-Google-Smtp-Source: APXvYqx10aUfkseuuvvIiZfCFrVLk2ANnIMrVihwB9ZsfC8ppUGV0nab1w1NRyDgV1ToQf1VrNj46Q==
+X-Received: by 2002:a17:90a:c082:: with SMTP id o2mr14857916pjs.94.1574378061504;
+        Thu, 21 Nov 2019 15:14:21 -0800 (PST)
+Date: Thu, 21 Nov 2019 15:14:19 -0800
 From: Kees Cook <keescook@chromium.org>
 To: Herbert Xu <herbert@gondor.apana.org.au>,
 	=?iso-8859-1?Q?Jo=E3o?= Moreira <joao.moreira@intel.com>,
@@ -61,73 +60,86 @@ To: Herbert Xu <herbert@gondor.apana.org.au>,
 	Stephan Mueller <smueller@chronox.de>, x86@kernel.org,
 	linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v5 3/8] crypto: x86/camellia: Remove glue function macro
- usage
-Message-ID: <201911211456.CE356C2@keescook>
+Subject: Re: [PATCH v5 8/8] crypto, x86/sha: Eliminate casts on asm
+ implementations
+Message-ID: <201911211512.6A86399@keescook>
 References: <20191113182516.13545-1-keescook@chromium.org>
- <20191113182516.13545-4-keescook@chromium.org>
- <20191113193911.GC221701@gmail.com>
+ <20191113182516.13545-9-keescook@chromium.org>
+ <20191113195529.GD221701@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20191113193911.GC221701@gmail.com>
+In-Reply-To: <20191113195529.GD221701@gmail.com>
 
-On Wed, Nov 13, 2019 at 11:39:12AM -0800, Eric Biggers wrote:
-> On Wed, Nov 13, 2019 at 10:25:11AM -0800, Kees Cook wrote:
-> > In order to remove the callsite function casts, regularize the function
-> > prototypes for helpers to avoid triggering Control-Flow Integrity checks
-> > during indirect function calls. Where needed, to avoid changes to
-> > pointer math, u8 pointers are internally cast back to u128 pointers.
+On Wed, Nov 13, 2019 at 11:55:30AM -0800, Eric Biggers wrote:
+> On Wed, Nov 13, 2019 at 10:25:16AM -0800, Kees Cook wrote:
+> > In order to avoid CFI function prototype mismatches, this removes the
+> > casts on assembly implementations of sha1/256/512 accelerators. The
+> > safety checks from BUILD_BUG_ON() remain.
 > > 
-> > Co-developed-by: João Moreira <joao.moreira@intel.com>
 > > Signed-off-by: Kees Cook <keescook@chromium.org>
 > > ---
-> >  arch/x86/crypto/camellia_aesni_avx2_glue.c | 74 ++++++++++------------
-> >  arch/x86/crypto/camellia_aesni_avx_glue.c  | 74 ++++++++++------------
-> >  arch/x86/crypto/camellia_glue.c            | 45 +++++++------
-> >  arch/x86/include/asm/crypto/camellia.h     | 64 ++++++++-----------
-> >  4 files changed, 119 insertions(+), 138 deletions(-)
+> >  arch/x86/crypto/sha1_ssse3_glue.c   | 61 ++++++++++++-----------------
+> >  arch/x86/crypto/sha256_ssse3_glue.c | 31 +++++++--------
+> >  arch/x86/crypto/sha512_ssse3_glue.c | 28 ++++++-------
+> >  3 files changed, 50 insertions(+), 70 deletions(-)
 > > 
-> > diff --git a/arch/x86/crypto/camellia_aesni_avx2_glue.c b/arch/x86/crypto/camellia_aesni_avx2_glue.c
-> > index a4f00128ea55..a68d54fc2dde 100644
-> > --- a/arch/x86/crypto/camellia_aesni_avx2_glue.c
-> > +++ b/arch/x86/crypto/camellia_aesni_avx2_glue.c
-> > @@ -19,20 +19,17 @@
-> >  #define CAMELLIA_AESNI_AVX2_PARALLEL_BLOCKS 32
+> > diff --git a/arch/x86/crypto/sha1_ssse3_glue.c b/arch/x86/crypto/sha1_ssse3_glue.c
+> > index 639d4c2fd6a8..a151d899f37a 100644
+> > --- a/arch/x86/crypto/sha1_ssse3_glue.c
+> > +++ b/arch/x86/crypto/sha1_ssse3_glue.c
+> > @@ -27,11 +27,8 @@
+> >  #include <crypto/sha1_base.h>
+> >  #include <asm/simd.h>
 > >  
-> >  /* 32-way AVX2/AES-NI parallel cipher functions */
-> > -asmlinkage void camellia_ecb_enc_32way(struct camellia_ctx *ctx, u8 *dst,
-> > -				       const u8 *src);
-> > -asmlinkage void camellia_ecb_dec_32way(struct camellia_ctx *ctx, u8 *dst,
-> > -				       const u8 *src);
-> > +asmlinkage void camellia_ecb_enc_32way(void *ctx, u8 *dst, const u8 *src);
-> > +asmlinkage void camellia_ecb_dec_32way(void *ctx, u8 *dst, const u8 *src);
+> > -typedef void (sha1_transform_fn)(u32 *digest, const char *data,
+> > -				unsigned int rounds);
+> > -
+> >  static int sha1_update(struct shash_desc *desc, const u8 *data,
+> > -			     unsigned int len, sha1_transform_fn *sha1_xform)
+> > +			     unsigned int len, sha1_block_fn *sha1_xform)
+> >  {
+> >  	struct sha1_state *sctx = shash_desc_ctx(desc);
 > >  
-> > -asmlinkage void camellia_cbc_dec_32way(struct camellia_ctx *ctx, u8 *dst,
-> > -				       const u8 *src);
-> > -asmlinkage void camellia_ctr_32way(struct camellia_ctx *ctx, u8 *dst,
-> > -				   const u8 *src, le128 *iv);
-> > +asmlinkage void camellia_cbc_dec_32way(void *ctx, u8 *dst, const u8 *src);
-> > +asmlinkage void camellia_ctr_32way(void *ctx, u8 *dst, const u8 *src,
-> > +				   le128 *iv);
+> > @@ -39,48 +36,44 @@ static int sha1_update(struct shash_desc *desc, const u8 *data,
+> >  	    (sctx->count % SHA1_BLOCK_SIZE) + len < SHA1_BLOCK_SIZE)
+> >  		return crypto_sha1_update(desc, data, len);
 > >  
-> > -asmlinkage void camellia_xts_enc_32way(struct camellia_ctx *ctx, u8 *dst,
-> > -				       const u8 *src, le128 *iv);
-> > -asmlinkage void camellia_xts_dec_32way(struct camellia_ctx *ctx, u8 *dst,
-> > -				       const u8 *src, le128 *iv);
-> > +asmlinkage void camellia_xts_enc_32way(void *ctx, u8 *dst, const u8 *src,
-> > +				       le128 *iv);
-> > +asmlinkage void camellia_xts_dec_32way(void *ctx, u8 *dst, const u8 *src,
-> > +				       le128 *iv);
+> > -	/* make sure casting to sha1_block_fn() is safe */
+> > +	/* make sure sha1_block_fn() use in generic routines is safe */
+> >  	BUILD_BUG_ON(offsetof(struct sha1_state, state) != 0);
 > 
-> As long as the type of all the 'ctx' arguments is being changed anyway, can you
-> please make them const, as they should have been all along?  This applies to all
-> the algorithms.  I.e., something like this:
+> This update to the comment makes no sense, since sha1_block_fn() is obviously
+> safe in the helpers, and this says nothing about the assembly functions.
+> Instead this should say something like:
 > 
-> [const diff]
+> 	/*
+> 	 * Make sure that struct sha1_state begins directly with the 160-bit
+> 	 * SHA1 internal state, as this is what the assembly functions expect.
+> 	 */
+> 
+> Likewise for SHA-256 and SHA-512, except for those it would be a 256-bit and
+> 512-bit internal state respectively.
 
-Awesome, thanks! I've incorporated this into the series now. :)
+Thanks! Agreed, that is much clearer.
+
+> > -asmlinkage void sha1_transform_ssse3(u32 *digest, const char *data,
+> > -				     unsigned int rounds);
+> > +asmlinkage void sha1_transform_ssse3(struct sha1_state *digest,
+> > +				     u8 const *data, int rounds);
+> 
+> 'u8 const' is unconventional.  Please use 'const u8' instead.
+
+Yeah, I noticed that but decided to disrupt less. Fixed now.
+
+> Also, this function prototype is also given in a comment in the corresponding
+> assembly file.  Can you please update that too, and also leave a comment in the
+> assembly file like "struct sha1_state is assumed to begin with u32 state[5]."?
+> 
+> Likewise for all the other SHA-1, and SHA-256, and SHA-512 assembly functions,
+> except it would be u32 state[8] for SHA-256 and u64 state[8] for SHA-512.
+
+I love how each uses an entirely different comment style. :) Updated!
 
 -- 
 Kees Cook
