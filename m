@@ -1,22 +1,23 @@
-Return-Path: <SRS0=IZSd=ZO=lists.openwall.com=kernel-hardening-return-17433-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=mnLe=ZO=lists.openwall.com=kernel-hardening-return-17434-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8F28CC432C0
-	for <kernel-hardening@archiver.kernel.org>; Fri, 22 Nov 2019 03:06:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A253BC432C0
+	for <kernel-hardening@archiver.kernel.org>; Fri, 22 Nov 2019 09:08:02 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DA05C206B6
-	for <kernel-hardening@archiver.kernel.org>; Fri, 22 Nov 2019 03:06:41 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E8A3420674
+	for <kernel-hardening@archiver.kernel.org>; Fri, 22 Nov 2019 09:08:01 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="wsysb1M4"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DA05C206B6
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17433-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7591 invoked by uid 550); 22 Nov 2019 03:06:35 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="t13lqmTw"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E8A3420674
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17434-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27683 invoked by uid 550); 22 Nov 2019 09:07:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,84 +25,92 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7551 invoked from network); 22 Nov 2019 03:06:34 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1574391982;
-	bh=WHOYATGBc/KhbUsY17Xhsk4+WhbvgQ0BBAtu736vu44=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=wsysb1M4c5Of6auNnd9WrnuX1d02JpYy2mPEoQ+5gjPFolt9aOvDJ6cbTtK9uowg+
-	 F3B/IcMPpFYJm+VI2Tz9NzrY3GG//ps0Q2UFi7UhjzC2A/93e1c3Oiee0q/7qX97qx
-	 1QSYrvkYUwciXyAbQHhi2Wmon4dgqLNThqpvPjsc=
-Date: Thu, 21 Nov 2019 19:06:20 -0800
-From: Eric Biggers <ebiggers@kernel.org>
-To: Kees Cook <keescook@chromium.org>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>,
-	=?iso-8859-1?Q?Jo=E3o?= Moreira <joao.moreira@intel.com>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Sami Tolvanen <samitolvanen@google.com>,
-	Stephan Mueller <smueller@chronox.de>, x86@kernel.org,
-	linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v6 8/8] crypto, x86/sha: Eliminate casts on asm
- implementations
-Message-ID: <20191122030620.GD32523@sol.localdomain>
-References: <20191122010334.12081-1-keescook@chromium.org>
- <20191122010334.12081-9-keescook@chromium.org>
+Received: (qmail 27649 invoked from network); 22 Nov 2019 09:07:54 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=Ljr/rHZhX2cKSZOMtdFMLeDFfDK4qscTIQX92Z+51jk=;
+        b=t13lqmTwW8+/JGno5Gk07nvJjaKYrR5f5FQtDf/FQuBJNqezdlfd+R1Lqo6u2sCE9o
+         4CJ6U0irpU617kY74B7xZ6MfT4NFdXzJ5Aw0EUiuSfdsL3YYJiaqDkPZQkqFln3hAr+6
+         lCgiZ22CmSJ/IT4/cyPr5v1VE9JpkXewlPyu9Z4PtyeC27Bg7NP5nCRuFrXFM+4vDjN+
+         lYMhfaePSyn/RK2K5o9jQh5HNsh/GLlmWGIHSm+zRNzhE/Tp5DvutMQPpakvtVzRP8/y
+         tiF5wJv8sZCez+gaEocICDbNCXycofg3bfXYVDBPpEZ2vY+nhsQQCvPB3ztg0MX3tLjk
+         808A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=Ljr/rHZhX2cKSZOMtdFMLeDFfDK4qscTIQX92Z+51jk=;
+        b=FhYgbtHdHby8osK+GgAJ2PBrUkmuCap7AK6t75HQbPMmLx9EKMcl2z/wBs1fV90DgI
+         5XkFTg/VdQgBpa9xO3MkSA2QTN/54B2hK9eGdFLtxLwfhKA+0lYK9l98iZOVAjQUj1Xq
+         Nx9QFrOzksKn9e3SvuaNxCDmjU29vnlfQT15GtxhGO3zMA2tqmgLsx9cHSReU+xNQnq+
+         ie96nMBA3G8C6Pl+gBMEQkBQmeRkeAalHRTy+VSVyAJakBEj1YpLrcd/LR1jZ0a3AHI4
+         La2pfu8L3Z8AxZlqmbPw7+qPJrIVoP0W4hu3FtXfexnHHrw0BW8Z+folUQoz3KNSrntF
+         QujQ==
+X-Gm-Message-State: APjAAAX3S2xF1qhhP0gCXs+QPakuE7f47Ry+xBtP2EHHeM46bvZV+zmd
+	czkT6Jf+xXU/4EhENffgszIaYOS1WuBtosaH5wr9pQ==
+X-Google-Smtp-Source: APXvYqyuNa94PLnoPGiyrEBNkcWkeo4IQevYwXNAy+9m/OTWblAYAJgbB28j4btr7t9cSrDA+LBcxyqV3jdSyfW0U6o=
+X-Received: by 2002:a0c:b446:: with SMTP id e6mr12863287qvf.159.1574413661601;
+ Fri, 22 Nov 2019 01:07:41 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20191122010334.12081-9-keescook@chromium.org>
-User-Agent: Mutt/1.12.2 (2019-09-21)
+References: <20191121181519.28637-1-keescook@chromium.org>
+In-Reply-To: <20191121181519.28637-1-keescook@chromium.org>
+From: Dmitry Vyukov <dvyukov@google.com>
+Date: Fri, 22 Nov 2019 10:07:29 +0100
+Message-ID: <CACT4Y+b3JZM=TSvUPZRMiJEPNH69otidRCqq9gmKX53UHxYqLg@mail.gmail.com>
+Subject: Re: [PATCH v2 0/3] ubsan: Split out bounds checker
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, 
+	Elena Petrova <lenaptr@google.com>, Alexander Potapenko <glider@google.com>, 
+	Linus Torvalds <torvalds@linux-foundation.org>, Dan Carpenter <dan.carpenter@oracle.com>, 
+	"Gustavo A. R. Silva" <gustavo@embeddedor.com>, Arnd Bergmann <arnd@arndb.de>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>, kasan-dev <kasan-dev@googlegroups.com>, 
+	LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, 
+	syzkaller <syzkaller@googlegroups.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On Thu, Nov 21, 2019 at 05:03:34PM -0800, Kees Cook wrote:
-> -asmlinkage void sha1_transform_ssse3(u32 *digest, const char *data,
-> -				     unsigned int rounds);
-> +asmlinkage void sha1_transform_ssse3(struct sha1_state *digest,
-> +				     const u8 *data, int rounds);
+On Thu, Nov 21, 2019 at 7:15 PM Kees Cook <keescook@chromium.org> wrote:
+>
+> v2:
+>     - clarify Kconfig help text (aryabinin)
+>     - add reviewed-by
+>     - aim series at akpm, which seems to be where ubsan goes through?
+> v1: https://lore.kernel.org/lkml/20191120010636.27368-1-keescook@chromium.org
+>
+> This splits out the bounds checker so it can be individually used. This
+> is expected to be enabled in Android and hopefully for syzbot. Includes
+> LKDTM tests for behavioral corner-cases (beyond just the bounds checker).
+>
+> -Kees
 
-Can you please use:
++syzkaller mailing list
 
-asmlinkage void sha1_transform_ssse3(struct sha1_state *state,
-				     const u8 *data, int blocks);
+This is great!
 
-I.e., rename 'digest' => 'state' and 'rounds' => 'blocks'.
+I wanted to enable UBSAN on syzbot for a long time. And it's
+_probably_ not lots of work. But it was stuck on somebody actually
+dedicating some time specifically for it.
+Kees, or anybody else interested, could you provide relevant configs
+that (1) useful for kernel, (2) we want 100% cleanliness, (3) don't
+fire all the time even without fuzzing? Anything else required to
+enable UBSAN? I don't see anything. syzbot uses gcc 8.something, which
+I assume should be enough (but we can upgrade if necessary).
 
-(Or alternatively 'sst' instead of 'state' would be okay since that's what
-sha{1,256,512}_block_fn uses, but 'state' seems much clearer to me.)
 
-Similarly for the other sha{1,256,512}_transform_*() functions.
 
-'digest' is confusing because it would typically be understood to mean the final
-digest, or maybe also the hash chaining state (e.g. u32[5] for SHA-1) if it's
-interpreted loosely.  I don't think it would typically be understand to also
-include buffered data like struct sha1_state does.
-
-'rounds' is confusing because the parameter is actually the number of blocks,
-not the number of rounds -- the latter being fixed for each SHA-* algorithm.
-Since sha{1,256,512}_block_fn already call it 'blocks' and this patch has to
-update the type of this parameter anyway, let's use that.
-
->  #ifdef CONFIG_AS_AVX
-> -asmlinkage void sha1_transform_avx(u32 *digest, const char *data,
-> -				   unsigned int rounds);
-> +asmlinkage void sha1_transform_avx(struct sha1_state *digest,
-> +				   const u8 *data, int rounds);
->  
-
-This patch is also still missing updates to the corresponding comments in the
-assembly files:
-
-	sha1_transform_avx()
-	sha1_transform_avx2()
-	sha256_transform_avx()
-	sha256_transform_rorx()
-	sha512_transform_ssse3() [references to D, M, and L remain]
-	sha512_transform_avx()
-	sha512_transform_rorx()
-
-FWIW, this patch is also independent from 1-7, so it could be sent out
-separately if it makes things any easier for you.
-
-Thanks,
-
-- Eric
+> Kees Cook (3):
+>   ubsan: Add trap instrumentation option
+>   ubsan: Split "bounds" checker from other options
+>   lkdtm/bugs: Add arithmetic overflow and array bounds checks
+>
+>  drivers/misc/lkdtm/bugs.c  | 75 ++++++++++++++++++++++++++++++++++++++
+>  drivers/misc/lkdtm/core.c  |  3 ++
+>  drivers/misc/lkdtm/lkdtm.h |  3 ++
+>  lib/Kconfig.ubsan          | 42 +++++++++++++++++++--
+>  lib/Makefile               |  2 +
+>  scripts/Makefile.ubsan     | 16 ++++++--
+>  6 files changed, 134 insertions(+), 7 deletions(-)
+>
+> --
+> 2.17.1
