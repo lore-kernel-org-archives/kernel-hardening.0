@@ -1,23 +1,24 @@
-Return-Path: <SRS0=ef45=ZU=lists.openwall.com=kernel-hardening-return-17447-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yBy0=ZV=lists.openwall.com=kernel-hardening-return-17448-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 24CBAC432C0
-	for <kernel-hardening@archiver.kernel.org>; Thu, 28 Nov 2019 16:15:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 63004C432C3
+	for <kernel-hardening@archiver.kernel.org>; Fri, 29 Nov 2019 08:43:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 736F6217BC
-	for <kernel-hardening@archiver.kernel.org>; Thu, 28 Nov 2019 16:14:59 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B58F7217AB
+	for <kernel-hardening@archiver.kernel.org>; Fri, 29 Nov 2019 08:43:04 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=lca.pw header.i=@lca.pw header.b="GE+oxFtg"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 736F6217BC
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=lca.pw
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17447-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11849 invoked by uid 550); 28 Nov 2019 16:14:52 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="uodPN27A"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B58F7217AB
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17448-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3829 invoked by uid 550); 29 Nov 2019 08:42:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,71 +26,61 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11815 invoked from network); 28 Nov 2019 16:14:51 -0000
+Received: (qmail 27962 invoked from network); 29 Nov 2019 04:39:34 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=lca.pw; s=google;
-        h=content-transfer-encoding:from:mime-version:subject:date:message-id
-         :references:cc:in-reply-to:to;
-        bh=swAWjg0mWyZStjQq/JoheoQkEGMMdPmGAhVcEaoY9Xg=;
-        b=GE+oxFtgNAcg6ATJOcfNRJ0lYQnf+CYQZpnNvAGWVvLlUMMm1ZBE0v2LoaG8Sv5gVx
-         TQ7KDT/FmW8ULozZHKpdmQCCD7H87rs5XpLvQ0OJoUtrmEczrh0XUs1KkB5FAKUbeJ4m
-         l31UyKZ7ZQYOb/TXZS07ah9oVgMfi/Wr1JngN75TOCq2pVOlbqGsj5MrAMyRANP21c65
-         0mV3BniwOvi1nuc4BbZU9lw6T/7WQQKPBQsgKyDIgLG01XYKRCPpJfubIv4/CXCYceyb
-         QpaybOq3bVONNtF/zn42GQcvuabSgrhPbVD50XQ/BHBf/MHV/875GCgDLLK4SHhAWzjI
-         26aQ==
+        d=gmail.com; s=20161025;
+        h=mime-version:from:date:message-id:subject:to;
+        bh=K+u/LiQ3cpbkmdZHIvcPiIKTKppdsGy7REIP819lmgc=;
+        b=uodPN27A5it0jCjR7C9UJ5SonADWkOhvDlDjLOTdi/HtDFriWhao00MxzlEHDKD41m
+         BLZl6fBoNdqKCr9DLb9lFrPvBdiG5yQ8lUerN1R2VqnbCcvVKUB1CCf+Q6SFW406wx4J
+         OGB7v7Qj5vVK1qodSxlG00Tf4nkHn7bqrG3AgkPYqRpV2HxPmpJaturTXH6QmZc/uUWS
+         Vqr4he73kNtbMQdwqc/Zi/rje32m9q4EgWXL9xd3fXXPbHKt/w5E094ru7ljvRrclEQp
+         E+nQ+IfjxyL19H4SVfha/FGfWpLLaeDtT7wR6ly6XDxwa6t8AVKy8NW56+RlXlAUz/VZ
+         McUg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:content-transfer-encoding:from:mime-version
-         :subject:date:message-id:references:cc:in-reply-to:to;
-        bh=swAWjg0mWyZStjQq/JoheoQkEGMMdPmGAhVcEaoY9Xg=;
-        b=LWvsMAbLNYo1Ioa8c0PkK2aVSPJEZlmXTFXJxIUcUCwVA34+9sJ6iiL1wzg7BSieQ6
-         PaFOKUZDQKDyaokUR+DI6mOxFu2V/B1xEjy/yGY4GYyKk3fYGSwN1aqnWk9DL7jSDWE+
-         SWOCce/VD6RFwKVWDu2ZUaqXP5pzqtEEWLK3gpiRNcS4KDxmZr5ZR3fS5XJW/M7OEY/m
-         kNj2dn/zR/fCG2l7Gq8bDRwX7m/nG5PozbuVZ6SlzIE6Gxe3RHvhTxCm8JHUraU23jVF
-         mwqGF5o8yYCzpXNFVK8wvhDGAnM8TkH5GG1Wt4PWyC0jKMxy4eyw+1DQvlQmeWlJXhmI
-         FOMw==
-X-Gm-Message-State: APjAAAXiVGflCp45HuNWXT6uH3IMFA/WPUxWMESspar7dZ8Di5JsPPQz
-	SAJrTYYJK3WZOLlKiEZpTsfUyw==
-X-Google-Smtp-Source: APXvYqwmn1ld2Vuf1VCvbx1/sMMTG95qkXhxsIXLZuBxGTgd524dbZVKZj5tWKroDxg56BukvcLyAA==
-X-Received: by 2002:a05:620a:13cf:: with SMTP id g15mr10594494qkl.195.1574957679840;
-        Thu, 28 Nov 2019 08:14:39 -0800 (PST)
-Content-Type: text/plain; charset=us-ascii
+        h=x-gm-message-state:mime-version:from:date:message-id:subject:to;
+        bh=K+u/LiQ3cpbkmdZHIvcPiIKTKppdsGy7REIP819lmgc=;
+        b=nwJUh0q4xIbV7hNFR0QelirwNE2GaIcZcGGiEDsM83sYWrWSFAV7u5uXxuLzYYgNL0
+         iCS34KXfKbkRsq+HCX5wJVLtYPxzRozHenTcMIDxd+LJ+U8uO4Ze0b1aaVl+CKtjY/nB
+         hrqV3/Y5SXPO76UKB3XSYAZT/MTdE49HHXB91EEtImEokZkK2wQ2CLTCkDRVsQ6tZowo
+         +XubjZs4mDoaXL87AHEWHAh4+lGLT2Le6LJTFFIxXwxLtSrTqKjUArmn39q8INzg5AWm
+         0hHVQ3FfE3/vxbLJt6tGtxwyTZ2+NADVJ6ZNs5zbbCr9U4wlAcNyjxkkWpcyaFknxJvh
+         L9/A==
+X-Gm-Message-State: APjAAAUa9lFBl6v81mGoo+hi+vc15C6SkxBr2FEB0RZdXExYkeqPMTfT
+	9EmtMBYF0crp2QtEqUjAWT4/nnEgWEYAIf7fFaePp2lG
+X-Google-Smtp-Source: APXvYqyrvEQOH6029NITMKuJ85dYHnbsDpVeR30GqOyKY2k/h857ykXGL9YzLL7COiU98kmIksX2JhZVKeGR2byxzPE=
+X-Received: by 2002:a05:6830:1501:: with SMTP id k1mr5037218otp.209.1575002362336;
+ Thu, 28 Nov 2019 20:39:22 -0800 (PST)
+MIME-Version: 1.0
+From: Kassad <aashad940@gmail.com>
+Date: Thu, 28 Nov 2019 23:39:11 -0500
+Message-ID: <CA+OAcEM94aAcaXB17Z2q9_iMWVEepCR8SycY6WSTcKYd+5rCAg@mail.gmail.com>
+Subject: Contributing to KSPP newbie
+To: kernel-hardening@lists.openwall.com, keescook@chromium.org
+Content-Type: multipart/alternative; boundary="00000000000053d8aa059874d0c8"
+
+--00000000000053d8aa059874d0c8
+Content-Type: text/plain; charset="UTF-8"
+
+Hey Kees,
+
+I'm 3rd university student interested in learning more about the linux
+kernel. I'm came across this subsystem, since it aligns with my interest in
+security. Do you think as a newbie this task
+https://github.com/KSPP/linux/issues/11 will be a good starting point?
+
+Thanks
+
+--00000000000053d8aa059874d0c8
+Content-Type: text/html; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
-From: Qian Cai <cai@lca.pw>
-Mime-Version: 1.0 (1.0)
-Subject: Re: [PATCH v2 0/3] ubsan: Split out bounds checker
-Date: Thu, 28 Nov 2019 11:14:38 -0500
-Message-Id: <4B3C1889-DE01-43A5-B0BD-0CFC33A5315A@lca.pw>
-References: <CACT4Y+a-0ZqGj0hQhOW=aUcjeQpf_487ASnnzdm_M2N7+z17Lg@mail.gmail.com>
-Cc: Kees Cook <keescook@chromium.org>,
- Andrew Morton <akpm@linux-foundation.org>,
- Andrey Ryabinin <aryabinin@virtuozzo.com>,
- Elena Petrova <lenaptr@google.com>,
- Alexander Potapenko <glider@google.com>,
- Linus Torvalds <torvalds@linux-foundation.org>,
- Dan Carpenter <dan.carpenter@oracle.com>,
- "Gustavo A. R. Silva" <gustavo@embeddedor.com>,
- Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>,
- kasan-dev <kasan-dev@googlegroups.com>,
- LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com,
- syzkaller <syzkaller@googlegroups.com>
-In-Reply-To: <CACT4Y+a-0ZqGj0hQhOW=aUcjeQpf_487ASnnzdm_M2N7+z17Lg@mail.gmail.com>
-To: Dmitry Vyukov <dvyukov@google.com>
-X-Mailer: iPhone Mail (17A878)
 
+<div dir=3D"ltr"><div>Hey Kees,</div><div><br></div><div>I&#39;m 3rd univer=
+sity student interested in learning more about the linux kernel. I&#39;m ca=
+me across this subsystem, since it aligns with my interest in security. Do =
+you think as a newbie this task <a href=3D"https://github.com/KSPP/linux/is=
+sues/11">https://github.com/KSPP/linux/issues/11</a> will be a good startin=
+g point?</div><div><br></div><div>Thanks</div></div>
 
-
-> On Nov 28, 2019, at 5:39 AM, 'Dmitry Vyukov' via kasan-dev <kasan-dev@goog=
-legroups.com> wrote:
->=20
-> But also LOCKDEP, KMEMLEAK, ODEBUG, FAULT_INJECTS, etc, all untested
-> too. Nobody knows what they produce, and if they even still detect
-> bugs, report false positives, etc.
-> But that's the kernel testing story...
-
-Yes, those work except PROVE_LOCKING where there are existing potential dead=
-locks are almost impossible to fix them properly now. I have been running th=
-ose for linux-next daily with all those debugging on where you can borrow th=
-e configs etc.
-
-https://github.com/cailca/linux-mm=
+--00000000000053d8aa059874d0c8--
