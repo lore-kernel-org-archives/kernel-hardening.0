@@ -1,4 +1,4 @@
-Return-Path: <SRS0=CsR0=Z3=lists.openwall.com=kernel-hardening-return-17465-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=1n6d=Z3=lists.openwall.com=kernel-hardening-return-17466-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EE2F2C43603
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Dec 2019 00:12:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 70A5EC43603
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Dec 2019 00:12:20 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 49C2B206DF
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Dec 2019 00:12:10 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C0CFD206DF
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Dec 2019 00:12:19 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="TYU9bizn"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 49C2B206DF
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="TOFLyf0y"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C0CFD206DF
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17465-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 29819 invoked by uid 550); 5 Dec 2019 00:10:38 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17466-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30049 invoked by uid 550); 5 Dec 2019 00:10:40 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,120 +25,88 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29770 invoked from network); 5 Dec 2019 00:10:36 -0000
+Received: (qmail 29910 invoked from network); 5 Dec 2019 00:10:38 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=Wom0YuEw+sxPN46lShSOJcleDb+6/uebIAUT9UJe6O4=;
-        b=TYU9biznX4Fr+oXplt8t6lZVC875R5GdQpDtGyoG7jHn1dhskEBnd09tvZhJGAFU/g
-         LrL5kio9op22EkuMbWapAdZnmHsJNSN3VvpSYWblpjxw1xSpBmEfPLeFLApm+7QNnUe1
-         b/lOwzkq65DhE5MjKUY1R1NraoVNUwtPyd4uk=
+        bh=+buIVC/1VPKvECsxMqNDPQ+i8AJPTJg9/lSk6De449o=;
+        b=TOFLyf0yU9XQEB/FeqiNbT3V7qcPRtpa6NeVrNIlQWiqVak0lOBZUpf1Yvd6G9OnJs
+         zZoCQoQD7O7Nl7/81xFWrt6uhDQwLfgPC/kMg1DZ9nekQl/hofNQHT34Lb2PaxDQZZUv
+         8pChH0mbB4xQmPqsjrYFEWKoH1hHaWA/Hxq4Q=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=Wom0YuEw+sxPN46lShSOJcleDb+6/uebIAUT9UJe6O4=;
-        b=hiybdenMdEyvIArLuSO1SVMrXvtzgyaxsxY2KEddIo2w8wagJ6ZHjXcduS5uS8SMHr
-         TFW3iJk3ENwXo332DuqndzWEca/1chr3VF1DBLFvHZVNsbG4ElKWqaamtOKQ571tRbm0
-         HhSSu1eT/xHACTe9Of16FIjOsefpmN8tFvVIoUzpN3JCnkpaZm+Gryxc0yksNoovQihg
-         R8D52Kbv/CgLA95aWZprztBOqiMuBAfHrLrxmL5SdrKOdZ1fVsgIsvePb6bBqDVdzm74
-         Yv+74mx662RdojZMuEw9G7HFaNL0jojPmAlCH4+gQl/i2YzprfI3mvcO2B1IX85jVmTf
-         dIbQ==
-X-Gm-Message-State: APjAAAVIPEhkVkhnwBdrvizdNGbqupC+bpwakJJirruYKe1z3ShhNVij
-	WV1Vp0rxUpS480o7WZ7Ddjn9aeUKYM8=
-X-Google-Smtp-Source: APXvYqx+rdjo7KYD764+cA3j+DYShZXYaqzplHV9aZLeeWqpbwUsyT49bWt0YB2+lFklCCpyLgsBCw==
-X-Received: by 2002:aa7:9afb:: with SMTP id y27mr6140094pfp.91.1575504624844;
-        Wed, 04 Dec 2019 16:10:24 -0800 (PST)
+        bh=+buIVC/1VPKvECsxMqNDPQ+i8AJPTJg9/lSk6De449o=;
+        b=egzuyxWzS3uWZv+yyPrYi2G1S5MOUWvpBTlHgMcAD8SPcgtHweHjpMclP52l2TnxtF
+         ZPa/jjHTKTCWMbZOIRlVyHXSyuTGACkQEkNnsuqFKtuHG/cFJTmiG+BGw5vuqE3/pZU7
+         NkPMF8vkWCVzjkyUFDx7hrHgsQOHYfR6+IyrnNffBs9ukn/TBDwTSQHfCGQzS4IGjXF6
+         +nES+sRuQ7o+XiTcQ6YEHln8hmZbbK3bP9aSx8xl5+0thjThiORNh7wrqyKsCSBhx7/t
+         FmLWFXo9OSc+nJO0mH3+EsIWbjIgZH28kfpTAFiW+BQmCdxoIDCIO844sM2UkEJkJYiQ
+         DnZw==
+X-Gm-Message-State: APjAAAW+0LdN5gfdiUQK1g3N3peb3785U/rVSHLI0TXRXWdFJdU/kiSz
+	BeULYqCKiCG+zN8SM6bW/cVMFbKhYwc=
+X-Google-Smtp-Source: APXvYqzgIu9igh7MFHq8gluXRTDKpLsMAIXgdWsDG2JqoQ+PmfOnBN59SFV+7mTZDoxKqvhnDHf7wQ==
+X-Received: by 2002:a17:902:7083:: with SMTP id z3mr6280284plk.215.1575504626887;
+        Wed, 04 Dec 2019 16:10:26 -0800 (PST)
 From: Thomas Garnier <thgarnie@chromium.org>
 To: kernel-hardening@lists.openwall.com
 Cc: kristen@linux.intel.com,
 	keescook@chromium.org,
 	Thomas Garnier <thgarnie@chromium.org>,
-	Juergen Gross <jgross@suse.com>,
-	Thomas Hellstrom <thellstrom@vmware.com>,
-	"VMware, Inc." <pv-drivers@vmware.com>,
 	Thomas Gleixner <tglx@linutronix.de>,
 	Ingo Molnar <mingo@redhat.com>,
 	Borislav Petkov <bp@alien8.de>,
 	"H. Peter Anvin" <hpa@zytor.com>,
 	x86@kernel.org,
-	virtualization@lists.linux-foundation.org,
+	Peter Zijlstra <peterz@infradead.org>,
+	Rasmus Villemoes <linux@rasmusvillemoes.dk>,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v10 10/11] x86/paravirt: Adapt assembly for PIE support
-Date: Wed,  4 Dec 2019 16:09:47 -0800
-Message-Id: <20191205000957.112719-11-thgarnie@chromium.org>
+Subject: [PATCH v10 11/11] x86/alternatives: Adapt assembly for PIE support
+Date: Wed,  4 Dec 2019 16:09:48 -0800
+Message-Id: <20191205000957.112719-12-thgarnie@chromium.org>
 X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
 In-Reply-To: <20191205000957.112719-1-thgarnie@chromium.org>
 References: <20191205000957.112719-1-thgarnie@chromium.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-If PIE is enabled, switch the paravirt assembly constraints to be
-compatible. The %c/i constrains generate smaller code so is kept by
-default.
+Change the assembly options to work with pointers instead of integers.
+The generated code is the same PIE just ensures input is a pointer.
 
 Position Independent Executable (PIE) support will allow to extend the
 KASLR randomization range below 0xffffffff80000000.
 
 Signed-off-by: Thomas Garnier <thgarnie@chromium.org>
-Acked-by: Juergen Gross <jgross@suse.com>
 ---
- arch/x86/include/asm/paravirt_types.h | 32 +++++++++++++++++++++++----
- 1 file changed, 28 insertions(+), 4 deletions(-)
+ arch/x86/include/asm/alternative.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/arch/x86/include/asm/paravirt_types.h b/arch/x86/include/asm/paravirt_types.h
-index 84812964d3dd..82f7ca22e0ae 100644
---- a/arch/x86/include/asm/paravirt_types.h
-+++ b/arch/x86/include/asm/paravirt_types.h
-@@ -336,9 +336,32 @@ extern struct paravirt_patch_template pv_ops;
- #define PARAVIRT_PATCH(x)					\
- 	(offsetof(struct paravirt_patch_template, x) / sizeof(void *))
- 
-+#ifdef CONFIG_X86_PIE
-+#define paravirt_opptr_call "a"
-+#define paravirt_opptr_type "p"
-+
-+/*
-+ * Alternative patching requires a maximum of 7 bytes but the relative call is
-+ * only 6 bytes. If PIE is enabled, add an additional nop to the call
-+ * instruction to ensure patching is possible.
-+ *
-+ * Without PIE, the call is reg/mem64:
-+ * ff 14 25 68 37 02 82    callq  *0xffffffff82023768
-+ *
-+ * With PIE, it is relative to %rip and take 1-less byte:
-+ * ff 15 fa d9 ff 00       callq  *0xffd9fa(%rip) # <pv_ops+0x30>
-+ *
-+ */
-+#define PARAVIRT_CALL_POST  "nop;"
-+#else
-+#define paravirt_opptr_call "c"
-+#define paravirt_opptr_type "i"
-+#define PARAVIRT_CALL_POST  ""
-+#endif
-+
- #define paravirt_type(op)				\
- 	[paravirt_typenum] "i" (PARAVIRT_PATCH(op)),	\
--	[paravirt_opptr] "i" (&(pv_ops.op))
-+	[paravirt_opptr] paravirt_opptr_type (&(pv_ops.op))
- #define paravirt_clobber(clobber)		\
- 	[paravirt_clobber] "i" (clobber)
- 
-@@ -377,9 +400,10 @@ int paravirt_disable_iospace(void);
-  * offset into the paravirt_patch_template structure, and can therefore be
-  * freely converted back into a structure offset.
-  */
--#define PARAVIRT_CALL					\
--	ANNOTATE_RETPOLINE_SAFE				\
--	"call *%c[paravirt_opptr];"
-+#define PARAVIRT_CALL						\
-+	ANNOTATE_RETPOLINE_SAFE					\
-+	"call *%" paravirt_opptr_call "[paravirt_opptr];"	\
-+	PARAVIRT_CALL_POST
+diff --git a/arch/x86/include/asm/alternative.h b/arch/x86/include/asm/alternative.h
+index 13adca37c99a..43a148042656 100644
+--- a/arch/x86/include/asm/alternative.h
++++ b/arch/x86/include/asm/alternative.h
+@@ -243,7 +243,7 @@ static inline int alternatives_text_reserved(void *start, void *end)
+ /* Like alternative_io, but for replacing a direct call with another one. */
+ #define alternative_call(oldfunc, newfunc, feature, output, input...)	\
+ 	asm_inline volatile (ALTERNATIVE("call %P[old]", "call %P[new]", feature) \
+-		: output : [old] "i" (oldfunc), [new] "i" (newfunc), ## input)
++		: output : [old] "X" (oldfunc), [new] "X" (newfunc), ## input)
  
  /*
-  * These macros are intended to wrap calls through one of the paravirt
+  * Like alternative_call, but there are two features and respective functions.
+@@ -256,8 +256,8 @@ static inline int alternatives_text_reserved(void *start, void *end)
+ 	asm_inline volatile (ALTERNATIVE_2("call %P[old]", "call %P[new1]", feature1,\
+ 		"call %P[new2]", feature2)				      \
+ 		: output, ASM_CALL_CONSTRAINT				      \
+-		: [old] "i" (oldfunc), [new1] "i" (newfunc1),		      \
+-		  [new2] "i" (newfunc2), ## input)
++		: [old] "X" (oldfunc), [new1] "X" (newfunc1),		      \
++		  [new2] "X" (newfunc2), ## input)
+ 
+ /*
+  * use this macro(s) if you need more than one output parameter
 -- 
 2.24.0.393.g34dc348eaf-goog
 
