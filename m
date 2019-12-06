@@ -1,24 +1,23 @@
-Return-Path: <SRS0=M4XE=Z4=lists.openwall.com=kernel-hardening-return-17484-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=FFnf=Z4=lists.openwall.com=kernel-hardening-return-17485-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	UNWANTED_LANGUAGE_BODY,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
+	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 41AE0C43603
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:16:14 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 32FADC43603
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:16:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8E759206DB
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:16:13 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 80F7D21835
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:16:23 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="r3PF25I8"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8E759206DB
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="FrhxzfWX"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 80F7D21835
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17484-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22421 invoked by uid 550); 6 Dec 2019 22:14:39 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17485-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23679 invoked by uid 550); 6 Dec 2019 22:14:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,41 +25,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22329 invoked from network); 6 Dec 2019 22:14:38 -0000
+Received: (qmail 23601 invoked from network); 6 Dec 2019 22:14:40 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=Ve3ap/e8LZQd2dbv+oe7rMBjURea5FcvbovcdBkDba8=;
-        b=r3PF25I8b9gh7TGG4nyyWOG/IBeyi5leohyetpHGT7HVJVhKrS0Kq4x36qkr37xPQZ
-         H4HOZxl0BVJe13eGlGPV1yZKSRRS5AmoOeRlUDllq58XEGXxaFeTrlkb9BrV5kcixQbm
-         XbGbrkKiH70yhU3gMykfI079m4y0ZDpdOP7kIIKS/yBz18w4YMZf4Pr4H9aBR21ygtcB
-         kY14G1EByPoZ/HSscjak3f91JNKl95S2IyZpSGv5MX3WaPMUnLjTgAsAI0PC749M53m0
-         8RfjY0MYNA3UUEnoDTDY3HwUrUHVLuT76W4oleiH3t8Kx7xMLKek/nE2jk+/o2pgp2U5
-         oBkw==
+        bh=8FJHqLK+9qp1SI0ZtY8nP7Vb0Kv4oQj2LgBWqplCpRM=;
+        b=FrhxzfWXmzsxE4agp2rhmb4i9ATROH/GqZDqVq2Imv+d8/yhy1TAupBbdgdQuSdfT5
+         6nQ5+3t9PECXIMWiDkrxMAiTDpvy1ngzEasXmXrAdNopBfmN/Bna9sPRCkNQn5V572bx
+         eywVNSAedzToawJGzxolT5bl0ETab6Tw7CSJ2i0Uja/LPJMZj7f7aPe8T4bfjdxlPjQS
+         3rIjn9HdeJXWzsniPYQzRfVJY1BL/sjidsk9JqsZiiFE1dkWT9OuAz7rz3hw05LyvVwP
+         aif6TsG/Uxd0YqyKA9qyIH/plzSKaLaWabPJbVwtZIh3ODY4G/YpLNqbHQXB/I8WrOae
+         /1eQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=Ve3ap/e8LZQd2dbv+oe7rMBjURea5FcvbovcdBkDba8=;
-        b=IZCveJKj7IoL9vlppiYf0cnr3lZC+6fP1yXBXdvV8MPCqWbdD5UgGHSWPWGqAuVJ2M
-         qeUukEtrH9eEEiFt1zYz2hMLEyIyZEb6XRaOD6rKr15iVeTmKp7RA8tspxtKzzQhz9HK
-         exXePcTuaq3xWTR25k8sSL8RsjdIvm0zJ4NPYRytBPh+5RmQVxkwHDsoVzkDFF6qeh9g
-         W6yJ4J7YUNJnTtZ8P+zazQUEzwMR4QWAt1um/9h34v4kIoEbgxAsr47wLh/Tic0P1VyO
-         ZarLGM1jK6vHzyEPpUTPE6Ili+0KJZTDq0zEQD0B26s/G15r4//ZsP0nuRZ2dZqMX3R9
-         NcHw==
-X-Gm-Message-State: APjAAAWa/b3M9zkDCsvKTNKWxADJ6sDFFtOezBVfnz5cs+MwLKg5Zapn
-	N2yZroVedXNtoJhAmN1lJ6yK9Xa3WkQ3n9mO7ds=
-X-Google-Smtp-Source: APXvYqwk2eRK+EeshXSfp5tSqqdwzFGqYQg2Gt1CoIRgkLdeR9mCxHtnbRaIQkXosCwRykWO94sSQGC7aLJzBhMw49s=
-X-Received: by 2002:a63:220b:: with SMTP id i11mr6011463pgi.50.1575670466460;
- Fri, 06 Dec 2019 14:14:26 -0800 (PST)
-Date: Fri,  6 Dec 2019 14:13:48 -0800
+        bh=8FJHqLK+9qp1SI0ZtY8nP7Vb0Kv4oQj2LgBWqplCpRM=;
+        b=cccdMCVne/eKPpse+XOZcxjfmyI+08EAEC1EBM030/hv/wbNlp2eNBv9cz7YDSaV6k
+         dwY0TYz97ktuTdqzy0u2m+nRdqtF0ze6qacxIg1pJtYsQbQXr2YZtonEXkbZUbFzRppc
+         tYr/qmJiAaCLzpeJm4zPFKwp2TSvKMJkW1Tjx9MLWAey4AjWp1jXB1zT/aeCv/O4tE11
+         /NUBcNjvniSHKQ2Lko2vsEnXz7hy4x0Y6MeeH/SirVfvc7buqF/AbCtjPyso/WUtElRX
+         wpSnnAjVo3334EfD30x+BJjMkOuGZF/vRf9f3zvKty6OL5EGU9HIyRgcINncnAFjV7ex
+         /J3g==
+X-Gm-Message-State: APjAAAX5H/JYuQ1f/Gi7uHqEaknnmYQSgtnMMyB8OdSTuA27XurQ44vy
+	+ftSXpk+YexTVGhs7vDwWfcUYP9O5Ko9X+m6m2g=
+X-Google-Smtp-Source: APXvYqzqfWQ39jRufjAhL7TZCDF47F43HjTHP8BNawKKpBRXjo9R8WHVKYYkig1q6KIkZysnArdkgny3hm72jaBZ4w0=
+X-Received: by 2002:a65:6245:: with SMTP id q5mr6050849pgv.347.1575670468844;
+ Fri, 06 Dec 2019 14:14:28 -0800 (PST)
+Date: Fri,  6 Dec 2019 14:13:49 -0800
 In-Reply-To: <20191206221351.38241-1-samitolvanen@google.com>
-Message-Id: <20191206221351.38241-13-samitolvanen@google.com>
+Message-Id: <20191206221351.38241-14-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20191206221351.38241-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
-Subject: [PATCH v6 12/15] arm64: vdso: disable Shadow Call Stack
+Subject: [PATCH v6 13/15] arm64: disable SCS for hypervisor code
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -74,30 +73,28 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Shadow stacks are only available in the kernel, so disable SCS
-instrumentation for the vDSO.
+Filter out CC_FLAGS_SCS for code that runs at a different exception
+level.
 
+Suggested-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
 Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 ---
- arch/arm64/kernel/vdso/Makefile | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ arch/arm64/kvm/hyp/Makefile | 3 +++
+ 1 file changed, 3 insertions(+)
 
-diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
-index dd2514bb1511..a87a4f11724e 100644
---- a/arch/arm64/kernel/vdso/Makefile
-+++ b/arch/arm64/kernel/vdso/Makefile
-@@ -25,7 +25,7 @@ ccflags-y += -DDISABLE_BRANCH_PROFILING
- 
- VDSO_LDFLAGS := -Bsymbolic
- 
--CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os
-+CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS)
- KBUILD_CFLAGS			+= $(DISABLE_LTO)
- KASAN_SANITIZE			:= n
- UBSAN_SANITIZE			:= n
+diff --git a/arch/arm64/kvm/hyp/Makefile b/arch/arm64/kvm/hyp/Makefile
+index ea710f674cb6..17ea3da325e9 100644
+--- a/arch/arm64/kvm/hyp/Makefile
++++ b/arch/arm64/kvm/hyp/Makefile
+@@ -28,3 +28,6 @@ GCOV_PROFILE	:= n
+ KASAN_SANITIZE	:= n
+ UBSAN_SANITIZE	:= n
+ KCOV_INSTRUMENT	:= n
++
++# remove the SCS flags from all objects in this directory
++KBUILD_CFLAGS := $(filter-out $(CC_FLAGS_SCS), $(KBUILD_CFLAGS))
 -- 
 2.24.0.393.g34dc348eaf-goog
 
