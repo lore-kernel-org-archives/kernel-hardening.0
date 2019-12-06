@@ -1,4 +1,4 @@
-Return-Path: <SRS0=FRCT=Z4=lists.openwall.com=kernel-hardening-return-17479-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=VFD4=Z4=lists.openwall.com=kernel-hardening-return-17480-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
 	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A60FCC43603
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:15:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 433C8C2D0C1
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:15:29 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F17952245C
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:15:17 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 93373206DB
+	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:15:28 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="SXuPCZw5"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F17952245C
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Ndn1mcgg"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 93373206DB
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17479-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20178 invoked by uid 550); 6 Dec 2019 22:14:27 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17480-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20392 invoked by uid 550); 6 Dec 2019 22:14:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,41 +25,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20031 invoked from network); 6 Dec 2019 22:14:26 -0000
+Received: (qmail 20315 invoked from network); 6 Dec 2019 22:14:28 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=dSkqIg9MhTEqSRuUPD+wLwf3dmJwcSH5rhdG+lQGY0Y=;
-        b=SXuPCZw5St6pvwTst8kmf5KElVFLKMFMp+CAkmkUaQLus5cyU/8kqr6V5JxAIwmDV8
-         RWdDAn+WZ18vV4T9eqQoonAjHW3Rzl/rq+nVdoOiKpP2KO897WS7qgb0uHjTrgJkEo1F
-         0w2fuPU7iE//Mhmc1AStldjXFL0gQujdjqFyhIQqo0PX3BYn+fe6w0aILNtXks9GiWbX
-         y15Zqo4dF7akKdP8o3QHjsZgpRBi+Vh9QT2pwFLxPBRKjS+x9TmrUCopcszBpJQvv4wL
-         EQLbAdHZz6TZ6uqyOto/Ft9UcaQoXc6w3u8Hni2mOOXu4O7zVJWi0IlEALO+ifSUBL0a
-         F4QA==
+        bh=l4zxu+Ve1HL3tnwJkQPbvyP6wBLrUpssPL9/jgnN43M=;
+        b=Ndn1mcggyHBtKAX2XvpEyO1cvzn5t5Rt5EL74f5oQNI8xON9HZdOIOpGfCHheh4ROb
+         ZMN247KbIgaMPUDc6e3RJ7DYNG8PST7u+oWWP+k1N+jSEe2J/d2Hj+oq/JPjyElDDN0s
+         1bajoDV+ePEiqhlZBkx0JT+WTHRbNVJ9xUb/RgEkuqCSSWGQ87CELue3gJUsVkVLLj1/
+         jMc9JOE96jedSwbK6Jh+owxavogPTbBQc3Lm1+HVnkCfDUu1/SEqZVkaAo5gGN3APpx7
+         /ziJCrqylxkp6ltt8RGxlVAjAuQ46tyN3U7+ZPVlmKLcHn2gKg0ggIkQts840wwlTABV
+         1Rpw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=dSkqIg9MhTEqSRuUPD+wLwf3dmJwcSH5rhdG+lQGY0Y=;
-        b=Ttw7LJXCfMpNwPK4N6uZE7yO0z68yt0i/MnXe886btWqsvO3AXYuOgbqsd/Hb9YKQ6
-         P45XlTJ9t8LsWKBOYYIHRm5KvnY6ekT+BHnwsQaDSCdQorTgA0G2+FbrPi4xveY1Be7e
-         T9A4qqTc0+kDr6L9PBGgW2FMlRQ1DQUxEyzreLYtY21pT0ivI4h2LSfPqKHhHSzVKDv/
-         51zv4pshzjSOMyHiZ5Wvsu+FyZ6PjrwYMTyxzOP1Kq09eoP/qRA8O9RKc/z50WYbwNSh
-         iMr4o0FoCW7J5xGWB2zcswDyyAlHQev16LjyjeGBZnIcz7NLYvV25MemTvTVJFHntq8N
-         dqFA==
-X-Gm-Message-State: APjAAAWg5N+/zLXGC/U9a6gUDtIqGM6wChrR7MSj+KdLbcGGrb8xfHTI
-	BFH5aLqF7aEe+XDZx148TGp4haO/NStKS/9d4gM=
-X-Google-Smtp-Source: APXvYqwr9gV3C2U9Vw8KNYzBqn9JcBiVcajDSJ2lm7uPyamXFOot36lh81Wh0+CfZKTc60xlWZW4gj6RW7XavjkgTmE=
-X-Received: by 2002:a63:4b52:: with SMTP id k18mr5960727pgl.371.1575670454000;
- Fri, 06 Dec 2019 14:14:14 -0800 (PST)
-Date: Fri,  6 Dec 2019 14:13:43 -0800
+        bh=l4zxu+Ve1HL3tnwJkQPbvyP6wBLrUpssPL9/jgnN43M=;
+        b=G/DbhBt7LFpkChDtWISIzkauENtJp1xvfq1Qyxse1MunPYN19BBP6AvOpSN+JqN++Y
+         eApF79Jsiq+4M72wJCfmgZV3SD8b1KtB/zgmeIADn3HVmZAKoxOu0ZQ/12qjueQXepWy
+         EDLKt+xCuGMpc20n/EaQoAUSdidVOIERZgUftEyMzwQfUQaCUp5l7V/qesJPGOv0MQQg
+         Tb0mPCMWs+zym4U24fVSNw6MyUKTq+0zD9OwVXI+bvBcR99Xn8/Ozmf/xcKkSqcyxQlc
+         Soi5ZiMR1LA24JC11W9gpVGr0z9jIi2fUS+WsaZEitbilwYuu16YoWbGbUJn2A0f3+9J
+         Jjhw==
+X-Gm-Message-State: APjAAAVarTiqV3BSJOTVZNz74E6n7iW/YyNXJiyKeZ0n8Sgq8/NEU1w4
+	vLnMmOxl/5k0BtEJnHBV1FfHzNTYeWWdv4Y+CxM=
+X-Google-Smtp-Source: APXvYqxNGRCIoJl/pi6uCzgUEQ/oTKWPk8JXk9O2ag4WW88WJwvi2rvTurqocnD02MdVkQxGa8htdlPNVJwyO2G3YuU=
+X-Received: by 2002:a65:4345:: with SMTP id k5mr6095564pgq.252.1575670456528;
+ Fri, 06 Dec 2019 14:14:16 -0800 (PST)
+Date: Fri,  6 Dec 2019 14:13:44 -0800
 In-Reply-To: <20191206221351.38241-1-samitolvanen@google.com>
-Message-Id: <20191206221351.38241-8-samitolvanen@google.com>
+Message-Id: <20191206221351.38241-9-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20191206221351.38241-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
-Subject: [PATCH v6 07/15] scs: add support for stack usage debugging
+Subject: [PATCH v6 08/15] arm64: disable function graph tracing with SCS
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -73,72 +73,34 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Implements CONFIG_DEBUG_STACK_USAGE for shadow stacks. When enabled,
-also prints out the highest shadow stack usage per process.
+The graph tracer hooks returns by modifying frame records on the
+(regular) stack, but with SCS the return address is taken from the
+shadow stack, and the value in the frame record has no effect. As we
+don't currently have a mechanism to determine the corresponding slot
+on the shadow stack (and to pass this through the ftrace
+infrastructure), for now let's disable the graph tracer when SCS is
+enabled.
 
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 ---
- kernel/scs.c | 39 +++++++++++++++++++++++++++++++++++++++
- 1 file changed, 39 insertions(+)
+ arch/arm64/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/kernel/scs.c b/kernel/scs.c
-index 5245e992c692..ad74d13f2c0f 100644
---- a/kernel/scs.c
-+++ b/kernel/scs.c
-@@ -184,6 +184,44 @@ int scs_prepare(struct task_struct *tsk, int node)
- 	return 0;
- }
- 
-+#ifdef CONFIG_DEBUG_STACK_USAGE
-+static inline unsigned long scs_used(struct task_struct *tsk)
-+{
-+	unsigned long *p = __scs_base(tsk);
-+	unsigned long *end = scs_magic(p);
-+	unsigned long s = (unsigned long)p;
-+
-+	while (p < end && READ_ONCE_NOCHECK(*p))
-+		p++;
-+
-+	return (unsigned long)p - s;
-+}
-+
-+static void scs_check_usage(struct task_struct *tsk)
-+{
-+	static DEFINE_SPINLOCK(lock);
-+	static unsigned long highest;
-+	unsigned long used = scs_used(tsk);
-+
-+	if (used <= highest)
-+		return;
-+
-+	spin_lock(&lock);
-+
-+	if (used > highest) {
-+		pr_info("%s (%d): highest shadow stack usage: %lu bytes\n",
-+			tsk->comm, task_pid_nr(tsk), used);
-+		highest = used;
-+	}
-+
-+	spin_unlock(&lock);
-+}
-+#else
-+static inline void scs_check_usage(struct task_struct *tsk)
-+{
-+}
-+#endif
-+
- bool scs_corrupted(struct task_struct *tsk)
- {
- 	unsigned long *magic = scs_magic(__scs_base(tsk));
-@@ -200,6 +238,7 @@ void scs_release(struct task_struct *tsk)
- 		return;
- 
- 	WARN_ON(scs_corrupted(tsk));
-+	scs_check_usage(tsk);
- 
- 	scs_account(tsk, -1);
- 	task_set_scs(tsk, NULL);
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index b1b4476ddb83..49e5f94ff4af 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -149,7 +149,7 @@ config ARM64
+ 	select HAVE_FTRACE_MCOUNT_RECORD
+ 	select HAVE_FUNCTION_TRACER
+ 	select HAVE_FUNCTION_ERROR_INJECTION
+-	select HAVE_FUNCTION_GRAPH_TRACER
++	select HAVE_FUNCTION_GRAPH_TRACER if !SHADOW_CALL_STACK
+ 	select HAVE_GCC_PLUGINS
+ 	select HAVE_HW_BREAKPOINT if PERF_EVENTS
+ 	select HAVE_IRQ_TIME_ACCOUNTING
 -- 
 2.24.0.393.g34dc348eaf-goog
 
