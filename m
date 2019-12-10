@@ -1,23 +1,23 @@
-Return-Path: <SRS0=1U9i=Z4=lists.openwall.com=kernel-hardening-return-17487-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=0mXB=2A=lists.openwall.com=kernel-hardening-return-17488-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-14.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
-	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A2A2AC43603
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:16:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 127F9C00454
+	for <kernel-hardening@archiver.kernel.org>; Tue, 10 Dec 2019 22:05:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C23DA206DB
-	for <kernel-hardening@archiver.kernel.org>; Fri,  6 Dec 2019 22:16:42 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 324212053B
+	for <kernel-hardening@archiver.kernel.org>; Tue, 10 Dec 2019 22:05:45 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="IKUt7ka9"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C23DA206DB
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="oQoy24F4"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 324212053B
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17487-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24166 invoked by uid 550); 6 Dec 2019 22:14:46 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17488-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18039 invoked by uid 550); 10 Dec 2019 22:05:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,275 +25,176 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24054 invoked from network); 6 Dec 2019 22:14:45 -0000
+Received: (qmail 17997 invoked from network); 10 Dec 2019 22:05:37 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=RFQeZBUfRbHmuBkixdwdHyK03/i2WwDYL6zKZ0PVNPE=;
-        b=IKUt7ka9OPp04nuNFtbFmNhMED5ty9XakjQvaYcOsgsRH/SYzLcVVpMACFeRRQLdNK
-         a0mE4lnUMI89KyyiE6NlXFQ2m8GZLvuy4PR6RLdT9AEzgHkAZhU6G5b+ckma8n0/nC3A
-         uTP3fT2oiMISqhQbVaIW4gO4gBClTWdiTL7rm1J1XulV10rrt/IDRTieIL/GcGuQQsG4
-         6Egq9+uHYBwiCGJ5LMSdZgryo1aNlorDmLG/eGF39k5gHk7IQUupl1+Ijf3qbFwsleLT
-         LLpe6caJ3SjrMFXnNFw4D60rd2Nj6RFgfq1c/qqHzMkzJxwAtqhrgHtf2Hz7J2QnnbA5
-         OZRg==
+        bh=E8j1utx508S5/TvNItlGvK7J8skQp+XJtz585eAmQOY=;
+        b=oQoy24F4W+3HEnQHY3kqxhyCRrgbihW2p+NtMsvMO+yWUSnGsN7KjaZ/j12OZqylPG
+         RDTSD78gK1nTi8JszGUq2QB3PcUE5yKacpkgCSbhkdr+OMP/LIf1oBF3QHqfa5HN5H4X
+         V98yTsV/FAVlwMRhY5YVG7FsTnJO9UEbXI3XWtVx7U9BMHQkZMLRKChzan7V91XQWURr
+         1aPZgtmtuhs9aHOC66Ef62wcCUDJXaLLJwwWih8PMjugAGqOnJb/X+O0jLbIinIqwhH1
+         WsP7k1R2W5hFniX99RJGyvIkpX/mJTbd59jsax0I2eS0lBUOoKtwQPHvuEcRn0H1jt3W
+         l3qg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc;
-        bh=RFQeZBUfRbHmuBkixdwdHyK03/i2WwDYL6zKZ0PVNPE=;
-        b=h3AVBnxs+0bia7DMaGYBt+sYcP7ea/AicPYIWZLVEvaKLtJVZJUZaxT79E5RBGdqTd
-         YsfSvwyiXaknAcx2MQq5uYsHqsSB2Jo89KAxRS2qAeEY16gP5gNhlpn6yDGkSZ37FvzK
-         b0osxNoQ3Lp+Ay7emJ8EXrs/clULm0GHTUWYrcQ/+gXRiuEMh1tRg56CxztRNJJ8C5db
-         sFIGvEFHLTeaieSDEnDaGkfjhPrrM6Qgx+lFtQ0aW8ZX+gG78nsnNIgEVE5DkRna5mSH
-         cetu7STvAlr8wbbfKuw8D5s1absZz11yfCws5JQSfCUcypCFd230fb2nSi7OeEVfH9Jc
-         aG7A==
-X-Gm-Message-State: APjAAAU+Uks9UZs46ip6F6WIHWZXgsqdSQ011nFAuCWYKb2i1spgaz0W
-	30Wv9+0TfUp0kbAoZ3g8U7TPmsEfDzjytReb+QM=
-X-Google-Smtp-Source: APXvYqxpGanN1bCoq5Nmn3aCH0YBZJAgBLdmk2cjRtHg7acgtGNdUOb0ffYjmscMm2O9CKp+3KwgpjzPR+bJF894TjI=
-X-Received: by 2002:a63:3484:: with SMTP id b126mr5874359pga.17.1575670473753;
- Fri, 06 Dec 2019 14:14:33 -0800 (PST)
-Date: Fri,  6 Dec 2019 14:13:51 -0800
-In-Reply-To: <20191206221351.38241-1-samitolvanen@google.com>
-Message-Id: <20191206221351.38241-16-samitolvanen@google.com>
-Mime-Version: 1.0
-References: <20191018161033.261971-1-samitolvanen@google.com> <20191206221351.38241-1-samitolvanen@google.com>
-X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
-Subject: [PATCH v6 15/15] arm64: scs: add shadow stacks for SDEI
-From: Sami Tolvanen <samitolvanen@google.com>
-To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
-	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>
-Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>, 
-	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>, 
-	Nick Desaulniers <ndesaulniers@google.com>, Jann Horn <jannh@google.com>, 
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
-	Masahiro Yamada <yamada.masahiro@socionext.com>, clang-built-linux@googlegroups.com, 
-	kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, 
-	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=E8j1utx508S5/TvNItlGvK7J8skQp+XJtz585eAmQOY=;
+        b=McMno6ZKoMZHXyIySNsolcsozjNgPRUzQWyX7+7iJMvUrPClbNaRqaxqh9HYoP0kbH
+         mhwHPRDUqQhhnKXHCBraGfDnfyu77Fh050kdeDEH7ljChJkyhL3NjeFSJPsQ0vi9rQAz
+         JFSHRknLzRef9LOyLT829qMAzevTlWaP8DcxGJBB3Ax+YTbcDFpOVoQ7UiJTldCLaIoc
+         8ekIi+Xt1ek05Gxo5NPAnu+9j22VbTMRsISY/QwOj/B6zl7hrSCfMNes50ceH6aC//n2
+         5gzjdKW1ghLoCwzejRYcQZoXkjrXmI0YXMWiJ88f+6oUOcOWbNMYefYNcKp1fj7aZOf8
+         0lgw==
+X-Gm-Message-State: APjAAAU4JAB7QFj+FIPYoMDlUYqoHmiv+/UdMbY/W+cB7T2AUut6wmnt
+	Bi4LA+QElLni8pLA4JfuIMOpbJruvkwFpL+37VKs8w==
+X-Google-Smtp-Source: APXvYqw9AHcZc7P3F/ugnCZTqo/2VwWhuZ4lejg+yte3f6J4FIMjtd/N6HKWzeO7qr80QJRuV8TXt6qnPUCzanMfF5o=
+X-Received: by 2002:a9d:6481:: with SMTP id g1mr29371otl.180.1576015524724;
+ Tue, 10 Dec 2019 14:05:24 -0800 (PST)
+MIME-Version: 1.0
+References: <20191210155742.5844-1-axboe@kernel.dk> <20191210155742.5844-8-axboe@kernel.dk>
+In-Reply-To: <20191210155742.5844-8-axboe@kernel.dk>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 10 Dec 2019 23:04:58 +0100
+Message-ID: <CAG48ez3yh7zRhMyM+VhH1g9Gp81_3FMjwAyj3TB6HQYETpxHmA@mail.gmail.com>
+Subject: Re: [PATCH 07/11] io_uring: use atomic_t for refcounts
+To: Jens Axboe <axboe@kernel.dk>
+Cc: io-uring <io-uring@vger.kernel.org>, Will Deacon <will@kernel.org>, 
+	Kees Cook <keescook@chromium.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
 Content-Type: text/plain; charset="UTF-8"
 
-This change adds per-CPU shadow call stacks for the SDEI handler.
-Similarly to how the kernel stacks are handled, we add separate shadow
-stacks for normal and critical events.
+[context preserved for additional CCs]
 
-Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
----
- arch/arm64/include/asm/scs.h |   2 +
- arch/arm64/kernel/entry.S    |  14 ++++-
- arch/arm64/kernel/scs.c      | 106 +++++++++++++++++++++++++++++------
- arch/arm64/kernel/sdei.c     |   7 +++
- 4 files changed, 112 insertions(+), 17 deletions(-)
+On Tue, Dec 10, 2019 at 4:57 PM Jens Axboe <axboe@kernel.dk> wrote:
+> Recently had a regression that turned out to be because
+> CONFIG_REFCOUNT_FULL was set.
 
-diff --git a/arch/arm64/include/asm/scs.h b/arch/arm64/include/asm/scs.h
-index c50d2b0c6c5f..8e327e14bc15 100644
---- a/arch/arm64/include/asm/scs.h
-+++ b/arch/arm64/include/asm/scs.h
-@@ -9,6 +9,7 @@
- #ifdef CONFIG_SHADOW_CALL_STACK
- 
- extern void scs_init_irq(void);
-+extern int scs_init_sdei(void);
- 
- static __always_inline void scs_save(struct task_struct *tsk)
- {
-@@ -27,6 +28,7 @@ static inline void scs_overflow_check(struct task_struct *tsk)
- #else /* CONFIG_SHADOW_CALL_STACK */
- 
- static inline void scs_init_irq(void) {}
-+static inline int scs_init_sdei(void) { return 0; }
- static inline void scs_save(struct task_struct *tsk) {}
- static inline void scs_overflow_check(struct task_struct *tsk) {}
- 
-diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 7aa2d366b2df..9327c3d21b64 100644
---- a/arch/arm64/kernel/entry.S
-+++ b/arch/arm64/kernel/entry.S
-@@ -1048,13 +1048,16 @@ ENTRY(__sdei_asm_handler)
- 
- 	mov	x19, x1
- 
-+#if defined(CONFIG_VMAP_STACK) || defined(CONFIG_SHADOW_CALL_STACK)
-+	ldrb	w4, [x19, #SDEI_EVENT_PRIORITY]
-+#endif
-+
- #ifdef CONFIG_VMAP_STACK
- 	/*
- 	 * entry.S may have been using sp as a scratch register, find whether
- 	 * this is a normal or critical event and switch to the appropriate
- 	 * stack for this CPU.
- 	 */
--	ldrb	w4, [x19, #SDEI_EVENT_PRIORITY]
- 	cbnz	w4, 1f
- 	ldr_this_cpu dst=x5, sym=sdei_stack_normal_ptr, tmp=x6
- 	b	2f
-@@ -1064,6 +1067,15 @@ ENTRY(__sdei_asm_handler)
- 	mov	sp, x5
- #endif
- 
-+#ifdef CONFIG_SHADOW_CALL_STACK
-+	/* Use a separate shadow call stack for normal and critical events */
-+	cbnz	w4, 3f
-+	ldr_this_cpu dst=x18, sym=sdei_shadow_call_stack_normal_ptr, tmp=x6
-+	b	4f
-+3:	ldr_this_cpu dst=x18, sym=sdei_shadow_call_stack_critical_ptr, tmp=x6
-+4:
-+#endif
-+
- 	/*
- 	 * We may have interrupted userspace, or a guest, or exit-from or
- 	 * return-to either of these. We can't trust sp_el0, restore it.
-diff --git a/arch/arm64/kernel/scs.c b/arch/arm64/kernel/scs.c
-index eaadf5430baa..dddb7c56518b 100644
---- a/arch/arm64/kernel/scs.c
-+++ b/arch/arm64/kernel/scs.c
-@@ -10,31 +10,105 @@
- #include <asm/pgtable.h>
- #include <asm/scs.h>
- 
--DEFINE_PER_CPU(unsigned long *, irq_shadow_call_stack_ptr);
-+#define DECLARE_SCS(name)						\
-+	DECLARE_PER_CPU(unsigned long *, name ## _ptr);			\
-+	DECLARE_PER_CPU(unsigned long [SCS_SIZE/sizeof(long)], name)
- 
--#ifndef CONFIG_SHADOW_CALL_STACK_VMAP
--DEFINE_PER_CPU(unsigned long [SCS_SIZE/sizeof(long)], irq_shadow_call_stack)
--	__aligned(SCS_SIZE);
-+#ifdef CONFIG_SHADOW_CALL_STACK_VMAP
-+#define DEFINE_SCS(name)						\
-+	DEFINE_PER_CPU(unsigned long *, name ## _ptr)
-+#else
-+/* Allocate a static per-CPU shadow stack */
-+#define DEFINE_SCS(name)						\
-+	DEFINE_PER_CPU(unsigned long *, name ## _ptr);			\
-+	DEFINE_PER_CPU(unsigned long [SCS_SIZE/sizeof(long)], name)	\
-+		__aligned(SCS_SIZE)
-+#endif /* CONFIG_SHADOW_CALL_STACK_VMAP */
-+
-+DECLARE_SCS(irq_shadow_call_stack);
-+DECLARE_SCS(sdei_shadow_call_stack_normal);
-+DECLARE_SCS(sdei_shadow_call_stack_critical);
-+
-+DEFINE_SCS(irq_shadow_call_stack);
-+#ifdef CONFIG_ARM_SDE_INTERFACE
-+DEFINE_SCS(sdei_shadow_call_stack_normal);
-+DEFINE_SCS(sdei_shadow_call_stack_critical);
- #endif
- 
-+static int scs_alloc_percpu(unsigned long * __percpu *ptr, int cpu)
-+{
-+	unsigned long *p;
-+
-+	p = __vmalloc_node_range(PAGE_SIZE, SCS_SIZE,
-+				 VMALLOC_START, VMALLOC_END,
-+				 GFP_SCS, PAGE_KERNEL,
-+				 0, cpu_to_node(cpu),
-+				 __builtin_return_address(0));
-+
-+	if (!p)
-+		return -ENOMEM;
-+	per_cpu(*ptr, cpu) = p;
-+
-+	return 0;
-+}
-+
-+static void scs_free_percpu(unsigned long * __percpu *ptr, int cpu)
-+{
-+	unsigned long *p = per_cpu(*ptr, cpu);
-+
-+	if (p) {
-+		per_cpu(*ptr, cpu) = NULL;
-+		vfree(p);
-+	}
-+}
-+
-+static void scs_free_sdei(void)
-+{
-+	int cpu;
-+
-+	for_each_possible_cpu(cpu) {
-+		scs_free_percpu(&sdei_shadow_call_stack_normal_ptr, cpu);
-+		scs_free_percpu(&sdei_shadow_call_stack_critical_ptr, cpu);
-+	}
-+}
-+
- void scs_init_irq(void)
- {
- 	int cpu;
- 
- 	for_each_possible_cpu(cpu) {
--#ifdef CONFIG_SHADOW_CALL_STACK_VMAP
--		unsigned long *p;
-+		if (IS_ENABLED(CONFIG_SHADOW_CALL_STACK_VMAP))
-+			WARN_ON(scs_alloc_percpu(&irq_shadow_call_stack_ptr,
-+						 cpu));
-+		else
-+			per_cpu(irq_shadow_call_stack_ptr, cpu) =
-+				per_cpu(irq_shadow_call_stack, cpu);
-+	}
-+}
- 
--		p = __vmalloc_node_range(PAGE_SIZE, SCS_SIZE,
--					 VMALLOC_START, VMALLOC_END,
--					 GFP_SCS, PAGE_KERNEL,
--					 0, cpu_to_node(cpu),
--					 __builtin_return_address(0));
-+int scs_init_sdei(void)
-+{
-+	int cpu;
- 
--		per_cpu(irq_shadow_call_stack_ptr, cpu) = p;
--#else
--		per_cpu(irq_shadow_call_stack_ptr, cpu) =
--			per_cpu(irq_shadow_call_stack, cpu);
--#endif /* CONFIG_SHADOW_CALL_STACK_VMAP */
-+	if (!IS_ENABLED(CONFIG_ARM_SDE_INTERFACE))
-+		return 0;
-+
-+	for_each_possible_cpu(cpu) {
-+		if (IS_ENABLED(CONFIG_SHADOW_CALL_STACK_VMAP)) {
-+			if (scs_alloc_percpu(
-+				&sdei_shadow_call_stack_normal_ptr, cpu) ||
-+			    scs_alloc_percpu(
-+				&sdei_shadow_call_stack_critical_ptr, cpu)) {
-+				scs_free_sdei();
-+				return -ENOMEM;
-+			}
-+		} else {
-+			per_cpu(sdei_shadow_call_stack_normal_ptr, cpu) =
-+				per_cpu(sdei_shadow_call_stack_normal, cpu);
-+			per_cpu(sdei_shadow_call_stack_critical_ptr, cpu) =
-+				per_cpu(sdei_shadow_call_stack_critical, cpu);
-+		}
- 	}
-+
-+	return 0;
- }
-diff --git a/arch/arm64/kernel/sdei.c b/arch/arm64/kernel/sdei.c
-index d6259dac62b6..2854b9f7760a 100644
---- a/arch/arm64/kernel/sdei.c
-+++ b/arch/arm64/kernel/sdei.c
-@@ -13,6 +13,7 @@
- #include <asm/kprobes.h>
- #include <asm/mmu.h>
- #include <asm/ptrace.h>
-+#include <asm/scs.h>
- #include <asm/sections.h>
- #include <asm/stacktrace.h>
- #include <asm/sysreg.h>
-@@ -162,6 +163,12 @@ unsigned long sdei_arch_get_entry_point(int conduit)
- 			return 0;
- 	}
- 
-+	if (scs_init_sdei()) {
-+		if (IS_ENABLED(CONFIG_VMAP_STACK))
-+			free_sdei_stacks();
-+		return 0;
-+	}
-+
- 	sdei_exit_mode = (conduit == SMCCC_CONDUIT_HVC) ? SDEI_EXIT_HVC : SDEI_EXIT_SMC;
- 
- #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
--- 
-2.24.0.393.g34dc348eaf-goog
+I assume "regression" here refers to a performance regression? Do you
+have more concrete numbers on this? Is one of the refcounting calls
+particularly problematic compared to the others?
 
+I really don't like it when raw atomic_t is used for refcounting
+purposes - not only because that gets rid of the overflow checks, but
+also because it is less clear semantically.
+
+> Our ref count usage is really simple,
+
+In my opinion, for a refcount to qualify as "really simple", it must
+be possible to annotate each relevant struct member and local variable
+with the (fixed) bias it carries when alive and non-NULL. This
+refcount is more complicated than that.
+
+> so let's just use atomic_t and get rid of the dependency on the full
+> reference count checking being enabled or disabled.
+>
+> Signed-off-by: Jens Axboe <axboe@kernel.dk>
+> ---
+>  fs/io_uring.c | 22 +++++++++++-----------
+>  1 file changed, 11 insertions(+), 11 deletions(-)
+>
+> diff --git a/fs/io_uring.c b/fs/io_uring.c
+> index 9a596b819334..05419a152b32 100644
+> --- a/fs/io_uring.c
+> +++ b/fs/io_uring.c
+> @@ -360,7 +360,7 @@ struct io_kiocb {
+>         };
+>         struct list_head        link_list;
+>         unsigned int            flags;
+> -       refcount_t              refs;
+> +       atomic_t                refs;
+>  #define REQ_F_NOWAIT           1       /* must not punt to workers */
+>  #define REQ_F_IOPOLL_COMPLETED 2       /* polled IO has completed */
+>  #define REQ_F_FIXED_FILE       4       /* ctx owns file */
+> @@ -770,7 +770,7 @@ static void io_cqring_fill_event(struct io_kiocb *req, long res)
+>                 WRITE_ONCE(ctx->rings->cq_overflow,
+>                                 atomic_inc_return(&ctx->cached_cq_overflow));
+>         } else {
+> -               refcount_inc(&req->refs);
+> +               atomic_inc(&req->refs);
+>                 req->result = res;
+>                 list_add_tail(&req->list, &ctx->cq_overflow_list);
+>         }
+> @@ -852,7 +852,7 @@ static struct io_kiocb *io_get_req(struct io_ring_ctx *ctx,
+>         req->ctx = ctx;
+>         req->flags = 0;
+>         /* one is dropped after submission, the other at completion */
+> -       refcount_set(&req->refs, 2);
+> +       atomic_set(&req->refs, 2);
+>         req->result = 0;
+>         INIT_IO_WORK(&req->work, io_wq_submit_work);
+>         return req;
+> @@ -1035,13 +1035,13 @@ static void io_put_req_find_next(struct io_kiocb *req, struct io_kiocb **nxtptr)
+>  {
+>         io_req_find_next(req, nxtptr);
+>
+> -       if (refcount_dec_and_test(&req->refs))
+> +       if (atomic_dec_and_test(&req->refs))
+>                 __io_free_req(req);
+>  }
+>
+>  static void io_put_req(struct io_kiocb *req)
+>  {
+> -       if (refcount_dec_and_test(&req->refs))
+> +       if (atomic_dec_and_test(&req->refs))
+>                 io_free_req(req);
+>  }
+>
+> @@ -1052,14 +1052,14 @@ static void io_put_req(struct io_kiocb *req)
+>  static void __io_double_put_req(struct io_kiocb *req)
+>  {
+>         /* drop both submit and complete references */
+> -       if (refcount_sub_and_test(2, &req->refs))
+> +       if (atomic_sub_and_test(2, &req->refs))
+>                 __io_free_req(req);
+>  }
+>
+>  static void io_double_put_req(struct io_kiocb *req)
+>  {
+>         /* drop both submit and complete references */
+> -       if (refcount_sub_and_test(2, &req->refs))
+> +       if (atomic_sub_and_test(2, &req->refs))
+>                 io_free_req(req);
+>  }
+>
+> @@ -1108,7 +1108,7 @@ static void io_iopoll_complete(struct io_ring_ctx *ctx, unsigned int *nr_events,
+>                 io_cqring_fill_event(req, req->result);
+>                 (*nr_events)++;
+>
+> -               if (refcount_dec_and_test(&req->refs)) {
+> +               if (atomic_dec_and_test(&req->refs)) {
+>                         /* If we're not using fixed files, we have to pair the
+>                          * completion part with the file put. Use regular
+>                          * completions for those, only batch free for fixed
+> @@ -3169,7 +3169,7 @@ static enum hrtimer_restart io_link_timeout_fn(struct hrtimer *timer)
+>         if (!list_empty(&req->link_list)) {
+>                 prev = list_entry(req->link_list.prev, struct io_kiocb,
+>                                   link_list);
+> -               if (refcount_inc_not_zero(&prev->refs)) {
+> +               if (atomic_inc_not_zero(&prev->refs)) {
+>                         list_del_init(&req->link_list);
+>                         prev->flags &= ~REQ_F_LINK_TIMEOUT;
+>                 } else
+> @@ -4237,7 +4237,7 @@ static void io_get_work(struct io_wq_work *work)
+>  {
+>         struct io_kiocb *req = container_of(work, struct io_kiocb, work);
+>
+> -       refcount_inc(&req->refs);
+> +       atomic_inc(&req->refs);
+>  }
+>
+>  static int io_sq_offload_start(struct io_ring_ctx *ctx,
+> @@ -4722,7 +4722,7 @@ static void io_uring_cancel_files(struct io_ring_ctx *ctx,
+>                         if (req->work.files != files)
+>                                 continue;
+>                         /* req is being completed, ignore */
+> -                       if (!refcount_inc_not_zero(&req->refs))
+> +                       if (!atomic_inc_not_zero(&req->refs))
+>                                 continue;
+>                         cancel_req = req;
+>                         break;
+> --
+> 2.24.0
+>
