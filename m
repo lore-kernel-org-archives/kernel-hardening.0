@@ -1,23 +1,23 @@
-Return-Path: <SRS0=t+8U=2G=lists.openwall.com=kernel-hardening-return-17503-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=TrOO=2H=lists.openwall.com=kernel-hardening-return-17504-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1FE3CC2D0C0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 16 Dec 2019 10:27:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C9249C43603
+	for <kernel-hardening@archiver.kernel.org>; Tue, 17 Dec 2019 19:46:19 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6CCEB2072D
-	for <kernel-hardening@archiver.kernel.org>; Mon, 16 Dec 2019 10:27:23 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 201052146E
+	for <kernel-hardening@archiver.kernel.org>; Tue, 17 Dec 2019 19:46:18 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="oKrWqvEV"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6CCEB2072D
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17503-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7929 invoked by uid 550); 16 Dec 2019 10:27:15 -0000
+	dkim=pass (1024-bit key) header.d=digitalocean.com header.i=@digitalocean.com header.b="fhRUhoT5"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 201052146E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=digitalocean.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17504-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3185 invoked by uid 550); 17 Dec 2019 19:46:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,111 +25,111 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7894 invoked from network); 16 Dec 2019 10:27:14 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1576492022;
-	bh=kUgzQHruAjaFJFDFjIH83xFuk1KBvTCvlgdm112GOkQ=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=oKrWqvEV9lXn1r3miOVPSITbPPacHp89DGtXxqTYnHvm6TN+1tSGZFivgdvUIN9o7
-	 cz4Ste93FLYwlxxzWJ603rI4ubx/PnNMo1xyoMJxTyuDz/t6BuQ3a2OcHHCyeXDOKA
-	 YAmAJhk4Qtwm29VaZCd1Kh4XTwB/LGGWe8oz9g+k=
-Date: Mon, 16 Dec 2019 10:26:56 +0000
-From: Will Deacon <will@kernel.org>
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>,
-	Andrey Ryabinin <aryabinin@virtuozzo.com>,
-	Elena Petrova <lenaptr@google.com>,
-	Alexander Potapenko <glider@google.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Dan Carpenter <dan.carpenter@oracle.com>,
-	"Gustavo A. R. Silva" <gustavo@embeddedor.com>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	kasan-dev@googlegroups.com, linux-kernel@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v2 1/3] ubsan: Add trap instrumentation option
-Message-ID: <20191216102655.GA11082@willie-the-truck>
-References: <20191121181519.28637-1-keescook@chromium.org>
- <20191121181519.28637-2-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20191121181519.28637-2-keescook@chromium.org>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+Received: (qmail 3151 invoked from network); 17 Dec 2019 19:46:10 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=digitalocean.com; s=google;
+        h=from:to:cc:subject:date:message-id;
+        bh=AAJSJ3f+v8JezMBUsPh9A10z/EEOzUS8//0MnaZjfnE=;
+        b=fhRUhoT5EFK8aFypWjMYWQEXn0A68rgujkbD304jvZXp3JfPv7k6NnGM/E1eum1xX4
+         j4YBGl92dALG3hyS9Wp4s9pVH7AwsWIBlroXxcsopP4rErsVX+Z6jfn4YXdl/vhhLTRm
+         QgkQlLxg9T3RDOCy7spNhNeAIr59mMTOn8ltk=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id;
+        bh=AAJSJ3f+v8JezMBUsPh9A10z/EEOzUS8//0MnaZjfnE=;
+        b=idrOalHR4H74MXFDob41jJfPb7NGwBGxtCqOt7pv3lyy5TL1UKx0j/ntbkuvfZ87LF
+         wpf/nuNx4K6ZyiDccQ50U0ivLqIII/UedJ1XEVSntxiuJvQxC4Alxr9bXVl49yyRSNKD
+         oKMCVrdn4ks9DwiL3nNxdd4VBX7lh1OYpZhgPjgGuO45DzpmtPKMrKU7dpKFmu4sENG0
+         ohBTE/VW9rI1VDFWdwSU/ZemDiKLT8VDPq41bBhwWJsMn8O03sBA/V6xCYchenwl9gYB
+         HjXe7K8fgHfh5pWb7wXFAXvakER7D74iebsm7+cl6RRrMwKBF/JUqlHMOsEyJeBCPkEe
+         PbWg==
+X-Gm-Message-State: APjAAAW01ycHpYBfnKiB9NJDLnMR9SvuVwfmKUBfnOw/PRmZ+ET+lMix
+	1nwdlJXMSOYwSAsKIVSm2mCI
+X-Google-Smtp-Source: APXvYqy9DfX8rmJagE79oA+aX3MuQF2B+hC64bxfgeA67Y79HktVWq+Hd4AXz5HGRzz3Ht4ndkjCUw==
+X-Received: by 2002:ae9:eb48:: with SMTP id b69mr6718950qkg.43.1576611959080;
+        Tue, 17 Dec 2019 11:45:59 -0800 (PST)
+From: Tianlin Li <tli@digitalocean.com>
+To: kernel-hardening@lists.openwall.com,
+	keescook@chromium.org
+Cc: Arnd Bergmann <arnd@arndb.de>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	linux-kernel@vger.kernel.org,
+	Tianlin Li <tli@digitalocean.com>
+Subject: [PATCH] drivers/misc: have the callers of set_memory_*() check the return value
+Date: Tue, 17 Dec 2019 13:45:28 -0600
+Message-Id: <20191217194528.16461-1-tli@digitalocean.com>
+X-Mailer: git-send-email 2.17.1
 
-Hi Kees,
+Right now several architectures allow their set_memory_*() family of  
+functions to fail, but callers may not be checking the return values.
+If set_memory_*() returns with an error, call-site assumptions may be
+infact wrong to assume that it would either succeed or not succeed at  
+all. Ideally, the failure of set_memory_*() should be passed up the 
+call stack, and callers should examine the failure and deal with it. 
 
-On Thu, Nov 21, 2019 at 10:15:17AM -0800, Kees Cook wrote:
-> The Undefined Behavior Sanitizer can operate in two modes: warning
-> reporting mode via lib/ubsan.c handler calls, or trap mode, which uses
-> __builtin_trap() as the handler. Using lib/ubsan.c means the kernel
-> image is about 5% larger (due to all the debugging text and reporting
-> structures to capture details about the warning conditions). Using the
-> trap mode, the image size changes are much smaller, though at the loss
-> of the "warning only" mode.
-> 
-> In order to give greater flexibility to system builders that want
-> minimal changes to image size and are prepared to deal with kernel code
-> being aborted and potentially destabilizing the system, this introduces
-> CONFIG_UBSAN_TRAP. The resulting image sizes comparison:
-> 
->    text    data     bss       dec       hex     filename
-> 19533663   6183037  18554956  44271656  2a38828 vmlinux.stock
-> 19991849   7618513  18874448  46484810  2c54d4a vmlinux.ubsan
-> 19712181   6284181  18366540  44362902  2a4ec96 vmlinux.ubsan-trap
-> 
-> CONFIG_UBSAN=y:      image +4.8% (text +2.3%, data +18.9%)
-> CONFIG_UBSAN_TRAP=y: image +0.2% (text +0.9%, data +1.6%)
-> 
-> Additionally adjusts the CONFIG_UBSAN Kconfig help for clarity and
-> removes the mention of non-existing boot param "ubsan_handle".
-> 
-> Suggested-by: Elena Petrova <lenaptr@google.com>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->  lib/Kconfig.ubsan      | 22 ++++++++++++++++++----
->  lib/Makefile           |  2 ++
->  scripts/Makefile.ubsan |  9 +++++++--
->  3 files changed, 27 insertions(+), 6 deletions(-)
-> 
-> diff --git a/lib/Kconfig.ubsan b/lib/Kconfig.ubsan
-> index 0e04fcb3ab3d..9deb655838b0 100644
-> --- a/lib/Kconfig.ubsan
-> +++ b/lib/Kconfig.ubsan
-> @@ -5,11 +5,25 @@ config ARCH_HAS_UBSAN_SANITIZE_ALL
->  config UBSAN
->  	bool "Undefined behaviour sanity checker"
->  	help
-> -	  This option enables undefined behaviour sanity checker
-> +	  This option enables the Undefined Behaviour sanity checker.
->  	  Compile-time instrumentation is used to detect various undefined
-> -	  behaviours in runtime. Various types of checks may be enabled
-> -	  via boot parameter ubsan_handle
-> -	  (see: Documentation/dev-tools/ubsan.rst).
-> +	  behaviours at runtime. For more details, see:
-> +	  Documentation/dev-tools/ubsan.rst
-> +
-> +config UBSAN_TRAP
-> +	bool "On Sanitizer warnings, abort the running kernel code"
-> +	depends on UBSAN
-> +	depends on $(cc-option, -fsanitize-undefined-trap-on-error)
-> +	help
-> +	  Building kernels with Sanitizer features enabled tends to grow
-> +	  the kernel size by around 5%, due to adding all the debugging
-> +	  text on failure paths. To avoid this, Sanitizer instrumentation
-> +	  can just issue a trap. This reduces the kernel size overhead but
-> +	  turns all warnings (including potentially harmless conditions)
-> +	  into full exceptions that abort the running kernel code
-> +	  (regardless of context, locks held, etc), which may destabilize
-> +	  the system. For some system builders this is an acceptable
-> +	  trade-off.
+Need to fix the callers and add the __must_check attribute. They also 
+may not provide any level of atomicity, in the sense that the memory 
+protections may be left incomplete on failure. This issue likely has a 
+few steps on effects architectures:
+1)Have all callers of set_memory_*() helpers check the return value.
+2)Add __must_check to all set_memory_*() helpers so that new uses do 
+not ignore the return value.
+3)Add atomicity to the calls so that the memory protections aren't left 
+in a partial state.
 
-Slight nit, but I wonder if it would make sense to move all this under a
-'menuconfig UBSAN' entry, so the dependencies can be dropped? Then you could
-have all of the suboptions default to on and basically choose which
-individual compiler options to disable based on your own preferences.
+This series is part of step 1. Make sram driver check the return value of  
+set_memory_*().
 
-What do you think?
+Signed-off-by: Tianlin Li <tli@digitalocean.com>
+---
+ drivers/misc/sram-exec.c | 21 +++++++++++++++++----
+ 1 file changed, 17 insertions(+), 4 deletions(-)
 
-Will
+diff --git a/drivers/misc/sram-exec.c b/drivers/misc/sram-exec.c
+index d054e2842a5f..cb57ac6ab4c3 100644
+--- a/drivers/misc/sram-exec.c
++++ b/drivers/misc/sram-exec.c
+@@ -85,6 +85,7 @@ void *sram_exec_copy(struct gen_pool *pool, void *dst, void *src,
+ 	unsigned long base;
+ 	int pages;
+ 	void *dst_cpy;
++	int ret;
+ 
+ 	mutex_lock(&exec_pool_list_mutex);
+ 	list_for_each_entry(p, &exec_pool_list, list) {
+@@ -104,16 +105,28 @@ void *sram_exec_copy(struct gen_pool *pool, void *dst, void *src,
+ 
+ 	mutex_lock(&part->lock);
+ 
+-	set_memory_nx((unsigned long)base, pages);
+-	set_memory_rw((unsigned long)base, pages);
++	ret = set_memory_nx((unsigned long)base, pages);
++	if (ret)
++		goto error_out;
++	ret = set_memory_rw((unsigned long)base, pages);
++	if (ret)
++		goto error_out;
+ 
+ 	dst_cpy = fncpy(dst, src, size);
+ 
+-	set_memory_ro((unsigned long)base, pages);
+-	set_memory_x((unsigned long)base, pages);
++	ret = set_memory_ro((unsigned long)base, pages);
++	if (ret)
++		goto error_out;
++	ret = set_memory_x((unsigned long)base, pages);
++	if (ret)
++		goto error_out;
+ 
+ 	mutex_unlock(&part->lock);
+ 
+ 	return dst_cpy;
++
++error_out:
++	mutex_unlock(&part->lock);
++	return NULL;
+ }
+ EXPORT_SYMBOL_GPL(sram_exec_copy);
+-- 
+2.17.1
+
