@@ -1,22 +1,22 @@
-Return-Path: <SRS0=5uoB=2O=lists.openwall.com=kernel-hardening-return-17523-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=oL6I=2O=lists.openwall.com=kernel-hardening-return-17524-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0099FC2D0CF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Dec 2019 13:03:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AAD1EC2D0C3
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Dec 2019 22:57:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 533DE206B7
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Dec 2019 13:03:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B3F0020663
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Dec 2019 22:57:03 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=alien8.de header.i=@alien8.de header.b="reF83Q8g"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 533DE206B7
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=alien8.de
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17523-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13593 invoked by uid 550); 24 Dec 2019 13:03:37 -0000
+	dkim=pass (2048-bit key) header.d=oracle.com header.i=@oracle.com header.b="BHlHU5eI"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B3F0020663
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=oracle.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17524-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 14023 invoked by uid 550); 24 Dec 2019 22:56:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,66 +24,169 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13568 invoked from network); 24 Dec 2019 13:03:36 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=alien8.de; s=dkim;
-	t=1577192598;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 content-transfer-encoding:in-reply-to:in-reply-to:  references:references;
-	bh=RPmKXDdfeilER4Cgaeoi2HiLWA8B3GNUxDgJuxdBXfU=;
-	b=reF83Q8gQU8d8BbbxQtuMbOFtz4tNW0TWem/vVoR96GaFFqKuP34eCfMKbkHGHhpKGdri3
-	pyPpxWQoCT/9pskvQWyrWoFHiWRqJx3nXMkEvHac9OE4eXfjVFUgDyv9Abz9tEzv8ew26N
-	WtLUvAmpJ1NPS+Gi5gUtfB2R8Ui/FNQ=
-Date: Tue, 24 Dec 2019 14:03:10 +0100
-From: Borislav Petkov <bp@alien8.de>
-To: Thomas Garnier <thgarnie@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, kristen@linux.intel.com,
-	keescook@chromium.org, Herbert Xu <herbert@gondor.apana.org.au>,
-	"David S. Miller" <davem@davemloft.net>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>,
-	x86@kernel.org, Andy Lutomirski <luto@kernel.org>,
-	Juergen Gross <jgross@suse.com>,
-	Thomas Hellstrom <thellstrom@vmware.com>,
-	"VMware, Inc." <pv-drivers@vmware.com>,
-	"Rafael J. Wysocki" <rjw@rjwysocki.net>,
-	Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>,
-	Rasmus Villemoes <linux@rasmusvillemoes.dk>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Will Deacon <will@kernel.org>,
-	Masami Hiramatsu <mhiramat@kernel.org>, Jiri Slaby <jslaby@suse.cz>,
-	Boris Ostrovsky <boris.ostrovsky@oracle.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Alexios Zavras <alexios.zavras@intel.com>,
-	Allison Randal <allison@lohutok.net>, linux-crypto@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	virtualization@lists.linux-foundation.org, linux-pm@vger.kernel.org
-Subject: Re: [PATCH v10 00/11] x86: PIE support to extend KASLR randomization
-Message-ID: <20191224130310.GE21017@zn.tnic>
-References: <20191205000957.112719-1-thgarnie@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20191205000957.112719-1-thgarnie@chromium.org>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+Received: (qmail 14000 invoked from network); 24 Dec 2019 22:56:55 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=oracle.com; h=content-type :
+ mime-version : subject : from : in-reply-to : date : cc :
+ content-transfer-encoding : message-id : references : to;
+ s=corp-2019-08-05; bh=/dgJ8XuSEwopCmXfGg18AuXhFUHdN3GB/Y4XIlcxZyI=;
+ b=BHlHU5eIkhzcnVBY5L45sIQ47YbRIKktvREB94jys27/0DzDY0S3pWHoxR8CP0rpGbcU
+ hN0djlTosL1vf1uxdXYhyuSodVNqkDCzDzsMUtUpQQWnHrB2L70j9QjIE0W7izBGyjxR
+ SgYSLGE4gXkiW1uWGKaaWaDsWx9wpmA1KuDT+G1/SpmEiKmbio1rEkF/HrhBbHw/5Mic
+ yeGFyigN3KzF0Sdoaa28XEFWBIs+KFvNiuCLecObkWDXxe/gXimopiQnROeinCkR9FDp
+ JUQKT+4vQ3AJDQSp43anr16r2M3ulDybsBxXc6b2KStAF2dKkE9hwu7irwDqqJzt7ALa ZQ== 
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.1 \(3445.4.7\))
+Subject: Re: [RESEND RFC 0/2] Paravirtualized Control Register pinning
+From: Liran Alon <liran.alon@oracle.com>
+In-Reply-To: <F82D153A-F083-432B-864C-1CF6A02C19DD@oracle.com>
+Date: Wed, 25 Dec 2019 00:56:03 +0200
+Cc: John Andersen <john.s.andersen@intel.com>,
+        Thomas Gleixner <tglx@linutronix.de>, mingo@redhat.com, bp@alien8.de,
+        x86@kernel.org, pbonzini@redhat.com, hpa@zytor.com,
+        sean.j.christopherson@intel.com, vkuznets@redhat.com,
+        wanpengli@tencent.com, jmattson@google.com, joro@8bytes.org,
+        linux-kernel@vger.kernel.org, kvm@vger.kernel.org
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <12D7EEB4-C77E-4BD1-AF61-8B0FBBA2ED05@oracle.com>
+References: <20191220192701.23415-1-john.s.andersen@intel.com>
+ <F82D153A-F083-432B-864C-1CF6A02C19DD@oracle.com>
+To: Liran Alon <liran.alon@oracle.com>, kernel-hardening@lists.openwall.com
+X-Mailer: Apple Mail (2.3445.4.7)
+X-Proofpoint-Virus-Version: vendor=nai engine=6000 definitions=9481 signatures=668685
+X-Proofpoint-Spam-Details: rule=notspam policy=default score=0 suspectscore=0 malwarescore=0
+ phishscore=0 bulkscore=0 spamscore=0 mlxscore=0 mlxlogscore=999
+ adultscore=0 classifier=spam adjust=0 reason=mlx scancount=1
+ engine=8.0.1-1911140001 definitions=main-1912240198
+X-Proofpoint-Virus-Version: vendor=nai engine=6000 definitions=9481 signatures=668685
+X-Proofpoint-Spam-Details: rule=notspam policy=default score=0 priorityscore=1501 malwarescore=0
+ suspectscore=0 phishscore=0 bulkscore=0 spamscore=0 clxscore=1011
+ lowpriorityscore=0 mlxscore=0 impostorscore=0 mlxlogscore=999 adultscore=0
+ classifier=spam adjust=0 reason=mlx scancount=1 engine=8.0.1-1911140001
+ definitions=main-1912240198
 
-On Wed, Dec 04, 2019 at 04:09:37PM -0800, Thomas Garnier wrote:
-> Minor changes based on feedback and rebase from v9.
-> 
-> Splitting the previous serie in two. This part contains assembly code
-> changes required for PIE but without any direct dependencies with the
-> rest of the patchset.
++kernel-hardening mailing list.
 
-Ok, modulo the minor commit message and comments fixup, this looks ok
-and passes testing here.
+> On 23 Dec 2019, at 16:30, Liran Alon <liran.alon@oracle.com> wrote:
+>=20
+>=20
+>=20
+>> On 20 Dec 2019, at 21:26, John Andersen <john.s.andersen@intel.com> =
+wrote:
+>>=20
+>> Paravirtualized Control Register pinning is a strengthened version of
+>> existing protections on the Write Protect, Supervisor Mode Execution =
+/
+>> Access Protection, and User-Mode Instruction Prevention bits. The
+>> existing protections prevent native_write_cr*() functions from =
+writing
+>> values which disable those bits. This patchset prevents any guest
+>> writes to control registers from disabling pinned bits, not just =
+writes
+>> from native_write_cr*(). This stops attackers within the guest from
+>> using ROP to disable protection bits.
+>>=20
+>> =
+https://urldefense.proofpoint.com/v2/url?u=3Dhttps-3A__web.archive.org_web=
+_20171029060939_http-3A__www.blackbunny.io_linux-2Dkernel-2Dx86-2D64-2Dbyp=
+ass-2Dsmep-2Dkaslr-2Dkptr-5Frestric_&d=3DDwIDAg&c=3DRoP1YumCXCgaWHvlZYR8PZ=
+h8Bv7qIrMUB65eapI_JnE&r=3DJk6Q8nNzkQ6LJ6g42qARkg6ryIDGQr-yKXPNGZbpTx0&m=3D=
+-H3SsRpu0sEBqqn9-OOVimBDXk6TimcJerlu4-ko5Io&s=3DTrjU4_UEZIoYjxtoXcjsA8Riu0=
+QZ8eI7a4fH96hSBQc&e=3D=20
+>>=20
+>> The protection is implemented by adding MSRs to KVM which contain the
+>> bits that are allowed to be pinned, and the bits which are pinned. =
+The
+>> guest or userspace can enable bit pinning by reading MSRs to check
+>> which bits are allowed to be pinned, and then writing MSRs to set =
+which
+>> bits they want pinned.
+>>=20
+>> Other hypervisors such as HyperV have implemented similar protections
+>> for Control Registers and MSRs; which security researchers have found
+>> effective.
+>>=20
+>> =
+https://urldefense.proofpoint.com/v2/url?u=3Dhttps-3A__www.abatchy.com_201=
+8_01_kernel-2Dexploitation-2D4&d=3DDwIDAg&c=3DRoP1YumCXCgaWHvlZYR8PZh8Bv7q=
+IrMUB65eapI_JnE&r=3DJk6Q8nNzkQ6LJ6g42qARkg6ryIDGQr-yKXPNGZbpTx0&m=3D-H3SsR=
+pu0sEBqqn9-OOVimBDXk6TimcJerlu4-ko5Io&s=3DFg3e-BSUebNg44Ocp_y19xIoK0HJEHPW=
+2AgM958F3Uc&e=3D=20
+>>=20
+>=20
+> I think it=E2=80=99s important to mention how Hyper-V implements this =
+protection as it is done in a very different architecture.
+>=20
+> Hyper-V implements a set of PV APIs named VSM (Virtual Secure Mode) =
+aimed to allow a guest (partition) to separate itself to multiple =
+security domains called VTLs (Virtual Trust Level).
+> The VSM API expose an interface to higher VTLs to control the =
+execution of lower VTLs. In theory, VSM supports up to 16 VTLs, but =
+Windows VBS (Virtualization Based Security) that is
+> the only current technology which utilise VSM, use only 2 VTLs. VTL0 =
+for most of OS execution (Normal-Mode) and VTL1 for a secure OS =
+execution (Secure-Mode).
+>=20
+> Higher VTL controls execution of lower VTL by the following VSM =
+mechanisms:
+> 1) Memory Access Protections: Allows higher VTL to restrict memory =
+access to physical pages. Either making them inaccessible or limited to =
+certain permissions.
+> 2) Secure Intercepts: Allows a higher VTL to request hypervisor to =
+intercept certain events in lower VTLs for handling by higher VTL. This =
+includes access to system registers (e.g. CRs & MSRs).
+>=20
+> VBS use above mentioned mechanisms as follows:
+> a) Credentials Guard: Prevents pass-the-hash attacks. Done by =
+encrypting credentials using a VTL1 trustlet to encrypt them by an =
+encryption-key stored in VTL1-only accessible memory.
+> b) HVCI (Hypervisor-based Code-Integrity): Prevents execution of =
+unsigned code. Done by marking all EPT entries with NX until signature =
+verified by VTL1 service. Once verified, mark EPT entries as RO+X.
+> (HVCI also supports enforcing code-signing only on Ring0 code =
+efficiently by utilising Intel MBEC or AMD GMET CPU features. Which =
+allows setting NX-bit on EPT entries based on guest CPL).
+> c) KDP (Kernel Data Protection): Marks certain pages after =
+initialisation as read-only on VTL0 EPT.
+> d) kCFG (Kernel Control-Flow Guard): VTL1 protects bitmap,specifying =
+valid indirect branch targets, by protecting it with read-only on VTL0 =
+EPT.
+> e) HyperGuard: VTL1 use =E2=80=9CSecure Intercepts=E2=80=9D mechanism =
+to prevent VTL0 from modifying important system registers. Including CR0 =
+& CR4 as done by this patch.
+>    HyperGuard also implements a mechanism named NPIEP (Non-Privileged =
+Instruction Execution Prevention) that prevents VTL0 Ring3 executing =
+SIDT/SGDT/SLDT/STR to leak Ring0 addresses.
+>=20
+> To sum-up, In Hyper-V, the hypervisor expose a relatively thin API to =
+allow guest to partition itself to multiple security domains (enforced =
+by virtualization).
+> Using this framework, it=E2=80=99s possible to implement multiple =
+OS-level protection mechanisms. Only one of them are pinning certain =
+registers to specific values as done by this patch.
+>=20
+> Therefore, as I also tried to say in recent KVM Forum, I think KVM =
+should consider exposing a VSM-like API to guest to allow various guest =
+OS,
+> Including Linux, to implement VBS-like features. To decide on how this =
+API should look like, we need to have a more broad discussion with Linux
+> Security maintainers and KVM maintainers on which security features we =
+would like to implement using such API and what should be their =
+architecture.
+> Then, we can implement this API in KVM and start to gradually =
+introduce more security features in Linux which utilise this API.
+>=20
+> Once Linux will have security features implemented with this new KVM =
+API, we could also consider implementing them on top of other similar =
+hypervisor APIs
+> such as Hyper-V VSM. To achieve, for example, Linux being more secure =
+when running on Microsoft Azure compute instances.
+>=20
+> Therefore, I see this patch as a short-term solution to quickly gain =
+real security value on a very specific issue.
+> But if we are serious about improving Linux security using =
+Virtualization, we should have this more broad discussion.
+>=20
+> -Liran
+>=20
 
-I'm going to queue patches 2-11 of the next version unless someone
-complains.
-
-Thx.
-
--- 
-Regards/Gruss,
-    Boris.
-
-https://people.kernel.org/tglx/notes-about-netiquette
