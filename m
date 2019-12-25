@@ -1,4 +1,4 @@
-Return-Path: <SRS0=jtPl=2P=lists.openwall.com=kernel-hardening-return-17536-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=4JTQ=2P=lists.openwall.com=kernel-hardening-return-17537-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-7.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
 	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DB7B6C2D0DB
-	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Dec 2019 23:07:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A6568C2D0C8
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Dec 2019 23:09:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E015A2075B
-	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Dec 2019 23:07:27 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E015A2075B
+	by mail.kernel.org (Postfix) with SMTP id AAF732075B
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Dec 2019 23:09:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AAF732075B
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17536-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20042 invoked by uid 550); 25 Dec 2019 23:07:19 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17537-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21989 invoked by uid 550); 25 Dec 2019 23:09:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,13 +22,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20004 invoked from network); 25 Dec 2019 23:07:18 -0000
-X-Amp-Result: UNSCANNABLE
+Received: (qmail 21942 invoked from network); 25 Dec 2019 23:09:27 -0000
+X-Amp-Result: UNKNOWN
+X-Amp-Original-Verdict: FILE UNKNOWN
 X-Amp-File-Uploaded: False
 X-ExtLoop1: 1
 X-IronPort-AV: E=Sophos;i="5.69,356,1571727600"; 
-   d="gz'50?scan'50,208,50";a="214449444"
-Date: Thu, 26 Dec 2019 07:06:40 +0800
+   d="gz'50?scan'50,208,50";a="367645134"
+Date: Thu, 26 Dec 2019 07:08:46 +0800
 From: kbuild test robot <lkp@intel.com>
 To: Alexey Gladkov <gladkov.alexey@gmail.com>
 Cc: kbuild-all@lists.01.org, LKML <linux-kernel@vger.kernel.org>,
@@ -55,27 +56,26 @@ Cc: kbuild-all@lists.01.org, LKML <linux-kernel@vger.kernel.org>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>,
 	Stephen Rothwell <sfr@canb.auug.org.au>
-Subject: Re: [PATCH v6 05/10] proc: add helpers to set and get proc hidepid
- and gid mount options
-Message-ID: <201912260746.bQZrXuS1%lkp@intel.com>
-References: <20191225125151.1950142-6-gladkov.alexey@gmail.com>
+Subject: Re: [PATCH v6 09/10] proc: add option to mount only a pids subset
+Message-ID: <201912260752.HesRrecx%lkp@intel.com>
+References: <20191225125151.1950142-10-gladkov.alexey@gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="2l264rrfzobypxrg"
+Content-Type: multipart/mixed; boundary="unnerkgwpqz6ml3z"
 Content-Disposition: inline
-In-Reply-To: <20191225125151.1950142-6-gladkov.alexey@gmail.com>
+In-Reply-To: <20191225125151.1950142-10-gladkov.alexey@gmail.com>
 User-Agent: NeoMutt/20170113 (1.7.2)
 
 
---2l264rrfzobypxrg
+--unnerkgwpqz6ml3z
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 
 Hi Alexey,
 
-Thank you for the patch! Yet something to improve:
+Thank you for the patch! Perhaps something to improve:
 
-[auto build test ERROR on linux/master]
-[also build test ERROR on lwn/docs-next linus/master v5.5-rc3 next-20191220]
+[auto build test WARNING on linux/master]
+[cannot apply to lwn/docs-next linus/master v5.5-rc3 next-20191220]
 [if your patch is applied to the wrong git tree, please drop us a note to help
 improve the system. BTW, we also suggest to use '--base' option to specify the
 base tree in git format-patch, please see https://stackoverflow.com/a/37406982]
@@ -91,92 +91,46 @@ reproduce:
 If you fix the issue, kindly add following tag
 Reported-by: kbuild test robot <lkp@intel.com>
 
-All error/warnings (new ones prefixed by >>):
+All warnings (new ones prefixed by >>):
 
-   ld: init/do_mounts.o: in function `proc_fs_pid_gid':
->> do_mounts.c:(.text+0x5): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: arch/x86/kernel/setup.o: in function `proc_fs_pid_gid':
-   setup.c:(.text+0x3): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: arch/x86/kernel/e820.o: in function `proc_fs_pid_gid':
-   e820.c:(.text+0xb1): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: arch/x86/kernel/fpu/xstate.o: in function `proc_fs_pid_gid':
-   xstate.c:(.text+0x36): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: arch/x86/kernel/reboot.o: in function `proc_fs_pid_gid':
-   reboot.c:(.text+0x1): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: arch/x86/mm/init_32.o: in function `proc_fs_pid_gid':
-   init_32.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: arch/x86/mm/fault.o: in function `proc_fs_pid_gid':
-   fault.c:(.text+0x908): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: arch/x86/mm/ioremap.o: in function `proc_fs_pid_gid':
-   ioremap.c:(.text+0x277): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/fork.o: in function `proc_fs_pid_gid':
-   fork.c:(.text+0x539): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/exec_domain.o: in function `proc_fs_pid_gid':
-   exec_domain.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/cpu.o: in function `proc_fs_pid_gid':
-   cpu.c:(.text+0x104): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/exit.o: in function `proc_fs_pid_gid':
-   exit.c:(.text+0x22c): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/resource.o: in function `proc_fs_pid_gid':
-   resource.c:(.text+0x362): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sysctl.o: in function `proc_fs_pid_gid':
-   sysctl.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/signal.o: in function `proc_fs_pid_gid':
-   signal.c:(.text+0x55b): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/core.o: in function `proc_fs_pid_gid':
-   core.c:(.text+0x2e4): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/loadavg.o: in function `proc_fs_pid_gid':
-   loadavg.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/clock.o: in function `proc_fs_pid_gid':
-   clock.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/cputime.o: in function `proc_fs_pid_gid':
-   cputime.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/idle.o: in function `proc_fs_pid_gid':
-   idle.c:(.text+0x2c): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/fair.o: in function `proc_fs_pid_gid':
-   fair.c:(.text+0x8cb): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/rt.o: in function `proc_fs_pid_gid':
-   rt.c:(.text+0x703): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/deadline.o: in function `proc_fs_pid_gid':
-   deadline.c:(.text+0xb02): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/wait.o: in function `proc_fs_pid_gid':
-   wait.c:(.text+0x15c): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/wait_bit.o: in function `proc_fs_pid_gid':
-   wait_bit.c:(.text+0x9d): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/swait.o: in function `proc_fs_pid_gid':
-   swait.c:(.text+0x4): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/sched/completion.o: in function `proc_fs_pid_gid':
-   completion.c:(.text+0x4): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/time/timer_list.o: in function `proc_fs_pid_gid':
-   timer_list.c:(.text+0x12): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: kernel/dma.o: in function `proc_fs_pid_gid':
-   dma.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: mm/vmstat.o: in function `proc_fs_pid_gid':
-   vmstat.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: mm/slab_common.o: in function `proc_fs_pid_gid':
-   slab_common.c:(.text+0x0): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: mm/vmalloc.o: in function `proc_fs_pid_gid':
-   vmalloc.c:(.text+0x4fd): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: fs/filesystems.o: in function `proc_fs_pid_gid':
-   filesystems.c:(.text+0x36): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
-   ld: drivers/char/misc.o: in function `proc_fs_pid_gid':
-   misc.c:(.text+0xc4): multiple definition of `proc_fs_pid_gid'; init/main.o:main.c:(.text+0x19): first defined here
---
-   In file included from init/main.c:18:0:
->> include/linux/proc_fs.h:138:47: warning: 'struct proc_info_fs' declared inside parameter list will not be visible outside of this definition or declaration
+   In file included from include/linux/sunrpc/stats.h:13:0,
+                    from include/linux/sunrpc/clnt.h:22,
+                    from include/linux/nfs_fs.h:32,
+                    from init/do_mounts.c:23:
+   include/linux/proc_fs.h:162:47: warning: 'struct proc_info_fs' declared inside parameter list will not be visible outside of this definition or declaration
     static inline void proc_fs_set_pid_gid(struct proc_info_fs *fs_info, kgid_t gid)
                                                   ^~~~~~~~~~~~
+   include/linux/proc_fs.h: In function 'proc_fs_pidonly':
+>> include/linux/proc_fs.h:168:9: warning: 'return' with a value, in function returning void
+     return PROC_PIDONLY_OFF;
+            ^~~~~~~~~~~~~~~~
+   include/linux/proc_fs.h:166:20: note: declared here
+    static inline void proc_fs_pidonly(struct proc_fs_info *fs_info)
+                       ^~~~~~~~~~~~~~~
+
+vim +/return +168 include/linux/proc_fs.h
+
+   161	
+ > 162	static inline void proc_fs_set_pid_gid(struct proc_info_fs *fs_info, kgid_t gid)
+   163	{
+   164	}
+   165	
+   166	static inline void proc_fs_pidonly(struct proc_fs_info *fs_info)
+   167	{
+ > 168		return PROC_PIDONLY_OFF;
+   169	}
+   170	
 
 ---
 0-DAY kernel test infrastructure                 Open Source Technology Center
 https://lists.01.org/hyperkitty/list/kbuild-all@lists.01.org Intel Corporation
 
---2l264rrfzobypxrg
+--unnerkgwpqz6ml3z
 Content-Type: application/gzip
 Content-Disposition: attachment; filename=".config.gz"
 Content-Transfer-Encoding: base64
 
-H4sICCjmA14AAy5jb25maWcAlDxZc9tGk+/5Faikasuur2zrsqLslh6GgyExES5jAIrUC4qh
+H4sICCvnA14AAy5jb25maWcAlDxZc9tGk+/5Faikasuur2zrsqLslh6GgyExES5jAIrUC4qh
 IJkVidTySOx/v90zADEAemhvKomt6WOunr6h3375zWOH/eZ1sV8tFy8v373nal1tF/vq0Xta
 vVT/4/mJFye5J3yZfwTkcLU+fPu0ury59j5//Pzx7MN2ee7dVdt19eLxzfpp9XwA6tVm/ctv
 v8C/v8Hg6xsw2v6397xcfvjde+dXf60Wa+93TX353vwFUHkSj+Wk5LyUqpxwfvu9GYIfyqnI
@@ -312,4 +266,4 @@ pKdM3/Ht00dvUfbGhEjcsySYF9LQAKhhUrNpVpCoT6kor1um1YjgNwE+yjeIM5V8G2WJ9rpS
 sUsgkinJ0Wu56HIZZ3zFeq/nhIbFyNQcymRWCHdz9vsnT9WpVxDJwM3WYn2lqtS3NqnGgArz
 YOTMyHYEKMJy/a2c4WamILXXaRWn6ARVxZQbQsHUIxSxqcZWl7iS/gWLOYZIM2kAAA==
 
---2l264rrfzobypxrg--
+--unnerkgwpqz6ml3z--
