@@ -1,23 +1,23 @@
-Return-Path: <SRS0=eFuf=2U=lists.openwall.com=kernel-hardening-return-17539-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=e5Lt=2U=lists.openwall.com=kernel-hardening-return-17540-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 58B63C2D0C2
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Dec 2019 19:42:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C6D07C2D0C3
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Dec 2019 22:03:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A96CD206DB
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Dec 2019 19:42:04 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 207BC206DB
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Dec 2019 22:03:56 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="VhyEFlYR"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A96CD206DB
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17539-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28465 invoked by uid 550); 30 Dec 2019 19:41:58 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="nEQfUB9B"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 207BC206DB
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17540-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3566 invoked by uid 550); 30 Dec 2019 22:03:49 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,101 +25,108 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28431 invoked from network); 30 Dec 2019 19:41:58 -0000
+Received: (qmail 3543 invoked from network); 30 Dec 2019 22:03:49 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=PkkLXDj8HeyoAsXSUf7EB7C7ycPCZ7nOePq2CDe6W7A=;
-        b=VhyEFlYR+ibRZhAU/Zlt2WaACOPEq9e9Vua53F8j4jJDylYSIMjRh8PTNivSdiOxNH
-         GsF4EZ4lDP4c63w3DIq6yAiRMC7U2Wjn4E1OYu9+mjH50XgD09xcHuyi4vW53UbRh0Si
-         PcAeooP0hmoYMydJKlP+uyiavUfPJ6ELFhEAg=
+        d=gmail.com; s=20161025;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-transfer-encoding:content-language;
+        bh=sWcIwqwAQVaMiL6AbIBVoLXwMM9wjsoCuHsXRphgo8Y=;
+        b=nEQfUB9BU7XTfjYvCMI6Yd/qByThVkk2PiHeRSy9HqRXeXx/ACLKilBsXAOBcCROWX
+         wuYYWc18pechAi8K+EkPH15KMlWyQ6nb0StYh3i01u248ouxra+l0YzVMzSbAIdPpj32
+         8IklPGgLy/ca2jvIWXCX+wjrXBcw+YhdM6dG2drTzpt9BJH4W/VMrXUHA7PFo1I1D0fp
+         bV/2HKq3EUqlQLAmrkiIYXp5l16qLryAJoIvQkBet0s7dkrKl35d2kNDuDe+cTkV6CtO
+         pdBNwQkWVWBXVmtsGPAeYKEJ7QDU9Bg9dcnJKVDvMxCHqk2OAX0edZ0X4oodFaH8Hq0U
+         10lw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=PkkLXDj8HeyoAsXSUf7EB7C7ycPCZ7nOePq2CDe6W7A=;
-        b=REugOppyj3LJ8MNnLEh+ply13QUPaL9Y9uZ7Sxj6D9QePBtzCPHo0KKK1iPl2ah88O
-         aN+GKFFVet6D/8Zea23ruiSqq6whqgQFd8sjCQGttabYH04OlIfMHIvcQowxoKTbAZL6
-         R2EXW2Kk6Bkcmsg17KGz+/y+eh3grTsX7DqxyXL454zFVZhLaYT1L4QqOl+IWTL9QSib
-         l0pLhZ5MF3WJcLx3IHN/KWIwHfPWyDo6YjWKDxMP/r2Z0q+Q7dZ9I7cJtN66Fw86w6T1
-         JJy9HBalkZfAfF7zO1649Ttn7AvcE2W9URR2XUCyrRPMTjnqjFBqaoPKJ7vV7G3Ek7Q7
-         KQbQ==
-X-Gm-Message-State: APjAAAUOaFjVcKvRyBNTBn7foyb3CBN3X9J4bFplJJ07uN6RbyXQ2aaZ
-	8KcBDBFJlTe9Ip78+kvh5Zfhig==
-X-Google-Smtp-Source: APXvYqzVpx3dL/tLel5sEMYXF+VVdZW9N+hNBFJ6GOs9NKyDtNGyXnUBHxnP/VH+O2xwue27dLhq5A==
-X-Received: by 2002:a05:6830:13d9:: with SMTP id e25mr73720379otq.134.1577734906535;
-        Mon, 30 Dec 2019 11:41:46 -0800 (PST)
-Date: Mon, 30 Dec 2019 11:41:44 -0800
-From: Kees Cook <keescook@chromium.org>
-To: Masahiro Yamada <masahiroy@kernel.org>
-Cc: Arnd Bergmann <arnd@arndb.de>, Emese Revfy <re.emese@gmail.com>,
-	Ard Biesheuvel <ardb@kernel.org>,
-	Andrey Ryabinin <aryabinin@virtuozzo.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-	clang-built-linux <clang-built-linux@googlegroups.com>,
-	Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH] gcc-plugins: make it possible to disable
- CONFIG_GCC_PLUGINS again
-Message-ID: <201912301141.38C6F7E0@keescook>
-References: <20191211133951.401933-1-arnd@arndb.de>
- <CAK7LNASeyPxgQczSvEN4S3Ae7fRtYyynhU9kJ=96VX34S4TECA@mail.gmail.com>
- <CAK8P3a1dH+msCgxU-=w4gp30Bw+x3=6Cj473DuFzxun+3dfOcA@mail.gmail.com>
- <201912120943.486E507@keescook>
- <CAK7LNAQKuyyC-bjSZ=8bhkd1PHjRa-LDEsZra_tFdYbL7X-Azw@mail.gmail.com>
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-transfer-encoding
+         :content-language;
+        bh=sWcIwqwAQVaMiL6AbIBVoLXwMM9wjsoCuHsXRphgo8Y=;
+        b=SJuU/KGRQlGhUWSa0HH9VpzSGCJW4Z0a98q/x/UrUxwMD5vv92SEivHcAGr0EIuTgw
+         jDf23R/I+ShmCMgLJJER0DlmtE4y4VvPz30tqAs9xq7uNZixk6EOLFJrI5DtLMJvJwia
+         EAEqypoNGdG0GL2WtJnbmP01Gpi7rJEory7/zPexAHCf59Rxqosspr6XtqdqI1o23QDD
+         ljOGozjoEQDk2DIGxu3IEfqj1KyvGO1u/N9ZAHIWfWXIsDM0MhOmczxPY+IOu8jnw4vt
+         6GslmynW+1HVFoZx3mUQzUK/+oyLkHJztMXDYd3iMif6/YDKhM8nj1xjd54MiejfHJFR
+         Ky8w==
+X-Gm-Message-State: APjAAAXTcekcpDqYvaVjuQRFlrqKX8b4k0WbP5AmqTh2QZpu3ZOFymgH
+	uaC34S5uIAssq/YUmJywmGU=
+X-Google-Smtp-Source: APXvYqzCT9zC3ZgKpQpD5zdYtsdEacKle/p/witN0yVp/CLOmZS4R1vbOaH6CIUVFPPMG9wX2sUhEg==
+X-Received: by 2002:a17:90a:1696:: with SMTP id o22mr1776310pja.78.1577743416953;
+        Mon, 30 Dec 2019 14:03:36 -0800 (PST)
+Subject: Re: [PATCH v6 07/10] proc: flush task dcache entries from all procfs
+ instances
+To: Alexey Gladkov <gladkov.alexey@gmail.com>,
+ LKML <linux-kernel@vger.kernel.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Linux API <linux-api@vger.kernel.org>,
+ Linux FS Devel <linux-fsdevel@vger.kernel.org>,
+ Linux Security Module <linux-security-module@vger.kernel.org>
+Cc: Akinobu Mita <akinobu.mita@gmail.com>,
+ Alexander Viro <viro@zeniv.linux.org.uk>,
+ Alexey Dobriyan <adobriyan@gmail.com>,
+ Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski
+ <luto@kernel.org>, Daniel Micay <danielmicay@gmail.com>,
+ Djalal Harouni <tixxdz@gmail.com>, "Dmitry V . Levin" <ldv@altlinux.org>,
+ "Eric W . Biederman" <ebiederm@xmission.com>,
+ Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Ingo Molnar <mingo@kernel.org>, "J . Bruce Fields" <bfields@fieldses.org>,
+ Jeff Layton <jlayton@poochiereds.net>, Jonathan Corbet <corbet@lwn.net>,
+ Kees Cook <keescook@chromium.org>,
+ Linus Torvalds <torvalds@linux-foundation.org>,
+ Oleg Nesterov <oleg@redhat.com>, Solar Designer <solar@openwall.com>,
+ Stephen Rothwell <sfr@canb.auug.org.au>
+References: <20191225125151.1950142-1-gladkov.alexey@gmail.com>
+ <20191225125151.1950142-8-gladkov.alexey@gmail.com>
+From: J Freyensee <why2jjj.linux@gmail.com>
+Message-ID: <8d85ba43-0759-358e-137d-246107bac747@gmail.com>
+Date: Mon, 30 Dec 2019 14:03:29 -0800
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:60.0)
+ Gecko/20100101 Thunderbird/60.9.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAK7LNAQKuyyC-bjSZ=8bhkd1PHjRa-LDEsZra_tFdYbL7X-Azw@mail.gmail.com>
+In-Reply-To: <20191225125151.1950142-8-gladkov.alexey@gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+Content-Language: en-US
 
-On Sat, Dec 14, 2019 at 05:56:34PM +0900, Masahiro Yamada wrote:
-> On Fri, Dec 13, 2019 at 2:44 AM Kees Cook <keescook@chromium.org> wrote:
-> >
-> > On Thu, Dec 12, 2019 at 10:59:40AM +0100, Arnd Bergmann wrote:
-> > > On Thu, Dec 12, 2019 at 5:52 AM Masahiro Yamada <masahiroy@kernel.org> wrote:
-> > > >
-> > > > On Wed, Dec 11, 2019 at 10:40 PM Arnd Bergmann <arnd@arndb.de> wrote:
-> > > > >
-> > > > > I noticed that randconfig builds with gcc no longer produce a lot of
-> > > > > ccache hits, unlike with clang, and traced this back to plugins
-> > > > > now being enabled unconditionally if they are supported.
-> > > > >
-> > > > > I am now working around this by adding
-> > > > >
-> > > > >    export CCACHE_COMPILERCHECK=/usr/bin/size -A %compiler%
-> > > > >
-> > > > > to my top-level Makefile. This changes the heuristic that ccache uses
-> > > > > to determine whether the plugins are the same after a 'make clean'.
-> > > > >
-> > > > > However, it also seems that being able to just turn off the plugins is
-> > > > > generally useful, at least for build testing it adds noticeable overhead
-> > > > > but does not find a lot of bugs additional bugs, and may be easier for
-> > > > > ccache users than my workaround.
-> > > > >
-> > > > > Fixes: 9f671e58159a ("security: Create "kernel hardening" config area")
-> > > > > Signed-off-by: Arnd Bergmann <arnd@arndb.de>
-> > > >
-> > > > Reviewed-by: Masahiro Yamada <masahiroy@kernel.org>
-> > >
-> > > On Wed, Dec 11, 2019 at 2:59 PM Ard Biesheuvel
-> > > <ard.biesheuvel@linaro.org> wrote:
-> > > >Acked-by: Ard Biesheuvel <ardb@kernel.org>
-> > >
-> > > Thanks! Who would be the best person to pick up the patch?
-> > > Should I send it to Andrew?
-> >
-> > Acked-by: Kees Cook <keescook@chromium.org>
-> >
-> > I can take it in my tree, or I'm happy to have Masahiro take it.
-> >
-> > --
-> > Kees Cook
-> 
-> Kees,
-> Please apply it to your tree.
+snip
 
-Thanks, applied!
+.
 
--- 
-Kees Cook
+.
+
+.
+
+>   
+> +#ifdef CONFIG_PROC_FS
+> +static inline void pidns_proc_lock(struct pid_namespace *pid_ns)
+> +{
+> +	down_write(&pid_ns->rw_proc_mounts);
+> +}
+> +
+> +static inline void pidns_proc_unlock(struct pid_namespace *pid_ns)
+> +{
+> +	up_write(&pid_ns->rw_proc_mounts);
+> +}
+> +
+> +static inline void pidns_proc_lock_shared(struct pid_namespace *pid_ns)
+> +{
+> +	down_read(&pid_ns->rw_proc_mounts);
+> +}
+> +
+> +static inline void pidns_proc_unlock_shared(struct pid_namespace *pid_ns)
+> +{
+> +	up_read(&pid_ns->rw_proc_mounts);
+> +}
+> +#else /* !CONFIG_PROC_FS */
+> +
+Apologies for my newbie question. I couldn't help but notice all these 
+function calls are assuming that the parameter struct pid_namespace 
+*pid_ns will never be NULL.  Is that a good assumption?
+
+I don't have the background in this code to answer on my own, but I 
+thought I'd raise the question.
+
+Thanks,
+Jay
+
