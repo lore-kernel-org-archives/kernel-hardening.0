@@ -1,23 +1,23 @@
-Return-Path: <SRS0=oa1A=3F=lists.openwall.com=kernel-hardening-return-17563-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=5Biu=3F=lists.openwall.com=kernel-hardening-return-17564-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 031BFC32771
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jan 2020 01:25:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A0E14C32771
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jan 2020 01:25:29 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2905B2084D
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jan 2020 01:25:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C40A52084D
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jan 2020 01:25:28 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="F0L+2cGd"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2905B2084D
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="B7I20849"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C40A52084D
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17563-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3868 invoked by uid 550); 16 Jan 2020 01:24:37 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17564-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3926 invoked by uid 550); 16 Jan 2020 01:24:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,37 +25,37 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3685 invoked from network); 16 Jan 2020 01:24:34 -0000
+Received: (qmail 3792 invoked from network); 16 Jan 2020 01:24:36 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=TZN5E5934TvMDmRyA6YbiUZA3oVW+HYGx9jzlGs1fas=;
-        b=F0L+2cGdglf0WmtEJtbNhOu0tsLJbuHzAC7gr4O8WS8Pef8z+2Vopixa6Qc3xKDykF
-         ZoaqE4KS2detzrDvFlhnL183vD9G0Dlxu8bnnwMSiGSnJcw/wPEDZryJJwgTsO6cSIbV
-         K3ySX8KnuTXqinCV6KX6X9zhMd+7hECdOUe18=
+        bh=q9yyIQHmH5l6RRr9oXrsGBCw2p7gy7/zKkbegYq6Q+s=;
+        b=B7I20849zduaZUej22ttALxy7KpacppyUhdQv1th1EbyGmfRtv2NhklqGAXCd1Yk/D
+         A2MkOc6mg+JxfrAnAoKrmKGlVo+my3T/Ah2SNdDuBATJOSh66n91QfvL5cLmwAOnMA1w
+         CKqyQ779gOAv3EBPiHu5x7+K4nn9ELNeDZaUA=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=TZN5E5934TvMDmRyA6YbiUZA3oVW+HYGx9jzlGs1fas=;
-        b=MliW3KPAYTZAPrcvAJnnGaTvTg8RjptOb+19uOXv9LZuzxTXUXk32kRgC7uVpOH0Xl
-         yY83o2vx87EDjJN6VHa5b5vnQgQjwv6ufaincUR0ZNggSkjeUge7tR4p+Q4WXYuIqe20
-         QaEaC/nqNF/lM4zWe4J62ogwYCrhiHzJDL3wfl9MK5OkptgKMlLvrYRCxRA4aTc8SZ1j
-         4/y6KKadye9YbJXbxidE353nqr3y1nL/DfA0C9eWkUXakPm6ojIJais6br/Yr0wW0RvO
-         OHfRRMkf6uUoK2HBUZjx06m03HuzTNQWpaD09u9bvXkl15SX6EWGm+mQXSt6g8DgVs9+
-         oHCA==
-X-Gm-Message-State: APjAAAVDzbo8Oo1MXTQOUid4siLwFUxgppaNeeBKTKx6/O2HL6NjnjqN
-	j8swkP+lFl2uLYsBIegqZ71t4A==
-X-Google-Smtp-Source: APXvYqzlIkM2MJkOvtIuhX2DY3fkspjNHpusBb4F4dDHo3Ua3MtimiH7urAXuSIo/Hb9h6dfm3wosA==
-X-Received: by 2002:a17:902:124:: with SMTP id 33mr28734328plb.115.1579137862886;
-        Wed, 15 Jan 2020 17:24:22 -0800 (PST)
+        bh=q9yyIQHmH5l6RRr9oXrsGBCw2p7gy7/zKkbegYq6Q+s=;
+        b=C/POZVm5JqJIR8w2jCcKkfkCKqECrWRZGISYbpKXQ0QAwjN3eI1Q+Mj3S+aeucokMN
+         u44NO0lBkKvC/oBrrA66mOt54evt//MsNUDTltSO5bfMV7Vd41vUga2PnYz/qKJMJ02t
+         VZXHZN983QsipI9TEQGt8/6Vj2UMKP58rK+6A8E4Ic364KFToBn8j/n43cg69YQPKu8z
+         HqxZk6Wf1V7oqljCJ8mIDOxzTUjSjzgGPaJP0GJLmGLOTzXbSS3EpkuwvSQPFxJIoJGp
+         jqOcQtYJKP7mMf4b/R6XuqeFEoBn49ZA2tKwhLwSrsl7kTtb9Ap2nKMVo/4qiT/fPO6R
+         226g==
+X-Gm-Message-State: APjAAAXpypRDsMYao60rXJ5ygBrYDsWT+SlyOWm24V3N2BjRKH2Mp7vi
+	kxac1tpFkY9USfab5ik7exPMHg==
+X-Google-Smtp-Source: APXvYqyOAYblAndR/UL8Abnum2Ky8g1e0MSKZwDdBzyR2nJu09CRBhIWbjiNtyWu1tUKWCTcaalMuw==
+X-Received: by 2002:a63:e0f:: with SMTP id d15mr36134094pgl.255.1579137864589;
+        Wed, 15 Jan 2020 17:24:24 -0800 (PST)
 From: Kees Cook <keescook@chromium.org>
 To: Andrew Morton <akpm@linux-foundation.org>
 Cc: Kees Cook <keescook@chromium.org>,
-	Elena Petrova <lenaptr@google.com>,
-	Andrey Ryabinin <aryabinin@virtuozzo.com>,
 	Dmitry Vyukov <dvyukov@google.com>,
+	Andrey Ryabinin <aryabinin@virtuozzo.com>,
+	Elena Petrova <lenaptr@google.com>,
 	Alexander Potapenko <glider@google.com>,
 	Dan Carpenter <dan.carpenter@oracle.com>,
 	"Gustavo A. R. Silva" <gustavo@embeddedor.com>,
@@ -66,152 +66,160 @@ Cc: Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com,
 	syzkaller@googlegroups.com
-Subject: [PATCH v3 2/6] ubsan: Split "bounds" checker from other options
-Date: Wed, 15 Jan 2020 17:23:17 -0800
-Message-Id: <20200116012321.26254-3-keescook@chromium.org>
+Subject: [PATCH v3 6/6] ubsan: Include bug type in report header
+Date: Wed, 15 Jan 2020 17:23:21 -0800
+Message-Id: <20200116012321.26254-7-keescook@chromium.org>
 X-Mailer: git-send-email 2.20.1
 In-Reply-To: <20200116012321.26254-1-keescook@chromium.org>
 References: <20200116012321.26254-1-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-In order to do kernel builds with the bounds checker individually
-available, introduce CONFIG_UBSAN_BOUNDS, with the remaining options
-under CONFIG_UBSAN_MISC.
+When syzbot tries to figure out how to deduplicate bug reports, it
+prefers seeing a hint about a specific bug type (we can do better than
+just "UBSAN"). This lifts the handler reason into the UBSAN report line
+that includes the file path that tripped a check. Unfortunately, UBSAN
+does not provide function names.
 
-For example, using this, we can start to expand the coverage syzkaller is
-providing. Right now, all of UBSan is disabled for syzbot builds because
-taken as a whole, it is too noisy. This will let us focus on one feature
-at a time.
-
-For the bounds checker specifically, this provides a mechanism to
-eliminate an entire class of array overflows with close to zero
-performance overhead (I cannot measure a difference). In my (mostly)
-defconfig, enabling bounds checking adds ~4200 checks to the kernel.
-Performance changes are in the noise, likely due to the branch predictors
-optimizing for the non-fail path.
-
-Some notes on the bounds checker:
-
-- it does not instrument {mem,str}*()-family functions, it only
-  instruments direct indexed accesses (e.g. "foo[i]"). Dealing with
-  the {mem,str}*()-family functions is a work-in-progress around
-  CONFIG_FORTIFY_SOURCE[1].
-
-- it ignores flexible array members, including the very old single
-  byte (e.g. "int foo[1];") declarations. (Note that GCC's
-  implementation appears to ignore _all_ trailing arrays, but Clang only
-  ignores empty, 0, and 1 byte arrays[2].)
-
-[1] https://github.com/KSPP/linux/issues/6
-[2] https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92589
-
-Suggested-by: Elena Petrova <lenaptr@google.com>
+Suggested-by: Dmitry Vyukov <dvyukov@google.com>
+Link: https://lore.kernel.org/lkml/CACT4Y+bsLJ-wFx_TaXqax3JByUOWB3uk787LsyMVcfW6JzzGvg@mail.gmail.com
 Signed-off-by: Kees Cook <keescook@chromium.org>
-Reviewed-by: Andrey Ryabinin <aryabinin@virtuozzo.com>
-Acked-by: Dmitry Vyukov <dvyukov@google.com>
 ---
- lib/Kconfig.ubsan      | 29 ++++++++++++++++++++++++-----
- scripts/Makefile.ubsan |  7 ++++++-
- 2 files changed, 30 insertions(+), 6 deletions(-)
+ lib/ubsan.c | 36 +++++++++++++++---------------------
+ 1 file changed, 15 insertions(+), 21 deletions(-)
 
-diff --git a/lib/Kconfig.ubsan b/lib/Kconfig.ubsan
-index 9deb655838b0..48469c95d78e 100644
---- a/lib/Kconfig.ubsan
-+++ b/lib/Kconfig.ubsan
-@@ -2,7 +2,7 @@
- config ARCH_HAS_UBSAN_SANITIZE_ALL
- 	bool
+diff --git a/lib/ubsan.c b/lib/ubsan.c
+index 429663eef6a7..057d5375bfc6 100644
+--- a/lib/ubsan.c
++++ b/lib/ubsan.c
+@@ -45,13 +45,6 @@ static bool was_reported(struct source_location *location)
+ 	return test_and_set_bit(REPORTED_BIT, &location->reported);
+ }
  
--config UBSAN
-+menuconfig UBSAN
- 	bool "Undefined behaviour sanity checker"
- 	help
- 	  This option enables the Undefined Behaviour sanity checker.
-@@ -10,9 +10,10 @@ config UBSAN
- 	  behaviours at runtime. For more details, see:
- 	  Documentation/dev-tools/ubsan.rst
+-static void print_source_location(const char *prefix,
+-				struct source_location *loc)
+-{
+-	pr_err("%s %s:%d:%d\n", prefix, loc->file_name,
+-		loc->line & LINE_MASK, loc->column & COLUMN_MASK);
+-}
+-
+ static bool suppress_report(struct source_location *loc)
+ {
+ 	return current->in_ubsan || was_reported(loc);
+@@ -140,13 +133,14 @@ static void val_to_string(char *str, size_t size, struct type_descriptor *type,
+ 	}
+ }
  
-+if UBSAN
-+
- config UBSAN_TRAP
- 	bool "On Sanitizer warnings, abort the running kernel code"
--	depends on UBSAN
- 	depends on $(cc-option, -fsanitize-undefined-trap-on-error)
- 	help
- 	  Building kernels with Sanitizer features enabled tends to grow
-@@ -25,9 +26,26 @@ config UBSAN_TRAP
- 	  the system. For some system builders this is an acceptable
- 	  trade-off.
+-static void ubsan_prologue(struct source_location *location)
++static void ubsan_prologue(struct source_location *loc, const char *reason)
+ {
+ 	current->in_ubsan++;
  
-+config UBSAN_BOUNDS
-+	bool "Perform array index bounds checking"
-+	default UBSAN
-+	help
-+	  This option enables detection of directly indexed out of bounds
-+	  array accesses, where the array size is known at compile time.
-+	  Note that this does not protect array overflows via bad calls
-+	  to the {str,mem}*cpy() family of functions (that is addressed
-+	  by CONFIG_FORTIFY_SOURCE).
-+
-+config UBSAN_MISC
-+	bool "Enable all other Undefined Behavior sanity checks"
-+	default UBSAN
-+	help
-+	  This option enables all sanity checks that don't have their
-+	  own Kconfig options. Disable this if you only want to have
-+	  individually selected checks.
-+
- config UBSAN_SANITIZE_ALL
- 	bool "Enable instrumentation for the entire kernel"
--	depends on UBSAN
- 	depends on ARCH_HAS_UBSAN_SANITIZE_ALL
+ 	pr_err("========================================"
+ 		"========================================\n");
+-	print_source_location("UBSAN: Undefined behaviour in", location);
++	pr_err("UBSAN: %s in %s:%d:%d\n", reason, loc->file_name,
++		loc->line & LINE_MASK, loc->column & COLUMN_MASK);
+ }
  
- 	# We build with -Wno-maybe-uninitilzed, but we still want to
-@@ -44,7 +62,6 @@ config UBSAN_SANITIZE_ALL
+ static void ubsan_epilogue(void)
+@@ -180,12 +174,12 @@ static void handle_overflow(struct overflow_data *data, void *lhs,
+ 	if (suppress_report(&data->location))
+ 		return;
  
- config UBSAN_NO_ALIGNMENT
- 	bool "Disable checking of pointers alignment"
--	depends on UBSAN
- 	default y if HAVE_EFFICIENT_UNALIGNED_ACCESS
- 	help
- 	  This option disables the check of unaligned memory accesses.
-@@ -57,7 +74,9 @@ config UBSAN_ALIGNMENT
+-	ubsan_prologue(&data->location);
++	ubsan_prologue(&data->location, type_is_signed(type) ?
++			"signed integer overflow" :
++			"unsigned integer overflow");
  
- config TEST_UBSAN
- 	tristate "Module for testing for undefined behavior detection"
--	depends on m && UBSAN
-+	depends on m
- 	help
- 	  This is a test module for UBSAN.
- 	  It triggers various undefined behavior, and detect it.
-+
-+endif	# if UBSAN
-diff --git a/scripts/Makefile.ubsan b/scripts/Makefile.ubsan
-index 668a91510bfe..5b15bc425ec9 100644
---- a/scripts/Makefile.ubsan
-+++ b/scripts/Makefile.ubsan
-@@ -5,14 +5,19 @@ ifdef CONFIG_UBSAN_ALIGNMENT
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=alignment)
- endif
+ 	val_to_string(lhs_val_str, sizeof(lhs_val_str), type, lhs);
+ 	val_to_string(rhs_val_str, sizeof(rhs_val_str), type, rhs);
+-	pr_err("%s integer overflow:\n",
+-		type_is_signed(type) ? "signed" : "unsigned");
+ 	pr_err("%s %c %s cannot be represented in type %s\n",
+ 		lhs_val_str,
+ 		op,
+@@ -225,7 +219,7 @@ void __ubsan_handle_negate_overflow(struct overflow_data *data,
+ 	if (suppress_report(&data->location))
+ 		return;
  
-+ifdef CONFIG_UBSAN_BOUNDS
-+      CFLAGS_UBSAN += $(call cc-option, -fsanitize=bounds)
-+endif
-+
-+ifdef CONFIG_UBSAN_MISC
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=shift)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=integer-divide-by-zero)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=unreachable)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=signed-integer-overflow)
--      CFLAGS_UBSAN += $(call cc-option, -fsanitize=bounds)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=object-size)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=bool)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=enum)
-+endif
+-	ubsan_prologue(&data->location);
++	ubsan_prologue(&data->location, "negation overflow");
  
- ifdef CONFIG_UBSAN_TRAP
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize-undefined-trap-on-error)
+ 	val_to_string(old_val_str, sizeof(old_val_str), data->type, old_val);
+ 
+@@ -245,7 +239,7 @@ void __ubsan_handle_divrem_overflow(struct overflow_data *data,
+ 	if (suppress_report(&data->location))
+ 		return;
+ 
+-	ubsan_prologue(&data->location);
++	ubsan_prologue(&data->location, "division overflow");
+ 
+ 	val_to_string(rhs_val_str, sizeof(rhs_val_str), data->type, rhs);
+ 
+@@ -264,7 +258,7 @@ static void handle_null_ptr_deref(struct type_mismatch_data_common *data)
+ 	if (suppress_report(data->location))
+ 		return;
+ 
+-	ubsan_prologue(data->location);
++	ubsan_prologue(data->location, "NULL pointer dereference");
+ 
+ 	pr_err("%s null pointer of type %s\n",
+ 		type_check_kinds[data->type_check_kind],
+@@ -279,7 +273,7 @@ static void handle_misaligned_access(struct type_mismatch_data_common *data,
+ 	if (suppress_report(data->location))
+ 		return;
+ 
+-	ubsan_prologue(data->location);
++	ubsan_prologue(data->location, "misaligned access");
+ 
+ 	pr_err("%s misaligned address %p for type %s\n",
+ 		type_check_kinds[data->type_check_kind],
+@@ -295,7 +289,7 @@ static void handle_object_size_mismatch(struct type_mismatch_data_common *data,
+ 	if (suppress_report(data->location))
+ 		return;
+ 
+-	ubsan_prologue(data->location);
++	ubsan_prologue(data->location, "object size mismatch");
+ 	pr_err("%s address %p with insufficient space\n",
+ 		type_check_kinds[data->type_check_kind],
+ 		(void *) ptr);
+@@ -354,7 +348,7 @@ void __ubsan_handle_out_of_bounds(struct out_of_bounds_data *data, void *index)
+ 	if (suppress_report(&data->location))
+ 		return;
+ 
+-	ubsan_prologue(&data->location);
++	ubsan_prologue(&data->location, "array index out of bounds");
+ 
+ 	val_to_string(index_str, sizeof(index_str), data->index_type, index);
+ 	pr_err("index %s is out of range for type %s\n", index_str,
+@@ -375,7 +369,7 @@ void __ubsan_handle_shift_out_of_bounds(struct shift_out_of_bounds_data *data,
+ 	if (suppress_report(&data->location))
+ 		goto out;
+ 
+-	ubsan_prologue(&data->location);
++	ubsan_prologue(&data->location, "shift out of bounds");
+ 
+ 	val_to_string(rhs_str, sizeof(rhs_str), rhs_type, rhs);
+ 	val_to_string(lhs_str, sizeof(lhs_str), lhs_type, lhs);
+@@ -407,7 +401,7 @@ EXPORT_SYMBOL(__ubsan_handle_shift_out_of_bounds);
+ 
+ void __ubsan_handle_builtin_unreachable(struct unreachable_data *data)
+ {
+-	ubsan_prologue(&data->location);
++	ubsan_prologue(&data->location, "unreachable");
+ 	pr_err("calling __builtin_unreachable()\n");
+ 	ubsan_epilogue();
+ 	panic("can't return from __builtin_unreachable()");
+@@ -422,7 +416,7 @@ void __ubsan_handle_load_invalid_value(struct invalid_value_data *data,
+ 	if (suppress_report(&data->location))
+ 		return;
+ 
+-	ubsan_prologue(&data->location);
++	ubsan_prologue(&data->location, "invalid load");
+ 
+ 	val_to_string(val_str, sizeof(val_str), data->type, val);
+ 
 -- 
 2.20.1
 
