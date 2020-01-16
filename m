@@ -1,23 +1,23 @@
-Return-Path: <SRS0=N249=27=lists.openwall.com=kernel-hardening-return-17558-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pjnT=3F=lists.openwall.com=kernel-hardening-return-17559-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C520AC33CA2
-	for <kernel-hardening@archiver.kernel.org>; Fri, 10 Jan 2020 10:35:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 839B8C32771
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jan 2020 01:24:48 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EBA5020661
-	for <kernel-hardening@archiver.kernel.org>; Fri, 10 Jan 2020 10:35:49 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id D59042467E
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jan 2020 01:24:47 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="juSyx3fI"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EBA5020661
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17558-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28337 invoked by uid 550); 10 Jan 2020 10:35:42 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="Necsxt4U"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D59042467E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17559-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3677 invoked by uid 550); 16 Jan 2020 01:24:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,183 +25,87 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23952 invoked from network); 9 Jan 2020 20:17:08 -0000
+Received: (qmail 3643 invoked from network); 16 Jan 2020 01:24:32 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc:content-transfer-encoding;
-        bh=E+lwrXE3aZ94AXYYIKmBRrTAemPYlA5yIdzG6bHrsbM=;
-        b=juSyx3fIemNz4CfhuztJJRSl/hZcSdBYYxa82QRPNc5ezugZgpxWIbJe8ZOAo3Y/OG
-         Zh/nnA/LwkmeHKVD7+fhrraxUqdbXkIy/yzqfxMcPcER5SXWrAyKbodbiHRcDIH+Ljuw
-         jaBKurW4cZD1tlk6qEhW+vkbcwBOHdbuGU5V8qYp+1KFz7/RUTucBBwEzhMSINlLG5X5
-         6mNdA+hmav+o0Q3JCRsTmjgEwgDdMmcRrPQZd8Jft6uVqLuSaSZ16wAOs8zaI4+CzvDb
-         Xr4BLxh34hH4LHKSqjloscJkcH30Dm0S74Y+WMf0O9hOYJc8+JEZJDiZ/iwgImwD7e0k
-         R50A==
+        d=chromium.org; s=google;
+        h=from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=ztBntqcbRDpikloUpN2F0KWZjGouqnztxdMWfXHrneU=;
+        b=Necsxt4UM069dJn7UjGMxHP4B4Sb0ubZNcm+nTrWn7TXh6RK8XLGxhuR6iy+4r9KvX
+         HtSp4KGSa43ZdYKf5GtwMSyGz/DsjpqSBBps9cJKtCKviSO7uwPrv9LibT7DWL71ALGF
+         w4jbfha23PQIwPGtO/NJIuyW3VbmoDRbPfxSU=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc:content-transfer-encoding;
-        bh=E+lwrXE3aZ94AXYYIKmBRrTAemPYlA5yIdzG6bHrsbM=;
-        b=sUKv668+wbh+BAi3evYgdqUAjpXkszO6QTnwC4Kd9oRLcIDnLGtHjkVNGxlerY4Wh7
-         0ZzT7ie1jl1vKUl9M0w2dv/G0gdqftEGQnAQZDGGy3bAG7EHUby4Z04O/WHG9EC8IDt8
-         /n4S6BrehdW0PEJGU7DM3D74XfSxtO15OXwCM5T8C+XIB2OdniCv8mqDxjiw5Vx/mrEr
-         hjbo2Cc9X411+12qMdY0cn+hzJqChPDAp1f7bSGk1ObQ7VXEXKEoXJBQolUoobRZitcA
-         GFocuBAup8vc84+1CAt3KhHipH3C4p6D99MjTazeGT5nU8PYPV1i0YN/PQH+veHoZrmX
-         BV1A==
-X-Gm-Message-State: APjAAAU6jZUq0vDnCuOY3bjarxpAxk1XrXIEeJqRF/uYApZv6VELOMZ6
-	VQLoYswOrHu1PzWq7PQw8gp81qguELTl4n/kdw0=
-X-Google-Smtp-Source: APXvYqyRBoQWA0EPa3ebhHv8AejJlhOoyhlMvK0QfxIl4zgcvvSGuHQ4BPXGpoSdlb3wsdh6/KtNAXpvrLOLks96BXo=
-X-Received: by 2002:a1c:6404:: with SMTP id y4mr6727312wmb.143.1578601016498;
- Thu, 09 Jan 2020 12:16:56 -0800 (PST)
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=ztBntqcbRDpikloUpN2F0KWZjGouqnztxdMWfXHrneU=;
+        b=s3m/Mx6Z0+lj6dF7N3yeuZk+0p0oJAmnMeA2oy2vxobp/Yqcjg5090vZfs1RDU85hw
+         gVxQ8UpD82kLoOqjkOHv53tTJlszq8HnV9LIBz4yb20E+ITNKzGQ4FfffZlokBFEQfpZ
+         pST7ujAZ9Npej4hPBqqvUPFLH5eEMR5CL+XusUZ5NPseCYrnm1oKbANzQ8/aaQFeBewn
+         mOMrjsxkThEGPEad0520YoAkw81SWIKkFguXX4cOVPgLoBWGEyC4IhsUcIiu2J63s1zJ
+         5l8aivckIpp85btvwrgNjJwaBfxevcioO130lwPMlo9VbOqctc+kk8hA5x79Cv5Xb2S+
+         km2Q==
+X-Gm-Message-State: APjAAAVYz3bDEqXwJLHPxMkR1vF94OJd5B3xsw8sQW4USxvUQh9qc5D8
+	yqfxkFHYazJVZPcHau+CTVvtkg==
+X-Google-Smtp-Source: APXvYqyEY91Ps4j5Unu6q/04cKkVouK2+nDVdzN3lDLdlCCZsHk9TuTlpS854xybBZZK2RoncaRauQ==
+X-Received: by 2002:a63:7843:: with SMTP id t64mr36298336pgc.144.1579137860501;
+        Wed, 15 Jan 2020 17:24:20 -0800 (PST)
+From: Kees Cook <keescook@chromium.org>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Kees Cook <keescook@chromium.org>,
+	Andrey Ryabinin <aryabinin@virtuozzo.com>,
+	Elena Petrova <lenaptr@google.com>,
+	Alexander Potapenko <glider@google.com>,
+	Dan Carpenter <dan.carpenter@oracle.com>,
+	"Gustavo A. R. Silva" <gustavo@embeddedor.com>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	kasan-dev@googlegroups.com,
+	linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com,
+	syzkaller@googlegroups.com
+Subject: [PATCH v3 0/6] ubsan: Split out bounds checker
+Date: Wed, 15 Jan 2020 17:23:15 -0800
+Message-Id: <20200116012321.26254-1-keescook@chromium.org>
+X-Mailer: git-send-email 2.20.1
 MIME-Version: 1.0
-References: <20200107192555.20606-1-tli@digitalocean.com> <b5984995-7276-97d3-a604-ddacfb89bd89@amd.com>
- <202001080936.A36005F1@keescook> <CADnq5_NLS=CuHD39utCTnTVsY_izuTPXFfsew6TpMjovgFoT5g@mail.gmail.com>
- <a2919283-f5aa-43b2-9186-6c41315458c4@amd.com> <505a76a9-6110-3ddb-0f15-059b60922482@suse.de>
-In-Reply-To: <505a76a9-6110-3ddb-0f15-059b60922482@suse.de>
-From: Alex Deucher <alexdeucher@gmail.com>
-Date: Thu, 9 Jan 2020 15:16:44 -0500
-Message-ID: <CADnq5_NH0Xwhr3YjT5Ax-45-f8mmCxvfUPb8V6i34TY44BJPOA@mail.gmail.com>
-Subject: Re: [PATCH 0/2] drm/radeon: have the callers of set_memory_*() check
- the return value
-To: Thomas Zimmermann <tzimmermann@suse.de>
-Cc: =?UTF-8?Q?Christian_K=C3=B6nig?= <christian.koenig@amd.com>, 
-	Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, 
-	David Airlie <airlied@linux.ie>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	LKML <linux-kernel@vger.kernel.org>, amd-gfx list <amd-gfx@lists.freedesktop.org>, 
-	Tianlin Li <tli@digitalocean.com>, 
-	Maling list - DRI developers <dri-devel@lists.freedesktop.org>, Alex Deucher <alexander.deucher@amd.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Content-Transfer-Encoding: 8bit
 
-On Thu, Jan 9, 2020 at 5:49 AM Thomas Zimmermann <tzimmermann@suse.de> wrot=
-e:
->
-> Hi
->
-> Am 09.01.20 um 11:15 schrieb Christian K=C3=B6nig:
-> > Am 08.01.20 um 18:51 schrieb Alex Deucher:
-> >> On Wed, Jan 8, 2020 at 12:39 PM Kees Cook <keescook@chromium.org> wrot=
-e:
-> >>> On Wed, Jan 08, 2020 at 01:56:47PM +0100, Christian K=C3=B6nig wrote:
-> >>>> Am 07.01.20 um 20:25 schrieb Tianlin Li:
-> >>>>> Right now several architectures allow their set_memory_*() family o=
-f
-> >>>>> functions to fail, but callers may not be checking the return value=
-s.
-> >>>>> If set_memory_*() returns with an error, call-site assumptions may =
-be
-> >>>>> infact wrong to assume that it would either succeed or not succeed =
-at
-> >>>>> all. Ideally, the failure of set_memory_*() should be passed up the
-> >>>>> call stack, and callers should examine the failure and deal with it=
-.
-> >>>>>
-> >>>>> Need to fix the callers and add the __must_check attribute. They al=
-so
-> >>>>> may not provide any level of atomicity, in the sense that the memor=
-y
-> >>>>> protections may be left incomplete on failure. This issue likely ha=
-s a
-> >>>>> few steps on effects architectures:
-> >>>>> 1)Have all callers of set_memory_*() helpers check the return value=
-.
-> >>>>> 2)Add __must_check to all set_memory_*() helpers so that new uses d=
-o
-> >>>>> not ignore the return value.
-> >>>>> 3)Add atomicity to the calls so that the memory protections aren't
-> >>>>> left
-> >>>>> in a partial state.
-> >>>>>
-> >>>>> This series is part of step 1. Make drm/radeon check the return
-> >>>>> value of
-> >>>>> set_memory_*().
-> >>>> I'm a little hesitate merge that. This hardware is >15 years old and
-> >>>> nobody
-> >>>> of the developers have any system left to test this change on.
-> >>> If that's true it should be removed from the tree. We need to be able=
- to
-> >>> correctly make these kinds of changes in the kernel.
-> >> This driver supports about 15 years of hardware generations.  Newer
-> >> cards are still prevalent, but the older stuff is less so.  It still
-> >> works and people use it based on feedback I've seen, but the older
-> >> stuff has no active development at this point.  This change just
-> >> happens to target those older chips.
-> >
-> > Just a few weeks back we've got a mail from somebody using an integrate=
-d
-> > R128 in a laptop.
-> >
-> > After a few mails back and force we figured out that his nearly 20 year=
-s
-> > old hardware was finally failing.
-> >
-> > Up till that he was still successfully updating his kernel from time to
-> > time and the driver still worked. I find that pretty impressive.
-> >
-> >>
-> >> Alex
-> >>
-> >>>> Would it be to much of a problem to just add something like: r =3D
-> >>>> set_memory_*(); (void)r; /* Intentionally ignored */.
-> >>> This seems like a bad idea -- we shouldn't be papering over failure
-> >>> like this when there is logic available to deal with it.
-> >
-> > Well I certainly agree to that, but we are talking about a call which
-> > happens only once during driver load/unload. If necessary we could also
-> > print an error when something goes wrong, but please no larger
-> > refactoring of return values and call paths.
-> >
->
-> IMHO radeon should be marked as orphaned or obsolete then.
+This splits out the bounds checker so it can be individually used. This
+is expected to be enabled in Android and hopefully for syzbot. Includes
+LKDTM tests for behavioral corner-cases (beyond just the bounds checker),
+and adjusts ubsan and kasan slightly for correct panic handling.
 
-As I said this covers about 15-17 years of GPUs (~60 asic families).
-The older stuff is hard to test these days because it's PCI or AGP
-hardware.  So far it works for most people.  The newer stuff is still
-tested as used regularly.
+-Kees
 
-Alex
+v3:
+ - use UBSAN menuconfig (will)
+ - clean up ubsan report titles (dvyukov)
+ - fix ubsan/kasan "panic" handling
+ - add Acks
+v2: https://lore.kernel.org/lkml/20191121181519.28637-1-keescook@chromium.org
+v1: https://lore.kernel.org/lkml/20191120010636.27368-1-keescook@chromium.org
 
->
-> Best regards
-> Thomas
->
-> > It is perfectly possible that this call actually failed on somebodies
-> > hardware, but we never noticed because the driver still works fine. If
-> > we now handle the error it is possible that the module never loads and
-> > the user gets a black screen instead.
-> >
-> > Regards,
-> > Christian.
-> >
-> >>>
-> >>>> Apart from that certainly a good idea to add __must_check to the
-> >>>> functions.
-> >>> Agreed!
-> >>>
-> >>> -Kees
-> >>>
-> >>> --
-> >>> Kees Cook
-> >>> _______________________________________________
-> >>> dri-devel mailing list
-> >>> dri-devel@lists.freedesktop.org
-> >>> https://nam11.safelinks.protection.outlook.com/?url=3Dhttps%3A%2F%2Fl=
-ists.freedesktop.org%2Fmailman%2Flistinfo%2Fdri-devel&amp;data=3D02%7C01%7C=
-christian.koenig%40amd.com%7Ca542d384d54040b5b0b708d794636df1%7C3dd8961fe48=
-84e608e11a82d994e183d%7C0%7C0%7C637141027080080147&amp;sdata=3DEHFl6YOHmNp7=
-gOqWsVmfoeD0jNirBTOGHcCP4efC%2FvE%3D&amp;reserved=3D0
-> >>>
-> >
-> > _______________________________________________
-> > dri-devel mailing list
-> > dri-devel@lists.freedesktop.org
-> > https://lists.freedesktop.org/mailman/listinfo/dri-devel
->
-> --
-> Thomas Zimmermann
-> Graphics Driver Developer
-> SUSE Software Solutions Germany GmbH
-> Maxfeldstr. 5, 90409 N=C3=BCrnberg, Germany
-> (HRB 36809, AG N=C3=BCrnberg)
-> Gesch=C3=A4ftsf=C3=BChrer: Felix Imend=C3=B6rffer
->
+
+Kees Cook (6):
+  ubsan: Add trap instrumentation option
+  ubsan: Split "bounds" checker from other options
+  lkdtm/bugs: Add arithmetic overflow and array bounds checks
+  ubsan: Check panic_on_warn
+  kasan: Unset panic_on_warn before calling panic()
+  ubsan: Include bug type in report header
+
+ drivers/misc/lkdtm/bugs.c  | 75 ++++++++++++++++++++++++++++++++++++++
+ drivers/misc/lkdtm/core.c  |  3 ++
+ drivers/misc/lkdtm/lkdtm.h |  3 ++
+ lib/Kconfig.ubsan          | 49 +++++++++++++++++++++----
+ lib/Makefile               |  2 +
+ lib/ubsan.c                | 47 +++++++++++++-----------
+ mm/kasan/report.c          | 10 ++++-
+ scripts/Makefile.ubsan     | 16 ++++++--
+ 8 files changed, 172 insertions(+), 33 deletions(-)
+
+-- 
+2.20.1
+
