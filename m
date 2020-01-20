@@ -1,23 +1,22 @@
-Return-Path: <SRS0=M31D=3J=lists.openwall.com=kernel-hardening-return-17592-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=VDg/=3J=lists.openwall.com=kernel-hardening-return-17593-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D58FCC32771
-	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Jan 2020 04:55:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 70496C33CB8
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Jan 2020 07:44:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2E6682073A
-	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Jan 2020 04:55:03 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B8CCB2465B
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Jan 2020 07:44:09 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=axtens.net header.i=@axtens.net header.b="oHxM02Cr"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2E6682073A
+	dkim=pass (1024-bit key) header.d=axtens.net header.i=@axtens.net header.b="k+UiYYHG"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B8CCB2465B
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=axtens.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17592-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21860 invoked by uid 550); 20 Jan 2020 04:54:51 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17593-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18298 invoked by uid 550); 20 Jan 2020 07:44:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,156 +24,119 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21716 invoked from network); 20 Jan 2020 04:54:50 -0000
+Received: (qmail 18262 invoked from network); 20 Jan 2020 07:44:01 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=axtens.net; s=google;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=pOmFCBblhkqj3gkmP+37nPe0hJ5NkRyIggkMoZ1sHnY=;
-        b=oHxM02Cr48GBC2n2ErbUXAGiQbp9a9tIcZ01GW7OKYJz7SZdJx/qhAqSqjyNPLtZHc
-         iXgHOE9I9QQlka8lEeceHuV/2cuIprxB8oep2Vgu9GlkUbjY9SELUov3xaKqMu7+FpNS
-         NJ3D9mZpMq9jHjQyR1ePY6oL3wPxcf7nalshU=
+        h=from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=6YkuZ8tp2wmCPxdpgMXItiYj736TUwlM7992jMev2hM=;
+        b=k+UiYYHG/v+VJD/4zWr69Wkd6H+h5loGovze3xLnJFbvL7nXcqhcsBh3ieanqlchRQ
+         jcG9Xv5AvZxJ/UXVHazQgMkBxNtnZELVWNUt27L+7mDr53+M2Yan5mS45jhpnJa/NRZz
+         v1nM8OE/bwDqVj/nZcOPD1br0C8bHAa892PKA=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=pOmFCBblhkqj3gkmP+37nPe0hJ5NkRyIggkMoZ1sHnY=;
-        b=sCnXbU4JQ73RuPUj3b5zKVErXd3ps5BkYv0sPE2D0IehYOh/WUXW2aRR8buG5NBmZg
-         eWXdynrWb8ctUpdPrgZZsDEfG0oHhsVeFhdUDfzyFmzCTqjZjIR6DNNF62H2VKRCQcrN
-         4U8BUIP9uRKpU6nDEgPWGDJaM27OIMv5kot+88Q7RMH7bYBx22R3CjmTPfI/ywZWzu5c
-         l70NRySVlCKaCMESjAE4QmnFGMiqfLkrxPpUaKtfIAt+yTF21hz+FsnBE07fG6/7EQt3
-         u8LBU7eQZ1Px2M07Wx/rnruVzlMzY7tzrHMNqpH6CtuEfvRXhnpLv0C5b9V9Cimv6bFJ
-         P3hQ==
-X-Gm-Message-State: APjAAAX5Uk+16S0zrcGJq9dyD81PW3UB1ha88MK1uVE7Duc0j3OfPeSs
-	qsHxMV8nAoimo1Mzm8MMYF+lo70wf1o=
-X-Google-Smtp-Source: APXvYqx7MFbc9YXjaXN7u01v6rADAHDuX6xKBxQb86CEcWZHxmIXyxvsRMsN6v83PEIaZCaoJ+1MrA==
-X-Received: by 2002:a63:a4b:: with SMTP id z11mr56030367pgk.97.1579496078651;
-        Sun, 19 Jan 2020 20:54:38 -0800 (PST)
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=6YkuZ8tp2wmCPxdpgMXItiYj736TUwlM7992jMev2hM=;
+        b=KXxTmGQZdSS8HgpiThoB2ss2FPS0W5QEoRTUQpD8EK+54fs34bHsGJa29vFsub9AMm
+         +H9oHGVOFHbGBv9N2xhFHA7BmHzA3xkMcBCu9pV04MutwpvDS9pabsUB09cZQ4axKO9k
+         xvTaHEjJzCMlEPwGLGwnDi3bU6qzmihvYPx8ja2qUYcMPXRFxikV6bAA0ENBsOtye9VB
+         tfpfSrieKSTpdnj5G6KzaSppDOpu/iWpwGv3rTKkAf/HqYeA48LwrDLTJ+/ozI4B3xoF
+         /17gQp5o87tWykskgY8WH5rBOkeI+NtCufEO1+IYKim2fQQFaXZwfluie6W7QlKB8Bcl
+         GGAw==
+X-Gm-Message-State: APjAAAWpzTSiQl28Lc1lp50OckIgNHng7tYJ78wRApZtzdZaVD4WZ2LU
+	XiLXTdBLRxMMgBOvQZy/sOyKTOF/eYQ=
+X-Google-Smtp-Source: APXvYqx6WIelXXQ1XxBQSJPB9fvVEwMpFGLYN0Oq9eHgf6RjMRe6JDnsTVkTumU89S7sClpvNsw8dQ==
+X-Received: by 2002:a17:902:b704:: with SMTP id d4mr12873725pls.54.1579506229307;
+        Sun, 19 Jan 2020 23:43:49 -0800 (PST)
 From: Daniel Axtens <dja@axtens.net>
 To: kernel-hardening@lists.openwall.com,
-	akpm@linux-foundation.org,
+	linux-mm@kvack.org,
 	keescook@chromium.org
 Cc: linux-kernel@vger.kernel.org,
+	akpm@linux-foundation.org,
 	Daniel Axtens <dja@axtens.net>
-Subject: [PATCH v2 2/2] lkdtm: tests for FORTIFY_SOURCE
-Date: Mon, 20 Jan 2020 15:54:24 +1100
-Message-Id: <20200120045424.16147-3-dja@axtens.net>
+Subject: [PATCH 0/5] Annotate allocation functions with alloc_size attribute
+Date: Mon, 20 Jan 2020 18:43:39 +1100
+Message-Id: <20200120074344.504-1-dja@axtens.net>
 X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200120045424.16147-1-dja@axtens.net>
-References: <20200120045424.16147-1-dja@axtens.net>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-Add code to test both:
+Both gcc and clang support the 'alloc_size' function attribute. It tells
+the compiler that a function returns a pointer to a certain amount of
+memory.
 
- - runtime detection of the overrun of a structure. This covers the
-   __builtin_object_size(x, 0) case. This test is called FORTIFY_OBJECT.
+This series tries applying that attribute to a number of our memory
+allocation functions. This provides much more information to things that
+use __builtin_object_size() (FORTIFY_SOURCE and some copy_to/from_user
+stuff), as well as enhancing inlining opportunities where __builtin_mem* or
+__builtin_str* are used.
 
- - runtime detection of the overrun of a char array within a structure.
-   This covers the __builtin_object_size(x, 1) case which can be used
-   for some string functions. This test is called FORTIFY_SUBOBJECT.
+With this series, FORTIFY_SOURCE picks up a bug in altera-stapl, which is
+fixed in patch 1.
 
-Suggested-by: Kees Cook <keescook@chromium.org>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Daniel Axtens <dja@axtens.net>
----
- drivers/misc/lkdtm/bugs.c  | 51 ++++++++++++++++++++++++++++++++++++++
- drivers/misc/lkdtm/core.c  |  2 ++
- drivers/misc/lkdtm/lkdtm.h |  2 ++
- 3 files changed, 55 insertions(+)
+It also generates a bunch of warnings about times memory allocation
+functions can be called with SIZE_MAX as the parameter. For example, from
+patch 3:
 
-diff --git a/drivers/misc/lkdtm/bugs.c b/drivers/misc/lkdtm/bugs.c
-index a4fdad04809a..77bf01ce7e0c 100644
---- a/drivers/misc/lkdtm/bugs.c
-+++ b/drivers/misc/lkdtm/bugs.c
-@@ -11,6 +11,7 @@
- #include <linux/sched/signal.h>
- #include <linux/sched/task_stack.h>
- #include <linux/uaccess.h>
-+#include <linux/slab.h>
- 
- #ifdef CONFIG_X86_32
- #include <asm/desc.h>
-@@ -376,3 +377,53 @@ void lkdtm_DOUBLE_FAULT(void)
- 	panic("tried to double fault but didn't die\n");
- }
- #endif
-+
-+void lkdtm_FORTIFY_OBJECT(void)
-+{
-+	struct target {
-+		char a[10];
-+	} target[2] = {};
-+	int result;
-+
-+	/*
-+	 * Using volatile prevents the compiler from determining the value of
-+	 * 'size' at compile time. Without that, we would get a compile error
-+	 * rather than a runtime error.
-+	 */
-+	volatile int size = 11;
-+
-+	pr_info("trying to read past the end of a struct\n");
-+
-+	result = memcmp(&target[0], &target[1], size);
-+
-+	/* Print result to prevent the code from being eliminated */
-+	pr_err("FAIL: fortify did not catch an object overread!\n"
-+	       "\"%d\" was the memcmp result.\n", result);
-+}
-+
-+void lkdtm_FORTIFY_SUBOBJECT(void)
-+{
-+	struct target {
-+		char a[10];
-+		char b[10];
-+	} target;
-+	char *src;
-+
-+	src = kmalloc(20, GFP_KERNEL);
-+	strscpy(src, "over ten bytes", 20);
-+
-+	pr_info("trying to strcpy past the end of a member of a struct\n");
-+
-+	/*
-+	 * strncpy(target.a, src, 20); will hit a compile error because the
-+	 * compiler knows at build time that target.a < 20 bytes. Use strcpy()
-+	 * to force a runtime error.
-+	 */
-+	strcpy(target.a, src);
-+
-+	/* Use target.a to prevent the code from being eliminated */
-+	pr_err("FAIL: fortify did not catch an sub-object overrun!\n"
-+	       "\"%s\" was copied.\n", target.a);
-+
-+	kfree(src);
-+}
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index ee0d6e721441..78d22a23b4f9 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -117,6 +117,8 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(STACK_GUARD_PAGE_TRAILING),
- 	CRASHTYPE(UNSET_SMEP),
- 	CRASHTYPE(UNALIGNED_LOAD_STORE_WRITE),
-+	CRASHTYPE(FORTIFY_OBJECT),
-+	CRASHTYPE(FORTIFY_SUBOBJECT),
- 	CRASHTYPE(OVERWRITE_ALLOCATION),
- 	CRASHTYPE(WRITE_AFTER_FREE),
- 	CRASHTYPE(READ_AFTER_FREE),
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index c56d23e37643..13f13421dc19 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -31,6 +31,8 @@ void lkdtm_UNSET_SMEP(void);
- #ifdef CONFIG_X86_32
- void lkdtm_DOUBLE_FAULT(void);
- #endif
-+void lkdtm_FORTIFY_OBJECT(void);
-+void lkdtm_FORTIFY_SUBOBJECT(void);
- 
- /* lkdtm_heap.c */
- void __init lkdtm_heap_init(void);
+drivers/staging/rts5208/rtsx_chip.c: In function ‘rtsx_write_cfg_seq’:
+drivers/staging/rts5208/rtsx_chip.c:1453:7: warning: argument 1 value ‘18446744073709551615’ exceeds maximum object size 9223372036854775807 [-Walloc-size-larger-than=]
+  data = vzalloc(array_size(dw_len, 4));
+  ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The parameter to array_size is a size_t, but it is called with a signed
+integer argument. If the argument is a negative integer, it will become a
+very large positive number when cast to size_t. This could cause an
+overflow, so array_size() will return SIZE_MAX _at compile time_. gcc then
+notices that this value is too large for an allocation and throws a
+warning.
+
+I propose two ways to deal with this:
+
+ - Individually go through and address these warnings, usualy by
+   catching when struct_size/array_size etc are called with a signed
+   type, and insert bounds checks or change the type where
+   appropriate. Patch 3 is an example.
+
+ - Patch 4: make kmalloc(_node) catch SIZE_MAX and return NULL early,
+   preventing an annotated kmalloc-family allocation function from seeing
+   SIZE_MAX as a parameter.
+
+I'm not sure whether I like the idea of catching SIZE_MAX in the inlined
+functions. Here are some pros and cons, and I'd be really interested to
+hear feedback:
+
+ * Making kmalloc return NULL early doesn't change _runtime_ behaviour:
+   obviously no SIZE_MAX allocation will ever succeed. And it means we
+   could have this feature earlier, which will help to catch issues like
+   what we catch in altera-stapl.
+
+ * However, it does mean we don't audit callsites where perhaps we should
+   have stricter types or bounds-checking. It also doesn't cover any of the
+   v*alloc functions.
+
+Overall I think this is a meaningful strengthening of FORTIFY_SOURCE
+and worth pursuing.
+
+Daniel Axtens (5):
+  altera-stapl: altera_get_note: prevent write beyond end of 'key'
+  [RFC] kasan: kasan_test: hide allocation sizes from the compiler
+  [RFC] staging: rts5208: make len a u16 in rtsx_write_cfg_seq
+  [VERY RFC] mm: kmalloc(_node): return NULL immediately for SIZE_MAX
+  [RFC] mm: annotate memory allocation functions with their sizes
+
+ drivers/misc/altera-stapl/altera.c  | 12 ++++----
+ drivers/staging/rts5208/rtsx_chip.c |  2 +-
+ drivers/staging/rts5208/rtsx_chip.h |  2 +-
+ include/linux/compiler_attributes.h |  6 ++++
+ include/linux/kasan.h               | 12 ++++----
+ include/linux/slab.h                | 44 +++++++++++++++++---------
+ include/linux/vmalloc.h             | 26 ++++++++--------
+ lib/test_kasan.c                    | 48 +++++++++++++++++++++--------
+ 8 files changed, 98 insertions(+), 54 deletions(-)
+
 -- 
 2.20.1
 
