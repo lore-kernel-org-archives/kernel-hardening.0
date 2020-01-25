@@ -1,22 +1,21 @@
-Return-Path: <SRS0=SgWP=3O=lists.openwall.com=kernel-hardening-return-17611-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Q+dY=3O=lists.openwall.com=kernel-hardening-return-17612-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
 	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6EAAEC2D0DB
-	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:08:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 916E2C2D0DB
+	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:08:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8F78A2071A
-	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:08:19 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8F78A2071A
+	by mail.kernel.org (Postfix) with SMTP id C133A2071A
+	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:08:29 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C133A2071A
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17611-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13366 invoked by uid 550); 25 Jan 2020 13:07:11 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17612-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13575 invoked by uid 550); 25 Jan 2020 13:07:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12070 invoked from network); 25 Jan 2020 13:07:06 -0000
+Received: (qmail 12192 invoked from network); 25 Jan 2020 13:07:08 -0000
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
 To: LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
@@ -51,200 +50,223 @@ Cc: Akinobu Mita <akinobu.mita@gmail.com>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>,
 	Stephen Rothwell <sfr@canb.auug.org.au>
-Subject: [PATCH v7 07/11] proc: flush task dcache entries from all procfs instances
-Date: Sat, 25 Jan 2020 14:05:37 +0100
-Message-Id: <20200125130541.450409-8-gladkov.alexey@gmail.com>
+Subject: [PATCH v7 09/11] proc: add option to mount only a pids subset
+Date: Sat, 25 Jan 2020 14:05:39 +0100
+Message-Id: <20200125130541.450409-10-gladkov.alexey@gmail.com>
 X-Mailer: git-send-email 2.24.1
 In-Reply-To: <20200125130541.450409-1-gladkov.alexey@gmail.com>
 References: <20200125130541.450409-1-gladkov.alexey@gmail.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-This allows to flush dcache entries of a task on multiple procfs mounts
-per pid namespace.
+This allows to hide all files and directories in the procfs that are not
+related to tasks.
 
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@kernel.org>
-Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
 Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
 ---
- fs/proc/base.c                | 23 ++++++++++++++-----
- fs/proc/root.c                | 14 ++++++++++++
- include/linux/pid_namespace.h | 42 +++++++++++++++++++++++++++++++++++
- include/linux/proc_fs.h       |  2 ++
- 4 files changed, 76 insertions(+), 5 deletions(-)
+ fs/proc/generic.c       |  9 +++++++++
+ fs/proc/inode.c         |  7 +++++++
+ fs/proc/internal.h      | 10 ++++++++++
+ fs/proc/root.c          | 36 ++++++++++++++++++++++++++++++++++++
+ include/linux/proc_fs.h |  7 +++++++
+ 5 files changed, 69 insertions(+)
 
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 4ccb280a3e79..f4f1bcb28603 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -3133,7 +3133,7 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
- 	.permission	= proc_pid_permission,
- };
- 
--static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
-+static void proc_flush_task_mnt_root(struct dentry *mnt_root, pid_t pid, pid_t tgid)
+diff --git a/fs/proc/generic.c b/fs/proc/generic.c
+index 64e9ee1b129e..6f6517d63053 100644
+--- a/fs/proc/generic.c
++++ b/fs/proc/generic.c
+@@ -267,6 +267,11 @@ struct dentry *proc_lookup_de(struct inode *dir, struct dentry *dentry,
+ struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry,
+ 		unsigned int flags)
  {
- 	struct dentry *dentry, *leader, *dir;
- 	char buf[10 + 1];
-@@ -3142,7 +3142,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
- 	name.name = buf;
- 	name.len = snprintf(buf, sizeof(buf), "%u", pid);
- 	/* no ->d_hash() rejects on procfs */
--	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
-+	dentry = d_hash_and_lookup(mnt_root, &name);
- 	if (dentry) {
- 		d_invalidate(dentry);
- 		dput(dentry);
-@@ -3153,7 +3153,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
- 
- 	name.name = buf;
- 	name.len = snprintf(buf, sizeof(buf), "%u", tgid);
--	leader = d_hash_and_lookup(mnt->mnt_root, &name);
-+	leader = d_hash_and_lookup(mnt_root, &name);
- 	if (!leader)
- 		goto out;
- 
-@@ -3208,14 +3208,27 @@ void proc_flush_task(struct task_struct *task)
- 	int i;
- 	struct pid *pid, *tgid;
- 	struct upid *upid;
-+	struct pid_namespace *pid_ns;
-+	struct dentry *mnt_root;
-+	struct proc_fs_info *fs_info;
- 
- 	pid = task_pid(task);
- 	tgid = task_tgid(task);
- 
- 	for (i = 0; i <= pid->level; i++) {
- 		upid = &pid->numbers[i];
--		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
--					tgid->numbers[i].nr);
++	struct proc_fs_info *fs_info = proc_sb_info(dir->i_sb);
 +
-+		pid_ns = upid->ns;
++	if (proc_fs_pidonly(fs_info) == PROC_PIDONLY_ON)
++		return ERR_PTR(-ENOENT);
 +
-+		pidns_proc_lock_shared(pid_ns);
-+		list_for_each_entry(fs_info, &pid_ns->proc_mounts, pidns_entry) {
-+			mnt_root = fs_info->m_super->s_root;
-+			proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
-+		}
-+		pidns_proc_unlock_shared(pid_ns);
-+
-+		mnt_root = pid_ns->proc_mnt->mnt_root;
-+		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
- 	}
+ 	return proc_lookup_de(dir, dentry, PDE(dir));
  }
  
+@@ -323,6 +328,10 @@ int proc_readdir_de(struct file *file, struct dir_context *ctx,
+ int proc_readdir(struct file *file, struct dir_context *ctx)
+ {
+ 	struct inode *inode = file_inode(file);
++	struct proc_fs_info *fs_info = proc_sb_info(inode->i_sb);
++
++	if (proc_fs_pidonly(fs_info) == PROC_PIDONLY_ON)
++		return 1;
+ 
+ 	return proc_readdir_de(file, ctx, PDE(inode));
+ }
+diff --git a/fs/proc/inode.c b/fs/proc/inode.c
+index 70b722fb8811..f35eef117775 100644
+--- a/fs/proc/inode.c
++++ b/fs/proc/inode.c
+@@ -114,6 +114,9 @@ static int proc_show_options(struct seq_file *seq, struct dentry *root)
+ 	if (hidepid != HIDEPID_OFF)
+ 		seq_printf(seq, ",hidepid=%u", hidepid);
+ 
++	if (proc_fs_pidonly(fs_info) != PROC_PIDONLY_OFF)
++		seq_printf(seq, ",subset=pidfs");
++
+ 	return 0;
+ }
+ 
+@@ -333,12 +336,16 @@ proc_reg_get_unmapped_area(struct file *file, unsigned long orig_addr,
+ 
+ static int proc_reg_open(struct inode *inode, struct file *file)
+ {
++	struct proc_fs_info *fs_info = proc_sb_info(inode->i_sb);
+ 	struct proc_dir_entry *pde = PDE(inode);
+ 	int rv = 0;
+ 	typeof_member(struct file_operations, open) open;
+ 	typeof_member(struct file_operations, release) release;
+ 	struct pde_opener *pdeo;
+ 
++	if (proc_fs_pidonly(fs_info) == PROC_PIDONLY_ON)
++		return -ENOENT;
++
+ 	/*
+ 	 * Ensure that
+ 	 * 1) PDE's ->release hook will be called no matter what
+diff --git a/fs/proc/internal.h b/fs/proc/internal.h
+index ff2f274b2e0d..e2c729267317 100644
+--- a/fs/proc/internal.h
++++ b/fs/proc/internal.h
+@@ -126,6 +126,11 @@ static inline void proc_fs_set_hide_pid(struct proc_fs_info *fs_info, int hide_p
+ 	fs_info->hide_pid = hide_pid;
+ }
+ 
++static inline void proc_fs_set_pidonly(struct proc_fs_info *fs_info, int value)
++{
++	fs_info->pidonly = value;
++}
++
+ static inline void proc_fs_set_pid_gid(struct proc_fs_info *fs_info, kgid_t gid)
+ {
+ 	fs_info->pid_gid = gid;
+@@ -141,6 +146,11 @@ static inline kgid_t proc_fs_pid_gid(struct proc_fs_info *fs_info)
+ 	return fs_info->pid_gid;
+ }
+ 
++static inline int proc_fs_pidonly(struct proc_fs_info *fs_info)
++{
++	return fs_info->pidonly;
++}
++
+ void task_dump_owner(struct task_struct *task, umode_t mode,
+ 		     kuid_t *ruid, kgid_t *rgid);
+ 
 diff --git a/fs/proc/root.c b/fs/proc/root.c
-index 5d5cba4c899b..3bb8df360cf7 100644
+index 57276cb65528..8e8d5c930e32 100644
 --- a/fs/proc/root.c
 +++ b/fs/proc/root.c
-@@ -112,6 +112,12 @@ static int proc_fill_super(struct super_block *s, struct fs_context *fc)
- 
- 	proc_apply_options(ctx->fs_info, fc, pid_ns, current_user_ns());
- 
-+	ctx->fs_info->m_super = s;
-+
-+	pidns_proc_lock(pid_ns);
-+	list_add_tail(&ctx->fs_info->pidns_entry, &pid_ns->proc_mounts);
-+	pidns_proc_unlock(pid_ns);
-+
- 	/* User space would break if executables or devices appear on proc */
- 	s->s_iflags |= SB_I_USERNS_VISIBLE | SB_I_NOEXEC | SB_I_NODEV;
- 	s->s_flags |= SB_NODIRATIME | SB_NOSUID | SB_NOEXEC;
-@@ -215,6 +221,11 @@ static void proc_kill_sb(struct super_block *sb)
- 		dput(fs_info->proc_self);
- 	if (fs_info->proc_thread_self)
- 		dput(fs_info->proc_thread_self);
-+
-+	pidns_proc_lock(fs_info->pid_ns);
-+	list_del(&fs_info->pidns_entry);
-+	pidns_proc_unlock(fs_info->pid_ns);
-+
- 	kill_anon_super(sb);
- 	put_pid_ns(fs_info->pid_ns);
- 	kfree(fs_info);
-@@ -336,6 +347,9 @@ int pid_ns_prepare_proc(struct pid_namespace *ns)
- 		ctx->fs_info->pid_ns = ns;
- 	}
- 
-+	init_rwsem(&ns->rw_proc_mounts);
-+	INIT_LIST_HEAD(&ns->proc_mounts);
-+
- 	mnt = fc_mount(fc);
- 	put_fs_context(fc);
- 	if (IS_ERR(mnt))
-diff --git a/include/linux/pid_namespace.h b/include/linux/pid_namespace.h
-index 66f47f1afe0d..297b39604312 100644
---- a/include/linux/pid_namespace.h
-+++ b/include/linux/pid_namespace.h
-@@ -26,6 +26,8 @@ struct pid_namespace {
- 	struct pid_namespace *parent;
- #ifdef CONFIG_PROC_FS
- 	struct vfsmount *proc_mnt; /* Internal proc mounted during each new pidns */
-+	struct rw_semaphore rw_proc_mounts;
-+	struct list_head proc_mounts; /* list of separated procfs mounts */
- #endif
- #ifdef CONFIG_BSD_PROCESS_ACCT
- 	struct fs_pin *bacct;
-@@ -90,4 +92,44 @@ extern struct pid_namespace *task_active_pid_ns(struct task_struct *tsk);
- void pidhash_init(void);
- void pid_idr_init(void);
- 
-+#ifdef CONFIG_PROC_FS
-+static inline void pidns_proc_lock(struct pid_namespace *pid_ns)
-+{
-+	down_write(&pid_ns->rw_proc_mounts);
-+}
-+
-+static inline void pidns_proc_unlock(struct pid_namespace *pid_ns)
-+{
-+	up_write(&pid_ns->rw_proc_mounts);
-+}
-+
-+static inline void pidns_proc_lock_shared(struct pid_namespace *pid_ns)
-+{
-+	down_read(&pid_ns->rw_proc_mounts);
-+}
-+
-+static inline void pidns_proc_unlock_shared(struct pid_namespace *pid_ns)
-+{
-+	up_read(&pid_ns->rw_proc_mounts);
-+}
-+#else /* !CONFIG_PROC_FS */
-+
-+static inline void pidns_proc_lock(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+static inline void pidns_proc_unlock(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+static inline void pidns_proc_lock_shared(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+static inline void pidns_proc_unlock_shared(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+#endif /* CONFIG_PROC_FS */
-+
- #endif /* _LINUX_PID_NS_H */
-diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
-index 5f0b1b7e4271..f307940f8311 100644
---- a/include/linux/proc_fs.h
-+++ b/include/linux/proc_fs.h
-@@ -20,6 +20,8 @@ enum {
+@@ -34,16 +34,19 @@ struct proc_fs_context {
+ 	unsigned int		mask;
+ 	int			hidepid;
+ 	int			gid;
++	int			pidonly;
  };
  
+ enum proc_param {
+ 	Opt_gid,
+ 	Opt_hidepid,
++	Opt_subset,
+ };
+ 
+ static const struct fs_parameter_spec proc_param_specs[] = {
+ 	fsparam_u32("gid",	Opt_gid),
+ 	fsparam_u32("hidepid",	Opt_hidepid),
++	fsparam_string("subset",	Opt_subset),
+ 	{}
+ };
+ 
+@@ -61,6 +64,30 @@ valid_hidepid(unsigned int value)
+ 		value == HIDEPID_NOT_PTRACABLE);
+ }
+ 
++static inline int
++proc_parse_subset_param(struct fs_context *fc, char *value)
++{
++	struct proc_fs_context *ctx = fc->fs_private;
++
++	while (value) {
++		char *ptr = strchr(value, ',');
++
++		if (ptr != NULL)
++			*ptr++ = '\0';
++
++		if (*value != '\0') {
++			if (!strcmp(value, "pidfs")) {
++				ctx->pidonly = PROC_PIDONLY_ON;
++			} else {
++				return invalf(fc, "proc: unsupported subset option - %s\n", value);
++			}
++		}
++		value = ptr;
++	}
++
++	return 0;
++}
++
+ static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
+ {
+ 	struct proc_fs_context *ctx = fc->fs_private;
+@@ -82,6 +109,11 @@ static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
+ 		ctx->hidepid = result.uint_32;
+ 		break;
+ 
++	case Opt_subset:
++		if (proc_parse_subset_param(fc, param->string) < 0)
++			return -EINVAL;
++		break;
++
+ 	default:
+ 		return -EINVAL;
+ 	}
+@@ -102,6 +134,7 @@ static void proc_apply_options(struct proc_fs_info *fs_info,
+ 
+ 		proc_fs_set_pid_gid(fs_info, proc_fs_pid_gid(pidns_fs_info));
+ 		proc_fs_set_hide_pid(fs_info, proc_fs_hide_pid(pidns_fs_info));
++		proc_fs_set_pidonly(fs_info, proc_fs_pidonly(pidns_fs_info));
+ 	}
+ 
+ 	if (ctx->mask & (1 << Opt_gid))
+@@ -109,6 +142,9 @@ static void proc_apply_options(struct proc_fs_info *fs_info,
+ 
+ 	if (ctx->mask & (1 << Opt_hidepid))
+ 		proc_fs_set_hide_pid(fs_info, ctx->hidepid);
++
++	if (ctx->mask & (1 << Opt_subset))
++		proc_fs_set_pidonly(fs_info, ctx->pidonly);
+ }
+ 
+ static int proc_fill_super(struct super_block *s, struct fs_context *fc)
+diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
+index 6822548405a7..3ad0a47c3556 100644
+--- a/include/linux/proc_fs.h
++++ b/include/linux/proc_fs.h
+@@ -20,6 +20,12 @@ enum {
+ 	HIDEPID_NOT_PTRACABLE = 4, /* Limit pids to only ptracable pids */
+ };
+ 
++/* definitions for proc mount option pidonly */
++enum {
++	PROC_PIDONLY_OFF = 0,
++	PROC_PIDONLY_ON  = 1,
++};
++
  struct proc_fs_info {
-+	struct list_head pidns_entry;    /* Node in procfs_mounts of a pidns */
-+	struct super_block *m_super;
- 	struct pid_namespace *pid_ns;
- 	struct dentry *proc_self;        /* For /proc/self */
+ 	struct list_head pidns_entry;    /* Node in procfs_mounts of a pidns */
+ 	struct super_block *m_super;
+@@ -28,6 +34,7 @@ struct proc_fs_info {
  	struct dentry *proc_thread_self; /* For /proc/thread-self */
+ 	kgid_t pid_gid;
+ 	int hide_pid;
++	int pidonly;
+ };
+ 
+ static inline struct proc_fs_info *proc_sb_info(struct super_block *sb)
 -- 
 2.24.1
 
