@@ -1,21 +1,22 @@
-Return-Path: <SRS0=iKV7=3O=lists.openwall.com=kernel-hardening-return-17604-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=t5OB=3O=lists.openwall.com=kernel-hardening-return-17605-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
 	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2EFD6C35244
-	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:07:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 24CC2C35243
+	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:07:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 880012071E
-	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:07:22 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 880012071E
+	by mail.kernel.org (Postfix) with SMTP id 5757D2077C
+	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 13:07:29 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5757D2077C
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17604-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11462 invoked by uid 550); 25 Jan 2020 13:06:58 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17605-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11495 invoked by uid 550); 25 Jan 2020 13:06:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +24,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11267 invoked from network); 25 Jan 2020 13:06:54 -0000
+Received: (qmail 11389 invoked from network); 25 Jan 2020 13:06:56 -0000
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
 To: LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
@@ -50,73 +51,157 @@ Cc: Akinobu Mita <akinobu.mita@gmail.com>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>,
 	Stephen Rothwell <sfr@canb.auug.org.au>
-Subject: [PATCH v7 01/11] proc: Rename struct proc_fs_info to proc_fs_opts
-Date: Sat, 25 Jan 2020 14:05:31 +0100
-Message-Id: <20200125130541.450409-2-gladkov.alexey@gmail.com>
+Subject: [PATCH v7 03/11] proc: move /proc/{self|thread-self} dentries to proc_fs_info
+Date: Sat, 25 Jan 2020 14:05:33 +0100
+Message-Id: <20200125130541.450409-4-gladkov.alexey@gmail.com>
 X-Mailer: git-send-email 2.24.1
 In-Reply-To: <20200125130541.450409-1-gladkov.alexey@gmail.com>
 References: <20200125130541.450409-1-gladkov.alexey@gmail.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
+This is a preparation patch that moves /proc/{self|thread-self} dentries
+to be stored inside procfs fs_info struct instead of making them per pid
+namespace. Since we want to support multiple procfs instances we need to
+make sure that these dentries are also per-superblock instead of
+per-pidns, unmounting a private procfs won't clash with other procfs
+mounts.
+
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
 Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
 ---
- fs/proc_namespace.c | 14 +++++++-------
- 1 file changed, 7 insertions(+), 7 deletions(-)
+ fs/proc/base.c                | 5 +++--
+ fs/proc/root.c                | 8 ++++----
+ fs/proc/self.c                | 4 ++--
+ fs/proc/thread_self.c         | 6 +++---
+ include/linux/pid_namespace.h | 4 +---
+ include/linux/proc_fs.h       | 2 ++
+ 6 files changed, 15 insertions(+), 14 deletions(-)
 
-diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index 273ee82d8aa9..9a8b624bc3db 100644
---- a/fs/proc_namespace.c
-+++ b/fs/proc_namespace.c
-@@ -37,23 +37,23 @@ static __poll_t mounts_poll(struct file *file, poll_table *wait)
- 	return res;
- }
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 672e71c52dbd..1eb366ad8b06 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -3316,6 +3316,7 @@ static struct tgid_iter next_tgid(struct pid_namespace *ns, struct tgid_iter ite
+ int proc_pid_readdir(struct file *file, struct dir_context *ctx)
+ {
+ 	struct tgid_iter iter;
++	struct proc_fs_info *fs_info = proc_sb_info(file_inode(file)->i_sb);
+ 	struct pid_namespace *ns = proc_pid_ns(file_inode(file));
+ 	loff_t pos = ctx->pos;
  
--struct proc_fs_info {
-+struct proc_fs_opts {
- 	int flag;
- 	const char *str;
+@@ -3323,13 +3324,13 @@ int proc_pid_readdir(struct file *file, struct dir_context *ctx)
+ 		return 0;
+ 
+ 	if (pos == TGID_OFFSET - 2) {
+-		struct inode *inode = d_inode(ns->proc_self);
++		struct inode *inode = d_inode(fs_info->proc_self);
+ 		if (!dir_emit(ctx, "self", 4, inode->i_ino, DT_LNK))
+ 			return 0;
+ 		ctx->pos = pos = pos + 1;
+ 	}
+ 	if (pos == TGID_OFFSET - 1) {
+-		struct inode *inode = d_inode(ns->proc_thread_self);
++		struct inode *inode = d_inode(fs_info->proc_thread_self);
+ 		if (!dir_emit(ctx, "thread-self", 11, inode->i_ino, DT_LNK))
+ 			return 0;
+ 		ctx->pos = pos = pos + 1;
+diff --git a/fs/proc/root.c b/fs/proc/root.c
+index d449f095f0f7..637e26cc795e 100644
+--- a/fs/proc/root.c
++++ b/fs/proc/root.c
+@@ -210,10 +210,10 @@ static void proc_kill_sb(struct super_block *sb)
+ {
+ 	struct proc_fs_info *fs_info = proc_sb_info(sb);
+ 
+-	if (fs_info->pid_ns->proc_self)
+-		dput(fs_info->pid_ns->proc_self);
+-	if (fs_info->pid_ns->proc_thread_self)
+-		dput(fs_info->pid_ns->proc_thread_self);
++	if (fs_info->proc_self)
++		dput(fs_info->proc_self);
++	if (fs_info->proc_thread_self)
++		dput(fs_info->proc_thread_self);
+ 	kill_anon_super(sb);
+ 	put_pid_ns(fs_info->pid_ns);
+ 	kfree(fs_info);
+diff --git a/fs/proc/self.c b/fs/proc/self.c
+index 57c0a1047250..846fc2b7c8a8 100644
+--- a/fs/proc/self.c
++++ b/fs/proc/self.c
+@@ -36,7 +36,7 @@ static unsigned self_inum __ro_after_init;
+ int proc_setup_self(struct super_block *s)
+ {
+ 	struct inode *root_inode = d_inode(s->s_root);
+-	struct pid_namespace *ns = proc_pid_ns(root_inode);
++	struct proc_fs_info *fs_info = proc_sb_info(s);
+ 	struct dentry *self;
+ 	int ret = -ENOMEM;
+ 	
+@@ -62,7 +62,7 @@ int proc_setup_self(struct super_block *s)
+ 	if (ret)
+ 		pr_err("proc_fill_super: can't allocate /proc/self\n");
+ 	else
+-		ns->proc_self = self;
++		fs_info->proc_self = self;
+ 
+ 	return ret;
+ }
+diff --git a/fs/proc/thread_self.c b/fs/proc/thread_self.c
+index f61ae53533f5..2493cbbdfa6f 100644
+--- a/fs/proc/thread_self.c
++++ b/fs/proc/thread_self.c
+@@ -36,7 +36,7 @@ static unsigned thread_self_inum __ro_after_init;
+ int proc_setup_thread_self(struct super_block *s)
+ {
+ 	struct inode *root_inode = d_inode(s->s_root);
+-	struct pid_namespace *ns = proc_pid_ns(root_inode);
++	struct proc_fs_info *fs_info = proc_sb_info(s);
+ 	struct dentry *thread_self;
+ 	int ret = -ENOMEM;
+ 
+@@ -60,9 +60,9 @@ int proc_setup_thread_self(struct super_block *s)
+ 	inode_unlock(root_inode);
+ 
+ 	if (ret)
+-		pr_err("proc_fill_super: can't allocate /proc/thread_self\n");
++		pr_err("proc_fill_super: can't allocate /proc/thread-self\n");
+ 	else
+-		ns->proc_thread_self = thread_self;
++		fs_info->proc_thread_self = thread_self;
+ 
+ 	return ret;
+ }
+diff --git a/include/linux/pid_namespace.h b/include/linux/pid_namespace.h
+index 49538b172483..f91a8bf6e09e 100644
+--- a/include/linux/pid_namespace.h
++++ b/include/linux/pid_namespace.h
+@@ -31,9 +31,7 @@ struct pid_namespace {
+ 	unsigned int level;
+ 	struct pid_namespace *parent;
+ #ifdef CONFIG_PROC_FS
+-	struct vfsmount *proc_mnt;
+-	struct dentry *proc_self;
+-	struct dentry *proc_thread_self;
++	struct vfsmount *proc_mnt; /* Internal proc mounted during each new pidns */
+ #endif
+ #ifdef CONFIG_BSD_PROCESS_ACCT
+ 	struct fs_pin *bacct;
+diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
+index 2d79489e55aa..59162988998e 100644
+--- a/include/linux/proc_fs.h
++++ b/include/linux/proc_fs.h
+@@ -14,6 +14,8 @@ struct seq_operations;
+ 
+ struct proc_fs_info {
+ 	struct pid_namespace *pid_ns;
++	struct dentry *proc_self;        /* For /proc/self */
++	struct dentry *proc_thread_self; /* For /proc/thread-self */
  };
  
- static int show_sb_opts(struct seq_file *m, struct super_block *sb)
- {
--	static const struct proc_fs_info fs_info[] = {
-+	static const struct proc_fs_opts fs_opts[] = {
- 		{ SB_SYNCHRONOUS, ",sync" },
- 		{ SB_DIRSYNC, ",dirsync" },
- 		{ SB_MANDLOCK, ",mand" },
- 		{ SB_LAZYTIME, ",lazytime" },
- 		{ 0, NULL }
- 	};
--	const struct proc_fs_info *fs_infop;
-+	const struct proc_fs_opts *fs_infop;
- 
--	for (fs_infop = fs_info; fs_infop->flag; fs_infop++) {
-+	for (fs_infop = fs_opts; fs_infop->flag; fs_infop++) {
- 		if (sb->s_flags & fs_infop->flag)
- 			seq_puts(m, fs_infop->str);
- 	}
-@@ -63,7 +63,7 @@ static int show_sb_opts(struct seq_file *m, struct super_block *sb)
- 
- static void show_mnt_opts(struct seq_file *m, struct vfsmount *mnt)
- {
--	static const struct proc_fs_info mnt_info[] = {
-+	static const struct proc_fs_opts mnt_opts[] = {
- 		{ MNT_NOSUID, ",nosuid" },
- 		{ MNT_NODEV, ",nodev" },
- 		{ MNT_NOEXEC, ",noexec" },
-@@ -72,9 +72,9 @@ static void show_mnt_opts(struct seq_file *m, struct vfsmount *mnt)
- 		{ MNT_RELATIME, ",relatime" },
- 		{ 0, NULL }
- 	};
--	const struct proc_fs_info *fs_infop;
-+	const struct proc_fs_opts *fs_infop;
- 
--	for (fs_infop = mnt_info; fs_infop->flag; fs_infop++) {
-+	for (fs_infop = mnt_opts; fs_infop->flag; fs_infop++) {
- 		if (mnt->mnt_flags & fs_infop->flag)
- 			seq_puts(m, fs_infop->str);
- 	}
+ static inline struct proc_fs_info *proc_sb_info(struct super_block *sb)
 -- 
 2.24.1
 
