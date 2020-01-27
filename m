@@ -1,22 +1,22 @@
-Return-Path: <SRS0=lqZi=3O=lists.openwall.com=kernel-hardening-return-17615-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8mS0=3Q=lists.openwall.com=kernel-hardening-return-17616-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C37FDC2D0DB
-	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 19:01:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7506DC2D0DB
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jan 2020 23:20:22 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1A10F2070A
-	for <kernel-hardening@archiver.kernel.org>; Sat, 25 Jan 2020 19:01:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C6FA624679
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jan 2020 23:20:21 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux-foundation.org header.i=@linux-foundation.org header.b="ebrkpC8l"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1A10F2070A
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-foundation.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17615-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30157 invoked by uid 550); 25 Jan 2020 19:00:53 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="XawkCOgE"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C6FA624679
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17616-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26235 invoked by uid 550); 27 Jan 2020 23:20:14 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,87 +24,89 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25787 invoked from network); 25 Jan 2020 18:52:34 -0000
+Received: (qmail 26215 invoked from network); 27 Jan 2020 23:20:13 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linux-foundation.org; s=google;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=agKBgndk3wOWKqvCTJf0yLyX2bJKGsFMAU50Ri7/n9U=;
-        b=ebrkpC8lWGHzj/TTwQVlGmpfBj+LMhP3xc48s3IkdXLpfPBkmBQH8glAibN3NZzhJ7
-         eaX+oPyIl6RK4Fcu/p33lei0jipvUcU+PHgqX1Ir4aJDuHlpLIX4SbceygCECD/xiFMl
-         QwEsuOsJJnKRw8LKLW82q3yqXp++TF+4Q343k=
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=QT8O29qq6UX2ERtfMZtIcpjsnZ2zWwc1vGjIRRz0cAI=;
+        b=XawkCOgE5DXMC5T4UMCWjNatVuCxPXGElKDJzkypz39qHzpJzBQm4Kjg2Wyc74N8XU
+         ae0RNb4v9jld0zCxnKtoZyL8qTh3A+57E2UqJ/UgP52rejOuyEYKSTX+2MbIBdIK8wvO
+         WFe7hDDB9CBICJzlBnEvr5cP0Jna4twh3KH9c=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=agKBgndk3wOWKqvCTJf0yLyX2bJKGsFMAU50Ri7/n9U=;
-        b=EesHDfQZ91VwEISrmysZaKNGCmwTbrQS8W8GGMJMGApzpzNrMJV9JwUKLxWHapheXj
-         3J30nA+eT+IPLiDejFXNdEbM8yNvzvFLGK22xH+Bl90pmia+Rk5IBGzHTJHAQtNRvWuv
-         UVZqXlykel/uMZIxTZtFF8GRG74fU6grwAF5Wbm60wsLrS699vIHecL+trgfcovx4e+N
-         WD3mWU0ZCT/RTV7PXoQ43cf+NT28E7m+bQWw3ixdmBhBCaMGK64TtLraO2ZVN7UByFKd
-         IgcOa95aoVXXjPjyT2NOax88gG/FH9IHibnzCni1zmgQx3obgskpJdUdhXAIY2Jj0Web
-         oJZQ==
-X-Gm-Message-State: APjAAAXxlQJM50OkRgS+Y23H0UbNIcZe+TcEOccg0kj3eygTIc0GbKwj
-	dPFHwZwT/FSgzFVwPiDqfvrxndFyHzs=
-X-Google-Smtp-Source: APXvYqzgLewJR0nE/QNO+U+gC9ccgANoMfkjz5RIYOkgGMagcp6I9g5IA86rGrIB2A+xfVfUHYQKdg==
-X-Received: by 2002:a17:906:3518:: with SMTP id r24mr7860556eja.361.1579978342635;
-        Sat, 25 Jan 2020 10:52:22 -0800 (PST)
-X-Received: by 2002:a05:651c:ce:: with SMTP id 14mr2080983ljr.241.1579977941361;
- Sat, 25 Jan 2020 10:45:41 -0800 (PST)
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=QT8O29qq6UX2ERtfMZtIcpjsnZ2zWwc1vGjIRRz0cAI=;
+        b=Njel1ih2uIQHnCrNm36u6m1FtVq3EyYTSMy3fTJrc/3sd03FEYo+iW5gh0OJZjiwMZ
+         4i5JNrMnpLTtoP8f0/b8KdlCLGOxgKUawboRkM16ig8kkY47kCmuCX7octFpBWt3ggXd
+         4WCuNG9kvu7EnW+deYN36FuZYauofQ3m9Qb0rzjPQZWOJVz8/anZB8TTTtzH32lkmGvx
+         O1ZVdYpSkc69AF3XyL0ExdKi/nxly37IWPs79/uUr95wQfPbLdK9bLimigkS9ykTiazp
+         7shBA2ileeHJvF3OAR6Xx4Oe2BVEXPQ1SGnriVTkFCVvtcI4hWuxm0V7ZinTJ5lAbZM4
+         b3eQ==
+X-Gm-Message-State: APjAAAWLT049/DIbeuCOGxN4XSxpTFh+o7y66GIocQsq3GezDX64tbhT
+	BDT6YadwRTO+7fcXySNfWtO4nw==
+X-Google-Smtp-Source: APXvYqyXDQEpPXM0xicaJgXWD5GwCMvtHrO2YWSFefSzTu/QuqyGJhGs+kmBUEZGJW1pcHmWRN4ELQ==
+X-Received: by 2002:aa7:934a:: with SMTP id 10mr1028171pfn.233.1580167201197;
+        Mon, 27 Jan 2020 15:20:01 -0800 (PST)
+Date: Mon, 27 Jan 2020 15:19:59 -0800
+From: Kees Cook <keescook@chromium.org>
+To: Jiri Slaby <jslaby@suse.cz>
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org,
+	David Windsor <dave@nullcore.net>,
+	Pekka Enberg <penberg@kernel.org>,
+	David Rientjes <rientjes@google.com>,
+	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
+	Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org,
+	linux-xfs@vger.kernel.org,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Christoph Hellwig <hch@infradead.org>,
+	Christoph Lameter <cl@linux.com>,
+	"David S. Miller" <davem@davemloft.net>,
+	Laura Abbott <labbott@redhat.com>,
+	Mark Rutland <mark.rutland@arm.com>,
+	"Martin K. Petersen" <martin.petersen@oracle.com>,
+	Paolo Bonzini <pbonzini@redhat.com>,
+	Christian Borntraeger <borntraeger@de.ibm.com>,
+	Christoffer Dall <christoffer.dall@linaro.org>,
+	Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>,
+	Luis de Bethencourt <luisbg@kernel.org>,
+	Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>,
+	Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org,
+	linux-arch@vger.kernel.org, netdev@vger.kernel.org,
+	kernel-hardening@lists.openwall.com,
+	Vlastimil Babka <vbabka@suse.cz>, Michal Kubecek <mkubecek@suse.cz>
+Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches
+ as usercopy caches
+Message-ID: <202001271519.AA6ADEACF0@keescook>
+References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
+ <1515636190-24061-10-git-send-email-keescook@chromium.org>
+ <9519edb7-456a-a2fa-659e-3e5a1ff89466@suse.cz>
+ <201911121313.1097D6EE@keescook>
+ <201911141327.4DE6510@keescook>
+ <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz>
 MIME-Version: 1.0
-References: <20200125130541.450409-1-gladkov.alexey@gmail.com> <20200125130541.450409-8-gladkov.alexey@gmail.com>
-In-Reply-To: <20200125130541.450409-8-gladkov.alexey@gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Sat, 25 Jan 2020 10:45:25 -0800
-X-Gmail-Original-Message-ID: <CAHk-=wiGNSQCA8TYa1Akp0_GRpe=ELKDPkDX5nzM5R=oDy1U+Q@mail.gmail.com>
-Message-ID: <CAHk-=wiGNSQCA8TYa1Akp0_GRpe=ELKDPkDX5nzM5R=oDy1U+Q@mail.gmail.com>
-Subject: Re: [PATCH v7 07/11] proc: flush task dcache entries from all procfs instances
-To: Alexey Gladkov <gladkov.alexey@gmail.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>, 
-	Linux Security Module <linux-security-module@vger.kernel.org>, 
-	Akinobu Mita <akinobu.mita@gmail.com>, Alexander Viro <viro@zeniv.linux.org.uk>, 
-	Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, 
-	Andy Lutomirski <luto@kernel.org>, Daniel Micay <danielmicay@gmail.com>, 
-	Djalal Harouni <tixxdz@gmail.com>, "Dmitry V . Levin" <ldv@altlinux.org>, 
-	"Eric W . Biederman" <ebiederm@xmission.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	Ingo Molnar <mingo@kernel.org>, "J . Bruce Fields" <bfields@fieldses.org>, 
-	Jeff Layton <jlayton@poochiereds.net>, Jonathan Corbet <corbet@lwn.net>, 
-	Kees Cook <keescook@chromium.org>, Oleg Nesterov <oleg@redhat.com>, 
-	Solar Designer <solar@openwall.com>, Stephen Rothwell <sfr@canb.auug.org.au>
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz>
 
-On Sat, Jan 25, 2020 at 5:06 AM Alexey Gladkov <gladkov.alexey@gmail.com> wrote:
->
-> This allows to flush dcache entries of a task on multiple procfs mounts
-> per pid namespace.
+On Thu, Jan 23, 2020 at 09:14:20AM +0100, Jiri Slaby wrote:
+> On 14. 11. 19, 22:27, Kees Cook wrote:
+> > On Tue, Nov 12, 2019 at 01:21:54PM -0800, Kees Cook wrote:
+> >> How is iucv the only network protocol that has run into this? Do others
+> >> use a bounce buffer?
+> > 
+> > Another solution would be to use a dedicated kmem cache (instead of the
+> > shared kmalloc dma one)?
+> 
+> Has there been any conclusion to this thread yet? For the time being, we
+> disabled HARDENED_USERCOPY on s390...
+> 
+> https://lore.kernel.org/kernel-hardening/9519edb7-456a-a2fa-659e-3e5a1ff89466@suse.cz/
 
-From a quick read-through, this is the only one I really react negatively to.
+I haven't heard anything new. What did people think of a separate kmem
+cache?
 
-The locking looks odd. It only seems to protect the new proc_mounts
-list, but then it's a whole big rwsem, and it's taken over all of
-proc_flush_task_mnt(), and the locking is exported to all over as a
-result of that - including the dummy functions for "there is no proc"
-case.
-
-And proc_flush_task_mnt() itself should need no locking over any of
-it, so it's all just for the silly looping over the list.
-
-So
-
- (a) this looks fishy and feels wrong - I get a very strong feeling
-that the locking is wrong to begin with, and could/should have been
-done differently
-
- (b) all the locking should have been internal to /proc, and those
-wrappers shouldn't exist in a common header file (and certainly not
-for the non-proc case).
-
-Yes, (a) is just a feeling, and I don't have any great suggestions.
-Maybe make it an RCU list and use a spinlock for updating it?
-
-But (b) is pretty much a non-starter in this form. Those wrappers
-shouldn't be in a globally exported core header file. No way.
-
-               Linus
+-- 
+Kees Cook
