@@ -1,4 +1,4 @@
-Return-Path: <SRS0=QTnj=3R=lists.openwall.com=kernel-hardening-return-17629-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yHK4=3R=lists.openwall.com=kernel-hardening-return-17630-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
 	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9CB4CC2D0DB
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jan 2020 18:51:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 69D21C2D0DB
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jan 2020 18:51:26 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F32D720CC7
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jan 2020 18:51:14 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id BA3F520CC7
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jan 2020 18:51:25 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="o7KYQSca"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F32D720CC7
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="XUGEKZAh"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BA3F520CC7
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17629-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13313 invoked by uid 550); 28 Jan 2020 18:50:11 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17630-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13521 invoked by uid 550); 28 Jan 2020 18:50:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,41 +25,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12211 invoked from network); 28 Jan 2020 18:50:10 -0000
+Received: (qmail 13437 invoked from network); 28 Jan 2020 18:50:13 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=bNCXRmM/yr4GL3yZ1bhHRJc0r5YpsDoQ2qXNiKtbIjQ=;
-        b=o7KYQScaTc5r0bWGyHvOSj2qDSparI8nM7EV2GGaR8zJgb85Unw1bAkclg2/3gkVjV
-         sWiP8fvXbxWaFa/3ylPd3mUT0DJXJwDNPclKGR0BQxZ4Cc2/1/tkupECkGjVL+qym1xJ
-         Ae3JulKZHCqg8uCAc0O9oxR71IRgfwLYrHi5idXDY3EpdKDxL0ypLNFgS5UoGwYlvaVK
-         coXWpBTQvrtoEim7i5jhgtRDRSCIEyXek1a+HFz3DKK+zmjORBlTmey8aAdNXMqQeIAI
-         9YEW0BDh4vOazWGWstuyBaqYyWx5H8LIDc1PihTJnexHB7ha5NBdEF0GBHhBS0eIc4XK
-         0rfg==
+        bh=g0WhvzNfeF8IPmBIIuRbqPpME0iXsXClcoR+8QuQDeM=;
+        b=XUGEKZAhBvSu9urDokgThLy629jPYLYOSmnR3mhcWiS20LG7HIFJnnyG7U9FeOKODN
+         dRcN/ygKYsH8zvUKqKrrEoAeiJh6xj9bUwUihjFNwrC/HNMCo631ZmTMa3qkV5FANr8P
+         6Bjc+r6yLtlgBlUAHhWWjX/TBrDG4QySpa2+C3PTWI7oznRugEbMlEysjsNyTLYh3Ly7
+         v4QRry1d0cr919cFyJZHFpX/pPX+XmluNzInaHF+jkT6HB6vLrQ8GXNwv3HX2Ci3+Tcp
+         DP6fw9+xZnGwQ4GQ+XUf08VGNsAQ/+zNH2o7Wt5M0nyNImoOhkc1Qa5/vpdDpvtQ4s0K
+         vK7A==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=bNCXRmM/yr4GL3yZ1bhHRJc0r5YpsDoQ2qXNiKtbIjQ=;
-        b=UKclOPZrNF97K+XrsmtQlxv4/yVLp4DmrkzTaGznYwivhvOOZSf8XgCAlThAcccTaS
-         tk5mGLP1DdYaBu/hn7am3wWS4pToXQaUwct04NoDZGofize4OI+R5ygO9EANzv8lmW5w
-         VTDoI/zyBlTGpHlks4+d5B+nfJ2wQAmDcQwH7XVFYj3kN8lJGOM4gRQRPpsegS6aJWeG
-         PhzABmxK3zZY1i2zBRYD90/+SVOq+VEmvlp7jCuf0j6HNPSEcKezRwDED4KQriQa9ItT
-         3cXeeOwHEFHwPIV8spWILXcsTvXj6kuKIlDvLwA/wAJAlhyDjgOwdkZJM15K6wEvqwdM
-         eJzw==
-X-Gm-Message-State: APjAAAUm9gqyCPAIFZZoe9geCc3OMoLtGgnHZFqASgu2Qrc46Jm1D7lW
-	6UILn4Bt6mvs1DEIWaUGJvI3TrjQgTOUzIw8Vdo=
-X-Google-Smtp-Source: APXvYqx+U9CfKO16wIXNBeeO96dJ60XaZ+hhyoe8kAoit2FdttoilLWi0KpO3nWQj2EBXb7JYYq1XAJT8FXWdsvdaLA=
-X-Received: by 2002:aed:2783:: with SMTP id a3mr7863657qtd.284.1580237398897;
- Tue, 28 Jan 2020 10:49:58 -0800 (PST)
-Date: Tue, 28 Jan 2020 10:49:31 -0800
+        bh=g0WhvzNfeF8IPmBIIuRbqPpME0iXsXClcoR+8QuQDeM=;
+        b=pV11iH5qLx/n9G+i/Qf3loXpRXrlfKZMJyD/FMfKI8F3lhgvJ48D/1T+689rZ7lc1N
+         rs+ZTpuJDqibDP91iU9cKiwVVNVnY0sqpCmBWbADsUhBs12qaorBKrO1s7MX1Fqg8FCw
+         G8U8khsjlMFarrOmJY9BTDmuStnj4/xVmYufYaW9FofZK4CVM1XcBzFnlGfH9mZrNieY
+         YCMBZyxRPovNk1diKfAn2JQ1TERVjFnCi4zOHsMIHp4yEQdOjW9o9zr4qTZmvmPzGyQm
+         /vUNweYHnlOQiSEvHPvOlNaQGTwiDyNwRPuwR0LKbsUxoJ7o8GDw+cjRu5Qc+iTraimF
+         c7xg==
+X-Gm-Message-State: APjAAAW1ZFRKpl33fgZDuVv9yWkCncByqUoDLf+I0pkGzeJdv6zGhxiX
+	VFKfZj8iTtHGIyomiouu5A9DOviMJv2KwPWjNg0=
+X-Google-Smtp-Source: APXvYqwm7y9ypcJdyxgJATkCgSChfFuwRpCL+hYKepF5YmIgtTs92oWD8GlXJgm6y8lRU+5VPoS8wWchRxTA1u6Ws80=
+X-Received: by 2002:a63:d90c:: with SMTP id r12mr19771294pgg.106.1580237401355;
+ Tue, 28 Jan 2020 10:50:01 -0800 (PST)
+Date: Tue, 28 Jan 2020 10:49:32 -0800
 In-Reply-To: <20200128184934.77625-1-samitolvanen@google.com>
-Message-Id: <20200128184934.77625-9-samitolvanen@google.com>
+Message-Id: <20200128184934.77625-10-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20200128184934.77625-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.25.0.341.g760bfbb309-goog
-Subject: [PATCH v7 08/11] arm64: vdso: disable Shadow Call Stack
+Subject: [PATCH v7 09/11] arm64: disable SCS for hypervisor code
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -73,31 +73,28 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Shadow stacks are only available in the kernel, so disable SCS
-instrumentation for the vDSO.
+Filter out CC_FLAGS_SCS and -ffixed-x18 for code that runs at a
+different exception level.
 
+Suggested-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
 Reviewed-by: Mark Rutland <mark.rutland@arm.com>
-Acked-by: Will Deacon <will@kernel.org>
 ---
- arch/arm64/kernel/vdso/Makefile | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ arch/arm64/kvm/hyp/Makefile | 3 +++
+ 1 file changed, 3 insertions(+)
 
-diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
-index dd2514bb1511..a87a4f11724e 100644
---- a/arch/arm64/kernel/vdso/Makefile
-+++ b/arch/arm64/kernel/vdso/Makefile
-@@ -25,7 +25,7 @@ ccflags-y += -DDISABLE_BRANCH_PROFILING
- 
- VDSO_LDFLAGS := -Bsymbolic
- 
--CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os
-+CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS)
- KBUILD_CFLAGS			+= $(DISABLE_LTO)
- KASAN_SANITIZE			:= n
- UBSAN_SANITIZE			:= n
+diff --git a/arch/arm64/kvm/hyp/Makefile b/arch/arm64/kvm/hyp/Makefile
+index ea710f674cb6..5843adef9ef6 100644
+--- a/arch/arm64/kvm/hyp/Makefile
++++ b/arch/arm64/kvm/hyp/Makefile
+@@ -28,3 +28,6 @@ GCOV_PROFILE	:= n
+ KASAN_SANITIZE	:= n
+ UBSAN_SANITIZE	:= n
+ KCOV_INSTRUMENT	:= n
++
++# remove the SCS flags from all objects in this directory
++KBUILD_CFLAGS := $(filter-out -ffixed-x18 $(CC_FLAGS_SCS), $(KBUILD_CFLAGS))
 -- 
 2.25.0.341.g760bfbb309-goog
 
