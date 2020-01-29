@@ -1,4 +1,4 @@
-Return-Path: <SRS0=1X/2=3S=lists.openwall.com=kernel-hardening-return-17638-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=W2ty=3S=lists.openwall.com=kernel-hardening-return-17639-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CBD84C2D0DB
-	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jan 2020 17:07:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D90AFC2D0DB
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jan 2020 17:20:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 07DBF206F0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jan 2020 17:07:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 07DBF206F0
+	by mail.kernel.org (Postfix) with SMTP id 1C1692071E
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jan 2020 17:20:26 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1C1692071E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=de.ibm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17638-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13439 invoked by uid 550); 29 Jan 2020 17:07:42 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17639-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20380 invoked by uid 550); 29 Jan 2020 17:20:21 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,11 +22,12 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13410 invoked from network); 29 Jan 2020 17:07:40 -0000
+Received: (qmail 20357 invoked from network); 29 Jan 2020 17:20:20 -0000
 Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches as
  usercopy caches
-To: Christopher Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>
-Cc: Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>,
+To: Christoph Hellwig <hch@infradead.org>
+Cc: Christopher Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>,
+        Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>,
         Ursula Braun <ubraun@linux.ibm.com>,
         Alexander Viro
  <viro@zeniv.linux.org.uk>,
@@ -38,7 +39,6 @@ Cc: Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>,
         linux-xfs@vger.kernel.org,
         Linus Torvalds <torvalds@linux-foundation.org>,
         Andy Lutomirski <luto@kernel.org>,
-        Christoph Hellwig <hch@infradead.org>,
         "David S. Miller" <davem@davemloft.net>,
         Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>,
         "Martin K. Petersen" <martin.petersen@oracle.com>,
@@ -52,8 +52,7 @@ Cc: Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>,
         linux-arch@vger.kernel.org, netdev@vger.kernel.org,
         kernel-hardening@lists.openwall.com, Vlastimil Babka <vbabka@suse.cz>,
         Michal Kubecek <mkubecek@suse.cz>
-References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
- <1515636190-24061-10-git-send-email-keescook@chromium.org>
+References: <1515636190-24061-10-git-send-email-keescook@chromium.org>
  <9519edb7-456a-a2fa-659e-3e5a1ff89466@suse.cz>
  <201911121313.1097D6EE@keescook> <201911141327.4DE6510@keescook>
  <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz>
@@ -61,6 +60,8 @@ References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
  <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com>
  <202001281457.FA11CC313A@keescook>
  <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
+ <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
+ <20200129170939.GA4277@infradead.org>
 From: Christian Borntraeger <borntraeger@de.ibm.com>
 Autocrypt: addr=borntraeger@de.ibm.com; prefer-encrypt=mutual; keydata=
  xsFNBE6cPPgBEAC2VpALY0UJjGmgAmavkL/iAdqul2/F9ONz42K6NrwmT+SI9CylKHIX+fdf
@@ -105,45 +106,48 @@ Autocrypt: addr=borntraeger@de.ibm.com; prefer-encrypt=mutual; keydata=
  jaqYefx7yQ7FJXXETd2uVURiDeNEFhVZWb5CiBJM5c6qQMhmkS4VyT7/+raaEGgkEKEgHOWf
  ZDP8BHfXtszHqI3Fo1F4IKFo/AP8GOFFxMRgbvlAs8z/+rEEaQYjxYJqj08raw6P4LFBqozr
  nS4h0HDFPrrp1C2EMVYIQrMokWvlFZbCpsdYbBI=
-Date: Wed, 29 Jan 2020 18:07:14 +0100
+Date: Wed, 29 Jan 2020 18:19:56 +0100
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.3.0
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
+In-Reply-To: <20200129170939.GA4277@infradead.org>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 X-TM-AS-GCONF: 00
-x-cbid: 20012917-0020-0000-0000-000003A523F0
+x-cbid: 20012917-0016-0000-0000-000002E1D3E4
 X-IBM-AV-DETECTION: SAVI=unused REMOTE=unused XFE=unused
-x-cbparentid: 20012917-0021-0000-0000-000021FCD55D
-Message-Id: <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
+x-cbparentid: 20012917-0017-0000-0000-000033449AC6
+Message-Id: <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
 X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:6.0.138,18.0.572
  definitions=2020-01-29_04:2020-01-28,2020-01-29 signatures=0
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 clxscore=1015 suspectscore=0
- lowpriorityscore=0 adultscore=0 malwarescore=0 phishscore=0
- priorityscore=1501 spamscore=0 mlxlogscore=694 impostorscore=0 bulkscore=0
- mlxscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-1911200001 definitions=main-2001290139
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 mlxlogscore=642 mlxscore=0
+ phishscore=0 priorityscore=1501 suspectscore=0 malwarescore=0
+ impostorscore=0 lowpriorityscore=0 clxscore=1015 adultscore=0 spamscore=0
+ bulkscore=0 classifier=spam adjust=0 reason=mlx scancount=1
+ engine=8.12.0-1911200001 definitions=main-2001290141
 
 
 
-On 29.01.20 17:43, Christopher Lameter wrote:
-> On Tue, 28 Jan 2020, Kees Cook wrote:
-> 
->>> On the other hand not marking the DMA caches still seems questionable.
+On 29.01.20 18:09, Christoph Hellwig wrote:
+> On Wed, Jan 29, 2020 at 06:07:14PM +0100, Christian Borntraeger wrote:
+>>> DMA can be done to NORMAL memory as well.
 >>
->> My understanding is that exposing DMA memory to userspace copies can
->> lead to unexpected results, especially for misbehaving hardware, so I'm
->> not convinced this is a generically bad hardening choice.
+>> Exactly. 
+>> I think iucv uses GFP_DMA because z/VM needs those buffers to reside below 2GB (which is ZONA_DMA for s390).
 > 
-> "DMA" memory (and thus DMA caches) have nothing to do with DMA. Its a
-> legacy term. "DMA Memory" is memory limited to a certain
-> physical address boundary (old restrictions on certain devices only
-> supporting a limited number of address bits).
-> 
-> DMA can be done to NORMAL memory as well.
+> The normal way to allocate memory with addressing limits would be to
+> use dma_alloc_coherent and friends.  Any chance to switch iucv over to
+> that?  Or is there no device associated with it?
 
-Exactly. 
-I think iucv uses GFP_DMA because z/VM needs those buffers to reside below 2GB (which is ZONA_DMA for s390).
+There is not necessarily a device for that. It is a hypervisor interface (an
+instruction that is interpreted by z/VM). We do have the netiucv driver that
+creates a virtual nic, but there is also AF_IUCV which works without a device.
+
+But back to the original question: If we mark kmalloc caches as usercopy caches,
+we should do the same for DMA kmalloc caches. As outlined by Christoph, this has
+nothing to do with device DMA.
+
+
+
 
