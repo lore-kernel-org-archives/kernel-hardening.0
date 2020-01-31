@@ -1,23 +1,23 @@
-Return-Path: <SRS0=0PID=3U=lists.openwall.com=kernel-hardening-return-17646-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8c+s=3U=lists.openwall.com=kernel-hardening-return-17647-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3267EC33CB2
-	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jan 2020 07:01:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 442AEC33CB2
+	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jan 2020 12:04:28 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 832BB20705
-	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jan 2020 07:01:58 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 69D0020707
+	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jan 2020 12:04:27 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=russell.cc header.i=@russell.cc header.b="WUnP55PU";
-	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="eWMqdOV0"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 832BB20705
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=russell.cc
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17646-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7326 invoked by uid 550); 31 Jan 2020 07:01:51 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="InWWajXp"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 69D0020707
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17647-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20408 invoked by uid 550); 31 Jan 2020 12:04:20 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,91 +25,169 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7286 invoked from network); 31 Jan 2020 07:01:50 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=russell.cc; h=
-	message-id:subject:from:to:cc:date:in-reply-to:references
-	:content-type:mime-version:content-transfer-encoding; s=fm1; bh=
-	t/GpK6YsM5srRFf7eFpXme57d41WlX9+o+qAquTPbfY=; b=WUnP55PUGNZUnNgg
-	nCC6+Xby2ixN1VG0TnMXE0MGmvManZHvl4QjoRSIWlWn501h0A97hT86h/W3Vv0d
-	/SyDesb9JQeXveIte5GJuz+jHsDasy459cDE+iAskHk1r1qnVNSZeMoNwU3K1hhR
-	75g9mWhEQXTLd91Md+saO87sl9mnSkrPcM1+GGxzlhmL2gRIEn7fAy+GdqBPQv0n
-	Y6ppTNw5CCLL2NQaOcrVVL48LW3MeoY1Li8UzZSTRwmppBv42rXqoMF5sspgfvBF
-	5agO1T+IDNV+BnFtE4sy62gRy5DvPvTYcTMiZbQSrlSMJlD8BEOoEXxMNO1FYOyz
-	iqlLwQ==
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-	messagingengine.com; h=cc:content-transfer-encoding:content-type
-	:date:from:in-reply-to:message-id:mime-version:references
-	:subject:to:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender
-	:x-sasl-enc; s=fm1; bh=t/GpK6YsM5srRFf7eFpXme57d41WlX9+o+qAquTPb
-	fY=; b=eWMqdOV0wHgRiduKdiglB1u/pBpJaQMLLyYLQ1mA2ovG2/QAoJ18iTR+c
-	z2q5mVR5mdF3stI2oRU658zN3PMKmC0hMkhHEwbhvgwxCjHFCRdqlql55RwC1ADa
-	l5ODIF4jsBWsiUslco2kQgWJN8xsHV0EMNuySn9cMf+Cz36HsXWo13JoeYCdStk8
-	r8NmqBlFp93DSeApXK4zmj600vjkOR2jpT7Us2nEu43PEuomXlei7PMjYs7U/lYc
-	r04jLCxy3xbG4jUDfJuXJ4S1n4Z/1Y6GaNSTTyU2pe8KlORAIcWkJwSeqNmSk4JS
-	ecuXaUuHMgY5U/w/khTGLLmo2oivg==
-X-ME-Sender: <xms:0NAzXqGzS9sO_L0E_NiIJt5SU0J2TR67rtnar_Yr_vDaq4yo1l64Wg>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedugedrfeelgdeljecutefuodetggdotefrodftvf
-    curfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfghnecu
-    uegrihhlohhuthemuceftddtnecusecvtfgvtghiphhivghnthhsucdlqddutddtmdenfg
-    hrlhcuvffnffculdeftddmnecujfgurhepkffuhffvffgjfhgtfggggfesthekredttder
-    jeenucfhrhhomheptfhushhsvghllhcuvehurhhrvgihuceorhhushgtuhhrsehruhhssh
-    gvlhhlrdgttgeqnecukfhppeduvddvrdelledrkedvrddutdenucevlhhushhtvghrufhi
-    iigvpedtnecurfgrrhgrmhepmhgrihhlfhhrohhmpehruhhstghurhesrhhushhsvghllh
-    drtggt
-X-ME-Proxy: <xmx:0NAzXnYqT8QLiIlSkd5nmOajtCbm_lecNG9Ec6XF5MsF33FGiW57Ww>
-    <xmx:0NAzXqHSQcXlNGODJm_uaD8wtvvWalJTXVQAv9dUJoGE0ZLJyxZO6Q>
-    <xmx:0NAzXlBiAeGTCGIsyf9Cyn9yrL4OXtPQl43bxAt1R08nA_r5hpM6nA>
-    <xmx:0dAzXjG8XyG67mG2BYnamOPEQ07UDA6GdP2sDeTAd0jX-r2WLqnc_Q>
-Message-ID: <9edd517d0238dc3319788a23d708b68102cdbc2f.camel@russell.cc>
-Subject: Re: [PATCH] lkdtm: Test KUAP directional user access unlocks on
- powerpc
-From: Russell Currey <ruscur@russell.cc>
-To: Christophe Leroy <christophe.leroy@c-s.fr>, keescook@chromium.org, 
-	mpe@ellerman.id.au
-Cc: linux-kernel@vger.kernel.org, dja@axtens.net, 
-	kernel-hardening@lists.openwall.com, linuxppc-dev@lists.ozlabs.org
-Date: Fri, 31 Jan 2020 18:01:32 +1100
-In-Reply-To: <c05a4327-0c81-0e3e-d93a-9d62183b146c@c-s.fr>
-References: <20200131053157.22463-1-ruscur@russell.cc>
-	 <1b40cea6-0675-731a-58b1-bdc65f1e495e@c-s.fr>
-	 <0b016861756cbe27e66651b5c21229a06558cb57.camel@russell.cc>
-	 <c05a4327-0c81-0e3e-d93a-9d62183b146c@c-s.fr>
-Content-Type: text/plain; charset="UTF-8"
-User-Agent: Evolution 3.34.3 
+Received: (qmail 20388 invoked from network); 31 Jan 2020 12:04:19 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=bPZYbEHgT8QqWy65RuP2LwO/ekDNyecnlbDtriR+rAY=;
+        b=InWWajXpKjo8nIUsFLbd3+gXkRiyQwKrsN3SuyxJtIAV+5mvx5jWLI+32kU4GxZqH0
+         RL3AB4Duh8Nu54vbn6Muxq8c7ddYI2vv1j7nsgV4hvKBOc2ykYv8yJY6xRCulQ68HJ9n
+         iMi+kRfnObu5vSYzqNBr6p9OyWwUMYtfZw8chuNpE5PrP9ihITkeTb6GRpUv11oX15Gx
+         hKLXcS74O2uqJiYEjhy6o05QCFBK6KK6y1VA4haWcWqrRWsb+K6OeBV3e3AiqLuW6rBp
+         N4hqHrI7+oEEVCExwmrVqpD/5Cb0z1bSEqvHGmen9xNTQ9Sn5kSIhznFRsrTIHBgnN/y
+         BP4Q==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=bPZYbEHgT8QqWy65RuP2LwO/ekDNyecnlbDtriR+rAY=;
+        b=Hzw15TX4vJV4TW73JvleXG+ibRqMgGJo38t/B3z5y6qHZIrqtlOuJyUpX6S/sQbt9i
+         SdsA5Knb1Lp139jpfsNKeg6h148xO4Xl5K3ZAgXu8bcxDw29RTjzWeg6l0SZVvRlu/Da
+         VCEuU1VkIyLPNqutPQHCk77Ia4R0UUbQpHYqRlADll3VhMOSWOSo6n2G/9Q4FZZwXUX5
+         olMz0Mk12x/Lw6KFwGEP1rm5ZOtQ/IDywWskUTCm55aFaed4a4Lp0AZayQLKqwvQICkV
+         1a4xo1LamX0GcST5/xKuT2Pe6ypwVAzpxveHMKrV9tMPP63kGQ0xEh/qEqI50mkQ5wiz
+         nf0g==
+X-Gm-Message-State: APjAAAWvj5I3KFnAU9xV/O3SoY5deUAxhsEhLO55bJ41v5MXJgXWAQ6h
+	4FIXmw58ECZBG5nPIeYybtJJ6U7TQ2BZIxmp6dDT8A==
+X-Google-Smtp-Source: APXvYqxX4kvjJgrVd0xsJAPveBUs527WZZheCaEcNR7VaN+pr2nJJe9jO88RJTZyjdW6BmhGD/zGL14X4MmAFHztlf4=
+X-Received: by 2002:a05:6830:22cc:: with SMTP id q12mr7537510otc.110.1580472246617;
+ Fri, 31 Jan 2020 04:04:06 -0800 (PST)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+References: <201911121313.1097D6EE@keescook> <201911141327.4DE6510@keescook>
+ <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz> <202001271519.AA6ADEACF0@keescook>
+ <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com> <202001281457.FA11CC313A@keescook>
+ <alpine.DEB.2.21.2001291640350.1546@www.lameter.com> <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
+ <20200129170939.GA4277@infradead.org> <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
+ <202001300945.7D465B5F5@keescook>
+In-Reply-To: <202001300945.7D465B5F5@keescook>
+From: Jann Horn <jannh@google.com>
+Date: Fri, 31 Jan 2020 13:03:40 +0100
+Message-ID: <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
+Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches as
+ usercopy caches
+To: Kees Cook <keescook@chromium.org>
+Cc: Christian Borntraeger <borntraeger@de.ibm.com>, Christoph Hellwig <hch@infradead.org>, 
+	Christopher Lameter <cl@linux.com>, Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>, 
+	Ursula Braun <ubraun@linux.ibm.com>, Alexander Viro <viro@zeniv.linux.org.uk>, 
+	kernel list <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, 
+	Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, 
+	Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, 
+	Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org, 
+	Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, 
+	"David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, 
+	Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, 
+	Paolo Bonzini <pbonzini@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, 
+	Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, 
+	Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, 
+	Matthew Garrett <mjg59@google.com>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
+	linux-arch <linux-arch@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Vlastimil Babka <vbabka@suse.cz>, 
+	Michal Kubecek <mkubecek@suse.cz>
+Content-Type: text/plain; charset="UTF-8"
 
-On Fri, 2020-01-31 at 07:58 +0100, Christophe Leroy wrote:
-> 
-> Le 31/01/2020 à 07:53, Russell Currey a écrit :
-> > On Fri, 2020-01-31 at 07:44 +0100, Christophe Leroy wrote:
-> > > Le 31/01/2020 à 06:31, Russell Currey a écrit :
-> > > > +	pr_info("attempting bad read at %px with write
-> > > > allowed\n",
-> > > > ptr);
-> > > > +	tmp = *ptr;
-> > > > +	tmp += 0xc0dec0de;
-> > > > +	prevent_write_to_user(ptr, sizeof(unsigned long));
-> > > 
-> > > Does it work ? I would have thought that if the read fails the
-> > > process
-> > > will die and the following test won't be performed.
-> > 
-> > Correct, the ACCESS_USERSPACE test does the same thing.  Splitting
-> > this
-> > into separate R and W tests makes sense, even if it is unlikely
-> > that
-> > one would be broken without the other.
-> > 
-> 
-> Or once we are using user_access_begin() stuff, we can use 
-> unsafe_put_user() and unsafe_get_user() which should return an error 
-> instead of killing the caller.
+On Thu, Jan 30, 2020 at 8:23 PM Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Jan 29, 2020 at 06:19:56PM +0100, Christian Borntraeger wrote:
+> > On 29.01.20 18:09, Christoph Hellwig wrote:
+> > > On Wed, Jan 29, 2020 at 06:07:14PM +0100, Christian Borntraeger wrote:
+> > >>> DMA can be done to NORMAL memory as well.
+> > >>
+> > >> Exactly.
+> > >> I think iucv uses GFP_DMA because z/VM needs those buffers to reside below 2GB (which is ZONA_DMA for s390).
+> > >
+> > > The normal way to allocate memory with addressing limits would be to
+> > > use dma_alloc_coherent and friends.  Any chance to switch iucv over to
+> > > that?  Or is there no device associated with it?
+> >
+> > There is not necessarily a device for that. It is a hypervisor interface (an
+> > instruction that is interpreted by z/VM). We do have the netiucv driver that
+> > creates a virtual nic, but there is also AF_IUCV which works without a device.
+> >
+> > But back to the original question: If we mark kmalloc caches as usercopy caches,
+> > we should do the same for DMA kmalloc caches. As outlined by Christoph, this has
+> > nothing to do with device DMA.
+>
+> Hm, looks like it's allocated from the low 16MB. Seems like poor naming!
 
-Even better, and thanks for your work on all this stuff.
+The physical address limit of the DMA zone depends on the architecture
+(and the kernel version); e.g. on Linux 4.4 on arm64 (which is used on
+the Pixel 2), the DMA zone goes up to 4GiB. Later, arm64 started using
+the DMA32 zone for that instead (as was already the case on e.g.
+X86-64); but recently (commit 1a8e1cef7603), arm64 started using the
+DMA zone again, but now for up to 1GiB. (AFAICS the DMA32 zone can't
+be used with kmalloc at all, that only works with the DMA zone.)
 
-- Russell
+> :) There seems to be a LOT of stuff using GFP_DMA, and it seems unlikely
+> those are all expecting low addresses?
 
-> 
-> Christophe
+I think there's a bunch of (especially really old) hardware where the
+hardware can only talk to low physical addresses, e.g. stuff that uses
+the ISA bus.
 
+However, there aren't *that* many users of GFP_DMA that actually cause
+kmalloc allocations with GFP_DMA - many of the users of GFP_DMA
+actually just pass that flag to dma_alloc_coherent()/dma_pool_alloc(),
+where it is filtered away and the allocation ultimately doesn't go
+through the slab allocator AFAICS, or they pass it directly to the
+page allocator, where it has no effect on the usercopy stuff. Looking
+on my workstation, there are zero objects allocated in dma-kmalloc-*
+slabs:
+
+/sys/kernel/slab# for name in dma-kmalloc-*; do echo "$name: $(cat
+$name/objects)"; done
+dma-kmalloc-128: 0
+dma-kmalloc-16: 0
+dma-kmalloc-192: 0
+dma-kmalloc-1k: 0
+dma-kmalloc-256: 0
+dma-kmalloc-2k: 0
+dma-kmalloc-32: 0
+dma-kmalloc-4k: 0
+dma-kmalloc-512: 0
+dma-kmalloc-64: 0
+dma-kmalloc-8: 0
+dma-kmalloc-8k: 0
+dma-kmalloc-96: 0
+
+On a Pixel 2, there are a whole five objects allocated across the DMA
+zone kmalloc caches:
+
+walleye:/sys/kernel/slab # for name in dma-kmalloc-*; do echo "$name:
+$(cat $name/objects)"; done
+dma-kmalloc-1024: 0
+dma-kmalloc-128: 0
+dma-kmalloc-2048: 2
+dma-kmalloc-256: 0
+dma-kmalloc-4096: 3
+dma-kmalloc-512: 0
+dma-kmalloc-8192: 0
+
+> Since this has only been a problem on s390, should just s390 gain the
+> weakening of the usercopy restriction?  Something like:
+>
+>
+> diff --git a/mm/slab_common.c b/mm/slab_common.c
+> index 1907cb2903c7..c5bbc141f20b 100644
+> --- a/mm/slab_common.c
+> +++ b/mm/slab_common.c
+> @@ -1303,7 +1303,9 @@ void __init create_kmalloc_caches(slab_flags_t flags)
+>                         kmalloc_caches[KMALLOC_DMA][i] = create_kmalloc_cache(
+>                                 kmalloc_info[i].name[KMALLOC_DMA],
+>                                 kmalloc_info[i].size,
+> -                               SLAB_CACHE_DMA | flags, 0, 0);
+> +                               SLAB_CACHE_DMA | flags, 0,
+> +                               IS_ENABLED(CONFIG_S390) ?
+> +                                       kmalloc_info[i].size : 0);
+>                 }
+>         }
+>  #endif
+
+I think dma-kmalloc slabs should be handled the same way as normal
+kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
+just normal kernel memory - even if it might later be used for DMA -,
+and it should be perfectly fine to copy_from_user() into such
+allocations at that point, and to copy_to_user() out of them at the
+end. If you look at the places where such allocations are created, you
+can see things like kmemdup(), memcpy() and so on - all normal
+operations that shouldn't conceptually be different from usercopy in
+any relevant way.
