@@ -1,4 +1,4 @@
-Return-Path: <SRS0=V/1n=3V=lists.openwall.com=kernel-hardening-return-17648-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=62UN=3V=lists.openwall.com=kernel-hardening-return-17649-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,17 +6,17 @@ X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
 	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2697DC33CB3
-	for <kernel-hardening@archiver.kernel.org>; Sat,  1 Feb 2020 16:40:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A4521C33CB3
+	for <kernel-hardening@archiver.kernel.org>; Sat,  1 Feb 2020 17:57:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 777A1205F4
-	for <kernel-hardening@archiver.kernel.org>; Sat,  1 Feb 2020 16:40:57 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 039C02067C
+	for <kernel-hardening@archiver.kernel.org>; Sat,  1 Feb 2020 17:57:03 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="jsFiPNcF"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 777A1205F4
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="UbIWczwi"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 039C02067C
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17648-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9788 invoked by uid 550); 1 Feb 2020 16:40:49 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17649-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11945 invoked by uid 550); 1 Feb 2020 17:56:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,62 +24,100 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9754 invoked from network); 1 Feb 2020 16:40:48 -0000
+Received: (qmail 11919 invoked from network); 1 Feb 2020 17:56:56 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=QwZ3CLPSOKerZ4q2cB/Hi0ai1yGFzd/B3udh3ZqTtuM=;
-        b=jsFiPNcF+Kv+AD+cCoimAjdmxdXVfz+jklLjuWAodKYGoYYpsmGFXd7lewm9b+k+0a
-         YxyMuZnoFgQBJJT4fvhBfbLaQinvoO/ovQPcFEXi5AGzl5olCx5gYZ4Eq7/UZCm/eIOr
-         OQ9onHvvIcrtHkP4clI72kPgvkSCx4wYKUuIw=
+        bh=1rxiDiiWyy+RaaD0YllXb5sVbRbHdZvAaLoyASC1RHA=;
+        b=UbIWczwiQvzV+o1/R62NbaP1lFCIW4J4I1Znu2jtuEVKVBfSBP0kAK6LdTGJ1ujZps
+         /G0uyRiL+3/xM2Hvkwz1ZQhXsnR97q5ZnjDFj6XXbM/7HbkX4QGvl8Ij1VWRDdoVEVqI
+         D9Ks/1wEw6tLdPvSdLg1Vw6B3NocqQ1gDZwAk=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=QwZ3CLPSOKerZ4q2cB/Hi0ai1yGFzd/B3udh3ZqTtuM=;
-        b=Df8Lj7ylv7scb73/jKvbpvMvR7XwgMxlzvXpbVehfchXIfWP1Dy0pyqmx85XCsLLKD
-         yaRNxRtmt2tpuffyCDXuwqGrjECmqpfS9Uv41Oanvlyyn0tiN68FDtMp0rZflLLLLXUn
-         cH4U19Me800DTNqBBwW75qEX8f8O31WLML9ZOGBKpc/f/0rS1NRqyZySiXJj1q8H2hrP
-         Q2932JPV0q5ndZrSccA65vIS17PQMi8awelo9wS87FZ28671aDZPn0w2xJMTMRPHa2vz
-         vMWpTfu8Ba6aKc1K9aNQmzSas7DqTsFCmo99AC3AZ89b6lxSMjOBPPcQFbuPozpB/Qfs
-         fONg==
-X-Gm-Message-State: APjAAAXOofcd9pgmhhjBcSUtwfyPuWkLUT1PyYqNJ85XfJTdpqNsHFDM
-	ouG6Lmjm2T0dZDlXe1zmTdagUA==
-X-Google-Smtp-Source: APXvYqxXMppfrfTklyz+pwg0P3CdY6ihdgY9Vslz5MfHbndtzF8KzUGwo01U+1jLgg/AvUUKozH1GA==
-X-Received: by 2002:a17:902:d20f:: with SMTP id t15mr16360800ply.55.1580575236433;
-        Sat, 01 Feb 2020 08:40:36 -0800 (PST)
-Date: Sat, 1 Feb 2020 08:40:34 -0800
+        bh=1rxiDiiWyy+RaaD0YllXb5sVbRbHdZvAaLoyASC1RHA=;
+        b=sP3HbNlolekH6FRCFdZStdtpkVtN3o9ycO/DMiNvcY9nW6O42T3H7mkMA8ZxYS0e5d
+         NiqGMcvojjZOPCgnCSMN3nQoUpWAosfvQYb6CZPmxYqK+Tw50O8f8/vUxFzqcZ5cD9Lk
+         puRQEpL7hgWTKMhvRsBkHjGwR0gTrd5mw1/ltjn6GMMvi8lt7neOy+FcxDuHZjxjHhsm
+         h2rgQg2JE7hu44yxX8u36wbtEbjNJx4H5ErhYhNNk56j3ubXm2O6jkvUvK7g26vIO5lS
+         Pkiwe2rN0BIWiDtjOYQyInhG+usjp16H+6NZsW29fdTIvuL+mxkl8lP5YbygYPh8Psep
+         inlw==
+X-Gm-Message-State: APjAAAWiBw5TG6OYfKJ2mPQL5gmn9UbW8jRwUQf3EZKleQe1BWTldhGA
+	AEZ2phvU+OcMubm+Ruz2S3/qaA==
+X-Google-Smtp-Source: APXvYqxT3vOizdt1K5+VTatra4+LXkGQ2fpy4tPPX6L9duoaO3re51J2wolPrp+nN4BPCFA89zymvQ==
+X-Received: by 2002:a17:902:9b93:: with SMTP id y19mr15780032plp.89.1580579803746;
+        Sat, 01 Feb 2020 09:56:43 -0800 (PST)
+Date: Sat, 1 Feb 2020 09:56:41 -0800
 From: Kees Cook <keescook@chromium.org>
-To: Russell Currey <ruscur@russell.cc>
-Cc: Christophe Leroy <christophe.leroy@c-s.fr>, mpe@ellerman.id.au,
-	linux-kernel@vger.kernel.org, dja@axtens.net,
-	kernel-hardening@lists.openwall.com, linuxppc-dev@lists.ozlabs.org
-Subject: Re: [PATCH] lkdtm: Test KUAP directional user access unlocks on
- powerpc
-Message-ID: <202002010836.76B19684@keescook>
-References: <20200131053157.22463-1-ruscur@russell.cc>
- <1b40cea6-0675-731a-58b1-bdc65f1e495e@c-s.fr>
- <0b016861756cbe27e66651b5c21229a06558cb57.camel@russell.cc>
+To: Jann Horn <jannh@google.com>
+Cc: Christian Borntraeger <borntraeger@de.ibm.com>,
+	Christoph Hellwig <hch@infradead.org>,
+	Christopher Lameter <cl@linux.com>, Jiri Slaby <jslaby@suse.cz>,
+	Julian Wiedmann <jwi@linux.ibm.com>,
+	Ursula Braun <ubraun@linux.ibm.com>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	kernel list <linux-kernel@vger.kernel.org>,
+	David Windsor <dave@nullcore.net>,
+	Pekka Enberg <penberg@kernel.org>,
+	David Rientjes <rientjes@google.com>,
+	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	"David S. Miller" <davem@davemloft.net>,
+	Laura Abbott <labbott@redhat.com>,
+	Mark Rutland <mark.rutland@arm.com>,
+	"Martin K. Petersen" <martin.petersen@oracle.com>,
+	Paolo Bonzini <pbonzini@redhat.com>,
+	Christoffer Dall <christoffer.dall@linaro.org>,
+	Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>,
+	Luis de Bethencourt <luisbg@kernel.org>,
+	Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>,
+	Matthew Garrett <mjg59@google.com>,
+	linux-fsdevel <linux-fsdevel@vger.kernel.org>,
+	linux-arch <linux-arch@vger.kernel.org>,
+	Network Development <netdev@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Michal Kubecek <mkubecek@suse.cz>
+Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches
+ as usercopy caches
+Message-ID: <202002010952.ACDA7A81@keescook>
+References: <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz>
+ <202001271519.AA6ADEACF0@keescook>
+ <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com>
+ <202001281457.FA11CC313A@keescook>
+ <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
+ <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
+ <20200129170939.GA4277@infradead.org>
+ <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
+ <202001300945.7D465B5F5@keescook>
+ <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <0b016861756cbe27e66651b5c21229a06558cb57.camel@russell.cc>
+In-Reply-To: <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
 
-On Fri, Jan 31, 2020 at 05:53:14PM +1100, Russell Currey wrote:
-> Correct, the ACCESS_USERSPACE test does the same thing.  Splitting this
-> into separate R and W tests makes sense, even if it is unlikely that
-> one would be broken without the other.
+On Fri, Jan 31, 2020 at 01:03:40PM +0100, Jann Horn wrote:
+> I think dma-kmalloc slabs should be handled the same way as normal
+> kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
+> just normal kernel memory - even if it might later be used for DMA -,
+> and it should be perfectly fine to copy_from_user() into such
+> allocations at that point, and to copy_to_user() out of them at the
+> end. If you look at the places where such allocations are created, you
+> can see things like kmemdup(), memcpy() and so on - all normal
+> operations that shouldn't conceptually be different from usercopy in
+> any relevant way.
 
-That would be my preference too -- the reason it wasn't separated before
-was because it was one big toggle before. I just had both directions in
-the test out of a desire for completeness.
+I can't find where the address limit for dma-kmalloc is implemented.
 
-Splitting into WRITE_USERSPACE and READ_USERSPACE seems good. Though if
-you want to test functionality (read while only write disabled), then
-I'm not sure what that should look like. Does the new
-user_access_begin() API provide a way to query existing state? I'll go
-read the series...
+As to whitelisting all of dma-kmalloc -- I guess I can be talked into
+it. It still seems like the memory used for direct hardware
+communication shouldn't be exposed to userspace, but it we're dealing
+with packet data, etc, then it makes sense not to have to have bounce
+buffers, etc.
 
 -- 
 Kees Cook
