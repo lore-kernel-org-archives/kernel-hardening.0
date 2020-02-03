@@ -1,22 +1,23 @@
-Return-Path: <SRS0=hehG=3X=lists.openwall.com=kernel-hardening-return-17653-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=C/69=3X=lists.openwall.com=kernel-hardening-return-17654-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 74B96C3524D
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 07:47:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 82D23C35247
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 16:18:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C7C3D20658
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 07:47:39 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id D923520838
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 16:18:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="tIPQmbMB"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C7C3D20658
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17653-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18379 invoked by uid 550); 3 Feb 2020 07:47:31 -0000
+	dkim=pass (1024-bit key) header.d=digitalocean.com header.i=@digitalocean.com header.b="eINJVtQO"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D923520838
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=digitalocean.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17654-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9271 invoked by uid 550); 3 Feb 2020 16:18:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,93 +25,107 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18359 invoked from network); 3 Feb 2020 07:47:30 -0000
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-	d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
-	:References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
-	Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:
-	Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:List-Id:
-	List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive;
-	 bh=1OnLUtccVxzRGy3H6tEuURVA5Cw1eDsrX9HvO+XJeD4=; b=tIPQmbMBJJkyM1EUffKpQ6t8+
-	6fwTSe6r4ihL5NqNlss4BtnMRFyaJcEPiVZ64i/7LitZrfYs81oZ1L69NyPjMREv3zXAuPxvS0bI2
-	eMLUSHfCDe+Uhbh/03f2I/93N1FOLazKz82/5pZp0ZjY/ieytY6YhoUGFolkmaBRB9ehsBDiIZHK+
-	bkuV60ig9MmsNyEVGt8E0ZhQVk6ERJlJE/YSTpSCBFbCtPNtYKIiwbs9X9JfUX2DCkFMoZJyTbNcM
-	L+Sm7T5i2/9zTP8/s+1LrDkKFqoSf7iPfX+6fv7NwwWoLbf8UowsIMPpObCqY5IZs9aWtvn+JjE0x
-	uAmUP6+mA==;
-Date: Sun, 2 Feb 2020 23:46:44 -0800
-From: Matthew Wilcox <willy@infradead.org>
-To: Jann Horn <jannh@google.com>
-Cc: Kees Cook <keescook@chromium.org>,
-	Christian Borntraeger <borntraeger@de.ibm.com>,
-	Christoph Hellwig <hch@infradead.org>,
-	Christopher Lameter <cl@linux.com>, Jiri Slaby <jslaby@suse.cz>,
-	Julian Wiedmann <jwi@linux.ibm.com>,
-	Ursula Braun <ubraun@linux.ibm.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	kernel list <linux-kernel@vger.kernel.org>,
-	David Windsor <dave@nullcore.net>,
-	Pekka Enberg <penberg@kernel.org>,
-	David Rientjes <rientjes@google.com>,
-	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	"David S. Miller" <davem@davemloft.net>,
-	Laura Abbott <labbott@redhat.com>,
-	Mark Rutland <mark.rutland@arm.com>,
-	"Martin K. Petersen" <martin.petersen@oracle.com>,
-	Paolo Bonzini <pbonzini@redhat.com>,
-	Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>,
-	Marc Zyngier <marc.zyngier@arm.com>,
-	Matthew Garrett <mjg59@google.com>,
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	Network Development <netdev@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Vlastimil Babka <vbabka@suse.cz>, Michal Kubecek <mkubecek@suse.cz>
-Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches
- as usercopy caches
-Message-ID: <20200203074644.GD8731@bombadil.infradead.org>
-References: <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com>
- <202001281457.FA11CC313A@keescook>
- <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
- <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
- <20200129170939.GA4277@infradead.org>
- <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
- <202001300945.7D465B5F5@keescook>
- <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
- <202002010952.ACDA7A81@keescook>
- <CAG48ez2ms+TDEXQdDONuQ1GG0K20E69nV1r_yjKxxYjYKv1VCg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAG48ez2ms+TDEXQdDONuQ1GG0K20E69nV1r_yjKxxYjYKv1VCg@mail.gmail.com>
+Received: (qmail 9237 invoked from network); 3 Feb 2020 16:18:51 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=digitalocean.com; s=google;
+        h=from:to:cc:subject:date:message-id;
+        bh=ptdL8j4y4Nu0slWC9GMlqw2vupDc3jE8cCzq/d6QOxo=;
+        b=eINJVtQOFasRcQUUhrRypp1cvIgGSB2uv66wDqp4LEqIw+IxE8nZFh8zR1m5xpcBNs
+         asYRxtDshmiHoSfr1mRX75C2UKBJu2rdW11q9+Bv/5yr2fbQHpAax5CNnqgsso8HZU0v
+         UyOp9uDe8Q5dKeQmicM7GjESp/71ZeaA3EeFA=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id;
+        bh=ptdL8j4y4Nu0slWC9GMlqw2vupDc3jE8cCzq/d6QOxo=;
+        b=G67TaWwOKPO9wEzuanGN6qsvQ1eCoY0gREnC6EP8dcOp13mjRVAe9xRSlhDfJlM3m5
+         iKlw8NGYdApztnP4qNtlbiYKCX4RXiBBAkyJaGLhZx7Kb0paPC30SrJ9zxft8J4SS5D1
+         9XEs3JUgVylDUFzpufc1KqYPvqFvAYuG+v8lEFSzVjG/jUmynMnPlGjNCd2xQVW36IHB
+         /ODb/aLUXXUVC4CVtWSkZmEYsC6FuwAgGZfc8xLOvzPRJEUOARsYmM7fqlZpahhkZz4A
+         CvSSYZAyn2FQvNRZ7PiyTGm4ww6dEW2twFBKcbX36kc0OILboGPBswV46E8uNUYz/Pvu
+         EDpQ==
+X-Gm-Message-State: APjAAAVKm5Vfl5Uw2qgIXwv31162el3bnThqHS1g4V2R2wCZkjW/3ASl
+	L0++fUY0l7rvMdhz8xs2aHuh
+X-Google-Smtp-Source: APXvYqxDPyKmX7Xb7xJg3h+x7fg95e7oQwGe6vGn9t+4Xg/mY5Q8WpzfOarZKicAK8elQfsAEGxyDw==
+X-Received: by 2002:a05:620a:306:: with SMTP id s6mr22664268qkm.469.1580746719156;
+        Mon, 03 Feb 2020 08:18:39 -0800 (PST)
+From: Tianlin Li <tli@digitalocean.com>
+To: kernel-hardening@lists.openwall.com
+Cc: keescook@chromium.org,
+	Alex Deucher <alexander.deucher@amd.com>,
+	christian.koenig@amd.com,
+	David1.Zhou@amd.com,
+	David Airlie <airlied@linux.ie>,
+	Daniel Vetter <daniel@ffwll.ch>,
+	amd-gfx@lists.freedesktop.org,
+	dri-devel@lists.freedesktop.org,
+	linux-kernel@vger.kernel.org,
+	Tianlin Li <tli@digitalocean.com>
+Subject: [PATCH v2] drm/radeon: have the callers of set_memory_*() check the return value
+Date: Mon,  3 Feb 2020 10:18:27 -0600
+Message-Id: <20200203161827.768-1-tli@digitalocean.com>
+X-Mailer: git-send-email 2.17.1
 
-On Sat, Feb 01, 2020 at 08:27:49PM +0100, Jann Horn wrote:
-> FWIW, as far as I understand, usercopy doesn't actually have any
-> effect on drivers that use the modern, proper APIs, since those don't
-> use the slab allocator at all - as I pointed out in my last mail, the
-> dma-kmalloc* slabs are used very rarely. (Which is good, because
-> putting objects from less-than-page-size slabs into iommu entries is a
-> terrible idea from a security and reliability perspective because it
-> gives the hardware access to completely unrelated memory.) Instead,
-> they get pages from the page allocator, and these pages may e.g. be
-> allocated from the DMA, DMA32 or NORMAL zones depending on the
-> restrictions imposed by hardware. So I think the usercopy restriction
-> only affects a few oddball drivers (like this s390 stuff), which is
-> why you're not seeing more bug reports caused by this.
+Right now several architectures allow their set_memory_*() family of  
+functions to fail, but callers may not be checking the return values.
+If set_memory_*() returns with an error, call-site assumptions may be
+infact wrong to assume that it would either succeed or not succeed at  
+all. Ideally, the failure of set_memory_*() should be passed up the 
+call stack, and callers should examine the failure and deal with it. 
 
-Getting pages from the page allocator is true for dma_alloc_coherent()
-and friends.  But it's not true for streaming DMA mappings (dma_map_*)
-for which the memory usually comes from kmalloc().  If this is something
-we want to fix (and I have an awful feeling we're going to regret it
-if we say "no, we trust the hardware"), we're going to have to come up
-with a new memory allocation API for these cases.  Or bounce bugger the
-memory for devices we don't trust.
+Need to fix the callers and add the __must_check attribute. They also 
+may not provide any level of atomicity, in the sense that the memory 
+protections may be left incomplete on failure. This issue likely has a 
+few steps on effects architectures:
+1)Have all callers of set_memory_*() helpers check the return value.
+2)Add __must_check to all set_memory_*() helpers so that new uses do  
+not ignore the return value.
+3)Add atomicity to the calls so that the memory protections aren't left 
+in a partial state.
 
-The problem with the dma_map_* API is that memory might end up being
-allocated once and then used multiple times by different drivers.  eg if
-I allocate an NFS packet, it might get sent first to eth0, then (when the
-route fails) sent to eth1.  Similarly in storage, a RAID-5 driver might
-map the same memory several times to send to different disk controllers.
+This series is part of step 1. Make drm/radeon check the return value of  
+set_memory_*().
+
+Signed-off-by: Tianlin Li <tli@digitalocean.com>
+---
+v2:
+The hardware is too old to be tested on and the code cannot be simply
+removed from the kernel, so this is the solution for the short term. 
+- Just print an error when something goes wrong
+- Remove patch 2.  
+v1:
+https://lore.kernel.org/lkml/20200107192555.20606-1-tli@digitalocean.com/
+---
+ drivers/gpu/drm/radeon/radeon_gart.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/radeon/radeon_gart.c b/drivers/gpu/drm/radeon/radeon_gart.c
+index f178ba321715..a2cc864aa08d 100644
+--- a/drivers/gpu/drm/radeon/radeon_gart.c
++++ b/drivers/gpu/drm/radeon/radeon_gart.c
+@@ -80,8 +80,9 @@ int radeon_gart_table_ram_alloc(struct radeon_device *rdev)
+ #ifdef CONFIG_X86
+ 	if (rdev->family == CHIP_RS400 || rdev->family == CHIP_RS480 ||
+ 	    rdev->family == CHIP_RS690 || rdev->family == CHIP_RS740) {
+-		set_memory_uc((unsigned long)ptr,
+-			      rdev->gart.table_size >> PAGE_SHIFT);
++		if (set_memory_uc((unsigned long)ptr,
++			      rdev->gart.table_size >> PAGE_SHIFT))
++			DRM_ERROR("set_memory_uc failed.\n");
+ 	}
+ #endif
+ 	rdev->gart.ptr = ptr;
+@@ -106,8 +107,9 @@ void radeon_gart_table_ram_free(struct radeon_device *rdev)
+ #ifdef CONFIG_X86
+ 	if (rdev->family == CHIP_RS400 || rdev->family == CHIP_RS480 ||
+ 	    rdev->family == CHIP_RS690 || rdev->family == CHIP_RS740) {
+-		set_memory_wb((unsigned long)rdev->gart.ptr,
+-			      rdev->gart.table_size >> PAGE_SHIFT);
++		if (set_memory_wb((unsigned long)rdev->gart.ptr,
++			      rdev->gart.table_size >> PAGE_SHIFT))
++			DRM_ERROR("set_memory_wb failed.\n");
+ 	}
+ #endif
+ 	pci_free_consistent(rdev->pdev, rdev->gart.table_size,
+-- 
+2.17.1
+
