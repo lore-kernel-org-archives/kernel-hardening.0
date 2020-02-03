@@ -1,23 +1,20 @@
-Return-Path: <SRS0=+5fr=3X=lists.openwall.com=kernel-hardening-return-17655-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=KN6T=3X=lists.openwall.com=kernel-hardening-return-17656-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C5BA7C35247
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 17:17:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6029AC35249
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 17:20:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EE88720838
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 17:17:01 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=amdcloud.onmicrosoft.com header.i=@amdcloud.onmicrosoft.com header.b="WHCq/xca"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EE88720838
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=amd.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17655-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 8003 invoked by uid 550); 3 Feb 2020 17:16:55 -0000
+	by mail.kernel.org (Postfix) with SMTP id AE6672080D
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 17:20:20 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AE6672080D
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17656-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11335 invoked by uid 550); 3 Feb 2020 17:20:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,146 +22,112 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7968 invoked from network); 3 Feb 2020 17:16:54 -0000
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=kiffTm8WM5G0SEFInh4n3wWxlwEU81QHOexvi5qVkhRBQ+hWStNE5A4Y8EvMwi8xIr6jfvKLP91QJ6fY5zoCem2sG7hT/uPCQRdXchBGxq5ZsmfH68kWg62JRiFguJWKFzgEOeFSYem1g14A0sY+WN8wi4y1UL3J41DhEX2CjENrt/D8lbUwt7as4fzr2O5rrostVExPqANamJYvKNYEJCSfbfcwpU7kSGRpvjP47UL9ki9I0WmOF56M07FiXDmIOZKBUN9PDvUPJVCZdMOfKD8ZAU+LH4CNidFiTxS2ko02FDHkuy5ieYg4ZcCoV+SEmzw4p9cXT7XEbmHiccKCJA==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=kP5YxPaUnw/mmqtfzj0P0CXrZvdxGSpEZaMB3tAG10A=;
- b=AcTXpNj1QuhsqYGHf/RyBzcuaLi1KlI95QmHXbCMT3xCTPTGadYup9PHlCUfJrjbRIQfad1czcBm32ld9M3LwumoUh1geEVX8Vn28KDRQ+EfU8GVf2kc5KZnMw3cMtcS/LllaxqNbq+JIJiIXPgqpNGkDYAKcQvJMW/M0ugkVn5CVrMDW46fAy5wvheZTOpR8DkUMssS94/NIT1dWNXf5Sc5B1VOlI/OPZ/72ElVoSqbIXLgmL6/oM3Q62uOa/pb8u3mYJMFAnQY8kM7vOoZZ0UHOPk3qcRv9mowKPCRW7iRmxCM1pjpYYFzYCLOkXhs3kxd4T9bd6hTmux+55kxAw==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
- smtp.mailfrom=amd.com; dmarc=pass action=none header.from=amd.com; dkim=pass
- header.d=amd.com; arc=none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
- d=amdcloud.onmicrosoft.com; s=selector2-amdcloud-onmicrosoft-com;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=kP5YxPaUnw/mmqtfzj0P0CXrZvdxGSpEZaMB3tAG10A=;
- b=WHCq/xca27D/otRxSfpGL5qvAiUSlpmn37kf0Ugfx9NXVPd3L5Urz6xzQp6rDLtCKYVcW/X04TFhAokWYKjoS8gHqg3Xlhxxyj8mT4brUTISNYdXSpVhXXcO2gj8FGgWfi5/TquwaZFHOvjeVWwUkbzFMqiH2nvt5XslMGxInBM=
-Authentication-Results: spf=none (sender IP is )
- smtp.mailfrom=Christian.Koenig@amd.com; 
-Subject: Re: [PATCH v2] drm/radeon: have the callers of set_memory_*() check
- the return value
-To: Tianlin Li <tli@digitalocean.com>, kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Alex Deucher <alexander.deucher@amd.com>,
- David1.Zhou@amd.com, David Airlie <airlied@linux.ie>,
- Daniel Vetter <daniel@ffwll.ch>, amd-gfx@lists.freedesktop.org,
- dri-devel@lists.freedesktop.org, linux-kernel@vger.kernel.org
-References: <20200203161827.768-1-tli@digitalocean.com>
-From: =?UTF-8?Q?Christian_K=c3=b6nig?= <christian.koenig@amd.com>
-Message-ID: <6e5a18f6-b7f6-c401-c845-fe24b183f348@amd.com>
-Date: Mon, 3 Feb 2020 18:16:33 +0100
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
- Thunderbird/60.9.0
-In-Reply-To: <20200203161827.768-1-tli@digitalocean.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
-Content-Language: en-US
-X-ClientProxiedBy: AM0PR05CA0086.eurprd05.prod.outlook.com
- (2603:10a6:208:136::26) To DM5PR12MB1705.namprd12.prod.outlook.com
- (2603:10b6:3:10c::22)
+Received: (qmail 11313 invoked from network); 3 Feb 2020 17:20:14 -0000
+Date: Mon, 3 Feb 2020 17:20:02 +0000 (UTC)
+From: Christopher Lameter <cl@linux.com>
+X-X-Sender: cl@www.lameter.com
+To: Kees Cook <keescook@chromium.org>
+cc: Jann Horn <jannh@google.com>, 
+    Christian Borntraeger <borntraeger@de.ibm.com>, 
+    Christoph Hellwig <hch@infradead.org>, Jiri Slaby <jslaby@suse.cz>, 
+    Julian Wiedmann <jwi@linux.ibm.com>, Ursula Braun <ubraun@linux.ibm.com>, 
+    Alexander Viro <viro@zeniv.linux.org.uk>, 
+    kernel list <linux-kernel@vger.kernel.org>, 
+    David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>, 
+    David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, 
+    Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, 
+    linux-xfs@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, 
+    Andy Lutomirski <luto@kernel.org>, "David S. Miller" <davem@davemloft.net>, 
+    Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, 
+    "Martin K. Petersen" <martin.petersen@oracle.com>, 
+    Paolo Bonzini <pbonzini@redhat.com>, 
+    Christoffer Dall <christoffer.dall@linaro.org>, 
+    Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, 
+    Luis de Bethencourt <luisbg@kernel.org>, 
+    Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, 
+    Matthew Garrett <mjg59@google.com>, 
+    linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
+    linux-arch <linux-arch@vger.kernel.org>, 
+    Network Development <netdev@vger.kernel.org>, 
+    Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+    Vlastimil Babka <vbabka@suse.cz>, Michal Kubecek <mkubecek@suse.cz>
+Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches
+ as usercopy caches
+In-Reply-To: <202002010952.ACDA7A81@keescook>
+Message-ID: <alpine.DEB.2.21.2002031716440.1668@www.lameter.com>
+References: <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz> <202001271519.AA6ADEACF0@keescook> <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com> <202001281457.FA11CC313A@keescook> <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
+ <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com> <20200129170939.GA4277@infradead.org> <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com> <202001300945.7D465B5F5@keescook> <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
+ <202002010952.ACDA7A81@keescook>
+User-Agent: Alpine 2.21 (DEB 202 2017-01-01)
 MIME-Version: 1.0
-X-Originating-IP: [2a02:908:1252:fb60:be8a:bd56:1f94:86e7]
-X-MS-PublicTrafficType: Email
-X-MS-Office365-Filtering-HT: Tenant
-X-MS-Office365-Filtering-Correlation-Id: 6b603d2b-343a-4008-4cbe-08d7a8ccd4ba
-X-MS-TrafficTypeDiagnostic: DM5PR12MB1209:|DM5PR12MB1209:
-X-MS-Exchange-Transport-Forked: True
-X-Microsoft-Antispam-PRVS:
-	<DM5PR12MB120964F1725658F3FC14CD5083000@DM5PR12MB1209.namprd12.prod.outlook.com>
-X-MS-Oob-TLC-OOBClassifiers: OLM:9508;
-X-Forefront-PRVS: 0302D4F392
-X-Forefront-Antispam-Report:
-	SFV:NSPM;SFS:(10009020)(4636009)(346002)(396003)(136003)(39860400002)(366004)(376002)(189003)(199004)(2616005)(66946007)(66556008)(31696002)(66476007)(2906002)(6486002)(36756003)(31686004)(4326008)(86362001)(66574012)(81156014)(8676002)(81166006)(8936002)(54906003)(6666004)(316002)(52116002)(45080400002)(16526019)(966005)(186003)(5660300002)(478600001);DIR:OUT;SFP:1101;SCL:1;SRVR:DM5PR12MB1209;H:DM5PR12MB1705.namprd12.prod.outlook.com;FPR:;SPF:None;LANG:en;PTR:InfoNoRecords;MX:1;A:1;
-Received-SPF: None (protection.outlook.com: amd.com does not designate
- permitted sender hosts)
-X-MS-Exchange-SenderADCheck: 1
-X-Microsoft-Antispam: BCL:0;
-X-Microsoft-Antispam-Message-Info:
-	8NPey4ko1r9VwUhulrVFZ+tTb1Ogma/BQWyxeEm2HuPkjLm/3iGX4W1MeBukMJ/r+3lyB4X1CEVtT31K7drrmR2rEGRElGexQHotzKqLQ6EbXmA4djERNJvw/khJl5bVrz1dQswL9hGcfeYLPttPiXN4dSB6ckZGUH7mIX1oEWrTAwBlUCrDyQTP/1JIaNwyRrDkzgRR/B+xttyoFkbmke0Aeq3WRzRzz9ukGK4xCFWFt6clxTxE+ujxh+42L4iG0DZ+SHVRbmJZvMn/LZA1wxlWfx39fFEaWZjNu903cm+Af0x+QaESmZVQ5b7LbyyCB3O3UdohCexoIiiPu6OioeoPCJues1FILGmX6vpJlNCFiC5AFaYzCd3b21uuFBWM3gGRUTLBtGKbpJKfKCR0r+iBSRnHW3vLO700HLw6FXmhvtAArP8LCu/WkKlypmxh+HyBRB0GVuLQZrq89SYOru7+pQT3iHqJC6HCX55eVzR6nCS5WLn/62N+juKJVfDA2uuf+CBGK0g1U0XSGzddpA==
-X-MS-Exchange-AntiSpam-MessageData:
-	mHrqjViZGqH+NG9fAuMDu9GXI3Y07SDcoW6HFuAH1+m4lXCgHK7Z57Bo7QrDKMZcURabr65XhmsEPZDTbsrp2JPTgT0Gt0p6IGuNHr9ZL38Atpe1wdNgfjhGfyNwgVFXWYlPaFThA+pSoivY8pjZ/Yi9afDNnHfyIGPTzpx4X9klHTjdWX60DnBaYlc6gaWtIxt6ShVbdL1GUo4J7SkhbA==
-X-OriginatorOrg: amd.com
-X-MS-Exchange-CrossTenant-Network-Message-Id: 6b603d2b-343a-4008-4cbe-08d7a8ccd4ba
-X-MS-Exchange-CrossTenant-OriginalArrivalTime: 03 Feb 2020 17:16:39.3232
- (UTC)
-X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
-X-MS-Exchange-CrossTenant-Id: 3dd8961f-e488-4e60-8e11-a82d994e183d
-X-MS-Exchange-CrossTenant-MailboxType: HOSTED
-X-MS-Exchange-CrossTenant-UserPrincipalName: 39B9R42sPSaCYxjZvJdYiFHcNyyW0ay7OlE8NrM4loHqbD1HF08+h71L+oeNX1Ns
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: DM5PR12MB1209
+Content-Type: text/plain; charset=US-ASCII
 
-Am 03.02.20 um 17:18 schrieb Tianlin Li:
-> Right now several architectures allow their set_memory_*() family of
-> functions to fail,
-
-Oh, that is a detail I previously didn't recognized. Which architectures 
-are that?
-
-Cause the RS400/480, RS690 and RS740 which are affected by this are 
-integrated in the south-bridge.
-
->   but callers may not be checking the return values.
-> If set_memory_*() returns with an error, call-site assumptions may be
-> infact wrong to assume that it would either succeed or not succeed at
-> all. Ideally, the failure of set_memory_*() should be passed up the
-> call stack, and callers should examine the failure and deal with it.
+On Sat, 1 Feb 2020, Kees Cook wrote:
 >
-> Need to fix the callers and add the __must_check attribute. They also
-> may not provide any level of atomicity, in the sense that the memory
-> protections may be left incomplete on failure. This issue likely has a
-> few steps on effects architectures:
-> 1)Have all callers of set_memory_*() helpers check the return value.
-> 2)Add __must_check to all set_memory_*() helpers so that new uses do
-> not ignore the return value.
-> 3)Add atomicity to the calls so that the memory protections aren't left
-> in a partial state.
->
-> This series is part of step 1. Make drm/radeon check the return value of
-> set_memory_*().
->
-> Signed-off-by: Tianlin Li <tli@digitalocean.com>
+> I can't find where the address limit for dma-kmalloc is implemented.
 
-Reviewed-by: Christian König <christian.koenig@amd.com>
+include/linux/mmzones.h
 
-> ---
-> v2:
-> The hardware is too old to be tested on and the code cannot be simply
-> removed from the kernel, so this is the solution for the short term.
-> - Just print an error when something goes wrong
-> - Remove patch 2.
-> v1:
-> https://nam11.safelinks.protection.outlook.com/?url=https%3A%2F%2Flore.kernel.org%2Flkml%2F20200107192555.20606-1-tli%40digitalocean.com%2F&amp;data=02%7C01%7Cchristian.koenig%40amd.com%7Cba2176d2ca834214e6b108d7a8c4bb1d%7C3dd8961fe4884e608e11a82d994e183d%7C0%7C0%7C637163435227030235&amp;sdata=mDhUEi3vmxahjsdrZOr83OEIWNBHefO8lkXST%2FW32CE%3D&amp;reserved=0
-> ---
->   drivers/gpu/drm/radeon/radeon_gart.c | 10 ++++++----
->   1 file changed, 6 insertions(+), 4 deletions(-)
->
-> diff --git a/drivers/gpu/drm/radeon/radeon_gart.c b/drivers/gpu/drm/radeon/radeon_gart.c
-> index f178ba321715..a2cc864aa08d 100644
-> --- a/drivers/gpu/drm/radeon/radeon_gart.c
-> +++ b/drivers/gpu/drm/radeon/radeon_gart.c
-> @@ -80,8 +80,9 @@ int radeon_gart_table_ram_alloc(struct radeon_device *rdev)
->   #ifdef CONFIG_X86
->   	if (rdev->family == CHIP_RS400 || rdev->family == CHIP_RS480 ||
->   	    rdev->family == CHIP_RS690 || rdev->family == CHIP_RS740) {
-> -		set_memory_uc((unsigned long)ptr,
-> -			      rdev->gart.table_size >> PAGE_SHIFT);
-> +		if (set_memory_uc((unsigned long)ptr,
-> +			      rdev->gart.table_size >> PAGE_SHIFT))
-> +			DRM_ERROR("set_memory_uc failed.\n");
->   	}
->   #endif
->   	rdev->gart.ptr = ptr;
-> @@ -106,8 +107,9 @@ void radeon_gart_table_ram_free(struct radeon_device *rdev)
->   #ifdef CONFIG_X86
->   	if (rdev->family == CHIP_RS400 || rdev->family == CHIP_RS480 ||
->   	    rdev->family == CHIP_RS690 || rdev->family == CHIP_RS740) {
-> -		set_memory_wb((unsigned long)rdev->gart.ptr,
-> -			      rdev->gart.table_size >> PAGE_SHIFT);
-> +		if (set_memory_wb((unsigned long)rdev->gart.ptr,
-> +			      rdev->gart.table_size >> PAGE_SHIFT))
-> +			DRM_ERROR("set_memory_wb failed.\n");
->   	}
->   #endif
->   	pci_free_consistent(rdev->pdev, rdev->gart.table_size,
+enum zone_type {
+        /*
+         * ZONE_DMA and ZONE_DMA32 are used when there are peripherals not able
+         * to DMA to all of the addressable memory (ZONE_NORMAL).
+         * On architectures where this area covers the whole 32 bit address
+         * space ZONE_DMA32 is used. ZONE_DMA is left for the ones with smaller
+         * DMA addressing constraints. This distinction is important as a 32bit
+         * DMA mask is assumed when ZONE_DMA32 is defined. Some 64-bit
+         * platforms may need both zones as they support peripherals with
+         * different DMA addressing limitations.
+         *
+         * Some examples:
+         *
+         *  - i386 and x86_64 have a fixed 16M ZONE_DMA and ZONE_DMA32 for the
+         *    rest of the lower 4G.
+         *
+         *  - arm only uses ZONE_DMA, the size, up to 4G, may vary depending on
+         *    the specific device.
+         *
+         *  - arm64 has a fixed 1G ZONE_DMA and ZONE_DMA32 for the rest of the
+         *    lower 4G.
+         *
+         *  - powerpc only uses ZONE_DMA, the size, up to 2G, may vary
+         *    depending on the specific device.
+         *
+         *  - s390 uses ZONE_DMA fixed to the lower 2G.
+         *
+         *  - ia64 and riscv only use ZONE_DMA32.
+         *
+         *  - parisc uses neither.
+         */
+#ifdef CONFIG_ZONE_DMA
+        ZONE_DMA,
+#endif
+#ifdef CONFIG_ZONE_DMA32
+        ZONE_DMA32,
+#endif
+        /*
+         * Normal addressable memory is in ZONE_NORMAL. DMA operations can
+be
+         * performed on pages in ZONE_NORMAL if the DMA devices support
+         * transfers to all addressable memory.
+         */
+        ZONE_NORMAL,
+#ifdef CONFIG_HIGHMEM
+        /*
+         * A memory area that is only addressable by the kernel through
+         * mapping portions into its own address space. This is for example
+         * used by i386 to allow the kernel to address the memory beyond
+         * 900MB. The kernel will set up special mappings (page
+         * table entries on i386) for each page that the kernel needs to
+         * access.
+         */
+        ZONE_HIGHMEM,
+#endif
+        ZONE_MOVABLE,
+#ifdef CONFIG_ZONE_DEVICE
+        ZONE_DEVICE,
+#endif
+        __MAX_NR_ZONES
+
+};
 
