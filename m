@@ -1,23 +1,24 @@
-Return-Path: <SRS0=2I3F=3V=lists.openwall.com=kernel-hardening-return-17650-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=YVTW=3X=lists.openwall.com=kernel-hardening-return-17651-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
+X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A76A3C33CB3
-	for <kernel-hardening@archiver.kernel.org>; Sat,  1 Feb 2020 19:28:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 27EFDC35249
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 00:47:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CDBC520723
-	for <kernel-hardening@archiver.kernel.org>; Sat,  1 Feb 2020 19:28:35 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3E627206E6
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 00:47:09 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="DHbz0vbx"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CDBC520723
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17650-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21596 invoked by uid 550); 1 Feb 2020 19:28:29 -0000
+	dkim=pass (2048-bit key) header.d=russell.cc header.i=@russell.cc header.b="V9HjTgpD";
+	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="KXbg+hgR"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3E627206E6
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=russell.cc
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17651-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3188 invoked by uid 550); 3 Feb 2020 00:46:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,163 +26,316 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21573 invoked from network); 1 Feb 2020 19:28:28 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=cxP/mWDrHKD9UWBcOV7z7zMrCIASBgDPmpZP09ULspU=;
-        b=DHbz0vbxuVJr39v4IG5GLko8yPJ2OS6cGBWBlCBw6koGzH+k7gmSCl86lfXXJXyTfS
-         lGLseZubt3OGJEGo7iYD6W08gI9l+Z0T6Z8qt2Sl4a584TvXAdgew2Zny1clbqb5yqTa
-         zo5P76hEP3ZOy/8YimvwqHHOOK/+kG2vflddlA4LDX2Xk+CZis5rwduV5SZe3AGIcN3F
-         N1JkutQpZB5oy9/0pQcdNCdb8eg8DZDeDkDvE3MZ2bvF7MYUe2GeY5l/edaHdyr+Ie4h
-         WulEeklbFMQFb86tSVVfFrIvW121MkB3D9LqmtYh62q+ZNYSKUgfvb5q/vKRjxTNuy/J
-         QBzw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=cxP/mWDrHKD9UWBcOV7z7zMrCIASBgDPmpZP09ULspU=;
-        b=gx222Tf2cVxCovWp80bDONKQmYgd8OGI6sb4L+wzvS1oSju/VeQcIQbFV4lQSzevRN
-         hJWOeQk9JWNjNqXg63q2UWT0u6JR3IpLvgMz6tijXzOpvQxFTNmDBrWuRN2bcyrbYpdu
-         Fbu3okgGrA3pCezjiIdbb6JvDPTl++zxe3HWxAgD8ktFrFcCeVnDUVS05eHcsaY6v/DO
-         MQ/6ccqtdUxsSzgfnQd4g/ExjH2uNpnmolo/6WCAFcGxPE+ZezXqDlfTSGsqmLS5SWb7
-         lK0I80dl5sCmzn8v3VwMW4zTUYC/EnaiPgMnmeYix8Q2T6OU8tZXst4eiZCrCao6bo1M
-         TTDg==
-X-Gm-Message-State: APjAAAVaNuZxchuyjT7msBWbt/wX5acwLHllk4WbvMBjspJj0gSXJtn3
-	kQxZa683pXGd7gl53c3hKX+EyKncXc5FdRLLKf05gw==
-X-Google-Smtp-Source: APXvYqwr4ptf9tE3b6yjDXLUXSR7qGzKb90HMFk1L4yOE6UqTeeItB+3BKcSnDGEm0sa3acbKu307vS9ea6L+YdsRSA=
-X-Received: by 2002:a9d:74d0:: with SMTP id a16mr1495412otl.228.1580585295885;
- Sat, 01 Feb 2020 11:28:15 -0800 (PST)
-MIME-Version: 1.0
-References: <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz> <202001271519.AA6ADEACF0@keescook>
- <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com> <202001281457.FA11CC313A@keescook>
- <alpine.DEB.2.21.2001291640350.1546@www.lameter.com> <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
- <20200129170939.GA4277@infradead.org> <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
- <202001300945.7D465B5F5@keescook> <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
- <202002010952.ACDA7A81@keescook>
-In-Reply-To: <202002010952.ACDA7A81@keescook>
-From: Jann Horn <jannh@google.com>
-Date: Sat, 1 Feb 2020 20:27:49 +0100
-Message-ID: <CAG48ez2ms+TDEXQdDONuQ1GG0K20E69nV1r_yjKxxYjYKv1VCg@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches as
- usercopy caches
-To: Kees Cook <keescook@chromium.org>
-Cc: Christian Borntraeger <borntraeger@de.ibm.com>, Christoph Hellwig <hch@infradead.org>, 
-	Christopher Lameter <cl@linux.com>, Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>, 
-	Ursula Braun <ubraun@linux.ibm.com>, Alexander Viro <viro@zeniv.linux.org.uk>, 
-	kernel list <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, 
-	Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, 
-	Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, 
-	Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org, 
-	Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, 
-	"David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, 
-	Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, 
-	Paolo Bonzini <pbonzini@redhat.com>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, 
-	Marc Zyngier <marc.zyngier@arm.com>, Matthew Garrett <mjg59@google.com>, 
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, 
-	Network Development <netdev@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Vlastimil Babka <vbabka@suse.cz>, 
-	Michal Kubecek <mkubecek@suse.cz>
+Received: (qmail 3152 invoked from network); 3 Feb 2020 00:46:58 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=russell.cc; h=
+	message-id:subject:from:to:cc:date:in-reply-to:references
+	:content-type:mime-version:content-transfer-encoding; s=fm1; bh=
+	ynMGFSkzo8+mnaAWwMov4giuOfwKzqEYIujXRx5U8og=; b=V9HjTgpD18V/o4ho
+	/OgJGE8WR5hOPoauZ/H/Ar5rklZ5/DLMuGovJAcLgbS6HVWHd9j3wsw5vNwThWQI
+	0pAs8M1yiU2SFnG0xxksJWpfVZuJXoelOFgf21OiTZvnald6Xrj/rFXfCuL5r2l6
+	7nvoG2EvmEQ6MpyA7troACoPAzU7Rsu0swr6CpL8PUEiKd5hewhBKL0gO+gURldE
+	diaJPftymtvn5v8NsXwMGYnanVZ4jAcrbH04Y1EJmvK5GKj5IFUfTHSGCHVM22pC
+	m9+ZqGsPwXKCySGP8a7zt6B6eJ5vWV5fLrQDuAHTr4G8Qew6wrPVDe6X6L97FLYK
+	WjgaOw==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
+	messagingengine.com; h=cc:content-transfer-encoding:content-type
+	:date:from:in-reply-to:message-id:mime-version:references
+	:subject:to:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender
+	:x-sasl-enc; s=fm1; bh=ynMGFSkzo8+mnaAWwMov4giuOfwKzqEYIujXRx5U8
+	og=; b=KXbg+hgR1zh5KFyW71vKaIj6WWsT5jAZYw1+JP5SvdcdldEFWwFA5Bk6p
+	X2Hcfzxop+wmC6/vJwpC8qAFOsu0FVozTVSKQiSLVwvPBS7jgXYw1IEGNJuysbq9
+	CEIKODMGm3eJiy5j3oVd1ha7OpOOIUikL3Faku8vuXSVr+DeHdRL76Em3FJvEVI6
+	27R1FO7C1yj1q0qBqJoOxleNZdyRzQgCojql1jZDAgE777Vbv+xQyJVa+QPsvFua
+	D6Ow+Ieg+G0i8rkhbhTMA7WdzipiXVL/5dUOK/2LEVXYXPDGlRQMtS81J+2RpNuq
+	+XJD3wEePYZcjc/gxltNbbXRHiNQw==
+X-ME-Sender: <xms:c203Xh5AG6BQwZ3gz4fngcPS-RSGWor8zgt8oNv_00IjeaRuiLYhDg>
+X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedugedrgeeigddvhecutefuodetggdotefrodftvf
+    curfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfghnecu
+    uegrihhlohhuthemuceftddtnecusecvtfgvtghiphhivghnthhsucdlqddutddtmdenfg
+    hrlhcuvffnffculdeftddmnecujfgurhepkffuhffvffgjfhgtfggggfesthekredttder
+    jeenucfhrhhomheptfhushhsvghllhcuvehurhhrvgihuceorhhushgtuhhrsehruhhssh
+    gvlhhlrdgttgeqnecukfhppeduvddvrdelledrkedvrddutdenucevlhhushhtvghrufhi
+    iigvpedtnecurfgrrhgrmhepmhgrihhlfhhrohhmpehruhhstghurhesrhhushhsvghllh
+    drtggt
+X-ME-Proxy: <xmx:c203Xpz1F3miSg1b-gDTSDKH5PgqEWgWmmRFvdLpFov0_cy7Uv2lcA>
+    <xmx:c203XrXXkesPodY9BW8bP6h5HC-VU9Suclg5iHDRjPFsjh_N8jSknw>
+    <xmx:c203Xj0rY_CK8CxRDyc4ZiPIlsP0zn9AS1oOPxL6TrQtGE6OYdCd1w>
+    <xmx:dW03XpQssGP2dR7UnwLqi-bvHUDKDFhldlmBmOQ2xZYscp1zbhWAPA>
+Message-ID: <8675c11631ac027a78e00d4fe2c20736496b1e97.camel@russell.cc>
+Subject: Re: [PATCH v6 1/5] powerpc/mm: Implement set_memory() routines
+From: Russell Currey <ruscur@russell.cc>
+To: Christophe Leroy <christophe.leroy@c-s.fr>, linuxppc-dev@lists.ozlabs.org
+Cc: joel@jms.id.au, mpe@ellerman.id.au, ajd@linux.ibm.com, dja@axtens.net, 
+	npiggin@gmail.com, kernel-hardening@lists.openwall.com
+Date: Mon, 03 Feb 2020 11:46:37 +1100
+In-Reply-To: <8f8940e2-c6ab-fca2-ab8a-61b80b2edd22@c-s.fr>
+References: <20191224055545.178462-1-ruscur@russell.cc>
+	 <20191224055545.178462-2-ruscur@russell.cc>
+	 <8f8940e2-c6ab-fca2-ab8a-61b80b2edd22@c-s.fr>
 Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.34.3 
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
 
-[pruned bogus addresses from recipient list]
+On Wed, 2020-01-08 at 13:52 +0100, Christophe Leroy wrote:
+> 
+> Le 24/12/2019 à 06:55, Russell Currey a écrit :
+> > The set_memory_{ro/rw/nx/x}() functions are required for
+> > STRICT_MODULE_RWX,
+> > and are generally useful primitives to have.  This implementation
+> > is
+> > designed to be completely generic across powerpc's many MMUs.
+> > 
+> > It's possible that this could be optimised to be faster for
+> > specific
+> > MMUs, but the focus is on having a generic and safe implementation
+> > for
+> > now.
+> > 
+> > This implementation does not handle cases where the caller is
+> > attempting
+> > to change the mapping of the page it is executing from, or if
+> > another
+> > CPU is concurrently using the page being altered.  These cases
+> > likely
+> > shouldn't happen, but a more complex implementation with MMU-
+> > specific code
+> > could safely handle them, so that is left as a TODO for now.
+> > 
+> > Signed-off-by: Russell Currey <ruscur@russell.cc>
+> > ---
+> >   arch/powerpc/Kconfig                  |  1 +
+> >   arch/powerpc/include/asm/set_memory.h | 32 +++++++++++
+> >   arch/powerpc/mm/Makefile              |  1 +
+> >   arch/powerpc/mm/pageattr.c            | 83
+> > +++++++++++++++++++++++++++
+> >   4 files changed, 117 insertions(+)
+> >   create mode 100644 arch/powerpc/include/asm/set_memory.h
+> >   create mode 100644 arch/powerpc/mm/pageattr.c
+> > 
+> > diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
+> > index 1ec34e16ed65..f0b9b47b5353 100644
+> > --- a/arch/powerpc/Kconfig
+> > +++ b/arch/powerpc/Kconfig
+> > @@ -133,6 +133,7 @@ config PPC
+> >   	select ARCH_HAS_PTE_SPECIAL
+> >   	select ARCH_HAS_MEMBARRIER_CALLBACKS
+> >   	select ARCH_HAS_SCALED_CPUTIME		if
+> > VIRT_CPU_ACCOUNTING_NATIVE && PPC_BOOK3S_64
+> > +	select ARCH_HAS_SET_MEMORY
+> >   	select ARCH_HAS_STRICT_KERNEL_RWX	if ((PPC_BOOK3S_64 ||
+> > PPC32) && !RELOCATABLE && !HIBERNATION)
+> >   	select ARCH_HAS_TICK_BROADCAST		if
+> > GENERIC_CLOCKEVENTS_BROADCAST
+> >   	select ARCH_HAS_UACCESS_FLUSHCACHE
+> > diff --git a/arch/powerpc/include/asm/set_memory.h
+> > b/arch/powerpc/include/asm/set_memory.h
+> > new file mode 100644
+> > index 000000000000..5230ddb2fefd
+> > --- /dev/null
+> > +++ b/arch/powerpc/include/asm/set_memory.h
+> > @@ -0,0 +1,32 @@
+> > +/* SPDX-License-Identifier: GPL-2.0 */
+> > +#ifndef _ASM_POWERPC_SET_MEMORY_H
+> > +#define _ASM_POWERPC_SET_MEMORY_H
+> > +
+> > +#define SET_MEMORY_RO	1
+> > +#define SET_MEMORY_RW	2
+> > +#define SET_MEMORY_NX	3
+> > +#define SET_MEMORY_X	4
+> 
+> Maybe going from 0 to 3 would be better than 1 to 4
+> 
+> > +
+> > +int change_memory_attr(unsigned long addr, int numpages, int
+> > action);
+> 
+> action could be unsigned.
+> 
+> > +
+> > +static inline int set_memory_ro(unsigned long addr, int numpages)
+> > +{
+> > +	return change_memory_attr(addr, numpages, SET_MEMORY_RO);
+> > +}
+> > +
+> > +static inline int set_memory_rw(unsigned long addr, int numpages)
+> > +{
+> > +	return change_memory_attr(addr, numpages, SET_MEMORY_RW);
+> > +}
+> > +
+> > +static inline int set_memory_nx(unsigned long addr, int numpages)
+> > +{
+> > +	return change_memory_attr(addr, numpages, SET_MEMORY_NX);
+> > +}
+> > +
+> > +static inline int set_memory_x(unsigned long addr, int numpages)
+> > +{
+> > +	return change_memory_attr(addr, numpages, SET_MEMORY_X);
+> > +}
+> > +
+> > +#endif
+> > diff --git a/arch/powerpc/mm/Makefile b/arch/powerpc/mm/Makefile
+> > index 5e147986400d..d0a0bcbc9289 100644
+> > --- a/arch/powerpc/mm/Makefile
+> > +++ b/arch/powerpc/mm/Makefile
+> > @@ -20,3 +20,4 @@ obj-$(CONFIG_HIGHMEM)		+= highmem.o
+> >   obj-$(CONFIG_PPC_COPRO_BASE)	+= copro_fault.o
+> >   obj-$(CONFIG_PPC_PTDUMP)	+= ptdump/
+> >   obj-$(CONFIG_KASAN)		+= kasan/
+> > +obj-$(CONFIG_ARCH_HAS_SET_MEMORY) += pageattr.o
+> 
+> CONFIG_ARCH_HAS_SET_MEMORY is set inconditionnally, I think you
+> should 
+> add pageattr.o to obj-y instead. CONFIG_ARCH_HAS_XXX are almost
+> never 
+> used in Makefiles
 
-On Sat, Feb 1, 2020 at 6:56 PM Kees Cook <keescook@chromium.org> wrote:
-> On Fri, Jan 31, 2020 at 01:03:40PM +0100, Jann Horn wrote:
-> > I think dma-kmalloc slabs should be handled the same way as normal
-> > kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
-> > just normal kernel memory - even if it might later be used for DMA -,
-> > and it should be perfectly fine to copy_from_user() into such
-> > allocations at that point, and to copy_to_user() out of them at the
-> > end. If you look at the places where such allocations are created, you
-> > can see things like kmemdup(), memcpy() and so on - all normal
-> > operations that shouldn't conceptually be different from usercopy in
-> > any relevant way.
->
-> I can't find where the address limit for dma-kmalloc is implemented.
+Fair enough, will keep that in mind
 
-dma-kmalloc is a slab that uses GFP_DMA pages.
+> 
+> > diff --git a/arch/powerpc/mm/pageattr.c
+> > b/arch/powerpc/mm/pageattr.c
+> > new file mode 100644
+> > index 000000000000..15d5fb04f531
+> > --- /dev/null
+> > +++ b/arch/powerpc/mm/pageattr.c
+> > @@ -0,0 +1,83 @@
+> > +// SPDX-License-Identifier: GPL-2.0
+> > +
+> > +/*
+> > + * MMU-generic set_memory implementation for powerpc
+> > + *
+> > + * Copyright 2019, IBM Corporation.
+> > + */
+> > +
+> > +#include <linux/mm.h>
+> > +#include <linux/set_memory.h>
+> > +
+> > +#include <asm/mmu.h>
+> > +#include <asm/page.h>
+> > +#include <asm/pgtable.h>
+> > +
+> > +
+> > +/*
+> > + * Updates the attributes of a page in three steps:
+> > + *
+> > + * 1. invalidate the page table entry
+> > + * 2. flush the TLB
+> > + * 3. install the new entry with the updated attributes
+> > + *
+> > + * This is unsafe if the caller is attempting to change the
+> > mapping of the
+> > + * page it is executing from, or if another CPU is concurrently
+> > using the
+> > + * page being altered.
+> > + *
+> > + * TODO make the implementation resistant to this.
+> > + */
+> > +static int __change_page_attr(pte_t *ptep, unsigned long addr,
+> > void *data)
+> > +{
+> > +	int action = *((int *)data);
+> 
+> Don't use pointers for so simple things, pointers forces the compiler
+> to 
+> setup a stack frame and save the data into stack. Instead do:
+> 
+> 	int action = (int)data;
+> 
+> > +	pte_t pte_val;
+> > +
+> > +	// invalidate the PTE so it's safe to modify
+> > +	pte_val = ptep_get_and_clear(&init_mm, addr, ptep);
+> > +	flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
+> 
+> Why flush a range for a single page ? On most targets this will do a 
+> tlbia which is heavy, while a tlbie would suffice.
+> 
+> I think flush_tlb_kernel_range() should be replaced by something 
+> flushing only a single page.
 
-Things have changed a bit through the kernel versions, but in current
-mainline, the zone limit for GFP_DMA is reported from arch code to
-generic code via zone_dma_bits, from where it is used to decide which
-zones should be used for allocations based on the address limit of a
-given device:
+You might be able to help me out here, I wanted to do that but the only
+functions I could find that flushed single pages needed a
+vm_area_struct, which I can't get.
 
-kernel/dma/direct.c:
-/*
- * Most architectures use ZONE_DMA for the first 16 Megabytes, but some use it
- * it for entirely different regions. In that case the arch code needs to
- * override the variable below for dma-direct to work properly.
- */
-unsigned int zone_dma_bits __ro_after_init = 24;
-[...]
-static gfp_t __dma_direct_optimal_gfp_mask(struct device *dev, u64 dma_mask,
-                u64 *phys_limit)
-{
-[...]
-        /*
-         * Optimistically try the zone that the physical address mask falls
-         * into first.  If that returns memory that isn't actually addressable
-         * we will fallback to the next lower zone and try again.
-         *
-         * Note that GFP_DMA32 and GFP_DMA are no ops without the corresponding
-         * zones.
-         */
-        if (*phys_limit <= DMA_BIT_MASK(zone_dma_bits))
-                return GFP_DMA;
-        if (*phys_limit <= DMA_BIT_MASK(32))
-                return GFP_DMA32;
-        return 0;
-}
+> 
+> > +
+> > +	// modify the PTE bits as desired, then apply
+> > +	switch (action) {
+> > +	case SET_MEMORY_RO:
+> > +		pte_val = pte_wrprotect(pte_val);
+> > +		break;
+> > +	case SET_MEMORY_RW:
+> > +		pte_val = pte_mkwrite(pte_val);
+> > +		break;
+> > +	case SET_MEMORY_NX:
+> > +		pte_val = pte_exprotect(pte_val);
+> > +		break;
+> > +	case SET_MEMORY_X:
+> > +		pte_val = pte_mkexec(pte_val);
+> > +		break;
+> > +	default:
+> > +		WARN_ON(true);
+> > +		return -EINVAL;
+> 
+> Is it worth checking that the action is valid for each page ? I
+> think 
+> validity of action should be checked in change_memory_attr(). All
+> other 
+> functions are static so you know they won't be called from outside.
+> 
+> Once done, you can squash __change_page_attr() into
+> change_page_attr(), 
+> remove the ret var and return 0 all the time.
 
+Makes sense to fold things into a single function, but in terms of
+performance it shouldn't make a difference, right?  I still have to
+check the action to determine what to change (unless I replace passing
+SET_MEMORY_RO into apply_to_page_range() with a function pointer to
+pte_wrprotect() for example).  
 
-There are only a few architectures that override the limit:
+> 
+> > +	}
+> > +
+> > +	set_pte_at(&init_mm, addr, ptep, pte_val);
+> > +
+> > +	return 0;
+> > +}
+> > +
+> > +static int change_page_attr(pte_t *ptep, unsigned long addr, void
+> > *data)
+> > +{
+> > +	int ret;
+> > +
+> > +	spin_lock(&init_mm.page_table_lock);
+> > +	ret = __change_page_attr(ptep, addr, data);
+> > +	spin_unlock(&init_mm.page_table_lock);
+> > +
+> > +	return ret;
+> > +}
+> > +
+> > +int change_memory_attr(unsigned long addr, int numpages, int
+> > action)
+> > +{
+> > +	unsigned long start = ALIGN_DOWN(addr, PAGE_SIZE);
+> > +	unsigned long size = numpages * PAGE_SIZE;
+> > +
+> > +	if (!numpages)
+> > +		return 0;
+> > +
+> > +	return apply_to_page_range(&init_mm, start, size,
+> > change_page_attr, &action);
+> 
+> Use (void*)action instead of &action (see upper comment)
 
-powerpc:
-        /*
-         * Allow 30-bit DMA for very limited Broadcom wifi chips on many
-         * powerbooks.
-         */
-        if (IS_ENABLED(CONFIG_PPC32))
-                zone_dma_bits = 30;
-        else
-                zone_dma_bits = 31;
+To get this to work I had to use (void *)(size_t)action to stop the
+compiler from complaining about casting an int to a void*, is there a
+better way to go about it?  Works fine, just looks gross.
 
-s390:
-        zone_dma_bits = 31;
+> 
+> > +}
+> > 
+> 
+> Christophe
+> 
 
-and arm64:
-#define ARM64_ZONE_DMA_BITS     30
-[...]
-        if (IS_ENABLED(CONFIG_ZONE_DMA)) {
-                zone_dma_bits = ARM64_ZONE_DMA_BITS;
-                arm64_dma_phys_limit = max_zone_phys(ARM64_ZONE_DMA_BITS);
-        }
-
-
-The actual categorization of page ranges into zones happens via
-free_area_init_nodes() or free_area_init_node(); these are provided
-with arrays of maximum physical addresses or zone sizes (depending on
-which of them is called) by arch-specific code.
-For arm64, the caller is zone_sizes_init(). X86 does it in zone_sizes_init().
-
-> As to whitelisting all of dma-kmalloc -- I guess I can be talked into
-> it. It still seems like the memory used for direct hardware
-> communication shouldn't be exposed to userspace, but it we're dealing
-> with packet data, etc, then it makes sense not to have to have bounce
-> buffers, etc.
-
-FWIW, as far as I understand, usercopy doesn't actually have any
-effect on drivers that use the modern, proper APIs, since those don't
-use the slab allocator at all - as I pointed out in my last mail, the
-dma-kmalloc* slabs are used very rarely. (Which is good, because
-putting objects from less-than-page-size slabs into iommu entries is a
-terrible idea from a security and reliability perspective because it
-gives the hardware access to completely unrelated memory.) Instead,
-they get pages from the page allocator, and these pages may e.g. be
-allocated from the DMA, DMA32 or NORMAL zones depending on the
-restrictions imposed by hardware. So I think the usercopy restriction
-only affects a few oddball drivers (like this s390 stuff), which is
-why you're not seeing more bug reports caused by this.
