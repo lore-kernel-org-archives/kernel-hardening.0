@@ -1,23 +1,22 @@
-Return-Path: <SRS0=iO7B=3X=lists.openwall.com=kernel-hardening-return-17652-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=hehG=3X=lists.openwall.com=kernel-hardening-return-17653-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4F4F6C33C9E
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 07:07:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 74B96C3524D
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 07:47:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A240B20661
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 07:07:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C7C3D20658
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Feb 2020 07:47:39 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=c-s.fr header.i=@c-s.fr header.b="IqgNPnJz"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A240B20661
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=c-s.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17652-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3398 invoked by uid 550); 3 Feb 2020 07:07:11 -0000
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="tIPQmbMB"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C7C3D20658
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17653-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18379 invoked by uid 550); 3 Feb 2020 07:47:31 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,165 +24,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3359 invoked from network); 3 Feb 2020 07:07:11 -0000
-Authentication-Results: localhost; dkim=pass
-	reason="1024-bit key; insecure key"
-	header.d=c-s.fr header.i=@c-s.fr header.b=IqgNPnJz; dkim-adsp=pass;
-	dkim-atps=neutral
-X-Virus-Scanned: Debian amavisd-new at c-s.fr
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=c-s.fr; s=mail;
-	t=1580713614; bh=smrKpIHjFvgNU1nY+YX2OWlGMfhRIgdamHvzNUhVLVg=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=IqgNPnJzQokcayKUyec8eVwm/PCXeJ9wuAZ3C027ZMmxzRzPJudSm2cGpYnowyuC2
-	 q7/KV4/7w7wzKa4FrQinYFr+MgOysUneExIAp9Jq/VZ5P/g/6VhhgsnR/FI5+hN9h5
-	 WsXbN4D7oe/tUwwjQyyoyeRsIAwQEvIUutUOjooE=
-X-Virus-Scanned: amavisd-new at c-s.fr
-Subject: Re: [PATCH v6 1/5] powerpc/mm: Implement set_memory() routines
-To: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org
-Cc: joel@jms.id.au, mpe@ellerman.id.au, ajd@linux.ibm.com, dja@axtens.net,
- npiggin@gmail.com, kernel-hardening@lists.openwall.com
-References: <20191224055545.178462-1-ruscur@russell.cc>
- <20191224055545.178462-2-ruscur@russell.cc>
- <8f8940e2-c6ab-fca2-ab8a-61b80b2edd22@c-s.fr>
- <8675c11631ac027a78e00d4fe2c20736496b1e97.camel@russell.cc>
-From: Christophe Leroy <christophe.leroy@c-s.fr>
-Message-ID: <59c7ce33-b61b-e008-f3fc-730ae1dd2ba7@c-s.fr>
-Date: Mon, 3 Feb 2020 08:06:58 +0100
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:68.0) Gecko/20100101
- Thunderbird/68.4.2
+Received: (qmail 18359 invoked from network); 3 Feb 2020 07:47:30 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
+	:References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:
+	Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:List-Id:
+	List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive;
+	 bh=1OnLUtccVxzRGy3H6tEuURVA5Cw1eDsrX9HvO+XJeD4=; b=tIPQmbMBJJkyM1EUffKpQ6t8+
+	6fwTSe6r4ihL5NqNlss4BtnMRFyaJcEPiVZ64i/7LitZrfYs81oZ1L69NyPjMREv3zXAuPxvS0bI2
+	eMLUSHfCDe+Uhbh/03f2I/93N1FOLazKz82/5pZp0ZjY/ieytY6YhoUGFolkmaBRB9ehsBDiIZHK+
+	bkuV60ig9MmsNyEVGt8E0ZhQVk6ERJlJE/YSTpSCBFbCtPNtYKIiwbs9X9JfUX2DCkFMoZJyTbNcM
+	L+Sm7T5i2/9zTP8/s+1LrDkKFqoSf7iPfX+6fv7NwwWoLbf8UowsIMPpObCqY5IZs9aWtvn+JjE0x
+	uAmUP6+mA==;
+Date: Sun, 2 Feb 2020 23:46:44 -0800
+From: Matthew Wilcox <willy@infradead.org>
+To: Jann Horn <jannh@google.com>
+Cc: Kees Cook <keescook@chromium.org>,
+	Christian Borntraeger <borntraeger@de.ibm.com>,
+	Christoph Hellwig <hch@infradead.org>,
+	Christopher Lameter <cl@linux.com>, Jiri Slaby <jslaby@suse.cz>,
+	Julian Wiedmann <jwi@linux.ibm.com>,
+	Ursula Braun <ubraun@linux.ibm.com>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	kernel list <linux-kernel@vger.kernel.org>,
+	David Windsor <dave@nullcore.net>,
+	Pekka Enberg <penberg@kernel.org>,
+	David Rientjes <rientjes@google.com>,
+	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	"David S. Miller" <davem@davemloft.net>,
+	Laura Abbott <labbott@redhat.com>,
+	Mark Rutland <mark.rutland@arm.com>,
+	"Martin K. Petersen" <martin.petersen@oracle.com>,
+	Paolo Bonzini <pbonzini@redhat.com>,
+	Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>,
+	Marc Zyngier <marc.zyngier@arm.com>,
+	Matthew Garrett <mjg59@google.com>,
+	linux-fsdevel <linux-fsdevel@vger.kernel.org>,
+	linux-arch <linux-arch@vger.kernel.org>,
+	Network Development <netdev@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Michal Kubecek <mkubecek@suse.cz>
+Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches
+ as usercopy caches
+Message-ID: <20200203074644.GD8731@bombadil.infradead.org>
+References: <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com>
+ <202001281457.FA11CC313A@keescook>
+ <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
+ <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
+ <20200129170939.GA4277@infradead.org>
+ <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
+ <202001300945.7D465B5F5@keescook>
+ <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
+ <202002010952.ACDA7A81@keescook>
+ <CAG48ez2ms+TDEXQdDONuQ1GG0K20E69nV1r_yjKxxYjYKv1VCg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <8675c11631ac027a78e00d4fe2c20736496b1e97.camel@russell.cc>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: fr
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAG48ez2ms+TDEXQdDONuQ1GG0K20E69nV1r_yjKxxYjYKv1VCg@mail.gmail.com>
 
+On Sat, Feb 01, 2020 at 08:27:49PM +0100, Jann Horn wrote:
+> FWIW, as far as I understand, usercopy doesn't actually have any
+> effect on drivers that use the modern, proper APIs, since those don't
+> use the slab allocator at all - as I pointed out in my last mail, the
+> dma-kmalloc* slabs are used very rarely. (Which is good, because
+> putting objects from less-than-page-size slabs into iommu entries is a
+> terrible idea from a security and reliability perspective because it
+> gives the hardware access to completely unrelated memory.) Instead,
+> they get pages from the page allocator, and these pages may e.g. be
+> allocated from the DMA, DMA32 or NORMAL zones depending on the
+> restrictions imposed by hardware. So I think the usercopy restriction
+> only affects a few oddball drivers (like this s390 stuff), which is
+> why you're not seeing more bug reports caused by this.
 
+Getting pages from the page allocator is true for dma_alloc_coherent()
+and friends.  But it's not true for streaming DMA mappings (dma_map_*)
+for which the memory usually comes from kmalloc().  If this is something
+we want to fix (and I have an awful feeling we're going to regret it
+if we say "no, we trust the hardware"), we're going to have to come up
+with a new memory allocation API for these cases.  Or bounce bugger the
+memory for devices we don't trust.
 
-Le 03/02/2020 à 01:46, Russell Currey a écrit :
-> On Wed, 2020-01-08 at 13:52 +0100, Christophe Leroy wrote:
->>
->> Le 24/12/2019 à 06:55, Russell Currey a écrit :
->>> diff --git a/arch/powerpc/mm/Makefile b/arch/powerpc/mm/Makefile
->>> index 5e147986400d..d0a0bcbc9289 100644
->>> --- a/arch/powerpc/mm/Makefile
->>> +++ b/arch/powerpc/mm/Makefile
->>> @@ -20,3 +20,4 @@ obj-$(CONFIG_HIGHMEM)		+= highmem.o
->>>    obj-$(CONFIG_PPC_COPRO_BASE)	+= copro_fault.o
->>>    obj-$(CONFIG_PPC_PTDUMP)	+= ptdump/
->>>    obj-$(CONFIG_KASAN)		+= kasan/
->>> +obj-$(CONFIG_ARCH_HAS_SET_MEMORY) += pageattr.o
->>
->> CONFIG_ARCH_HAS_SET_MEMORY is set inconditionnally, I think you
->> should
->> add pageattr.o to obj-y instead. CONFIG_ARCH_HAS_XXX are almost
->> never
->> used in Makefiles
-> 
-> Fair enough, will keep that in mind
-
-I forgot I commented that. I'll do it in v3.
-
->>> +	pte_t pte_val;
->>> +
->>> +	// invalidate the PTE so it's safe to modify
->>> +	pte_val = ptep_get_and_clear(&init_mm, addr, ptep);
->>> +	flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
->>
->> Why flush a range for a single page ? On most targets this will do a
->> tlbia which is heavy, while a tlbie would suffice.
->>
->> I think flush_tlb_kernel_range() should be replaced by something
->> flushing only a single page.
-> 
-> You might be able to help me out here, I wanted to do that but the only
-> functions I could find that flushed single pages needed a
-> vm_area_struct, which I can't get.
-
-I sent out two patches for that, one for book3s/32 and one for nohash:
-https://patchwork.ozlabs.org/patch/1231983/
-https://patchwork.ozlabs.org/patch/1232223/
-
-Maybe one for book3s/64 would be needed as well ? Can you do it if needed ?
-
-
-> 
->>
->>> +
->>> +	// modify the PTE bits as desired, then apply
->>> +	switch (action) {
->>> +	case SET_MEMORY_RO:
->>> +		pte_val = pte_wrprotect(pte_val);
->>> +		break;
->>> +	case SET_MEMORY_RW:
->>> +		pte_val = pte_mkwrite(pte_val);
->>> +		break;
->>> +	case SET_MEMORY_NX:
->>> +		pte_val = pte_exprotect(pte_val);
->>> +		break;
->>> +	case SET_MEMORY_X:
->>> +		pte_val = pte_mkexec(pte_val);
->>> +		break;
->>> +	default:
->>> +		WARN_ON(true);
->>> +		return -EINVAL;
->>
->> Is it worth checking that the action is valid for each page ? I
->> think
->> validity of action should be checked in change_memory_attr(). All
->> other
->> functions are static so you know they won't be called from outside.
->>
->> Once done, you can squash __change_page_attr() into
->> change_page_attr(),
->> remove the ret var and return 0 all the time.
-> 
-> Makes sense to fold things into a single function, but in terms of
-> performance it shouldn't make a difference, right?  I still have to
-> check the action to determine what to change (unless I replace passing
-> SET_MEMORY_RO into apply_to_page_range() with a function pointer to
-> pte_wrprotect() for example).
-
-pte_wrprotect() is a static inline.
-
-> 
->>
->>> +	}
->>> +
->>> +	set_pte_at(&init_mm, addr, ptep, pte_val);
->>> +
->>> +	return 0;
->>> +}
->>> +
->>> +static int change_page_attr(pte_t *ptep, unsigned long addr, void
->>> *data)
->>> +{
->>> +	int ret;
->>> +
->>> +	spin_lock(&init_mm.page_table_lock);
->>> +	ret = __change_page_attr(ptep, addr, data);
->>> +	spin_unlock(&init_mm.page_table_lock);
->>> +
->>> +	return ret;
->>> +}
->>> +
->>> +int change_memory_attr(unsigned long addr, int numpages, int
->>> action)
->>> +{
->>> +	unsigned long start = ALIGN_DOWN(addr, PAGE_SIZE);
->>> +	unsigned long size = numpages * PAGE_SIZE;
->>> +
->>> +	if (!numpages)
->>> +		return 0;
->>> +
->>> +	return apply_to_page_range(&init_mm, start, size,
->>> change_page_attr, &action);
->>
->> Use (void*)action instead of &action (see upper comment)
-> 
-> To get this to work I had to use (void *)(size_t)action to stop the
-> compiler from complaining about casting an int to a void*, is there a
-> better way to go about it?  Works fine, just looks gross.
-
-Yes, use long instead (see my v3)
-
-Christophe
+The problem with the dma_map_* API is that memory might end up being
+allocated once and then used multiple times by different drivers.  eg if
+I allocate an NFS packet, it might get sent first to eth0, then (when the
+route fails) sent to eth1.  Similarly in storage, a RAID-5 driver might
+map the same memory several times to send to different disk controllers.
