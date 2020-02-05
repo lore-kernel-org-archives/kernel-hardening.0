@@ -1,20 +1,21 @@
-Return-Path: <SRS0=wotS=3Y=lists.openwall.com=kernel-hardening-return-17661-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=xp3e=3Z=lists.openwall.com=kernel-hardening-return-17662-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	UNWANTED_LANGUAGE_BODY,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2A11BC35247
-	for <kernel-hardening@archiver.kernel.org>; Tue,  4 Feb 2020 00:00:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E9E55C35247
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Feb 2020 02:57:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7C0122084E
-	for <kernel-hardening@archiver.kernel.org>; Tue,  4 Feb 2020 00:00:21 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7C0122084E
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=namei.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17661-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12065 invoked by uid 550); 4 Feb 2020 00:00:14 -0000
+	by mail.kernel.org (Postfix) with SMTP id 5166D2082E
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Feb 2020 02:57:06 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5166D2082E
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17662-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3927 invoked by uid 550); 5 Feb 2020 02:56:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,132 +23,137 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12045 invoked from network); 4 Feb 2020 00:00:13 -0000
-Date: Tue, 4 Feb 2020 10:59:49 +1100 (AEDT)
-From: James Morris <jmorris@namei.org>
-To: linux-security-module@vger.kernel.org
-cc: linux-kernel@vger.kernel.org, lwn@lwn.net, fedora-selinux-list@redhat.com,
-        linux-crypto@vger.kernel.org, kernel-hardening@lists.openwall.com,
-        linux-integrity@vger.kernel.org, selinux@vger.kernel.org,
-        Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org,
-        keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net,
-        Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>
-Subject: [ANNOUNCE][CFP] Linux Security Summit North America 2020
-Message-ID: <alpine.LRH.2.21.2002041054320.12768@namei.org>
-User-Agent: Alpine 2.21 (LRH 202 2017-01-01)
+Received: (qmail 3868 invoked from network); 5 Feb 2020 02:56:50 -0000
+From: Jason Yan <yanaijie@huawei.com>
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>,
+	<oss@buserror.net>
+CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>, Jason Yan
+	<yanaijie@huawei.com>
+Subject: [PATCH v2 1/6] powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and kaslr_early_init()
+Date: Wed, 5 Feb 2020 10:55:22 +0800
+Message-ID: <20200205025527.28640-2-yanaijie@huawei.com>
+X-Mailer: git-send-email 2.17.2
+In-Reply-To: <20200205025527.28640-1-yanaijie@huawei.com>
+References: <20200205025527.28640-1-yanaijie@huawei.com>
 MIME-Version: 1.0
-Content-Type: multipart/mixed; BOUNDARY="1665246916-1737447927-1580774163=:12768"
-Content-ID: <alpine.LRH.2.21.2002041056360.12768@namei.org>
+Content-Type: text/plain
+X-Originating-IP: [10.175.124.28]
+X-CFilter-Loop: Reflected
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
+Some code refactor in kaslr_legal_offset() and kaslr_early_init(). No
+functional change. This is a preparation for KASLR fsl_booke64.
 
---1665246916-1737447927-1580774163=:12768
-Content-Type: text/plain; CHARSET=ISO-8859-7
-Content-Transfer-Encoding: 8BIT
-Content-ID: <alpine.LRH.2.21.2002041056361.12768@namei.org>
+Signed-off-by: Jason Yan <yanaijie@huawei.com>
+Cc: Scott Wood <oss@buserror.net>
+Cc: Diana Craciun <diana.craciun@nxp.com>
+Cc: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Christophe Leroy <christophe.leroy@c-s.fr>
+Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Paul Mackerras <paulus@samba.org>
+Cc: Nicholas Piggin <npiggin@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>
+---
+ arch/powerpc/mm/nohash/kaslr_booke.c | 40 ++++++++++++++--------------
+ 1 file changed, 20 insertions(+), 20 deletions(-)
 
-==============================================================================
-		   ANNOUNCEMENT AND CALL FOR PARTICIPATION
-
-		   LINUX SECURITY SUMMIT NORTH AMERICA 2020
-                             
-			        24-26 JUNE
-			    AUSTIN, TEXAS, USA
-==============================================================================
-
-DESCRIPTION
+diff --git a/arch/powerpc/mm/nohash/kaslr_booke.c b/arch/powerpc/mm/nohash/kaslr_booke.c
+index 4a75f2d9bf0e..07b036e98353 100644
+--- a/arch/powerpc/mm/nohash/kaslr_booke.c
++++ b/arch/powerpc/mm/nohash/kaslr_booke.c
+@@ -25,6 +25,7 @@ struct regions {
+ 	unsigned long pa_start;
+ 	unsigned long pa_end;
+ 	unsigned long kernel_size;
++	unsigned long linear_sz;
+ 	unsigned long dtb_start;
+ 	unsigned long dtb_end;
+ 	unsigned long initrd_start;
+@@ -260,11 +261,23 @@ static __init void get_cell_sizes(const void *fdt, int node, int *addr_cells,
+ 		*size_cells = fdt32_to_cpu(*prop);
+ }
  
-Linux Security Summit North America (LSS-NA) is a technical forum for
-collaboration between Linux developers, researchers, and end-users.  Its
-primary aim is to foster community efforts in analyzing and solving Linux
-security challenges.
+-static unsigned long __init kaslr_legal_offset(void *dt_ptr, unsigned long index,
+-					       unsigned long offset)
++static unsigned long __init kaslr_legal_offset(void *dt_ptr, unsigned long random)
+ {
+ 	unsigned long koffset = 0;
+ 	unsigned long start;
++	unsigned long index;
++	unsigned long offset;
++
++	/*
++	 * Decide which 64M we want to start
++	 * Only use the low 8 bits of the random seed
++	 */
++	index = random & 0xFF;
++	index %= regions.linear_sz / SZ_64M;
++
++	/* Decide offset inside 64M */
++	offset = random % (SZ_64M - regions.kernel_size);
++	offset = round_down(offset, SZ_16K);
  
- The program committee currently seeks proposals for:
+ 	while ((long)index >= 0) {
+ 		offset = memstart_addr + index * SZ_64M + offset;
+@@ -289,10 +302,9 @@ static inline __init bool kaslr_disabled(void)
+ static unsigned long __init kaslr_choose_location(void *dt_ptr, phys_addr_t size,
+ 						  unsigned long kernel_sz)
+ {
+-	unsigned long offset, random;
++	unsigned long random;
+ 	unsigned long ram, linear_sz;
+ 	u64 seed;
+-	unsigned long index;
  
-   * Refereed Presentations:
-     45 minutes in length.
+ 	kaslr_get_cmdline(dt_ptr);
+ 	if (kaslr_disabled())
+@@ -333,22 +345,12 @@ static unsigned long __init kaslr_choose_location(void *dt_ptr, phys_addr_t size
+ 	regions.dtb_start = __pa(dt_ptr);
+ 	regions.dtb_end = __pa(dt_ptr) + fdt_totalsize(dt_ptr);
+ 	regions.kernel_size = kernel_sz;
++	regions.linear_sz = linear_sz;
  
-   * Panel Discussion Topics:
-     45 minutes in length.
+ 	get_initrd_range(dt_ptr);
+ 	get_crash_kernel(dt_ptr, ram);
  
-   * Short Topics:
-     30 minutes in total, including at least 10 minutes discussion.
+-	/*
+-	 * Decide which 64M we want to start
+-	 * Only use the low 8 bits of the random seed
+-	 */
+-	index = random & 0xFF;
+-	index %= linear_sz / SZ_64M;
+-
+-	/* Decide offset inside 64M */
+-	offset = random % (SZ_64M - kernel_sz);
+-	offset = round_down(offset, SZ_16K);
+-
+-	return kaslr_legal_offset(dt_ptr, index, offset);
++	return kaslr_legal_offset(dt_ptr, random);
+ }
  
-   * Tutorials
-     90 minutes in length.
+ /*
+@@ -358,8 +360,6 @@ static unsigned long __init kaslr_choose_location(void *dt_ptr, phys_addr_t size
+  */
+ notrace void __init kaslr_early_init(void *dt_ptr, phys_addr_t size)
+ {
+-	unsigned long tlb_virt;
+-	phys_addr_t tlb_phys;
+ 	unsigned long offset;
+ 	unsigned long kernel_sz;
  
-Tutorial sessions should be focused on advanced Linux security defense
-topics within areas such as the kernel, compiler, and security-related
-libraries.  Priority will be given to tutorials created for this conference,
-and those where the presenter a leading subject matter expert on the topic.
+@@ -375,8 +375,8 @@ notrace void __init kaslr_early_init(void *dt_ptr, phys_addr_t size)
+ 	is_second_reloc = 1;
  
-Topic areas include, but are not limited to:
+ 	if (offset >= SZ_64M) {
+-		tlb_virt = round_down(kernstart_virt_addr, SZ_64M);
+-		tlb_phys = round_down(kernstart_addr, SZ_64M);
++		unsigned long tlb_virt = round_down(kernstart_virt_addr, SZ_64M);
++		phys_addr_t tlb_phys = round_down(kernstart_addr, SZ_64M);
  
-   * Kernel self-protection
-   * Access control
-   * Cryptography and key management
-   * Integrity policy and enforcement
-   * Hardware Security
-   * IoT and embedded security
-   * Virtualization and containers
-   * System-specific system hardening
-   * Case studies
-   * Security tools
-   * Security UX
-   * Emerging technologies, threats & techniques
+ 		/* Create kernel map to relocate in */
+ 		create_kaslr_tlb_entry(1, tlb_virt, tlb_phys);
+-- 
+2.17.2
 
-  Proposals should be submitted via:
-
-    https://events.linuxfoundation.org/linux-security-summit-north-america/program/cfp/
- 
-
-DATES
- 
-  * CFP close:            March 31
-  * CFP notifications:    April 13
-  * Schedule announced:   April 16
-  * Event:                June 24-26
-
-
-WHO SHOULD ATTEND
- 
-We're seeking a diverse range of attendees and welcome participation by
-people involved in Linux security development, operations, and research.
- 
-LSS-NA is a unique global event that provides the opportunity to present and
-discuss your work or research with key Linux security community members and
-maintainers.  It¢s also useful for those who wish to keep up with the latest
-in Linux security development and to provide input to the development
-process.
-
-WEB SITE
-
-    https://events.linuxfoundation.org/linux-security-summit-north-america/
-
-TWITTER
-
-  For event updates and announcements, follow:
-
-    https://twitter.com/LinuxSecSummit
-  
-    #linuxsecuritysummit
-
-PROGRAM COMMITTEE
-
-  The program committee for LSS 2020 is:
-
-    * James Morris, Microsoft
-    * Serge Hallyn, Cisco
-    * Paul Moore, Cisco
-    * Stephen Smalley, NSA
-    * Elena Reshetova, Intel
-    * John Johansen, Canonical
-    * Kees Cook, Google
-    * Casey Schaufler, Intel
-    * Mimi Zohar, IBM
-    * David A. Wheeler, Institute for Defense Analyses
-
-  The program committee may be contacted as a group via email:
-    lss-pc () lists.linuxfoundation.org
---1665246916-1737447927-1580774163=:12768--
