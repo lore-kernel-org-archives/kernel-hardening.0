@@ -1,20 +1,21 @@
-Return-Path: <SRS0=2tb1=3Z=lists.openwall.com=kernel-hardening-return-17665-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=qCPS=3Z=lists.openwall.com=kernel-hardening-return-17667-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2F7BAC35247
-	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Feb 2020 02:57:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 55314C35247
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Feb 2020 02:57:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8A7762082E
-	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Feb 2020 02:57:28 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8A7762082E
+	by mail.kernel.org (Postfix) with SMTP id AECEA2082E
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Feb 2020 02:57:36 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AECEA2082E
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17665-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 4086 invoked by uid 550); 5 Feb 2020 02:56:55 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17667-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5182 invoked by uid 550); 5 Feb 2020 02:56:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3866 invoked from network); 5 Feb 2020 02:56:50 -0000
+Received: (qmail 4050 invoked from network); 5 Feb 2020 02:56:53 -0000
 From: Jason Yan <yanaijie@huawei.com>
 To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
 	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
@@ -31,67 +32,48 @@ To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
 	<oss@buserror.net>
 CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>, Jason Yan
 	<yanaijie@huawei.com>
-Subject: [PATCH v2 0/6] implement KASLR for powerpc/fsl_booke/64
-Date: Wed, 5 Feb 2020 10:55:21 +0800
-Message-ID: <20200205025527.28640-1-yanaijie@huawei.com>
+Subject: [PATCH v2 5/6] powerpc/fsl_booke/64: clear the original kernel if randomized
+Date: Wed, 5 Feb 2020 10:55:26 +0800
+Message-ID: <20200205025527.28640-6-yanaijie@huawei.com>
 X-Mailer: git-send-email 2.17.2
+In-Reply-To: <20200205025527.28640-1-yanaijie@huawei.com>
+References: <20200205025527.28640-1-yanaijie@huawei.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 X-Originating-IP: [10.175.124.28]
 X-CFilter-Loop: Reflected
 
-This is a try to implement KASLR for Freescale BookE64 which is based on
-my earlier implementation for Freescale BookE32:
-https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718
+The original kernel still exists in the memory, clear it now.
 
-The implementation for Freescale BookE64 is similar as BookE32. One
-difference is that Freescale BookE64 set up a TLB mapping of 1G during
-booting. Another difference is that ppc64 needs the kernel to be
-64K-aligned. So we can randomize the kernel in this 1G mapping and make
-it 64K-aligned. This can save some code to creat another TLB map at
-early boot. The disadvantage is that we only have about 1G/64K = 16384
-slots to put the kernel in.
+Signed-off-by: Jason Yan <yanaijie@huawei.com>
+Cc: Scott Wood <oss@buserror.net>
+Cc: Diana Craciun <diana.craciun@nxp.com>
+Cc: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Christophe Leroy <christophe.leroy@c-s.fr>
+Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Paul Mackerras <paulus@samba.org>
+Cc: Nicholas Piggin <npiggin@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>
+---
+ arch/powerpc/mm/nohash/kaslr_booke.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
 
-    KERNELBASE
-
-          64K                     |--> kernel <--|
-           |                      |              |
-        +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
-        |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
-        +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
-        |                         |                        1G
-        |----->   offset    <-----|
-
-                              kernstart_virt_addr
-
-I'm not sure if the slot numbers is enough or the design has any
-defects. If you have some better ideas, I would be happy to hear that.
-
-Thank you all.
-
-v1->v2:
-  Add __kaslr_offset for the secondary cpu boot up.
-
-Jason Yan (6):
-  powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and
-    kaslr_early_init()
-  powerpc/fsl_booke/64: introduce reloc_kernel_entry() helper
-  powerpc/fsl_booke/64: implement KASLR for fsl_booke64
-  powerpc/fsl_booke/64: do not clear the BSS for the second pass
-  powerpc/fsl_booke/64: clear the original kernel if randomized
-  powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst
-    and add 64bit part
-
- .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 +++++++--
- arch/powerpc/Kconfig                          |  2 +-
- arch/powerpc/kernel/exceptions-64e.S          | 21 ++++++
- arch/powerpc/kernel/head_64.S                 | 14 ++++
- arch/powerpc/kernel/setup_64.c                |  4 +-
- arch/powerpc/mm/mmu_decl.h                    |  3 +-
- arch/powerpc/mm/nohash/kaslr_booke.c          | 71 +++++++++++++------
- 7 files changed, 122 insertions(+), 28 deletions(-)
- rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
-
+diff --git a/arch/powerpc/mm/nohash/kaslr_booke.c b/arch/powerpc/mm/nohash/kaslr_booke.c
+index c6f5c1db1394..ed1277059368 100644
+--- a/arch/powerpc/mm/nohash/kaslr_booke.c
++++ b/arch/powerpc/mm/nohash/kaslr_booke.c
+@@ -378,8 +378,10 @@ notrace void __init kaslr_early_init(void *dt_ptr, phys_addr_t size)
+ 	unsigned int *__kaslr_offset = (unsigned int *)(KERNELBASE + 0x58);
+ 	unsigned int *__run_at_load = (unsigned int *)(KERNELBASE + 0x5c);
+ 
+-	if (*__run_at_load == 1)
++	if (*__run_at_load == 1) {
++		kaslr_late_init();
+ 		return;
++	}
+ 
+ 	/* Setup flat device-tree pointer */
+ 	initial_boot_params = dt_ptr;
 -- 
 2.17.2
 
