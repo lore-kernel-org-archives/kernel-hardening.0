@@ -1,22 +1,22 @@
-Return-Path: <SRS0=W1yC=32=lists.openwall.com=kernel-hardening-return-17714-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=mkXG=32=lists.openwall.com=kernel-hardening-return-17715-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8F6F6C33CAC
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Feb 2020 15:46:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 45471C33CAC
+	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Feb 2020 16:11:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E43C121741
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Feb 2020 15:46:07 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9757C21741
+	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Feb 2020 16:11:51 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="RAFdqENd"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E43C121741
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=alum.mit.edu
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17714-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1486 invoked by uid 550); 6 Feb 2020 15:46:01 -0000
+	dkim=pass (2048-bit key) header.d=amacapital-net.20150623.gappssmtp.com header.i=@amacapital-net.20150623.gappssmtp.com header.b="BucAo8q5"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9757C21741
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=amacapital.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17715-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13552 invoked by uid 550); 6 Feb 2020 16:11:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,96 +24,82 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1466 invoked from network); 6 Feb 2020 15:46:01 -0000
+Received: (qmail 13529 invoked from network); 6 Feb 2020 16:11:44 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=sender:from:date:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to:user-agent;
-        bh=Mn+wA32ADRES29XAZT8b1wcKCAP8BI3eSNuQNmbNfNI=;
-        b=RAFdqENdrRpxI0v2GiPV3o1SXTb/XkGh+oHRxBt+cT6uE9zL54hbm8+2vQazQwl5j1
-         9H5N04RZiQRovRUQnqLFFJAovT4rnmd01bEcD7JSx/m4DYMnYRH/ziFiLYRFSLs7Qx1O
-         rZ20FG4+w7tQv6Ee7YhedtQxyNULYNkE2pTerz0GTHv3H2pWs4KeZsPPwTxfY7jI1/wa
-         Bn1SF2Z7b2BXTPXUZOAnkI60557e/9CrOopaLf1EsYorWzsE795nuwz5DZwLFNYiyA2Z
-         r8nAm3vmkM9YfsnkPntdLZJHuQegXZwrnd8YXiy7NZxgCBje5vo9U86wVEC2mSQA6uP3
-         HWAg==
+        d=amacapital-net.20150623.gappssmtp.com; s=20150623;
+        h=content-transfer-encoding:from:mime-version:subject:date:message-id
+         :references:cc:in-reply-to:to;
+        bh=ShO/ZVHIlXWBbnOBWlcqX5lFDNR31/CcbxL+NYy3uCs=;
+        b=BucAo8q5H6l+y/zkiWSHU/uS3/MdTExtLLSryAR0sLTOa7NCQHvC9SE1vOd3mwa7JD
+         Px/W1lQbZ/Ws2zsPbiWu4W3HImbTvt/8c4IFM+YBwXT9xiRc4cTIw1Y45AvvpsWWvpN/
+         oppgu5KccXuPdjobS3Imy34ND3dZn4Z+HeOq7BR2GmdgKx4NK4rxF7HJvQkTLEh/I3NS
+         U1kvnFjXkuDZIomK5HGX9p/C8wG1KVlPk50ZxgjoN8/6+h9u3Q7wcXyX+x9N+liA8I9Z
+         UWGNs50N/8tjc3VbemXUFHTAIow6n3alPnETR/ZPn+KfhgZNY7IHvFiG3ZNalnG0tb2L
+         waQQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:from:date:to:cc:subject:message-id
-         :references:mime-version:content-disposition:in-reply-to:user-agent;
-        bh=Mn+wA32ADRES29XAZT8b1wcKCAP8BI3eSNuQNmbNfNI=;
-        b=QRH8VH0zdqkkbKYY5l+t1nGP5KYv6UwBv0nkwtFW4AndBMOfBnSP2KaiyNWRTNKUoU
-         7CAsxDFuCB7kAhKnat6qgv/PYZFmSOLrFWC22hCX1TDHOEdMoBiA17tJrhzrHaej9o8j
-         WFKerZbHBZNEawrS96tXM5nKNPHfGks2bmFCjQ9Ul90W5eGFJbfdlKC0rTcIrNB4uXGV
-         WfamgbIoOUb4QqcenAi3eIx3FsWgqquWt7bKIGpQBJta3+AvhseVHM3uMILSwrQMdRrs
-         sFnQGwUajDbBhRBk4UKtJ9fZ1tCy0rTs1i1h3z1k0zxmRUxBLz7ge9uuQLKKWZRzmBSw
-         3Smw==
-X-Gm-Message-State: APjAAAXcDAUiyyIcwm93e/xWD3V9McYuiJ25QuC1xOPkMnS8DJ8A8rQG
-	BZKyXOmnv8uJ8EO9gtYLlZg=
-X-Google-Smtp-Source: APXvYqwnM5iXRheHAs7nPBvixr2V+pZnAthM0vrkuFe9eFK8du3HOTpIyaFVDRn3kNtcGHFBn1SJ8Q==
-X-Received: by 2002:a05:620a:1273:: with SMTP id b19mr3122584qkl.482.1581003949271;
-        Thu, 06 Feb 2020 07:45:49 -0800 (PST)
-Sender: Arvind Sankar <niveditas98@gmail.com>
-From: Arvind Sankar <nivedita@alum.mit.edu>
-X-Google-Original-From: Arvind Sankar <arvind@rani.riverdale.lan>
-Date: Thu, 6 Feb 2020 10:45:47 -0500
-To: Arvind Sankar <nivedita@alum.mit.edu>
-Cc: Kees Cook <keescook@chromium.org>,
-	Kristen Carlson Accardi <kristen@linux.intel.com>,
-	tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
-	arjan@linux.intel.com, rick.p.edgecombe@intel.com, x86@kernel.org,
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Subject: Re: [RFC PATCH 06/11] x86: make sure _etext includes function
- sections
-Message-ID: <20200206154547.GA3064177@rani.riverdale.lan>
-References: <20200205223950.1212394-1-kristen@linux.intel.com>
- <20200205223950.1212394-7-kristen@linux.intel.com>
- <202002060408.84005CEFFD@keescook>
- <20200206145738.GA3049612@rani.riverdale.lan>
-MIME-Version: 1.0
+        h=x-gm-message-state:content-transfer-encoding:from:mime-version
+         :subject:date:message-id:references:cc:in-reply-to:to;
+        bh=ShO/ZVHIlXWBbnOBWlcqX5lFDNR31/CcbxL+NYy3uCs=;
+        b=DzC8y+lVVg9CK1c5xpxpYQrNSVGuK59p61PLoM5n9TwtoYt/a9EhtmgfWSnanX4edu
+         SiUbBCUNep7dFfCdl/72T0cPs+0NSGxiQoPAIDlp7FbCgWCuYjPPR5RyrN9dWVFooJfS
+         NnOKH7WSvcAcwuiaeaiLjvXky9nv8AeiMImcd6yJCKxiGz7z12Ivqcb1c6CN1rkx5Oo2
+         CGFdnVJJ47lD5swogZ1zwiJyAVWUcIISGLBxGH+hJ5I8AfLbhIRFPiw2o1yDf1/OXlW3
+         86JWJweyZ4iv5yBrH01QxaD+hR8Qhbz3puMhVFupdDTuPWDQHsAidf9g10wFHMLF4Vq1
+         J8BQ==
+X-Gm-Message-State: APjAAAUTWZngFafGBIBW5t7mL58fezN3wU7Wyy1YqdfqjUpQxhSHqBdx
+	7TYp3W3T+efVFEyggEJlC6NTjA==
+X-Google-Smtp-Source: APXvYqzY/1V149Xc6NfSBQ5Gb8li0Zj7tK81ZlOtSgNffKALUeuhuKRkE0TSHk329flS3FxkOy5VyA==
+X-Received: by 2002:a17:90a:e981:: with SMTP id v1mr5371620pjy.131.1581005492066;
+        Thu, 06 Feb 2020 08:11:32 -0800 (PST)
 Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20200206145738.GA3049612@rani.riverdale.lan>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+Content-Transfer-Encoding: quoted-printable
+From: Andy Lutomirski <luto@amacapital.net>
+Mime-Version: 1.0 (1.0)
+Subject: Re: [RFC PATCH 06/11] x86: make sure _etext includes function sections
+Date: Thu, 6 Feb 2020 08:11:30 -0800
+Message-Id: <B1282A43-1246-4956-917C-72135D9F0328@amacapital.net>
+References: <20200206152949.GA3055637@rani.riverdale.lan>
+Cc: Kees Cook <keescook@chromium.org>,
+ Kristen Carlson Accardi <kristen@linux.intel.com>, tglx@linutronix.de,
+ mingo@redhat.com, bp@alien8.de, hpa@zytor.com, arjan@linux.intel.com,
+ rick.p.edgecombe@intel.com, x86@kernel.org, linux-kernel@vger.kernel.org,
+ kernel-hardening@lists.openwall.com
+In-Reply-To: <20200206152949.GA3055637@rani.riverdale.lan>
+To: Arvind Sankar <nivedita@alum.mit.edu>
+X-Mailer: iPhone Mail (17C54)
 
-On Thu, Feb 06, 2020 at 09:57:40AM -0500, Arvind Sankar wrote:
-> On Thu, Feb 06, 2020 at 04:26:23AM -0800, Kees Cook wrote:
-> > On Wed, Feb 05, 2020 at 02:39:45PM -0800, Kristen Carlson Accardi wrote:
-> > > We will be using -ffunction-sections to place each function in
-> > > it's own text section so it can be randomized at load time. The
-> > > linker considers these .text.* sections "orphaned sections", and
-> > > will place them after the first similar section (.text). However,
-> > > we need to move _etext so that it is after both .text and .text.*
-> > > We also need to calculate text size to include .text AND .text.*
-> > 
-> > The dependency on the linker's orphan section handling is, I feel,
-> > rather fragile (during work on CFI and generally building kernels with
-> > Clang's LLD linker, we keep tripping over difference between how BFD and
-> > LLD handle orphans). However, this is currently no way to perform a
-> > section "pass through" where input sections retain their name as an
-> > output section. (If anyone knows a way to do this, I'm all ears).
-> > 
-> > Right now, you can only collect sections like this:
-> > 
-> >         .text :  AT(ADDR(.text) - LOAD_OFFSET) {
-> > 		*(.text.*)
-> > 	}
-> > 
-> > or let them be orphans, which then the linker attempts to find a
-> > "similar" (code, data, etc) section to put them near:
-> > https://sourceware.org/binutils/docs-2.33.1/ld/Orphan-Sections.html
-> > 
-> > So, basically, yes, this works, but I'd like to see BFD and LLD grow
-> > some kind of /PASSTHRU/ special section (like /DISCARD/), that would let
-> > a linker script specify _where_ these sections should roughly live.
-> > 
-> 
-> You could go through the objects that are being linked and find the
-> individual text sections, and generate the linker script using that?
 
-Also, one thing to note about the orphan section handling -- by default
-ld will combine multiple orphan sections with the same name into a
-single output section. So if you have sections corresponding to static
-functions with the same name but from different files, they will get
-unnecessarily combined. You may want to add --unique to the ld options
-to keep them separate. That will create multiple sections with the same
-name instead of merging them.
+> On Feb 6, 2020, at 7:29 AM, Arvind Sankar <nivedita@alum.mit.edu> wrote:
+>=20
+> =EF=BB=BFOn Thu, Feb 06, 2020 at 09:39:43AM -0500, Arvind Sankar wrote:
+>>> On Thu, Feb 06, 2020 at 04:26:23AM -0800, Kees Cook wrote:
+>>> I know x86_64 stack alignment is 16 bytes. I cannot find evidence for
+>>> what function start alignment should be. It seems the linker is 16 byte
+>>> aligning these functions, when I think no alignment is needed for
+>>> function starts, so we're wasting some memory (average 8 bytes per
+>>> function, at say 50,000 functions, so approaching 512KB) between
+>>> functions. If we can specify a 1 byte alignment for these orphan
+>>> sections, that would be nice, as mentioned in the cover letter: we lose
+>>> a 4 bits of entropy to this alignment, since all randomized function
+>>> addresses will have their low bits set to zero.
+>>>=20
+>>=20
+>> The default function alignment is 16-bytes for x64 at least with gcc.
+>> You can use -falign-functions to specify a different alignment.
+>>=20
+>> There was some old discussion on reducing it [1] but it doesn't seem to
+>> have been merged.
+>>=20
+>> [1] https://lore.kernel.org/lkml/tip-4874fe1eeb40b403a8c9d0ddeb4d166cab3f=
+37ba@git.kernel.org/
+>=20
+> Though I don't think the entropy loss is real. With 50k functions, you
+> can use at most log(50k!) =3D ~35 KiB worth of entropy in permuting them,
+> no matter what the alignment is. The only way you can get more is if you
+> have more than 50k slots to put them in.
+
+There is a security consideration here that has nothing to do with entropy p=
+er se. If an attacker locates two functions, they learn the distance between=
+ them. This constrains what can fit in the gap. Padding reduces the strength=
+ of this type of attack, as would some degree of random padding.=
