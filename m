@@ -1,20 +1,23 @@
-Return-Path: <SRS0=woFZ=33=lists.openwall.com=kernel-hardening-return-17730-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=j8ex=33=lists.openwall.com=kernel-hardening-return-17731-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 21FDEC2BA83
-	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 16:53:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8FCB2C2BA83
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 20:39:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7A97520838
-	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 16:53:17 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7A97520838
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17730-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7320 invoked by uid 550); 7 Feb 2020 16:53:10 -0000
+	by mail.kernel.org (Postfix) with SMTP id E245620838
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 20:39:05 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="TIVoYpqK"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E245620838
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17731-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7205 invoked by uid 550); 7 Feb 2020 20:38:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,116 +25,53 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7294 invoked from network); 7 Feb 2020 16:53:09 -0000
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-X-IronPort-AV: E=Sophos;i="5.70,414,1574150400"; 
-   d="scan'208";a="280023013"
-Message-ID: <7d1309623b172bfcd4517898c99138c6f363604b.camel@linux.intel.com>
-Subject: Re: [RFC PATCH 04/11] x86/boot/KASLR: Introduce PRNG for faster
- shuffling
-From: Kristen Carlson Accardi <kristen@linux.intel.com>
-To: Kees Cook <keescook@chromium.org>, Jean-Philippe Aumasson
-	 <jeanphilippe.aumasson@gmail.com>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, tglx@linutronix.de, 
- mingo@redhat.com, bp@alien8.de, hpa@zytor.com, arjan@linux.intel.com, 
- rick.p.edgecombe@intel.com, x86@kernel.org, LKML
- <linux-kernel@vger.kernel.org>,  kernel-hardening@lists.openwall.com
-Date: Fri, 07 Feb 2020 08:52:55 -0800
-In-Reply-To: <202002070100.2521E7563@keescook>
-References: <20200205223950.1212394-1-kristen@linux.intel.com>
-	 <20200205223950.1212394-5-kristen@linux.intel.com>
-	 <20200206151001.GA280489@zx2c4.com>
-	 <CAGiyFdes26XnNeDfaz-vkm+bU7MBYQiK3xty2EigGjOXBGui2w@mail.gmail.com>
-	 <202002070100.2521E7563@keescook>
-Content-Type: text/plain; charset="UTF-8"
-User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
+Received: (qmail 6143 invoked from network); 7 Feb 2020 20:38:58 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=rSg7JMFRzPtoE945qQnjffCeXnLroF1u5VJV3uyBQCE=;
+        b=TIVoYpqKWPU4FbaHxrhBJ1Bwm+O6hvlv52zIi5d26xjDUTZ4yMC+K1iis5YbHTIZVl
+         9dHFuS4jNiXqxsq3FgyR0QBYCDDX0K20dUQm3BjtPvApP9txtUUaqU1OO0GhGh3Nep+F
+         BPgz1uHXGrOg8F5sRqAfUFY9p4EvycZiJalM+RzKSVOw2pxxJOS10UZf+ODEOwWn1KTt
+         ZqDzRMDMRWAmKXYblY7qJmxgBJymQDI6UbiK7qjXtkJzZqMTb1XCaabdFiCYMXNc+Ehz
+         aCcOFiv0DV4rUQziYOvUisKifEZCM89iODF4OZ09LVnQd9aS0sQtw75L6vLrgV6rGOTX
+         LtsA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=rSg7JMFRzPtoE945qQnjffCeXnLroF1u5VJV3uyBQCE=;
+        b=R0iAZkx0tjPxeFBkyrbAU5LcQSDr/opQm5oHino31biNQVYcdtfLeakRfVOEjknVXR
+         pWP50KjqUi/NQ2tPVz48P/r69mJAdhHVB6C0KgwcXpzB8FFly20yJxr9Wp1NVyClztYt
+         TbsNCKYrIn1ZDDneyoEaxcxHDXg+emLTdcHsLJL+EUjTZh/ufa7GJ8Cxz7/DWHarRlpU
+         +xcqnuyZv7oDZBOwkc5ekAZbBRQNpvxEO3SUn5bKrzcXA+bnQB7zdCPH2Q/EHyMqornX
+         3kfpBSJYfSn+0qKVAGXJZLQpkn+XuYMpDamXkC8J4wDIw2Z8BA4WnsaHWeLGglwokNvM
+         Jdmw==
+X-Gm-Message-State: APjAAAW5Jc7fKLmm8Ox1lN2jNPeMMuCgVfzJrnejMOXWFRUQHAeNmV2a
+	QuuggwDqGpN7FcMkC90WdBZaqTQdN5mo3kK9GDM=
+X-Google-Smtp-Source: APXvYqydjzIv13caN2xryirukeMzD0uzG2GhLc51HcLRq8k2qIGBrJQP/yUUcBKY5ND3CTEXOXO+aNgXuI7aWIVoDew=
+X-Received: by 2002:a1c:488a:: with SMTP id v132mr81301wma.153.1581107927512;
+ Fri, 07 Feb 2020 12:38:47 -0800 (PST)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
+References: <20200120074344.504-1-dja@axtens.net> <20200120074344.504-6-dja@axtens.net>
+In-Reply-To: <20200120074344.504-6-dja@axtens.net>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Fri, 7 Feb 2020 15:38:22 -0500
+Message-ID: <CA+DvKQJ6jRHZeZteqY7q-9sU8v3xacSPj65uac3PQfst4cKiMA@mail.gmail.com>
+Subject: Re: [PATCH 5/5] [RFC] mm: annotate memory allocation functions with
+ their sizes
+To: Daniel Axtens <dja@axtens.net>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, 
+	Kees Cook <keescook@chromium.org>, kernel list <linux-kernel@vger.kernel.org>, 
+	Andrew Morton <akpm@linux-foundation.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On Fri, 2020-02-07 at 01:05 -0800, Kees Cook wrote:
-> On Fri, Feb 07, 2020 at 08:23:53AM +0100, Jean-Philippe Aumasson
-> wrote:
-> > On Thu, Feb 6, 2020 at 4:10 PM Jason A. Donenfeld <Jason@zx2c4.com>
-> > wrote:
-> > 
-> > > Hey Kees,
-> > > 
-> > > On Wed, Feb 05, 2020 at 02:39:43PM -0800, Kristen Carlson Accardi
-> > > wrote:
-> > > > +#define rot(x, k) (((x)<<(k))|((x)>>(64-(k))))
-> > > > +static u64 prng_u64(struct prng_state *x)
-> > > > +{
-> > > > +     u64 e;
-> > > > +
-> > > > +     e = x->a - rot(x->b, 7);
-> > > > +     x->a = x->b ^ rot(x->c, 13);
-> > > > +     x->b = x->c + rot(x->d, 37);
-> > > > +     x->c = x->d + e;
-> > > > +     x->d = e + x->a;
-> > > > +
-> > > > +     return x->d;
-> > > > +}
-> > > 
-> > > I haven't looked closely at where the original entropy sources
-> > > are
-> > > coming from and how all this works, but on first glance, this
-> > > prng
-> > > doesn't look like an especially cryptographically secure one. I
-> > > realize
-> > > that isn't necessarily your intention (you're focused on speed),
-> > > but
-> > > actually might this be sort of important? If I understand
-> > > correctly, the
-> > > objective of this patch set is so that leaking the address of one
-> > > function doesn't leak the address of all other functions, as is
-> > > the case
-> > > with fixed-offset kaslr. But if you leak the addresses of _some_
-> > > set of
-> > > functions, and your prng is bogus, might it be possible to figure
-> > > out
-> > > the rest? For some prngs, if you give me the output stream of a
-> > > few
-> > > numbers, I can predict the rest. For others, it's not this
-> > > straight
-> > > forward, but there are some varieties of similar attacks. If any
-> > > of that
-> > > set of concerns turns out to apply to your prng_u64 here, would
-> > > that
-> > > undermine kaslr in similar ways as the current fixed-offset
-> > > variety? Or
-> > > does it not matter because it's some kind of blinded fixed-size
-> > > shuffle
-> > > with complex reasoning that makes this not a problem?
-> > 
-> > Let me share my 2 cents:
-> > 
-> > That permutation might be safe but afaict it hasn't been analyzed
-> > wrt
-> > modern cryptographic techniques and there might well be
-> > differential
-> > characteristics, statistical biases, etc.
-> > 
-> > What about just using SipHash's permutation, already in the kernel?
-> > It
-> > works on 4*u64 words too, and 6 rounds would be enough.
-> > 
-> > Doing a basic ops count, we currently have 5 group operations and 3
-> > rotations per round or 150 and 90 for the 30 init rounds. With
-> > SipHash it'd
-> > be 48 and 36 with the proposed 6 rounds. Probably insignificant
-> > speed wise
-> > as init is only done once but just to show that we'd get both
-> > better
-> > security assurance and better performance.
-> 
-> Yeah, this was never meant to be anything but a POC and after timing
-> tests, it seemed like an unneeded abstraction but was kept for this
-> RFC so it was possible to specify a stable seed at boot for
-> debugging,
-> etc. I think this patch will not survive to v1. :)
-
-That's right, I'm going to drop it and go with the ChaCha20
-implementation as was suggested.
-
-
+There are some uses of ksize in the kernel making use of the real
+usable size of memory allocations rather than only the requested
+amount. It's incorrect when mixed with alloc_size markers, since if a
+number like 14 is passed that's used as the upper bound, rather than a
+rounded size like 16 returned by ksize. It's unlikely to trigger any
+issues with only CONFIG_FORTIFY_SOURCE, but it becomes more likely
+with -fsanitize=object-size or other library-based usage of
+__builtin_object_size.
