@@ -1,22 +1,23 @@
-Return-Path: <SRS0=Riw8=32=lists.openwall.com=kernel-hardening-return-17726-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=svZm=33=lists.openwall.com=kernel-hardening-return-17727-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 69A0AC35247
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Feb 2020 21:33:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9B383C2D0B1
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 07:24:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B71CA21927
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Feb 2020 21:33:09 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id BF49C21741
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 07:24:24 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="KVrwWF2S"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B71CA21927
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17726-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16191 invoked by uid 550); 6 Feb 2020 21:33:03 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="cAVdz1Cm"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BF49C21741
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17727-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28290 invoked by uid 550); 7 Feb 2020 07:24:16 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,67 +25,168 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16166 invoked from network); 6 Feb 2020 21:33:03 -0000
+Received: (qmail 28262 invoked from network); 7 Feb 2020 07:24:15 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=CZIR0O4XSSHJzQ5NKMOaMQy9m9LNXwiQasS8KWy7Rew=;
-        b=KVrwWF2SKiVwKyoIsPVvbAikP44PdWvjeMhQkEtI1By6Zls5EW4B3PSNuMcCWXxG/v
-         xusmhSnTOcGjtj7V7BFKf6KBGw/XRFI38EnRK/cpY6ftMFBmZV6TSFD8jSDg+m6fy/z9
-         kWyh4e+ldTYzBi4iEsjBLdfXYAQLpCU5u9Vdo=
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=DxUqg8wrwusThXt0eFeBc0y4uk1czUM5aCSopm/x3tI=;
+        b=cAVdz1Cm84ruGfIpBvlppTP6X+HFeqv8Z18BMDBokfR+m0Oz5rIBa8YvZRS811qgYS
+         bES9KMKOAebbbI22c8JfvvnfT66EymkAnziMJUJfTXvKm1SdRMgbuUoftHSwXH7ugq79
+         ilmYSacaIQr3PZQRyeEfjmWLgAN9hBh7TQOwwBvALyLejXbvDtzDx8pwzNVsyPSdPes6
+         M2e21il1A7v5JlPorHBnszKfSXH7ua/HT0OS9s6wtusl6HoJPjgqZ69YMi399oChJPSA
+         CYCWtcNQqPgg2vmHOQGGD0pPeU388HnZIDA3nOe2MGtNNufgg7javwnpa+7pdSqqeLyk
+         Xsbg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=CZIR0O4XSSHJzQ5NKMOaMQy9m9LNXwiQasS8KWy7Rew=;
-        b=dfXglysMv4hIx8ok2LxVplWCxVSiwRU353r2Dcf1q0TfVILipWjI/5Vr31tAFW2NgV
-         /MwOYRG/AHEtLVa5qpV1iyXb6D0HA0PYn4NjGg9KgHx5m/ygltZZ7NVC5eZp/mmn7aEk
-         sq4r8CdAOd1oYq85s4bgh0VamRDz/m0qH9+ugPJPxyOX3dYRuoQjHJJX5xyoWBYbNbTO
-         JJgZSK941MPqo1ANrbHmkNVRVi05TkMLk8X8vcT3n6Qm3SBUn8x6LhQvGYy4x6VXcZr3
-         BlGn5y9BCAk1f+9VWkuJlZI9hsPpJkhTVTroBwZuDnKb2NAdf9Z0Qa5RJ0kpj241QHzF
-         5BZg==
-X-Gm-Message-State: APjAAAWUpKntOPr2ZGgsRjKiiCaH67fGbAK5oanN0R1D/gc4ulqU9JoG
-	jsp2//x2QX8vkfWQNEU1j51FZA==
-X-Google-Smtp-Source: APXvYqwvXjFqDoHHLLlHopScWku9ff/Blk8JGx7kXOUBy8QLwy4WBSOp/2rRgo7BA84Ute5uBspIMg==
-X-Received: by 2002:aca:cd46:: with SMTP id d67mr81999oig.156.1581024771067;
-        Thu, 06 Feb 2020 13:32:51 -0800 (PST)
-Date: Thu, 6 Feb 2020 13:32:48 -0800
-From: Kees Cook <keescook@chromium.org>
-To: Arvind Sankar <nivedita@alum.mit.edu>
-Cc: Kristen Carlson Accardi <kristen@linux.intel.com>, tglx@linutronix.de,
-	mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
-	arjan@linux.intel.com, rick.p.edgecombe@intel.com, x86@kernel.org,
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Subject: Re: [RFC PATCH 11/11] x86/boot: Move "boot heap" out of .bss
-Message-ID: <202002061331.E5956EA@keescook>
-References: <20200205223950.1212394-1-kristen@linux.intel.com>
- <20200205223950.1212394-12-kristen@linux.intel.com>
- <20200206001103.GA220377@rani.riverdale.lan>
- <202002060251.681292DE63@keescook>
- <20200206142557.GA3033443@rani.riverdale.lan>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=DxUqg8wrwusThXt0eFeBc0y4uk1czUM5aCSopm/x3tI=;
+        b=QgTwZxynV2SHHUqSUBAmp9sNQQ6FWVns9VNdFtD3TgxK4zd9+0yvhe7xc3yT0+KfHe
+         HlJm3vwtHSdQkBjiratpWOSPqzIN29m7jcF6TkSCvgT6N+SREBjf/VYUBsUk1++qRQvj
+         VUgxL4+v9GenStB0yaTAV8kWA8MGJrEkbHLJHF626O4G4eqNoHgKnTGM94CpK35hkSDb
+         10geWxvMknj+Wmt/xIRNZdOkZQUbqUThc/tFZUmq7H2aV0XpciX0XCfY/ZMuVamDUVkG
+         CIFrtMMyzQguZ/BJ2UaRgxqEi6rYagMTtYAHNRVSxXEdcFyjSfpb4G9bU+G+apeOxP9/
+         TwQg==
+X-Gm-Message-State: APjAAAUrvKqMyekaMLl4+Lwtb02gYp+jW0MaqD2jYNWm8E1pPnNwxTfg
+	2FTxijf0YHT8U6YvH7ooDVm/Dv1B1pqlU1r29K0=
+X-Google-Smtp-Source: APXvYqzqk+ROe/x18BMhepXyBYLxUA1AO8ZEaLpWKGarvfWo88vLnvnWyoUyfnZssnqBbyAS4LV4WunX8/nYxIEy4OE=
+X-Received: by 2002:a5d:6ac4:: with SMTP id u4mr2928629wrw.318.1581060243980;
+ Thu, 06 Feb 2020 23:24:03 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200206142557.GA3033443@rani.riverdale.lan>
+References: <20200205223950.1212394-1-kristen@linux.intel.com>
+ <20200205223950.1212394-5-kristen@linux.intel.com> <20200206151001.GA280489@zx2c4.com>
+In-Reply-To: <20200206151001.GA280489@zx2c4.com>
+From: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+Date: Fri, 7 Feb 2020 08:23:53 +0100
+Message-ID: <CAGiyFdes26XnNeDfaz-vkm+bU7MBYQiK3xty2EigGjOXBGui2w@mail.gmail.com>
+Subject: Re: [RFC PATCH 04/11] x86/boot/KASLR: Introduce PRNG for faster shuffling
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Kristen Carlson Accardi <kristen@linux.intel.com>, keescook@chromium.org, tglx@linutronix.de, 
+	mingo@redhat.com, bp@alien8.de, hpa@zytor.com, arjan@linux.intel.com, 
+	rick.p.edgecombe@intel.com, x86@kernel.org, 
+	LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: multipart/alternative; boundary="00000000000036047f059df74698"
 
-On Thu, Feb 06, 2020 at 09:25:59AM -0500, Arvind Sankar wrote:
-> On Thu, Feb 06, 2020 at 03:13:12AM -0800, Kees Cook wrote:
-> > Yes, thank you for the reminder. I couldn't find the ZO_INIT_SIZE when I
-> > was staring at this, since I only looked around the compressed/ directory.
-> > :)
-> > 
-> 
-> There's another thing I noticed -- you would need to ensure that the
-> init_size in the header covers your boot heap even if you did split it
-> out. The reason is that the bootloader will only know to reserve enough
-> memory for init_size: it's possible it might put the initrd or something
-> else following the kernel, or theoretically there might be reserved
-> memory regions or the end of physical RAM immediately following, so you
-> can't assume that area will be available when you get to extract_kernel.
+--00000000000036047f059df74698
+Content-Type: text/plain; charset="UTF-8"
 
-Yeah, that's what I was worrying about after I wrote that patch. Yours
-is the correct solution. :) (I Acked both of those now).
+Let me share my 2 cents:
 
--- 
-Kees Cook
+That permutation might be safe but afaict it hasn't been analyzed wrt
+modern cryptographic techniques and there might well be differential
+characteristics, statistical biases, etc.
+
+What about just using SipHash's permutation, already in the kernel? It
+works on 4*u64 words too, and 6 rounds would be enough.
+
+Doing a basic ops count, we currently have 5 group operations and 3
+rotations per round or 150 and 90 for the 30 init rounds. With SipHash it'd
+be 48 and 36 with the proposed 6 rounds. Probably insignificant speed wise
+as init is only done once but just to show that we'd get both better
+security assurance and better performance.
+
+
+On Thu, Feb 6, 2020 at 4:10 PM Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+
+> Hey Kees,
+>
+> On Wed, Feb 05, 2020 at 02:39:43PM -0800, Kristen Carlson Accardi wrote:
+> > +#define rot(x, k) (((x)<<(k))|((x)>>(64-(k))))
+> > +static u64 prng_u64(struct prng_state *x)
+> > +{
+> > +     u64 e;
+> > +
+> > +     e = x->a - rot(x->b, 7);
+> > +     x->a = x->b ^ rot(x->c, 13);
+> > +     x->b = x->c + rot(x->d, 37);
+> > +     x->c = x->d + e;
+> > +     x->d = e + x->a;
+> > +
+> > +     return x->d;
+> > +}
+>
+> I haven't looked closely at where the original entropy sources are
+> coming from and how all this works, but on first glance, this prng
+> doesn't look like an especially cryptographically secure one. I realize
+> that isn't necessarily your intention (you're focused on speed), but
+> actually might this be sort of important? If I understand correctly, the
+> objective of this patch set is so that leaking the address of one
+> function doesn't leak the address of all other functions, as is the case
+> with fixed-offset kaslr. But if you leak the addresses of _some_ set of
+> functions, and your prng is bogus, might it be possible to figure out
+> the rest? For some prngs, if you give me the output stream of a few
+> numbers, I can predict the rest. For others, it's not this straight
+> forward, but there are some varieties of similar attacks. If any of that
+> set of concerns turns out to apply to your prng_u64 here, would that
+> undermine kaslr in similar ways as the current fixed-offset variety? Or
+> does it not matter because it's some kind of blinded fixed-size shuffle
+> with complex reasoning that makes this not a problem?
+>
+> Jason
+>
+
+--00000000000036047f059df74698
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">Let me share my 2 cents:<div><br></div><div>That permutati=
+on might be safe but afaict it hasn&#39;t been analyzed wrt modern cryptogr=
+aphic techniques and there might well be differential characteristics, stat=
+istical biases, etc.=C2=A0</div><div><br></div><div>What about just using S=
+ipHash&#39;s permutation, already in the kernel? It works on 4*u64 words to=
+o, and 6 rounds would be enough.=C2=A0</div><div><br></div><div>Doing a bas=
+ic ops count, we currently have 5 group operations and 3 rotations per roun=
+d or 150 and 90 for the 30 init rounds. With SipHash it&#39;d be 48 and 36 =
+with the proposed 6 rounds. Probably insignificant speed wise as init is on=
+ly done once but just to show that we&#39;d get both better security assura=
+nce and better performance.</div><div><br></div></div><br><div class=3D"gma=
+il_quote"><div dir=3D"ltr" class=3D"gmail_attr">On Thu, Feb 6, 2020 at 4:10=
+ PM Jason A. Donenfeld &lt;<a href=3D"mailto:Jason@zx2c4.com">Jason@zx2c4.c=
+om</a>&gt; wrote:<br></div><blockquote class=3D"gmail_quote" style=3D"margi=
+n:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex=
+">Hey Kees,<br>
+<br>
+On Wed, Feb 05, 2020 at 02:39:43PM -0800, Kristen Carlson Accardi wrote:<br=
+>
+&gt; +#define rot(x, k) (((x)&lt;&lt;(k))|((x)&gt;&gt;(64-(k))))<br>
+&gt; +static u64 prng_u64(struct prng_state *x)<br>
+&gt; +{<br>
+&gt; +=C2=A0 =C2=A0 =C2=A0u64 e;<br>
+&gt; +<br>
+&gt; +=C2=A0 =C2=A0 =C2=A0e =3D x-&gt;a - rot(x-&gt;b, 7);<br>
+&gt; +=C2=A0 =C2=A0 =C2=A0x-&gt;a =3D x-&gt;b ^ rot(x-&gt;c, 13);<br>
+&gt; +=C2=A0 =C2=A0 =C2=A0x-&gt;b =3D x-&gt;c + rot(x-&gt;d, 37);<br>
+&gt; +=C2=A0 =C2=A0 =C2=A0x-&gt;c =3D x-&gt;d + e;<br>
+&gt; +=C2=A0 =C2=A0 =C2=A0x-&gt;d =3D e + x-&gt;a;<br>
+&gt; +<br>
+&gt; +=C2=A0 =C2=A0 =C2=A0return x-&gt;d;<br>
+&gt; +}<br>
+<br>
+I haven&#39;t looked closely at where the original entropy sources are<br>
+coming from and how all this works, but on first glance, this prng<br>
+doesn&#39;t look like an especially cryptographically secure one. I realize=
+<br>
+that isn&#39;t necessarily your intention (you&#39;re focused on speed), bu=
+t<br>
+actually might this be sort of important? If I understand correctly, the<br=
+>
+objective of this patch set is so that leaking the address of one<br>
+function doesn&#39;t leak the address of all other functions, as is the cas=
+e<br>
+with fixed-offset kaslr. But if you leak the addresses of _some_ set of<br>
+functions, and your prng is bogus, might it be possible to figure out<br>
+the rest? For some prngs, if you give me the output stream of a few<br>
+numbers, I can predict the rest. For others, it&#39;s not this straight<br>
+forward, but there are some varieties of similar attacks. If any of that<br=
+>
+set of concerns turns out to apply to your prng_u64 here, would that<br>
+undermine kaslr in similar ways as the current fixed-offset variety? Or<br>
+does it not matter because it&#39;s some kind of blinded fixed-size shuffle=
+<br>
+with complex reasoning that makes this not a problem?<br>
+<br>
+Jason<br>
+</blockquote></div>
+
+--00000000000036047f059df74698--
