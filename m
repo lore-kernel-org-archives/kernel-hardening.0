@@ -1,4 +1,4 @@
-Return-Path: <SRS0=je8g=36=lists.openwall.com=kernel-hardening-return-17741-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=652t=36=lists.openwall.com=kernel-hardening-return-17742-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
 	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5D5B6C352A3
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 15:07:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 29D7EC352A3
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 15:07:43 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8F72C20661
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 15:07:30 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8F72C20661
+	by mail.kernel.org (Postfix) with SMTP id 86D0920661
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 15:07:42 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 86D0920661
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17741-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1743 invoked by uid 550); 10 Feb 2020 15:06:26 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17742-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1974 invoked by uid 550); 10 Feb 2020 15:06:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1679 invoked from network); 10 Feb 2020 15:06:26 -0000
+Received: (qmail 1915 invoked from network); 10 Feb 2020 15:06:28 -0000
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
 To: LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
@@ -49,173 +49,108 @@ Cc: Akinobu Mita <akinobu.mita@gmail.com>,
 	Linus Torvalds <torvalds@linux-foundation.org>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>
-Subject: [PATCH v8 07/11] proc: flush task dcache entries from all procfs instances
-Date: Mon, 10 Feb 2020 16:05:15 +0100
-Message-Id: <20200210150519.538333-8-gladkov.alexey@gmail.com>
+Subject: [PATCH v8 08/11] proc: instantiate only pids that we can ptrace on 'hidepid=4' mount option
+Date: Mon, 10 Feb 2020 16:05:16 +0100
+Message-Id: <20200210150519.538333-9-gladkov.alexey@gmail.com>
 X-Mailer: git-send-email 2.24.1
 In-Reply-To: <20200210150519.538333-1-gladkov.alexey@gmail.com>
 References: <20200210150519.538333-1-gladkov.alexey@gmail.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-This allows to flush dcache entries of a task on multiple procfs mounts
-per pid namespace.
-
-The RCU lock is used because the number of reads at the task exit time
-is much larger than the number of procfs mounts.
+If "hidepid=4" mount option is set then do not instantiate pids that
+we can not ptrace. "hidepid=4" means that procfs should only contain
+pids that the caller can ptrace.
 
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
 Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
 ---
- fs/proc/base.c                | 20 +++++++++++++++-----
- fs/proc/root.c                | 27 ++++++++++++++++++++++++++-
- include/linux/pid_namespace.h |  2 ++
- include/linux/proc_fs.h       |  2 ++
- 4 files changed, 45 insertions(+), 6 deletions(-)
+ fs/proc/base.c          | 15 +++++++++++++++
+ fs/proc/root.c          | 14 +++++++++++---
+ include/linux/proc_fs.h |  1 +
+ 3 files changed, 27 insertions(+), 3 deletions(-)
 
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 4ccb280a3e79..24b7c620ded3 100644
+index 24b7c620ded3..49937d54e745 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
-@@ -3133,7 +3133,7 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
- 	.permission	= proc_pid_permission,
- };
- 
--static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
-+static void proc_flush_task_mnt_root(struct dentry *mnt_root, pid_t pid, pid_t tgid)
+@@ -699,6 +699,14 @@ static bool has_pid_permissions(struct proc_fs_info *fs_info,
+ 				 struct task_struct *task,
+ 				 int hide_pid_min)
  {
- 	struct dentry *dentry, *leader, *dir;
- 	char buf[10 + 1];
-@@ -3142,7 +3142,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
- 	name.name = buf;
- 	name.len = snprintf(buf, sizeof(buf), "%u", pid);
- 	/* no ->d_hash() rejects on procfs */
--	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
-+	dentry = d_hash_and_lookup(mnt_root, &name);
- 	if (dentry) {
- 		d_invalidate(dentry);
- 		dput(dentry);
-@@ -3153,7 +3153,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
- 
- 	name.name = buf;
- 	name.len = snprintf(buf, sizeof(buf), "%u", tgid);
--	leader = d_hash_and_lookup(mnt->mnt_root, &name);
-+	leader = d_hash_and_lookup(mnt_root, &name);
- 	if (!leader)
++	/*
++	 * If 'hidpid' mount option is set force a ptrace check,
++	 * we indicate that we are using a filesystem syscall
++	 * by passing PTRACE_MODE_READ_FSCREDS
++	 */
++	if (proc_fs_hide_pid(fs_info) == HIDEPID_NOT_PTRACABLE)
++		return ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS);
++
+ 	if (proc_fs_hide_pid(fs_info) < hide_pid_min)
+ 		return true;
+ 	if (in_group_p(proc_fs_pid_gid(fs_info)))
+@@ -3271,7 +3279,14 @@ struct dentry *proc_pid_lookup(struct dentry *dentry, unsigned int flags)
+ 	if (!task)
  		goto out;
  
-@@ -3208,14 +3208,24 @@ void proc_flush_task(struct task_struct *task)
- 	int i;
- 	struct pid *pid, *tgid;
- 	struct upid *upid;
-+	struct dentry *mnt_root;
-+	struct proc_fs_info *fs_info;
- 
- 	pid = task_pid(task);
- 	tgid = task_tgid(task);
- 
- 	for (i = 0; i <= pid->level; i++) {
- 		upid = &pid->numbers[i];
--		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
--					tgid->numbers[i].nr);
-+
-+		rcu_read_lock();
-+		list_for_each_entry_rcu(fs_info, &upid->ns->proc_mounts, pidns_entry) {
-+			mnt_root = fs_info->m_super->s_root;
-+			proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
-+		}
-+		rcu_read_unlock();
-+
-+		mnt_root = upid->ns->proc_mnt->mnt_root;
-+		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
- 	}
- }
- 
-diff --git a/fs/proc/root.c b/fs/proc/root.c
-index 5d5cba4c899b..e2bb015da1a8 100644
---- a/fs/proc/root.c
-+++ b/fs/proc/root.c
-@@ -149,7 +149,22 @@ static int proc_fill_super(struct super_block *s, struct fs_context *fc)
- 	if (ret) {
- 		return ret;
- 	}
--	return proc_setup_thread_self(s);
-+
-+	ret = proc_setup_thread_self(s);
-+	if (ret) {
-+		return ret;
++	/* Limit procfs to only ptracable tasks */
++	if (proc_fs_hide_pid(fs_info) == HIDEPID_NOT_PTRACABLE) {
++		if (!has_pid_permissions(fs_info, task, HIDEPID_NO_ACCESS))
++			goto out_put_task;
 +	}
 +
-+	/*
-+	 * back reference to flush dcache entries at process exit time.
-+	 */
-+	ctx->fs_info->m_super = s;
-+
-+	spin_lock(&pid_ns->proc_mounts_lock);
-+	list_add_tail_rcu(&ctx->fs_info->pidns_entry, &pid_ns->proc_mounts);
-+	spin_unlock(&pid_ns->proc_mounts_lock);
-+
-+	return 0;
- }
+ 	result = proc_pid_instantiate(dentry, task, NULL);
++out_put_task:
+ 	put_task_struct(task);
+ out:
+ 	return result;
+diff --git a/fs/proc/root.c b/fs/proc/root.c
+index e2bb015da1a8..5e27bb31f125 100644
+--- a/fs/proc/root.c
++++ b/fs/proc/root.c
+@@ -52,6 +52,15 @@ static const struct fs_parameter_description proc_fs_parameters = {
+ 	.specs		= proc_param_specs,
+ };
  
- static int proc_reconfigure(struct fs_context *fc)
-@@ -211,10 +226,17 @@ static void proc_kill_sb(struct super_block *sb)
++static inline int
++valid_hidepid(unsigned int value)
++{
++	return (value == HIDEPID_OFF ||
++		value == HIDEPID_NO_ACCESS ||
++		value == HIDEPID_INVISIBLE ||
++		value == HIDEPID_NOT_PTRACABLE);
++}
++
+ static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
  {
- 	struct proc_fs_info *fs_info = proc_sb_info(sb);
+ 	struct proc_fs_context *ctx = fc->fs_private;
+@@ -68,10 +77,9 @@ static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
+ 		break;
  
-+	spin_lock(&fs_info->pid_ns->proc_mounts_lock);
-+	list_del_rcu(&fs_info->pidns_entry);
-+	spin_unlock(&fs_info->pid_ns->proc_mounts_lock);
-+
-+	synchronize_rcu();
-+
- 	if (fs_info->proc_self)
- 		dput(fs_info->proc_self);
- 	if (fs_info->proc_thread_self)
- 		dput(fs_info->proc_thread_self);
-+
- 	kill_anon_super(sb);
- 	put_pid_ns(fs_info->pid_ns);
- 	kfree(fs_info);
-@@ -336,6 +358,9 @@ int pid_ns_prepare_proc(struct pid_namespace *ns)
- 		ctx->fs_info->pid_ns = ns;
- 	}
+ 	case Opt_hidepid:
++		if (!valid_hidepid(result.uint_32))
++			return invalf(fc, "proc: unknown value of hidepid.\n");
+ 		ctx->hidepid = result.uint_32;
+-		if (ctx->hidepid < HIDEPID_OFF ||
+-		    ctx->hidepid > HIDEPID_INVISIBLE)
+-			return invalf(fc, "proc: hidepid value must be between 0 and 2.\n");
+ 		break;
  
-+	spin_lock_init(&ns->proc_mounts_lock);
-+	INIT_LIST_HEAD_RCU(&ns->proc_mounts);
-+
- 	mnt = fc_mount(fc);
- 	put_fs_context(fc);
- 	if (IS_ERR(mnt))
-diff --git a/include/linux/pid_namespace.h b/include/linux/pid_namespace.h
-index 66f47f1afe0d..c36af1dfd862 100644
---- a/include/linux/pid_namespace.h
-+++ b/include/linux/pid_namespace.h
-@@ -26,6 +26,8 @@ struct pid_namespace {
- 	struct pid_namespace *parent;
- #ifdef CONFIG_PROC_FS
- 	struct vfsmount *proc_mnt; /* Internal proc mounted during each new pidns */
-+	spinlock_t proc_mounts_lock;
-+	struct list_head proc_mounts; /* list of separated procfs mounts */
- #endif
- #ifdef CONFIG_BSD_PROCESS_ACCT
- 	struct fs_pin *bacct;
+ 	default:
 diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
-index 5f0b1b7e4271..f307940f8311 100644
+index f307940f8311..6822548405a7 100644
 --- a/include/linux/proc_fs.h
 +++ b/include/linux/proc_fs.h
-@@ -20,6 +20,8 @@ enum {
+@@ -17,6 +17,7 @@ enum {
+ 	HIDEPID_OFF	  = 0,
+ 	HIDEPID_NO_ACCESS = 1,
+ 	HIDEPID_INVISIBLE = 2,
++	HIDEPID_NOT_PTRACABLE = 4, /* Limit pids to only ptracable pids */
  };
  
  struct proc_fs_info {
-+	struct list_head pidns_entry;    /* Node in procfs_mounts of a pidns */
-+	struct super_block *m_super;
- 	struct pid_namespace *pid_ns;
- 	struct dentry *proc_self;        /* For /proc/self */
- 	struct dentry *proc_thread_self; /* For /proc/thread-self */
 -- 
 2.24.1
 
