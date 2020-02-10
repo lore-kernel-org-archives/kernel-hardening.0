@@ -1,23 +1,22 @@
-Return-Path: <SRS0=j8ex=33=lists.openwall.com=kernel-hardening-return-17731-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=R3Ke=36=lists.openwall.com=kernel-hardening-return-17732-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8FCB2C2BA83
-	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 20:39:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 02617C2BA83
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 01:44:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E245620838
-	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Feb 2020 20:39:05 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 53C5620838
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 01:44:04 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="TIVoYpqK"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E245620838
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17731-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7205 invoked by uid 550); 7 Feb 2020 20:38:59 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="OWDasQsz"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 53C5620838
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17732-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3272 invoked by uid 550); 10 Feb 2020 01:43:55 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,53 +24,72 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 6143 invoked from network); 7 Feb 2020 20:38:58 -0000
+Received: (qmail 3249 invoked from network); 10 Feb 2020 01:43:55 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=rSg7JMFRzPtoE945qQnjffCeXnLroF1u5VJV3uyBQCE=;
-        b=TIVoYpqKWPU4FbaHxrhBJ1Bwm+O6hvlv52zIi5d26xjDUTZ4yMC+K1iis5YbHTIZVl
-         9dHFuS4jNiXqxsq3FgyR0QBYCDDX0K20dUQm3BjtPvApP9txtUUaqU1OO0GhGh3Nep+F
-         BPgz1uHXGrOg8F5sRqAfUFY9p4EvycZiJalM+RzKSVOw2pxxJOS10UZf+ODEOwWn1KTt
-         ZqDzRMDMRWAmKXYblY7qJmxgBJymQDI6UbiK7qjXtkJzZqMTb1XCaabdFiCYMXNc+Ehz
-         aCcOFiv0DV4rUQziYOvUisKifEZCM89iODF4OZ09LVnQd9aS0sQtw75L6vLrgV6rGOTX
-         LtsA==
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:content-transfer-encoding:in-reply-to;
+        bh=HdwoUvKACAu13YTpgkcA2GYzOLF4EXKUPzTpSp3Y354=;
+        b=OWDasQsz0mzVFR9NAt3/dyP6IIx6MvuQQk/PMLMcNc5J5Q2l/ZX9JlPy3ONAjfV1M+
+         sEuBiVbCoGOeWqeDw32+6/YQUu6fznqbJ8ZexyTCMHECPY64+PRjoV1PwfDHfxiuqPig
+         m2wz/WYPPexf1OuqvnAwKlwoUCD3O0DULryKA=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=rSg7JMFRzPtoE945qQnjffCeXnLroF1u5VJV3uyBQCE=;
-        b=R0iAZkx0tjPxeFBkyrbAU5LcQSDr/opQm5oHino31biNQVYcdtfLeakRfVOEjknVXR
-         pWP50KjqUi/NQ2tPVz48P/r69mJAdhHVB6C0KgwcXpzB8FFly20yJxr9Wp1NVyClztYt
-         TbsNCKYrIn1ZDDneyoEaxcxHDXg+emLTdcHsLJL+EUjTZh/ufa7GJ8Cxz7/DWHarRlpU
-         +xcqnuyZv7oDZBOwkc5ekAZbBRQNpvxEO3SUn5bKrzcXA+bnQB7zdCPH2Q/EHyMqornX
-         3kfpBSJYfSn+0qKVAGXJZLQpkn+XuYMpDamXkC8J4wDIw2Z8BA4WnsaHWeLGglwokNvM
-         Jdmw==
-X-Gm-Message-State: APjAAAW5Jc7fKLmm8Ox1lN2jNPeMMuCgVfzJrnejMOXWFRUQHAeNmV2a
-	QuuggwDqGpN7FcMkC90WdBZaqTQdN5mo3kK9GDM=
-X-Google-Smtp-Source: APXvYqydjzIv13caN2xryirukeMzD0uzG2GhLc51HcLRq8k2qIGBrJQP/yUUcBKY5ND3CTEXOXO+aNgXuI7aWIVoDew=
-X-Received: by 2002:a1c:488a:: with SMTP id v132mr81301wma.153.1581107927512;
- Fri, 07 Feb 2020 12:38:47 -0800 (PST)
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:content-transfer-encoding
+         :in-reply-to;
+        bh=HdwoUvKACAu13YTpgkcA2GYzOLF4EXKUPzTpSp3Y354=;
+        b=ZqL8t/rvvM34wcZ4oi4n6dAUl0W9d4lXtBlfR9nUmxdpouwJDSI7UOYfqr2iL+a6t7
+         sm22mxEP85xTohW1S/yo8BMseZY4yDjzyC5sLL4BgJCDYXd5/WLAecQH5w/olGpWN9Xa
+         iwpEzeVRqmgw/GR/In6TaHyCCxp5u58clQgCnYpdYsMgenxpVqiRq51Z8jBeRxG6gEVk
+         agYsRcuObpeKCH0XgtXPWoPums6Dh0dEGDgS56k4PQ0TB0W23n+PDGcJz/mYLTR4ucsd
+         2GKVD9fPGUXFm0pppc9t+BeDCKSEwQxRgBrwhNUfdhyO+rV0ANoochJ/w6b/zfWBpTvs
+         AMSA==
+X-Gm-Message-State: APjAAAX0bWjUW3QQexxwW9kwX7iX+OseYJUzw/RwBWSlpnCas+eyUFJ4
+	JP0U/z2SN/dSoj8WYvzZrLUO9Q==
+X-Google-Smtp-Source: APXvYqxJIiGcpGRtLkseu5csk6qVTgBaW3SqsXIHMJ1sQpVYEgldsMB1fM/RGLKTb04sdm8bPtwUSQ==
+X-Received: by 2002:a9d:7a89:: with SMTP id l9mr6809190otn.228.1581299023111;
+        Sun, 09 Feb 2020 17:43:43 -0800 (PST)
+Date: Sun, 9 Feb 2020 17:43:40 -0800
+From: Kees Cook <keescook@chromium.org>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Andy Lutomirski <luto@amacapital.net>,
+	Kristen Carlson Accardi <kristen@linux.intel.com>,
+	tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
+	arjan@linux.intel.com, rick.p.edgecombe@intel.com, x86@kernel.org,
+	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: Re: [RFC PATCH 06/11] x86: make sure _etext includes function
+ sections
+Message-ID: <202002091742.7B1E6BF19@keescook>
+References: <75f0bd0365857ba4442ee69016b63764a8d2ad68.camel@linux.intel.com>
+ <B413445A-F1F0-4FB7-AA9F-C5FF4CEFF5F5@amacapital.net>
+ <20200207092423.GC14914@hirez.programming.kicks-ass.net>
 MIME-Version: 1.0
-References: <20200120074344.504-1-dja@axtens.net> <20200120074344.504-6-dja@axtens.net>
-In-Reply-To: <20200120074344.504-6-dja@axtens.net>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Fri, 7 Feb 2020 15:38:22 -0500
-Message-ID: <CA+DvKQJ6jRHZeZteqY7q-9sU8v3xacSPj65uac3PQfst4cKiMA@mail.gmail.com>
-Subject: Re: [PATCH 5/5] [RFC] mm: annotate memory allocation functions with
- their sizes
-To: Daniel Axtens <dja@axtens.net>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, 
-	Kees Cook <keescook@chromium.org>, kernel list <linux-kernel@vger.kernel.org>, 
-	Andrew Morton <akpm@linux-foundation.org>
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20200207092423.GC14914@hirez.programming.kicks-ass.net>
 
-There are some uses of ksize in the kernel making use of the real
-usable size of memory allocations rather than only the requested
-amount. It's incorrect when mixed with alloc_size markers, since if a
-number like 14 is passed that's used as the upper bound, rather than a
-rounded size like 16 returned by ksize. It's unlikely to trigger any
-issues with only CONFIG_FORTIFY_SOURCE, but it becomes more likely
-with -fsanitize=object-size or other library-based usage of
-__builtin_object_size.
+On Fri, Feb 07, 2020 at 10:24:23AM +0100, Peter Zijlstra wrote:
+> On Thu, Feb 06, 2020 at 12:02:36PM -0800, Andy Lutomirski wrote:
+> > Also, in the shiny new era of
+> > Intel-CPUs-can’t-handle-Jcc-spanning-a-cacheline, function alignment
+> > may actually matter.
+> 
+> *groan*, indeed. I just went and looked that up. I missed this one in
+> all the other fuss :/
+> 
+> So per:
+> 
+>   https://www.intel.com/content/dam/support/us/en/documents/processors/mitigations-jump-conditional-code-erratum.pdf
+> 
+> the toolchain mitigations only work if the offset in the ifetch window
+> (32 bytes) is preserved. Which seems to suggest we ought to align all
+> functions to 32byte before randomizing it, otherwise we're almost
+> guaranteed to change this offset by the act of randomizing.
+
+Wheee! This sounds like in needs to be fixed generally, yes? (And I see
+"FUNCTION_ALIGN" macro is currently 16 bytes...
+
+-- 
+Kees Cook
