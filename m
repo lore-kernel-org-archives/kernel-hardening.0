@@ -1,22 +1,23 @@
-Return-Path: <SRS0=j1mR=36=lists.openwall.com=kernel-hardening-return-17748-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=fFfR=36=lists.openwall.com=kernel-hardening-return-17749-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 04B80C352A5
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 16:36:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 42AFBC352A3
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 16:41:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5950520870
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 16:36:49 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 931A820838
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 16:41:56 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ng1G/VSw"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5950520870
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=alum.mit.edu
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17748-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32323 invoked by uid 550); 10 Feb 2020 16:36:44 -0000
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="xZ9yor3P"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 931A820838
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17749-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3826 invoked by uid 550); 10 Feb 2020 16:41:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,75 +25,76 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32299 invoked from network); 10 Feb 2020 16:36:43 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=sender:from:date:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to:user-agent;
-        bh=B82P8bR5ozDn3yo+U/Bu+4ns+QtyTtYccr3OgXM2Xto=;
-        b=ng1G/VSw9LRJOGQ1b6uRbkUgf37UT3j939mOC/5gYT9UUEFV3K9QbsTejURWL01vLe
-         rmgHOjhlMXui4fo07OLbG88qSfkSbXMR0ti2l9a/Zu8qAtzhImtWAFOm4E9VCIcyf3ft
-         +8VvpSZ7CXcUx/r+OE8G14NpzjP8nvDqR49PbWCEPFRMxE6MejJOT4VGgxdq5qSY31cL
-         Tw9kxO4TfQ7bWh0xD9zJRZOpgUJe1D4j9zIxFSa9mHovxIAmZuVAdRfgHicFGiVwi4iU
-         OUnL90cliCXC+I9LtanC8Q1JIFuXx5BdlxLeEX9DablDUFMfIS8auz1nJS4qx5bj6BA8
-         d3lA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:from:date:to:cc:subject:message-id
-         :references:mime-version:content-disposition:in-reply-to:user-agent;
-        bh=B82P8bR5ozDn3yo+U/Bu+4ns+QtyTtYccr3OgXM2Xto=;
-        b=Lw3Bh87hEgMk47ou2gxDG8Ogf+TrFGIry+Y9paFAm7WbwaJHrj6c80I71FeASY91uv
-         7rWTW4K5N9orPGwU7i2l6iyjsQAHByG+UqhNiHB+rb325Xf3U7v77DoaPP5/lnPZ3qcS
-         NJOvBycjDCiFHc8U7T1tpBB+hSPAJXcXS03paqHhA3LYN5ZmDRhk/M/zjT7egKxbtvZW
-         2AUrsHrMH0cNfqjSUihDM6ql5SpnqfHFhXo+4855ZumekPm+w6YUZQaQprFSjToUTlUY
-         B6XueUXc/xvq4Y159E1jwUa7fKvio03Fmw3csRmOTs/gYvF1AvFl6+Hinj1iiLfzuxQa
-         fegQ==
-X-Gm-Message-State: APjAAAWc+z65g0wr6GLyGnfTO7ES5FOHQF7SjcqGQs2w1XRlgTCCdBWf
-	wB67o0we0PwmpR3tjj8O/m0=
-X-Google-Smtp-Source: APXvYqzcAeFu0IQPSK1BaoWoskfgcIaIoF3n5FvQ9/vQqw2qowCXX07aaHHNTwtuTQh9RE43OOmpHQ==
-X-Received: by 2002:aed:234a:: with SMTP id i10mr10644028qtc.155.1581352591251;
-        Mon, 10 Feb 2020 08:36:31 -0800 (PST)
-Sender: Arvind Sankar <niveditas98@gmail.com>
-From: Arvind Sankar <nivedita@alum.mit.edu>
-X-Google-Original-From: Arvind Sankar <arvind@rani.riverdale.lan>
-Date: Mon, 10 Feb 2020 11:36:29 -0500
-To: Arjan van de Ven <arjan@linux.intel.com>
-Cc: Peter Zijlstra <peterz@infradead.org>,
+Received: (qmail 3806 invoked from network); 10 Feb 2020 16:41:50 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1581352898;
+	bh=swgRA1rNS8tBiz0g1uvNqRf9FaXIwO8m18YRqWdGIWU=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=xZ9yor3PmK0g2VGI7TH5dURt6qVd/7JoQzVJWSGzhMpbis9o4lzC+9ygWQ0663Ml8
+	 mNsCjyu4UABSsLLe5Ja4m3XnHu6ZdABdFV/OZcz8udClXlNzbDXjPXG7WWBZAvWWNt
+	 S1LX2V8l6/MoP4lkNDVfdgj8iQdTmKUYem8h+bsE=
+Date: Mon, 10 Feb 2020 16:41:32 +0000
+From: Will Deacon <will@kernel.org>
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Catalin Marinas <catalin.marinas@arm.com>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Mark Rutland <mark.rutland@arm.com>, james.morse@arm.com,
+	Dave Martin <Dave.Martin@arm.com>,
 	Kees Cook <keescook@chromium.org>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Kristen Carlson Accardi <kristen@linux.intel.com>,
-	tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
-	rick.p.edgecombe@intel.com, x86@kernel.org,
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Subject: Re: [RFC PATCH 06/11] x86: make sure _etext includes function
- sections
-Message-ID: <20200210163627.GA1829035@rani.riverdale.lan>
-References: <75f0bd0365857ba4442ee69016b63764a8d2ad68.camel@linux.intel.com>
- <B413445A-F1F0-4FB7-AA9F-C5FF4CEFF5F5@amacapital.net>
- <20200207092423.GC14914@hirez.programming.kicks-ass.net>
- <202002091742.7B1E6BF19@keescook>
- <20200210105117.GE14879@hirez.programming.kicks-ass.net>
- <43b7ba31-6dca-488b-8a0e-72d9fdfd1a6b@linux.intel.com>
+	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	Jann Horn <jannh@google.com>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	Masahiro Yamada <yamada.masahiro@socionext.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com,
+	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v7 07/11] arm64: efi: restore x18 if it was corrupted
+Message-ID: <20200210164131.GB21900@willie-the-truck>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20200128184934.77625-1-samitolvanen@google.com>
+ <20200128184934.77625-8-samitolvanen@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <43b7ba31-6dca-488b-8a0e-72d9fdfd1a6b@linux.intel.com>
+In-Reply-To: <20200128184934.77625-8-samitolvanen@google.com>
 User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On Mon, Feb 10, 2020 at 07:54:58AM -0800, Arjan van de Ven wrote:
-> > 
-> > I'll leave it to others to figure out the exact details. But afaict it
-> > should be possible to have fine-grained-randomization and preserve the
-> > workaround in the end.
-> > 
+On Tue, Jan 28, 2020 at 10:49:30AM -0800, Sami Tolvanen wrote:
+> If we detect a corrupted x18, restore the register before jumping back
+> to potentially SCS instrumented code. This is safe, because the wrapper
+> is called with preemption disabled and a separate shadow stack is used
+> for interrupt handling.
 > 
-> the most obvious "solution" is to compile with an alignment of 4 bytes (so tight packing)
-> and then in the randomizer preserve the offset within 32 bytes, no matter what it is
+> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> ---
+>  arch/arm64/kernel/efi-rt-wrapper.S | 11 ++++++++++-
+>  1 file changed, 10 insertions(+), 1 deletion(-)
 > 
-> that would get you an average padding of 16 bytes which is a bit more than now but not too insane
-> (queue Kees' argument that tiny bits of padding are actually good)
-> 
+> diff --git a/arch/arm64/kernel/efi-rt-wrapper.S b/arch/arm64/kernel/efi-rt-wrapper.S
+> index 3fc71106cb2b..6ca6c0dc11a1 100644
+> --- a/arch/arm64/kernel/efi-rt-wrapper.S
+> +++ b/arch/arm64/kernel/efi-rt-wrapper.S
+> @@ -34,5 +34,14 @@ ENTRY(__efi_rt_asm_wrapper)
+>  	ldp	x29, x30, [sp], #32
+>  	b.ne	0f
+>  	ret
+> -0:	b	efi_handle_corrupted_x18	// tail call
+> +0:
+> +	/*
+> +	 * With CONFIG_SHADOW_CALL_STACK, the kernel uses x18 to store a
+> +	 * shadow stack pointer, which we need to restore before returning to
+> +	 * potentially instrumented code. This is safe because the wrapper is
+> +	 * called with preemption disabled and a separate shadow stack is used
+> +	 * for interrupts.
+> +	 */
+> +	mov	x18, x2
+> +	b	efi_handle_corrupted_x18	// tail call
+>  ENDPROC(__efi_rt_asm_wrapper)
 
-With the patchset for adding the mbranches-within-32B-boundaries option,
-the section alignment gets forced to 32. With function-sections that
-means function alignment has to be 32 too.
+Acked-by: Will Deacon <will@kernel.org>
+
+Will
