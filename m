@@ -1,22 +1,22 @@
-Return-Path: <SRS0=dNZ7=36=lists.openwall.com=kernel-hardening-return-17758-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=b9VZ=36=lists.openwall.com=kernel-hardening-return-17759-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B6FA8C35254
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 18:29:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 06052C35254
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 18:31:18 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 10A3920838
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 18:29:56 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5458C20838
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 18:31:17 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="EF8eHmVa"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 10A3920838
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="dZmJEdXy"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5458C20838
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17758-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1288 invoked by uid 550); 10 Feb 2020 18:29:50 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17759-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3308 invoked by uid 550); 10 Feb 2020 18:31:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,28 +24,28 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1258 invoked from network); 10 Feb 2020 18:29:49 -0000
+Received: (qmail 3287 invoked from network); 10 Feb 2020 18:31:10 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1581359377;
-	bh=75Y6o+R2RT1l2imBwb+jNktBnqH/sCmtNtwqXoR4Pes=;
+	s=default; t=1581359458;
+	bh=omPLg79kMPvUSKiyNNvd0/ylILD31wzwomGJPrNGyQg=;
 	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=EF8eHmVaJ5TifBzp1HvD/JNbwlvbm/aA4/9GdfxXGs3EBE23gGR5jRMoWysBmEhEv
-	 bM6+LM746QhXKsuJTk3aLNyym1Qk1hyrZeoazQHonF+iT4ek20ZURTP7yQAWWJKVQT
-	 HDcYXHCPea9x7ocZPOeejOQ7WIoXpvg6lSfHI8Z8=
-X-Gm-Message-State: APjAAAXbsEQ8cFG4891d8unhobDgxul9ZmP9EAKZl17kl4ZNZsjVCxSQ
-	4uHofeoHZao9Q/CdRT5Vbp0XdFwMi9zWsgPS0U95eQ==
-X-Google-Smtp-Source: APXvYqxWu0bxr7kTaxx7yZUgmkxyJ8dLufVkbPuDhZYClHKf5Jt0/P1jTw5e62T+H/SIPu7YOj0kdetnzt7Dw9LkXbw=
-X-Received: by 2002:a5d:4cc9:: with SMTP id c9mr3278410wrt.70.1581359375255;
- Mon, 10 Feb 2020 10:29:35 -0800 (PST)
+	b=dZmJEdXyo7TiCuP494908+DDQqiXuByAFM/5ZYZdUBh1RBbsjG4Nj8BtvNderACDu
+	 buUtqSZaMUtzDuCNulwdaDkgV5kqZL7lno4QgAbQ/lGQBv705tgeTFjmzJtXJCSjQ1
+	 BFRJCZcEs4eVwRoiOiwkJ6JclPVFDKSbcrF3PIR0=
+X-Gm-Message-State: APjAAAUZ0hxqF2fmdEUK6QeYr60+7Vd5p7yYKN4vEgFCKPAL+wJH6glN
+	s3Mcjw16qdCAyCa82K2IFz6q9VbB8l59eAYFTlFVGw==
+X-Google-Smtp-Source: APXvYqzr7b50VDslir7PKIqAsDCapDo139eIqmv/8TM15nWdMYYpgSAHPnXtkGdcaP89mSWD9lXJHS+xhiOGpQ18who=
+X-Received: by 2002:adf:ea85:: with SMTP id s5mr3242839wrm.75.1581359456683;
+ Mon, 10 Feb 2020 10:30:56 -0800 (PST)
 MIME-Version: 1.0
-References: <20200210150519.538333-1-gladkov.alexey@gmail.com> <20200210150519.538333-11-gladkov.alexey@gmail.com>
-In-Reply-To: <20200210150519.538333-11-gladkov.alexey@gmail.com>
+References: <20200210150519.538333-1-gladkov.alexey@gmail.com> <20200210150519.538333-6-gladkov.alexey@gmail.com>
+In-Reply-To: <20200210150519.538333-6-gladkov.alexey@gmail.com>
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 10 Feb 2020 10:29:23 -0800
-X-Gmail-Original-Message-ID: <CALCETrWOXXYy5fo+D0wVBEviyk38ACqvO5Fep_oTEY6+UrS=4g@mail.gmail.com>
-Message-ID: <CALCETrWOXXYy5fo+D0wVBEviyk38ACqvO5Fep_oTEY6+UrS=4g@mail.gmail.com>
-Subject: Re: [PATCH v8 10/11] docs: proc: add documentation for "hidepid=4"
- and "subset=pidfs" options and new mount behavior
+Date: Mon, 10 Feb 2020 10:30:45 -0800
+X-Gmail-Original-Message-ID: <CALCETrVjv04OOdzGNf7sRmRR-KUgY7xdMXA236nHZ1arn0KwVQ@mail.gmail.com>
+Message-ID: <CALCETrVjv04OOdzGNf7sRmRR-KUgY7xdMXA236nHZ1arn0KwVQ@mail.gmail.com>
+Subject: Re: [PATCH v8 05/11] proc: add helpers to set and get proc hidepid
+ and gid mount options
 To: Alexey Gladkov <gladkov.alexey@gmail.com>
 Cc: LKML <linux-kernel@vger.kernel.org>, 
 	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
@@ -64,55 +64,12 @@ Content-Type: text/plain; charset="UTF-8"
 
 On Mon, Feb 10, 2020 at 7:06 AM Alexey Gladkov <gladkov.alexey@gmail.com> wrote:
 >
-> Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
-> ---
->  Documentation/filesystems/proc.txt | 53 ++++++++++++++++++++++++++++++
->  1 file changed, 53 insertions(+)
->
-> diff --git a/Documentation/filesystems/proc.txt b/Documentation/filesystems/proc.txt
-> index 99ca040e3f90..4741fd092f36 100644
-> --- a/Documentation/filesystems/proc.txt
-> +++ b/Documentation/filesystems/proc.txt
-> @@ -50,6 +50,8 @@ Table of Contents
->    4    Configuring procfs
->    4.1  Mount options
->
-> +  5    Filesystem behavior
-> +
->  ------------------------------------------------------------------------------
->  Preface
->  ------------------------------------------------------------------------------
-> @@ -2021,6 +2023,7 @@ The following mount options are supported:
->
->         hidepid=        Set /proc/<pid>/ access mode.
->         gid=            Set the group authorized to learn processes information.
-> +       subset=         Show only the specified subset of procfs.
->
->  hidepid=0 means classic mode - everybody may access all /proc/<pid>/ directories
->  (default).
-> @@ -2042,6 +2045,56 @@ information about running processes, whether some daemon runs with elevated
->  privileges, whether other user runs some sensitive program, whether other users
->  run any program at all, etc.
->
-> +hidepid=4 means that procfs should only contain /proc/<pid>/ directories
-> +that the caller can ptrace.
+> This is a cleaning patch to add helpers to set and get proc mount
+> options instead of directly using them. This make it easy to track
+> what's happening and easy to update in future.
 
-I have a couple of minor nits here.
+On a cursory inspection, this looks like it obfuscates the code, and I
+don't see where it does something useful later in the series.  What is
+this abstraction for?
 
-First, perhaps we could stop using magic numbers and use words.
-hidepid=ptraceable is actually comprehensible, whereas hidepid=4
-requires looking up what '4' means.
-
-Second, there is PTRACE_MODE_ATTACH and PTRACE_MODE_READ.  Which is it?
-
-> +
->  gid= defines a group authorized to learn processes information otherwise
->  prohibited by hidepid=.  If you use some daemon like identd which needs to learn
->  information about processes information, just add identd to this group.
-
-How is this better than just creating an entirely separate mount a
-different hidepid and a different gid owning it?  In any event,
-usually gid= means that this gid is the group owner of inodes.  Let's
-call it something different.  gid_override_hidepid might be credible.
-But it's also really weird -- do different groups really see different
-contents when they read a directory?
+--Andy
