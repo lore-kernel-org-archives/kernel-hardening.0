@@ -1,24 +1,20 @@
-Return-Path: <SRS0=DPcE=36=lists.openwall.com=kernel-hardening-return-17768-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=hR7C=37=lists.openwall.com=kernel-hardening-return-17769-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	UNWANTED_LANGUAGE_BODY,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A078BC35254
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 19:32:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 379FAC352A4
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Feb 2020 01:38:28 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C10B520661
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2020 19:32:17 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="kD5EGiWm"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C10B520661
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17768-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13361 invoked by uid 550); 10 Feb 2020 19:31:19 -0000
+	by mail.kernel.org (Postfix) with SMTP id 683FF2082F
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Feb 2020 01:38:27 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 683FF2082F
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17769-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5686 invoked by uid 550); 11 Feb 2020 01:38:20 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,368 +22,226 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12123 invoked from network); 10 Feb 2020 19:31:16 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=Dy7V9n1SJWAfsimqdnx79gIWJx+OE4CfcWEJjNElzkw=;
-        b=kD5EGiWmI843sCuCafTUWkInv63C7SrnPb5eYa/PNLKeGUkbgs8l0tKEsrbARmFeO3
-         WnDV5WSszUbzwfAhGPPrFN3uYkvvUZgZNfPv/RmgJGj1O3LaHMDNKg2LDgAb2xaw9T6a
-         jtQyquGSSoFjFpvv8I0f9WMF2jMQbyTYs6jqo=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=Dy7V9n1SJWAfsimqdnx79gIWJx+OE4CfcWEJjNElzkw=;
-        b=IbqiZLoey5083EyI8tDjCDM/e3mgov4bqsuuVO38vGHv4lklF/rxyJmKzp7x8+u1lL
-         UO/TsJ7tN5Kv64ZCn4VXWjbXXIqO8lrhXZHyKH6yHiID+awy/er1CsZVDcrZHVNQyi0b
-         CzeKZ7OLBRgCoZF6WrW6SG1udCNP7/hdUZGYwKV20JVVGzxmUAWfpXLxRmbtxy16TG3Q
-         tZL4FlywTHACcMoTUMRpOVBsaa7MndkjmiIfbr4h2mrlr4PVRUSl0ASkXJfWLKShdyva
-         GX5ID1vYUiFcGaaz/E0u+E14R5YK/bER8aDPTvcldG93CiIhBQUDo7/ooX8SJnCXnPeV
-         dtfQ==
-X-Gm-Message-State: APjAAAVWRAOmSZD2WXh1+/Qz7VAd8RELFtX3C1Y0AxbE7ISIFDRnfypL
-	RzzmIi9uqmENTVOwte3wwj6oow==
-X-Google-Smtp-Source: APXvYqytQ6Tq8ED/M4IZzD6H8znkZODeLSYS85Lxv1Mg2ykDKGTymMbliK1RJrYqSv3Cgm5yBLjtiw==
-X-Received: by 2002:a9d:5a09:: with SMTP id v9mr2153543oth.214.1581363064328;
-        Mon, 10 Feb 2020 11:31:04 -0800 (PST)
-From: Kees Cook <keescook@chromium.org>
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>,
-	Hector Marco-Gisbert <hecmargi@upv.es>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Will Deacon <will.deacon@arm.com>,
-	Jason Gunthorpe <jgg@mellanox.com>,
-	Jann Horn <jannh@google.com>,
-	Russell King <linux@armlinux.org.uk>,
-	x86@kernel.org,
-	kernel-hardening@lists.openwall.com,
-	linux-arm-kernel@lists.infradead.org,
-	linux-kernel@vger.kernel.org,
-	linux-kselftest@vger.kernel.org
-Subject: [PATCH v3 7/7] selftests/exec: Add READ_IMPLIES_EXEC tests
-Date: Mon, 10 Feb 2020 11:30:49 -0800
-Message-Id: <20200210193049.64362-8-keescook@chromium.org>
-X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200210193049.64362-1-keescook@chromium.org>
-References: <20200210193049.64362-1-keescook@chromium.org>
+Received: (qmail 5646 invoked from network); 11 Feb 2020 01:38:19 -0000
+From: ebiederm@xmission.com (Eric W. Biederman)
+To: Alexey Gladkov <gladkov.alexey@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexander Viro <viro@zeniv.linux.org.uk>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,  Oleg Nesterov <oleg@redhat.com>,  Solar Designer <solar@openwall.com>
+References: <20200210150519.538333-1-gladkov.alexey@gmail.com>
+	<20200210150519.538333-8-gladkov.alexey@gmail.com>
+Date: Mon, 10 Feb 2020 19:36:08 -0600
+In-Reply-To: <20200210150519.538333-8-gladkov.alexey@gmail.com> (Alexey
+	Gladkov's message of "Mon, 10 Feb 2020 16:05:15 +0100")
+Message-ID: <87v9odlxbr.fsf@x220.int.ebiederm.org>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain
+X-XM-SPF: eid=1j1KV0-0008DW-MA;;;mid=<87v9odlxbr.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX19U7B4KhHh4/SgwTHfxXMZZMQO4jwEBNUA=
+X-SA-Exim-Connect-IP: 68.227.160.95
+X-SA-Exim-Mail-From: ebiederm@xmission.com
+Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs instances
+X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
+X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
 
-In order to check the matrix of possible states for handling
-READ_IMPLIES_EXEC across native, compat, and the state of PT_GNU_STACK,
-add tests for these execution conditions.
+Alexey Gladkov <gladkov.alexey@gmail.com> writes:
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- tools/testing/selftests/exec/Makefile         |  42 +++++-
- .../selftests/exec/read_implies_exec.c        | 121 ++++++++++++++++++
- .../selftests/exec/strip-gnu-stack-bits.c     |  34 +++++
- .../testing/selftests/exec/strip-gnu-stack.c  |  69 ++++++++++
- 4 files changed, 265 insertions(+), 1 deletion(-)
- create mode 100644 tools/testing/selftests/exec/read_implies_exec.c
- create mode 100644 tools/testing/selftests/exec/strip-gnu-stack-bits.c
- create mode 100644 tools/testing/selftests/exec/strip-gnu-stack.c
+> This allows to flush dcache entries of a task on multiple procfs mounts
+> per pid namespace.
+>
+> The RCU lock is used because the number of reads at the task exit time
+> is much larger than the number of procfs mounts.
 
-diff --git a/tools/testing/selftests/exec/Makefile b/tools/testing/selftests/exec/Makefile
-index 33339e31e365..085d0e4422ea 100644
---- a/tools/testing/selftests/exec/Makefile
-+++ b/tools/testing/selftests/exec/Makefile
-@@ -10,7 +10,19 @@ TEST_FILES := Makefile
- 
- TEST_GEN_PROGS += recursion-depth
- 
--EXTRA_CLEAN := $(OUTPUT)/subdir.moved $(OUTPUT)/execveat.moved $(OUTPUT)/xxxxx*
-+TEST_GEN_FILES += strip-gnu-stack
-+TEST_GEN_PROGS += rie-nx-gnu-stack rie-x-gnu-stack rie-missing-gnu-stack
-+
-+# While it would be nice to not build "compat" binaries on 32-bit builders,
-+# there's no harm: they're just redundant to the native binaries, so skip
-+# performing any detection for now, as it gets complex quickly.
-+TEST_GEN_PROGS += rie-compat-nx-gnu-stack \
-+		  rie-compat-x-gnu-stack \
-+		  rie-compat-missing-gnu-stack
-+
-+EXTRA_CLEAN := $(OUTPUT)/subdir.moved $(OUTPUT)/execveat.moved \
-+		$(OUTPUT)/rie-*.new \
-+		$(OUTPUT)/xxxxx*
- 
- include ../lib.mk
- 
-@@ -26,3 +38,31 @@ $(OUTPUT)/execveat.denatured: $(OUTPUT)/execveat
- 	cp $< $@
- 	chmod -x $@
- 
-+$(OUTPUT)/strip-gnu-stack: strip-gnu-stack.c strip-gnu-stack-bits.c
-+	$(CC) $(CFLAGS) -o $@ $<
-+
-+$(OUTPUT)/rie-nx-gnu-stack: read_implies_exec.c
-+	$(CC) $(CFLAGS) -Wl,-z,noexecstack -o $@.new $<
-+	readelf -Wl $@.new | grep GNU_STACK | grep -q 'RW ' && \
-+	mv $@.new $@
-+$(OUTPUT)/rie-x-gnu-stack: read_implies_exec.c
-+	$(CC) $(CFLAGS) -Wl,-z,execstack -o $@.new $<
-+	readelf -Wl $@.new | grep GNU_STACK | grep -q 'RWE' && \
-+	mv $@.new $@
-+$(OUTPUT)/rie-missing-gnu-stack: read_implies_exec.c $(OUTPUT)/strip-gnu-stack
-+	$(CC) $(CFLAGS) -o $@.new $<
-+	$(OUTPUT)/strip-gnu-stack $@.new && \
-+	mv $@.new $@
-+
-+$(OUTPUT)/rie-compat-nx-gnu-stack: read_implies_exec.c
-+	$(CC) -m32 $(CFLAGS) -Wl,-z,noexecstack -o $@.new $<
-+	readelf -Wl $@.new | grep GNU_STACK | grep -q 'RW ' && \
-+	mv $@.new $@
-+$(OUTPUT)/rie-compat-x-gnu-stack: read_implies_exec.c
-+	$(CC) -m32 $(CFLAGS) -Wl,-z,execstack -o $@.new $<
-+	readelf -Wl $@.new | grep GNU_STACK | grep -q 'RWE' && \
-+	mv $@.new $@
-+$(OUTPUT)/rie-compat-missing-gnu-stack: read_implies_exec.c $(OUTPUT)/strip-gnu-stack
-+	$(CC) -m32 $(CFLAGS) -o $@.new $<
-+	$(OUTPUT)/strip-gnu-stack $@.new && \
-+	mv $@.new $@
-diff --git a/tools/testing/selftests/exec/read_implies_exec.c b/tools/testing/selftests/exec/read_implies_exec.c
-new file mode 100644
-index 000000000000..4b253a84dd27
---- /dev/null
-+++ b/tools/testing/selftests/exec/read_implies_exec.c
-@@ -0,0 +1,121 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/*
-+ * This just examines a PROT_READ mapping to report if it see it gain
-+ * PROT_EXEC too (which means that READ_IMPLIES_EXEC has been enabled).
-+ */
-+#include <stdint.h>
-+#include <stdio.h>
-+#include <stdlib.h>
-+#include <string.h>
-+#include <unistd.h>
-+#include <sys/mman.h>
-+#include <sys/types.h>
-+
-+const char maps_path[] = "/proc/self/maps";
-+
-+int main(int argc, char *argv[])
-+{
-+	char maps_line[1024];
-+	FILE *maps;
-+	void *region;
-+	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
-+	int ret = -1;
-+	int perms = -1;
-+	int vma_64bit;
-+
-+	region = mmap(NULL, getpagesize(), PROT_READ, flags, -1, 0);
-+	if (region == MAP_FAILED) {
-+		perror("mmap");
-+		return 128;
-+	}
-+	maps = fopen(maps_path, "r");
-+	if (!maps) {
-+		perror(maps_path);
-+		ret = 127;
-+		goto out_munmap;
-+	}
-+
-+	memset(maps_line, 0, sizeof(maps_line));
-+	while (fgets(maps_line, sizeof(maps_line), maps)) {
-+		unsigned long long low, high;
-+		char *end;
-+
-+		low = strtoull(maps_line, &end, 16);
-+		if (*end != '-') {
-+			fprintf(stderr, "Missing '-' separator, line: %s",
-+				maps_line);
-+			ret = 126;
-+			goto out_close;
-+		}
-+		end++;
-+
-+		high = strtoull(end, &end, 16);
-+		if (*end != ' ') {
-+			fprintf(stderr, "Missing ' ' separator, line: %s",
-+				maps_line);
-+			ret = 125;
-+			goto out_close;
-+		}
-+		end++;
-+
-+		if ((uintptr_t)region >= low && (uintptr_t)region < high) {
-+			perms = 0;
-+			perms |= end[0] == 'r' ? PROT_READ : 0;
-+			perms |= end[1] == 'w' ? PROT_WRITE : 0;
-+			perms |= end[2] == 'x' ? PROT_EXEC : 0;
-+
-+			break;
-+		}
-+	}
-+	if (perms == -1) {
-+		fprintf(stderr, "Could not find mmap region\n");
-+		ret = 124;
-+		goto out_close;
-+	}
-+
-+	vma_64bit = sizeof(void *) == 8;
-+	fprintf(stderr, "%s-bit, ", vma_64bit ? "64" : "32");
-+
-+	ret = 1;
-+	if (strstr(argv[0], "missing-gnu-stack")) {
-+		fprintf(stderr, "missing-gnu-stack, ");
-+
-+		/* Missing PT_GNU_STACK on 64-bit: not READ_IMPLIES_EXEC */
-+		if (vma_64bit && (perms & PROT_EXEC) == 0)
-+			ret = 0;
-+		/* Missing PT_GNU_STACK on 32-bit enables READ_IMPLIES_EXEC */
-+		if (!vma_64bit && (perms & PROT_EXEC) == PROT_EXEC)
-+			ret = 0;
-+	} else if (strstr(argv[0], "x-gnu-stack")) {
-+		fprintf(stderr, "executable gnu-stack, ");
-+
-+		/* X PT_GNU_STACK should always leave READ_IMPLIES_EXEC off */
-+		if ((perms & PROT_EXEC) == 0)
-+			ret = 0;
-+	} else if (strstr(argv[0], "nx-gnu-stack")) {
-+		fprintf(stderr, "non-executable PT_GNU_STACK, ");
-+
-+		/* NX PT_GNU_STACK should always leave READ_IMPLIES_EXEC off */
-+		if ((perms & PROT_EXEC) == 0)
-+			ret = 0;
-+	} else {
-+		fprintf(stderr, "Unknown invocation\n");
-+		ret = 123;
-+		goto out_close;
-+	}
-+
-+	fprintf(stderr, "READ_IMPLIES_EXEC is %s: ",
-+		(perms & PROT_EXEC) ? "on" : "off");
-+
-+	if (ret)
-+		fprintf(stderr, "FAIL: %s", maps_line);
-+	else
-+		fprintf(stderr, "ok\n");
-+
-+out_close:
-+	fclose(maps);
-+out_munmap:
-+	munmap(region, getpagesize());
-+
-+	return ret;
-+}
-diff --git a/tools/testing/selftests/exec/strip-gnu-stack-bits.c b/tools/testing/selftests/exec/strip-gnu-stack-bits.c
-new file mode 100644
-index 000000000000..907e959c3477
---- /dev/null
-+++ b/tools/testing/selftests/exec/strip-gnu-stack-bits.c
-@@ -0,0 +1,34 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/*
-+ * word-size agnostic routines to scan ELF program headers for PT_GNU_STACK
-+ * and rewrite it as PT_NULL to emulate old toolchains that did not include
-+ * the PT_GNU_STACK program header.
-+ */
-+
-+int strip_bits(char *elf, size_t size)
-+{
-+	unsigned int i;
-+	Elf_Ehdr *eh;
-+
-+	eh = (Elf_Ehdr *)elf;
-+	if (sizeof(*eh) > size) {
-+		fprintf(stderr, "Elf Header too small\n");
-+		return 124;
-+	}
-+
-+	for (i = 0; i < eh->e_phnum; i++) {
-+		Elf_Phdr *ph = (Elf_Phdr *)(elf + (eh->e_phoff + eh->e_phentsize * i));
-+
-+		if (ph->p_type == PT_GNU_STACK) {
-+			ph->p_type = PT_NULL;
-+			return 0;
-+		}
-+	}
-+
-+	fprintf(stderr, "PT_GNU_STACK missing\n");
-+	return 123;
-+}
-+
-+#undef strip_bits
-+#undef Elf_Ehdr
-+#undef Elf_Phdr
-diff --git a/tools/testing/selftests/exec/strip-gnu-stack.c b/tools/testing/selftests/exec/strip-gnu-stack.c
-new file mode 100644
-index 000000000000..529e60cf0e6e
---- /dev/null
-+++ b/tools/testing/selftests/exec/strip-gnu-stack.c
-@@ -0,0 +1,69 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/* Converts an ELF's PT_GNU_STACK program header to PT_NULL. */
-+#include <elf.h>
-+#include <fcntl.h>
-+#include <stddef.h>
-+#include <stdio.h>
-+#include <string.h>
-+#include <unistd.h>
-+#include <sys/mman.h>
-+#include <sys/stat.h>
-+#include <sys/types.h>
-+
-+#define strip_bits	strip64
-+#define Elf_Ehdr	Elf64_Ehdr
-+#define Elf_Phdr	Elf64_Phdr
-+#include "strip-gnu-stack-bits.c"
-+
-+#define strip_bits	strip32
-+#define Elf_Ehdr	Elf32_Ehdr
-+#define Elf_Phdr	Elf32_Phdr
-+#include "strip-gnu-stack-bits.c"
-+
-+int strip(char *elf, size_t size)
-+{
-+	if (size < 4 || elf[0] != '\x7f' || strncmp(elf + 1, "ELF", 3) != 0) {
-+		fprintf(stderr, "Not an ELF file\n");
-+		return 128;
-+	}
-+	switch (elf[EI_CLASS]) {
-+	case ELFCLASS64:
-+		return strip64(elf, size);
-+	case ELFCLASS32:
-+		return strip32(elf, size);
-+	default:
-+		fprintf(stderr, "Unknown EI_CLASS: 0x%02x\n", elf[EI_CLASS]);
-+		return 127;
-+	}
-+}
-+
-+int main(int argc, char *argv[])
-+{
-+	int fd, ret;
-+	struct stat info;
-+	char *elf;
-+
-+	fd = open(argv[1], O_RDWR);
-+	if (fd < 0) {
-+		perror(argv[1]);
-+		return 1;
-+	}
-+
-+	if (fstat(fd, &info)) {
-+		perror(argv[1]);
-+		return 2;
-+	}
-+
-+	elf = mmap(NULL, info.st_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-+		   fd, 0);
-+	if (elf == MAP_FAILED) {
-+		perror(argv[1]);
-+		return 3;
-+	}
-+
-+	ret = strip(elf, info.st_size);
-+
-+	munmap(elf, info.st_size);
-+	close(fd);
-+	return ret;
-+}
--- 
-2.20.1
+A couple of quick comments.
 
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Andy Lutomirski <luto@kernel.org>
+> Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+> Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+> Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+> ---
+>  fs/proc/base.c                | 20 +++++++++++++++-----
+>  fs/proc/root.c                | 27 ++++++++++++++++++++++++++-
+>  include/linux/pid_namespace.h |  2 ++
+>  include/linux/proc_fs.h       |  2 ++
+>  4 files changed, 45 insertions(+), 6 deletions(-)
+>
+> diff --git a/fs/proc/base.c b/fs/proc/base.c
+> index 4ccb280a3e79..24b7c620ded3 100644
+> --- a/fs/proc/base.c
+> +++ b/fs/proc/base.c
+> @@ -3133,7 +3133,7 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
+>  	.permission	= proc_pid_permission,
+>  };
+>  
+> -static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+> +static void proc_flush_task_mnt_root(struct dentry *mnt_root, pid_t pid, pid_t tgid)
+Perhaps just rename things like:
+> +static void proc_flush_task_root(struct dentry *root, pid_t pid, pid_t tgid)
+>  {
+
+I don't think the mnt_ prefix conveys any information, and it certainly
+makes everything longer and more cumbersome.
+
+>  	struct dentry *dentry, *leader, *dir;
+>  	char buf[10 + 1];
+> @@ -3142,7 +3142,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+>  	name.name = buf;
+>  	name.len = snprintf(buf, sizeof(buf), "%u", pid);
+>  	/* no ->d_hash() rejects on procfs */
+> -	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
+> +	dentry = d_hash_and_lookup(mnt_root, &name);
+>  	if (dentry) {
+>  		d_invalidate(dentry);
+>  		dput(dentry);
+> @@ -3153,7 +3153,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+>  
+>  	name.name = buf;
+>  	name.len = snprintf(buf, sizeof(buf), "%u", tgid);
+> -	leader = d_hash_and_lookup(mnt->mnt_root, &name);
+> +	leader = d_hash_and_lookup(mnt_root, &name);
+>  	if (!leader)
+>  		goto out;
+>  
+> @@ -3208,14 +3208,24 @@ void proc_flush_task(struct task_struct *task)
+>  	int i;
+>  	struct pid *pid, *tgid;
+>  	struct upid *upid;
+> +	struct dentry *mnt_root;
+> +	struct proc_fs_info *fs_info;
+>  
+>  	pid = task_pid(task);
+>  	tgid = task_tgid(task);
+>  
+>  	for (i = 0; i <= pid->level; i++) {
+>  		upid = &pid->numbers[i];
+> -		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
+> -					tgid->numbers[i].nr);
+> +
+> +		rcu_read_lock();
+> +		list_for_each_entry_rcu(fs_info, &upid->ns->proc_mounts, pidns_entry) {
+> +			mnt_root = fs_info->m_super->s_root;
+> +			proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+> +		}
+> +		rcu_read_unlock();
+> +
+> +		mnt_root = upid->ns->proc_mnt->mnt_root;
+> +		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+
+I don't think this following of proc_mnt is needed.  It certainly
+shouldn't be.  The loop through all of the super blocks should be
+enough.
+
+Once this change goes through.  UML can be given it's own dedicated
+proc_mnt for the initial pid namespace, and proc_mnt can be removed
+entirely.
+
+Unless something has changed recently UML is the only other user of
+pid_ns->proc_mnt.  That proc_mnt really only exists to make the loop in
+proc_flush_task easy to write.
+
+It also probably makes sense to take the rcu_read_lock() over
+that entire for loop.
+
+
+>  	}
+>  }
+>  
+> diff --git a/fs/proc/root.c b/fs/proc/root.c
+> index 5d5cba4c899b..e2bb015da1a8 100644
+> --- a/fs/proc/root.c
+> +++ b/fs/proc/root.c
+> @@ -149,7 +149,22 @@ static int proc_fill_super(struct super_block *s, struct fs_context *fc)
+>  	if (ret) {
+>  		return ret;
+>  	}
+> -	return proc_setup_thread_self(s);
+> +
+> +	ret = proc_setup_thread_self(s);
+> +	if (ret) {
+> +		return ret;
+> +	}
+> +
+> +	/*
+> +	 * back reference to flush dcache entries at process exit time.
+> +	 */
+> +	ctx->fs_info->m_super = s;
+> +
+> +	spin_lock(&pid_ns->proc_mounts_lock);
+> +	list_add_tail_rcu(&ctx->fs_info->pidns_entry, &pid_ns->proc_mounts);
+> +	spin_unlock(&pid_ns->proc_mounts_lock);
+> +
+> +	return 0;
+>  }
+>  
+>  static int proc_reconfigure(struct fs_context *fc)
+> @@ -211,10 +226,17 @@ static void proc_kill_sb(struct super_block *sb)
+>  {
+>  	struct proc_fs_info *fs_info = proc_sb_info(sb);
+>  
+> +	spin_lock(&fs_info->pid_ns->proc_mounts_lock);
+> +	list_del_rcu(&fs_info->pidns_entry);
+> +	spin_unlock(&fs_info->pid_ns->proc_mounts_lock);
+> +
+> +	synchronize_rcu();
+> +
+
+Rather than a heavyweight synchronize_rcu here,
+it probably makes sense to instead to change
+
+	kfree(fs_info)
+to
+	kfree_rcu(fs_info, some_rcu_head_in_fs_info)
+
+Or possibly doing a full call_rcu.
+
+The problem is that synchronize_rcu takes about 10ms when HZ=100.
+Which makes synchronize_rcu incredibly expensive on any path where
+anything can wait for it.
+
+>  	if (fs_info->proc_self)
+>  		dput(fs_info->proc_self);
+>  	if (fs_info->proc_thread_self)
+>  		dput(fs_info->proc_thread_self);
+> +
+>  	kill_anon_super(sb);
+>  	put_pid_ns(fs_info->pid_ns);
+>  	kfree(fs_info);
+> @@ -336,6 +358,9 @@ int pid_ns_prepare_proc(struct pid_namespace *ns)
+>  		ctx->fs_info->pid_ns = ns;
+>  	}
+>  
+> +	spin_lock_init(&ns->proc_mounts_lock);
+> +	INIT_LIST_HEAD_RCU(&ns->proc_mounts);
+> +
+>  	mnt = fc_mount(fc);
+>  	put_fs_context(fc);
+>  	if (IS_ERR(mnt))
+> diff --git a/include/linux/pid_namespace.h b/include/linux/pid_namespace.h
+> index 66f47f1afe0d..c36af1dfd862 100644
+> --- a/include/linux/pid_namespace.h
+> +++ b/include/linux/pid_namespace.h
+> @@ -26,6 +26,8 @@ struct pid_namespace {
+>  	struct pid_namespace *parent;
+>  #ifdef CONFIG_PROC_FS
+>  	struct vfsmount *proc_mnt; /* Internal proc mounted during each new pidns */
+> +	spinlock_t proc_mounts_lock;
+> +	struct list_head proc_mounts; /* list of separated procfs mounts */
+>  #endif
+>  #ifdef CONFIG_BSD_PROCESS_ACCT
+>  	struct fs_pin *bacct;
+> diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
+> index 5f0b1b7e4271..f307940f8311 100644
+> --- a/include/linux/proc_fs.h
+> +++ b/include/linux/proc_fs.h
+> @@ -20,6 +20,8 @@ enum {
+>  };
+>  
+>  struct proc_fs_info {
+> +	struct list_head pidns_entry;    /* Node in procfs_mounts of a pidns */
+> +	struct super_block *m_super;
+>  	struct pid_namespace *pid_ns;
+>  	struct dentry *proc_self;        /* For /proc/self */
+>  	struct dentry *proc_thread_self; /* For /proc/thread-self */
+
+
+Eric
