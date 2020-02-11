@@ -1,23 +1,20 @@
-Return-Path: <SRS0=MviN=37=lists.openwall.com=kernel-hardening-return-17775-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ToMb=37=lists.openwall.com=kernel-hardening-return-17776-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 89525C352A3
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Feb 2020 12:39:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BBEC0C3B186
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Feb 2020 13:57:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DD25C206DB
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Feb 2020 12:39:57 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="2V2oxVmA"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DD25C206DB
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17775-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1161 invoked by uid 550); 11 Feb 2020 12:39:51 -0000
+	by mail.kernel.org (Postfix) with SMTP id 22F572086A
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Feb 2020 13:57:46 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 22F572086A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=arm.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17776-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7301 invoked by uid 550); 11 Feb 2020 13:57:40 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,186 +22,67 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1138 invoked from network); 11 Feb 2020 12:39:50 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1581424778;
-	bh=kzLCgKTPkI+N6fyK0lx70rE29ThRwi68n5bZdG+YZWU=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=2V2oxVmA3ZU9a3hXs6yXvGpPxs249Jihi0gD1I+npFyX5WLNIBfkEiWnv+t6HTIsq
-	 alLzC957QPlWyp7aJSFqZnxFabvuVMly0YqQHOsvF1W2x+m3S8AOba6/o9VdNFMHFa
-	 BQnWtgzovTJpLev0wCvkAr5HrszBO0shgMuryLYc=
-Date: Tue, 11 Feb 2020 13:39:32 +0100
-From: Jessica Yu <jeyu@kernel.org>
-To: Kees Cook <keescook@chromium.org>
-Cc: Kristen Carlson Accardi <kristen@linux.intel.com>, tglx@linutronix.de,
-	mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
-	arjan@linux.intel.com, rick.p.edgecombe@intel.com, x86@kernel.org,
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Subject: Re: [RFC PATCH 10/11] module: Reorder functions
-Message-ID: <20200211123932.GA29598@linux-8ccs>
-References: <20200205223950.1212394-1-kristen@linux.intel.com>
- <20200205223950.1212394-11-kristen@linux.intel.com>
- <202002060440.E7ED91B@keescook>
+Received: (qmail 7281 invoked from network); 11 Feb 2020 13:57:39 -0000
+Subject: Re: [PATCH v7 00/11] add support for Clang's Shadow Call Stack
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>,
+ Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu
+ <mhiramat@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+ Mark Rutland <mark.rutland@arm.com>, Dave Martin <Dave.Martin@arm.com>,
+ Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>,
+ Marc Zyngier <maz@kernel.org>, Nick Desaulniers <ndesaulniers@google.com>,
+ Jann Horn <jannh@google.com>, Miguel Ojeda
+ <miguel.ojeda.sandonis@gmail.com>,
+ Masahiro Yamada <yamada.masahiro@socionext.com>,
+ clang-built-linux@googlegroups.com, kernel-hardening@lists.openwall.com,
+ linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20200128184934.77625-1-samitolvanen@google.com>
+From: James Morse <james.morse@arm.com>
+Message-ID: <63517cff-4bd6-bb6c-9a54-23de4f5fbb4a@arm.com>
+Date: Tue, 11 Feb 2020 13:57:24 +0000
+User-Agent: Mozilla/5.0 (X11; Linux aarch64; rv:60.0) Gecko/20100101
+ Thunderbird/60.9.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii; format=flowed
-Content-Disposition: inline
-In-Reply-To: <202002060440.E7ED91B@keescook>
-X-OS: Linux linux-8ccs 4.12.14-lp150.12.61-default x86_64
-User-Agent: Mutt/1.10.1 (2018-07-13)
+In-Reply-To: <20200128184934.77625-1-samitolvanen@google.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-GB
+Content-Transfer-Encoding: 7bit
 
-+++ Kees Cook [06/02/20 04:41 -0800]:
->On Wed, Feb 05, 2020 at 02:39:49PM -0800, Kristen Carlson Accardi wrote:
->> If a module has functions split out into separate text sections
->> (i.e. compiled with the -ffunction-sections flag), reorder the
->> functions to provide some code diversification to modules.
->>
->> Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
->
->Probably a good idea to add Jessica to CC in next version:
->	Jessica Yu <jeyu@kernel.org>
+Hi Sami,
 
-Thanks :)
+On 28/01/2020 18:49, Sami Tolvanen wrote:
+> This patch series adds support for Clang's Shadow Call Stack
+> (SCS) mitigation, which uses a separately allocated shadow stack
+> to protect against return address overwrites. More information
+> can be found here:
+> 
+>   https://clang.llvm.org/docs/ShadowCallStack.html
+> 
+> SCS provides better protection against traditional buffer
+> overflows than CONFIG_STACKPROTECTOR_*, but it should be noted
+> that SCS security guarantees in the kernel differ from the ones
+> documented for user space. The kernel must store addresses of
+> shadow stacks used by inactive tasks and interrupt handlers in
+> memory, which means an attacker capable reading and writing
+> arbitrary memory may be able to locate them and hijack control
+> flow by modifying shadow stacks that are not currently in use.
+> 
+> SCS is currently supported only on arm64, where the compiler
+> requires the x18 register to be reserved for holding the current
+> task's shadow stack pointer.
 
->Reviewed-by: Kees Cook <keescook@chromium.org>
->
->-Kees
->
->> ---
->>  kernel/module.c | 85 +++++++++++++++++++++++++++++++++++++++++++++++++
->>  1 file changed, 85 insertions(+)
->>
->> diff --git a/kernel/module.c b/kernel/module.c
->> index b56f3224b161..231563e95e61 100644
->> --- a/kernel/module.c
->> +++ b/kernel/module.c
->> @@ -53,6 +53,8 @@
->>  #include <linux/bsearch.h>
->>  #include <linux/dynamic_debug.h>
->>  #include <linux/audit.h>
->> +#include <linux/random.h>
->> +#include <asm/setup.h>
->>  #include <uapi/linux/module.h>
->>  #include "module-internal.h"
->>
->> @@ -3245,6 +3247,87 @@ static int find_module_sections(struct module *mod, struct load_info *info)
->>  	return 0;
->>  }
->>
->> +/*
->> + * shuffle_text_list()
->> + * Use a Fisher Yates algorithm to shuffle a list of text sections.
->> + */
->> +static void shuffle_text_list(Elf_Shdr **list, int size)
->> +{
->> +	int i;
->> +	unsigned int j;
->> +	Elf_Shdr *temp;
->> +
->> +	for (i = size - 1; i > 0; i--) {
->> +		/*
->> +		 * TBD - seed. We need to be able to use a known
->> +		 * seed so that we can non-randomly randomize for
->> +		 * debugging.
->> +		 */
->> +
->> +		// pick a random index from 0 to i
->> +		get_random_bytes(&j, sizeof(j));
->> +		j = j % (i + 1);
->> +
->> +		temp = list[i];
->> +		list[i] = list[j];
->> +		list[j] = temp;
->> +	}
->> +}
->> +
->> +/*
->> + * randomize_text()
->> + * Look through the core section looking for executable code sections.
->> + * Store sections in an array and then shuffle the sections
->> + * to reorder the functions.
->> + */
->> +static void randomize_text(struct module *mod, struct load_info *info)
->> +{
->> +	int i;
->> +	int num_text_sections = 0;
->> +	Elf_Shdr **text_list;
->> +	int size = 0;
->> +	int max_sections = info->hdr->e_shnum;
->> +	unsigned int sec = find_sec(info, ".text");
->> +
->> +	if (!IS_ENABLED(CONFIG_FG_KASLR) || !kaslr_enabled())
->> +		return;
+I found I had to add:
+| KBUILD_CFLAGS := $(filter-out -ffixed-x18 $(CC_FLAGS_SCS), $(KBUILD_CFLAGS))
 
-Maybe put this conditional before the call to randomize_text() in
-move_module()? Just for code readability reasons (i.e., we only call
-randomize_text() when CONFIG_FG_KASLR || kaslr_enabled()). But this is
-just a matter of preference.
+to drivers/firmware/efi/libstub/Makefile, to get this going.
+I don't think there is much point supporting SCS for the EFIstub, its already isolated
+from the rest of the kernel's C code by the __efistub symbol prefix machinery, and trying
+to use it would expose us to buggy firmware at a point we can't handle it!
 
->> +
->> +	if (sec == 0)
->> +		return;
->> +
->> +	text_list = kmalloc_array(max_sections, sizeof(*text_list), GFP_KERNEL);
->> +	if (text_list == NULL)
->> +		return;
->> +
->> +	for (i = 0; i < max_sections; i++) {
->> +		Elf_Shdr *shdr = &info->sechdrs[i];
->> +		const char *sname = info->secstrings + shdr->sh_name;
->> +
->> +		if (!(shdr->sh_flags & SHF_ALLOC) ||
->> +		    !(shdr->sh_flags & SHF_EXECINSTR) ||
->> +		    strstarts(sname, ".init"))
->> +			continue;
->> +
->> +		text_list[num_text_sections] = shdr;
->> +		num_text_sections++;
->> +	}
->> +
->> +	shuffle_text_list(text_list, num_text_sections);
->> +
->> +	for (i = 0; i < num_text_sections; i++) {
->> +		Elf_Shdr *shdr = text_list[i];
->> +		unsigned int infosec;
->> +		const char *sname;
->> +
->> +		sname = info->secstrings + shdr->sh_name;
-
-sname doesn't appear to be used after this (?)
-
->> +		infosec	= shdr->sh_info;
->> +
->> +		shdr->sh_entsize = get_offset(mod, &size, shdr, infosec);
-
-get_offset() expects a section index as the last argument, but sh_info
-is 0 for text sections (SHT_PROGBITS). It's really only used in
-arch_mod_section_prepend() though, which is only defined for parisc.
-We could perhaps save the section index in sh_info in the previous for
-loop (hacky, I have to double check if this is actually safe, but it
-seems sh_info only has signficance for SHT_REL* and SHT_SYMTAB
-sections).
-
->> +	}
->> +
->> +	kfree(text_list);
->> +}
->> +
->>  static int move_module(struct module *mod, struct load_info *info)
->>  {
->>  	int i;
->> @@ -3282,6 +3365,8 @@ static int move_module(struct module *mod, struct load_info *info)
->>  	} else
->>  		mod->init_layout.base = NULL;
->>
->> +	randomize_text(mod, info);
-
-Hm, I wonder if we should not incorporate the randomize_text() logic into
-layout_sections() instead of move_module(), since logically speaking
-layout_sections() determines all the section offsets and stores them
-in sh_entsize, whereas move_module() does all the allocations and
-copying to final destination. Just a thought.
+I can send a patch if its easier for you,
 
 
-Thanks!
+Thanks,
 
-Jessica
+James
