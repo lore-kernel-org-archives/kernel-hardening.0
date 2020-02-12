@@ -1,22 +1,23 @@
-Return-Path: <SRS0=+kmZ=4A=lists.openwall.com=kernel-hardening-return-17805-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ixzM=4A=lists.openwall.com=kernel-hardening-return-17806-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DB78EC352A4
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 20:42:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0DBBEC352A4
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 20:59:53 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 32B8621734
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 20:42:46 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5EE70206D7
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 20:59:52 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux-foundation.org header.i=@linux-foundation.org header.b="IgiKGasr"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 32B8621734
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-foundation.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17805-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3445 invoked by uid 550); 12 Feb 2020 20:42:41 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="hqtkQWWM"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5EE70206D7
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17806-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17559 invoked by uid 550); 12 Feb 2020 20:59:46 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,75 +25,94 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3422 invoked from network); 12 Feb 2020 20:42:41 -0000
+Received: (qmail 17539 invoked from network); 12 Feb 2020 20:59:45 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linux-foundation.org; s=google;
+        d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=bqyVLATGO6MwZ1NPxpHKDD7nGLBCP8OMxbpMcz0c8xI=;
-        b=IgiKGasrvpx5KEqTjK3uSOaiUPZJr6oQaxEeiUKRSC7Mzut+kfrtuMYf7JfgJYo2j9
-         r6YHIpl0Oomh/U1TMzjQtQYQDvEFopln06zrn/G9JdYxAN1cr+G4MM7V+yIgIdgHmkT5
-         mB2IAKAHrGr3Dq04+09yh6iga9CCs4Dv6Lzfk=
+        bh=dNT84lBczGzzOgb9OnM5Fdxg6SAeViGOzJlzxW7UwtM=;
+        b=hqtkQWWMamX0OQO403fEmerDtGachsfSTpAQbGxOovOjrH4I6JJGU7ulCB6ab4JoT3
+         KAyC6liLk8dJENInpS9tXLd0C/e4cO0xsfrq3v5JmxMDWdQPH4RtbIyUaPUEmFFncsnu
+         NTRkAxc5qKDuK8ZfwFSsDYyfi27+i3eqlWyAZMw88Gui9+TfOwUOVnUpQC+aVOuJacyq
+         8T1BF/3aw0pTkYZ2HCojO8/QDLI6PFgcL/LPPiCxdXK9F4wYD6vIQ7uMQfgPEsyj2YE5
+         xyfVe+8nvsIELQ09/BO6sp4lG11/JqoDsbV7KjcyH1H3MR+bLO9ZJQVegNEKcfhvaktJ
+         6iJg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=bqyVLATGO6MwZ1NPxpHKDD7nGLBCP8OMxbpMcz0c8xI=;
-        b=tW9cyO4RSEO6xui7u6ZcbSrO2odfi8dzAcvAw9emES5P0Ub3MeChgRm5m3/0dSpFDB
-         AJwXKY+QuE4CNhMvoU11POXUvrb4fe9h/8/1zieaEdQycy3wW64mLc3IwXRwrz2bNbWk
-         a3kVPO4iQf+1ETpxwlyplESqro18rimsxkSQtMD6fKSPgFziVFPwcuqQQd5ZAB6Qv6Bk
-         OdQMeHpsSjjvTh3y0wlY5siR09I5tD4i2NBf6nCKt4UMUXiuYwEdJWXcdqGADyMVGgRJ
-         mtyJ4geZSfOvuR4ySV4DFXfgXRK3e4CW/Svo7p4fIbRf9aUfsfJmuiILmf88sI9Z9jP1
-         EIHg==
-X-Gm-Message-State: APjAAAW0Fj5Kzx3bhLcOMjYT4+YML1++SIbf1R2k6ZmNb1m+qomNhmU8
-	sGHlWV/haMAeF0QSGJeoH9cY60jcYC4=
-X-Google-Smtp-Source: APXvYqyRuPeDbseAp1XCX4OmjvoK0SPJ5VAuuHT4U1JqTUG5EQwp6fK5+cRVaRpIjRu1ZWabtvgABw==
-X-Received: by 2002:a2e:9218:: with SMTP id k24mr8495172ljg.262.1581540149719;
-        Wed, 12 Feb 2020 12:42:29 -0800 (PST)
-X-Received: by 2002:a2e:9d92:: with SMTP id c18mr9321452ljj.265.1581539720898;
- Wed, 12 Feb 2020 12:35:20 -0800 (PST)
+        bh=dNT84lBczGzzOgb9OnM5Fdxg6SAeViGOzJlzxW7UwtM=;
+        b=QE1DTvvAmbiOuwtl1kkXUlDWhwWJ6QCX7vd6O7uwJxro8CAMDujF2CVrFlfiwmcEwZ
+         8+WQatQHyw6NR2gggP0b5BHoK3jHNRY1kFTxXIq3LGmDpsGR4gPmQFiHchthsIB6iM8g
+         ytnlx3sB8zyHmu1fHaci/Nhf/EJDscLxhOyeerQZqkMPlbjVBmXhbmcbauTDrFRd6boO
+         jiYDwGt9ixOHnR8qKMdaO/ZZeuKdScY9DHgO0wM634qZsR3i4BeZGq/fFz3hIohdn7Pd
+         A1fdH9xMGPe12bpHF0xL7Ky3uJ/wzfqQZFOlAKygQ80pulhvKpML2GZ8/JF6Lvq2FlvO
+         5F3g==
+X-Gm-Message-State: APjAAAWYt4F3MaAnLPwqS+KdnjUILpEb78zSZ8teekDhOOk5ZoAtVAvT
+	nII1vQvyMD+6eddPulqpbnC0EG+BkV9Sf6/EmjdLUQ==
+X-Google-Smtp-Source: APXvYqwlqtMeW4JdpzouZL0DVTK633mlJLfXjD51WE9+E3ZvoUcyD8yDdtL0O1xkdRc9tJh+2nQxwQKr0i+z+9CR1Hg=
+X-Received: by 2002:a67:2c15:: with SMTP id s21mr298736vss.104.1581541173587;
+ Wed, 12 Feb 2020 12:59:33 -0800 (PST)
 MIME-Version: 1.0
-References: <20200210150519.538333-1-gladkov.alexey@gmail.com>
- <20200210150519.538333-8-gladkov.alexey@gmail.com> <87v9odlxbr.fsf@x220.int.ebiederm.org>
- <20200212144921.sykucj4mekcziicz@comp-core-i7-2640m-0182e6>
- <87tv3vkg1a.fsf@x220.int.ebiederm.org> <CAHk-=wg52stFtUxMOxs3afkwDWmWn1JXC7RJ7dPsTrJbnxpZVg@mail.gmail.com>
- <87v9obipk9.fsf@x220.int.ebiederm.org> <CAHk-=wgwmu4jpmOqW0+Lz0dcem1Fub=ThLHvmLobf_WqCq7bwg@mail.gmail.com>
- <20200212200335.GO23230@ZenIV.linux.org.uk>
-In-Reply-To: <20200212200335.GO23230@ZenIV.linux.org.uk>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 12 Feb 2020 12:35:04 -0800
-X-Gmail-Original-Message-ID: <CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
-Message-ID: <CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
-Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs instances
-To: Al Viro <viro@zeniv.linux.org.uk>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>, 
-	Linux Security Module <linux-security-module@vger.kernel.org>, 
-	Akinobu Mita <akinobu.mita@gmail.com>, Alexey Dobriyan <adobriyan@gmail.com>, 
-	Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, 
-	Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, 
-	"Dmitry V . Levin" <ldv@altlinux.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	Ingo Molnar <mingo@kernel.org>, "J . Bruce Fields" <bfields@fieldses.org>, 
-	Jeff Layton <jlayton@poochiereds.net>, Jonathan Corbet <corbet@lwn.net>, 
-	Kees Cook <keescook@chromium.org>, Oleg Nesterov <oleg@redhat.com>, 
-	Solar Designer <solar@openwall.com>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20200128184934.77625-1-samitolvanen@google.com> <20200128184934.77625-12-samitolvanen@google.com>
+ <dbb090ae-d1ec-cb1a-0710-e1d3cfe762b9@arm.com>
+In-Reply-To: <dbb090ae-d1ec-cb1a-0710-e1d3cfe762b9@arm.com>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Wed, 12 Feb 2020 12:59:22 -0800
+Message-ID: <CABCJKudpeTDa4Ro1aCsCJ-=x97SG0qu5LGpj9ywj1aLOtboNkQ@mail.gmail.com>
+Subject: Re: [PATCH v7 11/11] arm64: scs: add shadow stacks for SDEI
+To: James Morse <james.morse@arm.com>
+Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
+	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>, 
+	Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>, 
+	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, Jann Horn <jannh@google.com>, 
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
+	Masahiro Yamada <yamada.masahiro@socionext.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Wed, Feb 12, 2020 at 12:03 PM Al Viro <viro@zeniv.linux.org.uk> wrote:
+On Tue, Feb 11, 2020 at 5:57 AM James Morse <james.morse@arm.com> wrote:
 >
-> What's to prevent racing with fs shutdown while you are doing the second part?
+> Hi Sami,
+>
+> On 28/01/2020 18:49, Sami Tolvanen wrote:
+> > This change adds per-CPU shadow call stacks for the SDEI handler.
+> > Similarly to how the kernel stacks are handled, we add separate shadow
+> > stacks for normal and critical events.
+>
+> Reviewed-by: James Morse <james.morse@arm.com>
+> Tested-by: James Morse <james.morse@arm.com>
 
-I was thinking that only the proc_flush_task() code would do this.
+Thank you for taking the time to test this, James!
 
-And that holds a ref to the vfsmount through upid->ns.
+> > diff --git a/arch/arm64/kernel/scs.c b/arch/arm64/kernel/scs.c
+> > index eaadf5430baa..dddb7c56518b 100644
+> > --- a/arch/arm64/kernel/scs.c
+> > +++ b/arch/arm64/kernel/scs.c
+>
+> > +static int scs_alloc_percpu(unsigned long * __percpu *ptr, int cpu)
+> > +{
+> > +     unsigned long *p;
+> > +
+> > +     p = __vmalloc_node_range(PAGE_SIZE, SCS_SIZE,
+> > +                              VMALLOC_START, VMALLOC_END,
+> > +                              GFP_SCS, PAGE_KERNEL,
+> > +                              0, cpu_to_node(cpu),
+> > +                              __builtin_return_address(0));
+>
+> (What makes this arch specific? arm64 has its own calls like this for the regular vmap
+> stacks because it plays tricks with the alignment. Here the alignment requirement comes
+> from the core SCS code... Would another architecture implement these
+> scs_alloc_percpu()/scs_free_percpu() differently?)
 
-So I wasn't suggesting doing this in general - just splitting up the
-implementation of d_invalidate() so that proc_flush_task_mnt() could
-delay the complex part to after having traversed the RCU-protected
-list.
+You are correct, these aren't necessarily specific to arm64. However,
+right now, we are not allocating per-CPU shadow stacks anywhere else,
+so this was a natural place for the helper functions. Would you prefer
+me to move these to kernel/scs.c instead?
 
-But hey - I missed this part of the problem originally, so maybe I'm
-just missing something else this time. Wouldn't be the first time.
-
-               Linus
+Sami
