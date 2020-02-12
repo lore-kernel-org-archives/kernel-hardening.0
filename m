@@ -1,4 +1,4 @@
-Return-Path: <SRS0=ww9F=4A=lists.openwall.com=kernel-hardening-return-17794-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=6hPD=4A=lists.openwall.com=kernel-hardening-return-17795-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-6.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BC256C2BA83
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 16:04:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 758A8C2BA83
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 17:08:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1D4902082F
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 16:04:00 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1D4902082F
+	by mail.kernel.org (Postfix) with SMTP id A67C0206D7
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 17:08:58 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A67C0206D7
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17794-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7749 invoked by uid 550); 12 Feb 2020 16:03:53 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17795-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15655 invoked by uid 550); 12 Feb 2020 17:08:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,10 +23,10 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7722 invoked from network); 12 Feb 2020 16:03:53 -0000
-Date: Wed, 12 Feb 2020 17:03:39 +0100
+Received: (qmail 15634 invoked from network); 12 Feb 2020 17:08:51 -0000
+Date: Wed, 12 Feb 2020 18:08:37 +0100
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: Andy Lutomirski <luto@kernel.org>
+To: "Eric W. Biederman" <ebiederm@xmission.com>
 Cc: LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	Linux API <linux-api@vger.kernel.org>,
@@ -36,10 +36,10 @@ Cc: LKML <linux-kernel@vger.kernel.org>,
 	Alexander Viro <viro@zeniv.linux.org.uk>,
 	Alexey Dobriyan <adobriyan@gmail.com>,
 	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
 	Daniel Micay <danielmicay@gmail.com>,
 	Djalal Harouni <tixxdz@gmail.com>,
 	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	Ingo Molnar <mingo@kernel.org>,
 	"J . Bruce Fields" <bfields@fieldses.org>,
@@ -48,10 +48,10 @@ Cc: LKML <linux-kernel@vger.kernel.org>,
 	Linus Torvalds <torvalds@linux-foundation.org>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>
-Subject: Re: [PATCH v8 10/11] docs: proc: add documentation for "hidepid=4"
- and "subset=pidfs" options and new mount behavior
-Message-ID: <20200212160339.q6pm5zmjy5mfnvcr@comp-core-i7-2640m-0182e6>
-Mail-Followup-To: Andy Lutomirski <luto@kernel.org>,
+Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs
+ instances
+Message-ID: <20200212170836.kiqogl4cqdpyjjk3@comp-core-i7-2640m-0182e6>
+Mail-Followup-To: "Eric W. Biederman" <ebiederm@xmission.com>,
 	LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	Linux API <linux-api@vger.kernel.org>,
@@ -61,10 +61,10 @@ Mail-Followup-To: Andy Lutomirski <luto@kernel.org>,
 	Alexander Viro <viro@zeniv.linux.org.uk>,
 	Alexey Dobriyan <adobriyan@gmail.com>,
 	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
 	Daniel Micay <danielmicay@gmail.com>,
 	Djalal Harouni <tixxdz@gmail.com>,
 	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	Ingo Molnar <mingo@kernel.org>,
 	"J . Bruce Fields" <bfields@fieldses.org>,
@@ -74,88 +74,155 @@ Mail-Followup-To: Andy Lutomirski <luto@kernel.org>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>
 References: <20200210150519.538333-1-gladkov.alexey@gmail.com>
- <20200210150519.538333-11-gladkov.alexey@gmail.com>
- <CALCETrWOXXYy5fo+D0wVBEviyk38ACqvO5Fep_oTEY6+UrS=4g@mail.gmail.com>
+ <20200210150519.538333-8-gladkov.alexey@gmail.com>
+ <87v9odlxbr.fsf@x220.int.ebiederm.org>
+ <20200212144921.sykucj4mekcziicz@comp-core-i7-2640m-0182e6>
+ <87tv3vkg1a.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CALCETrWOXXYy5fo+D0wVBEviyk38ACqvO5Fep_oTEY6+UrS=4g@mail.gmail.com>
+In-Reply-To: <87tv3vkg1a.fsf@x220.int.ebiederm.org>
 
-On Mon, Feb 10, 2020 at 10:29:23AM -0800, Andy Lutomirski wrote:
-> On Mon, Feb 10, 2020 at 7:06 AM Alexey Gladkov <gladkov.alexey@gmail.com> wrote:
-> >
-> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
-> > ---
-> >  Documentation/filesystems/proc.txt | 53 ++++++++++++++++++++++++++++++
-> >  1 file changed, 53 insertions(+)
-> >
-> > diff --git a/Documentation/filesystems/proc.txt b/Documentation/filesystems/proc.txt
-> > index 99ca040e3f90..4741fd092f36 100644
-> > --- a/Documentation/filesystems/proc.txt
-> > +++ b/Documentation/filesystems/proc.txt
-> > @@ -50,6 +50,8 @@ Table of Contents
-> >    4    Configuring procfs
-> >    4.1  Mount options
-> >
-> > +  5    Filesystem behavior
-> > +
-> >  ------------------------------------------------------------------------------
-> >  Preface
-> >  ------------------------------------------------------------------------------
-> > @@ -2021,6 +2023,7 @@ The following mount options are supported:
-> >
-> >         hidepid=        Set /proc/<pid>/ access mode.
-> >         gid=            Set the group authorized to learn processes information.
-> > +       subset=         Show only the specified subset of procfs.
-> >
-> >  hidepid=0 means classic mode - everybody may access all /proc/<pid>/ directories
-> >  (default).
-> > @@ -2042,6 +2045,56 @@ information about running processes, whether some daemon runs with elevated
-> >  privileges, whether other user runs some sensitive program, whether other users
-> >  run any program at all, etc.
-> >
-> > +hidepid=4 means that procfs should only contain /proc/<pid>/ directories
-> > +that the caller can ptrace.
+On Wed, Feb 12, 2020 at 08:59:29AM -0600, Eric W. Biederman wrote:
+> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
 > 
-> I have a couple of minor nits here.
+> > On Mon, Feb 10, 2020 at 07:36:08PM -0600, Eric W. Biederman wrote:
+> >> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
+> >> 
+> >> > This allows to flush dcache entries of a task on multiple procfs mounts
+> >> > per pid namespace.
+> >> >
+> >> > The RCU lock is used because the number of reads at the task exit time
+> >> > is much larger than the number of procfs mounts.
+> >> 
+> >> A couple of quick comments.
+> >> 
+> >> > Cc: Kees Cook <keescook@chromium.org>
+> >> > Cc: Andy Lutomirski <luto@kernel.org>
+> >> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+> >> > Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+> >> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+> >> > ---
+> >> >  fs/proc/base.c                | 20 +++++++++++++++-----
+> >> >  fs/proc/root.c                | 27 ++++++++++++++++++++++++++-
+> >> >  include/linux/pid_namespace.h |  2 ++
+> >> >  include/linux/proc_fs.h       |  2 ++
+> >> >  4 files changed, 45 insertions(+), 6 deletions(-)
+> >> >
+> >> > diff --git a/fs/proc/base.c b/fs/proc/base.c
+> >> > index 4ccb280a3e79..24b7c620ded3 100644
+> >> > --- a/fs/proc/base.c
+> >> > +++ b/fs/proc/base.c
+> >> > @@ -3133,7 +3133,7 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
+> >> >  	.permission	= proc_pid_permission,
+> >> >  };
+> >> >  
+> >> > -static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+> >> > +static void proc_flush_task_mnt_root(struct dentry *mnt_root, pid_t pid, pid_t tgid)
+> >> Perhaps just rename things like:
+> >> > +static void proc_flush_task_root(struct dentry *root, pid_t pid, pid_t tgid)
+> >> >  {
+> >> 
+> >> I don't think the mnt_ prefix conveys any information, and it certainly
+> >> makes everything longer and more cumbersome.
+> >> 
+> >> >  	struct dentry *dentry, *leader, *dir;
+> >> >  	char buf[10 + 1];
+> >> > @@ -3142,7 +3142,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+> >> >  	name.name = buf;
+> >> >  	name.len = snprintf(buf, sizeof(buf), "%u", pid);
+> >> >  	/* no ->d_hash() rejects on procfs */
+> >> > -	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
+> >> > +	dentry = d_hash_and_lookup(mnt_root, &name);
+> >> >  	if (dentry) {
+> >> >  		d_invalidate(dentry);
+> >> >  		dput(dentry);
+> >> > @@ -3153,7 +3153,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+> >> >  
+> >> >  	name.name = buf;
+> >> >  	name.len = snprintf(buf, sizeof(buf), "%u", tgid);
+> >> > -	leader = d_hash_and_lookup(mnt->mnt_root, &name);
+> >> > +	leader = d_hash_and_lookup(mnt_root, &name);
+> >> >  	if (!leader)
+> >> >  		goto out;
+> >> >  
+> >> > @@ -3208,14 +3208,24 @@ void proc_flush_task(struct task_struct *task)
+> >> >  	int i;
+> >> >  	struct pid *pid, *tgid;
+> >> >  	struct upid *upid;
+> >> > +	struct dentry *mnt_root;
+> >> > +	struct proc_fs_info *fs_info;
+> >> >  
+> >> >  	pid = task_pid(task);
+> >> >  	tgid = task_tgid(task);
+> >> >  
+> >> >  	for (i = 0; i <= pid->level; i++) {
+> >> >  		upid = &pid->numbers[i];
+> >> > -		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
+> >> > -					tgid->numbers[i].nr);
+> >> > +
+> >> > +		rcu_read_lock();
+> >> > +		list_for_each_entry_rcu(fs_info, &upid->ns->proc_mounts, pidns_entry) {
+> >> > +			mnt_root = fs_info->m_super->s_root;
+> >> > +			proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+> >> > +		}
+> >> > +		rcu_read_unlock();
+> >> > +
+> >> > +		mnt_root = upid->ns->proc_mnt->mnt_root;
+> >> > +		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+> >> 
+> >> I don't think this following of proc_mnt is needed.  It certainly
+> >> shouldn't be.  The loop through all of the super blocks should be
+> >> enough.
+> >
+> > Yes, thanks!
+> >
+> >> Once this change goes through.  UML can be given it's own dedicated
+> >> proc_mnt for the initial pid namespace, and proc_mnt can be removed
+> >> entirely.
+> >
+> > After you deleted the old sysctl syscall we could probably do it.
+> >
+> >> Unless something has changed recently UML is the only other user of
+> >> pid_ns->proc_mnt.  That proc_mnt really only exists to make the loop in
+> >> proc_flush_task easy to write.
+> >
+> > Now I think, is there any way to get rid of proc_mounts or even
+> > proc_flush_task somehow.
+> >
+> >> It also probably makes sense to take the rcu_read_lock() over
+> >> that entire for loop.
+> >
+> > Al Viro pointed out to me that I cannot use rcu locks here :(
 > 
-> First, perhaps we could stop using magic numbers and use words.
-> hidepid=ptraceable is actually comprehensible, whereas hidepid=4
-> requires looking up what '4' means.
-
-Do you mean to add string aliases for the values?
-
-hidepid=0 == hidepid=default
-hidepid=1 == hidepid=restrict
-hidepid=2 == hidepid=ownonly
-hidepid=4 == hidepid=ptraceable
-
-Something like that ?
-
-> Second, there is PTRACE_MODE_ATTACH and PTRACE_MODE_READ.  Which is it?
-
-This is PTRACE_MODE_READ.
-
-> > +
-> >  gid= defines a group authorized to learn processes information otherwise
-> >  prohibited by hidepid=.  If you use some daemon like identd which needs to learn
-> >  information about processes information, just add identd to this group.
+> Fundamentally proc_flush_task is an optimization.  Just getting rid of
+> dentries earlier.  At least at one point it was an important
+> optimization because the old process dentries would just sit around
+> doing nothing for anyone.
 > 
-> How is this better than just creating an entirely separate mount a
-> different hidepid and a different gid owning it?
+> I wonder if instead of invalidating specific dentries we could instead
+> fire wake up a shrinker and point it at one or more instances of proc.
+> 
+> The practical challenge I see is something might need to access the
+> dentries to see that they are invalid.
+> 
+> We definitely could try without this optimization and see what happens.
 
-I'm not sure I understand the question. Now you cannot have two proc with
-different hidepid in the same pid_namespace. 
+When Linus said that a semaphore for proc_mounts is a bad idea, I tried
+to come up with some kind of asynchronous way to clear it per superblock.
+I gave up with the asynchronous GC because userspace can quite easily get
+ahead of it.
 
-> In any event,
-> usually gid= means that this gid is the group owner of inodes.  Let's
-> call it something different.  gid_override_hidepid might be credible.
-> But it's also really weird -- do different groups really see different
-> contents when they read a directory?
+Without this optimization the kernel starts to consume a lot of memory
+during intensive reading /proc. I tried to do:
 
-If you use hidepid=2,gid=wheel options then the user is not in the wheel
-group will see only their processes and the user in the wheel group will
-see whole tree. The gid= is a kind of whitelist for hidepid=1|2.
+while :; do
+	for x in `seq 0 9`; do sleep 0.1; done;
+	ls /proc/[0-9]*;
+done >/dev/null;
+
+and memory consumption went up without proc_flush_task. Since we have
+mounted procfs in each container, this is dangerous.
 
 -- 
 Rgrds, legion
