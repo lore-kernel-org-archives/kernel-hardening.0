@@ -1,21 +1,23 @@
-Return-Path: <SRS0=6hPD=4A=lists.openwall.com=kernel-hardening-return-17795-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=s585=4A=lists.openwall.com=kernel-hardening-return-17796-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 758A8C2BA83
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 17:08:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F288CC2BA83
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 17:31:20 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A67C0206D7
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 17:08:58 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A67C0206D7
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17795-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15655 invoked by uid 550); 12 Feb 2020 17:08:51 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4F29A2082F
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 17:31:20 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="BtezE3UK"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F29A2082F
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17796-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29904 invoked by uid 550); 12 Feb 2020 17:31:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,207 +25,70 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15634 invoked from network); 12 Feb 2020 17:08:51 -0000
-Date: Wed, 12 Feb 2020 18:08:37 +0100
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: LKML <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	Solar Designer <solar@openwall.com>
-Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs
- instances
-Message-ID: <20200212170836.kiqogl4cqdpyjjk3@comp-core-i7-2640m-0182e6>
-Mail-Followup-To: "Eric W. Biederman" <ebiederm@xmission.com>,
-	LKML <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	Solar Designer <solar@openwall.com>
-References: <20200210150519.538333-1-gladkov.alexey@gmail.com>
- <20200210150519.538333-8-gladkov.alexey@gmail.com>
- <87v9odlxbr.fsf@x220.int.ebiederm.org>
- <20200212144921.sykucj4mekcziicz@comp-core-i7-2640m-0182e6>
- <87tv3vkg1a.fsf@x220.int.ebiederm.org>
+Received: (qmail 29879 invoked from network); 12 Feb 2020 17:31:12 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=XgpctoHh6dg1wxvj3BzSThVl8kpcEhXa3sNGXPcFbT4=;
+        b=BtezE3UKOP32S7Hgi6uAZOCn9BCk1YLzZTI/31neMRdDIAastd/PkKexEg5uWIeSlq
+         /hFI/msrF2GQcVhisW/RaJNrJGmFkKA4SeD0lHwdM4ey9ghkS/K+yx90I62OEmTesdwF
+         xzMU/2Mq+v9/Okdl/2mUjBYKqE6P9vJw2KVomx5TFhjbaK/lu0Q6tw2rFDTRVzvD2KxL
+         boPGPbPxe+RpyEehZt6ohw9y9NodMcdQmgyDLVMfAAlCQ41OBvoUAldOafMsvbSOhhvM
+         Ujf9+E+XNGlSxbjxgY5T1BHWqvckIdfOYnsyRjOxsWx6G6V+xqkaOcye9xpAB/GIw4Zn
+         EW+A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=XgpctoHh6dg1wxvj3BzSThVl8kpcEhXa3sNGXPcFbT4=;
+        b=aqKrwywDhUyQ/iKY6OcxTKsPzo49Kc0aEI1x0mkJB3bJBbqR7HcsRI52dTFyxwPxVa
+         pzPL7Tt5OoTDMZQjqwYXz0NxReYg1xgpMMLagl5bz++GTOkjTO2qN4U7n7YgYjSn4GCy
+         /yuU8m3DPy29cJNyfX8V//ZeSz+y/2CR1hCGKPFZmc+LMeMIgcP80TCc5RK8Sv9kAMBM
+         ugqxlvaNggdl+7oA8ISrqRoywYivJcWhMA3vewEwqqerkSLu8j6Zs1s+FRR9FXa3Pz2+
+         huv59O6RSIlrGSDC8vX72twpSSDI3bZJ0Q+Y5d4eAVEn4rGIGH31ucNppeAttEijuUJ/
+         f94g==
+X-Gm-Message-State: APjAAAWfY5IY97s5qMD1yLjn25EkvZIx6JiEzXkzfeMedbJXEZ4px5lc
+	DmtmiD4vdPIOWDf8NRAlxiYJn2hcWqHqdzDGwvUBvg==
+X-Google-Smtp-Source: APXvYqyjKo/YFw4KoPFfCCWJOIKf5+SsU5ZWgCMmPdEkaicagM609YliueP7WkCTKw6TDAOHNRXlU3z7/h7iIoQqHFg=
+X-Received: by 2002:a67:f4d2:: with SMTP id s18mr12516774vsn.15.1581528660711;
+ Wed, 12 Feb 2020 09:31:00 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87tv3vkg1a.fsf@x220.int.ebiederm.org>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20200128184934.77625-1-samitolvanen@google.com> <20200128184934.77625-10-samitolvanen@google.com>
+ <6f62b3c0-e796-e91c-f53b-23bd80fcb065@arm.com> <20200210175214.GA23318@willie-the-truck>
+ <20200210180327.GB20840@lakrids.cambridge.arm.com> <20200210180740.GA24354@willie-the-truck>
+ <20200210182431.GC20840@lakrids.cambridge.arm.com> <20200211095401.GA8560@willie-the-truck>
+In-Reply-To: <20200211095401.GA8560@willie-the-truck>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Wed, 12 Feb 2020 09:30:49 -0800
+Message-ID: <CABCJKucpq=zu7ikf+Q-f-v+6T-cbQCEb1setiZfFvHa8iw3erg@mail.gmail.com>
+Subject: Re: [PATCH v7 09/11] arm64: disable SCS for hypervisor code
+To: Will Deacon <will@kernel.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, 
+	Catalin Marinas <catalin.marinas@arm.com>, Steven Rostedt <rostedt@goodmis.org>, 
+	Masami Hiramatsu <mhiramat@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, 
+	Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>, 
+	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, Jann Horn <jannh@google.com>, 
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
+	Masahiro Yamada <yamada.masahiro@socionext.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On Wed, Feb 12, 2020 at 08:59:29AM -0600, Eric W. Biederman wrote:
-> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
-> 
-> > On Mon, Feb 10, 2020 at 07:36:08PM -0600, Eric W. Biederman wrote:
-> >> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
-> >> 
-> >> > This allows to flush dcache entries of a task on multiple procfs mounts
-> >> > per pid namespace.
-> >> >
-> >> > The RCU lock is used because the number of reads at the task exit time
-> >> > is much larger than the number of procfs mounts.
-> >> 
-> >> A couple of quick comments.
-> >> 
-> >> > Cc: Kees Cook <keescook@chromium.org>
-> >> > Cc: Andy Lutomirski <luto@kernel.org>
-> >> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
-> >> > Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-> >> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
-> >> > ---
-> >> >  fs/proc/base.c                | 20 +++++++++++++++-----
-> >> >  fs/proc/root.c                | 27 ++++++++++++++++++++++++++-
-> >> >  include/linux/pid_namespace.h |  2 ++
-> >> >  include/linux/proc_fs.h       |  2 ++
-> >> >  4 files changed, 45 insertions(+), 6 deletions(-)
-> >> >
-> >> > diff --git a/fs/proc/base.c b/fs/proc/base.c
-> >> > index 4ccb280a3e79..24b7c620ded3 100644
-> >> > --- a/fs/proc/base.c
-> >> > +++ b/fs/proc/base.c
-> >> > @@ -3133,7 +3133,7 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
-> >> >  	.permission	= proc_pid_permission,
-> >> >  };
-> >> >  
-> >> > -static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
-> >> > +static void proc_flush_task_mnt_root(struct dentry *mnt_root, pid_t pid, pid_t tgid)
-> >> Perhaps just rename things like:
-> >> > +static void proc_flush_task_root(struct dentry *root, pid_t pid, pid_t tgid)
-> >> >  {
-> >> 
-> >> I don't think the mnt_ prefix conveys any information, and it certainly
-> >> makes everything longer and more cumbersome.
-> >> 
-> >> >  	struct dentry *dentry, *leader, *dir;
-> >> >  	char buf[10 + 1];
-> >> > @@ -3142,7 +3142,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
-> >> >  	name.name = buf;
-> >> >  	name.len = snprintf(buf, sizeof(buf), "%u", pid);
-> >> >  	/* no ->d_hash() rejects on procfs */
-> >> > -	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
-> >> > +	dentry = d_hash_and_lookup(mnt_root, &name);
-> >> >  	if (dentry) {
-> >> >  		d_invalidate(dentry);
-> >> >  		dput(dentry);
-> >> > @@ -3153,7 +3153,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
-> >> >  
-> >> >  	name.name = buf;
-> >> >  	name.len = snprintf(buf, sizeof(buf), "%u", tgid);
-> >> > -	leader = d_hash_and_lookup(mnt->mnt_root, &name);
-> >> > +	leader = d_hash_and_lookup(mnt_root, &name);
-> >> >  	if (!leader)
-> >> >  		goto out;
-> >> >  
-> >> > @@ -3208,14 +3208,24 @@ void proc_flush_task(struct task_struct *task)
-> >> >  	int i;
-> >> >  	struct pid *pid, *tgid;
-> >> >  	struct upid *upid;
-> >> > +	struct dentry *mnt_root;
-> >> > +	struct proc_fs_info *fs_info;
-> >> >  
-> >> >  	pid = task_pid(task);
-> >> >  	tgid = task_tgid(task);
-> >> >  
-> >> >  	for (i = 0; i <= pid->level; i++) {
-> >> >  		upid = &pid->numbers[i];
-> >> > -		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
-> >> > -					tgid->numbers[i].nr);
-> >> > +
-> >> > +		rcu_read_lock();
-> >> > +		list_for_each_entry_rcu(fs_info, &upid->ns->proc_mounts, pidns_entry) {
-> >> > +			mnt_root = fs_info->m_super->s_root;
-> >> > +			proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
-> >> > +		}
-> >> > +		rcu_read_unlock();
-> >> > +
-> >> > +		mnt_root = upid->ns->proc_mnt->mnt_root;
-> >> > +		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
-> >> 
-> >> I don't think this following of proc_mnt is needed.  It certainly
-> >> shouldn't be.  The loop through all of the super blocks should be
-> >> enough.
-> >
-> > Yes, thanks!
-> >
-> >> Once this change goes through.  UML can be given it's own dedicated
-> >> proc_mnt for the initial pid namespace, and proc_mnt can be removed
-> >> entirely.
-> >
-> > After you deleted the old sysctl syscall we could probably do it.
-> >
-> >> Unless something has changed recently UML is the only other user of
-> >> pid_ns->proc_mnt.  That proc_mnt really only exists to make the loop in
-> >> proc_flush_task easy to write.
-> >
-> > Now I think, is there any way to get rid of proc_mounts or even
-> > proc_flush_task somehow.
-> >
-> >> It also probably makes sense to take the rcu_read_lock() over
-> >> that entire for loop.
-> >
-> > Al Viro pointed out to me that I cannot use rcu locks here :(
-> 
-> Fundamentally proc_flush_task is an optimization.  Just getting rid of
-> dentries earlier.  At least at one point it was an important
-> optimization because the old process dentries would just sit around
-> doing nothing for anyone.
-> 
-> I wonder if instead of invalidating specific dentries we could instead
-> fire wake up a shrinker and point it at one or more instances of proc.
-> 
-> The practical challenge I see is something might need to access the
-> dentries to see that they are invalid.
-> 
-> We definitely could try without this optimization and see what happens.
+On Tue, Feb 11, 2020 at 1:54 AM Will Deacon <will@kernel.org> wrote:
+> Thanks, I missed that. It's annoying that we'll end up needing /both/
+> -ffixed-x18 *and* the save/restore around guest transitions, but if we
+> actually want to use SCS for the VHE code then I see that it will be
+> required.
+>
+> Sami -- can you restore -ffixed-x18 and then try the function attribute
+> as suggested by James, please?
 
-When Linus said that a semaphore for proc_mounts is a bad idea, I tried
-to come up with some kind of asynchronous way to clear it per superblock.
-I gave up with the asynchronous GC because userspace can quite easily get
-ahead of it.
+Sure. Adding __noscs to __hyp_text and not filtering out any of the
+flags in the Makefile appears to work. I'll update this in the next
+version.
 
-Without this optimization the kernel starts to consume a lot of memory
-during intensive reading /proc. I tried to do:
-
-while :; do
-	for x in `seq 0 9`; do sleep 0.1; done;
-	ls /proc/[0-9]*;
-done >/dev/null;
-
-and memory consumption went up without proc_flush_task. Since we have
-mounted procfs in each container, this is dangerous.
-
--- 
-Rgrds, legion
-
+Sami
