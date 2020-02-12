@@ -1,4 +1,4 @@
-Return-Path: <SRS0=STpf=4A=lists.openwall.com=kernel-hardening-return-17789-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=IPS2=4A=lists.openwall.com=kernel-hardening-return-17790-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-6.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5D1C5C2BA83
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 14:34:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5A486C2BA83
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 14:49:42 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8DB89206D7
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 14:34:22 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8DB89206D7
+	by mail.kernel.org (Postfix) with SMTP id 8B71D21569
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 14:49:41 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8B71D21569
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17789-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19758 invoked by uid 550); 12 Feb 2020 14:34:16 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17790-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28242 invoked by uid 550); 12 Feb 2020 14:49:35 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,10 +23,10 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19716 invoked from network); 12 Feb 2020 14:34:15 -0000
-Date: Wed, 12 Feb 2020 15:34:01 +0100
+Received: (qmail 28215 invoked from network); 12 Feb 2020 14:49:34 -0000
+Date: Wed, 12 Feb 2020 15:49:21 +0100
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: Jordan Glover <Golden_Miller83@protonmail.ch>
+To: "Eric W. Biederman" <ebiederm@xmission.com>
 Cc: LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	Linux API <linux-api@vger.kernel.org>,
@@ -40,7 +40,6 @@ Cc: LKML <linux-kernel@vger.kernel.org>,
 	Daniel Micay <danielmicay@gmail.com>,
 	Djalal Harouni <tixxdz@gmail.com>,
 	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	Ingo Molnar <mingo@kernel.org>,
 	"J . Bruce Fields" <bfields@fieldses.org>,
@@ -49,10 +48,10 @@ Cc: LKML <linux-kernel@vger.kernel.org>,
 	Linus Torvalds <torvalds@linux-foundation.org>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>
-Subject: Re: [PATCH v8 08/11] proc: instantiate only pids that we can ptrace
- on 'hidepid=4' mount option
-Message-ID: <20200212143401.vjiqsdmf55e7wsdc@comp-core-i7-2640m-0182e6>
-Mail-Followup-To: Jordan Glover <Golden_Miller83@protonmail.ch>,
+Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs
+ instances
+Message-ID: <20200212144921.sykucj4mekcziicz@comp-core-i7-2640m-0182e6>
+Mail-Followup-To: "Eric W. Biederman" <ebiederm@xmission.com>,
 	LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	Linux API <linux-api@vger.kernel.org>,
@@ -66,7 +65,6 @@ Mail-Followup-To: Jordan Glover <Golden_Miller83@protonmail.ch>,
 	Daniel Micay <danielmicay@gmail.com>,
 	Djalal Harouni <tixxdz@gmail.com>,
 	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	Ingo Molnar <mingo@kernel.org>,
 	"J . Bruce Fields" <bfields@fieldses.org>,
@@ -76,139 +74,121 @@ Mail-Followup-To: Jordan Glover <Golden_Miller83@protonmail.ch>,
 	Oleg Nesterov <oleg@redhat.com>,
 	Solar Designer <solar@openwall.com>
 References: <20200210150519.538333-1-gladkov.alexey@gmail.com>
- <20200210150519.538333-9-gladkov.alexey@gmail.com>
- <aBJUaM4BeffJa3vj1p1rUZRN60LVv39CTN9ETLC-swk2b6CvAW8BbP6QbxK5zBGwSYOEiRgjE-auqdRo-pYXxhwuJ_h5rbZ9uyeFqLcLSJQ=@protonmail.ch>
+ <20200210150519.538333-8-gladkov.alexey@gmail.com>
+ <87v9odlxbr.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <aBJUaM4BeffJa3vj1p1rUZRN60LVv39CTN9ETLC-swk2b6CvAW8BbP6QbxK5zBGwSYOEiRgjE-auqdRo-pYXxhwuJ_h5rbZ9uyeFqLcLSJQ=@protonmail.ch>
+In-Reply-To: <87v9odlxbr.fsf@x220.int.ebiederm.org>
 
-On Mon, Feb 10, 2020 at 04:29:31PM +0000, Jordan Glover wrote:
-> On Monday, February 10, 2020 3:05 PM, Alexey Gladkov <gladkov.alexey@gmail.com> wrote:
+On Mon, Feb 10, 2020 at 07:36:08PM -0600, Eric W. Biederman wrote:
+> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
 > 
-> > If "hidepid=4" mount option is set then do not instantiate pids that
-> > we can not ptrace. "hidepid=4" means that procfs should only contain
-> > pids that the caller can ptrace.
+> > This allows to flush dcache entries of a task on multiple procfs mounts
+> > per pid namespace.
 > >
-> > Cc: Kees Cook keescook@chromium.org
-> > Cc: Andy Lutomirski luto@kernel.org
-> > Signed-off-by: Djalal Harouni tixxdz@gmail.com
-> > Signed-off-by: Alexey Gladkov gladkov.alexey@gmail.com
-> >
-> > fs/proc/base.c | 15 +++++++++++++++
-> > fs/proc/root.c | 14 +++++++++++---
-> > include/linux/proc_fs.h | 1 +
-> > 3 files changed, 27 insertions(+), 3 deletions(-)
+> > The RCU lock is used because the number of reads at the task exit time
+> > is much larger than the number of procfs mounts.
+> 
+> A couple of quick comments.
+> 
+> > Cc: Kees Cook <keescook@chromium.org>
+> > Cc: Andy Lutomirski <luto@kernel.org>
+> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+> > Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+> > ---
+> >  fs/proc/base.c                | 20 +++++++++++++++-----
+> >  fs/proc/root.c                | 27 ++++++++++++++++++++++++++-
+> >  include/linux/pid_namespace.h |  2 ++
+> >  include/linux/proc_fs.h       |  2 ++
+> >  4 files changed, 45 insertions(+), 6 deletions(-)
 > >
 > > diff --git a/fs/proc/base.c b/fs/proc/base.c
-> > index 24b7c620ded3..49937d54e745 100644
+> > index 4ccb280a3e79..24b7c620ded3 100644
 > > --- a/fs/proc/base.c
 > > +++ b/fs/proc/base.c
-> > @@ -699,6 +699,14 @@ static bool has_pid_permissions(struct proc_fs_info *fs_info,
-> > struct task_struct *task,
-> > int hide_pid_min)
-> > {
-> >
-> > -   /*
-> > -   -   If 'hidpid' mount option is set force a ptrace check,
-> > -   -   we indicate that we are using a filesystem syscall
-> > -   -   by passing PTRACE_MODE_READ_FSCREDS
-> > -   */
-> > -   if (proc_fs_hide_pid(fs_info) == HIDEPID_NOT_PTRACABLE)
-> > -         return ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS);
-> >
-> >
-> > -   if (proc_fs_hide_pid(fs_info) < hide_pid_min)
-> >     return true;
-> >     if (in_group_p(proc_fs_pid_gid(fs_info)))
-> >     @@ -3271,7 +3279,14 @@ struct dentry *proc_pid_lookup(struct dentry *dentry, unsigned int flags)
-> >     if (!task)
-> >     goto out;
-> >
-> > -   /* Limit procfs to only ptracable tasks */
-> > -   if (proc_fs_hide_pid(fs_info) == HIDEPID_NOT_PTRACABLE) {
-> > -         if (!has_pid_permissions(fs_info, task, HIDEPID_NO_ACCESS))
-> >
-> >
-> > -         	goto out_put_task;
-> >
-> >
-> > -   }
-> > -   result = proc_pid_instantiate(dentry, task, NULL);
-> >     +out_put_task:
-> >     put_task_struct(task);
-> >     out:
-> >     return result;
-> >     diff --git a/fs/proc/root.c b/fs/proc/root.c
-> >     index e2bb015da1a8..5e27bb31f125 100644
-> >     --- a/fs/proc/root.c
-> >     +++ b/fs/proc/root.c
-> >     @@ -52,6 +52,15 @@ static const struct fs_parameter_description proc_fs_parameters = {
-> >     .specs = proc_param_specs,
-> >     };
-> >
-> >     +static inline int
-> >     +valid_hidepid(unsigned int value)
-> >     +{
-> >
-> > -   return (value == HIDEPID_OFF ||
-> > -         value == HIDEPID_NO_ACCESS ||
-> >
-> >
-> > -         value == HIDEPID_INVISIBLE ||
-> >
-> >
-> > -         value == HIDEPID_NOT_PTRACABLE);
-> >
-> >
-> >
-> > +}
-> > +
-> > static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
-> > {
-> > struct proc_fs_context *ctx = fc->fs_private;
-> > @@ -68,10 +77,9 @@ static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
-> > break;
-> >
-> > case Opt_hidepid:
-> >
-> > -         if (!valid_hidepid(result.uint_32))
-> >
-> >
-> > -         	return invalf(fc, "proc: unknown value of hidepid.\\n");
-> >           ctx->hidepid = result.uint_32;
-> >
-> >
-> >
-> > -         if (ctx->hidepid < HIDEPID_OFF ||
-> >
-> >
-> > -             ctx->hidepid > HIDEPID_INVISIBLE)
-> >
-> >
-> > -         	return invalf(fc, "proc: hidepid value must be between 0 and 2.\\n");
-> >           break;
-> >
-> >
-> >
-> > default:
-> > diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
-> > index f307940f8311..6822548405a7 100644
-> > --- a/include/linux/proc_fs.h
-> > +++ b/include/linux/proc_fs.h
-> > @@ -17,6 +17,7 @@ enum {
-> > HIDEPID_OFF = 0,
-> > HIDEPID_NO_ACCESS = 1,
-> > HIDEPID_INVISIBLE = 2,
-> >
-> > -   HIDEPID_NOT_PTRACABLE = 4, /* Limit pids to only ptracable pids */
+> > @@ -3133,7 +3133,7 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
+> >  	.permission	= proc_pid_permission,
+> >  };
+> >  
+> > -static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+> > +static void proc_flush_task_mnt_root(struct dentry *mnt_root, pid_t pid, pid_t tgid)
+> Perhaps just rename things like:
+> > +static void proc_flush_task_root(struct dentry *root, pid_t pid, pid_t tgid)
+> >  {
 > 
-> Is there a reason new option is "4" instead of "3"? The order 1..2..4 may be
-> confusing for people.
+> I don't think the mnt_ prefix conveys any information, and it certainly
+> makes everything longer and more cumbersome.
+> 
+> >  	struct dentry *dentry, *leader, *dir;
+> >  	char buf[10 + 1];
+> > @@ -3142,7 +3142,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+> >  	name.name = buf;
+> >  	name.len = snprintf(buf, sizeof(buf), "%u", pid);
+> >  	/* no ->d_hash() rejects on procfs */
+> > -	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
+> > +	dentry = d_hash_and_lookup(mnt_root, &name);
+> >  	if (dentry) {
+> >  		d_invalidate(dentry);
+> >  		dput(dentry);
+> > @@ -3153,7 +3153,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+> >  
+> >  	name.name = buf;
+> >  	name.len = snprintf(buf, sizeof(buf), "%u", tgid);
+> > -	leader = d_hash_and_lookup(mnt->mnt_root, &name);
+> > +	leader = d_hash_and_lookup(mnt_root, &name);
+> >  	if (!leader)
+> >  		goto out;
+> >  
+> > @@ -3208,14 +3208,24 @@ void proc_flush_task(struct task_struct *task)
+> >  	int i;
+> >  	struct pid *pid, *tgid;
+> >  	struct upid *upid;
+> > +	struct dentry *mnt_root;
+> > +	struct proc_fs_info *fs_info;
+> >  
+> >  	pid = task_pid(task);
+> >  	tgid = task_tgid(task);
+> >  
+> >  	for (i = 0; i <= pid->level; i++) {
+> >  		upid = &pid->numbers[i];
+> > -		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
+> > -					tgid->numbers[i].nr);
+> > +
+> > +		rcu_read_lock();
+> > +		list_for_each_entry_rcu(fs_info, &upid->ns->proc_mounts, pidns_entry) {
+> > +			mnt_root = fs_info->m_super->s_root;
+> > +			proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+> > +		}
+> > +		rcu_read_unlock();
+> > +
+> > +		mnt_root = upid->ns->proc_mnt->mnt_root;
+> > +		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+> 
+> I don't think this following of proc_mnt is needed.  It certainly
+> shouldn't be.  The loop through all of the super blocks should be
+> enough.
 
-This is just mask. For now hidepid values are mutually exclusive, but
-since it moved to uapi, I thought it would be good if there was an
-opportunity to combine values.
+Yes, thanks!
+
+> Once this change goes through.  UML can be given it's own dedicated
+> proc_mnt for the initial pid namespace, and proc_mnt can be removed
+> entirely.
+
+After you deleted the old sysctl syscall we could probably do it.
+
+> Unless something has changed recently UML is the only other user of
+> pid_ns->proc_mnt.  That proc_mnt really only exists to make the loop in
+> proc_flush_task easy to write.
+
+Now I think, is there any way to get rid of proc_mounts or even
+proc_flush_task somehow.
+
+> It also probably makes sense to take the rcu_read_lock() over
+> that entire for loop.
+
+Al Viro pointed out to me that I cannot use rcu locks here :(
 
 -- 
 Rgrds, legion
