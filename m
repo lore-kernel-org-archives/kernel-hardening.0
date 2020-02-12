@@ -1,21 +1,20 @@
-Return-Path: <SRS0=iqMO=4A=lists.openwall.com=kernel-hardening-return-17792-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=t3gL=4A=lists.openwall.com=kernel-hardening-return-17793-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7B525C2BA83
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 15:00:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0A1CEC2BA83
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 15:01:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D561120714
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 15:00:57 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D561120714
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17792-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 4077 invoked by uid 550); 12 Feb 2020 15:00:52 -0000
+	by mail.kernel.org (Postfix) with SMTP id 378152073C
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2020 15:01:50 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 378152073C
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17793-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5989 invoked by uid 550); 12 Feb 2020 15:01:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,84 +22,152 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 4025 invoked from network); 12 Feb 2020 15:00:51 -0000
-Date: Wed, 12 Feb 2020 16:00:38 +0100
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: LKML <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	Solar Designer <solar@openwall.com>
-Subject: Re: [PATCH v8 03/11] proc: move /proc/{self|thread-self} dentries to
- proc_fs_info
-Message-ID: <20200212150038.rr364l5kjcgbmr3g@comp-core-i7-2640m-0182e6>
-Mail-Followup-To: Andy Lutomirski <luto@kernel.org>,
-	LKML <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	Solar Designer <solar@openwall.com>
+Received: (qmail 5947 invoked from network); 12 Feb 2020 15:01:43 -0000
+From: ebiederm@xmission.com (Eric W. Biederman)
+To: LKML <linux-kernel@vger.kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexander Viro <viro@zeniv.linux.org.uk>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,  Oleg Nesterov <oleg@redhat.com>,  Solar Designer <solar@openwall.com>
 References: <20200210150519.538333-1-gladkov.alexey@gmail.com>
- <20200210150519.538333-4-gladkov.alexey@gmail.com>
- <CALCETrWGpRr86tVKJU-sEMcg+x0Yzp+TbiBhrAc71RaO8=DYGQ@mail.gmail.com>
+	<20200210150519.538333-8-gladkov.alexey@gmail.com>
+	<87v9odlxbr.fsf@x220.int.ebiederm.org>
+	<20200212144921.sykucj4mekcziicz@comp-core-i7-2640m-0182e6>
+Date: Wed, 12 Feb 2020 08:59:29 -0600
+In-Reply-To: <20200212144921.sykucj4mekcziicz@comp-core-i7-2640m-0182e6>
+	(Alexey Gladkov's message of "Wed, 12 Feb 2020 15:49:21 +0100")
+Message-ID: <87tv3vkg1a.fsf@x220.int.ebiederm.org>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CALCETrWGpRr86tVKJU-sEMcg+x0Yzp+TbiBhrAc71RaO8=DYGQ@mail.gmail.com>
+Content-Type: text/plain
+X-XM-SPF: eid=1j1tW0-0002sE-6R;;;mid=<87tv3vkg1a.fsf@x220.int.ebiederm.org>;;;hst=in02.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX1/y0OtQ5QQujeXudLM/V7FEvgZrY+iG/uQ=
+X-SA-Exim-Connect-IP: 68.227.160.95
+X-SA-Exim-Mail-From: ebiederm@xmission.com
+Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs instances
+X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
+X-SA-Exim-Scanned: Yes (on in02.mta.xmission.com)
 
-On Mon, Feb 10, 2020 at 10:23:23AM -0800, Andy Lutomirski wrote:
-> On Mon, Feb 10, 2020 at 7:06 AM Alexey Gladkov <gladkov.alexey@gmail.com> wrote:
-> >
-> > This is a preparation patch that moves /proc/{self|thread-self} dentries
-> > to be stored inside procfs fs_info struct instead of making them per pid
-> > namespace. Since we want to support multiple procfs instances we need to
-> > make sure that these dentries are also per-superblock instead of
-> > per-pidns,
-> 
-> The changelog makes perfect sense so far...
-> 
-> > unmounting a private procfs won't clash with other procfs
-> > mounts.
-> 
-> This doesn't parse as part of the previous sentence.  I'm also not
-> convinced that this really involves unmounting per se.  Maybe just
-> delete these words.
+Alexey Gladkov <gladkov.alexey@gmail.com> writes:
 
-Sure. I will remove this part.
+> On Mon, Feb 10, 2020 at 07:36:08PM -0600, Eric W. Biederman wrote:
+>> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
+>> 
+>> > This allows to flush dcache entries of a task on multiple procfs mounts
+>> > per pid namespace.
+>> >
+>> > The RCU lock is used because the number of reads at the task exit time
+>> > is much larger than the number of procfs mounts.
+>> 
+>> A couple of quick comments.
+>> 
+>> > Cc: Kees Cook <keescook@chromium.org>
+>> > Cc: Andy Lutomirski <luto@kernel.org>
+>> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+>> > Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+>> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+>> > ---
+>> >  fs/proc/base.c                | 20 +++++++++++++++-----
+>> >  fs/proc/root.c                | 27 ++++++++++++++++++++++++++-
+>> >  include/linux/pid_namespace.h |  2 ++
+>> >  include/linux/proc_fs.h       |  2 ++
+>> >  4 files changed, 45 insertions(+), 6 deletions(-)
+>> >
+>> > diff --git a/fs/proc/base.c b/fs/proc/base.c
+>> > index 4ccb280a3e79..24b7c620ded3 100644
+>> > --- a/fs/proc/base.c
+>> > +++ b/fs/proc/base.c
+>> > @@ -3133,7 +3133,7 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
+>> >  	.permission	= proc_pid_permission,
+>> >  };
+>> >  
+>> > -static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+>> > +static void proc_flush_task_mnt_root(struct dentry *mnt_root, pid_t pid, pid_t tgid)
+>> Perhaps just rename things like:
+>> > +static void proc_flush_task_root(struct dentry *root, pid_t pid, pid_t tgid)
+>> >  {
+>> 
+>> I don't think the mnt_ prefix conveys any information, and it certainly
+>> makes everything longer and more cumbersome.
+>> 
+>> >  	struct dentry *dentry, *leader, *dir;
+>> >  	char buf[10 + 1];
+>> > @@ -3142,7 +3142,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+>> >  	name.name = buf;
+>> >  	name.len = snprintf(buf, sizeof(buf), "%u", pid);
+>> >  	/* no ->d_hash() rejects on procfs */
+>> > -	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
+>> > +	dentry = d_hash_and_lookup(mnt_root, &name);
+>> >  	if (dentry) {
+>> >  		d_invalidate(dentry);
+>> >  		dput(dentry);
+>> > @@ -3153,7 +3153,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
+>> >  
+>> >  	name.name = buf;
+>> >  	name.len = snprintf(buf, sizeof(buf), "%u", tgid);
+>> > -	leader = d_hash_and_lookup(mnt->mnt_root, &name);
+>> > +	leader = d_hash_and_lookup(mnt_root, &name);
+>> >  	if (!leader)
+>> >  		goto out;
+>> >  
+>> > @@ -3208,14 +3208,24 @@ void proc_flush_task(struct task_struct *task)
+>> >  	int i;
+>> >  	struct pid *pid, *tgid;
+>> >  	struct upid *upid;
+>> > +	struct dentry *mnt_root;
+>> > +	struct proc_fs_info *fs_info;
+>> >  
+>> >  	pid = task_pid(task);
+>> >  	tgid = task_tgid(task);
+>> >  
+>> >  	for (i = 0; i <= pid->level; i++) {
+>> >  		upid = &pid->numbers[i];
+>> > -		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
+>> > -					tgid->numbers[i].nr);
+>> > +
+>> > +		rcu_read_lock();
+>> > +		list_for_each_entry_rcu(fs_info, &upid->ns->proc_mounts, pidns_entry) {
+>> > +			mnt_root = fs_info->m_super->s_root;
+>> > +			proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+>> > +		}
+>> > +		rcu_read_unlock();
+>> > +
+>> > +		mnt_root = upid->ns->proc_mnt->mnt_root;
+>> > +		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
+>> 
+>> I don't think this following of proc_mnt is needed.  It certainly
+>> shouldn't be.  The loop through all of the super blocks should be
+>> enough.
+>
+> Yes, thanks!
+>
+>> Once this change goes through.  UML can be given it's own dedicated
+>> proc_mnt for the initial pid namespace, and proc_mnt can be removed
+>> entirely.
+>
+> After you deleted the old sysctl syscall we could probably do it.
+>
+>> Unless something has changed recently UML is the only other user of
+>> pid_ns->proc_mnt.  That proc_mnt really only exists to make the loop in
+>> proc_flush_task easy to write.
+>
+> Now I think, is there any way to get rid of proc_mounts or even
+> proc_flush_task somehow.
+>
+>> It also probably makes sense to take the rcu_read_lock() over
+>> that entire for loop.
+>
+> Al Viro pointed out to me that I cannot use rcu locks here :(
 
--- 
-Rgrds, legion
+Fundamentally proc_flush_task is an optimization.  Just getting rid of
+dentries earlier.  At least at one point it was an important
+optimization because the old process dentries would just sit around
+doing nothing for anyone.
+
+I wonder if instead of invalidating specific dentries we could instead
+fire wake up a shrinker and point it at one or more instances of proc.
+
+The practical challenge I see is something might need to access the
+dentries to see that they are invalid.
+
+We definitely could try without this optimization and see what happens.
+
+Eric
 
