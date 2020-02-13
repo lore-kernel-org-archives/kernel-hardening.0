@@ -1,20 +1,20 @@
-Return-Path: <SRS0=XePu=4B=lists.openwall.com=kernel-hardening-return-17811-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=5Wwh=4B=lists.openwall.com=kernel-hardening-return-17812-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 77BF2C352A3
-	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Feb 2020 04:40:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BA2DCC352A3
+	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Feb 2020 05:55:56 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A7E07206D7
-	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Feb 2020 04:40:10 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A7E07206D7
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17811-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16359 invoked by uid 550); 13 Feb 2020 04:40:03 -0000
+	by mail.kernel.org (Postfix) with SMTP id 1AE8821734
+	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Feb 2020 05:55:55 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1AE8821734
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=zeniv.linux.org.uk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17812-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24560 invoked by uid 550); 13 Feb 2020 05:55:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,110 +22,119 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16322 invoked from network); 13 Feb 2020 04:40:02 -0000
-From: ebiederm@xmission.com (Eric W. Biederman)
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Al Viro <viro@zeniv.linux.org.uk>,  LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Oleg Nesterov <oleg@redhat.com>,  Solar Designer <solar@openwall.com>
-References: <20200210150519.538333-8-gladkov.alexey@gmail.com>
-	<87v9odlxbr.fsf@x220.int.ebiederm.org>
-	<20200212144921.sykucj4mekcziicz@comp-core-i7-2640m-0182e6>
-	<87tv3vkg1a.fsf@x220.int.ebiederm.org>
-	<CAHk-=wg52stFtUxMOxs3afkwDWmWn1JXC7RJ7dPsTrJbnxpZVg@mail.gmail.com>
-	<87v9obipk9.fsf@x220.int.ebiederm.org>
-	<CAHk-=wgwmu4jpmOqW0+Lz0dcem1Fub=ThLHvmLobf_WqCq7bwg@mail.gmail.com>
-	<20200212200335.GO23230@ZenIV.linux.org.uk>
-	<CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
-	<20200212203833.GQ23230@ZenIV.linux.org.uk>
-	<20200212204124.GR23230@ZenIV.linux.org.uk>
-	<CAHk-=wi5FOGV_3tALK3n6E2fK3Oa_yCYkYQtCSaXLSEm2DUCKg@mail.gmail.com>
-	<87lfp7h422.fsf@x220.int.ebiederm.org>
-	<CAHk-=wgmn9Qds0VznyphouSZW6e42GWDT5H1dpZg8pyGDGN+=w@mail.gmail.com>
-Date: Wed, 12 Feb 2020 22:37:52 -0600
-In-Reply-To: <CAHk-=wgmn9Qds0VznyphouSZW6e42GWDT5H1dpZg8pyGDGN+=w@mail.gmail.com>
-	(Linus Torvalds's message of "Wed, 12 Feb 2020 16:48:14 -0800")
-Message-ID: <87pnejf6fz.fsf@x220.int.ebiederm.org>
-User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
+Received: (qmail 24523 invoked from network); 13 Feb 2020 05:55:48 -0000
+Date: Thu, 13 Feb 2020 05:55:27 +0000
+From: Al Viro <viro@zeniv.linux.org.uk>
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>,
+	LKML <linux-kernel@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux API <linux-api@vger.kernel.org>,
+	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
+	Linux Security Module <linux-security-module@vger.kernel.org>,
+	Akinobu Mita <akinobu.mita@gmail.com>,
+	Alexey Dobriyan <adobriyan@gmail.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Daniel Micay <danielmicay@gmail.com>,
+	Djalal Harouni <tixxdz@gmail.com>,
+	"Dmitry V . Levin" <ldv@altlinux.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Ingo Molnar <mingo@kernel.org>,
+	"J . Bruce Fields" <bfields@fieldses.org>,
+	Jeff Layton <jlayton@poochiereds.net>,
+	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
+	Oleg Nesterov <oleg@redhat.com>,
+	Solar Designer <solar@openwall.com>
+Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs
+ instances
+Message-ID: <20200213055527.GS23230@ZenIV.linux.org.uk>
+References: <87v9obipk9.fsf@x220.int.ebiederm.org>
+ <CAHk-=wgwmu4jpmOqW0+Lz0dcem1Fub=ThLHvmLobf_WqCq7bwg@mail.gmail.com>
+ <20200212200335.GO23230@ZenIV.linux.org.uk>
+ <CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
+ <20200212203833.GQ23230@ZenIV.linux.org.uk>
+ <20200212204124.GR23230@ZenIV.linux.org.uk>
+ <CAHk-=wi5FOGV_3tALK3n6E2fK3Oa_yCYkYQtCSaXLSEm2DUCKg@mail.gmail.com>
+ <87lfp7h422.fsf@x220.int.ebiederm.org>
+ <CAHk-=wgmn9Qds0VznyphouSZW6e42GWDT5H1dpZg8pyGDGN+=w@mail.gmail.com>
+ <87pnejf6fz.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-X-XM-SPF: eid=1j26Hy-0006WH-VI;;;mid=<87pnejf6fz.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX184mp0tBu1N+5TIPW3et7RBWpPrbgy8SaE=
-X-SA-Exim-Connect-IP: 68.227.160.95
-X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: Re: [PATCH v8 07/11] proc: flush task dcache entries from all procfs instances
-X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
-X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <87pnejf6fz.fsf@x220.int.ebiederm.org>
+Sender: Al Viro <viro@ftp.linux.org.uk>
 
-Linus Torvalds <torvalds@linux-foundation.org> writes:
+On Wed, Feb 12, 2020 at 10:37:52PM -0600, Eric W. Biederman wrote:
 
-> On Wed, Feb 12, 2020 at 1:48 PM Eric W. Biederman <ebiederm@xmission.com> wrote:
->>
->> The good news is proc_flush_task isn't exactly called from process exit.
->> proc_flush_task is called during zombie clean up. AKA release_task.
->
-> Yeah, that at least avoids some of the nasty locking while dying debug problems.
->
-> But the one I was more worried about was actually the lock contention
-> issue with lots of processes. The lock is basically a single global
-> lock in many situations - yes, it's technically per-ns, but in a lot
-> of cases you really only have one namespace anyway.
->
-> And we've had problems with global locks in this area before, notably
-> the one you call out:
->
->> Further after proc_flush_task does it's thing the code goes
->> and does "write_lock_irq(&task_list_lock);"
->
-> Yeah, so it's not introducing a new issue, but it is potentially
-> making something we already know is bad even worse.
->
->> What would be downside of having a mutex for a list of proc superblocks?
->> A mutex that is taken for both reading and writing the list.
->
-> That's what the original patch actually was, and I was hoping we could
-> avoid that thing.
->
-> An rwsem would be possibly better, since most cases by far are likely
-> about reading.
->
-> And yes, I'm very aware of the task_list_lock, but it's literally why
-> I don't want to make a new one.
->
-> I'm _hoping_ we can some day come up with something better than
-> task_list_lock.
+> I think I have an alternate idea that could work.  Add some extra code
+> into proc_task_readdir, that would look for dentries that no longer
+> point to tasks and d_invalidate them.  With the same logic probably
+> being called from a few more places as well like proc_pid_readdir,
+> proc_task_lookup, and proc_pid_lookup.
+> 
+> We could even optimize it and have a process died flag we set in the
+> superblock.
+> 
+> That would would batch up the freeing work until the next time someone
+> reads from proc in a way that would create more dentries.  So it would
+> prevent dentries from reaped zombies from growing without bound.
+> 
+> Hmm.  Given the existence of proc_fill_cache it would really be a good
+> idea if readdir and lookup performed some of the freeing work as well.
+> As on readdir we always populate the dcache for all of the directory
+> entries.
 
-Yes.  I understand that.
+First of all, that won't do a damn thing when nobody is accessing
+given superblock.  What's more, readdir in root of that procfs instance
+is not enough - you need it in task/ of group leader.
 
-I occassionally play with ideas, and converted all of proc to rcu
-to help with situation but I haven't come up with anything clearly
-better.
+What I don't understand is the insistence on getting those dentries
+via dcache lookups.  _IF_ we are willing to live with cacheline
+contention (on ->d_lock of root dentry, if nothing else), why not
+do the following:
+	* put all dentries of such directories ([0-9]* and [0-9]*/task/*)
+into a list anchored in task_struct; have non-counting reference to
+task_struct stored in them (might simplify part of get_proc_task() users,
+BTW - avoids pid-to-task_struct lookups if we have a dentry and not just
+the inode; many callers do)
+	* have ->d_release() remove from it (protecting per-task_struct lock
+nested outside of all ->d_lock)
+	* on exit:
+	lock the (per-task_struct) list
+	while list is non-empty
+		pick the first dentry
+		remove from the list
+		sb = dentry->d_sb
+		try to bump sb->s_active (if non-zero, that is).
+		if failed
+			continue // move on to the next one - nothing to do here
+		grab ->d_lock
+		res = handle_it(dentry, &temp_list)
+		drop ->d_lock
+		unlock the list
+		if (!list_empty(&temp_list))
+			shrink_dentry_list(&temp_list)
+		if (res)
+			d_invalidate(dentry)
+			dput(dentry)
+		deactivate_super(sb)
+		lock the list
+	unlock the list
 
+handle_it(dentry, temp_list) // ->d_lock held; that one should be in dcache.c
+	if ->d_count is negative // unlikely
+		return 0;
+	if ->d_count is positive,
+		increment ->d_count
+		return 1;
+	// OK, it's still alive, but ->d_count is 0
+	__d_drop	// equivalent of d_invalidate in this case
+	if not on a shrink list // otherwise it's not our headache
+		if on lru list
+			d_lru_del
+		d_shrink_add dentry to temp_list
+	return 0;
 
-All of this is why I was really hoping we could have a change in
-strategy and see if we can make the shrinker be able to better prune
-proc inodes.
-
-
-
-I think I have an alternate idea that could work.  Add some extra code
-into proc_task_readdir, that would look for dentries that no longer
-point to tasks and d_invalidate them.  With the same logic probably
-being called from a few more places as well like proc_pid_readdir,
-proc_task_lookup, and proc_pid_lookup.
-
-We could even optimize it and have a process died flag we set in the
-superblock.
-
-That would would batch up the freeing work until the next time someone
-reads from proc in a way that would create more dentries.  So it would
-prevent dentries from reaped zombies from growing without bound.
-
-Hmm.  Given the existence of proc_fill_cache it would really be a good
-idea if readdir and lookup performed some of the freeing work as well.
-As on readdir we always populate the dcache for all of the directory
-entries.
-
-I am booked solid for the next little while but if no one beats me to it
-I will try and code something like that up where at least readdir
-looks for and invalidates stale dentries.
-
-Eric
+And yeah, that'll dirty ->s_active for each procfs superblock that
+has dentry for our process present in dcache.  On exit()...
