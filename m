@@ -1,23 +1,20 @@
-Return-Path: <SRS0=1O/P=4G=lists.openwall.com=kernel-hardening-return-17824-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=bsXh=4G=lists.openwall.com=kernel-hardening-return-17825-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AFCEDC34026
-	for <kernel-hardening@archiver.kernel.org>; Tue, 18 Feb 2020 11:08:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1B08FC34031
+	for <kernel-hardening@archiver.kernel.org>; Tue, 18 Feb 2020 20:55:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D6E292173E
-	for <kernel-hardening@archiver.kernel.org>; Tue, 18 Feb 2020 11:08:18 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="kc96tCEW"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D6E292173E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17824-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22500 invoked by uid 550); 18 Feb 2020 11:08:11 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4C6E0206F4
+	for <kernel-hardening@archiver.kernel.org>; Tue, 18 Feb 2020 20:55:20 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4C6E0206F4
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17825-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29814 invoked by uid 550); 18 Feb 2020 20:55:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,120 +22,136 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32712 invoked from network); 18 Feb 2020 02:22:13 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=subject:to:cc:references:from:openpgp:autocrypt:message-id:date
-         :user-agent:mime-version:in-reply-to:content-language
-         :content-transfer-encoding;
-        bh=z/jehiOXQCJ99Rc+Y+qxYc0pnP1x2sTTgrg9bNsXRtI=;
-        b=kc96tCEWf5sZc8m6jBxuKeJ0RbrhRpb/uJmmmNgzeCPT1J7fJaSBCULyzFIXfAX4ha
-         o8sVrNlBN1ajv3cF0cJ55NFKaRRHew5fbNf2A7KwuzT/YNXLSMhzGIS3i3k+DE6qGjV/
-         Ohe2Q5nOWWmjv0Al/h60tXXYADCvA52uL4hdNy2N2KfDG4z3QuzVETPK377Qxs8xiFPp
-         uIPns5NmKRkeYkGkqQuL6fqYWWXU96+MzOVnxLqf9qKrhUeNwdreYjxX5HV5IhJDaExv
-         32dTByueHQHz41yLZuQDUa2Ui21IPyffDSXetVRQ8bXV3D++QGoUqzEw4F5ckI7LY3zN
-         hW+Q==
+Received: (qmail 29777 invoked from network); 18 Feb 2020 20:55:12 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:subject:to:cc:references:from:openpgp:autocrypt
+        h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=z/jehiOXQCJ99Rc+Y+qxYc0pnP1x2sTTgrg9bNsXRtI=;
-        b=erXnG74TPjfiLPXX/MVObqYUCDO1CwWQ4WDKu2lofo4MHTDC7HnxdZIdZIktNO34RV
-         gle5S+t5gITh4Slm0xMCmcsd09fAaTPKbMgv2FPKalsjvsf8Sw+oZiuLmJ5T8gICvzvS
-         ZDQscxwDf7iFi/EZ8bhHg8DHGijBIjMlwAxaFGO5fi1oBttAwHA/oryf7hrXfGh4TyCw
-         unXEe/PVOtgDibRM2Eso059NPUMfHeGfYaPW0Ymk93tFGa5ynaytHAsoea++l4DiT6xA
-         rDgoQn8svTovc6nDW419F3DqsWkaen/KLC79HoKoUJOKaMl6x4iqLgVs6zTFSl35jx+V
-         xx1w==
-X-Gm-Message-State: APjAAAVRqH9vriekOl5ge6FdVfFcSn0cfG1vULOsgEALKA3Vz6I5be2M
-	OZ3812jK1QZXAdihIVNiDnM=
-X-Google-Smtp-Source: APXvYqxQXZr3jpQRyTuIlWQlekoV6fdLy63TfxHYB/Sd7qektCWGyzfMRDtUNkxofg0+k6DG2Gufyg==
-X-Received: by 2002:a17:90b:3c9:: with SMTP id go9mr2332215pjb.7.1581992521250;
-        Mon, 17 Feb 2020 18:22:01 -0800 (PST)
+        bh=Agn6nQMcqhupiGPj+A5XxBu1pX2cGpximgh4Q8Dc0iM=;
+        b=LdiTRu44r9r7a4bwlcQtWqfXgg1ON1t0WJSLkSICpr5RlWQiZzS79myw+cZzmW46op
+         u2vVcQYvJ9OlwiXigi1QAWgmiTf5jkhn1vkr2Dy3j0sSek3LCMNkmj1QmdBEBgFog9BO
+         96fpCbZl8+Mg5PxAROZWf+TUSc6kuQAHj3Cx2LwzEefqlZioZUDJ91f2y1ficzBCs3kg
+         NOmimPvZoC2cbayyVkSYRJiYEIYEdVwvjcHLmSpe+3o881U13mD2yYVoq3j29PWAmc41
+         ENiSO1ivDxzhpS11tkGPM677YLEEgTj6i5T8DpgqhJdCLUCfFnDJgUAyy59FMNgaCsMk
+         By6A==
+X-Gm-Message-State: APjAAAVGQ+/32pnU94YiCBBpf5UXhMgmtT0m55s4Kl9LSv0TLmtuuULY
+	W+nBCTvesCoFWlxLeUWcBjw=
+X-Google-Smtp-Source: APXvYqyILXQb2c2JMbxt4Gjj0RvriP68vptzY4kKMIaRYkRQ7wv5S5YAY3Y2n1U2kXE2AKMuvCicqA==
+X-Received: by 2002:a1c:bdc6:: with SMTP id n189mr5210371wmf.102.1582059300997;
+        Tue, 18 Feb 2020 12:55:00 -0800 (PST)
 Subject: Re: Maybe inappropriate use BUG_ON() in CONFIG_SLAB_FREELIST_HARDENED
-To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Popov <alex.popov@linux.com>,
- Andrey Konovalov <andreyknvl@google.com>,
- kernel-hardening@lists.openwall.com, Shawn <citypw@hardenedlinux.org>,
- spender@grsecurity.net
+To: Andrey Konovalov <andreyknvl@google.com>, zerons <zeronsaxm@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, Shawn <citypw@gmail.com>,
+ spender@grsecurity.net, Jann Horn <jannh@google.com>
 References: <e535d698-5268-e5fc-a238-0649c509cc4f@gmail.com>
  <CAAeHK+y-FdpH20Z7HsB0U+mgD9CK0gECCqShXFtFWpFp01jAmA@mail.gmail.com>
- <202002171019.A7B4679@keescook>
-From: zerons <zeronsaxm@gmail.com>
-Openpgp: preference=signencrypt
-Autocrypt: addr=zeronsaxm@gmail.com; prefer-encrypt=mutual; keydata=
- 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
-Message-ID: <dc337497-8084-915c-be64-059ef7cc1538@gmail.com>
-Date: Tue, 18 Feb 2020 10:21:47 +0800
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
- Thunderbird/60.9.0
+From: Alexander Popov <alex.popov@linux.com>
+Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
+ 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
+ j3lCqPk=
+Message-ID: <84b3a89a-cd20-1e49-8d98-53b74dd3f9d1@linux.com>
+Date: Tue, 18 Feb 2020 23:54:54 +0300
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.4.1
 MIME-Version: 1.0
-In-Reply-To: <202002171019.A7B4679@keescook>
-Content-Type: text/plain; charset=windows-1252
+In-Reply-To: <CAAeHK+y-FdpH20Z7HsB0U+mgD9CK0gECCqShXFtFWpFp01jAmA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
+Hello!
 
-> 
->>> In my opinion, this patch can somehow help attacker exploit this kind of bugs
->>> more reliable.
-> 
-> Why do you think this makes races easier to win?
-> 
+Thanks for adding me to this discussion.
+Let me also add Jann Horn.
 
-Sorry, not to make the races easier, but to make the exploitations
-more reliable.
-
->> +Alexander Popov, who is the author of the double free check in
->> SLAB_FREELIST_HARDENED.
+On 17.02.2020 18:15, Andrey Konovalov wrote:
+> On Thu, Feb 13, 2020 at 4:43 PM zerons <zeronsaxm@gmail.com> wrote:
+>> In slub.c(https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/mm/slub.c?h=v5.4.19#n305),
+>> for SLAB_FREELIST_HARDENED, an extra detection of the double free bug has been added.
 >>
->> Ah, so as long as the double free happens in a user process context,
->> you can retry triggering it until you succeed in winning the race to
->> reallocate the object (without causing slab freelist corruption, as it
->> would have had happened before SLAB_FREELIST_HARDENED). Nice idea!
-> 
-> Do you see improvements that could be made here?
-> 
+>> This patch can (maybe only) detect something like this: kfree(a) kfree(a).
+>> However, it does nothing when another process calls kfree(b) between the two kfree above.
 
-Could we use BUG_ON() only when panic_on_oops is set?
+Yes, that's correct.
+
+>> The problem is, if the panic_on_oops option is not set(Ubuntu 16.04/18.04 default option),
+>> for a bug which kfree an object twice in a row, if another process can preempt the process
+>> triggered this bug and then call kmalloc() to get the object, the patch doesn't work.
+
+In theory, that is true.
+
+However, let me show a counterexample from practice.
+
+I developed this check after I exploited CVE-2017-2636 (race condition causing
+double free). Please see the detailed write-up about the exploit:
+https://a13xp0p0v.github.io/2017/03/24/CVE-2017-2636.html
+
+There was a linked list with data buffers, and one of these buffers was added to
+the list twice. Double free happened when the driver cleaned up its resources
+and freed the buffers in this list. So double kfree() happened quite close to
+each other.
+
+I spent a lot of time trying to insert some kmalloc() between these kfree(), but
+didn't succeed. That is difficult because slab caches are per-CPU, and heap
+spray on other CPUs doesn't overwrite the needed kernel address.
+
+The vulnerable kernel task didn't call scheduler between double kfree(). I
+didn't manage to preempt it. But I solved that trouble by spraying _after_
+double kfree().
+
+>> Without this extra detection, the kernel could be unstable while the attacker
+>> trying to do the race.
+
+Could you bring more details? Which kind of instability do you mean?
+
+When I did heap spray with sk_buffs after double kfree(), I got two sk_buff
+items with sk_buff.head pointing to the same memory. Receiving one sk_buff
+created use-after-free on another one. That is how double free turns into
+use-after-free.
+
+The check which we discuss now breaks that method.
+
+Best regards,
+Alexander
