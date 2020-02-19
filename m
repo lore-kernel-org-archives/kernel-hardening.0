@@ -1,24 +1,24 @@
-Return-Path: <SRS0=FXXy=4H=lists.openwall.com=kernel-hardening-return-17834-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=r+GR=4H=lists.openwall.com=kernel-hardening-return-17835-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	UNWANTED_LANGUAGE_BODY,URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D448FC34031
-	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 491C4C34031
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3142522B48
-	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9209822B48
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:56 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="MLtcH1Zl"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3142522B48
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="cePll/Tr"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9209822B48
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17834-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32671 invoked by uid 550); 19 Feb 2020 00:09:06 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17835-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1219 invoked by uid 550); 19 Feb 2020 00:09:09 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,41 +26,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32583 invoked from network); 19 Feb 2020 00:09:05 -0000
+Received: (qmail 1125 invoked from network); 19 Feb 2020 00:09:08 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=W8ajq15Euo0CBn6HLEY8Ur3IDCmQBKzronvmXuYJ1Wc=;
-        b=MLtcH1ZlIr7PYSYq8+bwS883i63QukomQpLx88iQ8Ty8/42rPP+4KZrwuMCM79Mm8y
-         817RusRnQwu/CyF2v0uzoIwvRmOV4u/0FxSEzxKKHWOhb6hWWE/OAneX5bwh66Ly2qtm
-         YznnnRzzbN7twHBbdmKiyRvpdhaN1RrK5afuCzULkJ+VvgLPqyD5AlIoiRGARJ6zxb27
-         757p2uJ/BnnFVqtnpquh5ngNiJbA6U8ZEhhZeoEzcGA9JIw8t6XH0UWo5IOKMfaQpaYt
-         /Cavrovjgq0ziUxvV0b5eM9sr9i7Vkis+NVpWAq01JCZHkKt55tZ+v/e09v1BsMjdgCt
-         L+KA==
+        bh=VaL1LZE8ycQeC44ksYepx5tOKr2VfyNgExyF+AnjA94=;
+        b=cePll/TraKAUtAJ9SZ2Ia3LSLdgIxY1+FH9CeJe/Js8mU6ZMYsSLXkd7mkxW/sP5DZ
+         KJT+Ei4X/Kieg25Nl3ijU9ilrBU19coqFUri04BfLyqK5EuVRfmB30gu2bmvAalUS6LN
+         IMbhUPvGvYnYBxafAZ3iZSnwZoQLD7C4koK0IuRjhEPW0oZ2TaiJ9hz4upmRG6/Ns0dh
+         UTADf0Yy7wZKSoYV844RlPmV80QoHhyiDwRwibkak3UTghfYE1JKAvnv9As5XVJ0WJ7a
+         4rEss8BdwPK/XsciPHFcrXzGvsX8Q30c1NJSo5SBc2z3lUGDDitPI+TJwEDkMrNctWZh
+         TcLw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=W8ajq15Euo0CBn6HLEY8Ur3IDCmQBKzronvmXuYJ1Wc=;
-        b=VEJ4Z6RuUG1PnqsqPPD6hwey73xsEepEvLIfuCMZ8dixYTL13BCRuYOCD32oiu610m
-         j2osxuihy+zDn0UW/RWROeJJKGTOFag23CXXVdvjFyhJCifvJc0YIfwbHJ2R89IkKs80
-         xc7mw9Z9FNdqOouW99/ZbiXIBjJ1Ojp9KawDcJujpHXPDK08/zQEujbzx+koqtN8jd2z
-         KOQ/S7W6+2rJfwyEmyLCY8DGCeSUTc8LAGlGGBe4XzUrhssJMgAxyDvurXJmmW3qt9mM
-         MjJUMfjZPb1R39pjYs5Avak8K6uMY3q+lvvUOA0z3PUAnndnp3aWYpD9/DssSnHzo45Y
-         0HMA==
-X-Gm-Message-State: APjAAAU/nQmPsNmUmdhcGN6PUhKIUemnxcyI6ETxcWTs6RLfVv51WtVG
-	RB7Boyf1Kija1UG1Dsqr2qi5p3kfXnTz8UfNT8g=
-X-Google-Smtp-Source: APXvYqxpK1u5TV7lBQJWCp5pVL1urj5uZ/qQ47DJf+mApduaTIPmMgvlpsKCisN08m+BtnDwSnTiPrPaReEndts1HUA=
-X-Received: by 2002:a63:d042:: with SMTP id s2mr25008924pgi.66.1582070933662;
- Tue, 18 Feb 2020 16:08:53 -0800 (PST)
-Date: Tue, 18 Feb 2020 16:08:13 -0800
+        bh=VaL1LZE8ycQeC44ksYepx5tOKr2VfyNgExyF+AnjA94=;
+        b=IQIeUiaz2Jvkr57ERXqcf4pohXtYqz8P3elsFB3mujBWZXUyvJi7Yqst183v3Rs0uQ
+         2Dw4xsp/Dgg/aBKjYPbTv303xVhBGv7sg2wy6DlPKFC/Ve2Cyho5HwH4Ze56dN42NUA1
+         ufR7hWRbS81nzyqAHUuIC5StNBKaLOKaiQZX0D9CwTxuspIu85KOwHWmM0gI/jExhwx9
+         s5BDufdMNwc+eP6Kik2FeadUraQkyrbwcFa/u/Yz+iQ9ZBVvY/Q14CB5bkvrHW26ylOV
+         1iagc8Z+mwV09r+XfjMGk6k4zq9pKQLrjSjVaiNvUdSUAvVR4xkmGiXOq/5+bg+QIPge
+         3u/A==
+X-Gm-Message-State: APjAAAVEEEcDkie8mVsPIUI4yynWjTr0xT76SCzNw+PHCL1UI0oVq+8K
+	7GLIzvfpvASpNUI9kD4hM7pgrj9FfKXATvdJW0o=
+X-Google-Smtp-Source: APXvYqzYgoNmANIZrWEkIv02R5SWh6hiOCKzMRDH3zyUcr6xB+/h3Rs6ymsqIKfuYLDLk6+SeJ73cy3XJLHa4n8oA1M=
+X-Received: by 2002:a63:c846:: with SMTP id l6mr25182558pgi.144.1582070936327;
+ Tue, 18 Feb 2020 16:08:56 -0800 (PST)
+Date: Tue, 18 Feb 2020 16:08:14 -0800
 In-Reply-To: <20200219000817.195049-1-samitolvanen@google.com>
-Message-Id: <20200219000817.195049-9-samitolvanen@google.com>
+Message-Id: <20200219000817.195049-10-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20200219000817.195049-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.25.0.265.gbab2e86ba0-goog
-Subject: [PATCH v8 08/12] arm64: vdso: disable Shadow Call Stack
+Subject: [PATCH v8 09/12] arm64: disable SCS for hypervisor code
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -74,31 +74,28 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Shadow stacks are only available in the kernel, so disable SCS
-instrumentation for the vDSO.
+Disable SCS for code that runs at a different exception level by
+adding __noscs to __hyp_text.
 
+Suggested-by: James Morse <james.morse@arm.com>
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Reviewed-by: Mark Rutland <mark.rutland@arm.com>
-Acked-by: Will Deacon <will@kernel.org>
 ---
- arch/arm64/kernel/vdso/Makefile | 2 +-
+ arch/arm64/include/asm/kvm_hyp.h | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
-index dd2514bb1511..a87a4f11724e 100644
---- a/arch/arm64/kernel/vdso/Makefile
-+++ b/arch/arm64/kernel/vdso/Makefile
-@@ -25,7 +25,7 @@ ccflags-y += -DDISABLE_BRANCH_PROFILING
+diff --git a/arch/arm64/include/asm/kvm_hyp.h b/arch/arm64/include/asm/kvm_hyp.h
+index a3a6a2ba9a63..0f0603f55ea0 100644
+--- a/arch/arm64/include/asm/kvm_hyp.h
++++ b/arch/arm64/include/asm/kvm_hyp.h
+@@ -13,7 +13,7 @@
+ #include <asm/kvm_mmu.h>
+ #include <asm/sysreg.h>
  
- VDSO_LDFLAGS := -Bsymbolic
+-#define __hyp_text __section(.hyp.text) notrace
++#define __hyp_text __section(.hyp.text) notrace __noscs
  
--CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os
-+CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS)
- KBUILD_CFLAGS			+= $(DISABLE_LTO)
- KASAN_SANITIZE			:= n
- UBSAN_SANITIZE			:= n
+ #define read_sysreg_elx(r,nvh,vh)					\
+ 	({								\
 -- 
 2.25.0.265.gbab2e86ba0-goog
 
