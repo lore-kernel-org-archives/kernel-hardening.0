@@ -1,24 +1,24 @@
-Return-Path: <SRS0=o8M1=4H=lists.openwall.com=kernel-hardening-return-17833-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=FXXy=4H=lists.openwall.com=kernel-hardening-return-17834-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-14.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	UNWANTED_LANGUAGE_BODY,URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C24CDC34031
-	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D448FC34031
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1CDA622B48
-	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:37 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3142522B48
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Feb 2020 00:09:47 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="qufzpGjE"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1CDA622B48
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="MLtcH1Zl"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3142522B48
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17833-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32409 invoked by uid 550); 19 Feb 2020 00:09:03 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17834-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32671 invoked by uid 550); 19 Feb 2020 00:09:06 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,41 +26,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32316 invoked from network); 19 Feb 2020 00:09:02 -0000
+Received: (qmail 32583 invoked from network); 19 Feb 2020 00:09:05 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=QniVckAJWtqLmmFgAWqtQvDUqGmhiEDDkK5Atd0uI+w=;
-        b=qufzpGjEppDMWPImhTuGEdGT5fSrkUOCFRhcyjZobkamDvVW8lKE7S9n8IfeI9kMjN
-         GjSsbQERqiJCrQWg5+yur9ZmpwI3842rBfYePp5EboZsGV0A9NX4KJSaHBYX9WS8TV/B
-         YxOPfKJb3HR14olUqNzIghumWLSF9JfupKrwhtKGLhHcH+iy/cZLakuxTBBKr3BSQC+Q
-         l/d2gtUBVVI2+sDEnrXi83zlWZ5bO/OYVixaPN92nFcUWQ3ZPH+WoaCJq/ch+3VstHjI
-         DDMR+HT+E10IhOJZsyS+YJ4gi2CPv7gIBX5icVylNk3GYCOKGpIchxJrvY+jCKqp3YLe
-         pYjg==
+        bh=W8ajq15Euo0CBn6HLEY8Ur3IDCmQBKzronvmXuYJ1Wc=;
+        b=MLtcH1ZlIr7PYSYq8+bwS883i63QukomQpLx88iQ8Ty8/42rPP+4KZrwuMCM79Mm8y
+         817RusRnQwu/CyF2v0uzoIwvRmOV4u/0FxSEzxKKHWOhb6hWWE/OAneX5bwh66Ly2qtm
+         YznnnRzzbN7twHBbdmKiyRvpdhaN1RrK5afuCzULkJ+VvgLPqyD5AlIoiRGARJ6zxb27
+         757p2uJ/BnnFVqtnpquh5ngNiJbA6U8ZEhhZeoEzcGA9JIw8t6XH0UWo5IOKMfaQpaYt
+         /Cavrovjgq0ziUxvV0b5eM9sr9i7Vkis+NVpWAq01JCZHkKt55tZ+v/e09v1BsMjdgCt
+         L+KA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=QniVckAJWtqLmmFgAWqtQvDUqGmhiEDDkK5Atd0uI+w=;
-        b=c93dUL279+s4dhZOOvQvqXyIaTz19/LdehOOPs3pqj3KMEVu5xT46dNOUZquX6d5Xv
-         eomYoiWdpZSsS5yiPbiFc1RFWDP3bec9yzviXHWobuk5n2yhsa41CSVEVkwzS83bMBW2
-         c89GOPqRNDZsdAw9de9xbbirjexYWohmX0rxQNMrxVLLKdcFRTCI5MpoOncMO/fj55xk
-         0NUtcjJ7bp/QCd5SCCuTvanBhnIgrWmVmqDl2wYRhANXLze9/2SxbSSrL+Q3zHSAzmm3
-         9F8K42aw8iyK/k9rjD9HSroNj2x+Hqbdz4RIton3dGh71UVXe5VvQWcUDOpamWGhD9SJ
-         pYBQ==
-X-Gm-Message-State: APjAAAU4zO8N6Lrn0WPvvhl5IJGnn7tKTcHfMP+8DTWeK+pJHjSYiqlw
-	nrF/vIzuk0N/aOs1WvzPRfjoqxAWi8/RTk0jF4I=
-X-Google-Smtp-Source: APXvYqwciBBhLealMEWoo9KoEMacGgV/WZH2VTZ4SCan5a+9yYr+272BEeKH1BEVWPC4FCthWzaq/J27w407jXSF4NM=
-X-Received: by 2002:a63:bc02:: with SMTP id q2mr24517139pge.174.1582070930907;
- Tue, 18 Feb 2020 16:08:50 -0800 (PST)
-Date: Tue, 18 Feb 2020 16:08:12 -0800
+        bh=W8ajq15Euo0CBn6HLEY8Ur3IDCmQBKzronvmXuYJ1Wc=;
+        b=VEJ4Z6RuUG1PnqsqPPD6hwey73xsEepEvLIfuCMZ8dixYTL13BCRuYOCD32oiu610m
+         j2osxuihy+zDn0UW/RWROeJJKGTOFag23CXXVdvjFyhJCifvJc0YIfwbHJ2R89IkKs80
+         xc7mw9Z9FNdqOouW99/ZbiXIBjJ1Ojp9KawDcJujpHXPDK08/zQEujbzx+koqtN8jd2z
+         KOQ/S7W6+2rJfwyEmyLCY8DGCeSUTc8LAGlGGBe4XzUrhssJMgAxyDvurXJmmW3qt9mM
+         MjJUMfjZPb1R39pjYs5Avak8K6uMY3q+lvvUOA0z3PUAnndnp3aWYpD9/DssSnHzo45Y
+         0HMA==
+X-Gm-Message-State: APjAAAU/nQmPsNmUmdhcGN6PUhKIUemnxcyI6ETxcWTs6RLfVv51WtVG
+	RB7Boyf1Kija1UG1Dsqr2qi5p3kfXnTz8UfNT8g=
+X-Google-Smtp-Source: APXvYqxpK1u5TV7lBQJWCp5pVL1urj5uZ/qQ47DJf+mApduaTIPmMgvlpsKCisN08m+BtnDwSnTiPrPaReEndts1HUA=
+X-Received: by 2002:a63:d042:: with SMTP id s2mr25008924pgi.66.1582070933662;
+ Tue, 18 Feb 2020 16:08:53 -0800 (PST)
+Date: Tue, 18 Feb 2020 16:08:13 -0800
 In-Reply-To: <20200219000817.195049-1-samitolvanen@google.com>
-Message-Id: <20200219000817.195049-8-samitolvanen@google.com>
+Message-Id: <20200219000817.195049-9-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20200219000817.195049-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.25.0.265.gbab2e86ba0-goog
-Subject: [PATCH v8 07/12] arm64: efi: restore x18 if it was corrupted
+Subject: [PATCH v8 08/12] arm64: vdso: disable Shadow Call Stack
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	Steven Rostedt <rostedt@goodmis.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
@@ -74,38 +74,31 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-If we detect a corrupted x18, restore the register before jumping back
-to potentially SCS instrumented code. This is safe, because the wrapper
-is called with preemption disabled and a separate shadow stack is used
-for interrupt handling.
+Shadow stacks are only available in the kernel, so disable SCS
+instrumentation for the vDSO.
 
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 Acked-by: Will Deacon <will@kernel.org>
 ---
- arch/arm64/kernel/efi-rt-wrapper.S | 11 ++++++++++-
- 1 file changed, 10 insertions(+), 1 deletion(-)
+ arch/arm64/kernel/vdso/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/arch/arm64/kernel/efi-rt-wrapper.S b/arch/arm64/kernel/efi-rt-wrapper.S
-index 3fc71106cb2b..6ca6c0dc11a1 100644
---- a/arch/arm64/kernel/efi-rt-wrapper.S
-+++ b/arch/arm64/kernel/efi-rt-wrapper.S
-@@ -34,5 +34,14 @@ ENTRY(__efi_rt_asm_wrapper)
- 	ldp	x29, x30, [sp], #32
- 	b.ne	0f
- 	ret
--0:	b	efi_handle_corrupted_x18	// tail call
-+0:
-+	/*
-+	 * With CONFIG_SHADOW_CALL_STACK, the kernel uses x18 to store a
-+	 * shadow stack pointer, which we need to restore before returning to
-+	 * potentially instrumented code. This is safe because the wrapper is
-+	 * called with preemption disabled and a separate shadow stack is used
-+	 * for interrupts.
-+	 */
-+	mov	x18, x2
-+	b	efi_handle_corrupted_x18	// tail call
- ENDPROC(__efi_rt_asm_wrapper)
+diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
+index dd2514bb1511..a87a4f11724e 100644
+--- a/arch/arm64/kernel/vdso/Makefile
++++ b/arch/arm64/kernel/vdso/Makefile
+@@ -25,7 +25,7 @@ ccflags-y += -DDISABLE_BRANCH_PROFILING
+ 
+ VDSO_LDFLAGS := -Bsymbolic
+ 
+-CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os
++CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS)
+ KBUILD_CFLAGS			+= $(DISABLE_LTO)
+ KASAN_SANITIZE			:= n
+ UBSAN_SANITIZE			:= n
 -- 
 2.25.0.265.gbab2e86ba0-goog
 
