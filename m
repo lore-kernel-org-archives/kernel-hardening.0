@@ -1,4 +1,4 @@
-Return-Path: <SRS0=B0PO=4I=lists.openwall.com=kernel-hardening-return-17874-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=6Hkz=4I=lists.openwall.com=kernel-hardening-return-17875-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B03F0C11D00
-	for <kernel-hardening@archiver.kernel.org>; Thu, 20 Feb 2020 23:40:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 880DBC11D00
+	for <kernel-hardening@archiver.kernel.org>; Thu, 20 Feb 2020 23:41:34 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 13F42208CD
-	for <kernel-hardening@archiver.kernel.org>; Thu, 20 Feb 2020 23:40:04 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 13F42208CD
+	by mail.kernel.org (Postfix) with SMTP id DF11B207FD
+	for <kernel-hardening@archiver.kernel.org>; Thu, 20 Feb 2020 23:41:33 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DF11B207FD
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17874-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12153 invoked by uid 550); 20 Feb 2020 23:39:58 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17875-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 14295 invoked by uid 550); 20 Feb 2020 23:41:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,12 +22,11 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12112 invoked from network); 20 Feb 2020 23:39:57 -0000
+Received: (qmail 14258 invoked from network); 20 Feb 2020 23:41:27 -0000
 From: ebiederm@xmission.com (Eric W. Biederman)
 To: Al Viro <viro@zeniv.linux.org.uk>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>,  LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Oleg Nesterov <oleg@redhat.com>,  Solar Designer <solar@openwall.com>
-References: <20200212200335.GO23230@ZenIV.linux.org.uk>
-	<CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
+References: <CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
 	<20200212203833.GQ23230@ZenIV.linux.org.uk>
 	<20200212204124.GR23230@ZenIV.linux.org.uk>
 	<CAHk-=wi5FOGV_3tALK3n6E2fK3Oa_yCYkYQtCSaXLSEm2DUCKg@mail.gmail.com>
@@ -35,75 +34,48 @@ References: <20200212200335.GO23230@ZenIV.linux.org.uk>
 	<CAHk-=wgmn9Qds0VznyphouSZW6e42GWDT5H1dpZg8pyGDGN+=w@mail.gmail.com>
 	<87pnejf6fz.fsf@x220.int.ebiederm.org>
 	<871rqpaswu.fsf_-_@x220.int.ebiederm.org>
-	<CAHk-=whX7UmXgCKPPvjyQFqBiKw-Zsgj22_rH8epDPoWswAnLA@mail.gmail.com>
-	<20200220230758.GT23230@ZenIV.linux.org.uk>
-Date: Thu, 20 Feb 2020 17:37:44 -0600
-In-Reply-To: <20200220230758.GT23230@ZenIV.linux.org.uk> (Al Viro's message of
-	"Thu, 20 Feb 2020 23:07:58 +0000")
-Message-ID: <87mu9c7ruf.fsf@x220.int.ebiederm.org>
+	<87blpt9e6m.fsf_-_@x220.int.ebiederm.org>
+	<20200220225420.GR23230@ZenIV.linux.org.uk>
+	<20200220230309.GS23230@ZenIV.linux.org.uk>
+Date: Thu, 20 Feb 2020 17:39:14 -0600
+In-Reply-To: <20200220230309.GS23230@ZenIV.linux.org.uk> (Al Viro's message of
+	"Thu, 20 Feb 2020 23:03:09 +0000")
+Message-ID: <87blps7rrx.fsf@x220.int.ebiederm.org>
 User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
 Content-Type: text/plain
-X-XM-SPF: eid=1j4vQ0-0006jR-EQ;;;mid=<87mu9c7ruf.fsf@x220.int.ebiederm.org>;;;hst=in02.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX18cMc7gMcKxQtdSwR/g1EJXnhEFC3gu5r8=
+X-XM-SPF: eid=1j4vRS-0003Oz-LG;;;mid=<87blps7rrx.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX19OdZjKNTBNxrAmd9oO+cyfw3wUEl55Vpc=
 X-SA-Exim-Connect-IP: 68.227.160.95
 X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: Re: [PATCH 0/7] proc: Dentry flushing without proc_mnt
+Subject: Re: [PATCH 4/7] proc: Use d_invalidate in proc_prune_siblings_dcache
 X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
-X-SA-Exim-Scanned: Yes (on in02.mta.xmission.com)
+X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
 
 Al Viro <viro@zeniv.linux.org.uk> writes:
 
-> On Thu, Feb 20, 2020 at 03:02:22PM -0800, Linus Torvalds wrote:
->> On Thu, Feb 20, 2020 at 12:48 PM Eric W. Biederman
->> <ebiederm@xmission.com> wrote:
->> >
->> > Linus, does this approach look like something you can stand?
+> On Thu, Feb 20, 2020 at 10:54:20PM +0000, Al Viro wrote:
+>> On Thu, Feb 20, 2020 at 02:49:53PM -0600, Eric W. Biederman wrote:
+>> > 
+>> > The function d_prune_aliases has the problem that it will only prune
+>> > aliases thare are completely unused.  It will not remove aliases for
+>> > the dcache or even think of removing mounts from the dcache.  For that
+>> > behavior d_invalidate is needed.
+>> > 
+>> > To use d_invalidate replace d_prune_aliases with d_find_alias
+>> > followed by d_invalidate and dput.  This is safe and complete
+>> > because no inode in proc has any hardlinks or aliases.
 >> 
->> A couple of worries, although one of them seem to have already been
->> resolved by Al.
->> 
->> I think the real gatekeeper should be Al in general.  But other than
->> the small comments I had, I think this might work just fine.
->> 
->> Al?
+>> s/no inode.*/it's a fucking directory inode./
 >
-> I'll need to finish RTFS there; I have initially misread that patch,
-> actually - Eric _is_ using that thing both for those directories
-> and for sysctl inodes.  And the prototype for that machinery (the
-> one he'd pulled from proc_sysctl.c) is playing with pinning superblocks
-> way too much; for per-pid directories that's not an issue, but
-> for sysctl table removal you are very likely to hit a bunch of
-> evictees on the same superblock...
+> Wait... You are using it for sysctls as well?  Ho-hum...  The thing is,
+> for sysctls you are likely to run into consequent entries with the
+> same superblock, making for a big pile of useless playing with
+> ->s_active...  And yes, that applied to mainline as well
 
-I saw that was possible.  If the broad strokes look correct I don't have
-a problem at all with optimizing for the case where many of the entries
-are for inodes on the same superblock.  I just had enough other details
-on my mind I was afraid if I got a little more clever I would have
-introduced a typo somewhere.
-
-
-I wish I could limit the sysctl parts to just directories, but
-unfortunately the sysctl tables don't always give a guarantee that a
-directory is what will be removed.  But sysctls do have one name per
-inode invarant like fat.  There is no way to express a sysctl
-table that doesn't have that invariant.
-
-As for d_find_alias/d_invalidate.
-
-Just for completeness I wanted to write a loop:
-
-	while (dentry = d_find_alias(inode)) {
-        	d_invalidate(dentry);
-                dput(dentry);
-        }
-
-Unfortunately that breaks on directories, because for directories
-d_find_alias turns into d_find_any_alias, and continues to return aliases
-even when they are unhashed.
-
-It might be nice to write a cousin of d_prune_aliases call
-it d_invalidate_aliases that just does that loop the correct way
-in dcache.c
+Which is why I worked to merge the two cases since they were so close.
+Fewer things to fix and more eyeballs on the code.
 
 Eric
+
+
