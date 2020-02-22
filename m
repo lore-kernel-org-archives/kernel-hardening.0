@@ -1,22 +1,20 @@
-Return-Path: <SRS0=KFwK=4J=lists.openwall.com=kernel-hardening-return-17878-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/U3D=4K=lists.openwall.com=kernel-hardening-return-17879-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 40C3CC35669
-	for <kernel-hardening@archiver.kernel.org>; Fri, 21 Feb 2020 23:05:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8DB46C35671
+	for <kernel-hardening@archiver.kernel.org>; Sat, 22 Feb 2020 15:48:55 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8A4E820722
-	for <kernel-hardening@archiver.kernel.org>; Fri, 21 Feb 2020 23:05:32 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ZENXGE8+"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8A4E820722
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=alum.mit.edu
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17878-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 2034 invoked by uid 550); 21 Feb 2020 23:05:24 -0000
+	by mail.kernel.org (Postfix) with SMTP id BCA3820702
+	for <kernel-hardening@archiver.kernel.org>; Sat, 22 Feb 2020 15:48:54 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BCA3820702
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17879-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27961 invoked by uid 550); 22 Feb 2020 15:48:47 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,91 +22,119 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 2014 invoked from network); 21 Feb 2020 23:05:24 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=sender:from:date:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to:user-agent;
-        bh=JoSFFpTYFiaHmH8ulMoTAh2gcF7SkvLOnEEsmrgnXy8=;
-        b=ZENXGE8+LPDYeYrm7qYCxS6xLDib/gu7943oikNBP6fHJuCB0/3w8R3eGXbzaLq++Z
-         Qh41kBK8ftSyqNGIx8WZnBiuduCLirxIylRpNwjYqs0Mq986x4pbeN8k65/uU0HmiOPq
-         pCimpCmlVvuQTsNKANhNIcKdl98gK9he2u19uPZyNtM8poRfsvotTHMrolUeJMaYck/k
-         /NFBKzhm4zWgoqqdcvsw/6Sd+osJjx31ecscxw+zGC0zS62IWC9FMczxYpSEMBv+VsH0
-         MfDehN4zjx+117b03RuK++j87aOZa2opFhnZ3mj0rIa24ce8zyzC8bE5By9Q2E+o2srm
-         /UKg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:from:date:to:cc:subject:message-id
-         :references:mime-version:content-disposition:in-reply-to:user-agent;
-        bh=JoSFFpTYFiaHmH8ulMoTAh2gcF7SkvLOnEEsmrgnXy8=;
-        b=mox/8YqA6Kw9b3Ilx83eYmIb2+AiLre9+QWhYUJKuZI6g1Wq/k3ZkaWoUH/kwuAc6c
-         sVQUxtOwab5LrPPYbvfdx8TtvGusCGJ/lzRGebBH60atJEMcH1zUTCU4XWq96ET9AKHB
-         V02xrtjl9LjfZnLZjcMQNFhaBBAjibsn35PecmHe4tO3RKy0AhPnGZniz/22nwWSSvY6
-         exMxXIKcISouVxTlonARnPMMk4LjFJ3ZX2ee2JEdq1tMV0iNGVBk6sSdoNFUvuPwnc3g
-         pAbW/hxOUZh6QDDe6X/nEiF1iAbv2i06sOhy9z6MgQLfPPrX/B965p1Bnm6pBppoH/a/
-         UwNA==
-X-Gm-Message-State: APjAAAWXsKPBteMfmjE1LwvU636BVRumlncD1qVZxsCTVvQlUKRA4b6b
-	sfzFiJ1wjE5MzGf2w2ZN7yU=
-X-Google-Smtp-Source: APXvYqwaVqfXbV7TqYDvUgFLvjqxwL2ExERchNv7petey3SAoxE3PYNiAidZ+Xp96mfnbQUVuky0rA==
-X-Received: by 2002:a37:6c5:: with SMTP id 188mr35749334qkg.277.1582326311881;
-        Fri, 21 Feb 2020 15:05:11 -0800 (PST)
-Sender: Arvind Sankar <niveditas98@gmail.com>
-From: Arvind Sankar <nivedita@alum.mit.edu>
-X-Google-Original-From: Arvind Sankar <arvind@rani.riverdale.lan>
-Date: Fri, 21 Feb 2020 18:05:09 -0500
-To: Josh Poimboeuf <jpoimboe@redhat.com>
-Cc: Arvind Sankar <nivedita@alum.mit.edu>,
-	Arjan van de Ven <arjan@linux.intel.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Kees Cook <keescook@chromium.org>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Kristen Carlson Accardi <kristen@linux.intel.com>,
-	tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
-	rick.p.edgecombe@intel.com, x86@kernel.org,
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Subject: Re: [RFC PATCH 06/11] x86: make sure _etext includes function
- sections
-Message-ID: <20200221230504.GA3001063@rani.riverdale.lan>
-References: <75f0bd0365857ba4442ee69016b63764a8d2ad68.camel@linux.intel.com>
- <B413445A-F1F0-4FB7-AA9F-C5FF4CEFF5F5@amacapital.net>
- <20200207092423.GC14914@hirez.programming.kicks-ass.net>
- <202002091742.7B1E6BF19@keescook>
- <20200210105117.GE14879@hirez.programming.kicks-ass.net>
- <43b7ba31-6dca-488b-8a0e-72d9fdfd1a6b@linux.intel.com>
- <20200210163627.GA1829035@rani.riverdale.lan>
- <20200221195039.dptvoerfez4r76ay@treble>
+Received: (qmail 27921 invoked from network); 22 Feb 2020 15:48:46 -0000
+From: ebiederm@xmission.com (Eric W. Biederman)
+To: Oleg Nesterov <oleg@redhat.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>,  Al Viro <viro@zeniv.linux.org.uk>,  LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Solar Designer <solar@openwall.com>
+References: <20200212200335.GO23230@ZenIV.linux.org.uk>
+	<CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
+	<20200212203833.GQ23230@ZenIV.linux.org.uk>
+	<20200212204124.GR23230@ZenIV.linux.org.uk>
+	<CAHk-=wi5FOGV_3tALK3n6E2fK3Oa_yCYkYQtCSaXLSEm2DUCKg@mail.gmail.com>
+	<87lfp7h422.fsf@x220.int.ebiederm.org>
+	<CAHk-=wgmn9Qds0VznyphouSZW6e42GWDT5H1dpZg8pyGDGN+=w@mail.gmail.com>
+	<87pnejf6fz.fsf@x220.int.ebiederm.org>
+	<871rqpaswu.fsf_-_@x220.int.ebiederm.org>
+	<87r1yp7zhc.fsf_-_@x220.int.ebiederm.org>
+	<20200221165036.GB16646@redhat.com>
+Date: Sat, 22 Feb 2020 09:46:29 -0600
+In-Reply-To: <20200221165036.GB16646@redhat.com> (Oleg Nesterov's message of
+	"Fri, 21 Feb 2020 17:50:37 +0100")
+Message-ID: <87mu9a4obu.fsf@x220.int.ebiederm.org>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20200221195039.dptvoerfez4r76ay@treble>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+Content-Type: text/plain
+X-XM-SPF: eid=1j5X14-0004kb-Io;;;mid=<87mu9a4obu.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX1+wG8oCF9P5p4qTliSUMtLy9dXaaffHDtc=
+X-SA-Exim-Connect-IP: 68.227.160.95
+X-SA-Exim-Mail-From: ebiederm@xmission.com
+Subject: Re: [PATCH 7/7] proc: Ensure we see the exit of each process tid exactly once
+X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
+X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
 
-On Fri, Feb 21, 2020 at 01:50:39PM -0600, Josh Poimboeuf wrote:
-> On Mon, Feb 10, 2020 at 11:36:29AM -0500, Arvind Sankar wrote:
-> > On Mon, Feb 10, 2020 at 07:54:58AM -0800, Arjan van de Ven wrote:
-> > > > 
-> > > > I'll leave it to others to figure out the exact details. But afaict it
-> > > > should be possible to have fine-grained-randomization and preserve the
-> > > > workaround in the end.
-> > > > 
-> > > 
-> > > the most obvious "solution" is to compile with an alignment of 4 bytes (so tight packing)
-> > > and then in the randomizer preserve the offset within 32 bytes, no matter what it is
-> > > 
-> > > that would get you an average padding of 16 bytes which is a bit more than now but not too insane
-> > > (queue Kees' argument that tiny bits of padding are actually good)
-> > > 
-> > 
-> > With the patchset for adding the mbranches-within-32B-boundaries option,
-> > the section alignment gets forced to 32. With function-sections that
-> > means function alignment has to be 32 too.
-> 
-> We should be careful about enabling -mbranches-within-32B-boundaries.
-> It will hurt AMD, and presumably future Intel CPUs which don't need it.
-> 
-> -- 
-> Josh
-> 
+Oleg Nesterov <oleg@redhat.com> writes:
 
-And past Intel CPUs too :) As I understand it only appears from Skylake
-onwards.
+> On 02/20, Eric W. Biederman wrote:
+>>
+>> +void exchange_tids(struct task_struct *ntask, struct task_struct *otask)
+>> +{
+>> +	/* pid_links[PIDTYPE_PID].next is always NULL */
+>> +	struct pid *npid = READ_ONCE(ntask->thread_pid);
+>> +	struct pid *opid = READ_ONCE(otask->thread_pid);
+>> +
+>> +	rcu_assign_pointer(opid->tasks[PIDTYPE_PID].first, &ntask->pid_links[PIDTYPE_PID]);
+>> +	rcu_assign_pointer(npid->tasks[PIDTYPE_PID].first, &otask->pid_links[PIDTYPE_PID]);
+>> +	rcu_assign_pointer(ntask->thread_pid, opid);
+>> +	rcu_assign_pointer(otask->thread_pid, npid);
+>
+> this breaks has_group_leader_pid()...
+>
+> proc_pid_readdir() can miss a process doing mt-exec but this looks fixable,
+> just we need to update ntask->thread_pid before updating ->first.
+>
+> The more problematic case is __exit_signal() which does
+> 		
+> 		if (unlikely(has_group_leader_pid(tsk)))
+> 			posix_cpu_timers_exit_group(tsk);
+
+Along with the comment:
+		/*
+		 * This can only happen if the caller is de_thread().
+		 * FIXME: this is the temporary hack, we should teach
+		 * posix-cpu-timers to handle this case correctly.
+		 */
+So I suspect this is fixable and the above fix might be part of that.
+
+Hmm looking at your commit:
+
+commit e0a70217107e6f9844628120412cb27bb4cea194
+Author: Oleg Nesterov <oleg@redhat.com>
+Date:   Fri Nov 5 16:53:42 2010 +0100
+
+    posix-cpu-timers: workaround to suppress the problems with mt exec
+    
+    posix-cpu-timers.c correctly assumes that the dying process does
+    posix_cpu_timers_exit_group() and removes all !CPUCLOCK_PERTHREAD
+    timers from signal->cpu_timers list.
+    
+    But, it also assumes that timer->it.cpu.task is always the group
+    leader, and thus the dead ->task means the dead thread group.
+    
+    This is obviously not true after de_thread() changes the leader.
+    After that almost every posix_cpu_timer_ method has problems.
+    
+    It is not simple to fix this bug correctly. First of all, I think
+    that timer->it.cpu should use struct pid instead of task_struct.
+    Also, the locking should be reworked completely. In particular,
+    tasklist_lock should not be used at all. This all needs a lot of
+    nontrivial and hard-to-test changes.
+    
+    Change __exit_signal() to do posix_cpu_timers_exit_group() when
+    the old leader dies during exec. This is not the fix, just the
+    temporary hack to hide the problem for 2.6.37 and stable. IOW,
+    this is obviously wrong but this is what we currently have anyway:
+    cpu timers do not work after mt exec.
+    
+    In theory this change adds another race. The exiting leader can
+    detach the timers which were attached to the new leader. However,
+    the window between de_thread() and release_task() is small, we
+    can pretend that sys_timer_create() was called before de_thread().
+    
+    Signed-off-by: Oleg Nesterov <oleg@redhat.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+It looks like the data structures need fixing.  Possibly to use struct
+pid.  Possibly to move the group data to signal struct.
+
+I think I played with some of that awhile ago.
+
+I am going to move this change to another patchset.  So I don't wind up
+playing shift the bug around.  I thought I would need this to get the
+other code working but it turns out we remain bug compatible without
+this.
+
+Hopefully I can get something out in the next week or so that addresses
+the issues you have pointed out.
+
+Eric
+
