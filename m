@@ -1,20 +1,20 @@
-Return-Path: <SRS0=FX7U=4M=lists.openwall.com=kernel-hardening-return-17891-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=l2Nd=4M=lists.openwall.com=kernel-hardening-return-17892-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7E387C11D32
-	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:27:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5374EC11D2F
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:29:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DB08B21D7E
-	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:27:41 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DB08B21D7E
+	by mail.kernel.org (Postfix) with SMTP id 85A7B20836
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:29:05 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 85A7B20836
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17891-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17728 invoked by uid 550); 24 Feb 2020 16:27:35 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17892-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19694 invoked by uid 550); 24 Feb 2020 16:28:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17684 invoked from network); 24 Feb 2020 16:27:35 -0000
+Received: (qmail 19652 invoked from network); 24 Feb 2020 16:28:59 -0000
 From: ebiederm@xmission.com (Eric W. Biederman)
 To: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Al Viro <viro@zeniv.linux.org.uk>,  LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Oleg Nesterov <oleg@redhat.com>,  Solar Designer <solar@openwall.com>,  Alexey Gladkov <gladkov.alexey@gmail.com>
@@ -42,64 +42,99 @@ References: <20200210150519.538333-8-gladkov.alexey@gmail.com>
 	<CAHk-=wgmn9Qds0VznyphouSZW6e42GWDT5H1dpZg8pyGDGN+=w@mail.gmail.com>
 	<87pnejf6fz.fsf@x220.int.ebiederm.org>
 	<871rqpaswu.fsf_-_@x220.int.ebiederm.org>
-Date: Mon, 24 Feb 2020 10:25:16 -0600
-In-Reply-To: <871rqpaswu.fsf_-_@x220.int.ebiederm.org> (Eric W. Biederman's
-	message of "Thu, 20 Feb 2020 14:46:25 -0600")
-Message-ID: <871rqk2brn.fsf_-_@x220.int.ebiederm.org>
+	<871rqk2brn.fsf_-_@x220.int.ebiederm.org>
+Date: Mon, 24 Feb 2020 10:26:42 -0600
+In-Reply-To: <871rqk2brn.fsf_-_@x220.int.ebiederm.org> (Eric W. Biederman's
+	message of "Mon, 24 Feb 2020 10:25:16 -0600")
+Message-ID: <87v9nw0x4t.fsf_-_@x220.int.ebiederm.org>
 User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
 Content-Type: text/plain
-X-XM-SPF: eid=1j6GZk-0007ND-2p;;;mid=<871rqk2brn.fsf_-_@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX18r19JNQj7E6kX0G2mdhpQOxD8W+HrcR10=
+X-XM-SPF: eid=1j6Gb7-0007hr-Mu;;;mid=<87v9nw0x4t.fsf_-_@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX1+1jB7207zqKuGkzNocTI/FE1FQ8bEJSFo=
 X-SA-Exim-Connect-IP: 68.227.160.95
 X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: [PATCH v2 0/6] proc: Dentry flushing without proc_mnt
+Subject: [PATCH v2 1/6] proc: Rename in proc_inode rename sysctl_inodes sibling_inodes
 X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
 X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
 
 
-I have addressed all of the review comments as I understand them,
-and fixed the small oversight the kernel test robot was able to
-find. (I had failed to initialize the new field pid->inodes).
+I about to need and use the same functionality for pid based
+inodes and there is no point in adding a second field when
+this field is already here and serving the same purporse.
 
-I did not hear any concerns from the 10,000 foot level last time
-so I am assuming this set of changes (baring bugs) is good to go.
+Just give the field a generic name so it is clear that
+it is no longer sysctl specific.
 
-Unless some new issues appear my plan is to put this in my tree
-and get this into linux-next.  Which will give Alexey something
-to build his changes on.
+Also for good measure initialize sibling_inodes when
+proc_inode is initialized.
 
+Signed-off-by: Eric W. Biederman <ebiederm@xmission.com>
+---
+ fs/proc/inode.c       | 1 +
+ fs/proc/internal.h    | 2 +-
+ fs/proc/proc_sysctl.c | 8 ++++----
+ 3 files changed, 6 insertions(+), 5 deletions(-)
 
-I tested this set of changes by running:
- (while ls -1 -f /proc > /dev/null ; do :; done ) &
-And monitoring the amount of free memory.
-
-With the flushing disabled I saw the used memory in the system grow by
-20M before the shrinker would bring it back down to where it started.
-With the patch applied I saw the memory usage stay essentially fixed.
-
-So flushing definitely keeps things working better.
-
-
-If anyone sees any problems with this code please let me know.
-
-Thank you,
-
-Eric W. Biederman (6):
-      proc: Rename in proc_inode rename sysctl_inodes sibling_inodes
-      proc: Generalize proc_sys_prune_dcache into proc_prune_siblings_dcache
-      proc: In proc_prune_siblings_dcache cache an aquired super block
-      proc: Use d_invalidate in proc_prune_siblings_dcache
-      proc: Clear the pieces of proc_inode that proc_evict_inode cares about
-      proc: Use a list of inodes to flush from proc
-
- fs/proc/base.c          | 111 ++++++++++++++++--------------------------------
- fs/proc/inode.c         |  73 ++++++++++++++++++++++++++++---
- fs/proc/internal.h      |   4 +-
- fs/proc/proc_sysctl.c   |  45 +++-----------------
- include/linux/pid.h     |   1 +
- include/linux/proc_fs.h |   4 +-
- kernel/exit.c           |   4 +-
- kernel/pid.c            |   1 +
- 8 files changed, 120 insertions(+), 123 deletions(-)
+diff --git a/fs/proc/inode.c b/fs/proc/inode.c
+index 6da18316d209..bdae442d5262 100644
+--- a/fs/proc/inode.c
++++ b/fs/proc/inode.c
+@@ -68,6 +68,7 @@ static struct inode *proc_alloc_inode(struct super_block *sb)
+ 	ei->pde = NULL;
+ 	ei->sysctl = NULL;
+ 	ei->sysctl_entry = NULL;
++	INIT_HLIST_NODE(&ei->sibling_inodes);
+ 	ei->ns_ops = NULL;
+ 	return &ei->vfs_inode;
+ }
+diff --git a/fs/proc/internal.h b/fs/proc/internal.h
+index 41587276798e..366cd3aa690b 100644
+--- a/fs/proc/internal.h
++++ b/fs/proc/internal.h
+@@ -91,7 +91,7 @@ struct proc_inode {
+ 	struct proc_dir_entry *pde;
+ 	struct ctl_table_header *sysctl;
+ 	struct ctl_table *sysctl_entry;
+-	struct hlist_node sysctl_inodes;
++	struct hlist_node sibling_inodes;
+ 	const struct proc_ns_operations *ns_ops;
+ 	struct inode vfs_inode;
+ } __randomize_layout;
+diff --git a/fs/proc/proc_sysctl.c b/fs/proc/proc_sysctl.c
+index c75bb4632ed1..42fbb7f3c587 100644
+--- a/fs/proc/proc_sysctl.c
++++ b/fs/proc/proc_sysctl.c
+@@ -279,9 +279,9 @@ static void proc_sys_prune_dcache(struct ctl_table_header *head)
+ 		node = hlist_first_rcu(&head->inodes);
+ 		if (!node)
+ 			break;
+-		ei = hlist_entry(node, struct proc_inode, sysctl_inodes);
++		ei = hlist_entry(node, struct proc_inode, sibling_inodes);
+ 		spin_lock(&sysctl_lock);
+-		hlist_del_init_rcu(&ei->sysctl_inodes);
++		hlist_del_init_rcu(&ei->sibling_inodes);
+ 		spin_unlock(&sysctl_lock);
+ 
+ 		inode = &ei->vfs_inode;
+@@ -483,7 +483,7 @@ static struct inode *proc_sys_make_inode(struct super_block *sb,
+ 	}
+ 	ei->sysctl = head;
+ 	ei->sysctl_entry = table;
+-	hlist_add_head_rcu(&ei->sysctl_inodes, &head->inodes);
++	hlist_add_head_rcu(&ei->sibling_inodes, &head->inodes);
+ 	head->count++;
+ 	spin_unlock(&sysctl_lock);
+ 
+@@ -514,7 +514,7 @@ static struct inode *proc_sys_make_inode(struct super_block *sb,
+ void proc_sys_evict_inode(struct inode *inode, struct ctl_table_header *head)
+ {
+ 	spin_lock(&sysctl_lock);
+-	hlist_del_init_rcu(&PROC_I(inode)->sysctl_inodes);
++	hlist_del_init_rcu(&PROC_I(inode)->sibling_inodes);
+ 	if (!--head->count)
+ 		kfree_rcu(head, rcu);
+ 	spin_unlock(&sysctl_lock);
+-- 
+2.25.0
 
