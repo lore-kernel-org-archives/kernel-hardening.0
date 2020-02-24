@@ -1,20 +1,21 @@
-Return-Path: <SRS0=XlAL=4M=lists.openwall.com=kernel-hardening-return-17883-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=hOyw=4M=lists.openwall.com=kernel-hardening-return-17884-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-14.8 required=3.0
+	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9F2D8C11D2F
-	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:03:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7A8CBC11D2F
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:03:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4EC2220828
-	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:03:25 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4EC2220828
+	by mail.kernel.org (Postfix) with SMTP id 78A4720828
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:03:44 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 78A4720828
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17883-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24319 invoked by uid 550); 24 Feb 2020 16:02:46 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17884-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24533 invoked by uid 550); 24 Feb 2020 16:02:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24236 invoked from network); 24 Feb 2020 16:02:45 -0000
+Received: (qmail 24461 invoked from network); 24 Feb 2020 16:02:48 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -48,9 +49,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-kselftest@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
 	x86@kernel.org
-Subject: [RFC PATCH v14 08/10] selftests/landlock: Add initial tests
-Date: Mon, 24 Feb 2020 17:02:13 +0100
-Message-Id: <20200224160215.4136-9-mic@digikod.net>
+Subject: [RFC PATCH v14 10/10] landlock: Add user and kernel documentation
+Date: Mon, 24 Feb 2020 17:02:15 +0100
+Message-Id: <20200224160215.4136-11-mic@digikod.net>
 X-Mailer: git-send-email 2.25.1
 In-Reply-To: <20200224160215.4136-1-mic@digikod.net>
 References: <20200224160215.4136-1-mic@digikod.net>
@@ -60,10 +61,9 @@ Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
-Test landlock syscall, ptrace hooks semantic and filesystem
-access-control.
+This documentation can be built with the Sphinx framework.
 
-This is an initial batch, more tests will follow.
+Another location might be more appropriate, though.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Reviewed-by: Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>
@@ -71,1144 +71,345 @@ Cc: Andy Lutomirski <luto@amacapital.net>
 Cc: James Morris <jmorris@namei.org>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Serge E. Hallyn <serge@hallyn.com>
-Cc: Shuah Khan <shuah@kernel.org>
 ---
 
 Changes since v13:
-* Add back the filesystem tests (from v10) and extend them.
-* Add tests for the new syscall.
+* Rewrote the documentation according to the major revamp.
 
 Previous version:
-https://lore.kernel.org/lkml/20191104172146.30797-7-mic@digikod.net/
+https://lore.kernel.org/lkml/20191104172146.30797-8-mic@digikod.net/
 ---
- tools/testing/selftests/Makefile              |   1 +
- tools/testing/selftests/landlock/.gitignore   |   3 +
- tools/testing/selftests/landlock/Makefile     |  13 +
- tools/testing/selftests/landlock/config       |   4 +
- tools/testing/selftests/landlock/test.h       |  40 ++
- tools/testing/selftests/landlock/test_base.c  |  80 +++
- tools/testing/selftests/landlock/test_fs.c    | 624 ++++++++++++++++++
- .../testing/selftests/landlock/test_ptrace.c  | 293 ++++++++
- 8 files changed, 1058 insertions(+)
- create mode 100644 tools/testing/selftests/landlock/.gitignore
- create mode 100644 tools/testing/selftests/landlock/Makefile
- create mode 100644 tools/testing/selftests/landlock/config
- create mode 100644 tools/testing/selftests/landlock/test.h
- create mode 100644 tools/testing/selftests/landlock/test_base.c
- create mode 100644 tools/testing/selftests/landlock/test_fs.c
- create mode 100644 tools/testing/selftests/landlock/test_ptrace.c
+ Documentation/security/index.rst           |   1 +
+ Documentation/security/landlock/index.rst  |  18 ++
+ Documentation/security/landlock/kernel.rst |  44 ++++
+ Documentation/security/landlock/user.rst   | 233 +++++++++++++++++++++
+ 4 files changed, 296 insertions(+)
+ create mode 100644 Documentation/security/landlock/index.rst
+ create mode 100644 Documentation/security/landlock/kernel.rst
+ create mode 100644 Documentation/security/landlock/user.rst
 
-diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
-index 6ec503912bea..5183f269c244 100644
---- a/tools/testing/selftests/Makefile
-+++ b/tools/testing/selftests/Makefile
-@@ -24,6 +24,7 @@ TARGETS += ir
- TARGETS += kcmp
- TARGETS += kexec
- TARGETS += kvm
-+TARGETS += landlock
- TARGETS += lib
- TARGETS += livepatch
- TARGETS += lkdtm
-diff --git a/tools/testing/selftests/landlock/.gitignore b/tools/testing/selftests/landlock/.gitignore
+diff --git a/Documentation/security/index.rst b/Documentation/security/index.rst
+index fc503dd689a7..4d213e76ddf4 100644
+--- a/Documentation/security/index.rst
++++ b/Documentation/security/index.rst
+@@ -15,3 +15,4 @@ Security Documentation
+    self-protection
+    siphash
+    tpm/index
++   landlock/index
+diff --git a/Documentation/security/landlock/index.rst b/Documentation/security/landlock/index.rst
 new file mode 100644
-index 000000000000..4ee53c733af0
+index 000000000000..dbd33b96ce60
 --- /dev/null
-+++ b/tools/testing/selftests/landlock/.gitignore
-@@ -0,0 +1,3 @@
-+/test_base
-+/test_fs
-+/test_ptrace
-diff --git a/tools/testing/selftests/landlock/Makefile b/tools/testing/selftests/landlock/Makefile
++++ b/Documentation/security/landlock/index.rst
+@@ -0,0 +1,18 @@
++=========================================
++Landlock LSM: unprivileged access control
++=========================================
++
++:Author: Mickaël Salaün
++
++The goal of Landlock is to enable to restrict ambient rights (e.g.  global
++filesystem access) for a set of processes.  Because Landlock is a stackable
++LSM, it makes possible to create safe security sandboxes as new security layers
++in addition to the existing system-wide access-controls. This kind of sandbox
++is expected to help mitigate the security impact of bugs or
++unexpected/malicious behaviors in user-space applications. Landlock empower any
++process, including unprivileged ones, to securely restrict themselves.
++
++.. toctree::
++
++    user
++    kernel
+diff --git a/Documentation/security/landlock/kernel.rst b/Documentation/security/landlock/kernel.rst
 new file mode 100644
-index 000000000000..c7e26e1251c4
+index 000000000000..b87769909029
 --- /dev/null
-+++ b/tools/testing/selftests/landlock/Makefile
-@@ -0,0 +1,13 @@
-+# SPDX-License-Identifier: GPL-2.0
++++ b/Documentation/security/landlock/kernel.rst
+@@ -0,0 +1,44 @@
++==============================
++Landlock: kernel documentation
++==============================
 +
-+test_src := $(wildcard test_*.c)
++Landlock's goal is to create scoped access-control (i.e. sandboxing).  To
++harden a whole system, this feature should be available to any process,
++including unprivileged ones.  Because such process may be compromised or
++backdoored (i.e. untrusted), Landlock's features must be safe to use from the
++kernel and other processes point of view.  Landlock's interface must therefore
++expose a minimal attack surface.
 +
-+TEST_GEN_PROGS := $(test_src:.c=)
++Landlock is designed to be usable by unprivileged processes while following the
++system security policy enforced by other access control mechanisms (e.g. DAC,
++LSM).  Indeed, a Landlock rule shall not interfere with other access-controls
++enforced on the system, only add more restrictions.
 +
-+usr_include := ../../../../usr/include
++Any user can enforce Landlock rulesets on their processes.  They are merged and
++evaluated according to the inherited ones in a way that ensure that only more
++constraints can be added.
 +
-+CFLAGS += -Wall -O2 -I$(usr_include)
 +
-+include ../lib.mk
++Guiding principles for safe access controls
++===========================================
 +
-+$(TEST_GEN_PROGS): ../kselftest_harness.h $(usr_include)/linux/landlock.h
-diff --git a/tools/testing/selftests/landlock/config b/tools/testing/selftests/landlock/config
++* A Landlock rule shall be focused on access control on kernel objects instead
++  of syscall filtering (i.e. syscall arguments), which is the purpose of
++  seccomp-bpf.
++* To avoid multiple kind of side-channel attacks (e.g. leak of security
++  policies, CPU-based attacks), Landlock rules shall not be able to
++  programmatically communicate with user space.
++* Kernel access check shall not slow down access request from unsandboxed
++  processes.
++* Computation related to Landlock operations (e.g. enforce a ruleset) shall
++  only impact the processes requesting them.
++
++
++Landlock rulesets and domains
++=============================
++
++A domain is a read-only ruleset tied to a set of subjects (i.e. tasks).  A
++domain can transition to a new one which is the intersection of the constraints
++from the current and a new ruleset.  The definition of a subject is implicit
++for a task sandboxing itself, which makes the reasoning much easier and helps
++avoid pitfalls.
+diff --git a/Documentation/security/landlock/user.rst b/Documentation/security/landlock/user.rst
 new file mode 100644
-index 000000000000..662f72c5a0df
+index 000000000000..cbd7f61fca8c
 --- /dev/null
-+++ b/tools/testing/selftests/landlock/config
-@@ -0,0 +1,4 @@
-+CONFIG_HEADERS_INSTALL=y
-+CONFIG_SECURITY_LANDLOCK=y
-+CONFIG_SECURITY_PATH=y
-+CONFIG_SECURITY=y
-diff --git a/tools/testing/selftests/landlock/test.h b/tools/testing/selftests/landlock/test.h
-new file mode 100644
-index 000000000000..f9cebd8fc169
---- /dev/null
-+++ b/tools/testing/selftests/landlock/test.h
-@@ -0,0 +1,40 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+/*
-+ * Landlock test helpers
-+ *
-+ * Copyright © 2017-2020 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2019-2020 ANSSI
-+ */
-+
-+#include <errno.h>
-+#include <sys/syscall.h>
-+
-+#include "../kselftest_harness.h"
-+
-+#ifndef landlock
-+static inline int landlock(unsigned int command, unsigned int options,
-+		size_t attr_size, void *attr_ptr)
-+{
-+	errno = 0;
-+	return syscall(__NR_landlock, command, options, attr_size, attr_ptr, 0,
-+			NULL);
-+}
-+#endif
-+
-+FIXTURE(ruleset_rw) {
-+	struct landlock_attr_ruleset attr_ruleset;
-+	int ruleset_fd;
-+};
-+
-+FIXTURE_SETUP(ruleset_rw) {
-+	self->attr_ruleset.handled_access_fs = LANDLOCK_ACCESS_FS_READ |
-+		LANDLOCK_ACCESS_FS_WRITE;
-+	self->ruleset_fd = landlock(LANDLOCK_CMD_CREATE_RULESET,
-+			LANDLOCK_OPT_CREATE_RULESET,
-+			sizeof(self->attr_ruleset), &self->attr_ruleset);
-+	ASSERT_LE(0, self->ruleset_fd);
-+}
-+
-+FIXTURE_TEARDOWN(ruleset_rw) {
-+	ASSERT_EQ(0, close(self->ruleset_fd));
-+}
-diff --git a/tools/testing/selftests/landlock/test_base.c b/tools/testing/selftests/landlock/test_base.c
-new file mode 100644
-index 000000000000..1ac7dbead3b2
---- /dev/null
-+++ b/tools/testing/selftests/landlock/test_base.c
-@@ -0,0 +1,80 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Landlock tests - common resources
-+ *
-+ * Copyright © 2017-2020 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2019-2020 ANSSI
-+ */
-+
-+#define _GNU_SOURCE
-+#include <errno.h>
-+#include <fcntl.h>
-+#include <linux/landlock.h>
-+#include <sys/prctl.h>
-+
-+#include "test.h"
-+
-+#define FDINFO_TEMPLATE "/proc/self/fdinfo/%d"
-+#define FDINFO_SIZE 128
-+
-+#ifndef O_PATH
-+#define O_PATH		010000000
-+#endif
-+
-+TEST_F(ruleset_rw, fdinfo)
-+{
-+	int fdinfo_fd, fdinfo_path_size, fdinfo_buf_size;
-+	char fdinfo_path[sizeof(FDINFO_TEMPLATE) + 2];
-+	char fdinfo_buf[FDINFO_SIZE];
-+
-+	fdinfo_path_size = snprintf(fdinfo_path, sizeof(fdinfo_path),
-+			FDINFO_TEMPLATE, self->ruleset_fd);
-+	ASSERT_LE(fdinfo_path_size, sizeof(fdinfo_path));
-+
-+	fdinfo_fd = open(fdinfo_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_GE(fdinfo_fd, 0);
-+
-+	fdinfo_buf_size = read(fdinfo_fd, fdinfo_buf, sizeof(fdinfo_buf));
-+	ASSERT_LE(fdinfo_buf_size, sizeof(fdinfo_buf) - 1);
-+
-+	/*
-+	 * fdinfo_buf: pos:        0
-+	 * flags:  02000002
-+	 * mnt_id: 13
-+	 * handled_access_fs:     804000
-+	 */
-+	EXPECT_EQ(0, close(fdinfo_fd));
-+}
-+
-+TEST(features)
-+{
-+	struct landlock_attr_features attr_features = {
-+		.options_get_features = ~0ULL,
-+		.options_create_ruleset = ~0ULL,
-+		.options_add_rule = ~0ULL,
-+		.options_enforce_ruleset = ~0ULL,
-+		.access_fs = ~0ULL,
-+		.size_attr_ruleset = ~0ULL,
-+		.size_attr_path_beneath = ~0ULL,
-+	};
-+
-+	ASSERT_EQ(0, landlock(LANDLOCK_CMD_GET_FEATURES,
-+				LANDLOCK_OPT_CREATE_RULESET,
-+				sizeof(attr_features), &attr_features));
-+	ASSERT_EQ(((LANDLOCK_OPT_GET_FEATURES << 1) - 1),
-+			attr_features.options_get_features);
-+	ASSERT_EQ(((LANDLOCK_OPT_CREATE_RULESET << 1) - 1),
-+			attr_features.options_create_ruleset);
-+	ASSERT_EQ(((LANDLOCK_OPT_ADD_RULE_PATH_BENEATH << 1) - 1),
-+			attr_features.options_add_rule);
-+	ASSERT_EQ(((LANDLOCK_OPT_ENFORCE_RULESET << 1) - 1),
-+			attr_features.options_enforce_ruleset);
-+	ASSERT_EQ(((LANDLOCK_ACCESS_FS_MAP << 1) - 1),
-+			attr_features.access_fs);
-+	ASSERT_EQ(sizeof(struct landlock_attr_ruleset),
-+		attr_features.size_attr_ruleset);
-+	ASSERT_EQ(sizeof(struct landlock_attr_path_beneath),
-+		attr_features.size_attr_path_beneath);
-+}
-+
-+TEST_HARNESS_MAIN
-diff --git a/tools/testing/selftests/landlock/test_fs.c b/tools/testing/selftests/landlock/test_fs.c
-new file mode 100644
-index 000000000000..627cb3a71f89
---- /dev/null
-+++ b/tools/testing/selftests/landlock/test_fs.c
-@@ -0,0 +1,624 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Landlock tests - filesystem
-+ *
-+ * Copyright © 2017-2020 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2020 ANSSI
-+ */
-+
-+#define _GNU_SOURCE
-+#include <fcntl.h>
-+#include <linux/landlock.h>
-+#include <sched.h>
-+#include <sys/mount.h>
-+#include <sys/prctl.h>
-+#include <sys/stat.h>
-+#include <unistd.h>
-+
-+#include "test.h"
-+
-+#define TMP_PREFIX "tmp_"
-+
-+/* Paths (sibling number and depth) */
-+const char dir_s0_d1[] = TMP_PREFIX "a0";
-+const char dir_s0_d2[] = TMP_PREFIX "a0/b0";
-+const char dir_s0_d3[] = TMP_PREFIX "a0/b0/c0";
-+const char dir_s1_d1[] = TMP_PREFIX "a1";
-+const char dir_s2_d1[] = TMP_PREFIX "a2";
-+const char dir_s2_d2[] = TMP_PREFIX "a2/b2";
-+
-+/* dir_s3_d1 is a tmpfs mount. */
-+const char dir_s3_d1[] = TMP_PREFIX "a3";
-+const char dir_s3_d2[] = TMP_PREFIX "a3/b3";
-+
-+/* dir_s4_d2 is a tmpfs mount. */
-+const char dir_s4_d1[] = TMP_PREFIX "a4";
-+const char dir_s4_d2[] = TMP_PREFIX "a4/b4";
-+
-+static void cleanup_layout1(void)
-+{
-+	rmdir(dir_s2_d2);
-+	rmdir(dir_s2_d1);
-+	rmdir(dir_s1_d1);
-+	rmdir(dir_s0_d3);
-+	rmdir(dir_s0_d2);
-+	rmdir(dir_s0_d1);
-+
-+	/* dir_s3_d2 may be bind mounted */
-+	umount(dir_s3_d2);
-+	rmdir(dir_s3_d2);
-+	umount(dir_s3_d1);
-+	rmdir(dir_s3_d1);
-+
-+	umount(dir_s4_d2);
-+	rmdir(dir_s4_d2);
-+	rmdir(dir_s4_d1);
-+}
-+
-+FIXTURE(layout1) {
-+};
-+
-+FIXTURE_SETUP(layout1)
-+{
-+	cleanup_layout1();
-+
-+	/* Do not pollute the rest of the system. */
-+	ASSERT_NE(-1, unshare(CLONE_NEWNS));
-+
-+	ASSERT_EQ(0, mkdir(dir_s0_d1, 0600));
-+	ASSERT_EQ(0, mkdir(dir_s0_d2, 0600));
-+	ASSERT_EQ(0, mkdir(dir_s0_d3, 0600));
-+	ASSERT_EQ(0, mkdir(dir_s1_d1, 0600));
-+	ASSERT_EQ(0, mkdir(dir_s2_d1, 0600));
-+	ASSERT_EQ(0, mkdir(dir_s2_d2, 0600));
-+
-+	ASSERT_EQ(0, mkdir(dir_s3_d1, 0600));
-+	ASSERT_EQ(0, mount("tmp", dir_s3_d1, "tmpfs", 0, NULL));
-+	ASSERT_EQ(0, mkdir(dir_s3_d2, 0600));
-+
-+	ASSERT_EQ(0, mkdir(dir_s4_d1, 0600));
-+	ASSERT_EQ(0, mkdir(dir_s4_d2, 0600));
-+	ASSERT_EQ(0, mount("tmp", dir_s4_d2, "tmpfs", 0, NULL));
-+}
-+
-+FIXTURE_TEARDOWN(layout1)
-+{
-+	/*
-+	 * cleanup_layout1() would be denied here, use TEST(cleanup) instead.
-+	 */
-+}
-+
-+static void test_path_rel(struct __test_metadata *_metadata, int dirfd,
-+		const char *path, int ret)
-+{
-+	int fd;
-+	struct stat statbuf;
-+
-+	/* faccessat() can not be restricted for now */
-+	ASSERT_EQ(ret, fstatat(dirfd, path, &statbuf, 0)) {
-+		TH_LOG("fstatat path \"%s\" returned %s\n", path,
-+				strerror(errno));
-+	}
-+	if (ret) {
-+		ASSERT_EQ(EACCES, errno);
-+	}
-+	fd = openat(dirfd, path, O_DIRECTORY);
-+	if (ret) {
-+		ASSERT_EQ(-1, fd);
-+		ASSERT_EQ(EACCES, errno);
-+	} else {
-+		ASSERT_NE(-1, fd);
-+		EXPECT_EQ(0, close(fd));
-+	}
-+}
-+
-+static void test_path(struct __test_metadata *_metadata, const char *path,
-+		int ret)
-+{
-+	return test_path_rel(_metadata, AT_FDCWD, path, ret);
-+}
-+
-+TEST_F(layout1, no_restriction)
-+{
-+	test_path(_metadata, dir_s0_d1, 0);
-+	test_path(_metadata, dir_s0_d2, 0);
-+	test_path(_metadata, dir_s0_d3, 0);
-+	test_path(_metadata, dir_s1_d1, 0);
-+	test_path(_metadata, dir_s2_d2, 0);
-+}
-+
-+TEST_F(ruleset_rw, inval)
-+{
-+	int err;
-+	struct landlock_attr_path_beneath path_beneath = {
-+		.allowed_access = LANDLOCK_ACCESS_FS_READ |
-+			LANDLOCK_ACCESS_FS_WRITE,
-+		.parent_fd = -1,
-+	};
-+	struct landlock_attr_enforce attr_enforce;
-+
-+	path_beneath.ruleset_fd = self->ruleset_fd;
-+	path_beneath.parent_fd = open(dir_s0_d2, O_PATH | O_NOFOLLOW |
-+			O_DIRECTORY | O_CLOEXEC);
-+	ASSERT_GE(path_beneath.parent_fd, 0);
-+	err = landlock(LANDLOCK_CMD_ADD_RULE,
-+			LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
-+			sizeof(path_beneath), &path_beneath);
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(err, 0);
-+	ASSERT_EQ(0, close(path_beneath.parent_fd));
-+
-+	/* Tests without O_PATH. */
-+	path_beneath.parent_fd = open(dir_s0_d2, O_NOFOLLOW | O_DIRECTORY |
-+			O_CLOEXEC);
-+	ASSERT_GE(path_beneath.parent_fd, 0);
-+	err = landlock(LANDLOCK_CMD_ADD_RULE,
-+			LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
-+			sizeof(path_beneath), &path_beneath);
-+	ASSERT_EQ(err, -1);
-+	ASSERT_EQ(errno, EBADR);
-+	errno = 0;
-+	ASSERT_EQ(0, close(path_beneath.parent_fd));
-+
-+	/* Checks un-handled access. */
-+	path_beneath.parent_fd = open(dir_s0_d2, O_PATH | O_NOFOLLOW |
-+			O_DIRECTORY | O_CLOEXEC);
-+	ASSERT_GE(path_beneath.parent_fd, 0);
-+	path_beneath.allowed_access |= LANDLOCK_ACCESS_FS_EXECUTE;
-+	err = landlock(LANDLOCK_CMD_ADD_RULE,
-+			LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
-+			sizeof(path_beneath), &path_beneath);
-+	ASSERT_EQ(errno, EINVAL);
-+	errno = 0;
-+	ASSERT_EQ(err, -1);
-+	ASSERT_EQ(0, close(path_beneath.parent_fd));
-+
-+	err = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(err, 0);
-+
-+	attr_enforce.ruleset_fd = self->ruleset_fd;
-+	err = landlock(LANDLOCK_CMD_ENFORCE_RULESET,
-+			LANDLOCK_OPT_ENFORCE_RULESET, sizeof(attr_enforce),
-+			&attr_enforce);
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(err, 0);
-+}
-+
-+TEST_F(ruleset_rw, nsfs)
-+{
-+	struct landlock_attr_path_beneath path_beneath = {
-+		.allowed_access = LANDLOCK_ACCESS_FS_READ |
-+			LANDLOCK_ACCESS_FS_WRITE,
-+		.ruleset_fd = self->ruleset_fd,
-+	};
-+	int err;
-+
-+	path_beneath.parent_fd = open("/proc/self/ns/mnt", O_PATH | O_NOFOLLOW |
-+			O_CLOEXEC);
-+	ASSERT_GE(path_beneath.parent_fd, 0);
-+	err = landlock(LANDLOCK_CMD_ADD_RULE,
-+			LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
-+			sizeof(path_beneath), &path_beneath);
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(err, 0);
-+	ASSERT_EQ(0, close(path_beneath.parent_fd));
-+}
-+
-+static void add_path_beneath(struct __test_metadata *_metadata, int ruleset_fd,
-+		__u64 allowed_access, const char *path)
-+{
-+	int err;
-+	struct landlock_attr_path_beneath path_beneath = {
-+		.ruleset_fd = ruleset_fd,
-+		.allowed_access = allowed_access,
-+	};
-+
-+	path_beneath.parent_fd = open(path, O_PATH | O_NOFOLLOW | O_DIRECTORY |
-+			O_CLOEXEC);
-+	ASSERT_GE(path_beneath.parent_fd, 0) {
-+		TH_LOG("Failed to open directory \"%s\": %s\n", path,
-+				strerror(errno));
-+	}
-+	err = landlock(LANDLOCK_CMD_ADD_RULE,
-+			LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
-+			sizeof(path_beneath), &path_beneath);
-+	ASSERT_EQ(err, 0) {
-+		TH_LOG("Failed to update the ruleset with \"%s\": %s\n",
-+				path, strerror(errno));
-+	}
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(0, close(path_beneath.parent_fd));
-+}
-+
-+static int create_ruleset(struct __test_metadata *_metadata,
-+		const char *const dirs[])
-+{
-+	int ruleset_fd, dirs_len, i;
-+	struct landlock_attr_features attr_features;
-+	struct landlock_attr_ruleset attr_ruleset = {
-+		.handled_access_fs =
-+			LANDLOCK_ACCESS_FS_OPEN |
-+			LANDLOCK_ACCESS_FS_READ |
-+			LANDLOCK_ACCESS_FS_WRITE |
-+			LANDLOCK_ACCESS_FS_EXECUTE |
-+			LANDLOCK_ACCESS_FS_GETATTR
-+	};
-+	__u64 allowed_access =
-+			LANDLOCK_ACCESS_FS_OPEN |
-+			LANDLOCK_ACCESS_FS_READ |
-+			LANDLOCK_ACCESS_FS_GETATTR;
-+
-+	ASSERT_NE(NULL, dirs) {
-+		TH_LOG("No directory list\n");
-+	}
-+	ASSERT_NE(NULL, dirs[0]) {
-+		TH_LOG("Empty directory list\n");
-+	}
-+	/* Gets the number of dir entries. */
-+	for (dirs_len = 0; dirs[dirs_len]; dirs_len++);
-+
-+	ASSERT_EQ(0, landlock(LANDLOCK_CMD_GET_FEATURES,
-+				LANDLOCK_OPT_GET_FEATURES,
-+				sizeof(attr_features), &attr_features));
-+	/* Only for test, use a binary AND for real application instead. */
-+	ASSERT_EQ(attr_ruleset.handled_access_fs,
-+			attr_ruleset.handled_access_fs &
-+			attr_features.access_fs);
-+	ASSERT_EQ(allowed_access, allowed_access & attr_features.access_fs);
-+	ruleset_fd = landlock(LANDLOCK_CMD_CREATE_RULESET,
-+			LANDLOCK_OPT_CREATE_RULESET, sizeof(attr_ruleset),
-+			&attr_ruleset);
-+	ASSERT_GE(ruleset_fd, 0) {
-+		TH_LOG("Failed to create a ruleset: %s\n", strerror(errno));
-+	}
-+
-+	for (i = 0; dirs[i]; i++) {
-+		add_path_beneath(_metadata, ruleset_fd, allowed_access,
-+				dirs[i]);
-+	}
-+	return ruleset_fd;
-+}
-+
-+static void enforce_ruleset(struct __test_metadata *_metadata, int ruleset_fd)
-+{
-+	struct landlock_attr_enforce attr_enforce = {
-+		.ruleset_fd = ruleset_fd,
-+	};
-+	int err;
-+
-+	err = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(err, 0);
-+
-+	err = landlock(LANDLOCK_CMD_ENFORCE_RULESET,
-+			LANDLOCK_OPT_ENFORCE_RULESET, sizeof(attr_enforce),
-+			&attr_enforce);
-+	ASSERT_EQ(err, 0) {
-+		TH_LOG("Failed to enforce ruleset: %s\n", strerror(errno));
-+	}
-+	ASSERT_EQ(errno, 0);
-+}
-+
-+TEST_F(layout1, whitelist)
-+{
-+	int ruleset_fd = create_ruleset(_metadata,
-+			(const char *const []){ dir_s0_d2, dir_s1_d1, NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	test_path(_metadata, "/", -1);
-+	test_path(_metadata, dir_s0_d1, -1);
-+	test_path(_metadata, dir_s0_d2, 0);
-+	test_path(_metadata, dir_s0_d3, 0);
-+}
-+
-+TEST_F(layout1, unhandled_access)
-+{
-+	int ruleset_fd = create_ruleset(_metadata,
-+			(const char *const []){ dir_s0_d2, NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	/*
-+	 * Because the policy does not handled LANDLOCK_ACCESS_FS_CHROOT,
-+	 * chroot(2) should be allowed.
-+	 */
-+	ASSERT_EQ(0, chroot(dir_s0_d1));
-+	ASSERT_EQ(0, chroot(dir_s0_d2));
-+	ASSERT_EQ(0, chroot(dir_s0_d3));
-+}
-+
-+TEST_F(layout1, ruleset_overlap)
-+{
-+	struct stat statbuf;
-+	int open_fd;
-+	int ruleset_fd = create_ruleset(_metadata,
-+			(const char *const []){ dir_s1_d1, NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	/* These rules should be ORed among them. */
-+	add_path_beneath(_metadata, ruleset_fd,
-+			LANDLOCK_ACCESS_FS_GETATTR, dir_s0_d2);
-+	add_path_beneath(_metadata, ruleset_fd,
-+			LANDLOCK_ACCESS_FS_OPEN, dir_s0_d2);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d1, &statbuf, 0));
-+	ASSERT_EQ(-1, openat(AT_FDCWD, dir_s0_d1, O_DIRECTORY));
-+	ASSERT_EQ(0, fstatat(AT_FDCWD, dir_s0_d2, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d2, O_DIRECTORY);
-+	ASSERT_LE(0, open_fd);
-+	EXPECT_EQ(0, close(open_fd));
-+	ASSERT_EQ(0, fstatat(AT_FDCWD, dir_s0_d3, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d3, O_DIRECTORY);
-+	ASSERT_LE(0, open_fd);
-+	EXPECT_EQ(0, close(open_fd));
-+}
-+
-+TEST_F(layout1, inherit_superset)
-+{
-+	struct stat statbuf;
-+	int ruleset_fd, open_fd;
-+
-+	ruleset_fd = create_ruleset(_metadata,
-+			(const char *const []){ dir_s1_d1, NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	add_path_beneath(_metadata, ruleset_fd,
-+			LANDLOCK_ACCESS_FS_OPEN, dir_s0_d2);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d1, &statbuf, 0));
-+	ASSERT_EQ(-1, openat(AT_FDCWD, dir_s0_d1, O_DIRECTORY));
-+
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d2, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d2, O_DIRECTORY);
-+	ASSERT_NE(-1, open_fd);
-+	ASSERT_EQ(0, close(open_fd));
-+
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d3, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d3, O_DIRECTORY);
-+	ASSERT_NE(-1, open_fd);
-+	ASSERT_EQ(0, close(open_fd));
-+
-+	/*
-+	 * Test shared rule extension: the following rules should not grant any
-+	 * new access, only remove some.  Once enforced, these rules are ANDed
-+	 * with the previous ones.
-+	 */
-+	add_path_beneath(_metadata, ruleset_fd, LANDLOCK_ACCESS_FS_GETATTR,
-+			dir_s0_d2);
-+	/*
-+	 * In ruleset_fd, dir_s0_d2 should now have the LANDLOCK_ACCESS_FS_OPEN
-+	 * and LANDLOCK_ACCESS_FS_GETATTR access rights (even if this directory
-+	 * is opened a second time).  However, when enforcing this updated
-+	 * ruleset, the ruleset tied to the current process will still only
-+	 * have the dir_s0_d2 with LANDLOCK_ACCESS_FS_OPEN access,
-+	 * LANDLOCK_ACCESS_FS_GETATTR must not be allowed because it would be a
-+	 * privilege escalation.
-+	 */
-+	enforce_ruleset(_metadata, ruleset_fd);
-+
-+	/* Same tests and results as above. */
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d1, &statbuf, 0));
-+	ASSERT_EQ(-1, openat(AT_FDCWD, dir_s0_d1, O_DIRECTORY));
-+
-+	/* It is still forbiden to fstat(dir_s0_d2). */
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d2, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d2, O_DIRECTORY);
-+	ASSERT_NE(-1, open_fd);
-+	ASSERT_EQ(0, close(open_fd));
-+
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d3, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d3, O_DIRECTORY);
-+	ASSERT_NE(-1, open_fd);
-+	ASSERT_EQ(0, close(open_fd));
-+
-+	/*
-+	 * Now, dir_s0_d3 get a new rule tied to it, only allowing
-+	 * LANDLOCK_ACCESS_FS_GETATTR.  The kernel internal difference is that
-+	 * there was no rule tied to it before.
-+	 */
-+	add_path_beneath(_metadata, ruleset_fd, LANDLOCK_ACCESS_FS_GETATTR,
-+			dir_s0_d3);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	/*
-+	 * Same tests and results as above, except for open(dir_s0_d3) which is
-+	 * now denied because the new rule mask the rule previously inherited
-+	 * from dir_s0_d2.
-+	 */
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d1, &statbuf, 0));
-+	ASSERT_EQ(-1, openat(AT_FDCWD, dir_s0_d1, O_DIRECTORY));
-+
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d2, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d2, O_DIRECTORY);
-+	ASSERT_NE(-1, open_fd);
-+	ASSERT_EQ(0, close(open_fd));
-+
-+	/* It is still forbiden to fstat(dir_s0_d3). */
-+	ASSERT_EQ(-1, fstatat(AT_FDCWD, dir_s0_d3, &statbuf, 0));
-+	open_fd = openat(AT_FDCWD, dir_s0_d3, O_DIRECTORY);
-+	/* open(dir_s0_d3) is now forbidden. */
-+	ASSERT_EQ(-1, open_fd);
-+	ASSERT_EQ(EACCES, errno);
-+}
-+
-+TEST_F(layout1, extend_ruleset_with_denied_path)
-+{
-+	struct landlock_attr_path_beneath path_beneath = {
-+		.allowed_access = LANDLOCK_ACCESS_FS_GETATTR,
-+	};
-+
-+	path_beneath.ruleset_fd = create_ruleset(_metadata,
-+			(const char *const []){ dir_s0_d2, NULL });
-+	ASSERT_NE(-1, path_beneath.ruleset_fd);
-+	enforce_ruleset(_metadata, path_beneath.ruleset_fd);
-+
-+	ASSERT_EQ(-1, open(dir_s0_d1, O_NOFOLLOW | O_DIRECTORY | O_CLOEXEC));
-+	ASSERT_EQ(EACCES, errno);
-+
-+	/*
-+	 * Tests that we can't create a rule for which we are not allowed to
-+	 * open its path.
-+	 */
-+	path_beneath.parent_fd = open(dir_s0_d1, O_PATH | O_NOFOLLOW
-+			| O_DIRECTORY | O_CLOEXEC);
-+	ASSERT_GE(path_beneath.parent_fd, 0);
-+	ASSERT_EQ(-1, landlock(LANDLOCK_CMD_ADD_RULE,
-+				LANDLOCK_OPT_CREATE_RULESET,
-+				sizeof(path_beneath), &path_beneath));
-+	ASSERT_EQ(EACCES, errno);
-+	ASSERT_EQ(0, close(path_beneath.parent_fd));
-+	EXPECT_EQ(0, close(path_beneath.ruleset_fd));
-+}
-+
-+TEST_F(layout1, rule_on_mountpoint)
-+{
-+	int ruleset_fd = create_ruleset(_metadata,
-+			(const char *const []){ dir_s0_d1, dir_s3_d1, NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	test_path(_metadata, dir_s1_d1, -1);
-+	test_path(_metadata, dir_s0_d1, 0);
-+	test_path(_metadata, dir_s3_d1, 0);
-+}
-+
-+TEST_F(layout1, rule_over_mountpoint)
-+{
-+	int ruleset_fd = create_ruleset(_metadata,
-+			(const char *const []){ dir_s4_d1, dir_s0_d1, NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	test_path(_metadata, dir_s4_d2, 0);
-+	test_path(_metadata, dir_s0_d1, 0);
-+	test_path(_metadata, dir_s4_d1, 0);
-+}
-+
-+/*
-+ * This test verifies that we can apply a landlock rule on the root (/), it
-+ * might require special handling.
-+ */
-+TEST_F(layout1, rule_over_root)
-+{
-+	int ruleset_fd = create_ruleset(_metadata,
-+		(const char *const []){ "/", NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	test_path(_metadata, "/", 0);
-+	test_path(_metadata, dir_s0_d1, 0);
-+}
-+
-+TEST_F(layout1, rule_inside_mount_ns)
-+{
-+	ASSERT_NE(-1, mount(NULL, "/", NULL, MS_PRIVATE | MS_REC, NULL));
-+	ASSERT_NE(-1, syscall(SYS_pivot_root, dir_s3_d1, dir_s3_d2));
-+	ASSERT_NE(-1, chdir("/"));
-+
-+	int ruleset_fd = create_ruleset(_metadata,
-+		(const char *const []){ "b3", NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	test_path(_metadata, "b3", 0);
-+	test_path(_metadata, "/", -1);
-+}
-+
-+TEST_F(layout1, mount_and_pivot)
-+{
-+	int ruleset_fd = create_ruleset(_metadata,
-+		(const char *const []){ dir_s3_d1, NULL });
-+	ASSERT_NE(-1, ruleset_fd);
-+	enforce_ruleset(_metadata, ruleset_fd);
-+	EXPECT_EQ(0, close(ruleset_fd));
-+
-+	ASSERT_EQ(-1, mount(NULL, "/", NULL, MS_PRIVATE | MS_REC, NULL));
-+	ASSERT_EQ(-1, syscall(SYS_pivot_root, dir_s3_d1, dir_s3_d2));
-+}
-+
-+enum relative_access {
-+	REL_OPEN,
-+	REL_CHDIR,
-+	REL_CHROOT,
-+};
-+
-+static void check_access(struct __test_metadata *_metadata,
-+		bool enforce, enum relative_access rel)
-+{
-+	int dirfd;
-+	int ruleset_fd = -1;
-+
-+	if (enforce) {
-+		ruleset_fd = create_ruleset(_metadata, (const char *const []){
-+				dir_s0_d2, dir_s1_d1, NULL });
-+		ASSERT_NE(-1, ruleset_fd);
-+		if (rel == REL_CHROOT)
-+			ASSERT_NE(-1, chdir(dir_s0_d2));
-+		enforce_ruleset(_metadata, ruleset_fd);
-+	} else if (rel == REL_CHROOT)
-+		ASSERT_NE(-1, chdir(dir_s0_d2));
-+	switch (rel) {
-+	case REL_OPEN:
-+		dirfd = open(dir_s0_d2, O_DIRECTORY);
-+		ASSERT_NE(-1, dirfd);
-+		break;
-+	case REL_CHDIR:
-+		ASSERT_NE(-1, chdir(dir_s0_d2));
-+		dirfd = AT_FDCWD;
-+		break;
-+	case REL_CHROOT:
-+		ASSERT_NE(-1, chroot(".")) {
-+			TH_LOG("Failed to chroot: %s\n", strerror(errno));
-+		}
-+		dirfd = AT_FDCWD;
-+		break;
-+	default:
-+		ASSERT_TRUE(false);
-+		return;
-+	}
-+
-+	test_path_rel(_metadata, dirfd, "..", (rel == REL_CHROOT) ? 0 : -1);
-+	test_path_rel(_metadata, dirfd, ".", 0);
-+	if (rel != REL_CHROOT) {
-+		test_path_rel(_metadata, dirfd, "./c0", 0);
-+		test_path_rel(_metadata, dirfd, "../../" TMP_PREFIX "a1", 0);
-+		test_path_rel(_metadata, dirfd, "../../" TMP_PREFIX "a2", -1);
-+	}
-+
-+	if (rel == REL_OPEN)
-+		EXPECT_EQ(0, close(dirfd));
-+	if (enforce)
-+		EXPECT_EQ(0, close(ruleset_fd));
-+}
-+
-+TEST_F(layout1, deny_open)
-+{
-+	check_access(_metadata, true, REL_OPEN);
-+}
-+
-+TEST_F(layout1, deny_chdir)
-+{
-+	check_access(_metadata, true, REL_CHDIR);
-+}
-+
-+TEST_F(layout1, deny_chroot)
-+{
-+	check_access(_metadata, true, REL_CHROOT);
-+}
-+
-+TEST(cleanup)
-+{
-+	cleanup_layout1();
-+}
-+
-+TEST_HARNESS_MAIN
-diff --git a/tools/testing/selftests/landlock/test_ptrace.c b/tools/testing/selftests/landlock/test_ptrace.c
-new file mode 100644
-index 000000000000..fcdb41e172d1
---- /dev/null
-+++ b/tools/testing/selftests/landlock/test_ptrace.c
-@@ -0,0 +1,293 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Landlock tests - ptrace
-+ *
-+ * Copyright © 2017-2020 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2019-2020 ANSSI
-+ */
-+
-+#define _GNU_SOURCE
-+#include <errno.h>
-+#include <fcntl.h>
-+#include <linux/landlock.h>
-+#include <signal.h>
-+#include <sys/prctl.h>
-+#include <sys/ptrace.h>
-+#include <sys/types.h>
-+#include <sys/wait.h>
-+#include <unistd.h>
-+
-+#include "test.h"
-+
-+static void create_domain(struct __test_metadata *_metadata)
-+{
-+	int ruleset_fd, err;
-+	struct landlock_attr_features attr_features;
-+	struct landlock_attr_enforce attr_enforce;
-+	struct landlock_attr_ruleset attr_ruleset = {
-+		.handled_access_fs = LANDLOCK_ACCESS_FS_READ,
-+	};
-+	struct landlock_attr_path_beneath path_beneath = {
-+		.allowed_access = LANDLOCK_ACCESS_FS_READ,
-+	};
-+
-+	ASSERT_EQ(0, landlock(LANDLOCK_CMD_GET_FEATURES,
-+				LANDLOCK_OPT_GET_FEATURES,
-+				sizeof(attr_features), &attr_features));
-+	/* Only for test, use a binary AND for real application instead. */
-+	ASSERT_EQ(attr_ruleset.handled_access_fs,
-+			attr_ruleset.handled_access_fs &
-+			attr_features.access_fs);
-+	ruleset_fd = landlock(LANDLOCK_CMD_CREATE_RULESET,
-+			LANDLOCK_OPT_CREATE_RULESET, sizeof(attr_ruleset),
-+			&attr_ruleset);
-+	ASSERT_GE(ruleset_fd, 0) {
-+		TH_LOG("Failed to create a ruleset: %s\n", strerror(errno));
-+	}
-+	path_beneath.ruleset_fd = ruleset_fd;
-+	path_beneath.parent_fd = open("/tmp", O_PATH | O_NOFOLLOW | O_DIRECTORY
-+			| O_CLOEXEC);
-+	ASSERT_GE(path_beneath.parent_fd, 0);
-+	err = landlock(LANDLOCK_CMD_ADD_RULE,
-+			LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
-+			sizeof(path_beneath), &path_beneath);
-+	ASSERT_EQ(err, 0);
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(0, close(path_beneath.parent_fd));
-+
-+	err = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-+	ASSERT_EQ(errno, 0);
-+	ASSERT_EQ(err, 0);
-+
-+	attr_enforce.ruleset_fd = ruleset_fd;
-+	err = landlock(LANDLOCK_CMD_ENFORCE_RULESET,
-+			LANDLOCK_OPT_ENFORCE_RULESET, sizeof(attr_enforce),
-+			&attr_enforce);
-+	ASSERT_EQ(err, 0);
-+	ASSERT_EQ(errno, 0);
-+
-+	ASSERT_EQ(0, close(ruleset_fd));
-+}
-+
-+/* test PTRACE_TRACEME and PTRACE_ATTACH for parent and child */
-+static void check_ptrace(struct __test_metadata *_metadata,
-+		bool domain_both, bool domain_parent, bool domain_child)
-+{
-+	pid_t child, parent;
-+	int status;
-+	int pipe_child[2], pipe_parent[2];
-+	char buf_parent;
-+
-+	parent = getpid();
-+	ASSERT_EQ(0, pipe(pipe_child));
-+	ASSERT_EQ(0, pipe(pipe_parent));
-+	if (domain_both)
-+		create_domain(_metadata);
-+
-+	child = fork();
-+	ASSERT_LE(0, child);
-+	if (child == 0) {
-+		char buf_child;
-+
-+		EXPECT_EQ(0, close(pipe_parent[1]));
-+		EXPECT_EQ(0, close(pipe_child[0]));
-+		if (domain_child)
-+			create_domain(_metadata);
-+
-+		/* sync #1 */
-+		ASSERT_EQ(1, read(pipe_parent[0], &buf_child, 1)) {
-+			TH_LOG("Failed to read() sync #1 from parent");
-+		}
-+		ASSERT_EQ('.', buf_child);
-+
-+		/* Tests the parent protection. */
-+		ASSERT_EQ(domain_child ? -1 : 0,
-+				ptrace(PTRACE_ATTACH, parent, NULL, 0));
-+		if (domain_child) {
-+			ASSERT_EQ(EPERM, errno);
-+		} else {
-+			ASSERT_EQ(parent, waitpid(parent, &status, 0));
-+			ASSERT_EQ(1, WIFSTOPPED(status));
-+			ASSERT_EQ(0, ptrace(PTRACE_DETACH, parent, NULL, 0));
-+		}
-+
-+		/* sync #2 */
-+		ASSERT_EQ(1, write(pipe_child[1], ".", 1)) {
-+			TH_LOG("Failed to write() sync #2 to parent");
-+		}
-+
-+		/* Tests traceme. */
-+		ASSERT_EQ(domain_parent ? -1 : 0, ptrace(PTRACE_TRACEME));
-+		if (domain_parent) {
-+			ASSERT_EQ(EPERM, errno);
-+		} else {
-+			ASSERT_EQ(0, raise(SIGSTOP));
-+		}
-+
-+		/* sync #3 */
-+		ASSERT_EQ(1, read(pipe_parent[0], &buf_child, 1)) {
-+			TH_LOG("Failed to read() sync #3 from parent");
-+		}
-+		ASSERT_EQ('.', buf_child);
-+		_exit(_metadata->passed ? EXIT_SUCCESS : EXIT_FAILURE);
-+	}
-+
-+	EXPECT_EQ(0, close(pipe_child[1]));
-+	EXPECT_EQ(0, close(pipe_parent[0]));
-+	if (domain_parent)
-+		create_domain(_metadata);
-+
-+	/* sync #1 */
-+	ASSERT_EQ(1, write(pipe_parent[1], ".", 1)) {
-+		TH_LOG("Failed to write() sync #1 to child");
-+	}
-+
-+	/* Tests the parent protection. */
-+	/* sync #2 */
-+	ASSERT_EQ(1, read(pipe_child[0], &buf_parent, 1)) {
-+		TH_LOG("Failed to read() sync #2 from child");
-+	}
-+	ASSERT_EQ('.', buf_parent);
-+
-+	/* Tests traceme. */
-+	if (!domain_parent) {
-+		ASSERT_EQ(child, waitpid(child, &status, 0));
-+		ASSERT_EQ(1, WIFSTOPPED(status));
-+		ASSERT_EQ(0, ptrace(PTRACE_DETACH, child, NULL, 0));
-+	}
-+	/* Tests attach. */
-+	ASSERT_EQ(domain_parent ? -1 : 0,
-+			ptrace(PTRACE_ATTACH, child, NULL, 0));
-+	if (domain_parent) {
-+		ASSERT_EQ(EPERM, errno);
-+	} else {
-+		ASSERT_EQ(child, waitpid(child, &status, 0));
-+		ASSERT_EQ(1, WIFSTOPPED(status));
-+		ASSERT_EQ(0, ptrace(PTRACE_DETACH, child, NULL, 0));
-+	}
-+
-+	/* sync #3 */
-+	ASSERT_EQ(1, write(pipe_parent[1], ".", 1)) {
-+		TH_LOG("Failed to write() sync #3 to child");
-+	}
-+	ASSERT_EQ(child, waitpid(child, &status, 0));
-+	if (WIFSIGNALED(status) || WEXITSTATUS(status))
-+		_metadata->passed = 0;
-+}
-+
-+/*
-+ * Test multiple tracing combinations between a parent process P1 and a child
-+ * process P2.
-+ *
-+ * Yama's scoped ptrace is presumed disabled.  If enabled, this optional
-+ * restriction is enforced in addition to any Landlock check, which means that
-+ * all P2 requests to trace P1 would be denied.
-+ */
-+
-+/*
-+ *        No domain
-+ *
-+ *   P1-.               P1 -> P2 : allow
-+ *       \              P2 -> P1 : allow
-+ *        'P2
-+ */
-+TEST(allow_without_domain) {
-+	check_ptrace(_metadata, false, false, false);
-+}
-+
-+/*
-+ *        Child domain
-+ *
-+ *   P1--.              P1 -> P2 : allow
-+ *        \             P2 -> P1 : deny
-+ *        .'-----.
-+ *        |  P2  |
-+ *        '------'
-+ */
-+TEST(allow_with_one_domain) {
-+	check_ptrace(_metadata, false, false, true);
-+}
-+
-+/*
-+ *        Parent domain
-+ * .------.
-+ * |  P1  --.           P1 -> P2 : deny
-+ * '------'  \          P2 -> P1 : allow
-+ *            '
-+ *            P2
-+ */
-+TEST(deny_with_parent_domain) {
-+	check_ptrace(_metadata, false, true, false);
-+}
-+
-+/*
-+ *        Parent + child domain (siblings)
-+ * .------.
-+ * |  P1  ---.          P1 -> P2 : deny
-+ * '------'   \         P2 -> P1 : deny
-+ *         .---'--.
-+ *         |  P2  |
-+ *         '------'
-+ */
-+TEST(deny_with_sibling_domain) {
-+	check_ptrace(_metadata, false, true, true);
-+}
-+
-+/*
-+ *         Same domain (inherited)
-+ * .-------------.
-+ * | P1----.     |      P1 -> P2 : allow
-+ * |        \    |      P2 -> P1 : allow
-+ * |         '   |
-+ * |         P2  |
-+ * '-------------'
-+ */
-+TEST(allow_sibling_domain) {
-+	check_ptrace(_metadata, true, false, false);
-+}
-+
-+/*
-+ *         Inherited + child domain
-+ * .-----------------.
-+ * |  P1----.        |  P1 -> P2 : allow
-+ * |         \       |  P2 -> P1 : deny
-+ * |        .-'----. |
-+ * |        |  P2  | |
-+ * |        '------' |
-+ * '-----------------'
-+ */
-+TEST(allow_with_nested_domain) {
-+	check_ptrace(_metadata, true, false, true);
-+}
-+
-+/*
-+ *         Inherited + parent domain
-+ * .-----------------.
-+ * |.------.         |  P1 -> P2 : deny
-+ * ||  P1  ----.     |  P2 -> P1 : allow
-+ * |'------'    \    |
-+ * |             '   |
-+ * |             P2  |
-+ * '-----------------'
-+ */
-+TEST(deny_with_nested_and_parent_domain) {
-+	check_ptrace(_metadata, true, true, false);
-+}
-+
-+/*
-+ *         Inherited + parent and child domain (siblings)
-+ * .-----------------.
-+ * | .------.        |  P1 -> P2 : deny
-+ * | |  P1  .        |  P2 -> P1 : deny
-+ * | '------'\       |
-+ * |          \      |
-+ * |        .--'---. |
-+ * |        |  P2  | |
-+ * |        '------' |
-+ * '-----------------'
-+ */
-+TEST(deny_with_forked_domain) {
-+	check_ptrace(_metadata, true, true, true);
-+}
-+
-+TEST_HARNESS_MAIN
++++ b/Documentation/security/landlock/user.rst
+@@ -0,0 +1,233 @@
++=================================
++Landlock: userspace documentation
++=================================
++
++Landlock rules
++==============
++
++A Landlock rule enables to describe an action on an object.  An object is
++currently a file hierarchy, and the related filesystem actions are defined in
++`Access rights`_.  A set of rules are aggregated in a ruleset, which can then
++restricts the thread enforcing it, and its future children.
++
++
++Defining and enforcing a security policy
++----------------------------------------
++
++Before defining a security policy, an application should first probe for the
++features supported by the running kernel, which is important to be compatible
++with older kernels.  This can be done thanks to the `landlock` syscall (cf.
++:ref:`syscall`).
++
++.. code-block:: c
++
++    struct landlock_attr_features attr_features;
++
++    if (landlock(LANDLOCK_CMD_GET_FEATURES, LANDLOCK_OPT_GET_FEATURES,
++            sizeof(attr_features), &attr_features)) {
++        perror("Failed to probe the Landlock supported features");
++        return 1;
++    }
++
++Then, we need to create the ruleset that will contains our rules.  For this
++example, the ruleset will contains rules which only allow read actions, but
++write actions will be denied.  The ruleset then needs to handle both of these
++kind of actions.  To have a backward compatibility, these actions should be
++ANDed with the supported ones.
++
++.. code-block:: c
++
++    int ruleset_fd;
++    struct landlock_attr_ruleset ruleset = {
++        .handled_access_fs =
++            LANDLOCK_ACCESS_FS_READ |
++            LANDLOCK_ACCESS_FS_READDIR |
++            LANDLOCK_ACCESS_FS_EXECUTE |
++            LANDLOCK_ACCESS_FS_WRITE |
++            LANDLOCK_ACCESS_FS_TRUNCATE |
++            LANDLOCK_ACCESS_FS_CHMOD |
++            LANDLOCK_ACCESS_FS_CHOWN |
++            LANDLOCK_ACCESS_FS_CHGRP |
++            LANDLOCK_ACCESS_FS_LINK_TO |
++            LANDLOCK_ACCESS_FS_RENAME_FROM |
++            LANDLOCK_ACCESS_FS_RENAME_TO |
++            LANDLOCK_ACCESS_FS_RMDIR |
++            LANDLOCK_ACCESS_FS_UNLINK |
++            LANDLOCK_ACCESS_FS_MAKE_CHAR |
++            LANDLOCK_ACCESS_FS_MAKE_DIR |
++            LANDLOCK_ACCESS_FS_MAKE_REG |
++            LANDLOCK_ACCESS_FS_MAKE_SOCK |
++            LANDLOCK_ACCESS_FS_MAKE_FIFO |
++            LANDLOCK_ACCESS_FS_MAKE_BLOCK |
++            LANDLOCK_ACCESS_FS_MAKE_SYM,
++    };
++
++    ruleset.handled_access_fs &= attr_features.access_fs;
++    ruleset_fd = landlock(LANDLOCK_CMD_CREATE_RULESET,
++                    LANDLOCK_OPT_CREATE_RULESET, sizeof(ruleset), &ruleset);
++    if (ruleset_fd < 0) {
++        perror("Failed to create a ruleset");
++        return 1;
++    }
++
++We can now add a new rule to this ruleset thanks to the returned file
++descriptor referring to this ruleset.  The rule will only enable to read the
++file hierarchy ``/usr``.  Without other rule, write actions would then be
++denied by the ruleset.  To add ``/usr`` to the ruleset, we open it with the
++``O_PATH`` flag and fill the &struct landlock_attr_path_beneath with this file
++descriptor.
++
++.. code-block:: c
++
++    int err;
++    struct landlock_attr_path_beneath path_beneath = {
++        .ruleset_fd = ruleset_fd,
++        .allowed_access =
++            LANDLOCK_ACCESS_FS_READ |
++            LANDLOCK_ACCESS_FS_READDIR |
++            LANDLOCK_ACCESS_FS_EXECUTE,
++    };
++
++    path_beneath.allowed_access &= attr_features.access_fs;
++    path_beneath.parent_fd = open("/usr", O_PATH | O_CLOEXEC);
++    if (path_beneath.parent_fd < 0) {
++        perror("Failed to open file");
++        close(ruleset_fd);
++        return 1;
++    }
++    err = landlock(LANDLOCK_CMD_ADD_RULE, LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
++            sizeof(path_beneath), &path_beneath);
++    close(path_beneath.parent_fd);
++    if (err) {
++        perror("Failed to update ruleset");
++        close(ruleset_fd);
++        return 1;
++    }
++
++We now have a ruleset with one rule allowing read access to ``/usr`` while
++denying all accesses featured in ``attr_features.access_fs`` to everything else
++on the filesystem.  The next step is to restrict the current thread from
++gaining more privileges (e.g. thanks to a SUID binary).
++
++.. code-block:: c
++
++    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
++        perror("Failed to restrict privileges");
++        close(ruleset_fd);
++        return 1;
++    }
++
++The current thread is now ready to sandbox itself with the ruleset.
++
++.. code-block:: c
++
++    struct landlock_attr_enforce attr_enforce = {
++        .ruleset_fd = ruleset_fd,
++    };
++
++    if (landlock(LANDLOCK_CMD_ENFORCE_RULESET, LANDLOCK_OPT_ENFORCE_RULESET,
++            sizeof(attr_enforce), &attr_enforce)) {
++        perror("Failed to enforce ruleset");
++        close(ruleset_fd);
++        return 1;
++    }
++    close(ruleset_fd);
++
++If this last system call succeeds, the current thread is now restricted and
++this policy will be enforced on all its subsequently created children as well.
++Once a thread is landlocked, there is no way to remove its security policy,
++only adding more restrictions is allowed.  These threads are now in a new
++Landlock domain, merge of their parent one (if any) with the new ruleset.
++
++A full working code can be found in `samples/landlock/sandboxer.c`_.
++
++
++Inheritance
++-----------
++
++Every new thread resulting from a :manpage:`clone(2)` inherits Landlock program
++restrictions from its parent.  This is similar to the seccomp inheritance (cf.
++:doc:`/userspace-api/seccomp_filter`) or any other LSM dealing with task's
++:manpage:`credentials(7)`.  For instance, one process' thread may apply
++Landlock rules to itself, but they will not be automatically applied to other
++sibling threads (unlike POSIX thread credential changes, cf.
++:manpage:`nptl(7)`).
++
++
++Ptrace restrictions
++-------------------
++
++A sandboxed process has less privileges than a non-sandboxed process and must
++then be subject to additional restrictions when manipulating another process.
++To be allowed to use :manpage:`ptrace(2)` and related syscalls on a target
++process, a sandboxed process should have a subset of the target process rules,
++which means the tracee must be in a sub-domain of the tracer.
++
++
++.. _syscall:
++
++The `landlock` syscall and its arguments
++========================================
++
++.. kernel-doc:: security/landlock/syscall.c
++    :functions: sys_landlock
++
++Commands
++--------
++
++.. kernel-doc:: include/uapi/linux/landlock.h
++    :functions: landlock_cmd
++
++Options
++-------
++
++.. kernel-doc:: include/uapi/linux/landlock.h
++    :functions: options_intro
++                options_get_features options_create_ruleset
++                options_add_rule options_enforce_ruleset
++
++Attributes
++----------
++
++.. kernel-doc:: include/uapi/linux/landlock.h
++    :functions: landlock_attr_features landlock_attr_ruleset
++                landlock_attr_path_beneath landlock_attr_enforce
++
++Access rights
++-------------
++
++.. kernel-doc:: include/uapi/linux/landlock.h
++    :functions: fs_access
++
++
++Questions and answers
++=====================
++
++What about user space sandbox managers?
++---------------------------------------
++
++Using user space process to enforce restrictions on kernel resources can lead
++to race conditions or inconsistent evaluations (i.e. `Incorrect mirroring of
++the OS code and state
++<https://www.ndss-symposium.org/ndss2003/traps-and-pitfalls-practical-problems-system-call-interposition-based-security-tools/>`_).
++
++What about namespaces and containers?
++-------------------------------------
++
++Namespaces can help create sandboxes but they are not designed for
++access-control and then miss useful features for such use case (e.g. no
++fine-grained restrictions).  Moreover, their complexity can lead to security
++issues, especially when untrusted processes can manipulate them (cf.
++`Controlling access to user namespaces <https://lwn.net/Articles/673597/>`_).
++
++
++Additional documentation
++========================
++
++See https://landlock.io
++
++
++.. Links
++.. _samples/landlock/sandboxer.c: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/samples/landlock/sandboxer.c
++.. _tools/testing/selftests/landlock/: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/tools/testing/selftests/landlock/
++.. _tools/testing/selftests/landlock/test_ptrace.c: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/tools/testing/selftests/landlock/test_ptrace.c
 -- 
 2.25.0
 
