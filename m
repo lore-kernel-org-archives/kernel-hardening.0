@@ -1,4 +1,4 @@
-Return-Path: <SRS0=+3Ab=4M=lists.openwall.com=kernel-hardening-return-17893-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=DahZ=4M=lists.openwall.com=kernel-hardening-return-17894-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1CFD6C11D2F
-	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:29:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DF20AC11D30
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:30:14 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4CE872080D
-	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:29:41 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4CE872080D
+	by mail.kernel.org (Postfix) with SMTP id 473942080D
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:30:14 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 473942080D
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17893-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20476 invoked by uid 550); 24 Feb 2020 16:29:34 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17894-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22265 invoked by uid 550); 24 Feb 2020 16:30:06 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20434 invoked from network); 24 Feb 2020 16:29:33 -0000
+Received: (qmail 22226 invoked from network); 24 Feb 2020 16:30:05 -0000
 From: ebiederm@xmission.com (Eric W. Biederman)
 To: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Al Viro <viro@zeniv.linux.org.uk>,  LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Oleg Nesterov <oleg@redhat.com>,  Solar Designer <solar@openwall.com>,  Alexey Gladkov <gladkov.alexey@gmail.com>
@@ -43,139 +43,81 @@ References: <20200210150519.538333-8-gladkov.alexey@gmail.com>
 	<87pnejf6fz.fsf@x220.int.ebiederm.org>
 	<871rqpaswu.fsf_-_@x220.int.ebiederm.org>
 	<871rqk2brn.fsf_-_@x220.int.ebiederm.org>
-Date: Mon, 24 Feb 2020 10:27:17 -0600
+Date: Mon, 24 Feb 2020 10:27:49 -0600
 In-Reply-To: <871rqk2brn.fsf_-_@x220.int.ebiederm.org> (Eric W. Biederman's
 	message of "Mon, 24 Feb 2020 10:25:16 -0600")
-Message-ID: <87pne40x3u.fsf_-_@x220.int.ebiederm.org>
+Message-ID: <87k14c0x2y.fsf_-_@x220.int.ebiederm.org>
 User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
 Content-Type: text/plain
-X-XM-SPF: eid=1j6Gbg-0007qC-Jo;;;mid=<87pne40x3u.fsf_-_@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX1/UflptKI2kFaz4P7DX3c7LedTcEBcQNz8=
+X-XM-SPF: eid=1j6GcC-0007x0-LM;;;mid=<87k14c0x2y.fsf_-_@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX1/PBz/fWPf6jpbA0LkgeAc4T35MgRRLVLo=
 X-SA-Exim-Connect-IP: 68.227.160.95
 X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: [PATCH v2 2/6] proc: Generalize proc_sys_prune_dcache into proc_prune_siblings_dcache
+Subject: [PATCH v2 3/6] proc: In proc_prune_siblings_dcache cache an aquired super block
 X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
 X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
 
 
-This prepares the way for allowing the pid part of proc to use this
-dcache pruning code as well.
+Because there are likely to be several sysctls in a row on the
+same superblock cache the super_block after the count has
+been raised and don't deactivate it until we are processing
+another super_block.
 
-Signed-off-by: Eric W. Biederman <ebiederm@xmission.com>
+Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
 ---
- fs/proc/inode.c       | 38 ++++++++++++++++++++++++++++++++++++++
- fs/proc/internal.h    |  1 +
- fs/proc/proc_sysctl.c | 35 +----------------------------------
- 3 files changed, 40 insertions(+), 34 deletions(-)
+ fs/proc/inode.c | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
 
 diff --git a/fs/proc/inode.c b/fs/proc/inode.c
-index bdae442d5262..74ce4a8d05eb 100644
+index 74ce4a8d05eb..fa2dc732cd77 100644
 --- a/fs/proc/inode.c
 +++ b/fs/proc/inode.c
-@@ -103,6 +103,44 @@ void __init proc_init_kmemcache(void)
- 	BUILD_BUG_ON(sizeof(struct proc_dir_entry) >= SIZEOF_PDE);
- }
- 
-+void proc_prune_siblings_dcache(struct hlist_head *inodes, spinlock_t *lock)
-+{
-+	struct inode *inode;
-+	struct proc_inode *ei;
-+	struct hlist_node *node;
-+	struct super_block *sb;
-+
-+	rcu_read_lock();
-+	for (;;) {
-+		node = hlist_first_rcu(inodes);
-+		if (!node)
-+			break;
-+		ei = hlist_entry(node, struct proc_inode, sibling_inodes);
-+		spin_lock(lock);
-+		hlist_del_init_rcu(&ei->sibling_inodes);
-+		spin_unlock(lock);
-+
-+		inode = &ei->vfs_inode;
-+		sb = inode->i_sb;
-+		if (!atomic_inc_not_zero(&sb->s_active))
-+			continue;
-+		inode = igrab(inode);
-+		rcu_read_unlock();
-+		if (unlikely(!inode)) {
-+			deactivate_super(sb);
-+			rcu_read_lock();
-+			continue;
-+		}
-+
-+		d_prune_aliases(inode);
-+		iput(inode);
-+		deactivate_super(sb);
-+
-+		rcu_read_lock();
-+	}
-+	rcu_read_unlock();
-+}
-+
- static int proc_show_options(struct seq_file *seq, struct dentry *root)
- {
- 	struct super_block *sb = root->d_sb;
-diff --git a/fs/proc/internal.h b/fs/proc/internal.h
-index 366cd3aa690b..ba9a991824a5 100644
---- a/fs/proc/internal.h
-+++ b/fs/proc/internal.h
-@@ -210,6 +210,7 @@ extern const struct inode_operations proc_pid_link_inode_operations;
- extern const struct super_operations proc_sops;
- 
- void proc_init_kmemcache(void);
-+void proc_prune_siblings_dcache(struct hlist_head *inodes, spinlock_t *lock);
- void set_proc_pid_nlink(void);
- extern struct inode *proc_get_inode(struct super_block *, struct proc_dir_entry *);
- extern void proc_entry_rundown(struct proc_dir_entry *);
-diff --git a/fs/proc/proc_sysctl.c b/fs/proc/proc_sysctl.c
-index 42fbb7f3c587..5da9d7f7ae34 100644
---- a/fs/proc/proc_sysctl.c
-+++ b/fs/proc/proc_sysctl.c
-@@ -269,40 +269,7 @@ static void unuse_table(struct ctl_table_header *p)
- 
- static void proc_sys_prune_dcache(struct ctl_table_header *head)
- {
--	struct inode *inode;
--	struct proc_inode *ei;
--	struct hlist_node *node;
+@@ -108,10 +108,11 @@ void proc_prune_siblings_dcache(struct hlist_head *inodes, spinlock_t *lock)
+ 	struct inode *inode;
+ 	struct proc_inode *ei;
+ 	struct hlist_node *node;
 -	struct super_block *sb;
--
--	rcu_read_lock();
--	for (;;) {
--		node = hlist_first_rcu(&head->inodes);
--		if (!node)
--			break;
--		ei = hlist_entry(node, struct proc_inode, sibling_inodes);
--		spin_lock(&sysctl_lock);
--		hlist_del_init_rcu(&ei->sibling_inodes);
--		spin_unlock(&sysctl_lock);
--
--		inode = &ei->vfs_inode;
--		sb = inode->i_sb;
++	struct super_block *old_sb = NULL;
+ 
+ 	rcu_read_lock();
+ 	for (;;) {
++		struct super_block *sb;
+ 		node = hlist_first_rcu(inodes);
+ 		if (!node)
+ 			break;
+@@ -122,23 +123,28 @@ void proc_prune_siblings_dcache(struct hlist_head *inodes, spinlock_t *lock)
+ 
+ 		inode = &ei->vfs_inode;
+ 		sb = inode->i_sb;
 -		if (!atomic_inc_not_zero(&sb->s_active))
--			continue;
--		inode = igrab(inode);
--		rcu_read_unlock();
--		if (unlikely(!inode)) {
++		if ((sb != old_sb) && !atomic_inc_not_zero(&sb->s_active))
+ 			continue;
+ 		inode = igrab(inode);
+ 		rcu_read_unlock();
++		if (sb != old_sb) {
++			if (old_sb)
++				deactivate_super(old_sb);
++			old_sb = sb;
++		}
+ 		if (unlikely(!inode)) {
 -			deactivate_super(sb);
--			rcu_read_lock();
--			continue;
--		}
--
--		d_prune_aliases(inode);
--		iput(inode);
+ 			rcu_read_lock();
+ 			continue;
+ 		}
+ 
+ 		d_prune_aliases(inode);
+ 		iput(inode);
 -		deactivate_super(sb);
--
--		rcu_read_lock();
--	}
--	rcu_read_unlock();
-+	proc_prune_siblings_dcache(&head->inodes, &sysctl_lock);
+ 
+ 		rcu_read_lock();
+ 	}
+ 	rcu_read_unlock();
++	if (old_sb)
++		deactivate_super(old_sb);
  }
  
- /* called under sysctl_lock, will reacquire if has to wait */
+ static int proc_show_options(struct seq_file *seq, struct dentry *root)
 -- 
 2.25.0
 
