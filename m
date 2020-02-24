@@ -1,20 +1,21 @@
-Return-Path: <SRS0=/U3D=4K=lists.openwall.com=kernel-hardening-return-17879-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=xzqc=4M=lists.openwall.com=kernel-hardening-return-17880-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	UNWANTED_LANGUAGE_BODY,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8DB46C35671
-	for <kernel-hardening@archiver.kernel.org>; Sat, 22 Feb 2020 15:48:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ABA82C11D2F
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:02:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BCA3820702
-	for <kernel-hardening@archiver.kernel.org>; Sat, 22 Feb 2020 15:48:54 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BCA3820702
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17879-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 27961 invoked by uid 550); 22 Feb 2020 15:48:47 -0000
+	by mail.kernel.org (Postfix) with SMTP id DB8A820828
+	for <kernel-hardening@archiver.kernel.org>; Mon, 24 Feb 2020 16:02:48 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DB8A820828
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17880-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23695 invoked by uid 550); 24 Feb 2020 16:02:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,119 +23,281 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27921 invoked from network); 22 Feb 2020 15:48:46 -0000
-From: ebiederm@xmission.com (Eric W. Biederman)
-To: Oleg Nesterov <oleg@redhat.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>,  Al Viro <viro@zeniv.linux.org.uk>,  LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexey Dobriyan <adobriyan@gmail.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Solar Designer <solar@openwall.com>
-References: <20200212200335.GO23230@ZenIV.linux.org.uk>
-	<CAHk-=wi+1CPShMFvJNPfnrJ8DD8uVKUOQ5TQzQUNGLUkeoahkg@mail.gmail.com>
-	<20200212203833.GQ23230@ZenIV.linux.org.uk>
-	<20200212204124.GR23230@ZenIV.linux.org.uk>
-	<CAHk-=wi5FOGV_3tALK3n6E2fK3Oa_yCYkYQtCSaXLSEm2DUCKg@mail.gmail.com>
-	<87lfp7h422.fsf@x220.int.ebiederm.org>
-	<CAHk-=wgmn9Qds0VznyphouSZW6e42GWDT5H1dpZg8pyGDGN+=w@mail.gmail.com>
-	<87pnejf6fz.fsf@x220.int.ebiederm.org>
-	<871rqpaswu.fsf_-_@x220.int.ebiederm.org>
-	<87r1yp7zhc.fsf_-_@x220.int.ebiederm.org>
-	<20200221165036.GB16646@redhat.com>
-Date: Sat, 22 Feb 2020 09:46:29 -0600
-In-Reply-To: <20200221165036.GB16646@redhat.com> (Oleg Nesterov's message of
-	"Fri, 21 Feb 2020 17:50:37 +0100")
-Message-ID: <87mu9a4obu.fsf@x220.int.ebiederm.org>
-User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
+Received: (qmail 23659 invoked from network); 24 Feb 2020 16:02:38 -0000
+From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
+To: linux-kernel@vger.kernel.org
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
+	Al Viro <viro@zeniv.linux.org.uk>,
+	Andy Lutomirski <luto@amacapital.net>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	James Morris <jmorris@namei.org>,
+	Jann Horn <jann@thejh.net>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>,
+	"Serge E . Hallyn" <serge@hallyn.com>,
+	Shuah Khan <shuah@kernel.org>,
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+	kernel-hardening@lists.openwall.com,
+	linux-api@vger.kernel.org,
+	linux-arch@vger.kernel.org,
+	linux-doc@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	x86@kernel.org
+Subject: [RFC PATCH v14 03/10] landlock: Set up the security framework and manage credentials
+Date: Mon, 24 Feb 2020 17:02:08 +0100
+Message-Id: <20200224160215.4136-4-mic@digikod.net>
+X-Mailer: git-send-email 2.25.1
+In-Reply-To: <20200224160215.4136-1-mic@digikod.net>
+References: <20200224160215.4136-1-mic@digikod.net>
 MIME-Version: 1.0
-Content-Type: text/plain
-X-XM-SPF: eid=1j5X14-0004kb-Io;;;mid=<87mu9a4obu.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX1+wG8oCF9P5p4qTliSUMtLy9dXaaffHDtc=
-X-SA-Exim-Connect-IP: 68.227.160.95
-X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: Re: [PATCH 7/7] proc: Ensure we see the exit of each process tid exactly once
-X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
-X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-Oleg Nesterov <oleg@redhat.com> writes:
+A process credentials point to a Landlock domain, which is underneath
+implemented with a ruleset.  In the following commits, this domain is
+used to check and enforce the ptrace and filesystem security policies.
+A domain is inherited from a parent to its child the same way a thread
+inherits a seccomp policy.
 
-> On 02/20, Eric W. Biederman wrote:
->>
->> +void exchange_tids(struct task_struct *ntask, struct task_struct *otask)
->> +{
->> +	/* pid_links[PIDTYPE_PID].next is always NULL */
->> +	struct pid *npid = READ_ONCE(ntask->thread_pid);
->> +	struct pid *opid = READ_ONCE(otask->thread_pid);
->> +
->> +	rcu_assign_pointer(opid->tasks[PIDTYPE_PID].first, &ntask->pid_links[PIDTYPE_PID]);
->> +	rcu_assign_pointer(npid->tasks[PIDTYPE_PID].first, &otask->pid_links[PIDTYPE_PID]);
->> +	rcu_assign_pointer(ntask->thread_pid, opid);
->> +	rcu_assign_pointer(otask->thread_pid, npid);
->
-> this breaks has_group_leader_pid()...
->
-> proc_pid_readdir() can miss a process doing mt-exec but this looks fixable,
-> just we need to update ntask->thread_pid before updating ->first.
->
-> The more problematic case is __exit_signal() which does
-> 		
-> 		if (unlikely(has_group_leader_pid(tsk)))
-> 			posix_cpu_timers_exit_group(tsk);
+Signed-off-by: Mickaël Salaün <mic@digikod.net>
+Cc: Andy Lutomirski <luto@amacapital.net>
+Cc: James Morris <jmorris@namei.org>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Serge E. Hallyn <serge@hallyn.com>
+---
 
-Along with the comment:
-		/*
-		 * This can only happen if the caller is de_thread().
-		 * FIXME: this is the temporary hack, we should teach
-		 * posix-cpu-timers to handle this case correctly.
-		 */
-So I suspect this is fixable and the above fix might be part of that.
+Changes since v13:
+* totally get ride of the seccomp dependency
+* only keep credential management and LSM setup.
 
-Hmm looking at your commit:
+Previous version:
+https://lore.kernel.org/lkml/20191104172146.30797-4-mic@digikod.net/
+---
+ security/Kconfig           | 10 +++----
+ security/landlock/Makefile |  3 ++-
+ security/landlock/cred.c   | 47 ++++++++++++++++++++++++++++++++
+ security/landlock/cred.h   | 55 ++++++++++++++++++++++++++++++++++++++
+ security/landlock/setup.c  | 30 +++++++++++++++++++++
+ security/landlock/setup.h  | 18 +++++++++++++
+ 6 files changed, 157 insertions(+), 6 deletions(-)
+ create mode 100644 security/landlock/cred.c
+ create mode 100644 security/landlock/cred.h
+ create mode 100644 security/landlock/setup.c
+ create mode 100644 security/landlock/setup.h
 
-commit e0a70217107e6f9844628120412cb27bb4cea194
-Author: Oleg Nesterov <oleg@redhat.com>
-Date:   Fri Nov 5 16:53:42 2010 +0100
-
-    posix-cpu-timers: workaround to suppress the problems with mt exec
-    
-    posix-cpu-timers.c correctly assumes that the dying process does
-    posix_cpu_timers_exit_group() and removes all !CPUCLOCK_PERTHREAD
-    timers from signal->cpu_timers list.
-    
-    But, it also assumes that timer->it.cpu.task is always the group
-    leader, and thus the dead ->task means the dead thread group.
-    
-    This is obviously not true after de_thread() changes the leader.
-    After that almost every posix_cpu_timer_ method has problems.
-    
-    It is not simple to fix this bug correctly. First of all, I think
-    that timer->it.cpu should use struct pid instead of task_struct.
-    Also, the locking should be reworked completely. In particular,
-    tasklist_lock should not be used at all. This all needs a lot of
-    nontrivial and hard-to-test changes.
-    
-    Change __exit_signal() to do posix_cpu_timers_exit_group() when
-    the old leader dies during exec. This is not the fix, just the
-    temporary hack to hide the problem for 2.6.37 and stable. IOW,
-    this is obviously wrong but this is what we currently have anyway:
-    cpu timers do not work after mt exec.
-    
-    In theory this change adds another race. The exiting leader can
-    detach the timers which were attached to the new leader. However,
-    the window between de_thread() and release_task() is small, we
-    can pretend that sys_timer_create() was called before de_thread().
-    
-    Signed-off-by: Oleg Nesterov <oleg@redhat.com>
-    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
-
-It looks like the data structures need fixing.  Possibly to use struct
-pid.  Possibly to move the group data to signal struct.
-
-I think I played with some of that awhile ago.
-
-I am going to move this change to another patchset.  So I don't wind up
-playing shift the bug around.  I thought I would need this to get the
-other code working but it turns out we remain bug compatible without
-this.
-
-Hopefully I can get something out in the next week or so that addresses
-the issues you have pointed out.
-
-Eric
+diff --git a/security/Kconfig b/security/Kconfig
+index 9d9981394fb0..76547b5c694d 100644
+--- a/security/Kconfig
++++ b/security/Kconfig
+@@ -278,11 +278,11 @@ endchoice
+ 
+ config LSM
+ 	string "Ordered list of enabled LSMs"
+-	default "lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor" if DEFAULT_SECURITY_SMACK
+-	default "lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo" if DEFAULT_SECURITY_APPARMOR
+-	default "lockdown,yama,loadpin,safesetid,integrity,tomoyo" if DEFAULT_SECURITY_TOMOYO
+-	default "lockdown,yama,loadpin,safesetid,integrity" if DEFAULT_SECURITY_DAC
+-	default "lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor"
++	default "landlock,lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor" if DEFAULT_SECURITY_SMACK
++	default "landlock,lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo" if DEFAULT_SECURITY_APPARMOR
++	default "landlock,lockdown,yama,loadpin,safesetid,integrity,tomoyo" if DEFAULT_SECURITY_TOMOYO
++	default "landlock,lockdown,yama,loadpin,safesetid,integrity" if DEFAULT_SECURITY_DAC
++	default "landlock,lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor"
+ 	help
+ 	  A comma-separated list of LSMs, in initialization order.
+ 	  Any LSMs left off this list will be ignored. This can be
+diff --git a/security/landlock/Makefile b/security/landlock/Makefile
+index d846eba445bb..041ea242e627 100644
+--- a/security/landlock/Makefile
++++ b/security/landlock/Makefile
+@@ -1,3 +1,4 @@
+ obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
+ 
+-landlock-y := object.o ruleset.o
++landlock-y := setup.o object.o ruleset.o \
++	cred.o
+diff --git a/security/landlock/cred.c b/security/landlock/cred.c
+new file mode 100644
+index 000000000000..69ef93e29a53
+--- /dev/null
++++ b/security/landlock/cred.c
+@@ -0,0 +1,47 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Landlock LSM - Credential hooks
++ *
++ * Copyright © 2017-2019 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018-2019 ANSSI
++ */
++
++#include <linux/cred.h>
++#include <linux/lsm_hooks.h>
++
++#include "cred.h"
++#include "ruleset.h"
++#include "setup.h"
++
++static int hook_cred_prepare(struct cred *new, const struct cred *old,
++		gfp_t gfp)
++{
++	const struct landlock_cred_security *cred_old = landlock_cred(old);
++	struct landlock_cred_security *cred_new = landlock_cred(new);
++	struct landlock_ruleset *dom_old;
++
++	dom_old = cred_old->domain;
++	if (dom_old) {
++		landlock_get_ruleset(dom_old);
++		cred_new->domain = dom_old;
++	} else {
++		cred_new->domain = NULL;
++	}
++	return 0;
++}
++
++static void hook_cred_free(struct cred *cred)
++{
++	landlock_put_ruleset_enqueue(landlock_cred(cred)->domain);
++}
++
++static struct security_hook_list landlock_hooks[] __lsm_ro_after_init = {
++	LSM_HOOK_INIT(cred_prepare, hook_cred_prepare),
++	LSM_HOOK_INIT(cred_free, hook_cred_free),
++};
++
++__init void landlock_add_hooks_cred(void)
++{
++	security_add_hooks(landlock_hooks, ARRAY_SIZE(landlock_hooks),
++			LANDLOCK_NAME);
++}
+diff --git a/security/landlock/cred.h b/security/landlock/cred.h
+new file mode 100644
+index 000000000000..1e24682ee27e
+--- /dev/null
++++ b/security/landlock/cred.h
+@@ -0,0 +1,55 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++/*
++ * Landlock LSM - Credential hooks
++ *
++ * Copyright © 2019 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2019 ANSSI
++ */
++
++#ifndef _SECURITY_LANDLOCK_CRED_H
++#define _SECURITY_LANDLOCK_CRED_H
++
++#include <linux/cred.h>
++#include <linux/init.h>
++#include <linux/rcupdate.h>
++
++#include "ruleset.h"
++#include "setup.h"
++
++struct landlock_cred_security {
++	struct landlock_ruleset *domain;
++};
++
++static inline struct landlock_cred_security *landlock_cred(
++		const struct cred *cred)
++{
++	return cred->security + landlock_blob_sizes.lbs_cred;
++}
++
++static inline struct landlock_ruleset *landlock_get_current_domain(void)
++{
++	return landlock_cred(current_cred())->domain;
++}
++
++/*
++ * The caller needs an RCU lock.
++ */
++static inline struct landlock_ruleset *landlock_get_task_domain(
++		struct task_struct *task)
++{
++	return landlock_cred(__task_cred(task))->domain;
++}
++
++static inline bool landlocked(struct task_struct *task)
++{
++	bool has_dom;
++
++	rcu_read_lock();
++	has_dom = !!landlock_get_task_domain(task);
++	rcu_read_unlock();
++	return has_dom;
++}
++
++__init void landlock_add_hooks_cred(void);
++
++#endif /* _SECURITY_LANDLOCK_CRED_H */
+diff --git a/security/landlock/setup.c b/security/landlock/setup.c
+new file mode 100644
+index 000000000000..fca5fa185465
+--- /dev/null
++++ b/security/landlock/setup.c
+@@ -0,0 +1,30 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Landlock LSM - Security framework setup
++ *
++ * Copyright © 2016-2020 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018-2020 ANSSI
++ */
++
++#include <linux/init.h>
++#include <linux/lsm_hooks.h>
++
++#include "cred.h"
++#include "setup.h"
++
++struct lsm_blob_sizes landlock_blob_sizes __lsm_ro_after_init = {
++	.lbs_cred = sizeof(struct landlock_cred_security),
++};
++
++static int __init landlock_init(void)
++{
++	pr_info(LANDLOCK_NAME ": Registering hooks\n");
++	landlock_add_hooks_cred();
++	return 0;
++}
++
++DEFINE_LSM(LANDLOCK_NAME) = {
++	.name = LANDLOCK_NAME,
++	.init = landlock_init,
++	.blobs = &landlock_blob_sizes,
++};
+diff --git a/security/landlock/setup.h b/security/landlock/setup.h
+new file mode 100644
+index 000000000000..52eb8d806376
+--- /dev/null
++++ b/security/landlock/setup.h
+@@ -0,0 +1,18 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++/*
++ * Landlock LSM - Security framework setup
++ *
++ * Copyright © 2016-2020 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018-2020 ANSSI
++ */
++
++#ifndef _SECURITY_LANDLOCK_SETUP_H
++#define _SECURITY_LANDLOCK_SETUP_H
++
++#include <linux/lsm_hooks.h>
++
++#define LANDLOCK_NAME "landlock"
++
++extern struct lsm_blob_sizes landlock_blob_sizes;
++
++#endif /* _SECURITY_LANDLOCK_SETUP_H */
+-- 
+2.25.0
 
