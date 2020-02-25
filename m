@@ -1,23 +1,23 @@
-Return-Path: <SRS0=Vzw7=4N=lists.openwall.com=kernel-hardening-return-17904-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/MR4=4N=lists.openwall.com=kernel-hardening-return-17905-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D6229C35DF2
-	for <kernel-hardening@archiver.kernel.org>; Tue, 25 Feb 2020 05:14:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0CDD0C35E01
+	for <kernel-hardening@archiver.kernel.org>; Tue, 25 Feb 2020 17:40:02 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 09DDC2467C
-	for <kernel-hardening@archiver.kernel.org>; Tue, 25 Feb 2020 05:14:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 30BCF20CC7
+	for <kernel-hardening@archiver.kernel.org>; Tue, 25 Feb 2020 17:40:00 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="DPDiTUn9"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 09DDC2467C
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17904-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7727 invoked by uid 550); 25 Feb 2020 05:13:32 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Iz9ghN3t"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 30BCF20CC7
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17905-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30662 invoked by uid 550); 25 Feb 2020 17:39:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,146 +25,233 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7538 invoked from network); 25 Feb 2020 05:13:28 -0000
+Received: (qmail 30636 invoked from network); 25 Feb 2020 17:39:51 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=2lIWrB2rl2fls1DP3gLk6fTzwbihtKCjsTFZYdDbGQ4=;
-        b=DPDiTUn9mHAJPUVeuO6O/4+ZWGT7CXMflUkvN2DOGwNzNVpUoWmOyBDAPPODhXWKny
-         NAGKI6c4hPVF4ebdPpwklU4evW4Jv0T46fb90WvXFEfUBpzH+zSH2ffMjDvLcQk8cmtw
-         yow7naoX3eK49OZ2mSrrxi/CmK2iPRw64SR2c=
+        d=google.com; s=20161025;
+        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
+         :cc;
+        bh=pTqCjcEa9EXisQdFRd13/e3ghlAPwJ8mGDn87xFJvf0=;
+        b=Iz9ghN3tolwdp5o/gROA8qqHM/EG5oy+3huSTpvW3SyUMEdU6sXAB0OPK+CNnYW5ai
+         7vZmndBglgl4PIYwGFR4TwVIL+97BgxiQXwlTPUFmdSBJhjTW6OKADsHKPsws7u399Up
+         SktbQBTcmbNdUcejNfw49le8LmkmuFRvQPHR8AuVYBcicnfYfmsfpiKIl4GiLdvn/Bts
+         odApA50lf5YI74HQjP9tnGgkyYi3UD1GrlhLkzrtFZKbk5Rt+HK3JTH+m32NFQzCnZfo
+         w2EipiDKUKEYYXomNUOPbv7jypz24xq0XICYqZhNgrQI/RH9Rvk/1RK47Vrfrfv9DfLG
+         dOzA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=2lIWrB2rl2fls1DP3gLk6fTzwbihtKCjsTFZYdDbGQ4=;
-        b=pwJxXk/h1YFoUc0eBNbqM+4UQaDiK0z9Oacu5UH+cafHi1GWYgP6my4IcwCfgDrIxd
-         wsAOSjMQHKCurOJAr1jfVhcEy2L0WmXgUj5P0IXDdyZsJ0Kqo6Wvux7bDWjj5Y3DA4lA
-         Mv/UtwfNd0v4pIUaK7SrWI8qCPnDrGQME/3PsC4PSmkFCC6QMMw5crJTKjEiq9+vZxdR
-         E+D0fUaiZ+Dhaf8kbWLxbYc/yZO7MoVYX8TFZYVoyhDoCR0++sS2+Ad0eT73++RNLbfQ
-         YgjEDv54fQq2pa4m05mvLNQGOnNzp5YkwUJ37rmbjh1TYMqZuj8RL/bY3dVycE3ZELQZ
-         xUAQ==
-X-Gm-Message-State: APjAAAXlrPzZwf+M2/UchPu1S7A7V3yEVOBfiv66SOZvq6SfclNtUPOn
-	5vbHd0n7WR/W6qb+wboX9NgPJQ==
-X-Google-Smtp-Source: APXvYqypIEhUi0EJIgMKTYt0m4YMRHeIhF58LfEi+94S8qvARJ0jimCVUlM03w63T/gtF6c3CH2Xsg==
-X-Received: by 2002:aa7:8101:: with SMTP id b1mr56045649pfi.105.1582607596919;
-        Mon, 24 Feb 2020 21:13:16 -0800 (PST)
-From: Kees Cook <keescook@chromium.org>
-To: Borislav Petkov <bp@alien8.de>
-Cc: Kees Cook <keescook@chromium.org>,
-	Hector Marco-Gisbert <hecmargi@upv.es>,
-	Jason Gunthorpe <jgg@mellanox.com>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Jason Gunthorpe <jgg@ziepe.ca>,
-	Russell King <linux@armlinux.org.uk>,
-	Will Deacon <will@kernel.org>,
-	Jann Horn <jannh@google.com>,
-	x86@kernel.org,
-	linux-arm-kernel@lists.infradead.org,
-	kernel-hardening@lists.openwall.com,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH v4 5/6] arm32/64, elf: Split READ_IMPLIES_EXEC from executable GNU_STACK
-Date: Mon, 24 Feb 2020 21:13:06 -0800
-Message-Id: <20200225051307.6401-6-keescook@chromium.org>
-X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200225051307.6401-1-keescook@chromium.org>
-References: <20200225051307.6401-1-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=pTqCjcEa9EXisQdFRd13/e3ghlAPwJ8mGDn87xFJvf0=;
+        b=TCW4/9cK+MhOFZ5LAuf4HZfcaTXRYNol2d76TuiWeYFOY0N7UUhThTy+hObPMaL/zl
+         JL6XTKRIlGFru5chssqc50EtfC9OHi2uBGADEjycz8wHaXxfiqtB3gKMhuGa1SMr7Jga
+         iH64rrxMwWfX5CDXGE/7cyxgEWhoNjObDvCePY1Q6vA+OfuOaVrifJi4JDMEb8SIeWrG
+         dsp4Z2neuOlJ6pe61i3rYarv0Aykb9OCSzVoBVay3EruJ8dwuRbGgYsOBsS8ZZor11TN
+         /aZtZ6MZ+FOIgsUyg4p3vc2ZO4PKLlVhCrjVQyM1zfRVCoiOLOie/jRSnCT7er6hzcWo
+         bVrg==
+X-Gm-Message-State: APjAAAW0ke4QSda0w2/NkcamEeHpv/0RZ/Ln9lBH0PJC3yPW4lFXkcAx
+	kthQl6v8hecqWh7IuAxp+LbWXnYaXsVELSXjN5Y=
+X-Google-Smtp-Source: APXvYqxfsb5uSBRkmS+LtsgGjkJGKKupkdhq2wlH8nbQMAAzyqD76e3X2yMODI2NRGhLtk2pWC/SchFrfB8a0n1TzJg=
+X-Received: by 2002:a05:620a:1326:: with SMTP id p6mr36826889qkj.50.1582652379174;
+ Tue, 25 Feb 2020 09:39:39 -0800 (PST)
+Date: Tue, 25 Feb 2020 09:39:21 -0800
+In-Reply-To: <20191018161033.261971-1-samitolvanen@google.com>
+Message-Id: <20200225173933.74818-1-samitolvanen@google.com>
+Mime-Version: 1.0
+References: <20191018161033.261971-1-samitolvanen@google.com>
+X-Mailer: git-send-email 2.25.0.265.gbab2e86ba0-goog
+Subject: [PATCH v9 00/12] add support for Clang's Shadow Call Stack
+From: Sami Tolvanen <samitolvanen@google.com>
+To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
+	James Morse <james.morse@arm.com>, Steven Rostedt <rostedt@goodmis.org>, 
+	Masami Hiramatsu <mhiramat@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, 
+	Mark Rutland <mark.rutland@arm.com>
+Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>, 
+	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, Jann Horn <jannh@google.com>, 
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, 
+	Masahiro Yamada <yamada.masahiro@socionext.com>, clang-built-linux@googlegroups.com, 
+	kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, 
+	linux-kernel@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
+Content-Type: text/plain; charset="UTF-8"
 
-The READ_IMPLIES_EXEC work-around was designed for old toolchains that
-lacked the ELF PT_GNU_STACK marking under the assumption that toolchains
-that couldn't specify executable permission flags for the stack may not
-know how to do it correctly for any memory region.
+This patch series adds support for Clang's Shadow Call Stack
+(SCS) mitigation, which uses a separately allocated shadow stack
+to protect against return address overwrites. More information
+can be found here:
 
-This logic is sensible for having ancient binaries coexist in a system
-with possibly NX memory, but was implemented in a way that equated having
-a PT_GNU_STACK marked executable as being as "broken" as lacking the
-PT_GNU_STACK marking entirely. Things like unmarked assembly and stack
-trampolines may cause PT_GNU_STACK to need an executable bit, but they
-do not imply all mappings must be executable.
+  https://clang.llvm.org/docs/ShadowCallStack.html
 
-This confusion has led to situations where modern programs with explicitly
-marked executable stack are forced into the READ_IMPLIES_EXEC state when
-no such thing is needed. (And leads to unexpected failures when mmap()ing
-regions of device driver memory that wish to disallow VM_EXEC[1].)
+SCS provides better protection against traditional buffer
+overflows than CONFIG_STACKPROTECTOR_*, but it should be noted
+that SCS security guarantees in the kernel differ from the ones
+documented for user space. The kernel must store addresses of
+shadow stacks used by inactive tasks and interrupt handlers in
+memory, which means an attacker capable reading and writing
+arbitrary memory may be able to locate them and hijack control
+flow by modifying shadow stacks that are not currently in use.
 
-In looking for other reasons for the READ_IMPLIES_EXEC behavior, Jann
-Horn noted that glibc thread stacks have always been marked RWX (until
-2003 when they started tracking the PT_GNU_STACK flag instead[2]). And
-musl doesn't support executable stacks at all[3]. As such, no breakage
-for multithreaded applications is expected from this change.
+SCS is currently supported only on arm64, where the compiler
+requires the x18 register to be reserved for holding the current
+task's shadow stack pointer.
 
-This changes arm32 and arm64 compat together, to keep behavior the same.
+With -fsanitize=shadow-call-stack, the compiler injects
+instructions to all non-leaf C functions to store the return
+address to the shadow stack, and unconditionally load it again
+before returning. As a result, SCS is currently incompatible
+with features that rely on modifying function return addresses
+in the kernel stack to alter control flow. A copy of the return
+address is still kept in the kernel stack for compatibility with
+stack unwinding, for example.
 
-[1] https://lkml.kernel.org/r/20190418055759.GA3155@mellanox.com
-[2] https://sourceware.org/git/?p=glibc.git;a=commitdiff;h=54ee14b3882
-[3] https://lkml.kernel.org/r/20190423192534.GN23599@brightrain.aerifal.cx
+SCS has a minimal performance overhead, but allocating
+shadow stacks increases kernel memory usage. The feature is
+therefore mostly useful on hardware that lacks support for PAC
+instructions.
 
-Suggested-by: Hector Marco-Gisbert <hecmargi@upv.es>
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Reviewed-by: Jason Gunthorpe <jgg@mellanox.com>
-Reviewed-by: Catalin Marinas <catalin.marinas@arm.com>
----
- arch/arm/kernel/elf.c        | 5 +++--
- arch/arm64/include/asm/elf.h | 5 +++--
- 2 files changed, 6 insertions(+), 4 deletions(-)
+Changes in v9:
+ - Fixed grammar in the Kconfig help text.
+ - Changed Kconfig to allow SCS to be selected with the patchable-
+   function-entry graph tracer.
+ - Changed the EFI stub patch to not filter out -ffixed-x18, only
+   SCS flags.
 
-diff --git a/arch/arm/kernel/elf.c b/arch/arm/kernel/elf.c
-index 2f69cf978fe3..6965a673a141 100644
---- a/arch/arm/kernel/elf.c
-+++ b/arch/arm/kernel/elf.c
-@@ -87,12 +87,13 @@ EXPORT_SYMBOL(elf_set_personality);
-  * ELF:              |            |            |
-  * -------------------------------|------------|
-  * missing GNU_STACK | exec-all   | exec-all   |
-- * GNU_STACK == RWX  | exec-all   | exec-all   |
-+ * GNU_STACK == RWX  | exec-all   | exec-stack |
-  * GNU_STACK == RW   | exec-all   | exec-none  |
-  *
-  *  exec-all  : all PROT_READ user mappings are executable, except when
-  *              backed by files on a noexec-filesystem.
-  *  exec-none : only PROT_EXEC user mappings are executable.
-+ *  exec-stack: only the stack and PROT_EXEC user mappings are executable.
-  *
-  *  *this column has no architectural effect: NX markings are ignored by
-  *   hardware, but may have behavioral effects when "wants X" collides with
-@@ -102,7 +103,7 @@ EXPORT_SYMBOL(elf_set_personality);
-  */
- int arm_elf_read_implies_exec(int executable_stack)
- {
--	if (executable_stack != EXSTACK_DISABLE_X)
-+	if (executable_stack == EXSTACK_DEFAULT)
- 		return 1;
- 	if (cpu_architecture() < CPU_ARCH_ARMv6)
- 		return 1;
-diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
-index 7fc779e3f1ec..03ada29984a7 100644
---- a/arch/arm64/include/asm/elf.h
-+++ b/arch/arm64/include/asm/elf.h
-@@ -106,17 +106,18 @@
-  * ELF:              |            |            |
-  * -------------------------------|------------|
-  * missing GNU_STACK | exec-all   | exec-all   |
-- * GNU_STACK == RWX  | exec-all   | exec-all   |
-+ * GNU_STACK == RWX  | exec-stack | exec-stack |
-  * GNU_STACK == RW   | exec-none  | exec-none  |
-  *
-  *  exec-all  : all PROT_READ user mappings are executable, except when
-  *              backed by files on a noexec-filesystem.
-  *  exec-none : only PROT_EXEC user mappings are executable.
-+ *  exec-stack: only the stack and PROT_EXEC user mappings are executable.
-  *
-  *  *all arm64 CPUs support NX, so there is no "lacks NX" column.
-  *
-  */
--#define elf_read_implies_exec(ex,stk)	(stk != EXSTACK_DISABLE_X)
-+#define elf_read_implies_exec(ex,stk)	(stk == EXSTACK_DEFAULT)
- 
- #define CORE_DUMP_USE_REGSET
- #define ELF_EXEC_PAGESIZE	PAGE_SIZE
+Changes in v8:
+ - Added __noscs to __hyp_text instead of filtering SCS flags from
+   the entire arch/arm64/kvm/hyp directory.
+ - Added a patch to filter out -ffixed-x18 and SCS flags from the
+   EFI stub.
+
+Changes in v7:
+ - Changed irq_stack_entry/exit to store the shadow stack pointer
+   in x24 instead of x20 as kernel_entry uses x20-x23 to store
+   data that can be used later. Updated the comment as well.
+ - Changed the Makefile in arch/arm64/kvm/hyp to also filter out
+   -ffixed-x18.
+ - Changed SHADOW_CALL_STACK to depend on !FUNCTION_GRAPH_TRACER
+   instead of not selecting HAVE_FUNCTION_GRAPH_TRACER with SCS.
+ - Removed ifdefs from the EFI wrapper and updated the comment to
+   explain why we are restoring x18.
+ - Rebased as Ard's x18 patches that were part of this series have
+   already been merged.
+
+Changes in v6:
+ - Updated comment in the EFI RT wrapper to include the
+   explanation from the commit message.
+ - Fixed the SHADOW_CALL_STACK_VMAP config option and the
+   compilation errors in scs_init_irq()
+ - Updated the comment in entry.S to Mark's suggestion
+ - Fixed the WARN_ON in scs_init() to trip only when the return
+   value for cpuhp_setup_state() is < 0.
+ - Removed ifdefs from the code in arch/arm64/kernel/scs.c and
+   added separate shadow stacks for the SDEI handler
+
+Changes in v5:
+ - Updated the comment in __scs_base() to Mark's suggestion
+ - Changed all instances of uintptr_t to unsigned long
+ - Added allocation poisoning for KASAN to catch unintentional
+   shadow stack accesses; moved set_set_magic before poisoning
+   and switched scs_used() and scs_corrupted() to access the
+   buffer using READ_ONCE_NOCHECK() instead
+ - Changed scs_free() to check for NULL instead of zero
+ - Renamed SCS_CACHE_SIZE to NR_CACHED_SCS
+ - Added a warning if cpuhp_setup_state fails in scs_init()
+ - Dropped patches disabling kretprobes after confirming there's
+   no functional conflict with SCS instrumentation
+ - Added an explanation to the commit message why function graph
+   tracing and SCS are incompatible
+ - Removed the ifdefs from arch/arm64/mm/proc.S and added
+   comments explaining why we are saving and restoring x18
+ - Updated scs_check_usage format to include process information
+
+Changes in v4:
+ - Fixed authorship for Ard's patches
+ - Added missing commit messages
+ - Commented code that clears SCS from thread_info
+ - Added a comment about SCS_END_MAGIC being non-canonical
+
+Changes in v3:
+ - Switched to filter-out for removing SCS flags in Makefiles
+ - Changed the __noscs attribute to use __no_sanitize__("...")
+   instead of no_sanitize("...")
+ - Cleaned up inline function definitions and moved task_scs()
+   into a macro
+ - Cleaned up scs_free() and scs_magic()
+ - Moved SCS initialization into dup_task_struct() and removed
+   the now unused scs_task_init()
+ - Added comments to __scs_base() and scs_task_reset() to better
+   document design choices
+ - Changed copy_page to make the offset and bias explicit
+
+Changes in v2:
+ - Changed Ard's KVM patch to use x29 instead of x18 for the
+   guest context, which makes restore_callee_saved_regs cleaner
+ - Updated help text (and commit messages) to point out
+   differences in security properties compared to user space SCS
+ - Cleaned up config options: removed the ROP protection choice,
+   replaced the CC_IS_CLANG dependency with an arch-specific
+   cc-option test, and moved disabling of incompatible config
+   options to an arch-specific Kconfig
+ - Added CC_FLAGS_SCS, which are filtered out where needed
+   instead of using DISABLE_SCS
+ - Added a __has_feature guard around __noscs for older clang
+   versions
+
+Sami Tolvanen (12):
+  add support for Clang's Shadow Call Stack (SCS)
+  scs: add accounting
+  scs: add support for stack usage debugging
+  scs: disable when function graph tracing is enabled
+  arm64: reserve x18 from general allocation with SCS
+  arm64: preserve x18 when CPU is suspended
+  arm64: efi: restore x18 if it was corrupted
+  arm64: vdso: disable Shadow Call Stack
+  arm64: disable SCS for hypervisor code
+  arm64: implement Shadow Call Stack
+  arm64: scs: add shadow stacks for SDEI
+  efi/libstub: disable SCS
+
+ Makefile                              |   6 +
+ arch/Kconfig                          |  35 ++++
+ arch/arm64/Kconfig                    |   5 +
+ arch/arm64/Makefile                   |   4 +
+ arch/arm64/include/asm/kvm_hyp.h      |   2 +-
+ arch/arm64/include/asm/scs.h          |  39 ++++
+ arch/arm64/include/asm/suspend.h      |   2 +-
+ arch/arm64/include/asm/thread_info.h  |   3 +
+ arch/arm64/kernel/Makefile            |   1 +
+ arch/arm64/kernel/asm-offsets.c       |   3 +
+ arch/arm64/kernel/efi-rt-wrapper.S    |  11 +-
+ arch/arm64/kernel/entry.S             |  46 ++++-
+ arch/arm64/kernel/head.S              |   9 +
+ arch/arm64/kernel/irq.c               |   2 +
+ arch/arm64/kernel/process.c           |   2 +
+ arch/arm64/kernel/scs.c               | 114 ++++++++++++
+ arch/arm64/kernel/sdei.c              |   7 +
+ arch/arm64/kernel/smp.c               |   4 +
+ arch/arm64/kernel/vdso/Makefile       |   2 +-
+ arch/arm64/mm/proc.S                  |  14 ++
+ drivers/base/node.c                   |   6 +
+ drivers/firmware/efi/libstub/Makefile |   3 +
+ fs/proc/meminfo.c                     |   4 +
+ include/linux/compiler-clang.h        |   6 +
+ include/linux/compiler_types.h        |   4 +
+ include/linux/mmzone.h                |   3 +
+ include/linux/scs.h                   |  57 ++++++
+ init/init_task.c                      |   8 +
+ kernel/Makefile                       |   1 +
+ kernel/fork.c                         |   9 +
+ kernel/sched/core.c                   |   2 +
+ kernel/scs.c                          | 246 ++++++++++++++++++++++++++
+ mm/page_alloc.c                       |   6 +
+ mm/vmstat.c                           |   3 +
+ 34 files changed, 662 insertions(+), 7 deletions(-)
+ create mode 100644 arch/arm64/include/asm/scs.h
+ create mode 100644 arch/arm64/kernel/scs.c
+ create mode 100644 include/linux/scs.h
+ create mode 100644 kernel/scs.c
+
+
+base-commit: 63623fd44972d1ed2bfb6e0fb631dfcf547fd1e7
 -- 
-2.20.1
+2.25.0.265.gbab2e86ba0-goog
 
