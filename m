@@ -1,4 +1,4 @@
-Return-Path: <SRS0=IRQ/=4O=lists.openwall.com=kernel-hardening-return-17951-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Bpa0=4O=lists.openwall.com=kernel-hardening-return-17952-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,18 +7,18 @@ X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BC652C4BA0D
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 06:37:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D5FAFC4BA0A
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 06:37:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E5BD0206E2
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 06:37:37 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 31D34206E2
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 06:37:50 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=russell.cc header.i=@russell.cc header.b="jX39NwqM";
-	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="PiR+FfNC"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E5BD0206E2
+	dkim=pass (2048-bit key) header.d=russell.cc header.i=@russell.cc header.b="L6CsOItH";
+	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="mPi9H+PU"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 31D34206E2
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=russell.cc
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17951-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18235 invoked by uid 550); 26 Feb 2020 06:36:49 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17952-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19544 invoked by uid 550); 26 Feb 2020 06:36:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,225 +26,126 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18104 invoked from network); 26 Feb 2020 06:36:48 -0000
+Received: (qmail 19456 invoked from network); 26 Feb 2020 06:36:52 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=russell.cc; h=
 	from:to:cc:subject:date:message-id:in-reply-to:references
-	:mime-version:content-transfer-encoding; s=fm1; bh=nQz/eopHyv6q5
-	rSvIql6tVPdKhyrOQXmquL2XzUOAb4=; b=jX39NwqMqSxmybWoPXmoMtV5JTdKX
-	IPdEGV54q0nw57WtpEDCkVWZ1rgR3l87uLIPATRDZrZVnt3426lwTbnTuRM8zr4R
-	9txS9zXcMMUkKaRc8AxqimFyW2ReyYoEwYN9+4d1B0isLFEM0QKQvNinPwkZTA+Q
-	ToljzSs3pXrjjTdyG+ZjV4S+Ydf5CfHIrPcSvHLIoXYXVFMejhNhBjnDGQ+4HFri
-	66L4UvMMyVI67XUMigx3S62R2apuXJ6vieesES9l/0ABYwzcWkuX9YzKY9W56/aC
-	htoaR8TQAkYJ7uvcrwoTxUBbj7O67PL4/GHUW3ktyST9I5fnAVMScLK3g==
+	:mime-version:content-transfer-encoding; s=fm1; bh=W5XsVjL9tIlpR
+	T/rT1hidYf17YF0ZVTADr8UzRX/C3A=; b=L6CsOItH9rQDK40ZHxDDveX5ypsBb
+	ClDy6mOULobhKgxQ/qGVMtg2cTCduu15RGWQ0RiNC/kBaW1AMi57bWUw6+9dJfYB
+	7xRzUmj7wR4T2s5LkZ+YDGHgLSrONf1efS8f9RhSlN8j1LoxZ1G1x2d0j7+5ZMSK
+	5CwCgI4qulW8qY6kGY+lw5Ug247ZQiWCCyag6sQponpXELmWKKqG96qEj0i8+ARt
+	wkdiqFmpNEEFGo8wFcvZUT42/VcmX4v+WIWn2N/MC0o0XC8tvGLsEYqIqMsyOXan
+	CbnwAbuusu38Ia8TYTjej/hgOJVAvnvEQgF8wmBO4+LQwaOUL/hOCTv3A==
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
 	messagingengine.com; h=cc:content-transfer-encoding:date:from
 	:in-reply-to:message-id:mime-version:references:subject:to
 	:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=
-	fm2; bh=nQz/eopHyv6q5rSvIql6tVPdKhyrOQXmquL2XzUOAb4=; b=PiR+FfNC
-	dmzfBwIujjMGEoToDzg3hq81d/ZPGLBv5DAIBAbp/BSRM7POyvZGwUPhifn+2q2a
-	0kGQMFU1HMQkAyY9oMTX584ajfPPf7tsgoyKObXTQompMNLW7CHkK87Y4wEMl0L+
-	myZxk7hLhUd+T782+YCFtfNYCPnLP28ZxOJAfTSJzTJVnBf2gfZ6j5xx6Kh9AwLG
-	/9CRPQ7dBXkU3mLmNcdVrpHfZsFQ3j2qQFMa1veHQfxK/grE7GcMJfSJOfBGETQ0
-	ZNeX8YvGs0O9YeGsJaqLWMWCufdGgIp8RUrspyenIkIhcdhpZepFd2tKzfcKulPo
-	i87cvjs6b1Fuhw==
-X-ME-Sender: <xms:8xFWXvZvfKAcxLFHFPaHgYe7vITFa13bPZZPIRGfEbEMXhRlLNng8Q>
+	fm2; bh=W5XsVjL9tIlpRT/rT1hidYf17YF0ZVTADr8UzRX/C3A=; b=mPi9H+PU
+	Lo6fKgNX1fUhBf5pFZ4LuC5/rQ+GQd+XxQ2z907YbMN3MczhyNJDu2V8PHsb5Z5b
+	aN0KiGH65+3CrmJ/oOjU4XpCBTDsSaFBs6DZK6AxEkJr/L6ou8dQuXi2c8iAh5os
+	K6sVWnETfMNetfgDmJ2AjggJLUcv9GhN5wwOlzF3VIupjwHcZVwffvfsBoVnRsbK
+	HtLrZAB+3Xp0/CZh+/3EG3o0KZhBu7v3ZamOVpLsDxlm/pbTBcjPV9rs/AoCPDsq
+	EG+htObDHZIFaogUcYLNWc2Kq/T72sjJBwhm4cFukWrGgnWWypp5BFAqLD0oMG0D
+	HcMyqF32PK3SrA==
+X-ME-Sender: <xms:9xFWXmLen64EiRKs67CERxHZDNLtCtjR8pnmMP-az16IDUtQaFJ12A>
 X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedugedrleefgdelkecutefuodetggdotefrodftvf
     curfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfghnecu
-    uegrihhlohhuthemuceftddtnecusecvtfgvtghiphhivghnthhsucdlqddutddtmdenfg
-    hrlhcuvffnffculdduhedmnecujfgurhephffvufffkffojghfggfgsedtkeertdertddt
-    necuhfhrohhmpeftuhhsshgvlhhlucevuhhrrhgvhicuoehruhhstghurhesrhhushhsvg
-    hllhdrtggtqeenucfkphepuddvvddrleelrdekvddruddtnecuvehluhhsthgvrhfuihii
-    vgepheenucfrrghrrghmpehmrghilhhfrhhomheprhhushgtuhhrsehruhhsshgvlhhlrd
-    gttg
-X-ME-Proxy: <xmx:8xFWXpVGWtyo1A5aTIMwgTzwVTUPub7c0a0ZBWhEiHFUACP1iU8j-A>
-    <xmx:8xFWXknRTI4XE65SL5CxhR1UUKuT7ePDUJuVxOXmKfB1-FxlaNIItg>
-    <xmx:8xFWXkZmuep-uluaf9geB1MoSa-dujuUF42spckyMOPxFBk0950dlw>
-    <xmx:8xFWXpAh-WeiqeRVZJjUNkts5j72TJWuQ2eYaiYJYKoN3333eRxu-w>
+    uegrihhlohhuthemuceftddtnecufghrlhcuvffnffculdduhedmnecujfgurhephffvuf
+    ffkffojghfggfgsedtkeertdertddtnecuhfhrohhmpeftuhhsshgvlhhlucevuhhrrhgv
+    hicuoehruhhstghurhesrhhushhsvghllhdrtggtqeenucfkphepuddvvddrleelrdekvd
+    druddtnecuvehluhhsthgvrhfuihiivgepjeenucfrrghrrghmpehmrghilhhfrhhomhep
+    rhhushgtuhhrsehruhhsshgvlhhlrdgttg
+X-ME-Proxy: <xmx:9xFWXrg7ylTU1z3kmYOiT2xAUcjWNBF8UnDN8w6AiR0xaH8SBWztyQ>
+    <xmx:9xFWXr53YHUhApAyMVE1rzVpUeYu4pwB5zZV0tYr8qI1Ty86OTpS7g>
+    <xmx:9xFWXozKpB9fuvw4zogOXXgT8sFpF1AUHMxgMUj8GxMAIr7Ad-c3dQ>
+    <xmx:9xFWXvU3Xzvcn16NikFrKtmGDko3NSRmSEOJ6SBfS-slCUt4fVxysg>
 From: Russell Currey <ruscur@russell.cc>
 To: linuxppc-dev@lists.ozlabs.org
 Cc: jniethe5@gmail.com,
-	Christophe Leroy <christophe.leroy@c-s.fr>,
+	Russell Currey <ruscur@russell.cc>,
+	christophe.leroy@c-s.fr,
 	joel@jms.id.au,
 	mpe@ellerman.id.au,
 	ajd@linux.ibm.com,
 	dja@axtens.net,
 	npiggin@gmail.com,
 	kernel-hardening@lists.openwall.com
-Subject: [PATCH v5 7/8] powerpc/32: use set_memory_attr()
-Date: Wed, 26 Feb 2020 17:35:50 +1100
-Message-Id: <20200226063551.65363-8-ruscur@russell.cc>
+Subject: [PATCH v5 8/8] powerpc/mm: Disable set_memory() routines when strict RWX isn't enabled
+Date: Wed, 26 Feb 2020 17:35:51 +1100
+Message-Id: <20200226063551.65363-9-ruscur@russell.cc>
 X-Mailer: git-send-email 2.25.1
 In-Reply-To: <20200226063551.65363-1-ruscur@russell.cc>
 References: <20200226063551.65363-1-ruscur@russell.cc>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-From: Christophe Leroy <christophe.leroy@c-s.fr>
+There are a couple of reasons that the set_memory() functions are
+problematic when STRICT_KERNEL_RWX isn't enabled:
 
-Use set_memory_attr() instead of the PPC32 specific change_page_attr()
+ - The linear mapping is a different size and apply_to_page_range()
+	may modify a giant section, breaking everything
+ - patch_instruction() doesn't know to work around a page being marked
+ 	RO, and will subsequently crash
 
-change_page_attr() was checking that the address was not mapped by
-blocks and was handling highmem, but that's unneeded because the
-affected pages can't be in highmem and block mapping verification
-is already done by the callers.
+The latter can be replicated by building a kernel with the set_memory()
+patches but with STRICT_KERNEL_RWX off and running ftracetest.
 
-Signed-off-by: Christophe Leroy <christophe.leroy@c-s.fr>
+Reported-by: Jordan Niethe <jniethe5@gmail.com>
+Signed-off-by: Russell Currey <ruscur@russell.cc>
 ---
- arch/powerpc/mm/pgtable_32.c | 95 ++++--------------------------------
- 1 file changed, 10 insertions(+), 85 deletions(-)
+v5: Apply to both set_memory_attr() and change_memory_attr()
+v4: New
 
-diff --git a/arch/powerpc/mm/pgtable_32.c b/arch/powerpc/mm/pgtable_32.c
-index 5fb90edd865e..3d92eaf3ee2f 100644
---- a/arch/powerpc/mm/pgtable_32.c
-+++ b/arch/powerpc/mm/pgtable_32.c
-@@ -23,6 +23,7 @@
- #include <linux/highmem.h>
- #include <linux/memblock.h>
- #include <linux/slab.h>
-+#include <linux/set_memory.h>
+ arch/powerpc/mm/pageattr.c | 22 ++++++++++++++++------
+ 1 file changed, 16 insertions(+), 6 deletions(-)
+
+diff --git a/arch/powerpc/mm/pageattr.c b/arch/powerpc/mm/pageattr.c
+index ee6b5e3b7604..49b8e2e0581d 100644
+--- a/arch/powerpc/mm/pageattr.c
++++ b/arch/powerpc/mm/pageattr.c
+@@ -64,13 +64,18 @@ static int change_page_attr(pte_t *ptep, unsigned long addr, void *data)
  
- #include <asm/pgtable.h>
- #include <asm/pgalloc.h>
-@@ -121,99 +122,20 @@ void __init mapin_ram(void)
- 	}
- }
- 
--/* Scan the real Linux page tables and return a PTE pointer for
-- * a virtual address in a context.
-- * Returns true (1) if PTE was found, zero otherwise.  The pointer to
-- * the PTE pointer is unmodified if PTE is not found.
-- */
--static int
--get_pteptr(struct mm_struct *mm, unsigned long addr, pte_t **ptep, pmd_t **pmdp)
--{
--        pgd_t	*pgd;
--	pud_t	*pud;
--        pmd_t	*pmd;
--        pte_t	*pte;
--        int     retval = 0;
--
--        pgd = pgd_offset(mm, addr & PAGE_MASK);
--        if (pgd) {
--		pud = pud_offset(pgd, addr & PAGE_MASK);
--		if (pud && pud_present(*pud)) {
--			pmd = pmd_offset(pud, addr & PAGE_MASK);
--			if (pmd_present(*pmd)) {
--				pte = pte_offset_map(pmd, addr & PAGE_MASK);
--				if (pte) {
--					retval = 1;
--					*ptep = pte;
--					if (pmdp)
--						*pmdp = pmd;
--					/* XXX caller needs to do pte_unmap, yuck */
--				}
--			}
--		}
--        }
--        return(retval);
--}
--
--static int __change_page_attr_noflush(struct page *page, pgprot_t prot)
--{
--	pte_t *kpte;
--	pmd_t *kpmd;
--	unsigned long address;
--
--	BUG_ON(PageHighMem(page));
--	address = (unsigned long)page_address(page);
--
--	if (v_block_mapped(address))
--		return 0;
--	if (!get_pteptr(&init_mm, address, &kpte, &kpmd))
--		return -EINVAL;
--	__set_pte_at(&init_mm, address, kpte, mk_pte(page, prot), 0);
--	pte_unmap(kpte);
--
--	return 0;
--}
--
--/*
-- * Change the page attributes of an page in the linear mapping.
-- *
-- * THIS DOES NOTHING WITH BAT MAPPINGS, DEBUG USE ONLY
-- */
--static int change_page_attr(struct page *page, int numpages, pgprot_t prot)
--{
--	int i, err = 0;
--	unsigned long flags;
--	struct page *start = page;
--
--	local_irq_save(flags);
--	for (i = 0; i < numpages; i++, page++) {
--		err = __change_page_attr_noflush(page, prot);
--		if (err)
--			break;
--	}
--	wmb();
--	local_irq_restore(flags);
--	flush_tlb_kernel_range((unsigned long)page_address(start),
--			       (unsigned long)page_address(page));
--	return err;
--}
--
- void mark_initmem_nx(void)
+ int change_memory_attr(unsigned long addr, int numpages, long action)
  {
--	struct page *page = virt_to_page(_sinittext);
- 	unsigned long numpages = PFN_UP((unsigned long)_einittext) -
- 				 PFN_DOWN((unsigned long)_sinittext);
- 
- 	if (v_block_mapped((unsigned long)_stext + 1))
- 		mmu_mark_initmem_nx();
- 	else
--		change_page_attr(page, numpages, PAGE_KERNEL);
-+		set_memory_attr((unsigned long)_sinittext, numpages, PAGE_KERNEL);
- }
- 
- #ifdef CONFIG_STRICT_KERNEL_RWX
- void mark_rodata_ro(void)
- {
--	struct page *page;
- 	unsigned long numpages;
- 
- 	if (v_block_mapped((unsigned long)_sinittext)) {
-@@ -222,20 +144,18 @@ void mark_rodata_ro(void)
- 		return;
- 	}
- 
--	page = virt_to_page(_stext);
- 	numpages = PFN_UP((unsigned long)_etext) -
- 		   PFN_DOWN((unsigned long)_stext);
- 
--	change_page_attr(page, numpages, PAGE_KERNEL_ROX);
-+	set_memory_attr((unsigned long)_stext, numpages, PAGE_KERNEL_ROX);
- 	/*
- 	 * mark .rodata as read only. Use __init_begin rather than __end_rodata
- 	 * to cover NOTES and EXCEPTION_TABLE.
- 	 */
--	page = virt_to_page(__start_rodata);
- 	numpages = PFN_UP((unsigned long)__init_begin) -
- 		   PFN_DOWN((unsigned long)__start_rodata);
- 
--	change_page_attr(page, numpages, PAGE_KERNEL_RO);
-+	set_memory_attr((unsigned long)__start_rodata, numpages, PAGE_KERNEL_RO);
- 
- 	// mark_initmem_nx() should have already run by now
- 	ptdump_check_wx();
-@@ -245,9 +165,14 @@ void mark_rodata_ro(void)
- #ifdef CONFIG_DEBUG_PAGEALLOC
- void __kernel_map_pages(struct page *page, int numpages, int enable)
- {
-+	unsigned long addr = (unsigned long)page_address(page);
+-	unsigned long start = ALIGN_DOWN(addr, PAGE_SIZE);
+-	unsigned long sz = numpages * PAGE_SIZE;
++	unsigned long start, size;
 +
- 	if (PageHighMem(page))
- 		return;
++	if (!IS_ENABLED(CONFIG_STRICT_KERNEL_RWX))
++		return 0;
  
--	change_page_attr(page, numpages, enable ? PAGE_KERNEL : __pgprot(0));
-+	if (enable)
-+		set_memory_attr(addr, numpages, PAGE_KERNEL);
-+	else
-+		set_memory_attr(addr, numpages, __pgprot(0));
+ 	if (!numpages)
+ 		return 0;
+ 
+-	return apply_to_page_range(&init_mm, start, sz, change_page_attr, (void *)action);
++	start = ALIGN_DOWN(addr, PAGE_SIZE);
++	size = numpages * PAGE_SIZE;
++
++	return apply_to_page_range(&init_mm, start, size, change_page_attr, (void *)action);
  }
- #endif /* CONFIG_DEBUG_PAGEALLOC */
+ 
+ /*
+@@ -96,12 +101,17 @@ static int set_page_attr(pte_t *ptep, unsigned long addr, void *data)
+ 
+ int set_memory_attr(unsigned long addr, int numpages, pgprot_t prot)
+ {
+-	unsigned long start = ALIGN_DOWN(addr, PAGE_SIZE);
+-	unsigned long sz = numpages * PAGE_SIZE;
++	unsigned long start, size;
++
++	if (!IS_ENABLED(CONFIG_STRICT_KERNEL_RWX))
++		return 0;
+ 
+ 	if (!numpages)
+ 		return 0;
+ 
+-	return apply_to_page_range(&init_mm, start, sz, set_page_attr,
++	start = ALIGN_DOWN(addr, PAGE_SIZE);
++	size = numpages * PAGE_SIZE;
++
++	return apply_to_page_range(&init_mm, start, size, set_page_attr,
+ 				   (void *)pgprot_val(prot));
+ }
 -- 
 2.25.1
 
