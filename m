@@ -1,22 +1,23 @@
-Return-Path: <SRS0=GuZW=4O=lists.openwall.com=kernel-hardening-return-17953-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=z0SL=4O=lists.openwall.com=kernel-hardening-return-17954-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B25C5C4BA0A
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 07:16:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 28144C4BA0D
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 07:19:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 10A5C21556
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 07:16:50 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 7AA87222C2
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 07:19:44 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=axtens.net header.i=@axtens.net header.b="AdvfF+DV"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 10A5C21556
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=axtens.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17953-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15942 invoked by uid 550); 26 Feb 2020 07:16:43 -0000
+	dkim=pass (1024-bit key) header.d=c-s.fr header.i=@c-s.fr header.b="C//uJEes"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7AA87222C2
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=c-s.fr
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17954-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19947 invoked by uid 550); 26 Feb 2020 07:19:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,119 +25,105 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15901 invoked from network); 26 Feb 2020 07:16:42 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=axtens.net; s=google;
-        h=from:to:cc:subject:in-reply-to:references:date:message-id
-         :mime-version;
-        bh=bUll3MF+KOORxkWKae6CeWZqF5RK093f70VhPi5nTaA=;
-        b=AdvfF+DViD2Iihe2gGoCejFW6L9CR4CRCuvhd702kHXMW9aLKiXKfmFyTpucUBXYvN
-         cEZRvzdUlmSDzOLcdBFaPWO/Gqx8canJLTZTZUnf4NBrmhRAHnjLBh4VPtK3yWqwsia0
-         ED/nVdqp1ZBaUikJEfLHTuQiqHyge9lN9SdrA=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:in-reply-to:references:date
-         :message-id:mime-version;
-        bh=bUll3MF+KOORxkWKae6CeWZqF5RK093f70VhPi5nTaA=;
-        b=m3I/yS2cXdkXtYn+NIGuyobCaHozhkzyAFmNJWukXefxBrfRyp+5hIKKXF0aZgS2+n
-         nH/LGKxUaexASNZ+Jx/jZF340skdcVkZ9nOTMQpMS8ZlC4fzpYxAHmgHd7w2YLTdRRxu
-         7H8Md8yB0hpiTnY6UkaE52GrPk626k63fs97+8qazZvyRVmHinxp1ol+4+S7xwoI0vqV
-         c1yd4xZ4cm+K3ZzmN9sOUIujEaOLwjIxXsY1HP+sdt8mJziKpifYPrr29IvPGhh5Yk6z
-         8OHsNFMCxYWsIuP0DIdjaDuIBiZp2FpUvlSJVnfyk2t46l0H6KYgwbgeSGDtpuNTS90H
-         MKgw==
-X-Gm-Message-State: APjAAAWT6rmsWsYacWEMM8iUfeb2AeAFAGc2bp8L39mK6pKIQwttGcBS
-	TKnvdDn0zjKr9Zivol7ce0ULfA==
-X-Google-Smtp-Source: APXvYqyTVYEdw3GG568w+1dNFzY9ZMbswpQ8Fc19s42h9JN/v4uscW8ujuBJbXp4NXq4DVrPra5Yow==
-X-Received: by 2002:a17:902:bf49:: with SMTP id u9mr2644385pls.199.1582701390378;
-        Tue, 25 Feb 2020 23:16:30 -0800 (PST)
-From: Daniel Axtens <dja@axtens.net>
-To: Jason Yan <yanaijie@huawei.com>, mpe@ellerman.id.au, linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com, christophe.leroy@c-s.fr, benh@kernel.crashing.org, paulus@samba.org, npiggin@gmail.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, oss@buserror.net
-Cc: linux-kernel@vger.kernel.org, zhaohongjiang@huawei.com, Jason Yan <yanaijie@huawei.com>
-Subject: Re: [PATCH v3 0/6] implement KASLR for powerpc/fsl_booke/64
-In-Reply-To: <20200206025825.22934-1-yanaijie@huawei.com>
-References: <20200206025825.22934-1-yanaijie@huawei.com>
-Date: Wed, 26 Feb 2020 18:16:26 +1100
-Message-ID: <87tv3drf79.fsf@dja-thinkpad.axtens.net>
+Received: (qmail 19912 invoked from network); 26 Feb 2020 07:19:38 -0000
+Authentication-Results: localhost; dkim=pass
+	reason="1024-bit key; insecure key"
+	header.d=c-s.fr header.i=@c-s.fr header.b=C//uJEes; dkim-adsp=pass;
+	dkim-atps=neutral
+X-Virus-Scanned: Debian amavisd-new at c-s.fr
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=c-s.fr; s=mail;
+	t=1582701564; bh=TWcuATkJZ00ABnX/nWFwyVvB74ey5GHCEqWBA7CWIfQ=;
+	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
+	b=C//uJEesIFl3kP4gVOBgARMRL7k7AMSJwKJHqNbJCiXlEWjAvPIoXs42tLwObi23Q
+	 3knXXUyu7RmaoVZ8TSBQuFRPXDgTMOAMqzM+qXu0i6qpAuED4gKx/1Fd4pqtoAyWdh
+	 nHxMKLYPUEcc06pmeRLN4Cd82sBJU6rpN08thzRA=
+X-Virus-Scanned: amavisd-new at c-s.fr
+Subject: Re: [PATCH v4 8/8] powerpc/mm: Disable set_memory() routines when
+ strict RWX isn't enabled
+To: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org
+Cc: joel@jms.id.au, mpe@ellerman.id.au, ajd@linux.ibm.com, dja@axtens.net,
+ npiggin@gmail.com, kernel-hardening@lists.openwall.com,
+ Jordan Niethe <jniethe5@gmail.com>
+References: <20200226062403.63790-1-ruscur@russell.cc>
+ <20200226062403.63790-9-ruscur@russell.cc>
+From: Christophe Leroy <christophe.leroy@c-s.fr>
+Message-ID: <2a9988ec-c115-8fe8-4c68-82eb2fa43d6b@c-s.fr>
+Date: Wed, 26 Feb 2020 08:19:19 +0100
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:68.0) Gecko/20100101
+ Thunderbird/68.5.0
 MIME-Version: 1.0
-Content-Type: text/plain
-
-Hi Jason,
-
-> This is a try to implement KASLR for Freescale BookE64 which is based on
-> my earlier implementation for Freescale BookE32:
-> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718
->
-> The implementation for Freescale BookE64 is similar as BookE32. One
-> difference is that Freescale BookE64 set up a TLB mapping of 1G during
-> booting. Another difference is that ppc64 needs the kernel to be
-> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
-> it 64K-aligned. This can save some code to creat another TLB map at
-> early boot. The disadvantage is that we only have about 1G/64K = 16384
-> slots to put the kernel in.
->
->     KERNELBASE
->
->           64K                     |--> kernel <--|
->            |                      |              |
->         +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->         |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
->         +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->         |                         |                        1G
->         |----->   offset    <-----|
->
->                               kernstart_virt_addr
->
-> I'm not sure if the slot numbers is enough or the design has any
-> defects. If you have some better ideas, I would be happy to hear that.
->
-> Thank you all.
->
-
-Are you making any attempt to hide kernel address leaks in this series?
-I've just been looking at the stackdump code just now, and it directly
-prints link registers and stack pointers, which is probably enough to
-determine the kernel base address:
-
-                  SPs:               LRs:             %pS pointer
-[    0.424506] [c0000000de403970] [c000000001fc0458] dump_stack+0xfc/0x154 (unreliable)
-[    0.424593] [c0000000de4039c0] [c000000000267eec] panic+0x258/0x5ac
-[    0.424659] [c0000000de403a60] [c0000000024d7a00] mount_block_root+0x634/0x7c0
-[    0.424734] [c0000000de403be0] [c0000000024d8100] prepare_namespace+0x1ec/0x23c
-[    0.424811] [c0000000de403c60] [c0000000024d7010] kernel_init_freeable+0x804/0x880
-
-git grep \\\"REG\\\" arch/powerpc shows a few other uses like this, all
-in process.c or in xmon.
-
-Maybe replacing the REG format string in KASLR mode would be sufficient?
-
-Regards,
-Daniel
+In-Reply-To: <20200226062403.63790-9-ruscur@russell.cc>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Language: fr
+Content-Transfer-Encoding: 8bit
 
 
-> v2->v3:
->   Fix build error when KASLR is disabled.
-> v1->v2:
->   Add __kaslr_offset for the secondary cpu boot up.
->
-> Jason Yan (6):
->   powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and
->     kaslr_early_init()
->   powerpc/fsl_booke/64: introduce reloc_kernel_entry() helper
->   powerpc/fsl_booke/64: implement KASLR for fsl_booke64
->   powerpc/fsl_booke/64: do not clear the BSS for the second pass
->   powerpc/fsl_booke/64: clear the original kernel if randomized
->   powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst
->     and add 64bit part
->
->  .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 +++++++--
->  arch/powerpc/Kconfig                          |  2 +-
->  arch/powerpc/kernel/exceptions-64e.S          | 23 ++++++
->  arch/powerpc/kernel/head_64.S                 | 14 ++++
->  arch/powerpc/kernel/setup_64.c                |  4 +-
->  arch/powerpc/mm/mmu_decl.h                    | 19 ++---
->  arch/powerpc/mm/nohash/kaslr_booke.c          | 71 +++++++++++++------
->  7 files changed, 132 insertions(+), 36 deletions(-)
->  rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
->
-> -- 
-> 2.17.2
+
+Le 26/02/2020 à 07:24, Russell Currey a écrit :
+> There are a couple of reasons that the set_memory() functions are
+> problematic when STRICT_KERNEL_RWX isn't enabled:
+> 
+>   - The linear mapping is a different size and apply_to_page_range()
+> 	may modify a giant section, breaking everything
+
+I don't understand.
+
+>   - patch_instruction() doesn't know to work around a page being marked
+>   	RO, and will subsequently crash
+
+Is patch_instruction() involved at all ?
+
+> 
+> The latter can be replicated by building a kernel with the set_memory()
+> patches but with STRICT_KERNEL_RWX off and running ftracetest.
+> 
+> Reported-by: Jordan Niethe <jniethe5@gmail.com>
+> Signed-off-by: Russell Currey <ruscur@russell.cc>
+> ---
+> v4: new
+> 
+>   arch/powerpc/mm/pageattr.c | 11 ++++++++---
+>   1 file changed, 8 insertions(+), 3 deletions(-)
+> 
+> diff --git a/arch/powerpc/mm/pageattr.c b/arch/powerpc/mm/pageattr.c
+> index ee6b5e3b7604..ff111930cf5e 100644
+> --- a/arch/powerpc/mm/pageattr.c
+> +++ b/arch/powerpc/mm/pageattr.c
+> @@ -96,12 +96,17 @@ static int set_page_attr(pte_t *ptep, unsigned long addr, void *data)
+>   
+>   int set_memory_attr(unsigned long addr, int numpages, pgprot_t prot)
+
+Isn't it change_memory_attr() that is a problem for you ?
+
+>   {
+> -	unsigned long start = ALIGN_DOWN(addr, PAGE_SIZE);
+> -	unsigned long sz = numpages * PAGE_SIZE;
+> +	unsigned long start, size;
+> +
+> +	if (!IS_ENABLED(CONFIG_STRICT_KERNEL_RWX))
+> +		return 0;
+
+
+Doing this you break patch 7:
+mark_initmem_nx() is called regardless of CONFIG_STRICT_KERNEL_RWX
+__kernel_map_pages() depends on CONFIG_DEBUG_PAGEALLOC which doesn't 
+depend on CONFIG_STRICT_KERNEL_RWX
+
+
+>   
+>   	if (!numpages)
+>   		return 0;
+>   
+> -	return apply_to_page_range(&init_mm, start, sz, set_page_attr,
+> +	start = ALIGN_DOWN(addr, PAGE_SIZE);
+> +	size = numpages * PAGE_SIZE;
+> +
+> +	return apply_to_page_range(&init_mm, start, size, set_page_attr,
+
+You don't need to move start and size calculation and change the above.
+
+>   				   (void *)pgprot_val(prot));
+>   }
+> 
+
+Christophe
