@@ -1,20 +1,20 @@
-Return-Path: <SRS0=Oq80=4O=lists.openwall.com=kernel-hardening-return-17956-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ijwD=4O=lists.openwall.com=kernel-hardening-return-17957-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A1600C4BA0B
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 08:18:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 29EB3C4BA0A
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 08:27:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 053AE20714
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 08:18:57 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 053AE20714
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17956-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21738 invoked by uid 550); 26 Feb 2020 08:18:51 -0000
+	by mail.kernel.org (Postfix) with SMTP id 8463621556
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 08:27:24 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8463621556
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17957-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26338 invoked by uid 550); 26 Feb 2020 08:27:19 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,128 +22,55 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21703 invoked from network); 26 Feb 2020 08:18:50 -0000
-Subject: Re: [PATCH v3 0/6] implement KASLR for powerpc/fsl_booke/64
-To: Daniel Axtens <dja@axtens.net>, <mpe@ellerman.id.au>,
-	<linuxppc-dev@lists.ozlabs.org>, <diana.craciun@nxp.com>,
-	<christophe.leroy@c-s.fr>, <benh@kernel.crashing.org>, <paulus@samba.org>,
-	<npiggin@gmail.com>, <keescook@chromium.org>,
-	<kernel-hardening@lists.openwall.com>, <oss@buserror.net>
-CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>
-References: <20200206025825.22934-1-yanaijie@huawei.com>
- <87tv3drf79.fsf@dja-thinkpad.axtens.net>
-From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <8171d326-5138-4f5c-cff6-ad3ee606f0c2@huawei.com>
-Date: Wed, 26 Feb 2020 16:18:27 +0800
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
- Thunderbird/68.4.2
+Received: (qmail 26588 invoked from network); 26 Feb 2020 06:38:50 -0000
+Subject: Re: [PATCH v5 8/8] powerpc/mm: Disable set_memory() routines when
+ strict RWX isn't enabled
+To: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org
+Cc: jniethe5@gmail.com, christophe.leroy@c-s.fr, joel@jms.id.au,
+        mpe@ellerman.id.au, dja@axtens.net, npiggin@gmail.com,
+        kernel-hardening@lists.openwall.com
+References: <20200226063551.65363-1-ruscur@russell.cc>
+ <20200226063551.65363-9-ruscur@russell.cc>
+From: Andrew Donnellan <ajd@linux.ibm.com>
+Date: Wed, 26 Feb 2020 17:38:29 +1100
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.5.0
 MIME-Version: 1.0
-In-Reply-To: <87tv3drf79.fsf@dja-thinkpad.axtens.net>
-Content-Type: text/plain; charset="gbk"; format=flowed
-Content-Transfer-Encoding: 8bit
-X-Originating-IP: [10.173.221.195]
-X-CFilter-Loop: Reflected
+In-Reply-To: <20200226063551.65363-9-ruscur@russell.cc>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-TM-AS-GCONF: 00
+x-cbid: 20022606-0008-0000-0000-000003567CAB
+X-IBM-AV-DETECTION: SAVI=unused REMOTE=unused XFE=unused
+x-cbparentid: 20022606-0009-0000-0000-00004A779A5A
+Message-Id: <c560b6bb-1a42-bf50-5122-7912771e1481@linux.ibm.com>
+X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:6.0.138,18.0.572
+ definitions=2020-02-26_01:2020-02-25,2020-02-26 signatures=0
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 mlxlogscore=922 phishscore=0
+ bulkscore=0 suspectscore=0 clxscore=1011 adultscore=0 lowpriorityscore=0
+ mlxscore=0 priorityscore=1501 malwarescore=0 impostorscore=0 spamscore=0
+ classifier=spam adjust=0 reason=mlx scancount=1 engine=8.12.0-2001150001
+ definitions=main-2002260047
 
-Hi Daniel,
+On 26/2/20 5:35 pm, Russell Currey wrote:
+> There are a couple of reasons that the set_memory() functions are
+> problematic when STRICT_KERNEL_RWX isn't enabled:
+> 
+>   - The linear mapping is a different size and apply_to_page_range()
+> 	may modify a giant section, breaking everything
+>   - patch_instruction() doesn't know to work around a page being marked
+>   	RO, and will subsequently crash
+> 
+> The latter can be replicated by building a kernel with the set_memory()
+> patches but with STRICT_KERNEL_RWX off and running ftracetest.
+> 
+> Reported-by: Jordan Niethe <jniethe5@gmail.com>
+> Signed-off-by: Russell Currey <ruscur@russell.cc>
 
-ÔÚ 2020/2/26 15:16, Daniel Axtens Ð´µÀ:
-> Hi Jason,
-> 
->> This is a try to implement KASLR for Freescale BookE64 which is based on
->> my earlier implementation for Freescale BookE32:
->> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718
->>
->> The implementation for Freescale BookE64 is similar as BookE32. One
->> difference is that Freescale BookE64 set up a TLB mapping of 1G during
->> booting. Another difference is that ppc64 needs the kernel to be
->> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
->> it 64K-aligned. This can save some code to creat another TLB map at
->> early boot. The disadvantage is that we only have about 1G/64K = 16384
->> slots to put the kernel in.
->>
->>      KERNELBASE
->>
->>            64K                     |--> kernel <--|
->>             |                      |              |
->>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>          |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
->>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>          |                         |                        1G
->>          |----->   offset    <-----|
->>
->>                                kernstart_virt_addr
->>
->> I'm not sure if the slot numbers is enough or the design has any
->> defects. If you have some better ideas, I would be happy to hear that.
->>
->> Thank you all.
->>
-> 
-> Are you making any attempt to hide kernel address leaks in this series?
+Can we squash this in earlier in the series for the sake of bisectability?
 
-Yes.
-
-> I've just been looking at the stackdump code just now, and it directly
-> prints link registers and stack pointers, which is probably enough to
-> determine the kernel base address:
-> 
->                    SPs:               LRs:             %pS pointer
-> [    0.424506] [c0000000de403970] [c000000001fc0458] dump_stack+0xfc/0x154 (unreliable)
-> [    0.424593] [c0000000de4039c0] [c000000000267eec] panic+0x258/0x5ac
-> [    0.424659] [c0000000de403a60] [c0000000024d7a00] mount_block_root+0x634/0x7c0
-> [    0.424734] [c0000000de403be0] [c0000000024d8100] prepare_namespace+0x1ec/0x23c
-> [    0.424811] [c0000000de403c60] [c0000000024d7010] kernel_init_freeable+0x804/0x880
-> 
-> git grep \\\"REG\\\" arch/powerpc shows a few other uses like this, all
-> in process.c or in xmon.
-> 
-
-Thanks for reminding this.
-
-> Maybe replacing the REG format string in KASLR mode would be sufficient?
-> 
-
-Most archs have removed the address printing when dumping stack. Do we 
-really have to print this?
-
-If we have to do this, maybe we can use "%pK" so that they will be 
-hidden from unprivileged users.
-
-Thanks,
-Jason
-
-> Regards,
-> Daniel
-> 
-> 
->> v2->v3:
->>    Fix build error when KASLR is disabled.
->> v1->v2:
->>    Add __kaslr_offset for the secondary cpu boot up.
->>
->> Jason Yan (6):
->>    powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and
->>      kaslr_early_init()
->>    powerpc/fsl_booke/64: introduce reloc_kernel_entry() helper
->>    powerpc/fsl_booke/64: implement KASLR for fsl_booke64
->>    powerpc/fsl_booke/64: do not clear the BSS for the second pass
->>    powerpc/fsl_booke/64: clear the original kernel if randomized
->>    powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst
->>      and add 64bit part
->>
->>   .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 +++++++--
->>   arch/powerpc/Kconfig                          |  2 +-
->>   arch/powerpc/kernel/exceptions-64e.S          | 23 ++++++
->>   arch/powerpc/kernel/head_64.S                 | 14 ++++
->>   arch/powerpc/kernel/setup_64.c                |  4 +-
->>   arch/powerpc/mm/mmu_decl.h                    | 19 ++---
->>   arch/powerpc/mm/nohash/kaslr_booke.c          | 71 +++++++++++++------
->>   7 files changed, 132 insertions(+), 36 deletions(-)
->>   rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
->>
->> -- 
->> 2.17.2
-> 
-> .
-> 
+-- 
+Andrew Donnellan              OzLabs, ADL Canberra
+ajd@linux.ibm.com             IBM Australia Limited
 
