@@ -1,23 +1,23 @@
-Return-Path: <SRS0=PhSW=4O=lists.openwall.com=kernel-hardening-return-17966-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=HiWe=4O=lists.openwall.com=kernel-hardening-return-17967-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=ham
+X-Spam-Status: No, score=-5.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CA02CC4BA21
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 21:52:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BF8FEC4BA24
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 21:57:16 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 207B424672
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 21:52:34 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1ADB521D7E
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 21:57:15 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="WyBaIgGC"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 207B424672
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="CVWa98Uw"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1ADB521D7E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17966-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16258 invoked by uid 550); 26 Feb 2020 21:52:29 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17967-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19924 invoked by uid 550); 26 Feb 2020 21:57:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,138 +25,77 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16226 invoked from network); 26 Feb 2020 21:52:29 -0000
+Received: (qmail 19892 invoked from network); 26 Feb 2020 21:57:10 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=J0Egg9sFa3mWWC6z1XqltuWj5LdGN/8GpNEWbWGXDQk=;
-        b=WyBaIgGCTruemq7rHIeOFFKkSmZFey/y79zq+yX3DPMj/hLTJemZB776zVWmseAoPk
-         n4h+kFZSc7lg2ndIlXiXpwOs7NV1fjPDzQ+33L6hQsCrs96NecB9uK4pRd+/ngd7we7v
-         EPkCA9TR3YIPZOUKvAryhgjOD+1sVhs7AHBPo=
+        bh=agTSg4xTvTJ902v/wRSeSnCJDmYFaVhC2jp/Gq4x83M=;
+        b=CVWa98Uw4W2DSuAZ6nw8SSnOHBSkNazKVCAoUkannuWdT6ct919lXMS1jGfBN/0TGA
+         vi1r29dNanFqfnfQjHgMsWQeCfa8dPlKyRhtjdPBabDi/YdPfx1Nd5hK0amb+n6+XDYz
+         3A6pmEuOxzK9cvXLOsHwTn/z5Ld4PVK8tO180=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=J0Egg9sFa3mWWC6z1XqltuWj5LdGN/8GpNEWbWGXDQk=;
-        b=BYV+844LC0hCNUcr0tFXVKfSnpxoMFam0jPTLyyDztl8KUcCY1VpSGVqOn4CsPfopp
-         FgNlE/nseyoGJGHz2ioE157pZuiZ/xcZjBDJA5mDenJeo+usoiTa6Stx8WQosTi03CJj
-         Ix75VsAW2lJuvzz4Nq/mJnhcxaN3q7Qcvdtk+ZB/woBRW+P4ZtBn3VC89x9TX8yQjVM5
-         QZNKyqj61i7g8B4AmKr9t5hnmALBc4nsAMR+De28RtYgKFOU1l+Uw0zrZJpExnfdgHbS
-         XS+QigwcutnuQm1eWpuQYR0f8qNctGZd6NEVWs0CmG5SEtc20tajbGRMxpbftZOYQY2B
-         jpbg==
-X-Gm-Message-State: APjAAAWnkna3OMIcsklem72mKQC8EbTUHQmrJBh6QHXmJoTIw9SEphK+
-	0tsuSz+8G+Y28E584o3FMEDkVA==
-X-Google-Smtp-Source: APXvYqxEaK1Cv4oaPm0J/tFDjSfHee2s2mNobGOfYf+MXqkoFKyVBxJTTPEDCuSEP1qbuYVtz/v6DA==
-X-Received: by 2002:a17:902:b498:: with SMTP id y24mr1280527plr.343.1582753936716;
-        Wed, 26 Feb 2020 13:52:16 -0800 (PST)
-Date: Wed, 26 Feb 2020 13:52:14 -0800
+        bh=agTSg4xTvTJ902v/wRSeSnCJDmYFaVhC2jp/Gq4x83M=;
+        b=Iw1xeX7apSZARPMJ8fD7jFRnKXva4AfiaKR9C3kijC2g0Vpxrt7IXvaQDuF8ZEt3jr
+         KMdCmm97UXJuNqWsGy07t/zRyzBRWz2JhgQmG04wyi7w5WzuGBqc9Xh49VMXsIKQ0A0o
+         oh/kTWY+7i8f6EM5Ac6lEXjnSAJNqNpCe99RxlY7rMmDY4YLVOdJ6qBvHPXAulhfkKZM
+         dj7MjAn4NabhS+70qEJAe+YQNFeMuOw9oSdDfC3BWOfmAzEwT97xakePHgcAZj5b5sSV
+         lODoAwP3fBcMRdQpIw5lytMeuzZDlUy6EIHXE07rKN55ZT2mM0qEkEDE38ML0xSI1OLS
+         Lnwg==
+X-Gm-Message-State: APjAAAWs6LgFrHXWvcSfvT+sCpoHa9avMaa/FWeca1fVd9J/JpfPd43A
+	r28Es3zszPa6233wqsfUIRTq9w==
+X-Google-Smtp-Source: APXvYqyJGeL4QW5uWg6MxaWO+Pm23Yck/xgVU4oSTq3yCWFAC8LuFM9MWFMSX+jv/vuaDnFk8SNXQA==
+X-Received: by 2002:aa7:95b0:: with SMTP id a16mr688779pfk.253.1582754217916;
+        Wed, 26 Feb 2020 13:56:57 -0800 (PST)
+Date: Wed, 26 Feb 2020 13:56:56 -0800
 From: Kees Cook <keescook@chromium.org>
-To: Russell Currey <ruscur@russell.cc>
-Cc: linuxppc-dev@lists.ozlabs.org, jniethe5@gmail.com,
-	christophe.leroy@c-s.fr, joel@jms.id.au, mpe@ellerman.id.au,
-	ajd@linux.ibm.com, dja@axtens.net, npiggin@gmail.com,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v5 3/8] powerpc/mm/ptdump: debugfs handler for W+X checks
- at runtime
-Message-ID: <202002261348.8957F0E8D@keescook>
-References: <20200226063551.65363-1-ruscur@russell.cc>
- <20200226063551.65363-4-ruscur@russell.cc>
+To: Daniel Axtens <dja@axtens.net>
+Cc: Daniel Micay <danielmicay@gmail.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux-MM <linux-mm@kvack.org>,
+	kernel list <linux-kernel@vger.kernel.org>,
+	Andrew Morton <akpm@linux-foundation.org>
+Subject: Re: [PATCH 5/5] [RFC] mm: annotate memory allocation functions with
+ their sizes
+Message-ID: <202002261356.B632368@keescook>
+References: <20200120074344.504-1-dja@axtens.net>
+ <20200120074344.504-6-dja@axtens.net>
+ <CA+DvKQJ6jRHZeZteqY7q-9sU8v3xacSPj65uac3PQfst4cKiMA@mail.gmail.com>
+ <202002251035.AD29F84@keescook>
+ <87wo89rieh.fsf@dja-thinkpad.axtens.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200226063551.65363-4-ruscur@russell.cc>
+In-Reply-To: <87wo89rieh.fsf@dja-thinkpad.axtens.net>
 
-On Wed, Feb 26, 2020 at 05:35:46PM +1100, Russell Currey wrote:
-> Very rudimentary, just
+On Wed, Feb 26, 2020 at 05:07:18PM +1100, Daniel Axtens wrote:
+> Kees Cook <keescook@chromium.org> writes:
 > 
-> 	echo 1 > [debugfs]/check_wx_pages
+> > On Fri, Feb 07, 2020 at 03:38:22PM -0500, Daniel Micay wrote:
+> >> There are some uses of ksize in the kernel making use of the real
+> >> usable size of memory allocations rather than only the requested
+> >> amount. It's incorrect when mixed with alloc_size markers, since if a
+> >> number like 14 is passed that's used as the upper bound, rather than a
+> >> rounded size like 16 returned by ksize. It's unlikely to trigger any
+> >> issues with only CONFIG_FORTIFY_SOURCE, but it becomes more likely
+> >> with -fsanitize=object-size or other library-based usage of
+> >> __builtin_object_size.
+> >
+> > I think the solution here is to use a macro that does the per-bucket
+> > rounding and applies them to the attributes. Keep the bucket size lists
+> > in sync will likely need some BUILD_BUG_ON()s or similar.
 > 
-> and check the kernel log.  Useful for testing strict module RWX.
-> 
-> Updated the Kconfig entry to reflect this.
+> I can have a go at this but with various other work projects it has
+> unfortunately slipped way down the to-do list. So I've very happy for
+> anyone else to take this and run with it.
 
-Oh, I like this! This would be handy to have on all architectures.
+Sounds good. I've added the above note from Micay to the KSPP bug tracker:
+https://github.com/KSPP/linux/issues/5
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
-
--Kees
-
-> 
-> Also fixed a typo.
-> 
-> Signed-off-by: Russell Currey <ruscur@russell.cc>
-> ---
->  arch/powerpc/Kconfig.debug      |  6 ++++--
->  arch/powerpc/mm/ptdump/ptdump.c | 21 ++++++++++++++++++++-
->  2 files changed, 24 insertions(+), 3 deletions(-)
-> 
-> diff --git a/arch/powerpc/Kconfig.debug b/arch/powerpc/Kconfig.debug
-> index 0b063830eea8..e37960ef68c6 100644
-> --- a/arch/powerpc/Kconfig.debug
-> +++ b/arch/powerpc/Kconfig.debug
-> @@ -370,7 +370,7 @@ config PPC_PTDUMP
->  	  If you are unsure, say N.
->  
->  config PPC_DEBUG_WX
-> -	bool "Warn on W+X mappings at boot"
-> +	bool "Warn on W+X mappings at boot & enable manual checks at runtime"
->  	depends on PPC_PTDUMP && STRICT_KERNEL_RWX
->  	help
->  	  Generate a warning if any W+X mappings are found at boot.
-> @@ -384,7 +384,9 @@ config PPC_DEBUG_WX
->  	  of other unfixed kernel bugs easier.
->  
->  	  There is no runtime or memory usage effect of this option
-> -	  once the kernel has booted up - it's a one time check.
-> +	  once the kernel has booted up, it only automatically checks once.
-> +
-> +	  Enables the "check_wx_pages" debugfs entry for checking at runtime.
->  
->  	  If in doubt, say "Y".
->  
-> diff --git a/arch/powerpc/mm/ptdump/ptdump.c b/arch/powerpc/mm/ptdump/ptdump.c
-> index 206156255247..a15e19a3b14e 100644
-> --- a/arch/powerpc/mm/ptdump/ptdump.c
-> +++ b/arch/powerpc/mm/ptdump/ptdump.c
-> @@ -4,7 +4,7 @@
->   *
->   * This traverses the kernel pagetables and dumps the
->   * information about the used sections of memory to
-> - * /sys/kernel/debug/kernel_pagetables.
-> + * /sys/kernel/debug/kernel_page_tables.
->   *
->   * Derived from the arm64 implementation:
->   * Copyright (c) 2014, The Linux Foundation, Laura Abbott.
-> @@ -413,6 +413,25 @@ void ptdump_check_wx(void)
->  	else
->  		pr_info("Checked W+X mappings: passed, no W+X pages found\n");
->  }
-> +
-> +static int check_wx_debugfs_set(void *data, u64 val)
-> +{
-> +	if (val != 1ULL)
-> +		return -EINVAL;
-> +
-> +	ptdump_check_wx();
-> +
-> +	return 0;
-> +}
-> +
-> +DEFINE_SIMPLE_ATTRIBUTE(check_wx_fops, NULL, check_wx_debugfs_set, "%llu\n");
-> +
-> +static int ptdump_check_wx_init(void)
-> +{
-> +	return debugfs_create_file("check_wx_pages", 0200, NULL,
-> +				   NULL, &check_wx_fops) ? 0 : -ENOMEM;
-> +}
-> +device_initcall(ptdump_check_wx_init);
->  #endif
->  
->  static int ptdump_init(void)
-> -- 
-> 2.25.1
-> 
+Thanks for bringing this topic back up!
 
 -- 
 Kees Cook
