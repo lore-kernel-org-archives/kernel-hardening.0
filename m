@@ -1,20 +1,20 @@
-Return-Path: <SRS0=yvXn=4O=lists.openwall.com=kernel-hardening-return-17960-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=aZtO=4O=lists.openwall.com=kernel-hardening-return-17961-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 24853C4BA12
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 15:35:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C3034C4BA25
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 19:13:43 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8394624680
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 15:35:34 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8394624680
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17960-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1321 invoked by uid 550); 26 Feb 2020 15:35:29 -0000
+	by mail.kernel.org (Postfix) with SMTP id 2C900222C4
+	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Feb 2020 19:13:42 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2C900222C4
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17961-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22259 invoked by uid 550); 26 Feb 2020 19:13:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,50 +22,109 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1289 invoked from network); 26 Feb 2020 15:35:28 -0000
-Subject: Re: [RFC PATCH v14 00/10] Landlock LSM
-To: J Freyensee <why2jjj.linux@gmail.com>, linux-kernel@vger.kernel.org
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
-        Arnd Bergmann <arnd@arndb.de>,
-        Casey Schaufler <casey@schaufler-ca.com>,
-        Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-        James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>,
-        Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-        Michael Kerrisk <mtk.manpages@gmail.com>,
-        =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
-        "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
-        Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
-        kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-        linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
-        linux-fsdevel@vger.kernel.org, linux-kselftest@vger.kernel.org,
-        linux-security-module@vger.kernel.org, x86@kernel.org
-References: <20200224160215.4136-1-mic@digikod.net>
- <6df3e6b1-ffd1-dacf-2f2d-7df8e5aca668@gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <5ec24e38-1a6f-590a-3b30-50caae177e9b@digikod.net>
-Date: Wed, 26 Feb 2020 16:34:59 +0100
-User-Agent:
+Received: (qmail 22227 invoked from network); 26 Feb 2020 19:13:33 -0000
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+X-IronPort-AV: E=Sophos;i="5.70,489,1574150400"; 
+   d="scan'208";a="384904895"
+Message-ID: <bac9b04cd8ed1ff2898a0093a09190699f9e5355.camel@linux.intel.com>
+Subject: Re: [RFC PATCH 05/11] x86: Makefile: Add build and config option
+ for CONFIG_FG_KASLR
+From: Kristen Carlson Accardi <kristen@linux.intel.com>
+To: Arvind Sankar <nivedita@alum.mit.edu>
+Cc: tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, hpa@zytor.com, 
+	arjan@linux.intel.com, keescook@chromium.org, rick.p.edgecombe@intel.com, 
+	x86@kernel.org, linux-kernel@vger.kernel.org, 
+	kernel-hardening@lists.openwall.com
+Date: Wed, 26 Feb 2020 11:13:20 -0800
+In-Reply-To: <20200225175544.GA1385238@rani.riverdale.lan>
+References: <20200205223950.1212394-1-kristen@linux.intel.com>
+	 <20200205223950.1212394-6-kristen@linux.intel.com>
+	 <20200225175544.GA1385238@rani.riverdale.lan>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
 MIME-Version: 1.0
-In-Reply-To: <6df3e6b1-ffd1-dacf-2f2d-7df8e5aca668@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
+Content-Transfer-Encoding: 7bit
+
+On Tue, 2020-02-25 at 12:55 -0500, Arvind Sankar wrote:
+> On Wed, Feb 05, 2020 at 02:39:44PM -0800, Kristen Carlson Accardi
+> wrote:
+> > Allow user to select CONFIG_FG_KASLR if dependencies are met.
+> > Change
+> > the make file to build with -ffunction-sections if CONFIG_FG_KASLR
+> > 
+> > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+> > ---
+> >  Makefile         |  4 ++++
+> >  arch/x86/Kconfig | 13 +++++++++++++
+> >  2 files changed, 17 insertions(+)
+> > 
+> > diff --git a/Makefile b/Makefile
+> > index c50ef91f6136..41438a921666 100644
+> > --- a/Makefile
+> > +++ b/Makefile
+> > @@ -846,6 +846,10 @@ ifdef CONFIG_LIVEPATCH
+> >  KBUILD_CFLAGS += $(call cc-option, -flive-patching=inline-clone)
+> >  endif
+> >  
+> > +ifdef CONFIG_FG_KASLR
+> > +KBUILD_CFLAGS += -ffunction-sections
+> > +endif
+> > +
+> 
+> With -ffunction-sections I get a few unreachable code warnings from
+> objtool.
+> 
+> arch/x86/kernel/dumpstack.o: warning: objtool: show_iret_regs()+0x10:
+> unreachable instruction
+> fs/sysfs/dir.o: warning: objtool: sysfs_create_mount_point()+0x4f:
+> unreachable instruction
+> kernel/time/clocksource.o: warning: objtool:
+> __clocksource_register_scale()+0x21: unreachable instruction
+> drivers/tty/sysrq.o: warning: objtool: sysrq_filter()+0x2ef:
+> unreachable instruction
+> arch/x86/mm/fault.o: warning: objtool: pgtable_bad()+0x3f:
+> unreachable instruction
+> drivers/acpi/pci_root.o: warning: objtool:
+> acpi_pci_osc_control_set()+0x123: unreachable instruction
+> drivers/rtc/class.o: warning: objtool:
+> devm_rtc_device_register()+0x40: unreachable instruction
+> kernel/power/process.o: warning: objtool:
+> freeze_processes.cold()+0x0: unreachable instruction
+> drivers/pnp/quirks.o: warning: objtool: quirk_awe32_resources()+0x42:
+> unreachable instruction
+> drivers/acpi/utils.o: warning: objtool: acpi_evaluate_dsm()+0xf1:
+> unreachable instruction
+> kernel/reboot.o: warning: objtool: __do_sys_reboot()+0x1b6:
+> unreachable instruction
+> kernel/power/swap.o: warning: objtool: swsusp_read()+0x185:
+> unreachable instruction
+> drivers/hid/hid-core.o: warning: objtool: hid_hw_start()+0x38:
+> unreachable instruction
+> drivers/acpi/battery.o: warning: objtool:
+> sysfs_add_battery.cold()+0x1a: unreachable instruction
+> arch/x86/kernel/cpu/mce/core.o: warning: objtool:
+> do_machine_check.cold()+0x33: unreachable instruction
+> drivers/pcmcia/cistpl.o: warning: objtool: pccard_store_cis()+0x4e:
+> unreachable instruction
+> drivers/gpu/vga/vgaarb.o: warning: objtool: pci_notify()+0x35:
+> unreachable instruction
+> arch/x86/kernel/tsc.o: warning: objtool:
+> determine_cpu_tsc_frequencies()+0x45: unreachable instruction
+> drivers/pcmcia/yenta_socket.o: warning: objtool:
+> ti1250_override()+0x50: unreachable instruction
+> fs/proc/proc_sysctl.o: warning: objtool:
+> sysctl_print_dir.isra.0()+0x19: unreachable instruction
+> drivers/iommu/intel-iommu.o: warning: objtool:
+> intel_iommu_init()+0x4f4: unreachable instruction
+> net/mac80211/ibss.o: warning: objtool:
+> ieee80211_ibss_work.cold()+0x157: unreachable instruction
+> drivers/net/ethernet/intel/e1000/e1000_main.o: warning: objtool:
+> e1000_clean.cold()+0x0: unreachable instruction
+> net/core/skbuff.o: warning: objtool: skb_dump.cold()+0x3fd:
+> unreachable instruction
+
+Thanks, I will look into this. I also get these warnings - I've been
+ignoring them successfully so far, but I'll root cause the issue.
 
 
-On 25/02/2020 19:49, J Freyensee wrote:
-> 
-> 
-> On 2/24/20 8:02 AM, Mickaël Salaün wrote:
-> 
->> ## Syscall
->>
->> Because it is only tested on x86_64, the syscall is only wired up for
->> this architecture.  The whole x86 family (and probably all the others)
->> will be supported in the next patch series.
-> General question for u.  What is it meant "whole x86 family will be
-> supported".  32-bit x86 will be supported?
-
-Yes, I was referring to x86_32, x86_64 and x32, but all architectures
-should be supported.
