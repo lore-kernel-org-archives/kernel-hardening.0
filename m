@@ -1,20 +1,22 @@
-Return-Path: <SRS0=6hcF=4P=lists.openwall.com=kernel-hardening-return-17971-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/ngD=4P=lists.openwall.com=kernel-hardening-return-17972-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E8783C4BA24
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 11:28:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F0884C11D3D
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 16:03:00 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4F74524691
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 11:28:51 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F74524691
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17971-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22494 invoked by uid 550); 27 Feb 2020 11:28:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4E4C12469C
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 16:03:00 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="Qsxn4Hk1"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4E4C12469C
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17972-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 12193 invoked by uid 550); 27 Feb 2020 16:02:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,105 +24,76 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22457 invoked from network); 27 Feb 2020 11:28:44 -0000
+Received: (qmail 12173 invoked from network); 27 Feb 2020 16:02:51 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=9WYvJWXMZ+rcEfofeSJpHlDz/l6UP/pgxaBPI0bVL+I=;
+        b=Qsxn4Hk1uahykr+QWbXHItx2AejCBY1osUAbIGB78L1sCo7B6Il4l6DND0mh7bGD0P
+         VEphLT6LKCT7GeIYw8JhWS4IdRBHN9OjLD6OTWcRutDRZdUgwuaqV/hwpz3zxaBidUgO
+         ggRjZ0IGbj3DcO3j9UNLtGA9Bagw1dMPj4wqU=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
-         :message-id:date:user-agent:mime-version:in-reply-to
-         :content-language:content-transfer-encoding;
-        bh=FYljXCw4nyaa7+mNhFgsV23Q3a7Ri4+KuvIgd0pY/V4=;
-        b=VqjipMeKD1h3CYQY7Df4Yf/caI9rK6Vc9Vt/dcymLYX4kXmoy73nMhjQ+8HiCHCOmq
-         GuJa4mjTY6oy7soqcbkG6+SKZ5UFa1fyFtMI1toCvmBdSSe8TQ6a4pZYFlcL43ueI5CV
-         BqQWtR/imZrXUftVsVf5GCMe83IgtBNAAYH59VAhTEx6WiwT5fzAnQD+o1r4NtCXOelb
-         vZvZmoaNuwOa+EuZeW2wtvIAPO88Vjk0aZR/+V72A7fVXtsqMdLYHNlAMI+9lZB+B6Zf
-         4tR5bL1XiZhPp7EuEPmLufv2WIku2abolVzjXHpksVVqrPruqmMZt5sy1Yfeu2J5zkZ3
-         uFLA==
-X-Gm-Message-State: ANhLgQ2ULPk/pD+GJL52Q1Oa03oJbP93bcc+edGhkjM5SZUZah1LQTHC
-	/Nxj0svdzJj0SAyRE4FzB0w=
-X-Google-Smtp-Source: ADFU+vthlT4+Q5IJ64ubqcOE4gqlrP7FsHHRb6MsrUHrZX0+nPkFLAwolAhGlaeL5J8FrCTIZUQBUg==
-X-Received: by 2002:a2e:9d11:: with SMTP id t17mr2667169lji.169.1582802912901;
-        Thu, 27 Feb 2020 03:28:32 -0800 (PST)
-Subject: Re: Maybe inappropriate use BUG_ON() in CONFIG_SLAB_FREELIST_HARDENED
-To: zerons <zeronsaxm@gmail.com>
-Cc: Andrey Konovalov <andreyknvl@google.com>,
- kernel-hardening@lists.openwall.com, Shawn <citypw@hardenedlinux.org>,
- spender@grsecurity.net, Jann Horn <jannh@google.com>,
- Kees Cook <keescook@chromium.org>
-References: <e535d698-5268-e5fc-a238-0649c509cc4f@gmail.com>
- <CAAeHK+y-FdpH20Z7HsB0U+mgD9CK0gECCqShXFtFWpFp01jAmA@mail.gmail.com>
- <84b3a89a-cd20-1e49-8d98-53b74dd3f9d1@linux.com>
- <68e01bc3-f218-01a1-2398-ec51ffa11109@gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
- 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
- j3lCqPk=
-Message-ID: <04e89784-5ca8-0ecc-2735-4196ace74b0b@linux.com>
-Date: Thu, 27 Feb 2020 14:28:30 +0300
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.5.0
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=9WYvJWXMZ+rcEfofeSJpHlDz/l6UP/pgxaBPI0bVL+I=;
+        b=jQo3f2Ld8+IhVOAzHVOjYQ5Tkq0Vhc1OfKSxC+N6biPNvx5tmPza1GQHPmJLPUo2jE
+         ZNqdNldmjSG/7edIxp5dL6jNEGjg8cK5c30pH8Hlt2MQSXUpaaIeTJX0Nh3QnOrncDeC
+         nQ56OlaEW7fbiNW0eGm3Tz+GOWuik9IIO6NzcBtGyjpWxCPO2lpEsJaQPGL7ISZODVcV
+         Mf8GzDm/FM0vDvnpno2nqL0f/tnkj5zLzS+2NYiNMEaAhO4iqTCz6zeJRQbD6kIG1lay
+         oBPEcUbMcTZfRVTHhEkCEvLMgNS0KWP1adZJjsEZZrRoZh5GR/hEodAMOAnY6X9eTwIT
+         sKwA==
+X-Gm-Message-State: APjAAAWv9uA04vUR+V+1cs12jlXEOLC3xW2nSKr6I4c+wLSBL6nGpbDS
+	AxRPnzHOx0h+HAaG1AgsMzkaXQ==
+X-Google-Smtp-Source: APXvYqwuoISNzfA3MpWinuXHZq6onkj6FotCRgoAwXWcPcaWOvayXN9eZRYUoFiSP4YFJQB9lCtKzA==
+X-Received: by 2002:a17:902:265:: with SMTP id 92mr402833plc.292.1582819359541;
+        Thu, 27 Feb 2020 08:02:39 -0800 (PST)
+Date: Thu, 27 Feb 2020 08:02:37 -0800
+From: Kees Cook <keescook@chromium.org>
+To: Baoquan He <bhe@redhat.com>
+Cc: Kristen Carlson Accardi <kristen@linux.intel.com>, dyoung@redhat.com,
+	tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
+	arjan@linux.intel.com, rick.p.edgecombe@intel.com, x86@kernel.org,
+	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
+	kexec@lists.infradead.org
+Subject: Re: [RFC PATCH 09/11] kallsyms: hide layout and expose seed
+Message-ID: <202002270802.1CA8B32AC@keescook>
+References: <20200205223950.1212394-1-kristen@linux.intel.com>
+ <20200205223950.1212394-10-kristen@linux.intel.com>
+ <202002060428.08B14F1@keescook>
+ <a915e1eb131551aa766fde4c14de5a3e825af667.camel@linux.intel.com>
+ <20200227024253.GA5707@MiWiFi-R3L-srv>
 MIME-Version: 1.0
-In-Reply-To: <68e01bc3-f218-01a1-2398-ec51ffa11109@gmail.com>
-Content-Type: text/plain; charset=windows-1252
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200227024253.GA5707@MiWiFi-R3L-srv>
 
-On 19.02.2020 16:43, zerons wrote:
-> This patch does work for cve-2017-2636 case, it is barely impossible to win the
-> race. My concern is based on an assumption: we do have a double kfree() bug and
-> we can win the race.
+On Thu, Feb 27, 2020 at 10:42:53AM +0800, Baoquan He wrote:
+> On 02/06/20 at 09:51am, Kristen Carlson Accardi wrote:
+> > On Thu, 2020-02-06 at 04:32 -0800, Kees Cook wrote:
+> 
+> > > In the past, making kallsyms entirely unreadable seemed to break
+> > > weird
+> > > stuff in userspace. How about having an alternative view that just
+> > > contains a alphanumeric sort of the symbol names (and they will
+> > > continue
+> > > to have zeroed addresses for unprivileged users)?
+> > > 
+> > > Or perhaps we wait to hear about this causing a problem, and deal
+> > > with
+> > > it then? :)
+> > > 
+> > 
+> > Yeah - I don't know what people want here. Clearly, we can't leave
+> > kallsyms the way it is. Removing it entirely is a pretty fast way to
+> > figure out how people use it though :).
+> 
+> Kexec-tools and makedumpfile are the users of /proc/kallsyms currently. 
+> We use kallsyms to get page_offset_base and _stext.
 
-Yes, I agree that the double-free check in CONFIG_SLAB_FREELIST_HARDENED can be
-bypassed in some cases by winning the race and inserting kmalloc() between kfree().
+AIUI, those run as root so they'd be able to consume the uncensored
+output.
 
-But I *don't* agree that this double-free check can help the attacker.
-
-Without this check in CONFIG_SLAB_FREELIST_HARDENED, double-free exploitation is
-always easier, since the attacker has no need to race at all. In the write-up
-about CVE-2017-2636 exploit [1] I showed how to do heap spray *after*
-double-free (kfree-kfree-kmalloc-kmalloc).
-
-Best regards,
-Alexander
-
-[1]: https://a13xp0p0v.github.io/2017/03/24/CVE-2017-2636.html
+-- 
+Kees Cook
