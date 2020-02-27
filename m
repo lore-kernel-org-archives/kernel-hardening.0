@@ -1,23 +1,23 @@
-Return-Path: <SRS0=tzNZ=4P=lists.openwall.com=kernel-hardening-return-17977-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=4EKJ=4P=lists.openwall.com=kernel-hardening-return-17978-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CEBDCC11D3D
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 18:49:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6BAC5C4BA2D
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 18:50:02 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 05727246C6
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 18:49:53 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id BFE13246C6
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 18:50:01 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="eXruJRfn"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 05727246C6
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="M2bJFwGR"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BFE13246C6
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17977-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3734 invoked by uid 550); 27 Feb 2020 18:49:40 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17978-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3772 invoked by uid 550); 27 Feb 2020 18:49:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,37 +25,36 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3699 invoked from network); 27 Feb 2020 18:49:39 -0000
+Received: (qmail 3701 invoked from network); 27 Feb 2020 18:49:39 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=TZN5E5934TvMDmRyA6YbiUZA3oVW+HYGx9jzlGs1fas=;
-        b=eXruJRfnQmahJDeyOvX95cjw0dXGhTf7PEpDDj6CQlvkVdL87yFHrwKSQm2LixP2lk
-         8au/afqF+SQ1+SMDz9z/6272yLFXtVIAvGceYi3lt7xxtZw8aDgZpl1SVaFyCKSxRA+E
-         GF5oUviUdxtOaY5AMoMhU870DTHlhwK5HwGJI=
+        h=from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=uio9MFsHXugpSMEN2c2VbCCKbgwswLA7MQ9KMJphrpM=;
+        b=M2bJFwGRUurTAq2OXqUC83zEYHOro2pmObSwZO6Bo+WiLoXHkYK1zpCQs6116+4JSv
+         uGBJpDdGelG5RJ4fgFLQViDWAnSVRj/IlZJnNp11SqCTTBtNIN/T9W+56EdwZbVGngSB
+         VI85KVSzpvpJNyvsflH49hczSrHzddFNtjqT8=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=TZN5E5934TvMDmRyA6YbiUZA3oVW+HYGx9jzlGs1fas=;
-        b=rDTp1JELHxb6q8RRQA1eRjhrZaL7YgM0IRA2UdAp4dQ9YkXavgtvZC/vZd+GqHkK6m
-         rtYIb3cn3cvE+j7B9+v925XpOlrK+57ExESIl3ODrhnaaihCWyD8THlOvfgki6RzRDcu
-         nSFErJ6cY+SEtwwLx3Pp3Sf7FyhDkHA0C3RFC9DB5JvySaDd5jNuhSPj33VRfl+Dc5K4
-         kIMgTPg9MmJNMiE1cvhvNREpa3yNHBSSk0sYG7/IZjtvPJ7N3M+f/1k4KoPdm4JYac02
-         4bHl5d62k7dR5Oy1fINqCc5IDVMH5TOhVX5u4FxOHo0/x7yPy3XsJxYt395mj3B2ACrC
-         xJBA==
-X-Gm-Message-State: APjAAAUZH1sZ/X8UwEEO6DGt5zjGbCzRgEbpeyW2EDf9bZS8M0iRyE3f
-	cuCbrmqRWbOC5jcSeFyPYNK8Tg==
-X-Google-Smtp-Source: APXvYqzi0405M2isd5TrmwfjhdAc874OWtUh021IAQSnb+b3v9koU7Y59YGdJnGnP+UkARRMPRwUbQ==
-X-Received: by 2002:a17:902:8a89:: with SMTP id p9mr160846plo.286.1582829367317;
-        Thu, 27 Feb 2020 10:49:27 -0800 (PST)
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=uio9MFsHXugpSMEN2c2VbCCKbgwswLA7MQ9KMJphrpM=;
+        b=M0ihByHMi/2yYUuDlxXH4n34HSZtaLyFoODxOr2sb3yhCojw23QXMGkegCQpxPreea
+         noG+srpXUT+DM7pac3VtQNPIpovUrNK41FTWVaKLfiq/A8T5UvZfdbOP7eNcLWUfgQzx
+         Gpg4zSdHrWbQ4z5mGQE6Q1DyR/6vsiVl26HEUn9Ybm20Bv2hRn4L54MZR60DLFoa31AQ
+         W191UyulYFH6J+hMSKEVLF1ljTlfrZi3/qGVll9MeKwBBWcv7LNLgAePTKAtbNW2Vbab
+         ZaLjZAM8gqLVpEjGPjlznzHejZRSX3AYmY2dHUmuLaIJ6r8YId679TLC1WvzP7CBi5/3
+         QlHA==
+X-Gm-Message-State: APjAAAU2rZTbNLaQEALVthc7ddDFjTeyhFlvqGxdNwGCXyqStQ5sJXKO
+	+7y16GrPiebEG9TNTq9rloFGag==
+X-Google-Smtp-Source: APXvYqzjFLlBwzUnS9Buay5SU6EClRdGPy50Ngz3GJVvxZkvUCu0e9OzvgVYH7vICIR7BSm10X7QoA==
+X-Received: by 2002:a62:e414:: with SMTP id r20mr371760pfh.154.1582829368003;
+        Thu, 27 Feb 2020 10:49:28 -0800 (PST)
 From: Kees Cook <keescook@chromium.org>
 To: Andrew Morton <akpm@linux-foundation.org>
 Cc: Kees Cook <keescook@chromium.org>,
-	Elena Petrova <lenaptr@google.com>,
 	Andrey Ryabinin <aryabinin@virtuozzo.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
+	Elena Petrova <lenaptr@google.com>,
 	Andrey Konovalov <andreyknvl@google.com>,
 	Alexander Potapenko <glider@google.com>,
 	Dan Carpenter <dan.carpenter@oracle.com>,
@@ -67,152 +66,46 @@ Cc: Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com,
 	syzkaller@googlegroups.com
-Subject: [PATCH v4 2/6] ubsan: Split "bounds" checker from other options
-Date: Thu, 27 Feb 2020 10:49:17 -0800
-Message-Id: <20200227184921.30215-3-keescook@chromium.org>
+Subject: [PATCH v4 0/6] ubsan: Split out bounds checker
+Date: Thu, 27 Feb 2020 10:49:15 -0800
+Message-Id: <20200227184921.30215-1-keescook@chromium.org>
 X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200227184921.30215-1-keescook@chromium.org>
-References: <20200227184921.30215-1-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-In order to do kernel builds with the bounds checker individually
-available, introduce CONFIG_UBSAN_BOUNDS, with the remaining options
-under CONFIG_UBSAN_MISC.
+This splits out the bounds checker so it can be individually used. This
+is enabled in Android and hopefully for syzbot. Includes LKDTM tests for
+behavioral corner-cases (beyond just the bounds checker), and adjusts
+ubsan and kasan slightly for correct panic handling.
 
-For example, using this, we can start to expand the coverage syzkaller is
-providing. Right now, all of UBSan is disabled for syzbot builds because
-taken as a whole, it is too noisy. This will let us focus on one feature
-at a time.
+-Kees
 
-For the bounds checker specifically, this provides a mechanism to
-eliminate an entire class of array overflows with close to zero
-performance overhead (I cannot measure a difference). In my (mostly)
-defconfig, enabling bounds checking adds ~4200 checks to the kernel.
-Performance changes are in the noise, likely due to the branch predictors
-optimizing for the non-fail path.
+v4:
+ - use hyphenated bug class names (andreyknvl)
+ - add Acks
+v3: https://lore.kernel.org/lkml/20200116012321.26254-1-keescook@chromium.org
+v2: https://lore.kernel.org/lkml/20191121181519.28637-1-keescook@chromium.org
+v1: https://lore.kernel.org/lkml/20191120010636.27368-1-keescook@chromium.org
 
-Some notes on the bounds checker:
 
-- it does not instrument {mem,str}*()-family functions, it only
-  instruments direct indexed accesses (e.g. "foo[i]"). Dealing with
-  the {mem,str}*()-family functions is a work-in-progress around
-  CONFIG_FORTIFY_SOURCE[1].
+Kees Cook (6):
+  ubsan: Add trap instrumentation option
+  ubsan: Split "bounds" checker from other options
+  lkdtm/bugs: Add arithmetic overflow and array bounds checks
+  ubsan: Check panic_on_warn
+  kasan: Unset panic_on_warn before calling panic()
+  ubsan: Include bug type in report header
 
-- it ignores flexible array members, including the very old single
-  byte (e.g. "int foo[1];") declarations. (Note that GCC's
-  implementation appears to ignore _all_ trailing arrays, but Clang only
-  ignores empty, 0, and 1 byte arrays[2].)
+ drivers/misc/lkdtm/bugs.c  | 75 ++++++++++++++++++++++++++++++++++++++
+ drivers/misc/lkdtm/core.c  |  3 ++
+ drivers/misc/lkdtm/lkdtm.h |  3 ++
+ lib/Kconfig.ubsan          | 49 +++++++++++++++++++++----
+ lib/Makefile               |  2 +
+ lib/ubsan.c                | 47 +++++++++++++-----------
+ mm/kasan/report.c          | 10 ++++-
+ scripts/Makefile.ubsan     | 16 ++++++--
+ 8 files changed, 172 insertions(+), 33 deletions(-)
 
-[1] https://github.com/KSPP/linux/issues/6
-[2] https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92589
-
-Suggested-by: Elena Petrova <lenaptr@google.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Reviewed-by: Andrey Ryabinin <aryabinin@virtuozzo.com>
-Acked-by: Dmitry Vyukov <dvyukov@google.com>
----
- lib/Kconfig.ubsan      | 29 ++++++++++++++++++++++++-----
- scripts/Makefile.ubsan |  7 ++++++-
- 2 files changed, 30 insertions(+), 6 deletions(-)
-
-diff --git a/lib/Kconfig.ubsan b/lib/Kconfig.ubsan
-index 9deb655838b0..48469c95d78e 100644
---- a/lib/Kconfig.ubsan
-+++ b/lib/Kconfig.ubsan
-@@ -2,7 +2,7 @@
- config ARCH_HAS_UBSAN_SANITIZE_ALL
- 	bool
- 
--config UBSAN
-+menuconfig UBSAN
- 	bool "Undefined behaviour sanity checker"
- 	help
- 	  This option enables the Undefined Behaviour sanity checker.
-@@ -10,9 +10,10 @@ config UBSAN
- 	  behaviours at runtime. For more details, see:
- 	  Documentation/dev-tools/ubsan.rst
- 
-+if UBSAN
-+
- config UBSAN_TRAP
- 	bool "On Sanitizer warnings, abort the running kernel code"
--	depends on UBSAN
- 	depends on $(cc-option, -fsanitize-undefined-trap-on-error)
- 	help
- 	  Building kernels with Sanitizer features enabled tends to grow
-@@ -25,9 +26,26 @@ config UBSAN_TRAP
- 	  the system. For some system builders this is an acceptable
- 	  trade-off.
- 
-+config UBSAN_BOUNDS
-+	bool "Perform array index bounds checking"
-+	default UBSAN
-+	help
-+	  This option enables detection of directly indexed out of bounds
-+	  array accesses, where the array size is known at compile time.
-+	  Note that this does not protect array overflows via bad calls
-+	  to the {str,mem}*cpy() family of functions (that is addressed
-+	  by CONFIG_FORTIFY_SOURCE).
-+
-+config UBSAN_MISC
-+	bool "Enable all other Undefined Behavior sanity checks"
-+	default UBSAN
-+	help
-+	  This option enables all sanity checks that don't have their
-+	  own Kconfig options. Disable this if you only want to have
-+	  individually selected checks.
-+
- config UBSAN_SANITIZE_ALL
- 	bool "Enable instrumentation for the entire kernel"
--	depends on UBSAN
- 	depends on ARCH_HAS_UBSAN_SANITIZE_ALL
- 
- 	# We build with -Wno-maybe-uninitilzed, but we still want to
-@@ -44,7 +62,6 @@ config UBSAN_SANITIZE_ALL
- 
- config UBSAN_NO_ALIGNMENT
- 	bool "Disable checking of pointers alignment"
--	depends on UBSAN
- 	default y if HAVE_EFFICIENT_UNALIGNED_ACCESS
- 	help
- 	  This option disables the check of unaligned memory accesses.
-@@ -57,7 +74,9 @@ config UBSAN_ALIGNMENT
- 
- config TEST_UBSAN
- 	tristate "Module for testing for undefined behavior detection"
--	depends on m && UBSAN
-+	depends on m
- 	help
- 	  This is a test module for UBSAN.
- 	  It triggers various undefined behavior, and detect it.
-+
-+endif	# if UBSAN
-diff --git a/scripts/Makefile.ubsan b/scripts/Makefile.ubsan
-index 668a91510bfe..5b15bc425ec9 100644
---- a/scripts/Makefile.ubsan
-+++ b/scripts/Makefile.ubsan
-@@ -5,14 +5,19 @@ ifdef CONFIG_UBSAN_ALIGNMENT
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=alignment)
- endif
- 
-+ifdef CONFIG_UBSAN_BOUNDS
-+      CFLAGS_UBSAN += $(call cc-option, -fsanitize=bounds)
-+endif
-+
-+ifdef CONFIG_UBSAN_MISC
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=shift)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=integer-divide-by-zero)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=unreachable)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=signed-integer-overflow)
--      CFLAGS_UBSAN += $(call cc-option, -fsanitize=bounds)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=object-size)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=bool)
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize=enum)
-+endif
- 
- ifdef CONFIG_UBSAN_TRAP
-       CFLAGS_UBSAN += $(call cc-option, -fsanitize-undefined-trap-on-error)
 -- 
 2.20.1
 
