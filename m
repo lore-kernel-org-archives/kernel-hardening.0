@@ -1,21 +1,20 @@
-Return-Path: <SRS0=w8KQ=4P=lists.openwall.com=kernel-hardening-return-17970-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=6hcF=4P=lists.openwall.com=kernel-hardening-return-17971-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.8 required=3.0 tests=FREEMAIL_FORGED_FROMDOMAIN,
-	FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=ham
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 50348C4BA3B
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 09:41:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E8783C4BA24
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 11:28:51 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 56D012467F
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 09:41:40 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 56D012467F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=sina.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17970-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5456 invoked by uid 550); 27 Feb 2020 09:41:32 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4F74524691
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Feb 2020 11:28:51 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F74524691
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-17971-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22494 invoked by uid 550); 27 Feb 2020 11:28:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,375 +22,105 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30247 invoked from network); 27 Feb 2020 04:20:29 -0000
-X-Sender: hdanton@sina.com
-X-Auth-ID: hdanton@sina.com
-X-SMAIL-MID: 989328629005
-From: Hillf Danton <hdanton@sina.com>
-To: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org,
-	Al Viro <viro@zeniv.linux.org.uk>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	James Morris <jmorris@namei.org>,
-	Jann Horn <jann@thejh.net>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Kees Cook <keescook@chromium.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>,
-	"Serge E. Hallyn" <serge@hallyn.com>,
-	Shuah Khan <shuah@kernel.org>,
-	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com,
-	linux-api@vger.kernel.org,
-	linux-arch@vger.kernel.org,
-	linux-doc@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	linux-kselftest@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	x86@kernel.org
-Subject: Re: [RFC PATCH v14 01/10] landlock: Add object and rule management
-Date: Thu, 27 Feb 2020 12:20:02 +0800
-Message-Id: <20200227042002.3032-1-hdanton@sina.com>
-In-Reply-To: <20200224160215.4136-1-mic@digikod.net>
-References: <20200224160215.4136-1-mic@digikod.net>
+Received: (qmail 22457 invoked from network); 27 Feb 2020 11:28:44 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
+         :message-id:date:user-agent:mime-version:in-reply-to
+         :content-language:content-transfer-encoding;
+        bh=FYljXCw4nyaa7+mNhFgsV23Q3a7Ri4+KuvIgd0pY/V4=;
+        b=VqjipMeKD1h3CYQY7Df4Yf/caI9rK6Vc9Vt/dcymLYX4kXmoy73nMhjQ+8HiCHCOmq
+         GuJa4mjTY6oy7soqcbkG6+SKZ5UFa1fyFtMI1toCvmBdSSe8TQ6a4pZYFlcL43ueI5CV
+         BqQWtR/imZrXUftVsVf5GCMe83IgtBNAAYH59VAhTEx6WiwT5fzAnQD+o1r4NtCXOelb
+         vZvZmoaNuwOa+EuZeW2wtvIAPO88Vjk0aZR/+V72A7fVXtsqMdLYHNlAMI+9lZB+B6Zf
+         4tR5bL1XiZhPp7EuEPmLufv2WIku2abolVzjXHpksVVqrPruqmMZt5sy1Yfeu2J5zkZ3
+         uFLA==
+X-Gm-Message-State: ANhLgQ2ULPk/pD+GJL52Q1Oa03oJbP93bcc+edGhkjM5SZUZah1LQTHC
+	/Nxj0svdzJj0SAyRE4FzB0w=
+X-Google-Smtp-Source: ADFU+vthlT4+Q5IJ64ubqcOE4gqlrP7FsHHRb6MsrUHrZX0+nPkFLAwolAhGlaeL5J8FrCTIZUQBUg==
+X-Received: by 2002:a2e:9d11:: with SMTP id t17mr2667169lji.169.1582802912901;
+        Thu, 27 Feb 2020 03:28:32 -0800 (PST)
+Subject: Re: Maybe inappropriate use BUG_ON() in CONFIG_SLAB_FREELIST_HARDENED
+To: zerons <zeronsaxm@gmail.com>
+Cc: Andrey Konovalov <andreyknvl@google.com>,
+ kernel-hardening@lists.openwall.com, Shawn <citypw@hardenedlinux.org>,
+ spender@grsecurity.net, Jann Horn <jannh@google.com>,
+ Kees Cook <keescook@chromium.org>
+References: <e535d698-5268-e5fc-a238-0649c509cc4f@gmail.com>
+ <CAAeHK+y-FdpH20Z7HsB0U+mgD9CK0gECCqShXFtFWpFp01jAmA@mail.gmail.com>
+ <84b3a89a-cd20-1e49-8d98-53b74dd3f9d1@linux.com>
+ <68e01bc3-f218-01a1-2398-ec51ffa11109@gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
+ mQINBFX15q4BEADZartsIW3sQ9R+9TOuCFRIW+RDCoBWNHhqDLu+Tzf2mZevVSF0D5AMJW4f
+ UB1QigxOuGIeSngfmgLspdYe2Kl8+P8qyfrnBcS4hLFyLGjaP7UVGtpUl7CUxz2Hct3yhsPz
+ ID/rnCSd0Q+3thrJTq44b2kIKqM1swt/F2Er5Bl0B4o5WKx4J9k6Dz7bAMjKD8pHZJnScoP4
+ dzKPhrytN/iWM01eRZRc1TcIdVsRZC3hcVE6OtFoamaYmePDwWTRhmDtWYngbRDVGe3Tl8bT
+ 7BYN7gv7Ikt7Nq2T2TOfXEQqr9CtidxBNsqFEaajbFvpLDpUPw692+4lUbQ7FL0B1WYLvWkG
+ cVysClEyX3VBSMzIG5eTF0Dng9RqItUxpbD317ihKqYL95jk6eK6XyI8wVOCEa1V3MhtvzUo
+ WGZVkwm9eMVZ05GbhzmT7KHBEBbCkihS+TpVxOgzvuV+heCEaaxIDWY/k8u4tgbrVVk+tIVG
+ 99v1//kNLqd5KuwY1Y2/h2MhRrfxqGz+l/f/qghKh+1iptm6McN//1nNaIbzXQ2Ej34jeWDa
+ xAN1C1OANOyV7mYuYPNDl5c9QrbcNGg3D6gOeGeGiMn11NjbjHae3ipH8MkX7/k8pH5q4Lhh
+ Ra0vtJspeg77CS4b7+WC5jlK3UAKoUja3kGgkCrnfNkvKjrkEwARAQABtCZBbGV4YW5kZXIg
+ UG9wb3YgPGFsZXgucG9wb3ZAbGludXguY29tPokCVwQTAQgAQQIbIwIeAQIXgAULCQgHAwUV
+ CgkICwUWAgMBAAIZARYhBLl2JLAkAVM0bVvWTo4Oneu8fo+qBQJdehKcBQkLRpLuAAoJEI4O
+ neu8fo+qrkgP/jS0EhDnWhIFBnWaUKYWeiwR69DPwCs/lNezOu63vg30O9BViEkWsWwXQA+c
+ SVVTz5f9eB9K2me7G06A3U5AblOJKdoZeNX5GWMdrrGNLVISsa0geXNT95TRnFqE1HOZJiHT
+ NFyw2nv+qQBUHBAKPlk3eL4/Yev/P8w990Aiiv6/RN3IoxqTfSu2tBKdQqdxTjEJ7KLBlQBm
+ 5oMpm/P2Y/gtBiXRvBd7xgv7Y3nShPUDymjBnc+efHFqARw84VQPIG4nqVhIei8gSWps49DX
+ kp6v4wUzUAqFo+eh/ErWmyBNETuufpxZnAljtnKpwmpFCcq9yfcMlyOO9/viKn14grabE7qE
+ 4j3/E60wraHu8uiXJlfXmt0vG16vXb8g5a25Ck09UKkXRGkNTylXsAmRbrBrA3Moqf8QzIk9
+ p+aVu/vFUs4ywQrFNvn7Qwt2hWctastQJcH3jrrLk7oGLvue5KOThip0SNicnOxVhCqstjYx
+ KEnzZxtna5+rYRg22Zbfg0sCAAEGOWFXjqg3hw400oRxTW7IhiE34Kz1wHQqNif0i5Eor+TS
+ 22r9iF4jUSnk1jaVeRKOXY89KxzxWhnA06m8IvW1VySHoY1ZG6xEZLmbp3OuuFCbleaW07OU
+ 9L8L1Gh1rkAz0Fc9eOR8a2HLVFnemmgAYTJqBks/sB/DD0SuuQINBFX15q4BEACtxRV/pF1P
+ XiGSbTNPlM9z/cElzo/ICCFX+IKg+byRvOMoEgrzQ28ah0N5RXQydBtfjSOMV1IjSb3oc23z
+ oW2J9DefC5b8G1Lx2Tz6VqRFXC5OAxuElaZeoowV1VEJuN3Ittlal0+KnRYY0PqnmLzTXGA9
+ GYjw/p7l7iME7gLHVOggXIk7MP+O+1tSEf23n+dopQZrkEP2BKSC6ihdU4W8928pApxrX1Lt
+ tv2HOPJKHrcfiqVuFSsb/skaFf4uveAPC4AausUhXQVpXIg8ZnxTZ+MsqlwELv+Vkm/SNEWl
+ n0KMd58gvG3s0bE8H2GTaIO3a0TqNKUY16WgNglRUi0WYb7+CLNrYqteYMQUqX7+bB+NEj/4
+ 8dHw+xxaIHtLXOGxW6zcPGFszaYArjGaYfiTTA1+AKWHRKvD3MJTYIonphy5EuL9EACLKjEF
+ v3CdK5BLkqTGhPfYtE3B/Ix3CUS1Aala0L+8EjXdclVpvHQ5qXHs229EJxfUVf2ucpWNIUdf
+ lgnjyF4B3R3BFWbM4Yv8QbLBvVv1Dc4hZ70QUXy2ZZX8keza2EzPj3apMcDmmbklSwdC5kYG
+ EFT4ap06R2QW+6Nw27jDtbK4QhMEUCHmoOIaS9j0VTU4fR9ZCpVT/ksc2LPMhg3YqNTrnb1v
+ RVNUZvh78zQeCXC2VamSl9DMcwARAQABiQI8BBgBCAAmAhsMFiEEuXYksCQBUzRtW9ZOjg6d
+ 67x+j6oFAl16ErcFCQtGkwkACgkQjg6d67x+j6q7zA/+IsjSKSJypgOImN9LYjeb++7wDjXp
+ qvEpq56oAn21CvtbGus3OcC0hrRtyZ/rC5Qc+S5SPaMRFUaK8S3j1vYC0wZJ99rrmQbcbYMh
+ C2o0k4pSejaINmgyCajVOhUhln4IuwvZke1CLfXe1i3ZtlaIUrxfXqfYpeijfM/JSmliPxwW
+ BRnQRcgS85xpC1pBUMrraxajaVPwu7hCTke03v6bu8zSZlgA1rd9E6KHu2VNS46VzUPjbR77
+ kO7u6H5PgQPKcuJwQQ+d3qa+5ZeKmoVkc2SuHVrCd1yKtAMmKBoJtSku1evXPwyBzqHFOInk
+ mLMtrWuUhj+wtcnOWxaP+n4ODgUwc/uvyuamo0L2Gp3V5ItdIUDO/7ZpZ/3JxvERF3Yc1md8
+ 5kfflpLzpxyl2fKaRdvxr48ZLv9XLUQ4qNuADDmJArq/+foORAX4BBFWvqZQKe8a9ZMAvGSh
+ uoGUVg4Ks0uC4IeG7iNtd+csmBj5dNf91C7zV4bsKt0JjiJ9a4D85dtCOPmOeNuusK7xaDZc
+ gzBW8J8RW+nUJcTpudX4TC2SGeAOyxnM5O4XJ8yZyDUY334seDRJWtS4wRHxpfYcHKTewR96
+ IsP1USE+9ndu6lrMXQ3aFsd1n1m1pfa/y8hiqsSYHy7JQ9Iuo9DxysOj22UNOmOE+OYPK48D
+ j3lCqPk=
+Message-ID: <04e89784-5ca8-0ecc-2735-4196ace74b0b@linux.com>
+Date: Thu, 27 Feb 2020 14:28:30 +0300
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.5.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=y
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <68e01bc3-f218-01a1-2398-ec51ffa11109@gmail.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
+On 19.02.2020 16:43, zerons wrote:
+> This patch does work for cve-2017-2636 case, it is barely impossible to win the
+> race. My concern is based on an assumption: we do have a double kfree() bug and
+> we can win the race.
 
-On Mon, 24 Feb 2020 17:02:06 +0100 Mickaël Salaün 
-> A Landlock object enables to identify a kernel object (e.g. an inode).
-> A Landlock rule is a set of access rights allowed on an object.  Rules
-> are grouped in rulesets that may be tied to a set of processes (i.e.
-> subjects) to enforce a scoped access-control (i.e. a domain).
-> 
-> Because Landlock's goal is to empower any process (especially
-> unprivileged ones) to sandbox themselves, we can't rely on a system-wide
-> object identification such as file extended attributes.  Indeed, we need
-> innocuous, composable and modular access-controls.
-> 
-> The main challenge with this constraints is to identify kernel objects
-> while this identification is useful (i.e. when a security policy makes
-> use of this object).  But this identification data should be freed once
-> no policy is using it.  This ephemeral tagging should not and may not be
-> written in the filesystem.  We then need to manage the lifetime of a
-> rule according to the lifetime of its object.  To avoid a global lock,
-> this implementation make use of RCU and counters to safely reference
-> objects.
-> 
-> A following commit uses this generic object management for inodes.
-> 
-> Signed-off-by: Mickaël Salaün <mic@digikod.net>
-> Cc: Andy Lutomirski <luto@amacapital.net>
-> Cc: James Morris <jmorris@namei.org>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Serge E. Hallyn <serge@hallyn.com>
-> ---
-> 
-> Changes since v13:
-> * New dedicated implementation, removing the need for eBPF.
-> 
-> Previous version:
-> https://lore.kernel.org/lkml/20190721213116.23476-6-mic@digikod.net/
-> ---
->  MAINTAINERS                |  10 ++
->  security/Kconfig           |   1 +
->  security/Makefile          |   2 +
->  security/landlock/Kconfig  |  15 ++
->  security/landlock/Makefile |   3 +
->  security/landlock/object.c | 339 +++++++++++++++++++++++++++++++++++++
->  security/landlock/object.h | 134 +++++++++++++++
->  7 files changed, 504 insertions(+)
->  create mode 100644 security/landlock/Kconfig
->  create mode 100644 security/landlock/Makefile
->  create mode 100644 security/landlock/object.c
->  create mode 100644 security/landlock/object.h
-> 
-> diff --git a/MAINTAINERS b/MAINTAINERS
-> index fcd79fc38928..206f85768cd9 100644
-> --- a/MAINTAINERS
-> +++ b/MAINTAINERS
-> @@ -9360,6 +9360,16 @@ F:	net/core/skmsg.c
->  F:	net/core/sock_map.c
->  F:	net/ipv4/tcp_bpf.c
->  
-> +LANDLOCK SECURITY MODULE
-> +M:	Mickaël Salaün <mic@digikod.net>
-> +L:	linux-security-module@vger.kernel.org
-> +W:	https://landlock.io
-> +T:	git https://github.com/landlock-lsm/linux.git
-> +S:	Supported
-> +F:	security/landlock/
-> +K:	landlock
-> +K:	LANDLOCK
-> +
->  LANTIQ / INTEL Ethernet drivers
->  M:	Hauke Mehrtens <hauke@hauke-m.de>
->  L:	netdev@vger.kernel.org
-> diff --git a/security/Kconfig b/security/Kconfig
-> index 2a1a2d396228..9d9981394fb0 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -238,6 +238,7 @@ source "security/loadpin/Kconfig"
->  source "security/yama/Kconfig"
->  source "security/safesetid/Kconfig"
->  source "security/lockdown/Kconfig"
-> +source "security/landlock/Kconfig"
->  
->  source "security/integrity/Kconfig"
->  
-> diff --git a/security/Makefile b/security/Makefile
-> index 746438499029..2472ef96d40a 100644
-> --- a/security/Makefile
-> +++ b/security/Makefile
-> @@ -12,6 +12,7 @@ subdir-$(CONFIG_SECURITY_YAMA)		+= yama
->  subdir-$(CONFIG_SECURITY_LOADPIN)	+= loadpin
->  subdir-$(CONFIG_SECURITY_SAFESETID)    += safesetid
->  subdir-$(CONFIG_SECURITY_LOCKDOWN_LSM)	+= lockdown
-> +subdir-$(CONFIG_SECURITY_LANDLOCK)		+= landlock
->  
->  # always enable default capabilities
->  obj-y					+= commoncap.o
-> @@ -29,6 +30,7 @@ obj-$(CONFIG_SECURITY_YAMA)		+= yama/
->  obj-$(CONFIG_SECURITY_LOADPIN)		+= loadpin/
->  obj-$(CONFIG_SECURITY_SAFESETID)       += safesetid/
->  obj-$(CONFIG_SECURITY_LOCKDOWN_LSM)	+= lockdown/
-> +obj-$(CONFIG_SECURITY_LANDLOCK)	+= landlock/
->  obj-$(CONFIG_CGROUP_DEVICE)		+= device_cgroup.o
->  
->  # Object integrity file lists
-> diff --git a/security/landlock/Kconfig b/security/landlock/Kconfig
-> new file mode 100644
-> index 000000000000..4a321d5b3f67
-> --- /dev/null
-> +++ b/security/landlock/Kconfig
-> @@ -0,0 +1,15 @@
-> +# SPDX-License-Identifier: GPL-2.0-only
-> +
-> +config SECURITY_LANDLOCK
-> +	bool "Landlock support"
-> +	depends on SECURITY
-> +	default n
-> +	help
-> +	  This selects Landlock, a safe sandboxing mechanism.  It enables to
-> +	  restrict processes on the fly (i.e. enforce an access control policy),
-> +	  which can complement seccomp-bpf.  The security policy is a set of access
-> +	  rights tied to an object, which could be a file, a socket or a process.
-> +
-> +	  See Documentation/security/landlock/ for further information.
-> +
-> +	  If you are unsure how to answer this question, answer N.
-> diff --git a/security/landlock/Makefile b/security/landlock/Makefile
-> new file mode 100644
-> index 000000000000..cb6deefbf4c0
-> --- /dev/null
-> +++ b/security/landlock/Makefile
-> @@ -0,0 +1,3 @@
-> +obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
-> +
-> +landlock-y := object.o
-> diff --git a/security/landlock/object.c b/security/landlock/object.c
-> new file mode 100644
-> index 000000000000..38fbbb108120
-> --- /dev/null
-> +++ b/security/landlock/object.c
-> @@ -0,0 +1,339 @@
-> +// SPDX-License-Identifier: GPL-2.0-only
-> +/*
-> + * Landlock LSM - Object and rule management
-> + *
-> + * Copyright © 2016-2020 Mickaël Salaün <mic@digikod.net>
-> + * Copyright © 2018-2020 ANSSI
-> + *
-> + * Principles and constraints of the object and rule management:
-> + * - Do not leak memory.
-> + * - Try as much as possible to free a memory allocation as soon as it is
-> + *   unused.
-> + * - Do not use global lock.
-> + * - Do not charge processes other than the one requesting a Landlock
-> + *   operation.
-> + */
-> +
-> +#include <linux/bug.h>
-> +#include <linux/compiler.h>
-> +#include <linux/compiler_types.h>
-> +#include <linux/err.h>
-> +#include <linux/errno.h>
-> +#include <linux/fs.h>
-> +#include <linux/kernel.h>
-> +#include <linux/list.h>
-> +#include <linux/rbtree.h>
-> +#include <linux/rcupdate.h>
-> +#include <linux/refcount.h>
-> +#include <linux/slab.h>
-> +#include <linux/spinlock.h>
-> +#include <linux/workqueue.h>
-> +
-> +#include "object.h"
-> +
-> +struct landlock_object *landlock_create_object(
-> +		const enum landlock_object_type type, void *underlying_object)
-> +{
-> +	struct landlock_object *object;
-> +
-> +	if (WARN_ON_ONCE(!underlying_object))
-> +		return NULL;
-> +	object = kzalloc(sizeof(*object), GFP_KERNEL);
-> +	if (!object)
-> +		return NULL;
-> +	refcount_set(&object->usage, 1);
-> +	refcount_set(&object->cleaners, 1);
-> +	spin_lock_init(&object->lock);
-> +	INIT_LIST_HEAD(&object->rules);
-> +	object->type = type;
-> +	WRITE_ONCE(object->underlying_object, underlying_object);
-> +	return object;
-> +}
-> +
-> +struct landlock_object *landlock_get_object(struct landlock_object *object)
-> +	__acquires(object->usage)
-> +{
-> +	__acquire(object->usage);
-> +	/*
-> +	 * If @object->usage equal 0, then it will be ignored by writers, and
-> +	 * underlying_object->object may be replaced, but this is not an issue
-> +	 * for release_object().
-> +	 */
-> +	if (object && refcount_inc_not_zero(&object->usage)) {
-> +		/*
-> +		 * It should not be possible to get a reference to an object if
-> +		 * its underlying object is being terminated (e.g. with
-> +		 * landlock_release_object()), because an object is only
-> +		 * modifiable through such underlying object.  This is not the
-> +		 * case with landlock_get_object_cleaner().
-> +		 */
-> +		WARN_ON_ONCE(!READ_ONCE(object->underlying_object));
-> +		return object;
-> +	}
-> +	return NULL;
-> +}
-> +
-> +static struct landlock_object *get_object_cleaner(
-> +		struct landlock_object *object)
-> +	__acquires(object->cleaners)
-> +{
-> +	__acquire(object->cleaners);
-> +	if (object && refcount_inc_not_zero(&object->cleaners))
-> +		return object;
-> +	return NULL;
-> +}
-> +
-> +/*
-> + * There is two cases when an object should be free and the reference to the
-> + * underlying object should be put:
-> + * - when the last rule tied to this object is removed, which is handled by
-> + *   landlock_put_rule() and then release_object();
-> + * - when the object is being terminated (e.g. no more reference to an inode),
-> + *   which is handled by landlock_put_object().
-> + */
-> +static void put_object_free(struct landlock_object *object)
-> +	__releases(object->cleaners)
-> +{
-> +	__release(object->cleaners);
-> +	if (!refcount_dec_and_test(&object->cleaners))
-> +		return;
-> +	WARN_ON_ONCE(refcount_read(&object->usage));
-> +	/*
-> +	 * Ensures a safe use of @object in the RCU block from
-> +	 * landlock_put_rule().
-> +	 */
-> +	kfree_rcu(object, rcu_free);
-> +}
-> +
-> +/*
-> + * Destroys a newly created and useless object.
-> + */
-> +void landlock_drop_object(struct landlock_object *object)
-> +{
-> +	if (WARN_ON_ONCE(!refcount_dec_and_test(&object->usage)))
-> +		return;
-> +	__acquire(object->cleaners);
-> +	put_object_free(object);
-> +}
-> +
-> +/*
-> + * Puts the underlying object (e.g. inode) if it is the first request to
-> + * release @object, without calling landlock_put_object().
-> + *
-> + * Return true if this call effectively marks @object as released, false
-> + * otherwise.
-> + */
-> +static bool release_object(struct landlock_object *object)
-> +	__releases(&object->lock)
-> +{
-> +	void *underlying_object;
-> +
-> +	lockdep_assert_held(&object->lock);
-> +
-> +	underlying_object = xchg(&object->underlying_object, NULL);
+Yes, I agree that the double-free check in CONFIG_SLAB_FREELIST_HARDENED can be
+bypassed in some cases by winning the race and inserting kmalloc() between kfree().
 
-A one-line comment looks needed for xchg.
+But I *don't* agree that this double-free check can help the attacker.
 
-> +	spin_unlock(&object->lock);
-> +	might_sleep();
+Without this check in CONFIG_SLAB_FREELIST_HARDENED, double-free exploitation is
+always easier, since the attacker has no need to race at all. In the write-up
+about CVE-2017-2636 exploit [1] I showed how to do heap spray *after*
+double-free (kfree-kfree-kmalloc-kmalloc).
 
-Have trouble working out what might_sleep is put for.
+Best regards,
+Alexander
 
-> +	if (!underlying_object)
-> +		return false;
-> +
-> +	switch (object->type) {
-> +	case LANDLOCK_OBJECT_INODE:
-> +		break;
-> +	default:
-> +		WARN_ON_ONCE(1);
-> +	}
-> +	return true;
-> +}
-> +
-> +static void put_object_cleaner(struct landlock_object *object)
-> +	__releases(object->cleaners)
-> +{
-> +	/* Let's try an early lockless check. */
-> +	if (list_empty(&object->rules) &&
-> +			READ_ONCE(object->underlying_object)) {
-> +		/*
-> +		 * Puts @object if there is no rule tied to it and the
-> +		 * remaining user is the underlying object.  This check is
-> +		 * atomic because @object->rules and @object->underlying_object
-> +		 * are protected by @object->lock.
-> +		 */
-> +		spin_lock(&object->lock);
-> +		if (list_empty(&object->rules) &&
-> +				READ_ONCE(object->underlying_object) &&
-> +				refcount_dec_if_one(&object->usage)) {
-> +			/*
-> +			 * Releases @object, in place of
-> +			 * landlock_release_object().
-> +			 *
-> +			 * @object is already empty, implying that all its
-> +			 * previous rules are already disabled.
-> +			 *
-> +			 * Unbalance the @object->cleaners counter to reflect
-> +			 * the underlying object release.
-> +			 */
-> +			if (!WARN_ON_ONCE(!release_object(object))) {
-
-Two ! hurt more than help.
-> +				__acquire(object->cleaners);
-> +				put_object_free(object);
-
-Why put object more than once?
-
-> +			}
-> +		} else {
-> +			spin_unlock(&object->lock);
-> +		}
-> +	}
-> +	put_object_free(object);
-> +}
-> +
-
+[1]: https://a13xp0p0v.github.io/2017/03/24/CVE-2017-2636.html
