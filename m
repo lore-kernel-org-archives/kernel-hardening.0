@@ -1,20 +1,22 @@
-Return-Path: <SRS0=JQkI=4Q=lists.openwall.com=kernel-hardening-return-18005-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=LWWr=4Q=lists.openwall.com=kernel-hardening-return-18006-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A72A6C3F2CF
-	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 06:48:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CC7E0C3F2D2
+	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 10:44:00 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 91936246A3
-	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 06:48:03 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 91936246A3
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18005-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 23554 invoked by uid 550); 28 Feb 2020 06:47:56 -0000
+	by mail.kernel.org (Postfix) with SMTP id 2319E24691
+	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 10:43:59 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="arxk8kA3"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2319E24691
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18006-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1935 invoked by uid 550); 28 Feb 2020 10:43:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,125 +24,123 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22416 invoked from network); 28 Feb 2020 06:47:53 -0000
-Subject: Re: [PATCH v3 0/6] implement KASLR for powerpc/fsl_booke/64
-To: Scott Wood <oss@buserror.net>, Daniel Axtens <dja@axtens.net>,
-	<mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
-CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>
-References: <20200206025825.22934-1-yanaijie@huawei.com>
- <87tv3drf79.fsf@dja-thinkpad.axtens.net>
- <8171d326-5138-4f5c-cff6-ad3ee606f0c2@huawei.com>
- <e8cd8f287934954cfa07dcf76ac73492e2d49a5b.camel@buserror.net>
-From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <dd8db870-b607-3f74-d3bc-a8d9f33f9852@huawei.com>
-Date: Fri, 28 Feb 2020 14:47:28 +0800
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
- Thunderbird/68.4.2
+Received: (qmail 1893 invoked from network); 28 Feb 2020 10:43:51 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1582886618;
+	bh=AvNMaGxOXSlQd5OKJHyObGF8VX4ufChH9RWCJCyIJhg=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=arxk8kA3Yl7/vMnRjI0LVW7eSd/Buz1jbDwOGbAwplxtlsc4g7i8S5zvEI3ZaxdSt
+	 EbUy9kXEqvmrLkFMQRwicKF0JIQZKJ4tMqufK407q8+0H+RKhrh1DXiYdvIuBrvWLp
+	 11RIOAJkI7n6XNMjozNAbQIaxFeCI/CC2OeSFXD8=
+Date: Fri, 28 Feb 2020 10:43:33 +0000
+From: Will Deacon <will@kernel.org>
+To: Jann Horn <jannh@google.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>,
+	Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>,
+	Elena Reshetova <elena.reshetova@intel.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Hanjun Guo <guohanjun@huawei.com>,
+	Jan Glauber <jglauber@marvell.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: Re: [RESEND PATCH v4 05/10] lib/refcount: Improve performance of
+ generic REFCOUNT_FULL code
+Message-ID: <20200228104332.GB2395@willie-the-truck>
+References: <20191121115902.2551-1-will@kernel.org>
+ <20191121115902.2551-6-will@kernel.org>
+ <CAG48ez0CoY2fuxNkdAn_Jx+hffQ1eyM_V++5q6Q5nra+_tE9hQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <e8cd8f287934954cfa07dcf76ac73492e2d49a5b.camel@buserror.net>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Transfer-Encoding: 8bit
-X-Originating-IP: [10.173.221.195]
-X-CFilter-Loop: Reflected
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAG48ez0CoY2fuxNkdAn_Jx+hffQ1eyM_V++5q6Q5nra+_tE9hQ@mail.gmail.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
+Hi Jann,
 
-
-在 2020/2/28 13:53, Scott Wood 写道:
-> On Wed, 2020-02-26 at 16:18 +0800, Jason Yan wrote:
->> Hi Daniel,
->>
->> 在 2020/2/26 15:16, Daniel Axtens 写道:
->>> Hi Jason,
->>>
->>>> This is a try to implement KASLR for Freescale BookE64 which is based on
->>>> my earlier implementation for Freescale BookE32:
->>>> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718
->>>>
->>>> The implementation for Freescale BookE64 is similar as BookE32. One
->>>> difference is that Freescale BookE64 set up a TLB mapping of 1G during
->>>> booting. Another difference is that ppc64 needs the kernel to be
->>>> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
->>>> it 64K-aligned. This can save some code to creat another TLB map at
->>>> early boot. The disadvantage is that we only have about 1G/64K = 16384
->>>> slots to put the kernel in.
->>>>
->>>>       KERNELBASE
->>>>
->>>>             64K                     |--> kernel <--|
->>>>              |                      |              |
->>>>           +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>>>           |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
->>>>           +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>>>           |                         |                        1G
->>>>           |----->   offset    <-----|
->>>>
->>>>                                 kernstart_virt_addr
->>>>
->>>> I'm not sure if the slot numbers is enough or the design has any
->>>> defects. If you have some better ideas, I would be happy to hear that.
->>>>
->>>> Thank you all.
->>>>
->>>
->>> Are you making any attempt to hide kernel address leaks in this series?
->>
->> Yes.
->>
->>> I've just been looking at the stackdump code just now, and it directly
->>> prints link registers and stack pointers, which is probably enough to
->>> determine the kernel base address:
->>>
->>>                     SPs:               LRs:             %pS pointer
->>> [    0.424506] [c0000000de403970] [c000000001fc0458] dump_stack+0xfc/0x154
->>> (unreliable)
->>> [    0.424593] [c0000000de4039c0] [c000000000267eec] panic+0x258/0x5ac
->>> [    0.424659] [c0000000de403a60] [c0000000024d7a00]
->>> mount_block_root+0x634/0x7c0
->>> [    0.424734] [c0000000de403be0] [c0000000024d8100]
->>> prepare_namespace+0x1ec/0x23c
->>> [    0.424811] [c0000000de403c60] [c0000000024d7010]
->>> kernel_init_freeable+0x804/0x880
->>>
->>> git grep \\\"REG\\\" arch/powerpc shows a few other uses like this, all
->>> in process.c or in xmon.
->>>
->>
->> Thanks for reminding this.
->>
->>> Maybe replacing the REG format string in KASLR mode would be sufficient?
->>>
->>
->> Most archs have removed the address printing when dumping stack. Do we
->> really have to print this?
->>
->> If we have to do this, maybe we can use "%pK" so that they will be
->> hidden from unprivileged users.
+On Wed, Feb 26, 2020 at 05:10:46AM +0100, Jann Horn wrote:
+> On Thu, Nov 21, 2019 at 12:58 PM Will Deacon <will@kernel.org> wrote:
+> > Rewrite the generic REFCOUNT_FULL implementation so that the saturation
+> > point is moved to INT_MIN / 2. This allows us to defer the sanity checks
+> > until after the atomic operation, which removes many uses of cmpxchg()
+> > in favour of atomic_fetch_{add,sub}().
 > 
-> I've found the addresses to be useful, especially if I had a way to dump the
-> stack data itself.  Wouldn't the register dump also be likely to give away the
-> addresses?
+> Oh, I never saw this, this is really neat! CCing the kernel-hardening
+> list on this might've been a good idea.
 
-If we have to print the address, then kptr_restrict and dmesg_restrict
-must be set properly so that unprivileged users cannot see them.
+Glad you like it! I'll try to remember to cc them in future but
+get_maintainer.pl doesn't tend to mention them very often.
 
+> > + * If another thread also performs a refcount_inc() operation between the two
+> > + * atomic operations, then the count will continue to edge closer to 0. If it
+> > + * reaches a value of 1 before /any/ of the threads reset it to the saturated
+> > + * value, then a concurrent refcount_dec_and_test() may erroneously free the
+> > + * underlying object. Given the precise timing details involved with the
+> > + * round-robin scheduling of each thread manipulating the refcount and the need
+> > + * to hit the race multiple times in succession, there doesn't appear to be a
+> > + * practical avenue of attack even if using refcount_add() operations with
+> > + * larger increments.
 > 
-> I don't see any debug setting for %pK (or %p) to always print the actual
-> address (closest is kptr_restrict=1 but that only works in certain
-> contexts)... from looking at the code it seems it hashes even if kaslr is
-> entirely disabled?  Or am I missing something?
+> On top of that, the number of threads that can actually be running at
+> a given time is capped. See include/linux/threads.h, where it is
+> capped to pow(2, 22):
 > 
+>     /*
+>      * A maximum of 4 million PIDs should be enough for a while.
+>      * [NOTE: PID/TIDs are limited to 2^29 ~= 500+ million, see futex.h.]
+>      */
+>     #define PID_MAX_LIMIT (CONFIG_BASE_SMALL ? PAGE_SIZE * 8 : \
+>             (sizeof(long) > 4 ? 4 * 1024 * 1024 : PID_MAX_DEFAULT))
+> 
+> And in the futex UAPI header, we have this, baking a TID limit into
+> the userspace API (note that this is pow(2,30), not pow(2,29) as the
+> comment in threads.h claims - I'm not sure where that difference comes
+> from):
+> 
+>     /*
+>      * The rest of the robust-futex field is for the TID:
+>      */
+>     #define FUTEX_TID_MASK 0x3fffffff
+> 
+> So AFAICS, with the current PID_MAX_LIMIT, if you assume that all
+> participating refcount operations are non-batched (delta 1) and the
+> attacker can't cause the threads to oops in the middle of the refcount
+> operation (maybe that would be possible if you managed to find
+> something like a NULL pointer dereference in perf software event code
+> and had perf paranoia at <=1 , or something like that? - I'm not
+> sure), then even in a theoretical scenario where an attacker spawns
+> the maximum number of tasks possible and manages to get all of them to
+> sequentially preempt while being in the middle of increment operations
+> in several nested contexts (I'm not sure whether that can even happen
+> - you're not going to take typical sleeping exceptions like page
+> faults in the middle of a refcount op), the attacker will stay
+> comfortably inside the saturated range. Even if the PID_MAX_LIMIT is
+> at some point raised to the maximum permitted by the futex UAPI, this
+> still holds as long as you assume no nesting. Hm, should I send a
+> patch to add something like this to the explanatory comment?
 
-Yes, %pK (or %p) always hashes whether kaslr is disabled or not. So if
-we want the real value of the address, we cannot use it. But if you only
-want to distinguish if two pointers are the same, it's ok.
+Sure, I'd be happy to improve the document by adding this -- please send
+out a patch for review. It's probably also worth mentioning the batching
+use-cases, although I struggle to reason about the window between the
+{under,over}flow occuring and saturation. The idea of oopsing during that
+period is interesting, although at least that's not silent (and I think
+Android usually (always?) sets panic_on_oops to 1.
 
-> -Scott
-> 
-> 
-> 
-> .
-> 
+> Of course, if someone uses refcount batching with sufficiently large
+> values, those guarantees go out of the window - if we wanted to be
+> perfectionist about this, we could make the batched operations do slow
+> cmpxchg stuff while letting the much more performance-critical
+> single-reference case continue to use the fast saturation scheme.
+> OTOH, the networking folks would probably hate that, since they're
+> using the batched ops for ->sk_wmem_alloc stuff, where they count
+> bytes as references? So I guess maybe we should leave it as-is.
 
+Agreed. If we hamper the performance here, then people will either look
+to disable the checking or they will switch to atomic_t, which puts us
+back to square one. Perfection is the enemy of the good and all that.
+
+Having said that, I'd still be keen to learn about any practical attacks
+on this in case there is something smart we can do to mitigate them
+without cmpxchg(). For example, one silly approach might be to bound the
+maximum increment and split larger ones up using a loop.
+
+Will
