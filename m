@@ -1,20 +1,20 @@
-Return-Path: <SRS0=sKp6=4Q=lists.openwall.com=kernel-hardening-return-18009-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=gmYX=4Q=lists.openwall.com=kernel-hardening-return-18010-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E74B0C3F2CD
-	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 20:20:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 766E9C3F2D2
+	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 20:20:55 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4F2952469F
-	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 20:20:19 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F2952469F
+	by mail.kernel.org (Postfix) with SMTP id D3DD420637
+	for <kernel-hardening@archiver.kernel.org>; Fri, 28 Feb 2020 20:20:54 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D3DD420637
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18009-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11848 invoked by uid 550); 28 Feb 2020 20:20:07 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18010-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13597 invoked by uid 550); 28 Feb 2020 20:20:35 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,10 +22,10 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11828 invoked from network); 28 Feb 2020 20:20:06 -0000
+Received: (qmail 13574 invoked from network); 28 Feb 2020 20:20:34 -0000
 From: ebiederm@xmission.com (Eric W. Biederman)
-To: <linux-kernel@vger.kernel.org> 
-Cc: Al Viro <viro@zeniv.linux.org.uk>,   Kernel Hardening
+To: <linux-kernel@vger.kernel.org>
+Cc: Al Viro <viro@zeniv.linux.org.uk>,  Kernel Hardening
  <kernel-hardening@lists.openwall.com>,  Linux API
  <linux-api@vger.kernel.org>,  Linux FS Devel
  <linux-fsdevel@vger.kernel.org>,  Linux Security Module
@@ -37,10 +37,10 @@ Cc: Al Viro <viro@zeniv.linux.org.uk>,   Kernel Hardening
  <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce
  Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,
   Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,
-  Oleg Nesterov <oleg@redhat.com>, Alexey Gladkov
- <gladkov.alexey@gmail.com>, Linus Torvalds
- <torvalds@linux-foundation.org>, Jeff Dike <jdike@addtoit.com>, Richard
- Weinberger <richard@nod.at>, Anton Ivanov
+  Oleg Nesterov <oleg@redhat.com>,  Alexey Gladkov
+ <gladkov.alexey@gmail.com>,  Linus Torvalds
+ <torvalds@linux-foundation.org>,  Jeff Dike <jdike@addtoit.com>,  Richard
+ Weinberger <richard@nod.at>,  Anton Ivanov
  <anton.ivanov@cambridgegreys.com>
 References: <20200210150519.538333-8-gladkov.alexey@gmail.com>
 	<87v9odlxbr.fsf@x220.int.ebiederm.org>
@@ -59,66 +59,55 @@ References: <20200210150519.538333-8-gladkov.alexey@gmail.com>
 	<87pnejf6fz.fsf@x220.int.ebiederm.org>
 	<871rqpaswu.fsf_-_@x220.int.ebiederm.org>
 	<871rqk2brn.fsf_-_@x220.int.ebiederm.org>
-Date: Fri, 28 Feb 2020 14:17:41 -0600
-In-Reply-To: <871rqk2brn.fsf_-_@x220.int.ebiederm.org> (Eric W. Biederman's
-	message of "Mon, 24 Feb 2020 10:25:16 -0600")
-Message-ID: <878skmsbyy.fsf_-_@x220.int.ebiederm.org>
+	<878skmsbyy.fsf_-_@x220.int.ebiederm.org>
+Date: Fri, 28 Feb 2020 14:18:14 -0600
+In-Reply-To: <878skmsbyy.fsf_-_@x220.int.ebiederm.org> (Eric W. Biederman's
+	message of "Fri, 28 Feb 2020 14:17:41 -0600")
+Message-ID: <8736ausby1.fsf_-_@x220.int.ebiederm.org>
 User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
 Content-Type: text/plain
-X-XM-SPF: eid=1j7m6u-0002fJ-0Y;;;mid=<878skmsbyy.fsf_-_@x220.int.ebiederm.org>;;;hst=in02.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX184o7/7/rMRoEK9hF/5tZ1Qs2V3r2fvMT0=
+X-XM-SPF: eid=1j7m7R-0002lL-EH;;;mid=<8736ausby1.fsf_-_@x220.int.ebiederm.org>;;;hst=in02.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX1+WuHbOA66kXQc+ge/fBSMlwuwEjasAimw=
 X-SA-Exim-Connect-IP: 68.227.160.95
 X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: [PATCH 0/3] proc: Actually honor the mount options
+Subject: [PATCH 1/3] uml: Don't consult current to find the proc_mnt in mconsole_proc
 X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
 X-SA-Exim-Scanned: Yes (on in02.mta.xmission.com)
 
 
-Proc mount option handling is broken, and it has been since I
-accidentally broke it in the middle 2006.
+Inspection of the control flow reveals that mconsole_proc is either
+called from mconsole_stop called from mc_work_proc or from
+mc_work_proc directly.  The function mc_work_proc is dispatched to a
+kernel thread with schedule_work.
 
-The problem is that because we perform an internal mount of proc
-before user space mounts proc all of the mount options that user
-specifies when mounting proc are ignored.
+All of the threads that run dispatched by schedule_work are in the
+init pid namespace.
 
-You can set those mount options with a remount but that is rather
-surprising.
+So make the code clearer and by using init_pid_ns instead of
+task_active_pid_ns(current).
 
-This most directly affects android which is using hidpid=2 by default.
+Cc: Jeff Dike <jdike@addtoit.com>
+Cc: Richard Weinberger <richard@nod.at>
+Cc: Anton Ivanov <anton.ivanov@cambridgegreys.com>
+Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
+---
+ arch/um/drivers/mconsole_kern.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-Now that the sysctl system call support has been removed, and we have
-settled on way of flushing proc dentries when a process exits without
-using proc_mnt, there is an simple and easy fix.
+diff --git a/arch/um/drivers/mconsole_kern.c b/arch/um/drivers/mconsole_kern.c
+index b80a1d616e4e..e8f5c81c2c6c 100644
+--- a/arch/um/drivers/mconsole_kern.c
++++ b/arch/um/drivers/mconsole_kern.c
+@@ -123,7 +123,7 @@ void mconsole_log(struct mc_request *req)
+ 
+ void mconsole_proc(struct mc_request *req)
+ {
+-	struct vfsmount *mnt = task_active_pid_ns(current)->proc_mnt;
++	struct vfsmount *mnt = init_pid_ns.proc_mnt;
+ 	char *buf;
+ 	int len;
+ 	struct file *file;
+-- 
+2.25.0
 
-a) Give UML mconsole it's own private mount of proc to use.
-b) Stop creating the internal mount of proc
-
-We still need Alexey Gladkov's full patch to get proc mount options to
-work inside of UML, and to be generally useful.  This set of changes
-is just enough to get them working as well as they have in the past.
-
-If anyone sees any problem with this code please let me know.
-
-Otherwise I plan to merge these set of fixes through my tree.
-
-Link: https://lore.kernel.org/lkml/87r21tuulj.fsf@x220.int.ebiederm.org/
-Link: https://lore.kernel.org/lkml/871rqk2brn.fsf_-_@x220.int.ebiederm.org/
-Link: https://lore.kernel.org/lkml/20200210150519.538333-1-gladkov.alexey@gmail.com/
-Link: https://lore.kernel.org/lkml/20180611195744.154962-1-astrachan@google.com/
-Fixes: e94591d0d90c ("proc: Convert proc_mount to use mount_ns.")
-
-Eric W. Biederman (3):
-      uml: Don't consult current to find the proc_mnt in mconsole_proc
-      uml: Create a private mount of proc for mconsole
-      proc: Remove the now unnecessary internal mount of proc
-
- arch/um/drivers/mconsole_kern.c | 28 +++++++++++++++++++++++++++-
- fs/proc/root.c                  | 36 ------------------------------------
- include/linux/pid_namespace.h   |  2 --
- include/linux/proc_ns.h         |  5 -----
- kernel/pid.c                    |  8 --------
- kernel/pid_namespace.c          |  7 -------
- 6 files changed, 27 insertions(+), 59 deletions(-)
-
-Eric
