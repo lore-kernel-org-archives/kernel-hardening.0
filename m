@@ -1,23 +1,22 @@
-Return-Path: <SRS0=fiTU=4R=lists.openwall.com=kernel-hardening-return-18026-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=BeN7=4R=lists.openwall.com=kernel-hardening-return-18027-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 453A8C3F2CD
-	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 23:23:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 01A4CC3F2CD
+	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 23:52:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8FFF4222C2
-	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 23:23:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 549F724688
+	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 23:52:06 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="UmXHXH52"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8FFF4222C2
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="P/Nsf2a2"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 549F724688
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18026-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12139 invoked by uid 550); 29 Feb 2020 23:23:26 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18027-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18241 invoked by uid 550); 29 Feb 2020 23:52:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,77 +24,59 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12107 invoked from network); 29 Feb 2020 23:23:25 -0000
+Received: (qmail 18209 invoked from network); 29 Feb 2020 23:51:59 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=sC3t5GcfT+mcs+Zl2p6smFfDxG3Nl3S/QcoxnFPIWpo=;
-        b=UmXHXH52+3Ibq5SY+DNh7RIg8T1q46HbakkJRAP/XErovTGr0KFi97JvUqadnH/Qjr
-         L9w/0j4cC3oBKseA4rV+Y+oVI7+M4QrrFFuTVNOB7SlkP9qTSvM7MpXqakjP/ekXwrrQ
-         TiWSi5ZIHMZ5aUBf8/dCfcojIKCdtRQ/4geaw=
+        h=date:from:to:cc:subject:message-id:mime-version:content-disposition
+         :in-reply-to;
+        bh=JCx5kM2FMe+phgvKiMpcu0iiorhySMfHXJQpD4PHwa8=;
+        b=P/Nsf2a2wOYy7D1u146YWjS1s0ujxd2TAgYMb/LLAdf9b3eCgjLNdXrDZV2mViHn+a
+         WmdqTo54POm0wJbKOda2WLgKO23AX8ZVC56n86ceOp/d7nQqrv40YovrJ9GeywHUeIDu
+         muZunWBfnMGLQSnTUszHU82kX6t5xpQt2TdhQ=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=sC3t5GcfT+mcs+Zl2p6smFfDxG3Nl3S/QcoxnFPIWpo=;
-        b=A6b/ds/jxLWfyf44KjlOKt9RFSpRlgWTwlF4Ivi687Kz3MRlcc8w+d1E9miM+bPslm
-         63AGX5nUO5HoQLFDO33VH+izYEmIcNf2nuG77Kd7m71OfJnrRunrFIikE6LaBo6f4dtB
-         kWagrXafdKLEYtdnYZa0qYCzm24D3dAVv1WWER+R3QFkHOuqlI6vQbAbs+Ff65jOYbe8
-         gSP2FtGH+haF+6MqXqPBLZoQps9zghWgXkoX5bLBDnPEIJXly8oqTBC7jfyQ6Er0r6wm
-         zEKYxHRPK5dN9TV60PR6VnfIvPlK95U0sXKqzMR+CuGRTpe/cb6esnpY7RXa3cwZ5KUF
-         zW4Q==
-X-Gm-Message-State: APjAAAU2ZbIRwdHb9SslR5mjuGTIlcVSt1OVAQY6YN66t92dw+v6ynsR
-	/SmVINog8un50paf2FNbDDLuBw==
-X-Google-Smtp-Source: APXvYqzVpbm3DEESlR++G+OA4fQWfBPAh03D5/Ll8Sl1B81nyeETr8NLa8x/DcUXrDFDPjAxKgZrfw==
-X-Received: by 2002:a17:902:44d:: with SMTP id 71mr10571774ple.95.1583018593161;
-        Sat, 29 Feb 2020 15:23:13 -0800 (PST)
-Date: Sat, 29 Feb 2020 15:23:10 -0800
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:mime-version
+         :content-disposition:in-reply-to;
+        bh=JCx5kM2FMe+phgvKiMpcu0iiorhySMfHXJQpD4PHwa8=;
+        b=UtrFLoesZR8/nncvdm83ZTmGx8WyEGUTLGJD0xScE7r9n6t6nMFyIAf1H4HehTf5uN
+         cOnxGLL18LNjIq59LiyKeuOBptkOxAcO1Fi/VKPgev65tjLSmFzDu8Fc3AzZaTfzWRnM
+         xqGVemAmvzbHA8Wkk5SjikclAgzg1II358aJw/yDRnIWUvxYnXmD3642WUiftZfLKttm
+         fZKu27TJ0dRrUNYkrXndteX65o8w1X8woLBKeYs+AvvebdNDBM+i2S+YR8KcTbw7+3d/
+         YtAjsYyqV3XC5Vb/mpVPlT8bS/P/r+zNZOF9hEb7izK+x3+67XQnk1jWcMUTpZG+ziUk
+         mylA==
+X-Gm-Message-State: APjAAAUvTqZD2n3Y2QIwSzSBJioizsYu9AOwepCVDShOj+jhTxW0GG4i
+	+SJpLv/jCIw0+Nrqt04X73hgjA==
+X-Google-Smtp-Source: APXvYqxsx1i0sHqA2KvbaHmgfpHOZ+FRmZ9YIX/ymQrfriesl+tjije02HUpoRd4OXIwmBiGs6tUyQ==
+X-Received: by 2002:a17:90b:11d0:: with SMTP id gv16mr12761318pjb.109.1583020307505;
+        Sat, 29 Feb 2020 15:51:47 -0800 (PST)
+Date: Sat, 29 Feb 2020 15:51:45 -0800
 From: Kees Cook <keescook@chromium.org>
-To: x86@kernel.org
-Cc: Arvind Sankar <nivedita@alum.mit.edu>,
-	"Tobin C . Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>,
-	kernel-hardening@lists.openwall.com,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH] x86/mm/init: Stop printing pgt_buf addresses
-Message-ID: <202002291522.0EDB380@keescook>
-References: <20200229231120.1147527-1-nivedita@alum.mit.edu>
+To: Arvind Sankar <nivedita@alum.mit.edu>
+Cc: dave.hansen@linux.intel.com, kernel-hardening@lists.openwall.com,
+	linux-kernel@vger.kernel.org, luto@kernel.org, me@tobin.cc,
+	peterz@infradead.org, tycho@tycho.ws, x86@kernel.org
+Subject: Re: [PATCH] x86/mm/init_32: Don't print out kernel memory layout if
+ KASLR
+Message-ID: <202002291534.ED372CC@keescook>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200229231120.1147527-1-nivedita@alum.mit.edu>
+In-Reply-To: <20200226215039.2842351-1-nivedita@alum.mit.edu>
 
-On Sat, Feb 29, 2020 at 06:11:20PM -0500, Arvind Sankar wrote:
-> This currently leaks kernel physical addresses into userspace.
-> 
-> Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
+Arvind Sankar said:
+> For security, only show the virtual kernel memory layout if KASLR is
+> disabled.
 
-Acked-by: Kees Cook <keescook@chromium.org>
+These have been entirely removed on other architectures, so let's
+just do the same for ia32 and remove it unconditionally.
+
+071929dbdd86 ("arm64: Stop printing the virtual memory layout")
+1c31d4e96b8c ("ARM: 8820/1: mm: Stop printing the virtual memory layout")
+31833332f798 ("m68k/mm: Stop printing the virtual memory layout")
+fd8d0ca25631 ("parisc: Hide virtual kernel memory layout")
+adb1fe9ae2ee ("mm/page_alloc: Remove kernel address exposure in free_reserved_area()")
 
 -Kees
-
-> ---
->  arch/x86/mm/init.c | 2 --
->  1 file changed, 2 deletions(-)
-> 
-> diff --git a/arch/x86/mm/init.c b/arch/x86/mm/init.c
-> index e7bb483557c9..dc4711f09cdc 100644
-> --- a/arch/x86/mm/init.c
-> +++ b/arch/x86/mm/init.c
-> @@ -121,8 +121,6 @@ __ref void *alloc_low_pages(unsigned int num)
->  	} else {
->  		pfn = pgt_buf_end;
->  		pgt_buf_end += num;
-> -		printk(KERN_DEBUG "BRK [%#010lx, %#010lx] PGTABLE\n",
-> -			pfn << PAGE_SHIFT, (pgt_buf_end << PAGE_SHIFT) - 1);
->  	}
->  
->  	for (i = 0; i < num; i++) {
-> -- 
-> 2.24.1
-> 
 
 -- 
 Kees Cook
