@@ -1,20 +1,23 @@
-Return-Path: <SRS0=ymwJ=4R=lists.openwall.com=kernel-hardening-return-18022-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yU+q=4R=lists.openwall.com=kernel-hardening-return-18023-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6DD28C3F2D7
-	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 07:27:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9D067C3F2C6
+	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 17:24:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C047C24695
-	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 07:27:47 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C047C24695
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18022-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21711 invoked by uid 550); 29 Feb 2020 07:27:40 -0000
+	by mail.kernel.org (Postfix) with SMTP id C3C2221556
+	for <kernel-hardening@archiver.kernel.org>; Sat, 29 Feb 2020 17:24:08 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="qCqXkYKX"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C3C2221556
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18023-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28447 invoked by uid 550); 29 Feb 2020 17:23:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,123 +25,357 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21676 invoked from network); 29 Feb 2020 07:27:39 -0000
-Subject: Re: [PATCH v3 0/6] implement KASLR for powerpc/fsl_booke/64
-To: Scott Wood <oss@buserror.net>, Daniel Axtens <dja@axtens.net>,
-	<mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
-CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>
-References: <20200206025825.22934-1-yanaijie@huawei.com>
- <87tv3drf79.fsf@dja-thinkpad.axtens.net>
- <8171d326-5138-4f5c-cff6-ad3ee606f0c2@huawei.com>
- <e8cd8f287934954cfa07dcf76ac73492e2d49a5b.camel@buserror.net>
- <dd8db870-b607-3f74-d3bc-a8d9f33f9852@huawei.com>
- <4c0e7fec63dbc7b91fa6c24692c73c256c131f51.camel@buserror.net>
-From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <188971ed-f1c4-39b3-c07e-89cc593d88d7@huawei.com>
-Date: Sat, 29 Feb 2020 15:27:14 +0800
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
- Thunderbird/68.4.2
+Received: (qmail 28411 invoked from network); 29 Feb 2020 17:23:58 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=bombadil.20170209; h=Content-Transfer-Encoding:
+	Content-Type:In-Reply-To:MIME-Version:Date:Message-ID:From:References:Cc:To:
+	Subject:Sender:Reply-To:Content-ID:Content-Description;
+	bh=6Si9TLpxJhjW8mWab2ldu/HcfCY1uTLyNEocypbMayo=; b=qCqXkYKXQZee7Nz7LGtyQFTdWa
+	ZVGKnFYyveaS3XUHWGtQcRB3FOrAbYUm27JT/T5AyoFT3ue/iyXo8zc3ddUbZC7G9IQrm6cL/KK19
+	MThfgR/g4axpeCnWa31czFTMoSRby0YJ8yj3IwjqO2qurTtPdV/WYNmWmzPIxpE7CyLAwRzAICbq+
+	DD/JGPnBIP5lZqwP4eRIGnjzMtiBQBJtnsddAYp/iPIAYKOH3wesXgerkummOUO8SqaWGLNCP4b8j
+	H3fPBIySVY3Ur8MnMunXWtbPwqe+mlrE7w2/IRabkmxN81jPrFw5o87eGZXP6k1Sb4K+9GPfzW/iE
+	aYun8VdA==;
+Subject: Re: [RFC PATCH v14 10/10] landlock: Add user and kernel documentation
+To: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>,
+ linux-kernel@vger.kernel.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
+ Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
+ Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>,
+ Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>,
+ =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
+ "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
+ Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+ kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+ linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
+ linux-fsdevel@vger.kernel.org, linux-kselftest@vger.kernel.org,
+ linux-security-module@vger.kernel.org, x86@kernel.org
+References: <20200224160215.4136-1-mic@digikod.net>
+ <20200224160215.4136-11-mic@digikod.net>
+From: Randy Dunlap <rdunlap@infradead.org>
+Message-ID: <cc8da381-d3dc-3c0a-5afd-96824362b636@infradead.org>
+Date: Sat, 29 Feb 2020 09:23:38 -0800
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.5.0
 MIME-Version: 1.0
-In-Reply-To: <4c0e7fec63dbc7b91fa6c24692c73c256c131f51.camel@buserror.net>
-Content-Type: text/plain; charset="utf-8"; format=flowed
+In-Reply-To: <20200224160215.4136-11-mic@digikod.net>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
 Content-Transfer-Encoding: 8bit
-X-Originating-IP: [10.173.221.195]
-X-CFilter-Loop: Reflected
+
+Hi,
+Here are a few corrections for you to consider.
 
 
-
-在 2020/2/29 12:28, Scott Wood 写道:
-> On Fri, 2020-02-28 at 14:47 +0800, Jason Yan wrote:
->>
->> 在 2020/2/28 13:53, Scott Wood 写道:
->>> On Wed, 2020-02-26 at 16:18 +0800, Jason Yan wrote:
->>>> Hi Daniel,
->>>>
->>>> 在 2020/2/26 15:16, Daniel Axtens 写道:
->>>>> Maybe replacing the REG format string in KASLR mode would be
->>>>> sufficient?
->>>>>
->>>>
->>>> Most archs have removed the address printing when dumping stack. Do we
->>>> really have to print this?
->>>>
->>>> If we have to do this, maybe we can use "%pK" so that they will be
->>>> hidden from unprivileged users.
->>>
->>> I've found the addresses to be useful, especially if I had a way to dump
->>> the
->>> stack data itself.  Wouldn't the register dump also be likely to give away
->>> the
->>> addresses?
->>
->> If we have to print the address, then kptr_restrict and dmesg_restrict
->> must be set properly so that unprivileged users cannot see them.
+On 2/24/20 8:02 AM, Mickaël Salaün wrote:
+> This documentation can be built with the Sphinx framework.
 > 
-> And how does that work with crash dumps that could be from any context?
+> Another location might be more appropriate, though.
 > 
-> dmesg_restrict is irrelevant as it just controls who can see the dmesg, not
-> what goes into it.  kptr_restrict=1 will only get the value if you're not in
-> any sort of IRQ, *and* if the crashing context happened to have CAP_SYSLOG.
-> No other value of kptr_restrict will ever get you the raw value.
->
->>>
->>> I don't see any debug setting for %pK (or %p) to always print the actual
->>> address (closest is kptr_restrict=1 but that only works in certain
->>> contexts)... from looking at the code it seems it hashes even if kaslr is
->>> entirely disabled?  Or am I missing something?
->>>
->>
->> Yes, %pK (or %p) always hashes whether kaslr is disabled or not. So if
->> we want the real value of the address, we cannot use it. But if you only
->> want to distinguish if two pointers are the same, it's ok.
+> Signed-off-by: Mickaël Salaün <mic@digikod.net>
+> Reviewed-by: Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>
+> Cc: Andy Lutomirski <luto@amacapital.net>
+> Cc: James Morris <jmorris@namei.org>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Serge E. Hallyn <serge@hallyn.com>
+> ---
 > 
-> Am I the only one that finds this a bit crazy?  If you want to lock a system
-> down then fine, but why wage war on debugging even when there's no
-> randomization going on?  Comparing two pointers for equality is not always
-> adequate.
+> Changes since v13:
+> * Rewrote the documentation according to the major revamp.
 > 
+> Previous version:
+> https://lore.kernel.org/lkml/20191104172146.30797-8-mic@digikod.net/
+> ---
+>  Documentation/security/index.rst           |   1 +
+>  Documentation/security/landlock/index.rst  |  18 ++
+>  Documentation/security/landlock/kernel.rst |  44 ++++
+>  Documentation/security/landlock/user.rst   | 233 +++++++++++++++++++++
+>  4 files changed, 296 insertions(+)
+>  create mode 100644 Documentation/security/landlock/index.rst
+>  create mode 100644 Documentation/security/landlock/kernel.rst
+>  create mode 100644 Documentation/security/landlock/user.rst
+> 
+> diff --git a/Documentation/security/landlock/index.rst b/Documentation/security/landlock/index.rst
+> new file mode 100644
+> index 000000000000..dbd33b96ce60
+> --- /dev/null
+> +++ b/Documentation/security/landlock/index.rst
+> @@ -0,0 +1,18 @@
+> +=========================================
+> +Landlock LSM: unprivileged access control
+> +=========================================
+> +
+> +:Author: Mickaël Salaün
+> +
+> +The goal of Landlock is to enable to restrict ambient rights (e.g.  global
+> +filesystem access) for a set of processes.  Because Landlock is a stackable
+> +LSM, it makes possible to create safe security sandboxes as new security layers
+> +in addition to the existing system-wide access-controls. This kind of sandbox
+> +is expected to help mitigate the security impact of bugs or
+> +unexpected/malicious behaviors in user-space applications. Landlock empower any
 
-AFAIK, %p hashing is only exist because of many legacy address printings
-and force who really want the raw values to switch to %px or even %lx.
-It's not the opposite of debugging. Raw address printing is not
-forbidden, only people need to estimate the risk of adrdress leaks.
+                                                                       empowers
 
-Turnning to %p may not be a good idea in this situation. So
-for the REG logs printed when dumping stack, we can disable it when
-KASLR is open. For the REG logs in other places like show_regs(), only
-privileged can trigger it, and they are not combind with a symbol, so
-I think it's ok to keep them.
+> +process, including unprivileged ones, to securely restrict themselves.
+> +
+> +.. toctree::
+> +
+> +    user
+> +    kernel
+> diff --git a/Documentation/security/landlock/kernel.rst b/Documentation/security/landlock/kernel.rst
+> new file mode 100644
+> index 000000000000..b87769909029
+> --- /dev/null
+> +++ b/Documentation/security/landlock/kernel.rst
+> @@ -0,0 +1,44 @@
+> +==============================
+> +Landlock: kernel documentation
+> +==============================
+> +
+> +Landlock's goal is to create scoped access-control (i.e. sandboxing).  To
+> +harden a whole system, this feature should be available to any process,
+> +including unprivileged ones.  Because such process may be compromised or
+> +backdoored (i.e. untrusted), Landlock's features must be safe to use from the
+> +kernel and other processes point of view.  Landlock's interface must therefore
+> +expose a minimal attack surface.
+> +
+> +Landlock is designed to be usable by unprivileged processes while following the
+> +system security policy enforced by other access control mechanisms (e.g. DAC,
+> +LSM).  Indeed, a Landlock rule shall not interfere with other access-controls
+> +enforced on the system, only add more restrictions.
+> +
+> +Any user can enforce Landlock rulesets on their processes.  They are merged and
+> +evaluated according to the inherited ones in a way that ensure that only more
 
-diff --git a/arch/powerpc/kernel/process.c b/arch/powerpc/kernel/process.c
-index fad50db9dcf2..659c51f0739a 100644
---- a/arch/powerpc/kernel/process.c
-+++ b/arch/powerpc/kernel/process.c
-@@ -2068,7 +2068,10 @@ void show_stack(struct task_struct *tsk, unsigned 
-long *stack)
-                 newsp = stack[0];
-                 ip = stack[STACK_FRAME_LR_SAVE];
-                 if (!firstframe || ip != lr) {
--                       printk("["REG"] ["REG"] %pS", sp, ip, (void *)ip);
-+                       if (IS_ENABLED(CONFIG_RANDOMIZE_BASE))
-+                               printk("%pS", (void *)ip);
-+                       else
-+                               printk("["REG"] ["REG"] %pS", sp, ip, 
-(void *)ip);
-  #ifdef CONFIG_FUNCTION_GRAPH_TRACER
-                         ret_addr = ftrace_graph_ret_addr(current,
-                                                 &ftrace_idx, ip, stack);
+                                                           ensures
 
+> +constraints can be added.
+> +
+> +
+> +Guiding principles for safe access controls
+> +===========================================
+> +
+> +* A Landlock rule shall be focused on access control on kernel objects instead
+> +  of syscall filtering (i.e. syscall arguments), which is the purpose of
+> +  seccomp-bpf.
+> +* To avoid multiple kind of side-channel attacks (e.g. leak of security
 
-Thanks,
-Jason
+                       kinds
 
-> -Scott
-> 
-> 
-> 
-> .
-> 
+> +  policies, CPU-based attacks), Landlock rules shall not be able to
+> +  programmatically communicate with user space.
+> +* Kernel access check shall not slow down access request from unsandboxed
+> +  processes.
+> +* Computation related to Landlock operations (e.g. enforce a ruleset) shall
+> +  only impact the processes requesting them.
+> +
+> +
+> +Landlock rulesets and domains
+> +=============================
+> +
+> +A domain is a read-only ruleset tied to a set of subjects (i.e. tasks).  A
+> +domain can transition to a new one which is the intersection of the constraints
+> +from the current and a new ruleset.  The definition of a subject is implicit
+> +for a task sandboxing itself, which makes the reasoning much easier and helps
+> +avoid pitfalls.
+> diff --git a/Documentation/security/landlock/user.rst b/Documentation/security/landlock/user.rst
+> new file mode 100644
+> index 000000000000..cbd7f61fca8c
+> --- /dev/null
+> +++ b/Documentation/security/landlock/user.rst
+> @@ -0,0 +1,233 @@
+> +=================================
+> +Landlock: userspace documentation
+> +=================================
+> +
+> +Landlock rules
+> +==============
+> +
+> +A Landlock rule enables to describe an action on an object.  An object is
+> +currently a file hierarchy, and the related filesystem actions are defined in
+> +`Access rights`_.  A set of rules are aggregated in a ruleset, which can then
+
+                                     is
+
+> +restricts the thread enforcing it, and its future children.
+
+   restrict
+
+> +
+> +
+> +Defining and enforcing a security policy
+> +----------------------------------------
+> +
+> +Before defining a security policy, an application should first probe for the
+> +features supported by the running kernel, which is important to be compatible
+> +with older kernels.  This can be done thanks to the `landlock` syscall (cf.
+> +:ref:`syscall`).
+> +
+> +.. code-block:: c
+> +
+> +    struct landlock_attr_features attr_features;
+> +
+> +    if (landlock(LANDLOCK_CMD_GET_FEATURES, LANDLOCK_OPT_GET_FEATURES,
+> +            sizeof(attr_features), &attr_features)) {
+> +        perror("Failed to probe the Landlock supported features");
+> +        return 1;
+> +    }
+> +
+> +Then, we need to create the ruleset that will contains our rules.  For this
+
+                                                 contain
+
+> +example, the ruleset will contains rules which only allow read actions, but
+
+                             contain
+
+> +write actions will be denied.  The ruleset then needs to handle both of these
+> +kind of actions.  To have a backward compatibility, these actions should be
+> +ANDed with the supported ones.
+> +
+> +.. code-block:: c
+> +
+> +    int ruleset_fd;
+> +    struct landlock_attr_ruleset ruleset = {
+> +        .handled_access_fs =
+> +            LANDLOCK_ACCESS_FS_READ |
+> +            LANDLOCK_ACCESS_FS_READDIR |
+> +            LANDLOCK_ACCESS_FS_EXECUTE |
+> +            LANDLOCK_ACCESS_FS_WRITE |
+> +            LANDLOCK_ACCESS_FS_TRUNCATE |
+> +            LANDLOCK_ACCESS_FS_CHMOD |
+> +            LANDLOCK_ACCESS_FS_CHOWN |
+> +            LANDLOCK_ACCESS_FS_CHGRP |
+> +            LANDLOCK_ACCESS_FS_LINK_TO |
+> +            LANDLOCK_ACCESS_FS_RENAME_FROM |
+> +            LANDLOCK_ACCESS_FS_RENAME_TO |
+> +            LANDLOCK_ACCESS_FS_RMDIR |
+> +            LANDLOCK_ACCESS_FS_UNLINK |
+> +            LANDLOCK_ACCESS_FS_MAKE_CHAR |
+> +            LANDLOCK_ACCESS_FS_MAKE_DIR |
+> +            LANDLOCK_ACCESS_FS_MAKE_REG |
+> +            LANDLOCK_ACCESS_FS_MAKE_SOCK |
+> +            LANDLOCK_ACCESS_FS_MAKE_FIFO |
+> +            LANDLOCK_ACCESS_FS_MAKE_BLOCK |
+> +            LANDLOCK_ACCESS_FS_MAKE_SYM,
+> +    };
+> +
+> +    ruleset.handled_access_fs &= attr_features.access_fs;
+> +    ruleset_fd = landlock(LANDLOCK_CMD_CREATE_RULESET,
+> +                    LANDLOCK_OPT_CREATE_RULESET, sizeof(ruleset), &ruleset);
+> +    if (ruleset_fd < 0) {
+> +        perror("Failed to create a ruleset");
+> +        return 1;
+> +    }
+> +
+> +We can now add a new rule to this ruleset thanks to the returned file
+> +descriptor referring to this ruleset.  The rule will only enable to read the
+> +file hierarchy ``/usr``.  Without other rule, write actions would then be
+
+                             Without other rules,
+or
+                             Without another rule,
+
+> +denied by the ruleset.  To add ``/usr`` to the ruleset, we open it with the
+> +``O_PATH`` flag and fill the &struct landlock_attr_path_beneath with this file
+> +descriptor.
+> +
+> +.. code-block:: c
+> +
+> +    int err;
+> +    struct landlock_attr_path_beneath path_beneath = {
+> +        .ruleset_fd = ruleset_fd,
+> +        .allowed_access =
+> +            LANDLOCK_ACCESS_FS_READ |
+> +            LANDLOCK_ACCESS_FS_READDIR |
+> +            LANDLOCK_ACCESS_FS_EXECUTE,
+> +    };
+> +
+> +    path_beneath.allowed_access &= attr_features.access_fs;
+> +    path_beneath.parent_fd = open("/usr", O_PATH | O_CLOEXEC);
+> +    if (path_beneath.parent_fd < 0) {
+> +        perror("Failed to open file");
+> +        close(ruleset_fd);
+> +        return 1;
+> +    }
+> +    err = landlock(LANDLOCK_CMD_ADD_RULE, LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
+> +            sizeof(path_beneath), &path_beneath);
+> +    close(path_beneath.parent_fd);
+> +    if (err) {
+> +        perror("Failed to update ruleset");
+> +        close(ruleset_fd);
+> +        return 1;
+> +    }
+> +
+> +We now have a ruleset with one rule allowing read access to ``/usr`` while
+> +denying all accesses featured in ``attr_features.access_fs`` to everything else
+> +on the filesystem.  The next step is to restrict the current thread from
+> +gaining more privileges (e.g. thanks to a SUID binary).
+> +
+> +.. code-block:: c
+> +
+> +    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
+> +        perror("Failed to restrict privileges");
+> +        close(ruleset_fd);
+> +        return 1;
+> +    }
+> +
+> +The current thread is now ready to sandbox itself with the ruleset.
+> +
+> +.. code-block:: c
+> +
+> +    struct landlock_attr_enforce attr_enforce = {
+> +        .ruleset_fd = ruleset_fd,
+> +    };
+> +
+> +    if (landlock(LANDLOCK_CMD_ENFORCE_RULESET, LANDLOCK_OPT_ENFORCE_RULESET,
+> +            sizeof(attr_enforce), &attr_enforce)) {
+> +        perror("Failed to enforce ruleset");
+> +        close(ruleset_fd);
+> +        return 1;
+> +    }
+> +    close(ruleset_fd);
+> +
+> +If this last system call succeeds, the current thread is now restricted and
+
+   If this last landlock system call succeeds,
+
+[because close() is the last system call]
+
+> +this policy will be enforced on all its subsequently created children as well.
+> +Once a thread is landlocked, there is no way to remove its security policy,
+
+                                                   preferably:         policy;
+
+> +only adding more restrictions is allowed.  These threads are now in a new
+> +Landlock domain, merge of their parent one (if any) with the new ruleset.
+> +
+> +A full working code can be found in `samples/landlock/sandboxer.c`_.
+
+   Full working code
+
+> +
+> +
+> +Inheritance
+> +-----------
+> +
+> +Every new thread resulting from a :manpage:`clone(2)` inherits Landlock program
+> +restrictions from its parent.  This is similar to the seccomp inheritance (cf.
+> +:doc:`/userspace-api/seccomp_filter`) or any other LSM dealing with task's
+> +:manpage:`credentials(7)`.  For instance, one process' thread may apply
+
+                                                 process's
+
+> +Landlock rules to itself, but they will not be automatically applied to other
+> +sibling threads (unlike POSIX thread credential changes, cf.
+> +:manpage:`nptl(7)`).
+
+[snip]
+
+thanks for the documentation.
+
+-- 
+~Randy
 
