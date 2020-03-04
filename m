@@ -1,20 +1,22 @@
-Return-Path: <SRS0=pKdd=4V=lists.openwall.com=kernel-hardening-return-18058-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=zMI5=4V=lists.openwall.com=kernel-hardening-return-18059-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MIME_QP_LONG_LINE,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0E022C3F2D1
-	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 09:41:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F31F8C3F2D1
+	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 18:22:11 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6A6072073D
-	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 09:41:39 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6A6072073D
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zytor.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18058-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 8145 invoked by uid 550); 4 Mar 2020 09:41:33 -0000
+	by mail.kernel.org (Postfix) with SMTP id 494FC2146E
+	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 18:22:11 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="EtH+RNLz"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 494FC2146E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18059-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29845 invoked by uid 550); 4 Mar 2020 18:22:03 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,133 +24,88 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8120 invoked from network); 4 Mar 2020 09:41:32 -0000
-Authentication-Results:mail.zytor.com; dkim=permerror (bad message/signature format)
-From: "H. Peter Anvin" <hpa@zytor.com>
-Message-Id: <202003040940.0249eM5n306088@mail.zytor.com>
-Date: Wed, 04 Mar 2020 01:40:15 -0800
-User-Agent: K-9 Mail for Android
-In-Reply-To: <202003031314.1AFFC0E@keescook>
-References: <20200228000105.165012-1-thgarnie@chromium.org> <202003022100.54CEEE60F@keescook> <20200303095514.GA2596@hirez.programming.kicks-ass.net> <CAJcbSZH1oON2VC2U8HjfC-6=M-xn5eU+JxHG2575iMpVoheKdA@mail.gmail.com> <6e7e4191612460ba96567c16b4171f2d2f91b296.camel@linux.intel.com> <202003031314.1AFFC0E@keescook>
-MIME-Version: 1.0
-Content-Type: text/plain;
- charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+Received: (qmail 29815 invoked from network); 4 Mar 2020 18:22:02 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=xF2I7tf+DwxpQhNciBVkWhhaWOLjPvYzGL3E90sj2so=;
+        b=EtH+RNLzhqY+QqYdV6X7ap6Xu3EpSaat18+ckZb/mOfySU0ooqa/9cKD/lI/wgqztb
+         ZK2Ma6j1qv5DcakHHIlnNCH8JvP6u0Ga6Lxhnp2OX/arBJTY2+8pgH3SNyBm7i2VIJ2k
+         nN0QThNn3RyhAFc+q1sXxzjkc/ZdjOgh2+oOU=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=xF2I7tf+DwxpQhNciBVkWhhaWOLjPvYzGL3E90sj2so=;
+        b=BZtfLLgkcXHVa9oawoHqjR4iACComjRcsvTC7LZytzGUk22yaplyjdAvNNESRPEHWb
+         aSu2yUQQMxOgVtA/dOHfWhhBR+pFFPNPvDLT++ZR6DB8aJ5gk9ItnLyom69hVdy+dZtB
+         XJSp/UUXVai13SE1q16tXwVs4QmnEe5Wus2+akLmmcND6Ucrj4ZQOhZjUQ3SWDa83woP
+         7pQ9R0t5hVv7BO5l9NuJj3FaKBLHYR9i1qniTORoRqL/mqgaoJSSKQ2fMymkgQ97q4tC
+         00H7iPUkedYcGBxXXCYroAzXU8cPuNEejvDE/YEDjwQGw3WeLawflrkrg9gs42SEWeb9
+         l5SQ==
+X-Gm-Message-State: ANhLgQ3M8DcEuz41aEqt3UudK0l7XZ3xa1GrO74n8Z7DPfgkbGvnLAuJ
+	beUWtbedxrf6nJ6dhNNPUG9xpg==
+X-Google-Smtp-Source: ADFU+vuGalFADUNS2CsAir9E+YeLAVnzSZsmifwLoGDru8DbnpAUozLyZDUnqEqdqAQL4AUGpiCQNw==
+X-Received: by 2002:a63:ed14:: with SMTP id d20mr3606078pgi.267.1583346110401;
+        Wed, 04 Mar 2020 10:21:50 -0800 (PST)
+Date: Wed, 4 Mar 2020 10:21:48 -0800
+From: Kees Cook <keescook@chromium.org>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Kristen Carlson Accardi <kristen@linux.intel.com>,
+	Thomas Garnier <thgarnie@chromium.org>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Herbert Xu <herbert@gondor.apana.org.au>,
+	"David S. Miller" <davem@davemloft.net>,
+	"H. Peter Anvin" <hpa@zytor.com>,
+	the arch/x86 maintainers <x86@kernel.org>,
+	Andy Lutomirski <luto@kernel.org>, Juergen Gross <jgross@suse.com>,
+	Thomas Hellstrom <thellstrom@vmware.com>,
+	"VMware, Inc." <pv-drivers@vmware.com>,
+	"Rafael J. Wysocki" <rjw@rjwysocki.net>,
+	Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>,
+	Rasmus Villemoes <linux@rasmusvillemoes.dk>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	Will Deacon <will@kernel.org>, Ard Biesheuvel <ardb@kernel.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>, Jiri Slaby <jslaby@suse.cz>,
+	Boris Ostrovsky <boris.ostrovsky@oracle.com>,
+	Josh Poimboeuf <jpoimboe@redhat.com>,
+	Cao jin <caoj.fnst@cn.fujitsu.com>,
+	Allison Randal <allison@lohutok.net>,
+	Linux Crypto Mailing List <linux-crypto@vger.kernel.org>,
+	LKML <linux-kernel@vger.kernel.org>,
+	virtualization@lists.linux-foundation.org,
+	Linux PM list <linux-pm@vger.kernel.org>
 Subject: Re: [PATCH v11 00/11] x86: PIE support to extend KASLR randomization
-To: Kees Cook <keescook@chromium.org>,
-        Kristen Carlson Accardi <kristen@linux.intel.com>
-CC: Thomas Garnier <thgarnie@chromium.org>,
-        Peter Zijlstra <peterz@infradead.org>,
-        Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>,
-        Borislav Petkov <bp@alien8.de>,
-        Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        Herbert Xu <herbert@gondor.apana.org.au>,
-        "David S. Miller" <davem@davemloft.net>,
-        the arch/x86 maintainers <x86@kernel.org>,
-        Andy Lutomirski <luto@kernel.org>, Juergen Gross <jgross@suse.com>,
-        Thomas Hellstrom <thellstrom@vmware.com>,
-        "VMware, Inc." <pv-drivers@vmware.com>,
-        "Rafael J. Wysocki" <rjw@rjwysocki.net>,
-        Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>,
-        Rasmus Villemoes <linux@rasmusvillemoes.dk>,
-        Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
-        Will Deacon <will@kernel.org>, Ard Biesheuvel <ardb@kernel.org>,
-        Masami Hiramatsu <mhiramat@kernel.org>, Jiri Slaby <jslaby@suse.cz>,
-        Boris Ostrovsky <boris.ostrovsky@oracle.com>,
-        Josh Poimboeuf <jpoimboe@redhat.com>,
-        Cao jin <caoj.fnst@cn.fujitsu.com>,
-        Allison Randal <allison@lohutok.net>, Linux.Crypto@zytor.com
+Message-ID: <202003041019.C6386B2F7@keescook>
+References: <20200228000105.165012-1-thgarnie@chromium.org>
+ <202003022100.54CEEE60F@keescook>
+ <20200303095514.GA2596@hirez.programming.kicks-ass.net>
+ <CAJcbSZH1oON2VC2U8HjfC-6=M-xn5eU+JxHG2575iMpVoheKdA@mail.gmail.com>
+ <6e7e4191612460ba96567c16b4171f2d2f91b296.camel@linux.intel.com>
+ <202003031314.1AFFC0E@keescook>
+ <20200304092136.GI2596@hirez.programming.kicks-ass.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200304092136.GI2596@hirez.programming.kicks-ass.net>
 
-Mailing List <linux-crypto@vger.kernel.org>,LKML <linux-kernel@vger.kernel.org>,virtualization@lists.linux-foundation.org,Linux PM list <linux-pm@vger.kernel.org>
-From: hpa@zytor.com
-Message-ID: <F35C8DBD-9AC3-46F2-9043-6CB9A4FDDDC9@zytor.com>
+On Wed, Mar 04, 2020 at 10:21:36AM +0100, Peter Zijlstra wrote:
+> But at what cost; it does unspeakable ugly to the asm. And didn't a
+> kernel compiled with the extended PIE range produce a measurably slower
+> kernel due to all the ugly?
 
-On March 3, 2020 1:19:22 PM PST, Kees Cook <keescook@chromium=2Eorg> wrote:
->On Tue, Mar 03, 2020 at 01:01:26PM -0800, Kristen Carlson Accardi
->wrote:
->> On Tue, 2020-03-03 at 07:43 -0800, Thomas Garnier wrote:
->> > On Tue, Mar 3, 2020 at 1:55 AM Peter Zijlstra
-><peterz@infradead=2Eorg>
->> > wrote:
->> > > On Mon, Mar 02, 2020 at 09:02:15PM -0800, Kees Cook wrote:
->> > > > On Thu, Feb 27, 2020 at 04:00:45PM -0800, Thomas Garnier wrote:
->> > > > > Minor changes based on feedback and rebase from v10=2E
->> > > > >=20
->> > > > > Splitting the previous serie in two=2E This part contains
->> > > > > assembly code
->> > > > > changes required for PIE but without any direct dependencies
->> > > > > with the
->> > > > > rest of the patchset=2E
->> > > > >=20
->> > > > > Note: Using objtool to detect non-compliant PIE relocations
->is
->> > > > > not yet
->> > > > > possible as this patchset only includes the simplest PIE
->> > > > > changes=2E
->> > > > > Additional changes are needed in kvm, xen and percpu code=2E
->> > > > >=20
->> > > > > Changes:
->> > > > >  - patch v11 (assembly);
->> > > > >    - Fix comments on x86/entry/64=2E
->> > > > >    - Remove KASLR PIE explanation on all commits=2E
->> > > > >    - Add note on objtool not being possible at this stage of
->> > > > > the patchset=2E
->> > > >=20
->> > > > This moves us closer to PIE in a clean first step=2E I think
->these
->> > > > patches
->> > > > look good to go, and unblock the work in kvm, xen, and percpu
->> > > > code=2E Can
->> > > > one of the x86 maintainers pick this series up?
->> > >=20
->> > > But,=2E=2E=2E do we still need this in the light of that fine-grain=
-ed
->> > > kaslr
->> > > stuff?
->> > >=20
->> > > What is the actual value of this PIE crud in the face of that?
->> >=20
->> > If I remember well, it makes it easier/better but I haven't seen a
->> > recent update on that=2E Is that accurate Kees?
->>=20
->> I believe this patchset is valuable if people are trying to brute
->force
->> guess the kernel location, but not so awesome in the event of
->> infoleaks=2E In the case of the current fgkaslr implementation, we only
->> randomize within the existing text segment memory area - so with PIE
->> the text segment base can move around more, but within that it
->wouldn't
->> strengthen anything=2E So, if you have an infoleak, you learn the base
->> instantly, and are just left with the same extra protection you get
->> without PIE=2E
->
->Right -- PIE improves both non- and fg- KASLR similarly, in the sense
->that the possible entropy for base offset is expanded=2E It also opens
->the
->door to doing even more crazy things=2E (e=2Eg=2E why keep the kernel tex=
-t
->all
->in one contiguous chunk?)
->
->And generally speaking, it seems a nice improvement to me, as it gives
->the kernel greater addressing flexibility=2E
+Was that true? I thought the final results were a wash and that earlier
+benchmarks weren't accurate for some reason? I can't find the thread
+now. Thomas, do you have numbers on that?
 
-The difference in entropy between fgkaslr and extending the kernel to the =
-PIC memory model (which is the real thing this is doing) is immense:
+BTW, I totally agree that fgkaslr is the way to go in the future. I
+am mostly arguing for this under the assumption that it doesn't
+have meaningful performance impact and that it gains the kernel some
+flexibility in the kinds of things it can do in the future. If the former
+is not true, then I'd agree, the benefit needs to be more clear.
 
-The current kASLR has maybe 9 bits of entropy=2E PIC-model could extend th=
-at by at most 16 bits at considerable cost in performance and complexity=2E=
- Fgkaslr would provide many kilobits worth of entropy; the limiting factor =
-would be the random number source used! With a valid RNG, no two boots acro=
-ss all the computers in the world across all time would have an infinitesim=
-al probability of ever being the same; never mind the infoleak issue=2E
-
-In addition to the combinatorics, fgkaslr pushes randomization right as we=
-ll as left, so even for the address of any one individual function you get =
-a gain of 15-17 bits=2E
-
-"More is better" is a truism, but so is Amdahl's Law=2E
-
-
---=20
-Sent from my Android device with K-9 Mail=2E Please excuse my brevity=2E
+-- 
+Kees Cook
