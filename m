@@ -1,22 +1,20 @@
-Return-Path: <SRS0=XqUv=4V=lists.openwall.com=kernel-hardening-return-18062-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=9tU0=4V=lists.openwall.com=kernel-hardening-return-18063-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_2
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7E81CC3F2D8
-	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 19:22:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3DF51C3F2CE
+	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 21:26:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CDD9D20870
-	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 19:22:50 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=zytor.com header.i=@zytor.com header.b="ar6nn8Ge"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CDD9D20870
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zytor.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18062-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17660 invoked by uid 550); 4 Mar 2020 19:22:43 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9265020828
+	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Mar 2020 21:26:14 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9265020828
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=buserror.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18063-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9363 invoked by uid 550); 4 Mar 2020 21:26:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,80 +22,88 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17640 invoked from network); 4 Mar 2020 19:22:43 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 mail.zytor.com 024JM4WA436200
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=zytor.com;
-	s=2020022001; t=1583349727;
-	bh=g6Mtry4glpDMxH5UiOpY16heGYyer5fR7lVfPBWaveE=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=ar6nn8Ge/T+692bP42wyhN6/gA6zy1dzCiGF74CRXJXFqjrk6VwRkFpBhRP3+cZ6P
-	 aoecjqhhdSeSkR9EesGi+ThpGixJViS9m59hDZE5MkhJCppsl9CGI+XaXJHL6N9PSz
-	 N15YsSpDSe2BGbMQ73a5iqbaYgTLZGuuCk9xtQ+bYyE3yGCxvvNHQZ7Xw/jQnA8xUa
-	 jCODCawM3hNRUyrc1PnA5eoR37ZT81R1OELgMwfxsZpMMFvL9tLT1LJphQQCaZE+6J
-	 TgBBCCGkC2zFLRAajE3d9FAm6PTlGUqxGMq/StoWIgr6Tz8ZPVJwmUM93IFzinAgT+
-	 QzoETf31D45JA==
-Subject: Re: [PATCH v11 00/11] x86: PIE support to extend KASLR randomization
-To: Thomas Garnier <thgarnie@chromium.org>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>,
-        Kristen Carlson Accardi <kristen@linux.intel.com>,
-        Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>,
-        Borislav Petkov <bp@alien8.de>,
-        Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        Herbert Xu <herbert@gondor.apana.org.au>,
-        "David S. Miller" <davem@davemloft.net>,
-        the arch/x86 maintainers <x86@kernel.org>,
-        Andy Lutomirski
- <luto@kernel.org>, Juergen Gross <jgross@suse.com>,
-        Thomas Hellstrom <thellstrom@vmware.com>,
-        "VMware, Inc." <pv-drivers@vmware.com>,
-        "Rafael J. Wysocki"
- <rjw@rjwysocki.net>,
-        Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>,
-        Rasmus Villemoes <linux@rasmusvillemoes.dk>,
-        Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
-        Will Deacon
- <will@kernel.org>, Ard Biesheuvel <ardb@kernel.org>,
-        Masami Hiramatsu <mhiramat@kernel.org>, Jiri Slaby <jslaby@suse.cz>,
-        Boris Ostrovsky <boris.ostrovsky@oracle.com>,
-        Josh Poimboeuf <jpoimboe@redhat.com>,
-        Cao jin <caoj.fnst@cn.fujitsu.com>,
-        Allison Randal <allison@lohutok.net>,
-        Linux Crypto Mailing List <linux-crypto@vger.kernel.org>,
-        LKML <linux-kernel@vger.kernel.org>,
-        virtualization@lists.linux-foundation.org,
-        Linux PM list <linux-pm@vger.kernel.org>
-References: <20200228000105.165012-1-thgarnie@chromium.org>
- <202003022100.54CEEE60F@keescook>
- <20200303095514.GA2596@hirez.programming.kicks-ass.net>
- <CAJcbSZH1oON2VC2U8HjfC-6=M-xn5eU+JxHG2575iMpVoheKdA@mail.gmail.com>
- <6e7e4191612460ba96567c16b4171f2d2f91b296.camel@linux.intel.com>
- <202003031314.1AFFC0E@keescook>
- <20200304092136.GI2596@hirez.programming.kicks-ass.net>
- <202003041019.C6386B2F7@keescook>
- <e60876d0-4f7d-9523-bcec-6d002f717623@zytor.com>
- <CAJcbSZHBB1u2Vq0jZKsmd0UcRj=aichxTtbGvbWgf8-g8WPa7w@mail.gmail.com>
-From: "H. Peter Anvin" <hpa@zytor.com>
-Message-ID: <627fe5d2-e6c3-4eff-1a58-14e17dc04ac5@zytor.com>
-Date: Wed, 4 Mar 2020 11:22:04 -0800
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.3.1
-MIME-Version: 1.0
-In-Reply-To: <CAJcbSZHBB1u2Vq0jZKsmd0UcRj=aichxTtbGvbWgf8-g8WPa7w@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
+Received: (qmail 9331 invoked from network); 4 Mar 2020 21:26:06 -0000
+Message-ID: <d673649d6f371e82d4a94ba62bfd0d44efeca7b4.camel@buserror.net>
+From: Scott Wood <oss@buserror.net>
+To: Daniel Axtens <dja@axtens.net>, Jason Yan <yanaijie@huawei.com>, 
+ mpe@ellerman.id.au, linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com, 
+ christophe.leroy@c-s.fr, benh@kernel.crashing.org, paulus@samba.org, 
+ npiggin@gmail.com, keescook@chromium.org,
+ kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org, zhaohongjiang@huawei.com
+Date: Wed, 04 Mar 2020 15:21:21 -0600
+In-Reply-To: <87tv3drf79.fsf@dja-thinkpad.axtens.net>
+References: <20200206025825.22934-1-yanaijie@huawei.com>
+	 <87tv3drf79.fsf@dja-thinkpad.axtens.net>
+Organization: Red Hat
+Content-Type: text/plain; charset="UTF-8"
+X-Mailer: Evolution 3.28.5-0ubuntu0.18.04.1 
+Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
+X-SA-Exim-Connect-IP: 2601:449:8480:af0:12bf:48ff:fe84:c9a0
+X-SA-Exim-Rcpt-To: dja@axtens.net, yanaijie@huawei.com, mpe@ellerman.id.au, linuxppc-dev@lists.ozlabs.org, diana.craciun@nxp.com, christophe.leroy@c-s.fr, benh@kernel.crashing.org, paulus@samba.org, npiggin@gmail.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, zhaohongjiang@huawei.com
+X-SA-Exim-Mail-From: oss@buserror.net
+Subject: Re: [PATCH v3 0/6] implement KASLR for powerpc/fsl_booke/64
+X-SA-Exim-Version: 4.2.1 (built Tue, 02 Aug 2016 21:08:31 +0000)
+X-SA-Exim-Scanned: Yes (on baldur.buserror.net)
 
-On 2020-03-04 11:19, Thomas Garnier wrote:
->>
->> The huge memory model, required for arbitrary placement, has a very
->> significant performance impact.
+On Wed, 2020-02-26 at 18:16 +1100, Daniel Axtens wrote:
+> Hi Jason,
 > 
-> I assume you mean mcmodel=large, it doesn't use it. It uses -fPIE and
-> removes -mcmodel=kernel. It favors relative references whenever
-> possible.
+> > This is a try to implement KASLR for Freescale BookE64 which is based on
+> > my earlier implementation for Freescale BookE32:
+> > https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718
+> > 
+> > The implementation for Freescale BookE64 is similar as BookE32. One
+> > difference is that Freescale BookE64 set up a TLB mapping of 1G during
+> > booting. Another difference is that ppc64 needs the kernel to be
+> > 64K-aligned. So we can randomize the kernel in this 1G mapping and make
+> > it 64K-aligned. This can save some code to creat another TLB map at
+> > early boot. The disadvantage is that we only have about 1G/64K = 16384
+> > slots to put the kernel in.
+> > 
+> >     KERNELBASE
+> > 
+> >           64K                     |--> kernel <--|
+> >            |                      |              |
+> >         +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
+> >         |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
+> >         +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
+> >         |                         |                        1G
+> >         |----->   offset    <-----|
+> > 
+> >                               kernstart_virt_addr
+> > 
+> > I'm not sure if the slot numbers is enough or the design has any
+> > defects. If you have some better ideas, I would be happy to hear that.
+> > 
+> > Thank you all.
+> > 
 > 
+> Are you making any attempt to hide kernel address leaks in this series?
+> I've just been looking at the stackdump code just now, and it directly
+> prints link registers and stack pointers, which is probably enough to
+> determine the kernel base address:
+> 
+>                   SPs:               LRs:             %pS pointer
+> [    0.424506] [c0000000de403970] [c000000001fc0458] dump_stack+0xfc/0x154
+> (unreliable)
+> [    0.424593] [c0000000de4039c0] [c000000000267eec] panic+0x258/0x5ac
+> [    0.424659] [c0000000de403a60] [c0000000024d7a00]
+> mount_block_root+0x634/0x7c0
+> [    0.424734] [c0000000de403be0] [c0000000024d8100]
+> prepare_namespace+0x1ec/0x23c
+> [    0.424811] [c0000000de403c60] [c0000000024d7010]
+> kernel_init_freeable+0x804/0x880
+> 
+> git grep \\\"REG\\\" arch/powerpc shows a few other uses like this, all
+> in process.c or in xmon.
+> 
+> Maybe replacing the REG format string in KASLR mode would be sufficient?
 
-I know... this was in reference to a comment of Kees'.
+Whatever we decide to do here, it's not book3e-specific so it should be
+considered separately from these patches.
 
-	-hpa
+-Scott
+
 
