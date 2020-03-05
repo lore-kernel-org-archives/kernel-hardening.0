@@ -1,20 +1,23 @@
-Return-Path: <SRS0=g5h4=4W=lists.openwall.com=kernel-hardening-return-18084-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=14c+=4W=lists.openwall.com=kernel-hardening-return-18085-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 20EF8C3F2D1
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 17:55:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 92256C3F2D1
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 20:49:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7F2BE2072D
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 17:55:40 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7F2BE2072D
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=physik.fu-berlin.de
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18084-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13606 invoked by uid 550); 5 Mar 2020 17:55:35 -0000
+	by mail.kernel.org (Postfix) with SMTP id E7B3920870
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 20:49:46 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=tycho-ws.20150623.gappssmtp.com header.i=@tycho-ws.20150623.gappssmtp.com header.b="oCjzxHqs"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E7B3920870
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=tycho.ws
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18085-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21511 invoked by uid 550); 5 Mar 2020 20:49:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,91 +25,67 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26363 invoked from network); 5 Mar 2020 15:49:38 -0000
-Subject: Re: [PATCH] sh: Stop printing the virtual memory layout
+Received: (qmail 20455 invoked from network); 5 Mar 2020 20:49:38 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=tycho-ws.20150623.gappssmtp.com; s=20150623;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to:user-agent;
+        bh=5zmgxN7VRZXC7kbix0t7HZalzUvTentTfjnGm/3hMTE=;
+        b=oCjzxHqsExisvhlxj2vLbWI+LleP320DIA63HiMC3CvCVE+taSKApySOErK4ZOUpEt
+         J9NEAZwHZEmWGlvwUQRcTkTuMMzGpWOQXnz4PiGwEe5CWdNMxavPFDWW2EAGixCQhviZ
+         +I4OFEjaLBOeE10vj1L+uU8FohllLaMLab6RAz0XnnMv15zFailN4BfRGHiOaoAiaIYw
+         8y7qzIaNpPZH88IK1Cp3LTrqck3d8e8y5MxZg3BI38HsHzkuz/kBeEblxNYQ8e5miY8W
+         LR739rAjjIcqXS5O5Y8bv+USeISElSCSY4fbxmQTRCK7NaVpZZ18/K2gcxXqCO097Yi6
+         pKWw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to:user-agent;
+        bh=5zmgxN7VRZXC7kbix0t7HZalzUvTentTfjnGm/3hMTE=;
+        b=UUSQwjsF4GjltPwE+oMzdiHEBVfFJckectzvarFYA9I382O5fMGrfCAnpLMEMtEjDO
+         qkADJ2dGKCc1b+rfMsXXOyXmkgo/CP82jXJaFxZl3tkpBVb+WWLU7ijkCQa7Qk8GRUT+
+         tAi7jXY9lYg8/mytAl0gWsy3jYaDOPgi1nPLRXvcCAzmhjOvxKWKw4d/ChcBQzUk3UYA
+         SNcphNXTm9453FKnOrZcRXAYHD8FfaUmQ2My0hGK1Hqe92X5wShCw11S5rtykscWqJWq
+         PgW6MZaZWN90F9E97Q2YgtQjGK//7W9UbiQQXmT91pj3UpNmKxdgs/KQ/+6AMYe7U+IG
+         mYgQ==
+X-Gm-Message-State: ANhLgQ0KrHJ+tGWiyavB9oEO4HnpApbD2TSfsqxaOx437LptEErPCgpC
+	pRZRoOFJ9TC/8B7K2O98OoTzrw==
+X-Google-Smtp-Source: ADFU+vut5SaFR53pXBOtJjgao2EQ5xqKFPyU2dbqIJP6N0WO2apubN/ljUNmlK9XJyrF+68bzRL6FA==
+X-Received: by 2002:a25:860d:: with SMTP id y13mr137357ybk.310.1583441366443;
+        Thu, 05 Mar 2020 12:49:26 -0800 (PST)
+Date: Thu, 5 Mar 2020 13:49:08 -0700
+From: Tycho Andersen <tycho@tycho.ws>
 To: Arvind Sankar <nivedita@alum.mit.edu>
-Cc: Joe Perches <joe@perches.com>, Kees Cook <keescook@chromium.org>,
- "Tobin C . Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>,
- kernel-hardening@lists.openwall.com,
- Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>,
- linux-sh@vger.kernel.org, linux-kernel@vger.kernel.org
-References: <202003021038.8F0369D907@keescook>
- <20200305151010.835954-1-nivedita@alum.mit.edu>
- <f672417e-1323-4ef2-58a1-1158c482d569@physik.fu-berlin.de>
- <31d1567c4c195f3bc5c6b610386cf0f559f9094f.camel@perches.com>
- <3c628a5a-35c7-3d92-b94b-23704500f7c4@physik.fu-berlin.de>
- <20200305154657.GA848330@rani.riverdale.lan>
-From: John Paul Adrian Glaubitz <glaubitz@physik.fu-berlin.de>
-Autocrypt: addr=glaubitz@physik.fu-berlin.de; keydata=
- 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
- scOkTAZQGVpD/8AaLH4v1w==
-Message-ID: <456fddd9-c980-b0f2-9dd0-19befee7861e@physik.fu-berlin.de>
-Date: Thu, 5 Mar 2020 16:49:22 +0100
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.5.0
+Cc: Kees Cook <keescook@chromium.org>, "Tobin C . Harding" <me@tobin.cc>,
+	kernel-hardening@lists.openwall.com,
+	Dave Hansen <dave.hansen@linux.intel.com>,
+	Andy Lutomirski <luto@kernel.org>,
+	Peter Zijlstra <peterz@infradead.org>, x86@kernel.org,
+	linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v3] x86/mm/init_32: Stop printing the virtual memory
+ layout
+Message-ID: <20200305204908.GA6506@cisco>
+References: <202003021039.257258E1B@keescook>
+ <20200305150152.831697-1-nivedita@alum.mit.edu>
 MIME-Version: 1.0
-In-Reply-To: <20200305154657.GA848330@rani.riverdale.lan>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-Originating-IP: 160.45.32.140
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200305150152.831697-1-nivedita@alum.mit.edu>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On 3/5/20 4:46 PM, Arvind Sankar wrote:
-> Not really too late. I can do s/pr_info/pr_devel and resubmit.
+On Thu, Mar 05, 2020 at 10:01:52AM -0500, Arvind Sankar wrote:
+> For security, don't display the kernel's virtual memory layout.
 > 
-> parisc for eg actually hides this in #if 0 rather than deleting the
-> code.
+> Kees Cook points out:
+> "These have been entirely removed on other architectures, so let's
+> just do the same for ia32 and remove it unconditionally."
 > 
-> Kees, you fine with that?
+> 071929dbdd86 ("arm64: Stop printing the virtual memory layout")
+> 1c31d4e96b8c ("ARM: 8820/1: mm: Stop printing the virtual memory layout")
+> 31833332f798 ("m68k/mm: Stop printing the virtual memory layout")
+> fd8d0ca25631 ("parisc: Hide virtual kernel memory layout")
+> adb1fe9ae2ee ("mm/page_alloc: Remove kernel address exposure in free_reserved_area()")
+> 
+> Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
 
-But wasn't it removed for all the other architectures already? Or are these
-changes not in Linus' tree yet?
-
-Adrian
-
--- 
- .''`.  John Paul Adrian Glaubitz
-: :' :  Debian Developer - glaubitz@debian.org
-`. `'   Freie Universitaet Berlin - glaubitz@physik.fu-berlin.de
-  `-    GPG: 62FF 8A75 84E0 2956 9546  0006 7426 3B37 F5B5 F913
+Acked-by: Tycho Andersen <tycho@tycho.ws>
