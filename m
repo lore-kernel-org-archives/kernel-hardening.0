@@ -1,4 +1,4 @@
-Return-Path: <SRS0=mcRH=4W=lists.openwall.com=kernel-hardening-return-18083-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=g5h4=4W=lists.openwall.com=kernel-hardening-return-18084-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A327FC3F2D1
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 17:54:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 20EF8C3F2D1
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 17:55:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0AD022072D
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 17:54:23 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0AD022072D
+	by mail.kernel.org (Postfix) with SMTP id 7F2BE2072D
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 17:55:40 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7F2BE2072D
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=physik.fu-berlin.de
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18083-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11766 invoked by uid 550); 5 Mar 2020 17:54:17 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18084-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13606 invoked by uid 550); 5 Mar 2020 17:55:35 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,11 +22,11 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22383 invoked from network); 5 Mar 2020 15:41:21 -0000
+Received: (qmail 26363 invoked from network); 5 Mar 2020 15:49:38 -0000
 Subject: Re: [PATCH] sh: Stop printing the virtual memory layout
-To: Joe Perches <joe@perches.com>, Arvind Sankar <nivedita@alum.mit.edu>,
- Kees Cook <keescook@chromium.org>
-Cc: "Tobin C . Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>,
+To: Arvind Sankar <nivedita@alum.mit.edu>
+Cc: Joe Perches <joe@perches.com>, Kees Cook <keescook@chromium.org>,
+ "Tobin C . Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>,
  kernel-hardening@lists.openwall.com,
  Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>,
  linux-sh@vger.kernel.org, linux-kernel@vger.kernel.org
@@ -34,6 +34,8 @@ References: <202003021038.8F0369D907@keescook>
  <20200305151010.835954-1-nivedita@alum.mit.edu>
  <f672417e-1323-4ef2-58a1-1158c482d569@physik.fu-berlin.de>
  <31d1567c4c195f3bc5c6b610386cf0f559f9094f.camel@perches.com>
+ <3c628a5a-35c7-3d92-b94b-23704500f7c4@physik.fu-berlin.de>
+ <20200305154657.GA848330@rani.riverdale.lan>
 From: John Paul Adrian Glaubitz <glaubitz@physik.fu-berlin.de>
 Autocrypt: addr=glaubitz@physik.fu-berlin.de; keydata=
  mQINBE3JE9wBEADMrYGNfz3oz6XLw9XcWvuIxIlPWoTyw9BxTicfGAv0d87wngs9U+d52t/R
@@ -79,27 +81,27 @@ Autocrypt: addr=glaubitz@physik.fu-berlin.de; keydata=
  jEF9ImTPcYZpw5vhdyPwBdXW2lSjV3EAqknWujRgcsm84nycuJnImwJptR481EWmtuH6ysj5
  YhRVGbQPfdsjVUQfZdRdkEv4CZ90pdscBi1nRqcqANtzC+WQFwekDzk2lGqNRDg56s+q0KtY
  scOkTAZQGVpD/8AaLH4v1w==
-Message-ID: <3c628a5a-35c7-3d92-b94b-23704500f7c4@physik.fu-berlin.de>
-Date: Thu, 5 Mar 2020 16:41:05 +0100
+Message-ID: <456fddd9-c980-b0f2-9dd0-19befee7861e@physik.fu-berlin.de>
+Date: Thu, 5 Mar 2020 16:49:22 +0100
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.5.0
 MIME-Version: 1.0
-In-Reply-To: <31d1567c4c195f3bc5c6b610386cf0f559f9094f.camel@perches.com>
+In-Reply-To: <20200305154657.GA848330@rani.riverdale.lan>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 X-Originating-IP: 160.45.32.140
 
-On 3/5/20 4:38 PM, Joe Perches wrote:
->> Aww, why wasn't this made configurable? I found these memory map printouts
->> very useful for development.
+On 3/5/20 4:46 PM, Arvind Sankar wrote:
+> Not really too late. I can do s/pr_info/pr_devel and resubmit.
 > 
-> It could be changed from pr_info to pr_devel.
+> parisc for eg actually hides this in #if 0 rather than deleting the
+> code.
 > 
-> A #define DEBUG would have to be added to emit it.
+> Kees, you fine with that?
 
-Well, from the discussion it seems the decision to cut it out has already been
-made, so I guess it's too late :(.
+But wasn't it removed for all the other architectures already? Or are these
+changes not in Linus' tree yet?
 
 Adrian
 
