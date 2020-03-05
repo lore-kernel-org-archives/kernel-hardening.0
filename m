@@ -1,20 +1,20 @@
-Return-Path: <SRS0=JcPc=4W=lists.openwall.com=kernel-hardening-return-18070-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Sw95=4W=lists.openwall.com=kernel-hardening-return-18071-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7AF24C3F2D1
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 03:22:45 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5C6E3C3F2D1
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 15:02:16 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D89E1208C3
-	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 03:22:44 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D89E1208C3
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18070-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3672 invoked by uid 550); 5 Mar 2020 03:22:38 -0000
+	by mail.kernel.org (Postfix) with SMTP id B238B20801
+	for <kernel-hardening@archiver.kernel.org>; Thu,  5 Mar 2020 15:02:15 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B238B20801
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=alum.mit.edu
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18071-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1828 invoked by uid 550); 5 Mar 2020 15:02:06 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,96 +22,108 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3637 invoked from network); 5 Mar 2020 03:22:38 -0000
-Subject: Re: [PATCH v3 0/6] implement KASLR for powerpc/fsl_booke/64
-To: Scott Wood <oss@buserror.net>, Daniel Axtens <dja@axtens.net>,
-	<mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>
-CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>
-References: <20200206025825.22934-1-yanaijie@huawei.com>
- <87tv3drf79.fsf@dja-thinkpad.axtens.net>
- <d673649d6f371e82d4a94ba62bfd0d44efeca7b4.camel@buserror.net>
-From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <473e276e-ed72-b75b-9797-7845ee27db88@huawei.com>
-Date: Thu, 5 Mar 2020 11:22:16 +0800
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
- Thunderbird/68.4.2
+Received: (qmail 1796 invoked from network); 5 Mar 2020 15:02:05 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=G+99kCRYMzeEWVxPvUrg7nF1DV74zPu+cLQl+vuE6tE=;
+        b=ikgQK95PV7J6MqEfek1UMDx4AAwvahztyM5/jz0wszEI97hC02/dpziXlCFKkpJ5uO
+         tQcb645funOi/zSyniOq4xolxmXfPnTKWvPPaUilyy1xlffNZaiNHUB8ced6CErT1yFp
+         barwGAlqA63ZLicUOKjeDdHwNH2L7yz1fiCLPbaaCTRtg8+cy7xcJ0WvGJC8qHuD2RtO
+         xByC2RE/yKK0nlQjuBG2HAeduyCZ50qPAlb6eHJ+8hmLGllYoC9y8pceZek7rXNAe/Ss
+         l+dt0pOD+0m6eBeW9G7NqtvBs7BHIpP+nZVbfoMRhrP8m7lcdnRWrzb0Vfosv/xY8krq
+         LG6Q==
+X-Gm-Message-State: ANhLgQ1pEOXTaOm1OQ/6QTGBf+Z1gkGBChfg+J5EZEqTo7qXkrJHvkE1
+	bmCdeR2w8QDnwzo+6o24Hbc=
+X-Google-Smtp-Source: ADFU+vun+lE3H+kFlVWifa921exuOdYo+CsuSTA28nIHTavPtrQtBcLZ/jpFo/8YRdLeTKv6qbbgJg==
+X-Received: by 2002:a37:a14a:: with SMTP id k71mr8329570qke.321.1583420513686;
+        Thu, 05 Mar 2020 07:01:53 -0800 (PST)
+From: Arvind Sankar <nivedita@alum.mit.edu>
+To: Kees Cook <keescook@chromium.org>
+Cc: "Tobin C . Harding" <me@tobin.cc>,
+	Tycho Andersen <tycho@tycho.ws>,
+	kernel-hardening@lists.openwall.com,
+	Dave Hansen <dave.hansen@linux.intel.com>,
+	Andy Lutomirski <luto@kernel.org>,
+	Peter Zijlstra <peterz@infradead.org>,
+	x86@kernel.org,
+	linux-kernel@vger.kernel.org
+Subject: [PATCH v3] x86/mm/init_32: Stop printing the virtual memory layout
+Date: Thu,  5 Mar 2020 10:01:52 -0500
+Message-Id: <20200305150152.831697-1-nivedita@alum.mit.edu>
+X-Mailer: git-send-email 2.24.1
+In-Reply-To: <202003021039.257258E1B@keescook>
+References: <202003021039.257258E1B@keescook>
 MIME-Version: 1.0
-In-Reply-To: <d673649d6f371e82d4a94ba62bfd0d44efeca7b4.camel@buserror.net>
-Content-Type: text/plain; charset="utf-8"; format=flowed
 Content-Transfer-Encoding: 8bit
-X-Originating-IP: [10.173.221.195]
-X-CFilter-Loop: Reflected
 
+For security, don't display the kernel's virtual memory layout.
 
+Kees Cook points out:
+"These have been entirely removed on other architectures, so let's
+just do the same for ia32 and remove it unconditionally."
 
-在 2020/3/5 5:21, Scott Wood 写道:
-> On Wed, 2020-02-26 at 18:16 +1100, Daniel Axtens wrote:
->> Hi Jason,
->>
->>> This is a try to implement KASLR for Freescale BookE64 which is based on
->>> my earlier implementation for Freescale BookE32:
->>> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718
->>>
->>> The implementation for Freescale BookE64 is similar as BookE32. One
->>> difference is that Freescale BookE64 set up a TLB mapping of 1G during
->>> booting. Another difference is that ppc64 needs the kernel to be
->>> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
->>> it 64K-aligned. This can save some code to creat another TLB map at
->>> early boot. The disadvantage is that we only have about 1G/64K = 16384
->>> slots to put the kernel in.
->>>
->>>      KERNELBASE
->>>
->>>            64K                     |--> kernel <--|
->>>             |                      |              |
->>>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>>          |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
->>>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>>          |                         |                        1G
->>>          |----->   offset    <-----|
->>>
->>>                                kernstart_virt_addr
->>>
->>> I'm not sure if the slot numbers is enough or the design has any
->>> defects. If you have some better ideas, I would be happy to hear that.
->>>
->>> Thank you all.
->>>
->>
->> Are you making any attempt to hide kernel address leaks in this series?
->> I've just been looking at the stackdump code just now, and it directly
->> prints link registers and stack pointers, which is probably enough to
->> determine the kernel base address:
->>
->>                    SPs:               LRs:             %pS pointer
->> [    0.424506] [c0000000de403970] [c000000001fc0458] dump_stack+0xfc/0x154
->> (unreliable)
->> [    0.424593] [c0000000de4039c0] [c000000000267eec] panic+0x258/0x5ac
->> [    0.424659] [c0000000de403a60] [c0000000024d7a00]
->> mount_block_root+0x634/0x7c0
->> [    0.424734] [c0000000de403be0] [c0000000024d8100]
->> prepare_namespace+0x1ec/0x23c
->> [    0.424811] [c0000000de403c60] [c0000000024d7010]
->> kernel_init_freeable+0x804/0x880
->>
->> git grep \\\"REG\\\" arch/powerpc shows a few other uses like this, all
->> in process.c or in xmon.
->>
->> Maybe replacing the REG format string in KASLR mode would be sufficient?
-> 
-> Whatever we decide to do here, it's not book3e-specific so it should be
-> considered separately from these patches.
-> 
+071929dbdd86 ("arm64: Stop printing the virtual memory layout")
+1c31d4e96b8c ("ARM: 8820/1: mm: Stop printing the virtual memory layout")
+31833332f798 ("m68k/mm: Stop printing the virtual memory layout")
+fd8d0ca25631 ("parisc: Hide virtual kernel memory layout")
+adb1fe9ae2ee ("mm/page_alloc: Remove kernel address exposure in free_reserved_area()")
 
-OK, I will continue to work with this series.
+Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
+---
+ arch/x86/mm/init_32.c | 38 --------------------------------------
+ 1 file changed, 38 deletions(-)
 
-> -Scott
-> 
-> 
-> 
-> .
-> 
+diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
+index 23df4885bbed..8ae0272c1c51 100644
+--- a/arch/x86/mm/init_32.c
++++ b/arch/x86/mm/init_32.c
+@@ -788,44 +788,6 @@ void __init mem_init(void)
+ 	x86_init.hyper.init_after_bootmem();
+ 
+ 	mem_init_print_info(NULL);
+-	printk(KERN_INFO "virtual kernel memory layout:\n"
+-		"    fixmap  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"  cpu_entry : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-#ifdef CONFIG_HIGHMEM
+-		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-#endif
+-		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .data : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .text : 0x%08lx - 0x%08lx   (%4ld kB)\n",
+-		FIXADDR_START, FIXADDR_TOP,
+-		(FIXADDR_TOP - FIXADDR_START) >> 10,
+-
+-		CPU_ENTRY_AREA_BASE,
+-		CPU_ENTRY_AREA_BASE + CPU_ENTRY_AREA_MAP_SIZE,
+-		CPU_ENTRY_AREA_MAP_SIZE >> 10,
+-
+-#ifdef CONFIG_HIGHMEM
+-		PKMAP_BASE, PKMAP_BASE+LAST_PKMAP*PAGE_SIZE,
+-		(LAST_PKMAP*PAGE_SIZE) >> 10,
+-#endif
+-
+-		VMALLOC_START, VMALLOC_END,
+-		(VMALLOC_END - VMALLOC_START) >> 20,
+-
+-		(unsigned long)__va(0), (unsigned long)high_memory,
+-		((unsigned long)high_memory - (unsigned long)__va(0)) >> 20,
+-
+-		(unsigned long)&__init_begin, (unsigned long)&__init_end,
+-		((unsigned long)&__init_end -
+-		 (unsigned long)&__init_begin) >> 10,
+-
+-		(unsigned long)&_etext, (unsigned long)&_edata,
+-		((unsigned long)&_edata - (unsigned long)&_etext) >> 10,
+-
+-		(unsigned long)&_text, (unsigned long)&_etext,
+-		((unsigned long)&_etext - (unsigned long)&_text) >> 10);
+ 
+ 	/*
+ 	 * Check boundaries twice: Some fundamental inconsistencies can
+-- 
+2.24.1
 
