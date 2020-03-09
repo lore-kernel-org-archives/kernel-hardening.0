@@ -1,23 +1,23 @@
-Return-Path: <SRS0=35Yx=42=lists.openwall.com=kernel-hardening-return-18111-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=r3WZ=42=lists.openwall.com=kernel-hardening-return-18112-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-13.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F1B71C18E5A
-	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 16:59:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 361BDC10F25
+	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 23:45:42 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5131620727
-	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 16:59:51 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 594D724654
+	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 23:45:41 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="kkDM6ZUx"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5131620727
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=roeck-us.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18111-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20149 invoked by uid 550); 9 Mar 2020 16:59:45 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="TEQwnLgh"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 594D724654
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18112-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1162 invoked by uid 550); 9 Mar 2020 23:45:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,80 +25,204 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14335 invoked from network); 9 Mar 2020 16:49:45 -0000
+Received: (qmail 1127 invoked from network); 9 Mar 2020 23:45:33 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=sender:date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to:user-agent;
-        bh=bNoFPXhpvMiuUF7F+uekItlbOQGQEdKTXJsSJYz6wNk=;
-        b=kkDM6ZUxQYSDcpRCzqXBzl6yRdTxqvu7JFcn1rImw8v+HOQq5uEy+Sz/qwy5/3C+s3
-         KUB+FBs5z4n/A5MqPulS4DKCuhgmvKIaNUHArlCnB0h/4FTfLx81RD+3NgPaOsTFI1sc
-         Xht0fVFnt3MfGytquyliFmFlyCRFniOygfHi/nqq5EDEZIh0kzrbvrDR7LEVlhMc98eX
-         29sgNmh17iEBtwdaaw3GPVgxtwO9+CmG5NxPouEQhUPQ9nIeCFBa/YA5/1Cb1Wws7s7Y
-         +vU04Kr5himrgDw19nt8CDZj7ZuERB70/bdH97/T6iWuj6uLbmoM8YruSAMB5TCOsPlb
-         8E3A==
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc:content-transfer-encoding;
+        bh=fmBdIxd2DBH3drat2RxXw5EvMETx4X35UelSAv/ALh8=;
+        b=TEQwnLgh8B3PsJKBlW2TWyJTnA9DDlkOy51XwT8ZvW45CdlsU0L88IRmKnKkRltzBm
+         kGOI6UBw/K7+paEi85+jlPPq3aiTme3vzGx0b9SuJDLCK0DjPl3v+LDgpJwsWFjalO1g
+         VMe5PrqnKGg8d5GsqbZHoRMhh7Niv0b3RLcDFnfMlagHZIzScsm1LLtypLf7E73dZsIz
+         Uu+rOdydlnVXzRtmsfDp6JQRHCADpg+3xOUK4fvE+ZcX7GO7hPaNAxIED0JiHv2Ndvjm
+         IgTFCLoYEf13ad9TCi4MxxRLj54zFArGjR3fZwoYAoFD1Y+5F1sl/nxCYT1zPUp2xbwH
+         keJw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:date:from:to:cc:subject:message-id
-         :references:mime-version:content-disposition:in-reply-to:user-agent;
-        bh=bNoFPXhpvMiuUF7F+uekItlbOQGQEdKTXJsSJYz6wNk=;
-        b=D3V2Wne0i4j0UE5xbkgiiL9QmYQFLPGtzkjVc0JCzs8IvRDLidFoNSKWQoKe9Dd+/t
-         MS0J8Zu06xxzBd2vplV9uTpkW4f3MJtHlJhh4CFHIEhogdYr1qGGoHIM0Xf1DpREgPGj
-         RWYsrmUd+Ar/U8g5Sr/wl0FgtvYlsRC7Aep43M3wg8QEZSG14Et8x62v933zWUL8nCI2
-         phHCoz86twVunld1kQnMRrVCebN6vcyzXZvfFoEwopv2g7pitjTbzyKc2oZ/HyTDEVuL
-         WuZzUYJugND+LEIVo91Z8U6WnG67iSyh9tFY19VA+ZEfOFBZ5kXYW4QD1tHJKfQkum7h
-         4eIA==
-X-Gm-Message-State: ANhLgQ16ULGcD4U4lVJUD26IPvlTkReSaugwYGmHRdLluG9z5neciGK7
-	pXpECHk+0MWrYYqawmosJkY=
-X-Google-Smtp-Source: ADFU+vt/onT9cxmuspJ5T+KCU952uWkieCbEwJO4adVK6fLUN8zSNRf6ArvXDJD1xRu8YQakUYup1A==
-X-Received: by 2002:a17:90b:1882:: with SMTP id mn2mr105796pjb.139.1583772573044;
-        Mon, 09 Mar 2020 09:49:33 -0700 (PDT)
-Sender: Guenter Roeck <groeck7@gmail.com>
-Date: Mon, 9 Mar 2020 09:49:31 -0700
-From: Guenter Roeck <linux@roeck-us.net>
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org,
-	linux@armlinux.org.uk, Kees Cook <keescook@chromium.org>,
-	Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>,
-	Laura Abbott <labbott@redhat.com>,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v3] ARM: smp: add support for per-task stack canaries
-Message-ID: <20200309164931.GA23889@roeck-us.net>
-References: <20181206083257.9596-1-ard.biesheuvel@linaro.org>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=fmBdIxd2DBH3drat2RxXw5EvMETx4X35UelSAv/ALh8=;
+        b=NyK+LxgvmCP3v1d+tXSYpZwbS15LmHkEdNdEE0oheCSqCsjzqwkhE+SCnAsuaQEVIh
+         L+bMWMnNq+hUqRHOlUfmQrCphBFDLB08daHbB/53eThlZKwJQO47GIlpYDjQjzTOQTn9
+         8vDtqQvwBBf4UlGqeLk72n10Snjk+Z9Q7ZRrn5m35eZ4Duy9MV9//wmpFyIA4Mbazqtm
+         8ei8NRcPTQx8SM0xykl4ZnW9TrUYxl9SGycrVw10ug3lAA5ePZ0i36wpuPGmefMSDKbj
+         yC2TwrZRcbkq9TC8Vo+sLgkiAgSuLQr/00aN9I9Y1ccCZy7UoL9n+U1bjNIisON2KMYo
+         9LZw==
+X-Gm-Message-State: ANhLgQ2DW8Fzw9CmAK9uSNH7xAZO8aZc57rZZ+jxPjXk+8PwvcYTbVKm
+	oOBwfsvzNzoQCbSKVDWJ6CwJ96ytaRfMTwOc+YAE5w==
+X-Google-Smtp-Source: ADFU+vu3ctqe66UiWnus61OOtoDCVSNb+kXOZJ2waD27t2a3YUthZNqfb4fWuw2uMljnqbH/s6/XwWZrmf2yGIRlebQ=
+X-Received: by 2002:a9d:7358:: with SMTP id l24mr14121308otk.228.1583797521077;
+ Mon, 09 Mar 2020 16:45:21 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20181206083257.9596-1-ard.biesheuvel@linaro.org>
-User-Agent: Mutt/1.9.4 (2018-02-28)
+References: <20200224160215.4136-1-mic@digikod.net>
+In-Reply-To: <20200224160215.4136-1-mic@digikod.net>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 10 Mar 2020 00:44:54 +0100
+Message-ID: <CAG48ez21bEn0wL1bbmTiiu8j9jP5iEWtHOwz4tURUJ+ki0ydYw@mail.gmail.com>
+Subject: Re: [RFC PATCH v14 00/10] Landlock LSM
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: kernel list <linux-kernel@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, 
+	Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, 
+	Casey Schaufler <casey@schaufler-ca.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
+	James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, 
+	Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>, 
+	=?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mickael.salaun@ssi.gouv.fr>, 
+	"Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, 
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
+	linux-arch <linux-arch@vger.kernel.org>, linux-doc@vger.kernel.org, 
+	linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
+	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, 
+	linux-security-module <linux-security-module@vger.kernel.org>, 
+	"the arch/x86 maintainers" <x86@kernel.org>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-On Thu, Dec 06, 2018 at 09:32:57AM +0100, Ard Biesheuvel wrote:
-> On ARM, we currently only change the value of the stack canary when
-> switching tasks if the kernel was built for UP. On SMP kernels, this
-> is impossible since the stack canary value is obtained via a global
-> symbol reference, which means
-> a) all running tasks on all CPUs must use the same value
-> b) we can only modify the value when no kernel stack frames are live
->    on any CPU, which is effectively never.
-> 
-> So instead, use a GCC plugin to add a RTL pass that replaces each
-> reference to the address of the __stack_chk_guard symbol with an
-> expression that produces the address of the 'stack_canary' field
-> that is added to struct thread_info. This way, each task will use
-> its own randomized value.
-> 
-> Cc: Russell King <linux@armlinux.org.uk>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Emese Revfy <re.emese@gmail.com>
-> Cc: Arnd Bergmann <arnd@arndb.de>
-> Cc: Laura Abbott <labbott@redhat.com>
-> Cc: kernel-hardening@lists.openwall.com
-> Acked-by: Nicolas Pitre <nico@linaro.org>
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+On Mon, Feb 24, 2020 at 5:03 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
+wrote:
+> This new version of Landlock is a major revamp of the previous series
+> [1], hence the RFC tag.  The three main changes are the replacement of
+> eBPF with a dedicated safe management of access rules, the replacement
+> of the use of seccomp(2) with a dedicated syscall, and the management of
+> filesystem access-control (back from the v10).
+>
+> As discussed in [2], eBPF may be too powerful and dangerous to be put in
+> the hand of unprivileged and potentially malicious processes, especially
+> because of side-channel attacks against access-controls or other parts
+> of the kernel.
+>
+> Thanks to this new implementation (1540 SLOC), designed from the ground
+> to be used by unprivileged processes, this series enables a process to
+> sandbox itself without requiring CAP_SYS_ADMIN, but only the
+> no_new_privs constraint (like seccomp).  Not relying on eBPF also
+> enables to improve performances, especially for stacked security
+> policies thanks to mergeable rulesets.
+>
+> The compiled documentation is available here:
+> https://landlock.io/linux-doc/landlock-v14/security/landlock/index.html
+>
+> This series can be applied on top of v5.6-rc3.  This can be tested with
+> CONFIG_SECURITY_LANDLOCK and CONFIG_SAMPLE_LANDLOCK.  This patch series
+> can be found in a Git repository here:
+> https://github.com/landlock-lsm/linux/commits/landlock-v14
+> I would really appreciate constructive comments on the design and the cod=
+e.
 
-Since this patch is in the tree, cc-option no longer works on
-the arm architecture if CONFIG_STACKPROTECTOR_PER_TASK is enabled.
+I've looked through the patchset, and I think that it would be
+possible to simplify it quite a bit. I have tried to do that (and
+compiled-tested it, but not actually tried running it); here's what I
+came up with:
 
-Any idea how to fix that ? 
+https://github.com/thejh/linux/commits/landlock-mod
 
-Thanks,
-Guenter
+The three modified patches (patches 1, 2 and 5) are marked with
+"[MODIFIED]" in their title. Please take a look - what do you think?
+Feel free to integrate my changes into your patches if you think they
+make sense.
+
+
+Apart from simplifying the code, I also found the following issues,
+which I have fixed in the modified patches:
+
+put_hierarchy() has to drop a reference on its parent. (However, this
+must not recurse, so we have to do it with a loop.)
+
+put_ruleset() is not in an RCU read-side critical section, so as soon
+as it calls kfree_rcu(), "freeme" might disappear; but "orig" is in
+"freeme", so when the loop tries to find the next element with
+rb_next(orig), that can be a UAF.
+rbtree_postorder_for_each_entry_safe() exists for dealing with such
+issues.
+
+AFAIK the calls to rb_erase() in clean_ruleset() is not safe if
+someone is concurrently accessing the rbtree as an RCU reader, because
+concurrent rotations can prevent a lookup from succeeding. The
+simplest fix is probably to just make any rbtree that has been
+installed on a process immutable, and give up on the cleaning -
+arguably the memory wastage that can cause is pretty limited. (By the
+way, as a future optimization, we might want to turn the rbtree into a
+hashtable when installing it?)
+
+The iput() in landlock_release_inode() looks unsafe - you need to
+guarantee that even if the deletion of a ruleset races with
+generic_shutdown_super(), every iput() for that superblock finishes
+before landlock_release_inodes() returns, even if the iput() is
+happening in the context of ruleset deletion. This is why
+fsnotify_unmount_inodes() has that wait_var_event() at the end.
+
+
+Aside from those things, there is also a major correctness issue where
+I'm not sure how to solve it properly:
+
+Let's say a process installs a filter on itself like this:
+
+struct landlock_attr_ruleset ruleset =3D { .handled_access_fs =3D
+ACCESS_FS_ROUGHLY_WRITE};
+int ruleset_fd =3D landlock(LANDLOCK_CMD_CREATE_RULESET,
+LANDLOCK_OPT_CREATE_RULESET, sizeof(ruleset), &ruleset);
+struct landlock_attr_path_beneath path_beneath =3D {
+  .ruleset_fd =3D ruleset_fd,
+  .allowed_access =3D ACCESS_FS_ROUGHLY_WRITE,
+  .parent_fd =3D open("/tmp/foobar", O_PATH),
+};
+landlock(LANDLOCK_CMD_ADD_RULE, LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
+sizeof(path_beneath), &path_beneath);
+prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+struct landlock_attr_enforce attr_enforce =3D { .ruleset_fd =3D ruleset_fd =
+};
+landlock(LANDLOCK_CMD_ENFORCE_RULESET, LANDLOCK_OPT_ENFORCE_RULESET,
+sizeof(attr_enforce), &attr_enforce);
+
+At this point, the process is not supposed to be able to write to
+anything outside /tmp/foobar, right? But what happens if the process
+does the following next?
+
+struct landlock_attr_ruleset ruleset =3D { .handled_access_fs =3D
+ACCESS_FS_ROUGHLY_WRITE};
+int ruleset_fd =3D landlock(LANDLOCK_CMD_CREATE_RULESET,
+LANDLOCK_OPT_CREATE_RULESET, sizeof(ruleset), &ruleset);
+struct landlock_attr_path_beneath path_beneath =3D {
+  .ruleset_fd =3D ruleset_fd,
+  .allowed_access =3D ACCESS_FS_ROUGHLY_WRITE,
+  .parent_fd =3D open("/", O_PATH),
+};
+landlock(LANDLOCK_CMD_ADD_RULE, LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
+sizeof(path_beneath), &path_beneath);
+prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+struct landlock_attr_enforce attr_enforce =3D { .ruleset_fd =3D ruleset_fd =
+};
+landlock(LANDLOCK_CMD_ENFORCE_RULESET, LANDLOCK_OPT_ENFORCE_RULESET,
+sizeof(attr_enforce), &attr_enforce);
+
+As far as I can tell from looking at the source, after this, you will
+have write access to the entire filesystem again. I think the idea is
+that LANDLOCK_CMD_ENFORCE_RULESET should only let you drop privileges,
+not increase them, right?
+
+I think the easy way to fix this would be to add a bitmask to each
+rule that says from which ruleset it originally comes, and then let
+check_access_path() collect these bitmasks from each rule with OR, and
+check at the end whether the resulting bitmask is full - if not, at
+least one of the rulesets did not permit the access, and it should be
+denied.
+
+But maybe it would make more sense to change how the API works
+instead, and get rid of the concept of "merging" two rulesets
+together? Instead, we could make the API work like this:
+
+ - LANDLOCK_CMD_CREATE_RULESET gives you a file descriptor whose
+->private_data contains a pointer to the old ruleset of the process,
+as well as a pointer to a new empty ruleset.
+ - LANDLOCK_CMD_ADD_RULE fails if the specified rule would not be
+permitted by the old ruleset, then adds the rule to the new ruleset
+ - LANDLOCK_CMD_ENFORCE_RULESET fails if the old ruleset pointer in
+->private_data doesn't match the current ruleset of the process, then
+replaces the old ruleset with the new ruleset.
+
+With this, the new ruleset is guaranteed to be a subset of the old
+ruleset because each of the new ruleset's rules is permitted by the
+old ruleset. (Unless the directory hierarchy rotates, but in that case
+the inaccuracy isn't much worse than what would've been possible
+through RCU path walk anyway AFAIK.)
+
+What do you think?
