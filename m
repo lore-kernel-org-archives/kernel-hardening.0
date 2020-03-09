@@ -1,24 +1,23 @@
-Return-Path: <SRS0=Ui4d=42=lists.openwall.com=kernel-hardening-return-18108-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=fJeB=42=lists.openwall.com=kernel-hardening-return-18109-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+X-Spam-Status: No, score=-11.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 650C4C10F27
-	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 12:22:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 18EE2C10F27
+	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 16:15:34 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8924D2072A
-	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 12:22:04 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 69A6224655
+	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Mar 2020 16:15:33 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=kroah.com header.i=@kroah.com header.b="I9kaRzON";
-	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="iMn0MJOk"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8924D2072A
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=kroah.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18108-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9879 invoked by uid 550); 9 Mar 2020 12:21:58 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="bFsZ5+xS"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 69A6224655
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18109-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1831 invoked by uid 550); 9 Mar 2020 16:15:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,50 +25,42 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9842 invoked from network); 9 Mar 2020 12:21:57 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kroah.com; h=
-	date:from:to:cc:subject:message-id:references:mime-version
-	:content-type:in-reply-to; s=fm3; bh=BCMBiPrCo1x258U10zWiv/x8MXq
-	dMoavcniKhTrs81s=; b=I9kaRzON9+ykXOtdOV8S8BiZlkUcJtW5y0vuPwIagC6
-	xVJabMl5MsqwOM4J5EjYpagU7mmDAuJEu/Y53KG2XUrlQmCpeVCZbnfCQpxP3jeX
-	tZuIuGF6XHPSCiscR7yXiKYS1UfvmY+afXTb5sRA1rHhQa10bqRyZEJk+Nv5Jw8y
-	9De7oc/VvumX8Of/kLJlsqqapH1bNfPRE7wstWPEzbjGfl4P36eByQVCFpvhKB0j
-	5FNyHhASwsC3YcXIZcd05Ec+8pmwpXmC/Iyd8kPGoO3FgYFwp4u1hBlhYk4cOV/Z
-	o2cYsY+ROTfSHDRBdouud05Ap5MsQFWKHXInazxQZvg==
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-	messagingengine.com; h=cc:content-type:date:from:in-reply-to
-	:message-id:mime-version:references:subject:to:x-me-proxy
-	:x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=fm2; bh=BCMBiP
-	rCo1x258U10zWiv/x8MXqdMoavcniKhTrs81s=; b=iMn0MJOkt/FR2T+s/BWYrL
-	blD06GQqZk4b43TttiV+/Nf7oa/xO6z/4Xcw1BXGp8m5oMlUmSAF82vXeV7VV28z
-	SldpCEV9SMiWfQC35ROyMJAWEKfCU77iwOd2hPs3lmqkIzWCuHU0naYWAOSLLKwA
-	GprlwDKOY8oyLEEv++J0oEzi978DvPAHU/ITRM9I8k8iQbZApDjKzSTUGKzTrDVM
-	h5yogM6Q6nnxLlF460PIsg2DMjUuyjXd6T6qVuLjtR7QklX89u06QQEs3z5vFXaQ
-	uUV5cpVKQ+Vk3UtLGKG5Ht86iJzZeqX/NOE0fddZ9R7utiz6H+fyD3iPzpMQu2qg
-	==
-X-ME-Sender: <xms:1zRmXtH-yKQMWpuF3IyyqnICVVcysVb3uIMmRi2Z4gFKR5mnqI5dkw>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedugedruddukedggedtucetufdoteggodetrfdotf
-    fvucfrrhhofhhilhgvmecuhfgrshhtofgrihhlpdfqfgfvpdfurfetoffkrfgpnffqhgen
-    uceurghilhhouhhtmecufedttdenucesvcftvggtihhpihgvnhhtshculddquddttddmne
-    cujfgurhepfffhvffukfhfgggtuggjsehttdertddttddvnecuhfhrohhmpefirhgvghcu
-    mffjuceoghhrvghgsehkrhhorghhrdgtohhmqeenucffohhmrghinhepghhithhhuhgsrd
-    gtohhmnecukfhppeekfedrkeeirdekledruddtjeenucevlhhushhtvghrufhiiigvpedt
-    necurfgrrhgrmhepmhgrihhlfhhrohhmpehgrhgvgheskhhrohgrhhdrtghomh
-X-ME-Proxy: <xmx:1zRmXoGKVtAQerX8aGN6EOt2sQp9wEoBXq4D89SQ4JpW4lptpFhl3Q>
-    <xmx:1zRmXl-AY3daGj8NRfq5wIhDIgSx1cKnY9CxFRm6TYI3XI-fntGoHA>
-    <xmx:1zRmXqSZ16_FnCEBU9uEJEwdvITbtQ56hn1Cd_d_i1qMEQEFqNxjJg>
-    <xmx:2TRmXlP85Fx5jAXXBL1epi8AW3aA9x4e18TyRonSUdgo6ZCBy8M_-g>
-Date: Mon, 9 Mar 2020 13:21:38 +0100
-From: Greg KH <greg@kroah.com>
-To: Phong Tran <tranmanphong@gmail.com>
-Cc: Mark Rutland <mark.rutland@arm.com>, catalin.marinas@arm.com,
+Received: (qmail 1797 invoked from network); 9 Mar 2020 16:15:24 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=YnKNr3hKRT5ikwt9roCSkDxlo76o8UWZ8pQ2c566Cf4=;
+        b=bFsZ5+xSdTR8H8crWlM6K47GKUWc1rJ515OZGp73trVfjgiNteU9a+Cahp2oKyNWjY
+         5fyUr2Je7MMc9pQbQScjAk+4L4d7mu0qzQ67QIx5ntGMze9FCj00EIuaXj45eRA9xwLC
+         Q39gzs6fLraauHczp7CUQ/uvpSu/Pv3g1+zyM=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=YnKNr3hKRT5ikwt9roCSkDxlo76o8UWZ8pQ2c566Cf4=;
+        b=ba9lkHRSobgc+JE91emwIWH5UvR0rx5mozBnOU+VIw3W73jtmsMSfobfYlCoaEYgPt
+         kaBCahl+mDpSC9ddE1IpSBw63t6UchVfODpn8oZFyUpasbl/r+RcmbTcOqLDOn6d4XYY
+         mE4aDw9L9sMmszdUGCtFt3KEinYtBmlP7swgcpN36rRryQxB2tKr/aMUcBSpV/GCukok
+         WTdxPe7M3AO1Oh70cGpYhRjav+vvMvqp1orL6M9zrBG7+uF3L5YyFJEssVdMjRn0fk+X
+         hyh4//O/ru2DdhxQn2kwv2oY5zhaMFzztYoGK9BzfpwvyPu8soezMheVLcXYZ3W04wV0
+         ygQw==
+X-Gm-Message-State: ANhLgQ2UgkI7HcQLyVlBhRpRgVpGNFW2y4HkP3/589rMXIHja8F+jzQ6
+	LR9CfAHwtv9j2xzQpSwQwGkRVA==
+X-Google-Smtp-Source: ADFU+vvFjBxaKhEtFtDyy5FhCQR6zvOlDckAvu416t13ucxmTgfU3D8gVc8Q+eGzqzcwU5poa34MfQ==
+X-Received: by 2002:a17:90a:a588:: with SMTP id b8mr71771pjq.182.1583770512109;
+        Mon, 09 Mar 2020 09:15:12 -0700 (PDT)
+Date: Mon, 9 Mar 2020 09:15:10 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Phong Tran <tranmanphong@gmail.com>, catalin.marinas@arm.com,
 	will@kernel.org, alexios.zavras@intel.com, tglx@linutronix.de,
 	akpm@linux-foundation.org, steven.price@arm.com,
-	steve.capper@arm.com, broonie@kernel.org, keescook@chromium.org,
+	steve.capper@arm.com, broonie@kernel.org,
 	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
 Subject: Re: [PATCH] arm64: add check_wx_pages debugfs for CHECK_WX
-Message-ID: <20200309122138.GA206943@kroah.com>
+Message-ID: <202003090914.F6720CFF13@keescook>
 References: <20200307093926.27145-1-tranmanphong@gmail.com>
  <20200309121713.GA26309@lakrids.cambridge.arm.com>
 MIME-Version: 1.0
@@ -88,6 +79,11 @@ On Mon, Mar 09, 2020 at 12:17:14PM +0000, Mark Rutland wrote:
 > 
 > ... so surely this should be in generic code, rahter than being
 > arm64-specific?
+
+Not all architectures have implemented CONFIG_DEBUG_WX...
+
+-Kees
+
 > 
 > Thanks,
 > Mark.
@@ -168,13 +164,10 @@ On Mon, Mar 09, 2020 at 12:17:14PM +0000, Mark Rutland wrote:
 > > +{
 > > +	return debugfs_create_file("check_wx_pages", 0200, NULL,
 > > +				   NULL, &check_wx_fops) ? 0 : -ENOMEM;
+> > +}
+> > -- 
+> > 2.20.1
+> > 
 
-Do not check the return value of this function, especially as it is
-returning a pointer, not an int!
-
-Just call the function and move on, you should not do anything different
-if it returns an error or not.
-
-thanks,
-
-greg k-h
+-- 
+Kees Cook
