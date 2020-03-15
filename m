@@ -1,23 +1,21 @@
-Return-Path: <SRS0=ff+4=46=lists.openwall.com=kernel-hardening-return-18130-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=SFRd=5A=lists.openwall.com=kernel-hardening-return-18131-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.7 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 647D0C10DCE
-	for <kernel-hardening@archiver.kernel.org>; Fri, 13 Mar 2020 00:06:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9D55AC5ACD6
+	for <kernel-hardening@archiver.kernel.org>; Sun, 15 Mar 2020 15:26:18 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B7E76206F1
-	for <kernel-hardening@archiver.kernel.org>; Fri, 13 Mar 2020 00:06:23 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="JiEN0kcC"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B7E76206F1
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18130-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25677 invoked by uid 550); 13 Mar 2020 00:06:16 -0000
+	by mail.kernel.org (Postfix) with SMTP id AA06520578
+	for <kernel-hardening@archiver.kernel.org>; Sun, 15 Mar 2020 15:26:17 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AA06520578
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18131-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3224 invoked by uid 550); 15 Mar 2020 15:26:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,95 +23,292 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25645 invoked from network); 13 Mar 2020 00:06:15 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=MT56InialoA5Gvuu17QFzhKM9mlaqKUsiERx8J8mK8A=;
-        b=JiEN0kcC+FSY9JxDVE0c/Nf+raSXxIfGzQiQhnnpAW2AxKWxl8VwuQzkSN6DGlyY/D
-         eDRiciH0xugCpu0Hh94n501CXjCftR1SK/fbXY07Qli4f+xGd0C7FqiyWqvh4IrwhRRq
-         BU1O23uhLzOqB6dxjuJhz6ZTZ5UjPI4f54crU=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=MT56InialoA5Gvuu17QFzhKM9mlaqKUsiERx8J8mK8A=;
-        b=cu4Yf7v/I8I0Xmi+qoLMgBohiEimuKJv83anHcVn3z1bi/psSmgyiNqCU92dxzl11N
-         X2qycMC9jAHV5LgSd0JJ0lLO9aIX3pWVI8LCKio5mV6J32DdJM7erdnt2CIOk86dGaGk
-         pwSac+Tn6LeL1PgAKz+HxPPPZP6ysw3t2yUg2HmcpkLFdVocoLr9tIUx3Iyf/xdnOdEX
-         BGUZ/51Lv5+AH5yFynqrZDSoAFOSxe0qJqxgkmbIs+/fxZwCCGpBc43XE5o3Xy9vk7P+
-         XQv9qhYXLIGBm1k9wyGVGZQfjjJk3GStYP0lOtl0LipJsDZ3yKRdF8LuBz9AG7wX4UDu
-         bNSA==
-X-Gm-Message-State: ANhLgQ1xxfgjjfX3aVzetH8oYwihCmtsUsgtOhnBPWc9vYJtgwqh+TIs
-	XKxNmINP7nRwM7jWb97srEvL1g==
-X-Google-Smtp-Source: ADFU+vufqVAMrmsyN2FQR+i0rIhNKJocLKys2LdKmIIuznP6bLJC6/QtdecJYAQsRGo5+9W0tYLH9Q==
-X-Received: by 2002:aa7:8217:: with SMTP id k23mr10886894pfi.257.1584057963010;
-        Thu, 12 Mar 2020 17:06:03 -0700 (PDT)
-Date: Thu, 12 Mar 2020 17:06:01 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Borislav Petkov <bp@alien8.de>
-Cc: Jason Gunthorpe <jgg@mellanox.com>,
-	Hector Marco-Gisbert <hecmargi@upv.es>,
-	Jason Gunthorpe <jgg@ziepe.ca>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Russell King <linux@armlinux.org.uk>, Will Deacon <will@kernel.org>,
-	Jann Horn <jannh@google.com>, x86@kernel.org,
-	linux-arm-kernel@lists.infradead.org,
-	kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v4 1/6] x86/elf: Add table to document READ_IMPLIES_EXEC
-Message-ID: <202003121705.6ABA79D8F0@keescook>
-References: <20200225051307.6401-1-keescook@chromium.org>
- <20200225051307.6401-2-keescook@chromium.org>
- <20200311194446.GL3470@zn.tnic>
+Received: (qmail 3176 invoked from network); 15 Mar 2020 15:26:03 -0000
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: LKML <linux-kernel@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux API <linux-api@vger.kernel.org>,
+	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
+	Linux Security Module <linux-security-module@vger.kernel.org>
+Cc: Akinobu Mita <akinobu.mita@gmail.com>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Alexey Dobriyan <adobriyan@gmail.com>,
+	Alexey Gladkov <legion@kernel.org>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Daniel Micay <danielmicay@gmail.com>,
+	Djalal Harouni <tixxdz@gmail.com>,
+	"Dmitry V . Levin" <ldv@altlinux.org>,
+	"Eric W . Biederman" <ebiederm@xmission.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Ingo Molnar <mingo@kernel.org>,
+	"J . Bruce Fields" <bfields@fieldses.org>,
+	Jeff Layton <jlayton@poochiereds.net>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Oleg Nesterov <oleg@redhat.com>
+Subject: [PATCH v9 0/8] proc: modernize proc to support multiple private instances
+Date: Sun, 15 Mar 2020 16:25:15 +0100
+Message-Id: <cover.1584278173.git.gladkov.alexey@gmail.com>
+X-Mailer: git-send-email 2.25.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <20200311194446.GL3470@zn.tnic>
 
-On Wed, Mar 11, 2020 at 08:44:46PM +0100, Borislav Petkov wrote:
-> Ozenn Mon, Feb 24, 2020 at 09:13:02PM -0800, Kees Cook wrote:
-> > Add a table to document the current behavior of READ_IMPLIES_EXEC in
-> > preparation for changing the behavior.
-> > 
-> > Signed-off-by: Kees Cook <keescook@chromium.org>
-> > Reviewed-by: Jason Gunthorpe <jgg@mellanox.com>
-> > ---
-> >  arch/x86/include/asm/elf.h | 19 +++++++++++++++++++
-> >  1 file changed, 19 insertions(+)
-> > 
-> > diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
-> > index 69c0f892e310..733f69c2b053 100644
-> > --- a/arch/x86/include/asm/elf.h
-> > +++ b/arch/x86/include/asm/elf.h
-> > @@ -281,6 +281,25 @@ extern u32 elf_hwcap2;
-> >  /*
-> >   * An executable for which elf_read_implies_exec() returns TRUE will
-> >   * have the READ_IMPLIES_EXEC personality flag set automatically.
-> > + *
-> > + * The decision process for determining the results are:
-> > + *
-> > + *              CPU: | lacks NX*  | has NX, ia32     | has NX, x86_64 |
-> > + * ELF:              |            |                  |                |
-> > + * -------------------------------|------------------|----------------|
-> > + * missing GNU_STACK | exec-all   | exec-all         | exec-all       |
-> > + * GNU_STACK == RWX  | exec-all   | exec-all         | exec-all       |
-> > + * GNU_STACK == RW   | exec-none  | exec-none        | exec-none      |
-> 
-> In all those tables, you wanna do:
-> 
-> s/GNU_STACK/PT_GNU_STACK/g
-> 
-> so that it is clear what this define is.
+Greetings!
 
-Fair enough. :) I think I was trying to save 3 characters from earlier
-tables that were wider. I'll send a v5.
+Preface:
+--------
+This is patchset v9 to modernize procfs and make it able to support multiple
+private instances per the same pid namespace.
 
-Thanks!
+This patchset can be applied on top of:
 
--Kees
+git.kernel.org/pub/scm/linux/kernel/git/ebiederm/user-namespace.git 58a45d79571a
+
+
+Procfs modernization:
+---------------------
+Historically procfs was always tied to pid namespaces, during pid
+namespace creation we internally create a procfs mount for it. However,
+this has the effect that all new procfs mounts are just a mirror of the
+internal one, any change, any mount option update, any new future
+introduction will propagate to all other procfs mounts that are in the
+same pid namespace.
+
+This may have solved several use cases in that time. However today we
+face new requirements, and making procfs able to support new private
+instances inside same pid namespace seems a major point. If we want to
+to introduce new features and security mechanisms we have to make sure
+first that we do not break existing usecases. Supporting private procfs
+instances will allow to support new features and behaviour without
+propagating it to all other procfs mounts.
+
+Today procfs is more of a burden especially to some Embedded, IoT,
+sandbox, container use cases. In user space we are over-mounting null
+or inaccessible files on top to hide files and information. If we want
+to hide pids we have to create PID namespaces otherwise mount options
+propagate to all other proc mounts, changing a mount option value in one
+mount will propagate to all other proc mounts. If we want to introduce
+new features, then they will propagate to all other mounts too, resulting
+either maybe new useful functionality or maybe breaking stuff. We have
+also to note that userspace should not workaround procfs, the kernel
+should just provide a sane simple interface.
+
+In this regard several developers and maintainers pointed out that
+there are problems with procfs and it has to be modernized:
+
+"Here's another one: split up and modernize /proc." by Andy Lutomirski [1]
+
+Discussion about kernel pointer leaks:
+
+"And yes, as Kees and Daniel mentioned, it's definitely not just dmesg.
+In fact, the primary things tend to be /proc and /sys, not dmesg
+itself." By Linus Torvalds [2]
+
+Lot of other areas in the kernel and filesystems have been updated to be
+able to support private instances, devpts is one major example [3].
+
+Which will be used for:
+
+1) Embedded systems and IoT: usually we have one supervisor for
+apps, we have some lightweight sandbox support, however if we create
+pid namespaces we have to manage all the processes inside too,
+where our goal is to be able to run a bunch of apps each one inside
+its own mount namespace, maybe use network namespaces for vlans
+setups, but right now we only want mount namespaces, without all the
+other complexity. We want procfs to behave more like a real file system,
+and block access to inodes that belong to other users. The 'hidepid=' will
+not work since it is a shared mount option.
+
+2) Containers, sandboxes and Private instances of file systems - devpts case
+Historically, lot of file systems inside Linux kernel view when instantiated
+were just a mirror of an already created and mounted filesystem. This was the
+case of devpts filesystem, it seems at that time the requirements were to
+optimize things and reuse the same memory, etc. This design used to work but not
+anymore with today's containers, IoT, hostile environments and all the privacy
+challenges that Linux faces.
+
+In that regards, devpts was updated so that each new mounts is a total
+independent file system by the following patches:
+
+"devpts: Make each mount of devpts an independent filesystem" by
+Eric W. Biederman [3] [4]
+
+3) Linux Security Modules have multiple ptrace paths inside some
+subsystems, however inside procfs, the implementation does not guarantee
+that the ptrace() check which triggers the security_ptrace_check() hook
+will always run. We have the 'hidepid' mount option that can be used to
+force the ptrace_may_access() check inside has_pid_permissions() to run.
+The problem is that 'hidepid' is per pid namespace and not attached to
+the mount point, any remount or modification of 'hidepid' will propagate
+to all other procfs mounts.
+
+This also does not allow to support Yama LSM easily in desktop and user
+sessions. Yama ptrace scope which restricts ptrace and some other
+syscalls to be allowed only on inferiors, can be updated to have a
+per-task context, where the context will be inherited during fork(),
+clone() and preserved across execve(). If we support multiple private
+procfs instances, then we may force the ptrace_may_access() on
+/proc/<pids>/ to always run inside that new procfs instances. This will
+allow to specifiy on user sessions if we should populate procfs with
+pids that the user can ptrace or not.
+
+By using Yama ptrace scope, some restricted users will only be able to see
+inferiors inside /proc, they won't even be able to see their other
+processes. Some software like Chromium, Firefox's crash handler, Wine
+and others are already using Yama to restrict which processes can be
+ptracable. With this change this will give the possibility to restrict
+/proc/<pids>/ but more importantly this will give desktop users a
+generic and usuable way to specifiy which users should see all processes
+and which user can not.
+
+Side notes:
+
+* This covers the lack of seccomp where it is not able to parse
+arguments, it is easy to install a seccomp filter on direct syscalls
+that operate on pids, however /proc/<pid>/ is a Linux ABI using
+filesystem syscalls. With this change all LSMs should be able to analyze
+open/read/write/close... on /proc/<pid>/
+
+4) This will allow to implement new features either in kernel or
+userspace without having to worry about procfs.
+In containers, sandboxes, etc we have workarounds to hide some /proc
+inodes, this should be supported natively without doing extra complex
+work, the kernel should be able to support sane options that work with
+today and future Linux use cases.
+
+5) Creation of new superblock with all procfs options for each procfs
+mount will fix the ignoring of mount options. The problem is that the
+second mount of procfs in the same pid namespace ignores the mount
+options. The mount options are ignored without error until procfs is
+remounted.
+
+Before:
+
+# grep ^proc /proc/mounts
+proc /proc proc rw,relatime,hidepid=2 0 0
+
+# strace -e mount mount -o hidepid=1 -t proc proc /tmp/proc
+mount("proc", "/tmp/proc", "proc", 0, "hidepid=1") = 0
++++ exited with 0 +++
+
+# grep ^proc /proc/mounts
+proc /proc proc rw,relatime,hidepid=2 0 0
+proc /tmp/proc proc rw,relatime,hidepid=2 0 0
+
+# mount -o remount,hidepid=1 -t proc proc /tmp/proc
+
+# grep ^proc /proc/mounts
+proc /proc proc rw,relatime,hidepid=1 0 0
+proc /tmp/proc proc rw,relatime,hidepid=1 0 0
+
+After:
+
+# grep ^proc /proc/mounts
+proc /proc proc rw,relatime,hidepid=ptraceable 0 0
+
+# mount -o hidepid=invisible -t proc proc /tmp/proc
+
+# grep ^proc /proc/mounts
+proc /proc proc rw,relatime,hidepid=ptraceable 0 0
+proc /tmp/proc proc rw,relatime,hidepid=invisible 0 0
+
+
+Introduced changes:
+-------------------
+Each mount of procfs creates a separate procfs instance with its own
+mount options.
+
+This series adds few new mount options:
+
+* New 'hidepid=ptraceable' or 'hidepid=4' mount option to show only ptraceable
+processes in the procfs. This allows to support lightweight sandboxes in
+Embedded Linux, also solves the case for LSM where now with this mount option,
+we make sure that they have a ptrace path in procfs.
+
+* 'subset=pidfs' that allows to hide non-pid inodes from procfs. It can be used
+in containers and sandboxes, as these are already trying to hide and block
+access to procfs inodes anyway.
+
+
+ChangeLog:
+----------
+# v9:
+* Rebase on top of Eric W. Biederman's procfs changes.
+* Add human readable values of 'hidepid' as suggested by Andy Lutomirski.
+
+# v8:
+* Started using RCU lock to clean dcache entries as suggested by Linus Torvalds.
+
+# v7:
+* 'pidonly=1' renamed to 'subset=pidfs' as suggested by Alexey Dobriyan.
+* HIDEPID_* moved to uapi/ as they are user interface to mount().
+  Suggested-by Alexey Dobriyan <adobriyan@gmail.com>
+
+# v6:
+* 'hidepid=' and 'gid=' mount options are moved from pid namespace to superblock.
+* 'newinstance' mount option removed as suggested by Eric W. Biederman.
+   Mount of procfs always creates a new instance.
+* 'limit_pids' renamed to 'hidepid=3'.
+* I took into account the comment of Linus Torvalds [7].
+* Documentation added.
+
+# v5:
+* Fixed a bug that caused a problem with the Fedora boot.
+* The 'pidonly' option is visible among the mount options.
+
+# v2:
+* Renamed mount options to 'newinstance' and 'pids='
+   Suggested-by: Andy Lutomirski <luto@kernel.org>
+* Fixed order of commit, Suggested-by: Andy Lutomirski <luto@kernel.org>
+* Many bug fixes.
+
+# v1:
+* Removed 'unshared' mount option and replaced it with 'limit_pids'
+   which is attached to the current procfs mount.
+   Suggested-by Andy Lutomirski <luto@kernel.org>
+* Do not fill dcache with pid entries that we can not ptrace.
+* Many bug fixes.
+
+
+References:
+-----------
+[1] https://lists.linuxfoundation.org/pipermail/ksummit-discuss/2017-January/004215.html
+[2] http://www.openwall.com/lists/kernel-hardening/2017/10/05/5
+[3] https://lwn.net/Articles/689539/
+[4] http://lxr.free-electrons.com/source/Documentation/filesystems/devpts.txt?v=3.14
+[5] https://lkml.org/lkml/2017/5/2/407
+[6] https://lkml.org/lkml/2017/5/3/357
+[7] https://lkml.org/lkml/2018/5/11/505
+
+
+Alexey Gladkov (8):
+  proc: rename struct proc_fs_info to proc_fs_opts
+  proc: allow to mount many instances of proc in one pid namespace
+  proc: move hide_pid, pid_gid from pid_namespace to proc_fs_info
+  proc: instantiate only pids that we can ptrace on 'hidepid=4' mount
+    option
+  proc: add option to mount only a pids subset
+  docs: proc: add documentation for "hidepid=4" and "subset=pidfs"
+    options and new mount behavior
+  proc: move hidepid values to uapi as they are user interface to mount
+  proc: use human-readable values for hidehid
+
+ Documentation/filesystems/proc.txt |  93 ++++++++++++++++-----
+ fs/proc/base.c                     |  46 ++++++++---
+ fs/proc/generic.c                  |   9 +++
+ fs/proc/inode.c                    |  28 +++++--
+ fs/proc/root.c                     | 126 +++++++++++++++++++++++------
+ fs/proc/self.c                     |   6 +-
+ fs/proc/thread_self.c              |   6 +-
+ fs/proc_namespace.c                |  14 ++--
+ include/linux/pid_namespace.h      |   8 --
+ include/linux/proc_fs.h            |  22 +++++
+ include/uapi/linux/proc_fs.h       |  13 +++
+ 11 files changed, 288 insertions(+), 83 deletions(-)
+ create mode 100644 include/uapi/linux/proc_fs.h
 
 -- 
-Kees Cook
+2.25.1
+
