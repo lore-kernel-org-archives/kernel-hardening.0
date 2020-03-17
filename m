@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Je+Q=5C=lists.openwall.com=kernel-hardening-return-18142-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=DnlD=5C=lists.openwall.com=kernel-hardening-return-18143-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 633ABC10F29
-	for <kernel-hardening@archiver.kernel.org>; Tue, 17 Mar 2020 16:48:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C1DA8C1975A
+	for <kernel-hardening@archiver.kernel.org>; Tue, 17 Mar 2020 17:50:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BAA7F20724
-	for <kernel-hardening@archiver.kernel.org>; Tue, 17 Mar 2020 16:48:03 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BAA7F20724
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=zeniv.linux.org.uk
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18142-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3842 invoked by uid 550); 17 Mar 2020 16:47:57 -0000
+	by mail.kernel.org (Postfix) with SMTP id F2E4620714
+	for <kernel-hardening@archiver.kernel.org>; Tue, 17 Mar 2020 17:50:29 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F2E4620714
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18143-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28341 invoked by uid 550); 17 Mar 2020 17:50:22 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,47 +22,162 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3810 invoked from network); 17 Mar 2020 16:47:56 -0000
-Date: Tue, 17 Mar 2020 16:47:09 +0000
-From: Al Viro <viro@zeniv.linux.org.uk>
-To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Andy Lutomirski <luto@amacapital.net>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>,
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mickael.salaun@ssi.gouv.fr>,
-	"Serge E . Hallyn" <serge@hallyn.com>,
-	Shuah Khan <shuah@kernel.org>,
-	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-	linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org, linux-kselftest@vger.kernel.org,
-	linux-security-module@vger.kernel.org, x86@kernel.org
-Subject: Re: [RFC PATCH v14 06/10] landlock: Add syscall implementation
-Message-ID: <20200317164709.GA23230@ZenIV.linux.org.uk>
+Received: (qmail 28306 invoked from network); 17 Mar 2020 17:50:21 -0000
+Subject: Re: [RFC PATCH v14 00/10] Landlock LSM
+To: Jann Horn <jannh@google.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>,
+ Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
+ Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
+ Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>,
+ Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>,
+ =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
+ "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
+ Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Linux API <linux-api@vger.kernel.org>,
+ linux-arch <linux-arch@vger.kernel.org>, linux-doc@vger.kernel.org,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>,
+ "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
+ linux-security-module <linux-security-module@vger.kernel.org>,
+ the arch/x86 maintainers <x86@kernel.org>
 References: <20200224160215.4136-1-mic@digikod.net>
- <20200224160215.4136-7-mic@digikod.net>
+ <CAG48ez21bEn0wL1bbmTiiu8j9jP5iEWtHOwz4tURUJ+ki0ydYw@mail.gmail.com>
+ <873d7419-bdd9-8a52-0a9b-dddbe31df4f9@digikod.net>
+ <CAG48ez0=0W5Ok-8nASqZrZ28JboXRRi3gDxV5u6mdcOtzwuRVA@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <688dda0f-0907-34eb-c19e-3e9e5f613a74@digikod.net>
+Date: Tue, 17 Mar 2020 18:50:07 +0100
+User-Agent:
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
+In-Reply-To: <CAG48ez0=0W5Ok-8nASqZrZ28JboXRRi3gDxV5u6mdcOtzwuRVA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <20200224160215.4136-7-mic@digikod.net>
-Sender: Al Viro <viro@ftp.linux.org.uk>
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-On Mon, Feb 24, 2020 at 05:02:11PM +0100, Micka�l Sala�n wrote:
 
-> +static int get_path_from_fd(u64 fd, struct path *path)
+On 17/03/2020 17:19, Jann Horn wrote:
+> On Thu, Mar 12, 2020 at 12:38 AM Mickaël Salaün <mic@digikod.net> wrote:
+>> On 10/03/2020 00:44, Jann Horn wrote:
+>>> On Mon, Feb 24, 2020 at 5:03 PM Mickaël Salaün <mic@digikod.net> wrote:
 
-> +	/*
-> +	 * Only allows O_PATH FD: enable to restrict ambiant (FS) accesses
-> +	 * without requiring to open and risk leaking or misuing a FD.  Accept
-> +	 * removed, but still open directory (S_DEAD).
-> +	 */
-> +	if (!(f.file->f_mode & FMODE_PATH) || !f.file->f_path.mnt ||
-					      ^^^^^^^^^^^^^^^^^^^
-Could you explain what that one had been be about?  The underlined
-subexpression is always false; was that supposed to check some
-condition and if so, which one?
+[...]
+
+>>> Aside from those things, there is also a major correctness issue where
+>>> I'm not sure how to solve it properly:
+>>>
+>>> Let's say a process installs a filter on itself like this:
+>>>
+>>> struct landlock_attr_ruleset ruleset = { .handled_access_fs =
+>>> ACCESS_FS_ROUGHLY_WRITE};
+>>> int ruleset_fd = landlock(LANDLOCK_CMD_CREATE_RULESET,
+>>> LANDLOCK_OPT_CREATE_RULESET, sizeof(ruleset), &ruleset);
+>>> struct landlock_attr_path_beneath path_beneath = {
+>>>   .ruleset_fd = ruleset_fd,
+>>>   .allowed_access = ACCESS_FS_ROUGHLY_WRITE,
+>>>   .parent_fd = open("/tmp/foobar", O_PATH),
+>>> };
+>>> landlock(LANDLOCK_CMD_ADD_RULE, LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
+>>> sizeof(path_beneath), &path_beneath);
+>>> prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+>>> struct landlock_attr_enforce attr_enforce = { .ruleset_fd = ruleset_fd };
+>>> landlock(LANDLOCK_CMD_ENFORCE_RULESET, LANDLOCK_OPT_ENFORCE_RULESET,
+>>> sizeof(attr_enforce), &attr_enforce);
+>>>
+>>> At this point, the process is not supposed to be able to write to
+>>> anything outside /tmp/foobar, right? But what happens if the process
+>>> does the following next?
+>>>
+>>> struct landlock_attr_ruleset ruleset = { .handled_access_fs =
+>>> ACCESS_FS_ROUGHLY_WRITE};
+>>> int ruleset_fd = landlock(LANDLOCK_CMD_CREATE_RULESET,
+>>> LANDLOCK_OPT_CREATE_RULESET, sizeof(ruleset), &ruleset);
+>>> struct landlock_attr_path_beneath path_beneath = {
+>>>   .ruleset_fd = ruleset_fd,
+>>>   .allowed_access = ACCESS_FS_ROUGHLY_WRITE,
+>>>   .parent_fd = open("/", O_PATH),
+>>> };
+>>> landlock(LANDLOCK_CMD_ADD_RULE, LANDLOCK_OPT_ADD_RULE_PATH_BENEATH,
+>>> sizeof(path_beneath), &path_beneath);
+>>> prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+>>> struct landlock_attr_enforce attr_enforce = { .ruleset_fd = ruleset_fd };
+>>> landlock(LANDLOCK_CMD_ENFORCE_RULESET, LANDLOCK_OPT_ENFORCE_RULESET,
+>>> sizeof(attr_enforce), &attr_enforce);
+>>>
+>>> As far as I can tell from looking at the source, after this, you will
+>>> have write access to the entire filesystem again. I think the idea is
+>>> that LANDLOCK_CMD_ENFORCE_RULESET should only let you drop privileges,
+>>> not increase them, right?
+>>
+>> There is an additionnal check in syscall.c:get_path_from_fd(): it is
+>> forbidden to add a rule with a path which is not accessible (according
+>> to LANDLOCK_ACCESS_FS_OPEN) thanks to a call to security_file_open(),
+>> but this is definitely not perfect.
+> 
+> Ah, I missed that.
+> 
+>>> I think the easy way to fix this would be to add a bitmask to each
+>>> rule that says from which ruleset it originally comes, and then let
+>>> check_access_path() collect these bitmasks from each rule with OR, and
+>>> check at the end whether the resulting bitmask is full - if not, at
+>>> least one of the rulesets did not permit the access, and it should be
+>>> denied.
+>>>
+>>> But maybe it would make more sense to change how the API works
+>>> instead, and get rid of the concept of "merging" two rulesets
+>>> together? Instead, we could make the API work like this:
+>>>
+>>>  - LANDLOCK_CMD_CREATE_RULESET gives you a file descriptor whose
+>>> ->private_data contains a pointer to the old ruleset of the process,
+>>> as well as a pointer to a new empty ruleset.
+>>>  - LANDLOCK_CMD_ADD_RULE fails if the specified rule would not be
+>>> permitted by the old ruleset, then adds the rule to the new ruleset
+>>>  - LANDLOCK_CMD_ENFORCE_RULESET fails if the old ruleset pointer in
+>>> ->private_data doesn't match the current ruleset of the process, then
+>>> replaces the old ruleset with the new ruleset.
+>>>
+>>> With this, the new ruleset is guaranteed to be a subset of the old
+>>> ruleset because each of the new ruleset's rules is permitted by the
+>>> old ruleset. (Unless the directory hierarchy rotates, but in that case
+>>> the inaccuracy isn't much worse than what would've been possible
+>>> through RCU path walk anyway AFAIK.)
+>>>
+>>> What do you think?
+>>>
+>>
+>> I would prefer to add the same checks you described at first (with
+>> check_access_path), but only when creating a new ruleset with
+>> merge_ruleset() (which should probably be renamed). This enables not to
+>> rely on a parent ruleset/domain until the enforcement, which is the case
+>> anyway.
+>> Unfortunately this doesn't work for some cases with bind mounts. Because
+>> check_access_path() goes through one path, another (bind mounted) path
+>> could be illegitimately allowed.
+> 
+> Hmm... I'm not sure what you mean. At the moment, landlock doesn't
+> allow any sandboxed process to change the mount hierarchy, right? Can
+> you give an example where this would go wrong?
+
+Indeed, a Landlocked process must no be able to change its mount
+namespace layout. However, bind mounts may already exist.
+Let's say a process sandbox itself to only access /a in a read-write
+way. Then, this process (or one of its children) add a new restriction
+on /a/b to only be able to read this hierarchy. The check at insertion
+time would allow this because this access right is a subset of the
+access right allowed with the parent directory. However, If /a/b is bind
+mounted somewhere else, let's say in /private/b, then the second
+enforcement just gave new access rights to this hierarchy too. This is
+why it seems risky to rely on a check about the legitimacy of a new
+access right when adding it to a ruleset or when enforcing it.
+
+
+> 
+>> That makes the problem a bit more complicated. A solution may be to keep
+>> track of the hierarchy of each rule (e.g. with a layer/depth number),
+>> and only allow an access request if at least a rule of each layer allow
+>> this access. In this case we also need to correctly handle the case when
+>> rules from different layers are tied to the same object.
+> 
