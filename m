@@ -1,20 +1,22 @@
-Return-Path: <SRS0=IuEN=5F=lists.openwall.com=kernel-hardening-return-18154-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=k2KC=5I=lists.openwall.com=kernel-hardening-return-18155-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id ABC18C4332E
-	for <kernel-hardening@archiver.kernel.org>; Fri, 20 Mar 2020 06:16:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BB492C3F2CD
+	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Mar 2020 19:16:51 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1574F20739
-	for <kernel-hardening@archiver.kernel.org>; Fri, 20 Mar 2020 06:16:37 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1574F20739
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18154-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 6048 invoked by uid 550); 20 Mar 2020 06:16:30 -0000
+	by mail.kernel.org (Postfix) with SMTP id 1A5422072D
+	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Mar 2020 19:16:50 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="JR8Td2VW"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1A5422072D
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18155-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16264 invoked by uid 550); 23 Mar 2020 19:16:43 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,138 +24,59 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 6009 invoked from network); 20 Mar 2020 06:16:29 -0000
-Subject: Re: [PATCH v4 0/6] implement KASLR for powerpc/fsl_booke/64
-To: Daniel Axtens <dja@axtens.net>, <mpe@ellerman.id.au>,
-	<linuxppc-dev@lists.ozlabs.org>, <diana.craciun@nxp.com>,
-	<christophe.leroy@c-s.fr>, <benh@kernel.crashing.org>, <paulus@samba.org>,
-	<npiggin@gmail.com>, <keescook@chromium.org>,
-	<kernel-hardening@lists.openwall.com>, <oss@buserror.net>
-CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>
-References: <20200306064033.3398-1-yanaijie@huawei.com>
- <87imizww4i.fsf@dja-thinkpad.axtens.net>
-From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <6546b653-c7d6-41cf-3954-0587600127e3@huawei.com>
-Date: Fri, 20 Mar 2020 14:16:04 +0800
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
- Thunderbird/68.4.2
+Received: (qmail 16232 invoked from network); 23 Mar 2020 19:16:43 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=LfJMiV/49sj6L4e81DHhjEgnfxf9d3EZ6mYKtA8MhxI=;
+        b=JR8Td2VWwalrpJKkB6gyz340vs5CKMXWDL4GtX8wY0n0eivLT88RJL9ROpeRBlTnps
+         zDRwLBb/EnS0/fGhGWpxIqyxaB0WezdvrZcSOkWz1cLg/np3NoODiXK/75Zt8a6fgZ92
+         g+nz1LekACPXNgS+ZZzfv0gopma16H6jZq/aE=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=LfJMiV/49sj6L4e81DHhjEgnfxf9d3EZ6mYKtA8MhxI=;
+        b=cDQBvkx9OkBUdfWW4w5qcaXiy/yCQvcHchBw3zLk0HayHxKXUk/plUzrEB5Rh3v6dC
+         WX7W0mf3lvzf5YJR1rNbk2/WjO993PW+rKLsL7i++gsqsPGvPChimIQGoDpu7tsjq4ck
+         H3HdQxOodYDhBVZNexo+dloqnHhIwhKIU8fz9l9rvbBwcqoyH3k3W11cVKVSqMeNclY8
+         5lUP9KX2qfReOYRxcokaphRCyKv2/Gwq29hDjMeQGFWzanpGkDBt80vG8LO4LiTwJW3A
+         fXOunPqgB47FcnJseG53qqpQV71+ABNjzx+soj8JKp6bszvDWVbmw+49CKwN37jmHHLI
+         iguA==
+X-Gm-Message-State: ANhLgQ1vuARZk08VvzrZxBxpC/+CGFx0Fnc3OwCh/fjsQChYr9GVpBwL
+	KjxF1IZEwzKL2N8NokUYYBO27i1OscA=
+X-Google-Smtp-Source: ADFU+vt5xsBbDjsNMby5NYY/aH//ITEKmaBHDiX1nskNdQbxj9RXWF444kcSoQXuq/dD8xGzzycRaQ==
+X-Received: by 2002:a17:902:169:: with SMTP id 96mr22673905plb.140.1584990990982;
+        Mon, 23 Mar 2020 12:16:30 -0700 (PDT)
+Date: Mon, 23 Mar 2020 12:16:27 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Konstantin Ryabitsev <konstantin@linuxfoundation.org>
+Cc: kernel-hardening@lists.openwall.com
+Subject: Re: Looking for help testing patch attestation
+Message-ID: <202003231214.4669C6088@keescook>
+References: <20200318163930.5n545jfsbenc5vyr@chatter.i7.local>
 MIME-Version: 1.0
-In-Reply-To: <87imizww4i.fsf@dja-thinkpad.axtens.net>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Transfer-Encoding: 8bit
-X-Originating-IP: [10.173.221.195]
-X-CFilter-Loop: Reflected
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200318163930.5n545jfsbenc5vyr@chatter.i7.local>
 
+On Wed, Mar 18, 2020 at 12:39:30PM -0400, Konstantin Ryabitsev wrote:
+> If you are interested in participating, all you need to do is to install 
+> the "b4" tool and start submitting and checking patch attestation.  
+> Please see the following post for details:
+> 
+> https://people.kernel.org/monsieuricon/introducing-b4-and-patch-attestation
+> 
+> With any feedback, please email the tools@linux.kernel.org list in order 
+> to minimize off-topic conversations on this list.
 
+Thanks for reaching out! I'll be switching to b4 shortly -- I already
+incorporated the earlier version of this tool into my workflow. It's very
+easy. I recommend everyone else here give it a try if you're regularly
+sending patches around by email. :)
 
-在 2020/3/20 11:19, Daniel Axtens 写道:
-> Hi Jason,
-> 
-> I tried to compile this series and got the following error:
-> 
-> /home/dja/dev/linux/linux/arch/powerpc/mm/nohash/kaslr_booke.c: In function ‘kaslr_early_init’:
-> /home/dja/dev/linux/linux/arch/powerpc/mm/nohash/kaslr_booke.c:357:33: error: ‘linear_sz’ may be used uninitialized in this function [-Werror=maybe-uninitialized]
->    357 |  regions.pa_end = memstart_addr + linear_sz;
->        |                   ~~~~~~~~~~~~~~^~~~~~~~~~~
-> /home/dja/dev/linux/linux/arch/powerpc/mm/nohash/kaslr_booke.c:317:21: note: ‘linear_sz’ was declared here
->    317 |  unsigned long ram, linear_sz;
->        |                     ^~~~~~~~~
-> /home/dja/dev/linux/linux/arch/powerpc/mm/nohash/kaslr_booke.c:187:8: error: ‘ram’ may be used uninitialized in this function [-Werror=maybe-uninitialized]
->    187 |  ret = parse_crashkernel(boot_command_line, size, &crash_size,
->        |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
->    188 |     &crash_base);
->        |     ~~~~~~~~~~~~
-> /home/dja/dev/linux/linux/arch/powerpc/mm/nohash/kaslr_booke.c:317:16: note: ‘ram’ was declared here
->    317 |  unsigned long ram, linear_sz;
->        |                ^~~
-> cc1: all warnings being treated as errors
-> make[4]: *** [/home/dja/dev/linux/linux/scripts/Makefile.build:268: arch/powerpc/mm/nohash/kaslr_booke.o] Error 1
-> make[3]: *** [/home/dja/dev/linux/linux/scripts/Makefile.build:505: arch/powerpc/mm/nohash] Error 2
-> make[2]: *** [/home/dja/dev/linux/linux/scripts/Makefile.build:505: arch/powerpc/mm] Error 2
-> make[2]: *** Waiting for unfinished jobs....
-> 
-> I have attached my .config file.
-> 
+-Kees
 
-Thanks Daniel,
-
-My config had CC_DISABLE_WARN_MAYBE_UNINITIALIZED=y enabled so I missed 
-this warning. I will fix it.
-
-Thanks again.
-
-Jason
-
-> I'm using
-> powerpc64-linux-gnu-gcc (Ubuntu 9.2.1-9ubuntu1) 9.2.1 20191008
-> 
-> Regards,
-> Daniel
-> 
-> 
-> 
-> 
->> This is a try to implement KASLR for Freescale BookE64 which is based on
->> my earlier implementation for Freescale BookE32:
->> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718&state=*
->>
->> The implementation for Freescale BookE64 is similar as BookE32. One
->> difference is that Freescale BookE64 set up a TLB mapping of 1G during
->> booting. Another difference is that ppc64 needs the kernel to be
->> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
->> it 64K-aligned. This can save some code to creat another TLB map at
->> early boot. The disadvantage is that we only have about 1G/64K = 16384
->> slots to put the kernel in.
->>
->>      KERNELBASE
->>
->>            64K                     |--> kernel <--|
->>             |                      |              |
->>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>          |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
->>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->>          |                         |                        1G
->>          |----->   offset    <-----|
->>
->>                                kernstart_virt_addr
->>
->> I'm not sure if the slot numbers is enough or the design has any
->> defects. If you have some better ideas, I would be happy to hear that.
->>
->> Thank you all.
->>
->> v3->v4:
->>    Do not define __kaslr_offset as a fixed symbol. Reference __run_at_load and
->>      __kaslr_offset by symbol instead of magic offsets.
->>    Use IS_ENABLED(CONFIG_PPC32) instead of #ifdef CONFIG_PPC32.
->>    Change kaslr-booke32 to kaslr-booke in index.rst
->>    Switch some instructions to 64-bit.
->> v2->v3:
->>    Fix build error when KASLR is disabled.
->> v1->v2:
->>    Add __kaslr_offset for the secondary cpu boot up.
->>
->> Jason Yan (6):
->>    powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and
->>      kaslr_early_init()
->>    powerpc/fsl_booke/64: introduce reloc_kernel_entry() helper
->>    powerpc/fsl_booke/64: implement KASLR for fsl_booke64
->>    powerpc/fsl_booke/64: do not clear the BSS for the second pass
->>    powerpc/fsl_booke/64: clear the original kernel if randomized
->>    powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst
->>      and add 64bit part
->>
->>   Documentation/powerpc/index.rst               |  2 +-
->>   .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 +++++++-
->>   arch/powerpc/Kconfig                          |  2 +-
->>   arch/powerpc/kernel/exceptions-64e.S          | 23 +++++
->>   arch/powerpc/kernel/head_64.S                 | 13 +++
->>   arch/powerpc/kernel/setup_64.c                |  3 +
->>   arch/powerpc/mm/mmu_decl.h                    | 23 ++---
->>   arch/powerpc/mm/nohash/kaslr_booke.c          | 88 +++++++++++++------
->>   8 files changed, 144 insertions(+), 45 deletions(-)
->>   rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
->>
->> -- 
->> 2.17.2
-
+-- 
+Kees Cook
