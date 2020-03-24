@@ -1,4 +1,4 @@
-Return-Path: <SRS0=GDqk=5J=lists.openwall.com=kernel-hardening-return-18198-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=4ZUS=5J=lists.openwall.com=kernel-hardening-return-18199-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-9.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6138EC43331
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:33:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A83D4C54EEB
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:33:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 88D5320735
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:33:35 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 077F120788
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:33:44 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="BcF5fu0w"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 88D5320735
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="S9Srk3vt"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 077F120788
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18198-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18048 invoked by uid 550); 24 Mar 2020 20:32:55 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18199-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18150 invoked by uid 550); 24 Mar 2020 20:32:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,31 +25,31 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17835 invoked from network); 24 Mar 2020 20:32:53 -0000
+Received: (qmail 18007 invoked from network); 24 Mar 2020 20:32:54 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=1MVGnSojuGRbIf385C9jQfbyEyUVxBYpFXB8EsCcrYw=;
-        b=BcF5fu0w+3RjSRBoJOMuJwRkQ7K/mRa1BZHJeNserbqzlapS73yhJkI9BAFD3QlZia
-         /tK6Q6a0Xix0108WsK916BMXctBv6x/nqlbYs0Fqc2Fl/c07lkSHe4EI2UglGuLZrWzk
-         OsxF7OZPK7kzoWTSxKgurb1BP56sAT/bnrrp0=
+        bh=c3b1sjWFJGWk+HhbHvBn4evu301M7fqA/kMQ4pyC4tI=;
+        b=S9Srk3vtm/u5AWxb5Lq0VLBe/+/+CUvcc/nWuriifzbcDxo3ZwBkLe8Zpl+BamGg/O
+         HO1v1zWZwiU7plLhdxR37s1Jaqc0uJSA8G7tsY4VxqWCO/G2fiHTxNvERagnEIgId99M
+         jOOdb0wJUrZaXGZR5SVzv7rR8cyPHnbBh6gDc=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=1MVGnSojuGRbIf385C9jQfbyEyUVxBYpFXB8EsCcrYw=;
-        b=rBRz6xQsAYtVOMoy+YMmiTrrUAKv+BzkR6B6tvidDn0YdoMzjqnPLd9Z9SSOn8nvJt
-         RLNMX0+I9T0mPlU8nm5k9IFS+3NpMBYCfMbuG9CsLX3RA0RDvSKDdsyHzOkPqEBXvMa2
-         UtcUzEdqmWpPVw/ZwaKyIMHW9lafGvxV5kfG2Dr8Mcd1s/oYUoLNSRgTFgtk4nsrZIuH
-         rprHlCNCzuttbwmMdI4sBmFyDdeLlkpmXxyZzsxouig952n4zcqltVLN5Q0QAcx45fmi
-         0aEdHgBQ8E9vQxJHoseQ3tcwrBRe1U+IzKJEP71miufDcQif3Z/ui7sR5luvHjXic9v1
-         +BoQ==
-X-Gm-Message-State: ANhLgQ1i7pmYotT11cjMWObt93qhGT5Wd4A/xVZhWwl74EXqFPITGXNx
-	3j5VNuEZJSwPLnVjWcQduOr2HQ==
-X-Google-Smtp-Source: ADFU+vvnVRb00GhJN60Odz51h8y0qLnFMPgufkKkVflkAhmJwmU/2do8qdmBufOmVDll0iyTu12GSw==
-X-Received: by 2002:a17:902:61:: with SMTP id 88mr28126394pla.313.1585081961408;
-        Tue, 24 Mar 2020 13:32:41 -0700 (PDT)
+        bh=c3b1sjWFJGWk+HhbHvBn4evu301M7fqA/kMQ4pyC4tI=;
+        b=rO1g+5xCBL3okOFIix+x5dmDAqmR1sZTzOuW7nh36g4fds3xILiZ92NvONEqPCwxKn
+         QPRwAh5DkozW4Pez57ZmPbXE5/RDhj+oL2W3PLWre0iFDtZFSFQf2CN/Y0zgbluU2JqX
+         NgTaujxtqRv1a1uzfL8F77GKR4E99wqHxvUdX1slVwva//xczDMBZXa81rG1L4IpdCyc
+         l++EmPpvwUpuPMS8pEXcAnhZyGKYZzLhUI5AL9ULqs6JHowzR3GDoHpqTHaCcBwt24kd
+         wy1LkPlramxX4ahuLFPmv4TUdi6I1o6ueRsNrA/0JV5uXwof6YgeZBQBhAgDlBa8Mn0a
+         Ghkw==
+X-Gm-Message-State: ANhLgQ2NVvECXNa4AqHrBOa82FZXG5r+PloNdLfZFBNhUcUBDoTWyYlb
+	HILXAFCQ0HIMk77WW9CoAnolkg==
+X-Google-Smtp-Source: ADFU+vtXBHEgdg26RkMBmCkSMYW4AGLyko9MzjPWEETXma0en8jpa6fm5D16S9175yT7TTEUnSU+xQ==
+X-Received: by 2002:a17:90a:1911:: with SMTP id 17mr205762pjg.65.1585081963230;
+        Tue, 24 Mar 2020 13:32:43 -0700 (PDT)
 From: Kees Cook <keescook@chromium.org>
 To: Thomas Gleixner <tglx@linutronix.de>
 Cc: Kees Cook <keescook@chromium.org>,
@@ -68,121 +68,71 @@ Cc: Kees Cook <keescook@chromium.org>,
 	linux-arm-kernel@lists.infradead.org,
 	linux-mm@kvack.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v2 1/5] jump_label: Provide CONFIG-driven build state defaults
-Date: Tue, 24 Mar 2020 13:32:27 -0700
-Message-Id: <20200324203231.64324-2-keescook@chromium.org>
+Subject: [PATCH v2 5/5] arm64: entry: Enable random_kstack_offset support
+Date: Tue, 24 Mar 2020 13:32:31 -0700
+Message-Id: <20200324203231.64324-6-keescook@chromium.org>
 X-Mailer: git-send-email 2.20.1
 In-Reply-To: <20200324203231.64324-1-keescook@chromium.org>
 References: <20200324203231.64324-1-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Choosing the initial state of static branches changes the assembly
-layout (if the condition is expected to be likely, inline, or unlikely,
-out of line via a jump). A few places in the kernel use (or could be
-using) a CONFIG to choose the default state, so provide the
-infrastructure to do this and convert the existing cases (init_on_alloc
-and init_on_free) to the new macros.
+Allow for a randomized stack offset on a per-syscall basis, with roughly
+5 bits of entropy.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- include/linux/jump_label.h | 19 +++++++++++++++++++
- include/linux/mm.h         | 12 ++----------
- mm/page_alloc.c            | 12 ++----------
- 3 files changed, 23 insertions(+), 20 deletions(-)
+ arch/arm64/Kconfig          |  1 +
+ arch/arm64/kernel/syscall.c | 10 ++++++++++
+ 2 files changed, 11 insertions(+)
 
-diff --git a/include/linux/jump_label.h b/include/linux/jump_label.h
-index 3526c0aee954..615fdfb871a3 100644
---- a/include/linux/jump_label.h
-+++ b/include/linux/jump_label.h
-@@ -382,6 +382,21 @@ struct static_key_false {
- 		[0 ... (count) - 1] = STATIC_KEY_FALSE_INIT,	\
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 0b30e884e088..4d5aa4959f72 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -127,6 +127,7 @@ config ARM64
+ 	select HAVE_ARCH_MMAP_RND_BITS
+ 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+ 	select HAVE_ARCH_PREL32_RELOCATIONS
++	select HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
+ 	select HAVE_ARCH_SECCOMP_FILTER
+ 	select HAVE_ARCH_STACKLEAK
+ 	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+diff --git a/arch/arm64/kernel/syscall.c b/arch/arm64/kernel/syscall.c
+index a12c0c88d345..238dbd753b44 100644
+--- a/arch/arm64/kernel/syscall.c
++++ b/arch/arm64/kernel/syscall.c
+@@ -5,6 +5,7 @@
+ #include <linux/errno.h>
+ #include <linux/nospec.h>
+ #include <linux/ptrace.h>
++#include <linux/randomize_kstack.h>
+ #include <linux/syscalls.h>
+ 
+ #include <asm/daifflags.h>
+@@ -42,6 +43,8 @@ static void invoke_syscall(struct pt_regs *regs, unsigned int scno,
+ {
+ 	long ret;
+ 
++	add_random_kstack_offset();
++
+ 	if (scno < sc_nr) {
+ 		syscall_fn_t syscall_fn;
+ 		syscall_fn = syscall_table[array_index_nospec(scno, sc_nr)];
+@@ -51,6 +54,13 @@ static void invoke_syscall(struct pt_regs *regs, unsigned int scno,
  	}
  
-+#define _DEFINE_STATIC_KEY_1(name)	DEFINE_STATIC_KEY_TRUE(name)
-+#define _DEFINE_STATIC_KEY_0(name)	DEFINE_STATIC_KEY_FALSE(name)
-+#define DEFINE_STATIC_KEY_MAYBE(cfg, name)			\
-+	__PASTE(_DEFINE_STATIC_KEY_, IS_ENABLED(cfg))(name)
+ 	regs->regs[0] = ret;
 +
-+#define _DEFINE_STATIC_KEY_RO_1(name)	DEFINE_STATIC_KEY_TRUE_RO(name)
-+#define _DEFINE_STATIC_KEY_RO_0(name)	DEFINE_STATIC_KEY_FALSE_RO(name)
-+#define DEFINE_STATIC_KEY_MAYBE_RO(cfg, name)			\
-+	__PASTE(_DEFINE_STATIC_KEY_RO_, IS_ENABLED(cfg))(name)
-+
-+#define _DECLARE_STATIC_KEY_1(name)	DECLARE_STATIC_KEY_TRUE(name)
-+#define _DECLARE_STATIC_KEY_0(name)	DECLARE_STATIC_KEY_FALSE(name)
-+#define DECLARE_STATIC_KEY_MAYBE(cfg, name)			\
-+	__PASTE(_DECLARE_STATIC_KEY_, IS_ENABLED(cfg))(name)
-+
- extern bool ____wrong_branch_error(void);
- 
- #define static_key_enabled(x)							\
-@@ -482,6 +497,10 @@ extern bool ____wrong_branch_error(void);
- 
- #endif /* CONFIG_JUMP_LABEL */
- 
-+#define static_branch_maybe(config, x)					\
-+	(IS_ENABLED(config) ? static_branch_likely(x)			\
-+			    : static_branch_unlikely(x))
-+
- /*
-  * Advanced usage; refcount, branch is enabled when: count != 0
-  */
-diff --git a/include/linux/mm.h b/include/linux/mm.h
-index c54fb96cb1e6..059658604dd6 100644
---- a/include/linux/mm.h
-+++ b/include/linux/mm.h
-@@ -2662,11 +2662,7 @@ static inline void kernel_poison_pages(struct page *page, int numpages,
- 					int enable) { }
- #endif
- 
--#ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
--DECLARE_STATIC_KEY_TRUE(init_on_alloc);
--#else
--DECLARE_STATIC_KEY_FALSE(init_on_alloc);
--#endif
-+DECLARE_STATIC_KEY_MAYBE(CONFIG_INIT_ON_ALLOC_DEFAULT_ON, init_on_alloc);
- static inline bool want_init_on_alloc(gfp_t flags)
- {
- 	if (static_branch_unlikely(&init_on_alloc) &&
-@@ -2675,11 +2671,7 @@ static inline bool want_init_on_alloc(gfp_t flags)
- 	return flags & __GFP_ZERO;
++	/*
++	 * Since the compiler chooses a 4 bit alignment for the stack,
++	 * let's save one additional bit (9 total), which gets us up
++	 * near 5 bits of entropy.
++	 */
++	choose_random_kstack_offset(get_random_int() & 0x1FF);
  }
  
--#ifdef CONFIG_INIT_ON_FREE_DEFAULT_ON
--DECLARE_STATIC_KEY_TRUE(init_on_free);
--#else
--DECLARE_STATIC_KEY_FALSE(init_on_free);
--#endif
-+DECLARE_STATIC_KEY_MAYBE(CONFIG_INIT_ON_FREE_DEFAULT_ON, init_on_free);
- static inline bool want_init_on_free(void)
- {
- 	return static_branch_unlikely(&init_on_free) &&
-diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 3c4eb750a199..1f625e5a03c0 100644
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
-@@ -135,18 +135,10 @@ unsigned long totalcma_pages __read_mostly;
- 
- int percpu_pagelist_fraction;
- gfp_t gfp_allowed_mask __read_mostly = GFP_BOOT_MASK;
--#ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
--DEFINE_STATIC_KEY_TRUE(init_on_alloc);
--#else
--DEFINE_STATIC_KEY_FALSE(init_on_alloc);
--#endif
-+DEFINE_STATIC_KEY_MAYBE(CONFIG_INIT_ON_ALLOC_DEFAULT_ON, init_on_alloc);
- EXPORT_SYMBOL(init_on_alloc);
- 
--#ifdef CONFIG_INIT_ON_FREE_DEFAULT_ON
--DEFINE_STATIC_KEY_TRUE(init_on_free);
--#else
--DEFINE_STATIC_KEY_FALSE(init_on_free);
--#endif
-+DEFINE_STATIC_KEY_MAYBE(CONFIG_INIT_ON_FREE_DEFAULT_ON, init_on_free);
- EXPORT_SYMBOL(init_on_free);
- 
- static int __init early_init_on_alloc(char *buf)
+ static inline bool has_syscall_work(unsigned long flags)
 -- 
 2.20.1
 
