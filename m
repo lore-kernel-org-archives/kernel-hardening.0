@@ -1,4 +1,4 @@
-Return-Path: <SRS0=eHLN=5J=lists.openwall.com=kernel-hardening-return-18207-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=XP7G=5J=lists.openwall.com=kernel-hardening-return-18208-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-9.7 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
 	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5E647C43331
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:47:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 19E42C43331
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:47:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B8EC8205ED
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:47:29 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B8EC8205ED
+	by mail.kernel.org (Postfix) with SMTP id 74C14205ED
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 20:47:39 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 74C14205ED
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18207-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1374 invoked by uid 550); 24 Mar 2020 20:46:35 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18208-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1407 invoked by uid 550); 24 Mar 2020 20:46:36 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1178 invoked from network); 24 Mar 2020 20:46:33 -0000
+Received: (qmail 1129 invoked from network); 24 Mar 2020 20:46:33 -0000
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
 To: LKML <linux-kernel@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
@@ -48,69 +48,98 @@ Cc: Akinobu Mita <akinobu.mita@gmail.com>,
 	Kees Cook <keescook@chromium.org>,
 	Linus Torvalds <torvalds@linux-foundation.org>,
 	Oleg Nesterov <oleg@redhat.com>
-Subject: [PATCH RESEND v9 7/8] proc: move hidepid values to uapi as they are user interface to mount
-Date: Tue, 24 Mar 2020 21:44:48 +0100
-Message-Id: <20200324204449.7263-8-gladkov.alexey@gmail.com>
+Subject: [PATCH RESEND v9 6/8] docs: proc: add documentation for "hidepid=4" and "subset=pidfs" options and new mount behavior
+Date: Tue, 24 Mar 2020 21:44:47 +0100
+Message-Id: <20200324204449.7263-7-gladkov.alexey@gmail.com>
 X-Mailer: git-send-email 2.25.2
 In-Reply-To: <20200324204449.7263-1-gladkov.alexey@gmail.com>
 References: <20200324204449.7263-1-gladkov.alexey@gmail.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Suggested-by: Alexey Dobriyan <adobriyan@gmail.com>
 Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
 ---
- include/linux/proc_fs.h      |  9 +--------
- include/uapi/linux/proc_fs.h | 13 +++++++++++++
- 2 files changed, 14 insertions(+), 8 deletions(-)
- create mode 100644 include/uapi/linux/proc_fs.h
+ Documentation/filesystems/proc.txt | 53 ++++++++++++++++++++++++++++++
+ 1 file changed, 53 insertions(+)
 
-diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
-index afd38cae2339..d259817ec913 100644
---- a/include/linux/proc_fs.h
-+++ b/include/linux/proc_fs.h
-@@ -7,6 +7,7 @@
+diff --git a/Documentation/filesystems/proc.txt b/Documentation/filesystems/proc.txt
+index 99ca040e3f90..4741fd092f36 100644
+--- a/Documentation/filesystems/proc.txt
++++ b/Documentation/filesystems/proc.txt
+@@ -50,6 +50,8 @@ Table of Contents
+   4	Configuring procfs
+   4.1	Mount options
  
- #include <linux/types.h>
- #include <linux/fs.h>
-+#include <uapi/linux/proc_fs.h>
- 
- struct proc_dir_entry;
- struct seq_file;
-@@ -27,14 +28,6 @@ struct proc_ops {
- 	unsigned long (*proc_get_unmapped_area)(struct file *, unsigned long, unsigned long, unsigned long, unsigned long);
- };
- 
--/* definitions for hide_pid field */
--enum {
--	HIDEPID_OFF	  = 0,
--	HIDEPID_NO_ACCESS = 1,
--	HIDEPID_INVISIBLE = 2,
--	HIDEPID_NOT_PTRACEABLE = 4, /* Limit pids to only ptraceable pids */
--};
--
- /* definitions for proc mount option pidonly */
- enum {
- 	PROC_PIDONLY_OFF = 0,
-diff --git a/include/uapi/linux/proc_fs.h b/include/uapi/linux/proc_fs.h
-new file mode 100644
-index 000000000000..dc6d717aa6ec
---- /dev/null
-+++ b/include/uapi/linux/proc_fs.h
-@@ -0,0 +1,13 @@
-+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-+#ifndef _UAPI_PROC_FS_H
-+#define _UAPI_PROC_FS_H
++  5	Filesystem behavior
 +
-+/* definitions for hide_pid field */
-+enum {
-+	HIDEPID_OFF            = 0,
-+	HIDEPID_NO_ACCESS      = 1,
-+	HIDEPID_INVISIBLE      = 2,
-+	HIDEPID_NOT_PTRACEABLE = 4,
-+};
+ ------------------------------------------------------------------------------
+ Preface
+ ------------------------------------------------------------------------------
+@@ -2021,6 +2023,7 @@ The following mount options are supported:
+ 
+ 	hidepid=	Set /proc/<pid>/ access mode.
+ 	gid=		Set the group authorized to learn processes information.
++	subset=		Show only the specified subset of procfs.
+ 
+ hidepid=0 means classic mode - everybody may access all /proc/<pid>/ directories
+ (default).
+@@ -2042,6 +2045,56 @@ information about running processes, whether some daemon runs with elevated
+ privileges, whether other user runs some sensitive program, whether other users
+ run any program at all, etc.
+ 
++hidepid=4 means that procfs should only contain /proc/<pid>/ directories
++that the caller can ptrace.
 +
-+#endif
+ gid= defines a group authorized to learn processes information otherwise
+ prohibited by hidepid=.  If you use some daemon like identd which needs to learn
+ information about processes information, just add identd to this group.
++
++subset=pidfs hides all top level files and directories in the procfs that
++are not related to tasks.
++
++------------------------------------------------------------------------------
++5 Filesystem behavior
++------------------------------------------------------------------------------
++
++Originally, before the advent of pid namepsace, procfs was a global file
++system. It means that there was only one procfs instance in the system.
++
++When pid namespace was added, a separate procfs instance was mounted in
++each pid namespace. So, procfs mount options are global among all
++mountpoints within the same namespace.
++
++# grep ^proc /proc/mounts
++proc /proc proc rw,relatime,hidepid=2 0 0
++
++# strace -e mount mount -o hidepid=1 -t proc proc /tmp/proc
++mount("proc", "/tmp/proc", "proc", 0, "hidepid=1") = 0
+++++ exited with 0 +++
++
++# grep ^proc /proc/mounts
++proc /proc proc rw,relatime,hidepid=2 0 0
++proc /tmp/proc proc rw,relatime,hidepid=2 0 0
++
++and only after remounting procfs mount options will change at all
++mountpoints.
++
++# mount -o remount,hidepid=1 -t proc proc /tmp/proc
++
++# grep ^proc /proc/mounts
++proc /proc proc rw,relatime,hidepid=1 0 0
++proc /tmp/proc proc rw,relatime,hidepid=1 0 0
++
++This behavior is different from the behavior of other filesystems.
++
++The new procfs behavior is more like other filesystems. Each procfs mount
++creates a new procfs instance. Mount options affect own procfs instance.
++It means that it became possible to have several procfs instances
++displaying tasks with different filtering options in one pid namespace.
++
++# mount -o hidepid=2 -t proc proc /proc
++# mount -o hidepid=1 -t proc proc /tmp/proc
++# grep ^proc /proc/mounts
++proc /proc proc rw,relatime,hidepid=2 0 0
++proc /tmp/proc proc rw,relatime,hidepid=1 0 0
 -- 
 2.25.2
 
