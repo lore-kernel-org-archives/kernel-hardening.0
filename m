@@ -1,23 +1,23 @@
-Return-Path: <SRS0=8tN5=5J=lists.openwall.com=kernel-hardening-return-18214-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=3Rnm=5J=lists.openwall.com=kernel-hardening-return-18215-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+X-Spam-Status: No, score=-5.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 46FE8C10DCE
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 21:34:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4A850C10DCE
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 22:07:14 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 96F39206F6
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 21:34:16 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 95A652078A
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 22:07:13 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="iXKz/8wy"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 96F39206F6
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18214-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3495 invoked by uid 550); 24 Mar 2020 21:34:11 -0000
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="aAS4Q+6s"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 95A652078A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18215-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18028 invoked by uid 550); 24 Mar 2020 22:07:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,97 +25,53 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3458 invoked from network); 24 Mar 2020 21:34:10 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1585085638;
-	bh=YSucMrRxtrynGJ/g9tDph2k08nv6kh3kh3Hl7TdUQPo=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=iXKz/8wy8p4KltD7XQjmmy52F9817kzLNOiw4klkv30Lpg690Ck3BR5pWPmOXvYTT
-	 65/iPl6FiQNrWy8nDWzCtOh2lHQ2VCBp4DyOQADo7k+1qlTqsStcT0HN3HVZNR7MfY
-	 HZQqGk2p5wW29XzFJBh2XzyQ0tSzpezK2TzFy72Q=
-Date: Tue, 24 Mar 2020 21:33:53 +0000
-From: Will Deacon <will@kernel.org>
-To: Marco Elver <elver@google.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Eric Dumazet <edumazet@google.com>,
-	Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>,
-	Maddie Stone <maddiestone@google.com>,
-	"Paul E . McKenney" <paulmck@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Thomas Gleixner <tglx@linutronix.de>, kernel-team@android.com,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [RFC PATCH 03/21] list: Annotate lockless list primitives with
- data_race()
-Message-ID: <20200324213352.GB21176@willie-the-truck>
-References: <20200324153643.15527-1-will@kernel.org>
- <20200324153643.15527-4-will@kernel.org>
- <CANpmjNPWpkxqZQJJOwmx0oqvzfcxhtqErjCzjRO_y0BQSmre8A@mail.gmail.com>
+Received: (qmail 17996 invoked from network); 24 Mar 2020 22:07:06 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=merlin.20170209; h=In-Reply-To:Content-Type:MIME-Version:
+	References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description;
+	bh=RgOSv5leUzdh9drlvUWI/yMDTMMdqFPXz0ZLHcJ9Qrk=; b=aAS4Q+6sODIaHbIvnMNlQ5KsSS
+	WQ6pOZIKF1v1HbpnjpTp0sEEqKotsv7YAX/6keV3jCJi4monNTYQgMJDjQc6zZgSJyWEoAJJxrCn6
+	2Wtau+W4MCGQhoG1DYaVOae5ieyPMQantZoA70LPpgA2d92YcmM9Opq94LM+64idGuHIarHnOa+fJ
+	8g/FtxwMBiYi5ljyGa6nG/AzrKDh3BPJpxrV/7Nn030GCm7jOEH3LpTrxhyQH2Gl6SJDFbCgh7/Yu
+	EHVYqlnS6JEoOjv8O8HKtL1Xt5PUyZ3W+zgHvzKrF2zatGASlP9ApCKZ12nWFczNHgWiHpAVILumF
+	lFViESkw==;
+Date: Tue, 24 Mar 2020 23:06:41 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>,
+	Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org,
+	Andy Lutomirski <luto@kernel.org>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Will Deacon <will@kernel.org>, Mark Rutland <mark.rutland@arm.com>,
+	Alexander Potapenko <glider@google.com>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Jann Horn <jannh@google.com>,
+	"Perla, Enrico" <enrico.perla@intel.com>,
+	kernel-hardening@lists.openwall.com,
+	linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v2 1/5] jump_label: Provide CONFIG-driven build state
+ defaults
+Message-ID: <20200324220641.GT2452@worktop.programming.kicks-ass.net>
+References: <20200324203231.64324-1-keescook@chromium.org>
+ <20200324203231.64324-2-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CANpmjNPWpkxqZQJJOwmx0oqvzfcxhtqErjCzjRO_y0BQSmre8A@mail.gmail.com>
+In-Reply-To: <20200324203231.64324-2-keescook@chromium.org>
 User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On Tue, Mar 24, 2020 at 05:23:30PM +0100, Marco Elver wrote:
-> On Tue, 24 Mar 2020 at 16:37, Will Deacon <will@kernel.org> wrote:
-> >
-> > Some list predicates can be used locklessly even with the non-RCU list
-> > implementations, since they effectively boil down to a test against
-> > NULL. For example, checking whether or not a list is empty is safe even
-> > in the presence of a concurrent, tearing write to the list head pointer.
-> > Similarly, checking whether or not an hlist node has been hashed is safe
-> > as well.
-> >
-> > Annotate these lockless list predicates with data_race() and READ_ONCE()
-> > so that KCSAN and the compiler are aware of what's going on. The writer
-> > side can then avoid having to use WRITE_ONCE() in the non-RCU
-> > implementation.
-> >
-> > Cc: Paul E. McKenney <paulmck@kernel.org>
-> > Cc: Peter Zijlstra <peterz@infradead.org>
-> > Cc: Marco Elver <elver@google.com>
-> > Signed-off-by: Will Deacon <will@kernel.org>
-> > ---
-> >  include/linux/list.h       | 10 +++++-----
-> >  include/linux/list_bl.h    |  5 +++--
-> >  include/linux/list_nulls.h |  6 +++---
-> >  include/linux/llist.h      |  2 +-
-> >  4 files changed, 12 insertions(+), 11 deletions(-)
-> >
-> > diff --git a/include/linux/list.h b/include/linux/list.h
-> > index 4fed5a0f9b77..4d9f5f9ed1a8 100644
-> > --- a/include/linux/list.h
-> > +++ b/include/linux/list.h
-> > @@ -279,7 +279,7 @@ static inline int list_is_last(const struct list_head *list,
-> >   */
-> >  static inline int list_empty(const struct list_head *head)
-> >  {
-> > -       return READ_ONCE(head->next) == head;
-> > +       return data_race(READ_ONCE(head->next) == head);
+On Tue, Mar 24, 2020 at 01:32:27PM -0700, Kees Cook wrote:
+> Choosing the initial state of static branches changes the assembly
+> layout (if the condition is expected to be likely, inline, or unlikely,
+> out of line via a jump). A few places in the kernel use (or could be
+> using) a CONFIG to choose the default state, so provide the
+> infrastructure to do this and convert the existing cases (init_on_alloc
+> and init_on_free) to the new macros.
 > 
-> Double-marking should never be necessary, at least if you want to make
-> KCSAN happy. From what I gather there is an unmarked write somewhere,
-> correct? In that case, KCSAN will still complain because if it sees a
-> race between this read and the other write, then at least one is still
-> plain (the write).
-> 
-> Then, my suggestion would be to mark the write with data_race() and
-> just leave this as a READ_ONCE(). Having a data_race() somewhere only
-> makes KCSAN stop reporting the race if the paired access is also
-> marked (be it with data_race() or _ONCE, etc.).
-> 
-> Alternatively, if marking the write is impossible, you can surround
-> the access with kcsan_disable_current()/kcsan_enable_current(). Or, as
-> a last resort, just leaving as-is is fine too, because KCSAN's default
-> config (still) has KCSAN_ASSUME_PLAIN_WRITES_ATOMIC selected.
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-Right, it looks like this is a bit of a smoking gun and we need to decide
-on whether list_empty() is actually usable without synchronisation first.
-Based on the outcome of that discussion, I'll update this patch accordingly.
+Cute,
 
-The main thing I want to avoid is marking parts of the non-RCU list
-implementation with data_race() or {READ,WRITE}_ONCE() because that's a
-sure-fire way to hide real bugs.
-
-Cheers,
-
-Will
+Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
