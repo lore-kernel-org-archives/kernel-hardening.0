@@ -1,20 +1,23 @@
-Return-Path: <SRS0=s4B7=5J=lists.openwall.com=kernel-hardening-return-18211-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=P7WL=5J=lists.openwall.com=kernel-hardening-return-18212-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2AD9AC10DCE
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 21:25:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E34F7C10DCE
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 21:29:20 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 853722076F
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 21:25:29 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 853722076F
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18211-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28423 invoked by uid 550); 24 Mar 2020 21:25:24 -0000
+	by mail.kernel.org (Postfix) with SMTP id 3E205206F6
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 21:29:20 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="YSCmWxRY"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3E205206F6
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18212-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 31784 invoked by uid 550); 24 Mar 2020 21:29:14 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,115 +25,76 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28398 invoked from network); 24 Mar 2020 21:25:23 -0000
-IronPort-SDR: LXuNVZpXjgVPq5LR3RC/tPWAKjSkRf/6cflzUkuOR1YtyDvyL5rhk89POxzzv7NGGWTg4O2Obo
- w4xxw/7WTerA==
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-IronPort-SDR: mN5mW36bByfx8u23caSwnMSwzlVG0gkUNRt7tD/10fEzNJJZ2RY/DgvZQ40y7vKwPOVR487G31
- vY7WdAYs8ORA==
-X-IronPort-AV: E=Sophos;i="5.72,301,1580803200"; 
-   d="scan'208";a="265298598"
-Message-ID: <a01e6b2f0a19f0ace0b5f2c8a50cafccc9b4ef60.camel@linux.intel.com>
-Subject: Re: [RFC PATCH 05/11] x86: Makefile: Add build and config option
- for CONFIG_FG_KASLR
-From: Kristen Carlson Accardi <kristen@linux.intel.com>
-To: Arvind Sankar <nivedita@alum.mit.edu>
-Cc: tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, hpa@zytor.com, 
-	arjan@linux.intel.com, keescook@chromium.org, rick.p.edgecombe@intel.com, 
-	x86@kernel.org, linux-kernel@vger.kernel.org, 
-	kernel-hardening@lists.openwall.com
-Date: Tue, 24 Mar 2020 14:24:51 -0700
-In-Reply-To: <20200225175544.GA1385238@rani.riverdale.lan>
-References: <20200205223950.1212394-1-kristen@linux.intel.com>
-	 <20200205223950.1212394-6-kristen@linux.intel.com>
-	 <20200225175544.GA1385238@rani.riverdale.lan>
-Content-Type: text/plain; charset="UTF-8"
-User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
+Received: (qmail 31747 invoked from network); 24 Mar 2020 21:29:14 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=mt9R6MAwAgMsRiTLzlySm2VmV71YyEXXijbHmE8WTzk=;
+        b=YSCmWxRY40BGiMze1Yvin1YLkJXXl+PFUME/YQdtuWumwzPRmAdvKghADmWKlRrN0K
+         f9xnko63sgT0KH37iYw/9/MXZe1oLeb2jpfOZFVn6TSxlkYn1LgOxa54s9Ewh6bUAMOy
+         BTu90myx9FunEp53IT4emC25nbXXzPJhnl84W6vhgEIa5wtgGP30cMvv/5ZskWvr8+4O
+         Nr3uuT2MSmd1BDUPB1tsmSRiIQExkkO/w1eNM2f0qE61UeZwTTOh9IfxQOOmNTpezIgO
+         mLkwFd5DYS6Gf4stv1h7MySVYHXya5QyIbq/2+4YJQUlIUc7dad9mqPuRzul6/Z7nzr+
+         FAAw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=mt9R6MAwAgMsRiTLzlySm2VmV71YyEXXijbHmE8WTzk=;
+        b=jpaNj7AwNKSrxeLVkCQNQyVeu+ZxYi/5x1V9+t1BWrYWx8cRSBMN+s5/eo+LPFU6Dg
+         5PrRBsebW59lMberIX08Ozp3+OBlp5OrWyBjHLyNpJiPUgj2+IGJN8ZcVbLbzSw3T6E1
+         21O9QjNv3PiX/6L3oArrHFeSWt4VYxjGTGsjX5T7OdwAUz1ewPdEab5I2NuxHjhUwwC2
+         CZQO0jF4kHSwrDDia9ZaJ6ivG3v3cv+3OXBNjSDTOY9LOcRWDqTA6mjtJ28pRsQzFiVe
+         Ah+RfqvpGLrNlZ/+sQ1P6IHSArmOO6kHKJub0zR1MvsrUimTeSfeIJRP4oyuAYO9b4Km
+         HsdQ==
+X-Gm-Message-State: ANhLgQ0+G7B74sST/zdho7U9EfKdEpN8TA0BmlEtegadQjVBvoL5SreC
+	FdDH5xUa/AX6zkOY574lqYvivC9Z/4KmlQYV2aXcLg==
+X-Google-Smtp-Source: ADFU+vv8d+tvt43tW6wjpsme/liCuo5+2rssm9plm9lpdQXp8OhLUCZZ8xFwlvpxLM+HptNYxGF5KgkzMO7Hg0NPccQ=
+X-Received: by 2002:a2e:89c1:: with SMTP id c1mr17348550ljk.215.1585085342690;
+ Tue, 24 Mar 2020 14:29:02 -0700 (PDT)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
+References: <20200324203231.64324-1-keescook@chromium.org>
+In-Reply-To: <20200324203231.64324-1-keescook@chromium.org>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 24 Mar 2020 22:28:35 +0100
+Message-ID: <CAG48ez3yYkMdxEEW6sJzBC5BZSbzEZKnpWzco32p-TJx7y_srg@mail.gmail.com>
+Subject: Re: [PATCH v2 0/5] Optionally randomize kernel stack offset each syscall
+To: Kees Cook <keescook@chromium.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Elena Reshetova <elena.reshetova@intel.com>, 
+	"the arch/x86 maintainers" <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, 
+	Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will@kernel.org>, 
+	Mark Rutland <mark.rutland@arm.com>, Alexander Potapenko <glider@google.com>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>, "Perla, Enrico" <enrico.perla@intel.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel@lists.infradead.org, 
+	Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On Tue, 2020-02-25 at 12:55 -0500, Arvind Sankar wrote:
-> On Wed, Feb 05, 2020 at 02:39:44PM -0800, Kristen Carlson Accardi
-> wrote:
-> > Allow user to select CONFIG_FG_KASLR if dependencies are met.
-> > Change
-> > the make file to build with -ffunction-sections if CONFIG_FG_KASLR
-> > 
-> > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
-> > ---
-> >  Makefile         |  4 ++++
-> >  arch/x86/Kconfig | 13 +++++++++++++
-> >  2 files changed, 17 insertions(+)
-> > 
-> > diff --git a/Makefile b/Makefile
-> > index c50ef91f6136..41438a921666 100644
-> > --- a/Makefile
-> > +++ b/Makefile
-> > @@ -846,6 +846,10 @@ ifdef CONFIG_LIVEPATCH
-> >  KBUILD_CFLAGS += $(call cc-option, -flive-patching=inline-clone)
-> >  endif
-> >  
-> > +ifdef CONFIG_FG_KASLR
-> > +KBUILD_CFLAGS += -ffunction-sections
-> > +endif
-> > +
-> 
-> With -ffunction-sections I get a few unreachable code warnings from
-> objtool.
-> 
-> arch/x86/kernel/dumpstack.o: warning: objtool: show_iret_regs()+0x10:
-> unreachable instruction
-> fs/sysfs/dir.o: warning: objtool: sysfs_create_mount_point()+0x4f:
-> unreachable instruction
-> kernel/time/clocksource.o: warning: objtool:
-> __clocksource_register_scale()+0x21: unreachable instruction
-> drivers/tty/sysrq.o: warning: objtool: sysrq_filter()+0x2ef:
-> unreachable instruction
-> arch/x86/mm/fault.o: warning: objtool: pgtable_bad()+0x3f:
-> unreachable instruction
-> drivers/acpi/pci_root.o: warning: objtool:
-> acpi_pci_osc_control_set()+0x123: unreachable instruction
-> drivers/rtc/class.o: warning: objtool:
-> devm_rtc_device_register()+0x40: unreachable instruction
-> kernel/power/process.o: warning: objtool:
-> freeze_processes.cold()+0x0: unreachable instruction
-> drivers/pnp/quirks.o: warning: objtool: quirk_awe32_resources()+0x42:
-> unreachable instruction
-> drivers/acpi/utils.o: warning: objtool: acpi_evaluate_dsm()+0xf1:
-> unreachable instruction
-> kernel/reboot.o: warning: objtool: __do_sys_reboot()+0x1b6:
-> unreachable instruction
-> kernel/power/swap.o: warning: objtool: swsusp_read()+0x185:
-> unreachable instruction
-> drivers/hid/hid-core.o: warning: objtool: hid_hw_start()+0x38:
-> unreachable instruction
-> drivers/acpi/battery.o: warning: objtool:
-> sysfs_add_battery.cold()+0x1a: unreachable instruction
-> arch/x86/kernel/cpu/mce/core.o: warning: objtool:
-> do_machine_check.cold()+0x33: unreachable instruction
-> drivers/pcmcia/cistpl.o: warning: objtool: pccard_store_cis()+0x4e:
-> unreachable instruction
-> drivers/gpu/vga/vgaarb.o: warning: objtool: pci_notify()+0x35:
-> unreachable instruction
-> arch/x86/kernel/tsc.o: warning: objtool:
-> determine_cpu_tsc_frequencies()+0x45: unreachable instruction
-> drivers/pcmcia/yenta_socket.o: warning: objtool:
-> ti1250_override()+0x50: unreachable instruction
-> fs/proc/proc_sysctl.o: warning: objtool:
-> sysctl_print_dir.isra.0()+0x19: unreachable instruction
-> drivers/iommu/intel-iommu.o: warning: objtool:
-> intel_iommu_init()+0x4f4: unreachable instruction
-> net/mac80211/ibss.o: warning: objtool:
-> ieee80211_ibss_work.cold()+0x157: unreachable instruction
-> drivers/net/ethernet/intel/e1000/e1000_main.o: warning: objtool:
-> e1000_clean.cold()+0x0: unreachable instruction
-> net/core/skbuff.o: warning: objtool: skb_dump.cold()+0x3fd:
-> unreachable instruction
+On Tue, Mar 24, 2020 at 9:32 PM Kees Cook <keescook@chromium.org> wrote:
+> This is a continuation and refactoring of Elena's earlier effort to add
+> kernel stack base offset randomization. In the time since the previous
+> discussions, two attacks[1][2] were made public that depended on stack
+> determinism, so we're no longer in the position of "this is a good idea
+> but we have no examples of attacks". :)
+[...]
+> [1] https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
 
-I'm still working on a solution, but the issue here is that any .cold
-function is going to be in a different section than the related
-function, and when objtool is searching for instructions in
-find_insn(), it assumes that it must be in the same section as the
-caller.
+This one only starts using the stack's location after having parsed
+it out of dmesg (which in any environment that wants to provide a
+reasonable level of security really ought to be restricted to root),
+right? If you give people read access to dmesg, they can leak all
+sorts of pointers; not just the stack pointer, but also whatever else
+happens to be in the registers at that point - which is likely to give
+the attacker more ways to place controlled data at a known location.
+See e.g. <https://googleprojectzero.blogspot.com/2018/09/a-cache-invalidation-bug-in-linux.html>,
+which leaks the pointer to a BPF map out of dmesg.
 
+Also, are you sure that it isn't possible to make the syscall that
+leaked its stack pointer never return to userspace (via ptrace or
+SIGSTOP or something like that), and therefore never realign its
+stack, while keeping some controlled data present on the syscall's
+stack?
+
+> [2] https://repositorio-aberto.up.pt/bitstream/10216/125357/2/374717.pdf
+
+That's a moderately large document; which specific part are you referencing?
