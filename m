@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Sh76=5J=lists.openwall.com=kernel-hardening-return-18160-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yHRp=5J=lists.openwall.com=kernel-hardening-return-18161-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8D4F7C54EEB
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:37:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0DD68C43331
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:37:53 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DF37520788
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:37:40 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 625D320774
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:37:52 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="ooPy8VS1"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DF37520788
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="UuO6IgZn"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 625D320774
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18160-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24549 invoked by uid 550); 24 Mar 2020 15:37:11 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18161-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25776 invoked by uid 550); 24 Mar 2020 15:37:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,14 +25,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24379 invoked from network); 24 Mar 2020 15:37:10 -0000
+Received: (qmail 25653 invoked from network); 24 Mar 2020 15:37:12 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1585064218;
-	bh=QY0oPyqlXUd/xyVI4B2QSRbEsJgKQpxLLXC0d7PqKfU=;
+	s=default; t=1585064221;
+	bh=88VE/OFCJ68wUOdcxhSay8r/8S/aaN+bgGPAlwd52xA=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=ooPy8VS1ZB1zf15FBC0Y9g64wzVn6YQ+dSCb44ZRNwzCo3Y3MdaJG47x25mU8c2rV
-	 KA4gW51sECJ1dE9b9lujesOi+Vu9RjU7RfxuHIC5wKlLWU3TWAdKfmiaKyAUOI9Tc9
-	 Ft68clf/VM0E2M7OrXhDYMW2Zxcmaqp5CMT8m1oo=
+	b=UuO6IgZnkaarA94D7wpwykQ4xoQZNyPAp3GcmAWUlOD959KpOUcsbLUXezUDq1gQu
+	 1XHhKPHtJGTanA/aVzrgdyzwqYNOKDYyG5cXOEGOM3ofhkp37APz6Jwu7Cn4IkyuMp
+	 oaxy+sYGeiaeecR0vMVrEJtsNaDEtOQKUt7snBJU=
 From: Will Deacon <will@kernel.org>
 To: linux-kernel@vger.kernel.org
 Cc: Will Deacon <will@kernel.org>,
@@ -46,147 +46,99 @@ Cc: Will Deacon <will@kernel.org>,
 	Thomas Gleixner <tglx@linutronix.de>,
 	kernel-team@android.com,
 	kernel-hardening@lists.openwall.com
-Subject: [RFC PATCH 03/21] list: Annotate lockless list primitives with data_race()
-Date: Tue, 24 Mar 2020 15:36:25 +0000
-Message-Id: <20200324153643.15527-4-will@kernel.org>
+Subject: [RFC PATCH 04/21] timers: Use hlist_unhashed() instead of open-coding in timer_pending()
+Date: Tue, 24 Mar 2020 15:36:26 +0000
+Message-Id: <20200324153643.15527-5-will@kernel.org>
 X-Mailer: git-send-email 2.20.1
 In-Reply-To: <20200324153643.15527-1-will@kernel.org>
 References: <20200324153643.15527-1-will@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Some list predicates can be used locklessly even with the non-RCU list
-implementations, since they effectively boil down to a test against
-NULL. For example, checking whether or not a list is empty is safe even
-in the presence of a concurrent, tearing write to the list head pointer.
-Similarly, checking whether or not an hlist node has been hashed is safe
-as well.
+timer_pending() open-codes a version of hlist_unhashed() to check
+whether or not the 'timer' parameter has been queued in the timer wheel.
+KCSAN detects this as a racy operation and explodes at us:
 
-Annotate these lockless list predicates with data_race() and READ_ONCE()
-so that KCSAN and the compiler are aware of what's going on. The writer
-side can then avoid having to use WRITE_ONCE() in the non-RCU
-implementation.
+  | BUG: KCSAN: data-race in del_timer / detach_if_pending
+  |
+  | write to 0xffff88808697d870 of 8 bytes by task 10 on cpu 0:
+  |  __hlist_del include/linux/list.h:764 [inline]
+  |  detach_timer kernel/time/timer.c:815 [inline]
+  |  detach_if_pending+0xcd/0x2d0 kernel/time/timer.c:832
+  |  try_to_del_timer_sync+0x60/0xb0 kernel/time/timer.c:1226
+  |  del_timer_sync+0x6b/0xa0 kernel/time/timer.c:1365
+  |  schedule_timeout+0x2d2/0x6e0 kernel/time/timer.c:1896
+  |  rcu_gp_fqs_loop+0x37c/0x580 kernel/rcu/tree.c:1639
+  |  rcu_gp_kthread+0x143/0x230 kernel/rcu/tree.c:1799
+  |  kthread+0x1d4/0x200 drivers/block/aoe/aoecmd.c:1253
+  |  ret_from_fork+0x1f/0x30 arch/x86/entry/entry_64.S:352
+  |
+  | read to 0xffff88808697d870 of 8 bytes by task 12060 on cpu 1:
+  |  del_timer+0x3b/0xb0 kernel/time/timer.c:1198
+  |  sk_stop_timer+0x25/0x60 net/core/sock.c:2845
+  |  inet_csk_clear_xmit_timers+0x69/0xa0 net/ipv4/inet_connection_sock.c:523
+  |  tcp_clear_xmit_timers include/net/tcp.h:606 [inline]
+  |  tcp_v4_destroy_sock+0xa3/0x3f0 net/ipv4/tcp_ipv4.c:2096
+  |  inet_csk_destroy_sock+0xf4/0x250 net/ipv4/inet_connection_sock.c:836
+  |  tcp_close+0x6f3/0x970 net/ipv4/tcp.c:2497
+  |  inet_release+0x86/0x100 net/ipv4/af_inet.c:427
+  |  __sock_release+0x85/0x160 net/socket.c:590
+  |  sock_close+0x24/0x30 net/socket.c:1268
+  |  __fput+0x1e1/0x520 fs/file_table.c:280
+  |  ____fput+0x1f/0x30 fs/file_table.c:313
+  |  task_work_run+0xf6/0x130 kernel/task_work.c:113
+  |  tracehook_notify_resume include/linux/tracehook.h:188 [inline]
+  |  exit_to_usermode_loop+0x2b4/0x2c0 arch/x86/entry/common.c:163
+
+Replace the explicit 'pprev' pointer comparison in timer_pending() with
+a call to hlist_unhashed() and initialise the 'expires' timer field
+explicitly in do_init_timer() so that the compiler doesn't emit bogus
+'maybe used uninitialised' warnings now that it cannot reason statically
+about the result of timer_pending().
 
 Cc: Paul E. McKenney <paulmck@kernel.org>
 Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Marco Elver <elver@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Eric Dumazet <edumazet@google.com>
 Signed-off-by: Will Deacon <will@kernel.org>
 ---
- include/linux/list.h       | 10 +++++-----
- include/linux/list_bl.h    |  5 +++--
- include/linux/list_nulls.h |  6 +++---
- include/linux/llist.h      |  2 +-
- 4 files changed, 12 insertions(+), 11 deletions(-)
+ include/linux/timer.h | 5 +++--
+ kernel/time/timer.c   | 1 +
+ 2 files changed, 4 insertions(+), 2 deletions(-)
 
-diff --git a/include/linux/list.h b/include/linux/list.h
-index 4fed5a0f9b77..4d9f5f9ed1a8 100644
---- a/include/linux/list.h
-+++ b/include/linux/list.h
-@@ -279,7 +279,7 @@ static inline int list_is_last(const struct list_head *list,
-  */
- static inline int list_empty(const struct list_head *head)
- {
--	return READ_ONCE(head->next) == head;
-+	return data_race(READ_ONCE(head->next) == head);
- }
- 
- /**
-@@ -524,7 +524,7 @@ static inline void list_splice_tail_init(struct list_head *list,
-  */
- #define list_first_entry_or_null(ptr, type, member) ({ \
- 	struct list_head *head__ = (ptr); \
--	struct list_head *pos__ = READ_ONCE(head__->next); \
-+	struct list_head *pos__ = data_race(READ_ONCE(head__->next)); \
- 	pos__ != head__ ? list_entry(pos__, type, member) : NULL; \
- })
- 
-@@ -772,13 +772,13 @@ static inline void INIT_HLIST_NODE(struct hlist_node *h)
-  * hlist_unhashed - Has node been removed from list and reinitialized?
-  * @h: Node to be checked
+diff --git a/include/linux/timer.h b/include/linux/timer.h
+index 1e6650ed066d..e9610d2988ba 100644
+--- a/include/linux/timer.h
++++ b/include/linux/timer.h
+@@ -158,13 +158,14 @@ static inline void destroy_timer_on_stack(struct timer_list *timer) { }
   *
-- * Not that not all removal functions will leave a node in unhashed
-+ * Note that not all removal functions will leave a node in unhashed
-  * state.  For example, hlist_nulls_del_init_rcu() does leave the
-  * node in unhashed state, but hlist_nulls_del() does not.
-  */
- static inline int hlist_unhashed(const struct hlist_node *h)
- {
--	return !READ_ONCE(h->pprev);
-+	return data_race(!READ_ONCE(h->pprev));
- }
- 
- /**
-@@ -787,7 +787,7 @@ static inline int hlist_unhashed(const struct hlist_node *h)
-  */
- static inline int hlist_empty(const struct hlist_head *h)
- {
--	return !READ_ONCE(h->first);
-+	return data_race(!READ_ONCE(h->first));
- }
- 
- static inline void __hlist_del(struct hlist_node *n)
-diff --git a/include/linux/list_bl.h b/include/linux/list_bl.h
-index ae1b541446c9..1804fdb84dda 100644
---- a/include/linux/list_bl.h
-+++ b/include/linux/list_bl.h
-@@ -51,7 +51,7 @@ static inline void INIT_HLIST_BL_NODE(struct hlist_bl_node *h)
- 
- static inline bool  hlist_bl_unhashed(const struct hlist_bl_node *h)
- {
--	return !h->pprev;
-+	return data_race(!READ_ONCE(h->pprev));
- }
- 
- static inline struct hlist_bl_node *hlist_bl_first(struct hlist_bl_head *h)
-@@ -71,7 +71,8 @@ static inline void hlist_bl_set_first(struct hlist_bl_head *h,
- 
- static inline bool hlist_bl_empty(const struct hlist_bl_head *h)
- {
--	return !((unsigned long)READ_ONCE(h->first) & ~LIST_BL_LOCKMASK);
-+	unsigned long first = data_race((unsigned long)READ_ONCE(h->first));
-+	return !(first & ~LIST_BL_LOCKMASK);
- }
- 
- static inline void hlist_bl_add_head(struct hlist_bl_node *n,
-diff --git a/include/linux/list_nulls.h b/include/linux/list_nulls.h
-index 3a9ff01e9a11..fa51a801bf32 100644
---- a/include/linux/list_nulls.h
-+++ b/include/linux/list_nulls.h
-@@ -60,18 +60,18 @@ static inline unsigned long get_nulls_value(const struct hlist_nulls_node *ptr)
-  * hlist_nulls_unhashed - Has node been removed and reinitialized?
-  * @h: Node to be checked
+  * timer_pending will tell whether a given timer is currently pending,
+  * or not. Callers must ensure serialization wrt. other operations done
+- * to this timer, eg. interrupt contexts, or other CPUs on SMP.
++ * to this timer, eg. interrupt contexts, or other CPUs on SMP if they
++ * cannot tolerate spurious results.
   *
-- * Not that not all removal functions will leave a node in unhashed state.
-+ * Note that not all removal functions will leave a node in unhashed state.
-  * For example, hlist_del_init_rcu() leaves the node in unhashed state,
-  * but hlist_nulls_del() does not.
+  * return value: 1 if the timer is pending, 0 if not.
   */
- static inline int hlist_nulls_unhashed(const struct hlist_nulls_node *h)
+ static inline int timer_pending(const struct timer_list * timer)
  {
--	return !READ_ONCE(h->pprev);
-+	return data_race(!READ_ONCE(h->pprev));
+-	return timer->entry.pprev != NULL;
++	return !hlist_unhashed(&timer->entry);
  }
  
- static inline int hlist_nulls_empty(const struct hlist_nulls_head *h)
+ extern void add_timer_on(struct timer_list *timer, int cpu);
+diff --git a/kernel/time/timer.c b/kernel/time/timer.c
+index 4820823515e9..9e1c6fc8433a 100644
+--- a/kernel/time/timer.c
++++ b/kernel/time/timer.c
+@@ -780,6 +780,7 @@ static void do_init_timer(struct timer_list *timer,
+ 			  const char *name, struct lock_class_key *key)
  {
--	return is_a_nulls(READ_ONCE(h->first));
-+	return data_race(is_a_nulls(READ_ONCE(h->first)));
- }
- 
- static inline void hlist_nulls_add_head(struct hlist_nulls_node *n,
-diff --git a/include/linux/llist.h b/include/linux/llist.h
-index 2e9c7215882b..c7f042b73899 100644
---- a/include/linux/llist.h
-+++ b/include/linux/llist.h
-@@ -186,7 +186,7 @@ static inline void init_llist_head(struct llist_head *list)
-  */
- static inline bool llist_empty(const struct llist_head *head)
- {
--	return READ_ONCE(head->first) == NULL;
-+	return data_race(READ_ONCE(head->first) == NULL);
- }
- 
- static inline struct llist_node *llist_next(struct llist_node *node)
+ 	timer->entry.pprev = NULL;
++	timer->expires = 0; /* Avoid bogus 'maybe used uninitialized' warning */
+ 	timer->function = func;
+ 	timer->flags = flags | raw_smp_processor_id();
+ 	lockdep_init_map(&timer->lockdep_map, name, key, 0);
 -- 
 2.20.1
 
