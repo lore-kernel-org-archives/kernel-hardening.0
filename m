@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Mobk=5J=lists.openwall.com=kernel-hardening-return-18176-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=dyf/=5J=lists.openwall.com=kernel-hardening-return-18177-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2E9A2C43331
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:41:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A3C51C43331
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:41:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7FFDD20714
-	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:41:39 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id F2C1E20714
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Mar 2020 15:41:56 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="YVd4cx+d"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7FFDD20714
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="X2t5R6Hq"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F2C1E20714
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18176-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 31944 invoked by uid 550); 24 Mar 2020 15:37:50 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18177-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32108 invoked by uid 550); 24 Mar 2020 15:37:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,14 +25,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 31834 invoked from network); 24 Mar 2020 15:37:49 -0000
+Received: (qmail 32036 invoked from network); 24 Mar 2020 15:37:51 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1585064257;
-	bh=JiMaCGA20Xf9Oah3yv0sde3pP3KYH4qj5+3w+Wbfcto=;
+	s=default; t=1585064260;
+	bh=XWqetTA32I53c5P8S/oKOfl+VkXjOX16eJWZLMzOkxE=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=YVd4cx+dxJAQ7qFcgpH/vBm98OPGuI81muj23xFNKay798fqF+Oyuv7qdhlj3AL3W
-	 djrHKLzyZIKD/ezP9xZrsYdOYErUiqoZSMpSo6Nam4vjZv8u2bIFmAJSgjrvyYN7PW
-	 T7mHC8dL0d/CqZvSfNFImHdPgcnawJOeQs3zxDz4=
+	b=X2t5R6HqMQbGBFIPAA+m6IOSLwhb7FStDZ8NFam625QSOCw14mFlTiBsnuvoca/Wy
+	 F9ymQwGi3yTJSwaDwLbIRHrePiqOWHxe3LDUbMKaJuAIGjTipAHROumUZNcee+9+XJ
+	 1kvxdazNh14ZQQAwicQRBhJkCu/JdSz+UnWDb78U=
 From: Will Deacon <will@kernel.org>
 To: linux-kernel@vger.kernel.org
 Cc: Will Deacon <will@kernel.org>,
@@ -46,109 +46,86 @@ Cc: Will Deacon <will@kernel.org>,
 	Thomas Gleixner <tglx@linutronix.de>,
 	kernel-team@android.com,
 	kernel-hardening@lists.openwall.com
-Subject: [RFC PATCH 19/21] list_bl: Extend integrity checking to cover the same cases as 'hlist'
-Date: Tue, 24 Mar 2020 15:36:41 +0000
-Message-Id: <20200324153643.15527-20-will@kernel.org>
+Subject: [RFC PATCH 20/21] list: Format CHECK_DATA_CORRUPTION error messages consistently
+Date: Tue, 24 Mar 2020 15:36:42 +0000
+Message-Id: <20200324153643.15527-21-will@kernel.org>
 X-Mailer: git-send-email 2.20.1
 In-Reply-To: <20200324153643.15527-1-will@kernel.org>
 References: <20200324153643.15527-1-will@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-The list integrity checks for 'hlist_bl' are missing a number of cases
-that are covered by other list implementations (e.g. 'hlist'), such as
-validating 'next' and 'pprev' pointers when adding and deleting nodes.
+The error strings printed when list data corruption is detected are
+formatted inconsistently.
 
-Extend the list_bl integrity checks to bring them up to the same level
-as for other list implementations.
+Satisfy my inner-pedant by consistently using ':' to limit the message
+from its prefix and drop the terminating full stops where they exist.
 
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Paul E. McKenney <paulmck@kernel.org>
-Cc: Peter Zijlstra <peterz@infradead.org>
 Signed-off-by: Will Deacon <will@kernel.org>
 ---
- lib/list_debug.c | 48 ++++++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 40 insertions(+), 8 deletions(-)
+ lib/list_debug.c | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/lib/list_debug.c b/lib/list_debug.c
-index 9591fa6c9337..3be50b5c8014 100644
+index 3be50b5c8014..00e414508f93 100644
 --- a/lib/list_debug.c
 +++ b/lib/list_debug.c
-@@ -7,6 +7,7 @@
- 
- #include <linux/export.h>
- #include <linux/list.h>
-+#include <linux/list_bl.h>
- #include <linux/bug.h>
- #include <linux/kernel.h>
- #include <linux/rculist.h>
-@@ -190,27 +191,58 @@ EXPORT_SYMBOL(__hlist_nulls_del_valid);
- bool __hlist_bl_add_head_valid(struct hlist_bl_node *new,
- 			       struct hlist_bl_head *head)
+@@ -23,10 +23,10 @@ bool __list_add_valid(struct list_head *new, struct list_head *prev,
+ 		      struct list_head *next)
  {
-+	struct hlist_bl_node *first = hlist_bl_first(head);
- 	unsigned long hlock = (unsigned long)head->first & LIST_BL_LOCKMASK;
+ 	if (CHECK_DATA_CORRUPTION(next->prev != prev,
+-			"list_add corruption. next->prev should be prev (%px), but was %px. (next=%px).\n",
++			"list_add corruption: next->prev should be prev (%px), but was %px (next=%px)\n",
+ 			prev, next->prev, next) ||
+ 	    CHECK_DATA_CORRUPTION(prev->next != next,
+-			"list_add corruption. prev->next should be next (%px), but was %px. (prev=%px).\n",
++			"list_add corruption: prev->next should be next (%px), but was %px (prev=%px)\n",
+ 			next, prev->next, prev) ||
+ 	    CHECK_DATA_CORRUPTION(new == prev || new == next,
+ 			"list_add double add: new=%px, prev=%px, next=%px.\n",
+@@ -45,16 +45,16 @@ bool __list_del_entry_valid(struct list_head *entry)
+ 	next = entry->next;
+ 
+ 	if (CHECK_DATA_CORRUPTION(next == LIST_POISON1,
+-			"list_del corruption, %px->next is LIST_POISON1 (%px)\n",
++			"list_del corruption: %px->next is LIST_POISON1 (%px)\n",
+ 			entry, LIST_POISON1) ||
+ 	    CHECK_DATA_CORRUPTION(prev == LIST_POISON2,
+-			"list_del corruption, %px->prev is LIST_POISON2 (%px)\n",
++			"list_del corruption: %px->prev is LIST_POISON2 (%px)\n",
+ 			entry, LIST_POISON2) ||
+ 	    CHECK_DATA_CORRUPTION(prev->next != entry,
+-			"list_del corruption. prev->next should be %px, but was %px\n",
++			"list_del corruption: prev->next should be %px, but was %px\n",
+ 			entry, prev->next) ||
+ 	    CHECK_DATA_CORRUPTION(next->prev != entry,
+-			"list_del corruption. next->prev should be %px, but was %px\n",
++			"list_del corruption: next->prev should be %px, but was %px\n",
+ 			entry, next->prev))
+ 		return false;
+ 
+@@ -196,7 +196,7 @@ bool __hlist_bl_add_head_valid(struct hlist_bl_node *new,
  	unsigned long nlock = (unsigned long)new & LIST_BL_LOCKMASK;
  
--	return !(CHECK_DATA_CORRUPTION(nlock,
-+	if (CHECK_DATA_CORRUPTION(nlock,
- 			"hlist_bl_add_head: node is locked\n") ||
--		 CHECK_DATA_CORRUPTION(hlock != LIST_BL_LOCKMASK,
--			"hlist_bl_add_head: head is unlocked\n"));
-+	    CHECK_DATA_CORRUPTION(hlock != LIST_BL_LOCKMASK,
-+			"hlist_bl_add_head: head is unlocked\n"))
-+		return false;
-+
-+	if (CHECK_DATA_CORRUPTION(first && first->pprev != &head->first,
-+			"hlist_bl_add_head corruption: first->pprev should be &head->first (%px), but was %px (first=%px)",
-+			&head->first, first->pprev, first) ||
-+	    CHECK_DATA_CORRUPTION(new == first,
-+			"hlist_bl_add_head double add: new (%px) == first (%px)",
-+			new, first))
-+		return false;
-+
-+	return true;
- }
- EXPORT_SYMBOL(__hlist_bl_add_head_valid);
- 
- bool __hlist_bl_del_valid(struct hlist_bl_node *node)
- {
-+	struct hlist_bl_node *prev, *next = node->next;
- 	unsigned long nlock = (unsigned long)node & LIST_BL_LOCKMASK;
-+	unsigned long pnext;
- 
--	return !(CHECK_DATA_CORRUPTION(nlock,
--			"hlist_bl_del_valid: node locked") ||
--		 CHECK_DATA_CORRUPTION(node->next == LIST_POISON1,
-+	if (CHECK_DATA_CORRUPTION(nlock,
-+			"hlist_bl_del corruption: node is locked") ||
-+	    CHECK_DATA_CORRUPTION(next == LIST_POISON1,
- 			"hlist_bl_del corruption, %px->next is LIST_POISON1 (%px)\n",
+ 	if (CHECK_DATA_CORRUPTION(nlock,
+-			"hlist_bl_add_head: node is locked\n") ||
++			"hlist_bl_add_head corruption: node is locked\n") ||
+ 	    CHECK_DATA_CORRUPTION(hlock != LIST_BL_LOCKMASK,
+ 			"hlist_bl_add_head: head is unlocked\n"))
+ 		return false;
+@@ -222,10 +222,10 @@ bool __hlist_bl_del_valid(struct hlist_bl_node *node)
+ 	if (CHECK_DATA_CORRUPTION(nlock,
+ 			"hlist_bl_del corruption: node is locked") ||
+ 	    CHECK_DATA_CORRUPTION(next == LIST_POISON1,
+-			"hlist_bl_del corruption, %px->next is LIST_POISON1 (%px)\n",
++			"hlist_bl_del corruption: %px->next is LIST_POISON1 (%px)\n",
  			node, LIST_POISON1) ||
--		 CHECK_DATA_CORRUPTION(node->pprev == LIST_POISON2,
-+	    CHECK_DATA_CORRUPTION(node->pprev == LIST_POISON2,
- 			"hlist_bl_del corruption, %px->pprev is LIST_POISON2 (%px)\n",
--			node, LIST_POISON2));
-+			node, LIST_POISON2))
-+		return false;
-+
-+	BUILD_BUG_ON(offsetof(struct hlist_bl_node, next) !=
-+		     offsetof(struct hlist_bl_head, first));
-+	prev = container_of(node->pprev, struct hlist_bl_node, next);
-+	pnext = (unsigned long)prev->next & ~LIST_BL_LOCKMASK;
-+	if (CHECK_DATA_CORRUPTION((unsigned long)next & LIST_BL_LOCKMASK,
-+			"hlist_bl_del_corruption: node->next is locked") ||
-+	    CHECK_DATA_CORRUPTION((struct hlist_bl_node *)pnext != node,
-+			"hlist_bl_del corruption: prev->next should be %px, but was %lx\n",
-+			node, pnext) ||
-+	    CHECK_DATA_CORRUPTION(next && next->pprev != &node->next,
-+			"hlist_bl_del corruption: next->pprev should be %px, but was %px\n",
-+			&node->next, next->pprev))
-+		return false;
-+
-+	return true;
- }
- EXPORT_SYMBOL(__hlist_bl_del_valid);
+ 	    CHECK_DATA_CORRUPTION(node->pprev == LIST_POISON2,
+-			"hlist_bl_del corruption, %px->pprev is LIST_POISON2 (%px)\n",
++			"hlist_bl_del corruption: %px->pprev is LIST_POISON2 (%px)\n",
+ 			node, LIST_POISON2))
+ 		return false;
+ 
 -- 
 2.20.1
 
