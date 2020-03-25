@@ -1,23 +1,21 @@
-Return-Path: <SRS0=RfJL=5K=lists.openwall.com=kernel-hardening-return-18222-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=eqse=5K=lists.openwall.com=kernel-hardening-return-18223-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.7 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 799DDC1975A
-	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Mar 2020 15:34:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 58ABEC2D0EC
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Mar 2020 17:43:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C8BFC2073E
-	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Mar 2020 15:34:46 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="jf9VMJu8"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C8BFC2073E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18222-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11776 invoked by uid 550); 25 Mar 2020 15:34:38 -0000
+	by mail.kernel.org (Postfix) with SMTP id BDE45207FC
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Mar 2020 17:43:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BDE45207FC
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18223-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 10038 invoked by uid 550); 25 Mar 2020 17:43:27 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,95 +23,128 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11756 invoked from network); 25 Mar 2020 15:34:38 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=ehziNPeaBvtJLg13Ry2+oGWqU/h8Z30gqipX1jtupZo=;
-        b=jf9VMJu8DVs0x+Z49kPRCZTQoMvHgkYdC9Kpmy0uQgm4UR9jFf/L7dIviuoIwP9ZNi
-         iiac4DCON+0EuJPysY6VP8AqQwEHrl0R5fMHVBTeNtr8ohxjVd6nOXrFqQDEFIu5CDRY
-         fxLV9xf1LaZTggHKl75w0RxgGrxFRHowY8HBM=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=ehziNPeaBvtJLg13Ry2+oGWqU/h8Z30gqipX1jtupZo=;
-        b=l/ED/cpeFnLTy0lxi0szEGaxzhEHqYDcQMyEHe2fVaat4TIdPqkYAcZZRUMpm/HOrB
-         M3UCjTSAtkvVtniZOwQEFDhFTyZKtM79DNnCBOz8h5oKFMubdeFGoic5Bn6A3e56gAM1
-         KxENvlOglgrSIN/h02aq0FGNjo/dFYGjiYO8vxNJxU7CcJ2Wj9b0eoscVVy+sNitAzVW
-         2ZOHr0v5G1WrEfxFfTK/MnMRvmNAGOFRrrRI4pbvy0ZkEO3qeq8xLz/55LhxceaR8OPg
-         z18kPM9teT6a7Ss89PRV1c3CrqiI9i1ngen90t9e/998Bjg03nqSIfXUYvUOxNhGdDaV
-         rhIw==
-X-Gm-Message-State: ANhLgQ1ppA6LFqiTztLcFkMownCEzZSwa9TWPmQfbRc3trdCvUVedvZw
-	A4P11kfIcN0E6F8f6EvqlUxpxA==
-X-Google-Smtp-Source: ADFU+vuE/OkWaSorz352VE4048NKpohcauVrFpF0sseKDb5HdyB0hC6/0vZ+ltQJWrYg+Ox9ctjKFw==
-X-Received: by 2002:a62:7811:: with SMTP id t17mr4024383pfc.268.1585150465380;
-        Wed, 25 Mar 2020 08:34:25 -0700 (PDT)
-Date: Wed, 25 Mar 2020 08:34:23 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Kristen Carlson Accardi <kristen@linux.intel.com>
-Cc: Arvind Sankar <nivedita@alum.mit.edu>, tglx@linutronix.de,
-	mingo@redhat.com, bp@alien8.de, hpa@zytor.com,
-	arjan@linux.intel.com, rick.p.edgecombe@intel.com, x86@kernel.org,
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Subject: Re: [RFC PATCH 05/11] x86: Makefile: Add build and config option for
- CONFIG_FG_KASLR
-Message-ID: <202003250832.058B12D3@keescook>
-References: <20200205223950.1212394-1-kristen@linux.intel.com>
- <20200205223950.1212394-6-kristen@linux.intel.com>
- <20200225175544.GA1385238@rani.riverdale.lan>
- <a01e6b2f0a19f0ace0b5f2c8a50cafccc9b4ef60.camel@linux.intel.com>
+Received: (qmail 10018 invoked from network); 25 Mar 2020 17:43:26 -0000
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: LKML <linux-kernel@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux API <linux-api@vger.kernel.org>,
+	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
+	Linux Security Module <linux-security-module@vger.kernel.org>
+Cc: Akinobu Mita <akinobu.mita@gmail.com>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Alexey Dobriyan <adobriyan@gmail.com>,
+	Alexey Gladkov <legion@kernel.org>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Daniel Micay <danielmicay@gmail.com>,
+	Djalal Harouni <tixxdz@gmail.com>,
+	"Dmitry V . Levin" <ldv@altlinux.org>,
+	"Eric W . Biederman" <ebiederm@xmission.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Ingo Molnar <mingo@kernel.org>,
+	"J . Bruce Fields" <bfields@fieldses.org>,
+	Jeff Layton <jlayton@poochiereds.net>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Oleg Nesterov <oleg@redhat.com>
+Subject: [PATCH v9 9/8] proc: use named enums for better readability
+Date: Wed, 25 Mar 2020 18:42:45 +0100
+Message-Id: <20200325174245.298009-1-gladkov.alexey@gmail.com>
+X-Mailer: git-send-email 2.25.2
+In-Reply-To: <CAHk-=whXbgW7-FYL4Rkaoh8qX+CkS5saVGP2hsJPV0c+EZ6K7A@mail.gmail.com>
+References: <CAHk-=whXbgW7-FYL4Rkaoh8qX+CkS5saVGP2hsJPV0c+EZ6K7A@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <a01e6b2f0a19f0ace0b5f2c8a50cafccc9b4ef60.camel@linux.intel.com>
+Content-Transfer-Encoding: 8bit
 
-On Tue, Mar 24, 2020 at 02:24:51PM -0700, Kristen Carlson Accardi wrote:
-> On Tue, 2020-02-25 at 12:55 -0500, Arvind Sankar wrote:
-> > On Wed, Feb 05, 2020 at 02:39:44PM -0800, Kristen Carlson Accardi
-> > wrote:
-> > > Allow user to select CONFIG_FG_KASLR if dependencies are met.
-> > > Change
-> > > the make file to build with -ffunction-sections if CONFIG_FG_KASLR
-> > > 
-> > > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
-> > > ---
-> > >  Makefile         |  4 ++++
-> > >  arch/x86/Kconfig | 13 +++++++++++++
-> > >  2 files changed, 17 insertions(+)
-> > > 
-> > > diff --git a/Makefile b/Makefile
-> > > index c50ef91f6136..41438a921666 100644
-> > > --- a/Makefile
-> > > +++ b/Makefile
-> > > @@ -846,6 +846,10 @@ ifdef CONFIG_LIVEPATCH
-> > >  KBUILD_CFLAGS += $(call cc-option, -flive-patching=inline-clone)
-> > >  endif
-> > >  
-> > > +ifdef CONFIG_FG_KASLR
-> > > +KBUILD_CFLAGS += -ffunction-sections
-> > > +endif
-> > > +
-> > 
-> > With -ffunction-sections I get a few unreachable code warnings from
-> > objtool.
-> > 
-> > [...]
-> > net/mac80211/ibss.o: warning: objtool:
-> > ieee80211_ibss_work.cold()+0x157: unreachable instruction
-> > drivers/net/ethernet/intel/e1000/e1000_main.o: warning: objtool:
-> > e1000_clean.cold()+0x0: unreachable instruction
-> > net/core/skbuff.o: warning: objtool: skb_dump.cold()+0x3fd:
-> > unreachable instruction
-> 
-> I'm still working on a solution, but the issue here is that any .cold
-> function is going to be in a different section than the related
-> function, and when objtool is searching for instructions in
-> find_insn(), it assumes that it must be in the same section as the
-> caller.
+Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+---
+ fs/proc/base.c               | 2 +-
+ fs/proc/inode.c              | 2 +-
+ fs/proc/root.c               | 4 ++--
+ include/linux/proc_fs.h      | 6 +++---
+ include/uapi/linux/proc_fs.h | 2 +-
+ 5 files changed, 8 insertions(+), 8 deletions(-)
 
-Can we teach objtool about this? It doesn't seem too unreasonable.
-
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index a836979e42fe..608d60fb79fb 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -699,7 +699,7 @@ int proc_setattr(struct dentry *dentry, struct iattr *attr)
+  */
+ static bool has_pid_permissions(struct proc_fs_info *fs_info,
+ 				 struct task_struct *task,
+-				 int hide_pid_min)
++				 enum proc_hidepid hide_pid_min)
+ {
+ 	/*
+ 	 * If 'hidpid' mount option is set force a ptrace check,
+diff --git a/fs/proc/inode.c b/fs/proc/inode.c
+index a462fd111719..7870e0be0a1f 100644
+--- a/fs/proc/inode.c
++++ b/fs/proc/inode.c
+@@ -165,7 +165,7 @@ void proc_invalidate_siblings_dcache(struct hlist_head *inodes, spinlock_t *lock
+ 		deactivate_super(old_sb);
+ }
+ 
+-static inline const char *hidepid2str(int v)
++static inline const char *hidepid2str(enum proc_hidepid v)
+ {
+ 	switch (v) {
+ 		case HIDEPID_OFF: return "off";
+diff --git a/fs/proc/root.c b/fs/proc/root.c
+index 42f3ee05c584..de7cee435621 100644
+--- a/fs/proc/root.c
++++ b/fs/proc/root.c
+@@ -32,9 +32,9 @@
+ struct proc_fs_context {
+ 	struct proc_fs_info	*fs_info;
+ 	unsigned int		mask;
+-	int			hidepid;
++	enum proc_hidepid	hidepid;
+ 	int			gid;
+-	int			pidonly;
++	enum proc_pidonly	pidonly;
+ };
+ 
+ enum proc_param {
+diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
+index d259817ec913..b9f7ecd7f61f 100644
+--- a/include/linux/proc_fs.h
++++ b/include/linux/proc_fs.h
+@@ -29,7 +29,7 @@ struct proc_ops {
+ };
+ 
+ /* definitions for proc mount option pidonly */
+-enum {
++enum proc_pidonly {
+ 	PROC_PIDONLY_OFF = 0,
+ 	PROC_PIDONLY_ON  = 1,
+ };
+@@ -39,8 +39,8 @@ struct proc_fs_info {
+ 	struct dentry *proc_self;        /* For /proc/self */
+ 	struct dentry *proc_thread_self; /* For /proc/thread-self */
+ 	kgid_t pid_gid;
+-	int hide_pid;
+-	int pidonly;
++	enum proc_hidepid hide_pid;
++	enum proc_pidonly pidonly;
+ };
+ 
+ static inline struct proc_fs_info *proc_sb_info(struct super_block *sb)
+diff --git a/include/uapi/linux/proc_fs.h b/include/uapi/linux/proc_fs.h
+index dc6d717aa6ec..f5fe0e8dcfe4 100644
+--- a/include/uapi/linux/proc_fs.h
++++ b/include/uapi/linux/proc_fs.h
+@@ -3,7 +3,7 @@
+ #define _UAPI_PROC_FS_H
+ 
+ /* definitions for hide_pid field */
+-enum {
++enum proc_hidepid {
+ 	HIDEPID_OFF            = 0,
+ 	HIDEPID_NO_ACCESS      = 1,
+ 	HIDEPID_INVISIBLE      = 2,
 -- 
-Kees Cook
+2.25.2
+
