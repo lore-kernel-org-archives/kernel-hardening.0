@@ -1,23 +1,23 @@
-Return-Path: <SRS0=HyiT=5L=lists.openwall.com=kernel-hardening-return-18234-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=annt=5L=lists.openwall.com=kernel-hardening-return-18235-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+X-Spam-Status: No, score=-5.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
-	autolearn_force=no version=3.4.0
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9F126C43331
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Mar 2020 16:31:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CA2DCC43331
+	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Mar 2020 17:19:14 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EDD0820719
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Mar 2020 16:31:53 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id EBE3920737
+	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Mar 2020 17:19:13 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="fMaF0p1e"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EDD0820719
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="bOPaTx6G"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EBE3920737
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18234-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3431 invoked by uid 550); 26 Mar 2020 16:31:47 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18235-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25723 invoked by uid 550); 26 Mar 2020 17:19:06 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,109 +25,145 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3397 invoked from network); 26 Mar 2020 16:31:46 -0000
+Received: (qmail 25682 invoked from network); 26 Mar 2020 17:19:05 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=ZDF6On+HDyMfQFFmOzj2HQxDo1MqPfrIkTej+3BhvlQ=;
-        b=fMaF0p1e3sw4WUqlnz+78vbRi0z7dyl2McMHXTD+sd1/6njnlDhaPruhcC8Rm/PONY
-         h/KIZx8kfstf2SInDgM8Ia8ACWComL6cz15SRdgw2ZqSeVFDj6jKGl1qdbKgSajR39p6
-         OWi/cobumFsmvp3qDjKwP7CpsIHjb95Q2VwBQ=
+        bh=FuNH3TvottBd6Vom+HjZUn38bx12HjWSuxT5PFFp2NM=;
+        b=bOPaTx6GdaN/kw3TDtNtl7YJvpKCdLmNpmXwiUaOV/H2Dyt1eisLQis+PnTqW9A+cy
+         EpkaDdfA5uo4DCk1ebTh4faj0FTdvUrGM01MpAbv2nSbK+gGglpLa6jzzOF6TUBcNS18
+         J+EdB85pXrJ9G1gjVsQGSBY1SA1XxTOvVWnGc=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=ZDF6On+HDyMfQFFmOzj2HQxDo1MqPfrIkTej+3BhvlQ=;
-        b=rk2ptNYxcgxsYi4sc9cBAQHbBud9n1I7jJcFvJxDMxLHMWUWpjNYJHcF6gEDW9vi8e
-         z2ZjuitqzL2D97LleiANhf+0p/cj2+Pp5n3uP4iKr0+s+8Enjtb9EW1SftgM/z53XPnB
-         dBpRqNUYZbA97FgFV3JpyHXp/oSyXQuHOzuXk+FEbhAx1s+htkkzZ/HdDS+My0odGaoa
-         5na/jmyvs/jBZz5RBpTwayGXFiRl82+mrt98XoKpYOx/rmiXQc1rFyfbapfAxm9ZYwn2
-         UdspLi8ToW47b3RmlAmxvGernwJg2X5cdf8RS1Nx03rMR2pR8F/sku/v6RfJleMayzEU
-         l6CA==
-X-Gm-Message-State: ANhLgQ1cJfyjNXgiBInTcxgaJUfTLD0QjcSji55pDgCEy1ogg0VbUSQL
-	1tLyf1A4EC9VnwbCVx2L6zrUzw==
-X-Google-Smtp-Source: ADFU+vuLwI1ER/8Bbsjtmss9W6jlCzZe3fmKIOXRb2Ju4TVJZ9hfmc4Ba4cmo4/+h6Vgp2PYRi2lvA==
-X-Received: by 2002:a17:90a:2541:: with SMTP id j59mr883153pje.128.1585240294536;
-        Thu, 26 Mar 2020 09:31:34 -0700 (PDT)
-Date: Thu, 26 Mar 2020 09:31:32 -0700
+        bh=FuNH3TvottBd6Vom+HjZUn38bx12HjWSuxT5PFFp2NM=;
+        b=dCXkD2BPBdAaa4GzpJ7NScR9q6evi6Bsxs6I0sexo4ucD9veKeqJuPGI5L/gWnfVe/
+         GFgzuhOJUVfIEB6RBJe6BVaIgtxPT6a/O/NdZ4+G6HWIwrIL3sN+uBsC/JJv5KDnrXfP
+         T4bEyzIqL2lm5SyuYNUrvr9x7qGRg6xKN9gTb4Ak4BBW7X/0wKH7WwXRRiVWTsVXsCld
+         HlpTzbd8/cea0ED1nMYyXimEGqFs0VigXL6vC0owqYKTi8daCiXe9JKiZ90BpIk92zsn
+         0/btdqEE9p0Nn8qBSIPd1rzVijtMSkxCJ2+pg3TeEWZWBWZmsgNTxm657MpdHJPygU5b
+         JF7w==
+X-Gm-Message-State: ANhLgQ2/PN+YrVuDW0BVtSX2LGQfF0qP6r++pOTKnSk0OGxE9JM8l7aP
+	gVLiMQiG8xD2Rq/cBPPDOFGjrg==
+X-Google-Smtp-Source: ADFU+vuKz5FLrd/n++22UcE/kf4ftn3gYQmH2FDL1/qqMttDY074nJOuzLStkZh5VaZoPZM9xVSjkg==
+X-Received: by 2002:a17:90a:3783:: with SMTP id v3mr1135572pjb.31.1585243134014;
+        Thu, 26 Mar 2020 10:18:54 -0700 (PDT)
+Date: Thu, 26 Mar 2020 10:18:51 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>,
-	Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org,
+To: Jann Horn <jannh@google.com>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	the arch/x86 maintainers <x86@kernel.org>,
 	Andy Lutomirski <luto@kernel.org>,
 	Peter Zijlstra <peterz@infradead.org>,
 	Catalin Marinas <catalin.marinas@arm.com>,
-	Will Deacon <will@kernel.org>,
+	Will Deacon <will@kernel.org>, Mark Rutland <mark.rutland@arm.com>,
 	Alexander Potapenko <glider@google.com>,
 	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Jann Horn <jannh@google.com>,
-	"Perla, Enrico" <enrico.perla@intel.com>,
-	kernel-hardening@lists.openwall.com,
-	linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org,
-	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v2 5/5] arm64: entry: Enable random_kstack_offset support
-Message-ID: <202003260926.83BC44B@keescook>
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	"linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>,
+	Linux-MM <linux-mm@kvack.org>,
+	kernel list <linux-kernel@vger.kernel.org>
+Subject: Re: [PATCH v2 0/5] Optionally randomize kernel stack offset each
+ syscall
+Message-ID: <202003260932.510967DD@keescook>
 References: <20200324203231.64324-1-keescook@chromium.org>
- <20200324203231.64324-6-keescook@chromium.org>
- <20200325132127.GB12236@lakrids.cambridge.arm.com>
- <202003251319.AECA788D63@keescook>
- <20200326111521.GA72909@C02TD0UTHF1T.local>
+ <CAG48ez3yYkMdxEEW6sJzBC5BZSbzEZKnpWzco32p-TJx7y_srg@mail.gmail.com>
+ <202003241604.7269C810B@keescook>
+ <BL0PR11MB3281D8D615FA521401B8E320E7CE0@BL0PR11MB3281.namprd11.prod.outlook.com>
+ <202003251322.180F2536E@keescook>
+ <CAG48ez1RfvayCpNVkVQrdNbb6tNv1Wc=337Q7kZu80PrbMOP_A@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200326111521.GA72909@C02TD0UTHF1T.local>
+In-Reply-To: <CAG48ez1RfvayCpNVkVQrdNbb6tNv1Wc=337Q7kZu80PrbMOP_A@mail.gmail.com>
 
-On Thu, Mar 26, 2020 at 11:15:21AM +0000, Mark Rutland wrote:
-> On Wed, Mar 25, 2020 at 01:22:07PM -0700, Kees Cook wrote:
-> > On Wed, Mar 25, 2020 at 01:21:27PM +0000, Mark Rutland wrote:
-> > > On Tue, Mar 24, 2020 at 01:32:31PM -0700, Kees Cook wrote:
-> > > > Allow for a randomized stack offset on a per-syscall basis, with roughly
-> > > > 5 bits of entropy.
-> > > > 
-> > > > Signed-off-by: Kees Cook <keescook@chromium.org>
-> > > 
-> > > Just to check, do you have an idea of the impact on arm64? Patch 3 had
-> > > figures for x86 where it reads the TSC, and it's unclear to me how
-> > > get_random_int() compares to that.
-> > 
-> > I didn't do a measurement on arm64 since I don't have a good bare-metal
-> > test environment. I know Andy Lutomirki has plans for making
-> > get_random_get() as fast as possible, so that's why I used it here.
+On Thu, Mar 26, 2020 at 12:20:19AM +0100, Jann Horn wrote:
+> On Wed, Mar 25, 2020 at 9:27 PM Kees Cook <keescook@chromium.org> wrote:
+> > On Wed, Mar 25, 2020 at 12:15:12PM +0000, Reshetova, Elena wrote:
+> > > > > Also, are you sure that it isn't possible to make the syscall that
+> > > > > leaked its stack pointer never return to userspace (via ptrace or
+> > > > > SIGSTOP or something like that), and therefore never realign its
+> > > > > stack, while keeping some controlled data present on the syscall's
+> > > > > stack?
+> > >
+> > > How would you reliably detect that a stack pointer has been leaked
+> > > to userspace while it has been in a syscall? Does not seem to be a trivial
+> > > task to me.
+> >
+> > Well, my expectation is that folks using this defense are also using
+> > panic_on_warn sysctl, etc, so attackers don't get a chance to actually
+> > _use_ register values spilled to dmesg.
 > 
-> Ok. I suspect I also won't get the chance to test that in the next few
-> days, but if I do I'll try to share the results.
+> Uh... I thought that thing was exclusively for stuff like syzkaller,
+> because nuking the entire system because of a WARN is far too
+> excessive? WARNs should be safe to add almost anywhere in the kernel,
+> so that developers can put their assumptions about system behavior
+> into code without having to worry about bringing down the entire
+> system if that assumption turns out to have been false in some
+> harmless edgecase.
 
-Okay, thanks! I can try a rough estimate under emulation, but I assume
-that'll be mostly useless. :)
+So, I'm caught in a tight spot between Linus's deprecation of BUG()[1],
+and the desire for high-sensitivity security-oriented system builders
+to have a "completely stop running that kernel thread" option. Linus's
+entirely reasonable observation that BUG() destabilizes the kernel more
+often than it doesn't means there isn't actually a safe "stop that kernel
+thread" option, especially since many mitigations that detect badness span
+a spectrum of "stops the badness before it happens" (e.g. NX memory) to
+"I see badness has already happened" (e.g. stack protector). As a result,
+the only way to provide a way for the security-prioritized users is to
+downgrade corruptions to DoSes via panic(). I wish there was a magic
+way to have a perfect kernel state unwinder to get us the BUG() we
+wanted it to be, but given the kernel's complexity, it doesn't exist
+(and is unlikely to be worth developing). Right now, we either get
+"WARN() and keep going as best we can" or we get "WARN() and panic".
 
-> My concern here was that, get_random_int() has to grab a spinlock and
-> mess with IRQ masking, so has the potential to block for much longer,
-> but that might not be an issue in practice, and I don't think that
-> should block these patches.
+And with regard to "WARNs should be safe to add", yes, that's generally
+true, but the goal is to not make them reachable from userspace because
+of this need to be able to "upgrade" them to panic(). I have tried to
+document[1] this:
 
-Gotcha. I was already surprised by how "heavy" the per-cpu access was
-when I looked at the resulting assembly (there looked to be preempt
-stuff, etc). But my hope was that this is configurable so people can
-measure for themselves if they want it, and most people who want this
-feature have a high tolerance for performance trade-offs. ;)
+  Note that the WARN()-family should only be used for "expected to
+  be unreachable" situations. If you want to warn about "reachable
+  but undesirable" situations, please use the pr_warn()-family of
+  functions. System owners may have set the *panic_on_warn* sysctl,
+  to make sure their systems do not continue running in the face of
+  "unreachable" conditions. (For example, see commits like `this one
+  <https://git.kernel.org/linus/d4689846881d160a4d12a514e991a740bcb5d65a>`_.)
 
-> > I couldn't figure out if there was a comparable instruction like rdtsc
-> > in aarch64 (it seems there's a cycle counter, but I found nothing in
-> > the kernel that seemed to actually use it)?
-> 
-> AArch64 doesn't have a direct equivalent. The generic counter
-> (CNTxCT_EL0) is the closest thing, but its nominal frequency is
-> typically much lower than the nominal CPU clock frequency (unlike TSC
-> where they're the same). The cycle counter (PMCCNTR_EL0) is part of the
-> PMU, and can't be relied on in the same way (e.g. as perf reprograms it
-> to generate overflow events, and it can stop for things like WFI/WFE).
+[1] https://lore.kernel.org/lkml/202003141524.59C619B51A@keescook/
 
-Okay, cool; thanks for the details! It's always nice to confirm I didn't
-miss some glaringly obvious solution. ;)
+> Also, there are other places that dump register state. In particular
+> the soft lockup detection, which you can IIRC easily trip even
+> accidentally if you play around with stuff like FUSE filesystems, or
+> if a disk becomes unresponsive. Sure, *theoretically* you can also set
+> the "panic on soft lockup" flag, but that seems like a really terrible
+> idea to me.
 
-For a potential v2, should I add your reviewed-by or wait for your
-timing analysis, etc?
+I understand your general objection to non-deterministic defenses,
+as there will always be ways to weaken them, but I don't think that's
+reason enough to not have them. I prefer to look at mitigations as a
+spectrum, and to recognize that some are more effective with certain
+system configurations. They become tools to choose from when building
+defense in depth.
+
+> As far as I can tell, the only clean way to fix this is to tell
+> distros that give non-root users access to dmesg (Ubuntu in
+> particular) that they have to stop doing that. E.g. Debian seems to
+> get by just fine with root-restricted dmesg.
+
+Totally agreed about that. Ubuntu may be hard to convince as one of
+their design principles has been to make the first user able to use the
+system completely with as little interruption as possible. (e.g. pop-up
+confirmation dialogs are strongly discouraged, etc.)
+
+So, for this series, I think the benefit-to-complexity value is high.
+It's a simple solution even if it's not perfect (most things can't be
+given the existing kernel design trade-offs).
+
+-Kees
 
 -- 
 Kees Cook
