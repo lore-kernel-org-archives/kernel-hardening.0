@@ -1,23 +1,23 @@
-Return-Path: <SRS0=jOn1=5L=lists.openwall.com=kernel-hardening-return-18247-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Y8Sh=5M=lists.openwall.com=kernel-hardening-return-18248-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9AA4AC43331
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Mar 2020 23:54:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 41884C43331
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Mar 2020 06:48:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E83DF20714
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Mar 2020 23:54:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 934DF20716
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Mar 2020 06:48:51 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="dK4sZYvD"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E83DF20714
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18247-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22179 invoked by uid 550); 26 Mar 2020 23:54:40 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="QNhpPzdq"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 934DF20716
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18248-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26189 invoked by uid 550); 27 Mar 2020 06:48:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,72 +25,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22145 invoked from network); 26 Mar 2020 23:54:40 -0000
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-	d=infradead.org; s=bombadil.20170209; h=Content-Transfer-Encoding:
-	Content-Type:In-Reply-To:MIME-Version:Date:Message-ID:From:References:Cc:To:
-	Subject:Sender:Reply-To:Content-ID:Content-Description;
-	bh=aynR0UVS1u6v72AstwmjORHZT9G2O0P+jTJ7R4PmUNo=; b=dK4sZYvDkNLevoDdXkS4/oyhiU
-	F8qajT/Y0c1KSxptgyjGLpiU8BSyPOG7u9i0XBd9reLVgCeE/oNACNqF3+f7tBcl05BU7hhD2fBmn
-	U9Y4h1hg5yBKmahrnpRMQZllYKE2dPj3pIfr7SBvecMZmhRnfhnCe/pM6fj0AFHXwoJ4QFQGoe79A
-	BpWBgGgxt5fo0OXTHk9ISPwAK9hSkXMzQJUBSk/UxFuVuZNXRUeD1Hnbi8dboIKKVcDZEs52xgv0r
-	G5TpVblEuGgkKr674wrV7JQKEJ3UxccIoCcGhDsq7B31oHmLUUwS57DffTYS2oRlInV7M9Q51DbId
-	MhvsvZ4w==;
-Subject: Re: [PATCH v15 09/10] samples/landlock: Add a sandbox manager example
-To: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>,
- linux-kernel@vger.kernel.org
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
- Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
- James Morris <jmorris@namei.org>, Jann Horn <jann@thejh.net>,
- Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
- linux-fsdevel@vger.kernel.org, linux-kselftest@vger.kernel.org,
- linux-security-module@vger.kernel.org, x86@kernel.org
-References: <20200326202731.693608-1-mic@digikod.net>
- <20200326202731.693608-10-mic@digikod.net>
-From: Randy Dunlap <rdunlap@infradead.org>
-Message-ID: <11634607-2fdb-1868-03d0-94096763766f@infradead.org>
-Date: Thu, 26 Mar 2020 16:54:21 -0700
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.6.0
+Received: (qmail 26155 invoked from network); 27 Mar 2020 06:48:37 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=from:to:cc:subject:date:message-id:in-reply-to:references
+         :mime-version:content-transfer-encoding;
+        bh=RpYBuJfY08WhjaxaukJkaddMj0LXmdHxotG0jM4ptqg=;
+        b=QNhpPzdqJpCei279jTF+h/ObhmvlR6FTP7G9SeLHFQQYYYl/hOo7K7A4ahYZW9rBTi
+         CxTyqKu7s/VDnh0YhGgfs7LNY7Bn+lOco0Y3SE1ZH7MyzXiWqcevIJXEgNfXB9RcIubp
+         WtzpdKV9R1aShxwRNBzHJ6OLnP2DSIhS0HLyA=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=RpYBuJfY08WhjaxaukJkaddMj0LXmdHxotG0jM4ptqg=;
+        b=EMXDQ6tzt9/t8/Zun3CARSYjZmkQ30AhYFVov1bzxCkyc006f1i5VjxCXIVKWv69mE
+         DR2nV9MopXCQcG8x2jqbXtT4eX75cyJVIG4v3BRdlDNWTNSFxQxn7Ty9C24EVGnFzqTv
+         D4ALQc/lWWFwV350Z1kLB+HXcXv1o5jtajO+QPV1i3Ea4UgemAy6RYdL3Nb3y8uNi4jo
+         +yoxAi7I2eIuXu22/xCOi9DXoERd/QJoTB/mo5emTExP121Orb17iSnJiytBtglbSAGs
+         pFx0bylUhP3e2MDg+KRfkQZfGvYZecBmx3oQOGXGlRFRSpK7jnRLtOWUdl3SEcgzbbIk
+         /hyA==
+X-Gm-Message-State: ANhLgQ3NYqgU2ZSRSZfI4Zvv2xL3bMnKjQtIok11MlL9SIH4K5QaIWXb
+	8fjIl5raA1NoOIfp0IpzEp1dxw==
+X-Google-Smtp-Source: ADFU+vsCyDBR9n7viFoDu0Ekx+5WslhiT7XTciFmLxv2z4EAe6/t7zwz9Rj+ofshsa0IFDSE5S7sOw==
+X-Received: by 2002:a62:75d0:: with SMTP id q199mr13127618pfc.72.1585291704670;
+        Thu, 26 Mar 2020 23:48:24 -0700 (PDT)
+From: Kees Cook <keescook@chromium.org>
+To: Borislav Petkov <bp@alien8.de>
+Cc: Kees Cook <keescook@chromium.org>,
+	Hector Marco-Gisbert <hecmargi@upv.es>,
+	Jason Gunthorpe <jgg@mellanox.com>,
+	Jason Gunthorpe <jgg@ziepe.ca>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Russell King <linux@armlinux.org.uk>,
+	Will Deacon <will@kernel.org>,
+	Jann Horn <jannh@google.com>,
+	x86@kernel.org,
+	linux-arm-kernel@lists.infradead.org,
+	kernel-hardening@lists.openwall.com,
+	linux-kernel@vger.kernel.org
+Subject: [PATCH v5 3/6] x86/elf: Disable automatic READ_IMPLIES_EXEC for 64-bit address spaces
+Date: Thu, 26 Mar 2020 23:48:17 -0700
+Message-Id: <20200327064820.12602-4-keescook@chromium.org>
+X-Mailer: git-send-email 2.20.1
+In-Reply-To: <20200327064820.12602-1-keescook@chromium.org>
+References: <20200327064820.12602-1-keescook@chromium.org>
 MIME-Version: 1.0
-In-Reply-To: <20200326202731.693608-10-mic@digikod.net>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
+Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-Hi,
+With modern x86 64-bit environments, there should never be a need for
+automatic READ_IMPLIES_EXEC, as the architecture is intended to always
+be execute-bit aware (as in, the default memory protection should be NX
+unless a region explicitly requests to be executable).
 
-On 3/26/20 1:27 PM, Mickaël Salaün wrote:
-> diff --git a/samples/Kconfig b/samples/Kconfig
-> index 9d236c346de5..b54408c5bd86 100644
-> --- a/samples/Kconfig
-> +++ b/samples/Kconfig
-> @@ -120,6 +120,13 @@ config SAMPLE_HIDRAW
->  	bool "hidraw sample"
->  	depends on HEADERS_INSTALL
->  
-> +config SAMPLE_LANDLOCK
-> +	bool "Build Landlock sample code"
-> +	select HEADERS_INSTALL
+There were very old x86_64 systems that lacked the NX bit, but for those,
+the NX bit is, obviously, unenforceable, so these changes should have
+no impact on them.
 
-I think that this should be like all of the other users of HEADERS_INSTALL
-and depend on that instead of select-ing it.
+Suggested-by: Hector Marco-Gisbert <hecmargi@upv.es>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: Jason Gunthorpe <jgg@mellanox.com>
+---
+ arch/x86/include/asm/elf.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-> +	help
-> +	  Build a simple Landlock sandbox manager able to launch a process
-> +	  restricted by a user-defined filesystem access-control security policy.
-> +
->  config SAMPLE_PIDFD
->  	bool "pidfd sample"
->  	depends on HEADERS_INSTALL
-
-thanks.
+diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
+index 397a1c74433e..452beed7892b 100644
+--- a/arch/x86/include/asm/elf.h
++++ b/arch/x86/include/asm/elf.h
+@@ -287,7 +287,7 @@ extern u32 elf_hwcap2;
+  *                 CPU: | lacks NX*  | has NX, ia32     | has NX, x86_64 |
+  * ELF:                 |            |                  |                |
+  * ---------------------|------------|------------------|----------------|
+- * missing PT_GNU_STACK | exec-all   | exec-all         | exec-all       |
++ * missing PT_GNU_STACK | exec-all   | exec-all         | exec-none      |
+  * PT_GNU_STACK == RWX  | exec-stack | exec-stack       | exec-stack     |
+  * PT_GNU_STACK == RW   | exec-none  | exec-none        | exec-none      |
+  *
+@@ -303,7 +303,7 @@ extern u32 elf_hwcap2;
+  *
+  */
+ #define elf_read_implies_exec(ex, executable_stack)	\
+-	(executable_stack == EXSTACK_DEFAULT)
++	(mmap_is_ia32() && executable_stack == EXSTACK_DEFAULT)
+ 
+ struct task_struct;
+ 
 -- 
-~Randy
+2.20.1
 
