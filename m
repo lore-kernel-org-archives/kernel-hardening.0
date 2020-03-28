@@ -1,21 +1,21 @@
-Return-Path: <SRS0=3CXV=5N=lists.openwall.com=kernel-hardening-return-18270-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ImlY=5N=lists.openwall.com=kernel-hardening-return-18271-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
+X-Spam-Status: No, score=-3.7 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
 	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1A264C43331
-	for <kernel-hardening@archiver.kernel.org>; Sat, 28 Mar 2020 21:24:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BBEDDC43331
+	for <kernel-hardening@archiver.kernel.org>; Sat, 28 Mar 2020 21:26:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7511D20857
-	for <kernel-hardening@archiver.kernel.org>; Sat, 28 Mar 2020 21:23:59 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7511D20857
+	by mail.kernel.org (Postfix) with SMTP id 1FA78206F2
+	for <kernel-hardening@archiver.kernel.org>; Sat, 28 Mar 2020 21:26:09 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1FA78206F2
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18270-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28303 invoked by uid 550); 28 Mar 2020 21:23:54 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18271-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30357 invoked by uid 550); 28 Mar 2020 21:26:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,8 +23,8 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28283 invoked from network); 28 Mar 2020 21:23:53 -0000
-Date: Sat, 28 Mar 2020 22:23:36 +0100
+Received: (qmail 30337 invoked from network); 28 Mar 2020 21:26:04 -0000
+Date: Sat, 28 Mar 2020 22:25:47 +0100
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
 To: Kees Cook <keescook@chromium.org>
 Cc: LKML <linux-kernel@vger.kernel.org>,
@@ -48,128 +48,45 @@ Cc: LKML <linux-kernel@vger.kernel.org>,
 	Jonathan Corbet <corbet@lwn.net>,
 	Linus Torvalds <torvalds@linux-foundation.org>,
 	Oleg Nesterov <oleg@redhat.com>
-Subject: Re: [PATCH v10 4/9] proc: instantiate only pids that we can ptrace
- on 'hidepid=4' mount option
-Message-ID: <20200328212336.zyj5naxz4jc64tgp@comp-core-i7-2640m-0182e6>
+Subject: Re: [PATCH v10 7/9] proc: move hidepid values to uapi as they are
+ user interface to mount
+Message-ID: <20200328212547.xxiqxqhxzwp6w5n5@comp-core-i7-2640m-0182e6>
 References: <20200327172331.418878-1-gladkov.alexey@gmail.com>
- <20200327172331.418878-5-gladkov.alexey@gmail.com>
- <202003281336.8354DB74@keescook>
+ <20200327172331.418878-8-gladkov.alexey@gmail.com>
+ <202003281340.B73225DCC9@keescook>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <202003281336.8354DB74@keescook>
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Sat, 28 Mar 2020 21:23:42 +0000 (UTC)
+In-Reply-To: <202003281340.B73225DCC9@keescook>
+X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Sat, 28 Mar 2020 21:25:52 +0000 (UTC)
 
-On Sat, Mar 28, 2020 at 01:40:03PM -0700, Kees Cook wrote:
-> On Fri, Mar 27, 2020 at 06:23:26PM +0100, Alexey Gladkov wrote:
-> > If "hidepid=4" mount option is set then do not instantiate pids that
-> > we can not ptrace. "hidepid=4" means that procfs should only contain
-> > pids that the caller can ptrace.
+On Sat, Mar 28, 2020 at 01:41:02PM -0700, Kees Cook wrote:
+ > diff --git a/include/uapi/linux/proc_fs.h b/include/uapi/linux/proc_fs.h
+> > new file mode 100644
+> > index 000000000000..dc6d717aa6ec
+> > --- /dev/null
+> > +++ b/include/uapi/linux/proc_fs.h
+> > @@ -0,0 +1,13 @@
+> > +/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
+> > +#ifndef _UAPI_PROC_FS_H
+> > +#define _UAPI_PROC_FS_H
+> > +
+> > +/* definitions for hide_pid field */
+> > +enum {
+> > +	HIDEPID_OFF            = 0,
+> > +	HIDEPID_NO_ACCESS      = 1,
+> > +	HIDEPID_INVISIBLE      = 2,
+> > +	HIDEPID_NOT_PTRACEABLE = 4,
+> > +};
+> > +
+> > +#endif
+> > -- 
+> > 2.25.2
 > > 
-> > Cc: Kees Cook <keescook@chromium.org>
-> > Cc: Andy Lutomirski <luto@kernel.org>
-> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
-> > Reviewed-by: Alexey Dobriyan <adobriyan@gmail.com>
-> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
-> > ---
-> >  fs/proc/base.c          | 15 +++++++++++++++
-> >  fs/proc/root.c          | 13 ++++++++++---
-> >  include/linux/proc_fs.h |  1 +
-> >  3 files changed, 26 insertions(+), 3 deletions(-)
-> > 
-> > diff --git a/fs/proc/base.c b/fs/proc/base.c
-> > index 43a28907baf9..1ebe9eba48ea 100644
-> > --- a/fs/proc/base.c
-> > +++ b/fs/proc/base.c
-> > @@ -701,6 +701,14 @@ static bool has_pid_permissions(struct proc_fs_info *fs_info,
-> >  				 struct task_struct *task,
-> >  				 int hide_pid_min)
-> >  {
-> > +	/*
-> > +	 * If 'hidpid' mount option is set force a ptrace check,
-> > +	 * we indicate that we are using a filesystem syscall
-> > +	 * by passing PTRACE_MODE_READ_FSCREDS
-> > +	 */
-> > +	if (fs_info->hide_pid == HIDEPID_NOT_PTRACEABLE)
-> > +		return ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS);
-> > +
-> >  	if (fs_info->hide_pid < hide_pid_min)
-> >  		return true;
-> >  	if (in_group_p(fs_info->pid_gid))
-> > @@ -3319,7 +3327,14 @@ struct dentry *proc_pid_lookup(struct dentry *dentry, unsigned int flags)
-> >  	if (!task)
-> >  		goto out;
-> >  
-> > +	/* Limit procfs to only ptraceable tasks */
-> > +	if (fs_info->hide_pid == HIDEPID_NOT_PTRACEABLE) {
-> > +		if (!has_pid_permissions(fs_info, task, HIDEPID_NO_ACCESS))
-> > +			goto out_put_task;
-> > +	}
-> > +
-> >  	result = proc_pid_instantiate(dentry, task, NULL);
-> > +out_put_task:
-> >  	put_task_struct(task);
-> >  out:
-> >  	return result;
-> > diff --git a/fs/proc/root.c b/fs/proc/root.c
-> > index 616e8976185c..62eae22403d2 100644
-> > --- a/fs/proc/root.c
-> > +++ b/fs/proc/root.c
-> > @@ -47,6 +47,14 @@ static const struct fs_parameter_spec proc_fs_parameters[] = {
-> >  	{}
-> >  };
-> >  
-> > +static inline int valid_hidepid(unsigned int value)
-> > +{
-> > +	return (value == HIDEPID_OFF ||
-> > +		value == HIDEPID_NO_ACCESS ||
-> > +		value == HIDEPID_INVISIBLE ||
-> > +		value == HIDEPID_NOT_PTRACEABLE);
 > 
-> This likely easier to do with a ...MAX value? i.e.
-> 
-> 	return (value < HIDEPID_OFF || value >= HIDEPID_MAX);
-> 
-> > +}
-> > +
-> >  static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
-> >  {
-> >  	struct proc_fs_context *ctx = fc->fs_private;
-> > @@ -63,10 +71,9 @@ static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
-> >  		break;
-> >  
-> >  	case Opt_hidepid:
-> > +		if (!valid_hidepid(result.uint_32))
-> > +			return invalf(fc, "proc: unknown value of hidepid.\n");
-> >  		ctx->hidepid = result.uint_32;
-> > -		if (ctx->hidepid < HIDEPID_OFF ||
-> > -		    ctx->hidepid > HIDEPID_INVISIBLE)
-> > -			return invalfc(fc, "hidepid value must be between 0 and 2.\n");
-> >  		break;
-> >  
-> >  	default:
-> > diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
-> > index 7d852dbca253..21d19353fdc7 100644
-> > --- a/include/linux/proc_fs.h
-> > +++ b/include/linux/proc_fs.h
-> > @@ -32,6 +32,7 @@ enum {
-> >  	HIDEPID_OFF	  = 0,
-> >  	HIDEPID_NO_ACCESS = 1,
-> >  	HIDEPID_INVISIBLE = 2,
-> > +	HIDEPID_NOT_PTRACEABLE = 4, /* Limit pids to only ptraceable pids */
-> 
-> This isn't a bit field -- shouldn't this be "3"?
-> 
-> 	...
-> 	HIDEPID_NOT_PTRACEABLE = 3,
-> 	HIDEPID_MAX
-> 
-> etc?
+> Should the numeric values still be UAPI if there is string parsing now?
 
-I decided to choose 4 so that if later we need to be able to make a mask.
-I am not sure that this parameter will not have values that cannot be used
-together. Since now these parameters are becoming part of the public api,
-I decided to add flexibility.
+I think yes, because these are still valid hidepid= values.
 
 -- 
 Rgrds, legion
