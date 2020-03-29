@@ -1,23 +1,22 @@
-Return-Path: <SRS0=zqIe=5O=lists.openwall.com=kernel-hardening-return-18281-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=FbfW=5P=lists.openwall.com=kernel-hardening-return-18282-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 045C2C43331
-	for <kernel-hardening@archiver.kernel.org>; Sun, 29 Mar 2020 15:02:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7B54AC43331
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 00:49:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5647C206F6
-	for <kernel-hardening@archiver.kernel.org>; Sun, 29 Mar 2020 15:02:04 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 7B338206CC
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 00:49:40 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="faOX4sSF"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5647C206F6
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18281-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3366 invoked by uid 550); 29 Mar 2020 15:01:40 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="n6lc+LK1"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7B338206CC
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18282-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20152 invoked by uid 550); 29 Mar 2020 22:43:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,123 +24,106 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22066 invoked from network); 29 Mar 2020 14:14:15 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1585491243;
-	bh=4XpHVvC8TcjRHMXA07MsHC1KMbRM57UlVFxVOGGaVZQ=;
-	h=From:To:Cc:Subject:Date:From;
-	b=faOX4sSFauxZrAmlwYEdXcv9jA5gJ1oyD12Tkd2n7uqk4ze2vIMaI0GvBGeYgLOLA
-	 Q0Kx9A6pErdgIP0IUF2D0F/q2cYf47TDuxHtUswHjSlbtHB3q5jgAQ5sXI91Hr8hhJ
-	 KJmqJIY04zTZsNR/SGMsNjpGSe2IC8woM8oEyo+Q=
-From: Ard Biesheuvel <ardb@kernel.org>
-To: linux-arm-kernel@lists.infradead.org
-Cc: kernel-hardening@lists.openwall.com,
-	catalin.marinas@arm.com,
-	will@kernel.org,
-	mark.rutland@arm.com,
-	Ard Biesheuvel <ardb@kernel.org>
-Subject: [RFC PATCH] arm64: remove CONFIG_DEBUG_ALIGN_RODATA feature
-Date: Sun, 29 Mar 2020 16:12:58 +0200
-Message-Id: <20200329141258.31172-1-ardb@kernel.org>
-X-Mailer: git-send-email 2.17.1
+Received: (qmail 20124 invoked from network); 29 Mar 2020 22:43:28 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=Kl5YMuDzJs4NG/vSYEC77l8Gtiw/O3eg/TM2DvabUpw=;
+        b=n6lc+LK1FCt0gR4ZOE1QFdAxCzrUaV/yMDw66ahvhK3Ad302xoFyhH20qVDneO9BBP
+         KXQzPPHKnvYI+ID8fIP9iXe/Y9Fp8+ppZpzepTtbO6WdC3jS+Wbf05Ini1/engjN6evw
+         TH0DkyuMh9cqLSHwMC2mOj+WiW41pfI0e/7iQ=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=Kl5YMuDzJs4NG/vSYEC77l8Gtiw/O3eg/TM2DvabUpw=;
+        b=lBNZdIkhJMVRvYSk5TpmbiPpB+0ShaPDewfoKs+bo756Twf3infPFE3NomZg6P0Woj
+         oeo2ayJKRWFVZFnJuc4zTSI4IHk0MGW0CKM+zF5e5qB6SYYKHCkdXfmJKvYN+MazcZDJ
+         CRDAMFu6/bxqsu4HCjgEN75Aiqukb2RLbn0n0R33USh2VnUp0e4Y3LcuQE0PCE10UMvu
+         SxECntEc5kStI9hWnLUyze4i9byZKwAFhVbNXCy5DRC4cySvabt06NBOxKSYNRXHr5Bx
+         XVIaktA34b6SjL5bKHahZwE+ye7pHmR7Y5vNYqMOaB0+DE9gPdOSMsqY82ew45Xa7cmf
+         f+qw==
+X-Gm-Message-State: ANhLgQ0GA87pxjCOHycGaufQWADT+F8+n6nU68qrlT+lfyI4lzL+Ljgu
+	DcvOgbbrhhIJqiLiWROTvWEDZQ==
+X-Google-Smtp-Source: ADFU+vvd9QEm0i5cPyf+tnFqUbkb5oWWEC4hoOa5TSqI3Q0NsG7wBiz9cwW0Ji6+BaXNXuVVZmpVjA==
+X-Received: by 2002:a17:902:6b07:: with SMTP id o7mr9615611plk.141.1585521796466;
+        Sun, 29 Mar 2020 15:43:16 -0700 (PDT)
+Date: Sun, 29 Mar 2020 15:43:14 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Adam Zabrocki <pi3@pi3.com.pl>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
+	Jann Horn <jannh@google.com>, Oleg Nesterov <oleg@redhat.com>,
+	Andy Lutomirski <luto@amacapital.net>,
+	"Eric W. Biederman" <ebiederm@xmission.com>,
+	Bernd Edlinger <bernd.edlinger@hotmail.de>
+Subject: Re: Curiosity around 'exec_id' and some problems associated with it
+Message-ID: <202003291528.730A329@keescook>
+References: <20200324215049.GA3710@pi3.com.pl>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200324215049.GA3710@pi3.com.pl>
 
-When CONFIG_DEBUG_ALIGN_RODATA is enabled, kernel segments mapped with
-different permissions (r-x for .text, r-- for .rodata, rw- for .data,
-etc) are rounded up to 2 MiB so they can be mapped more efficiently.
-In particular, it permits the segments to be mapped using level 2
-block entries when using 4k pages, which is expected to result in less
-TLB pressure.
+Hi!
 
-However, the mappings for the bulk of the kernel will use level 2
-entries anyway, and the misaligned fringes are organized such that they
-can take advantage of the contiguous bit, and use far fewer level 3
-entries than would be needed otherwise.
+Sorry, I missed this originally because it got filed into my lkml
+archive and not kernel-hardening, but no one actually reads lkml
+directly, myself included -- it's mostly a thread archive. I'll update
+my filters, and I've added a handful of people to CC that might be
+interested in looking at this too. Here's the full email, I trimmed
+heavily since it's very detailed:
+https://lore.kernel.org/lkml/20200324215049.GA3710@pi3.com.pl/
 
-This makes the value of this feature dubious at best, and since it is not
-enabled in defconfig or in the distro configs, it does not appear to be
-in wide use either. So let's just remove it.
+On Tue, Mar 24, 2020 at 10:50:49PM +0100, Adam Zabrocki wrote:
+> Some curiosities which are interesting to point out:
+> 
+>  1) Linus Torvalds in 2012 suspected that such 'overflow' might be possible.
+>     You can read more about it here:
+> 
+>     https://www.openwall.com/lists/kernel-hardening/2012/03/11/4
+> 
+>  2) Solar Designer in 1999(!) was aware about the problem that 'exit_signal' can
+>     be abused. The kernel didn't protect it at all at that time. So he came up
+>     with the idea to introduce those two counters to deal with that problem.
+>     Originally, these counters were defined as "long long" type. However, during
+>     the revising between September 14 and September 16, 1999 he switched from
+>     "long long" to "int" and introduced integer wraparound handling. His patches
+>     were merged to the kernel 2.0.39 and 2.0.40.
+> 
+>  3) It is worth to read the Solar Designer's message during the discussion about
+>     the fix for the problem CVE-2012-0056 (I'm referencing this problem later in
+>     that write-up about "Problem II"):
+> 
+>     https://www.openwall.com/lists/kernel-hardening/2012/03/11/12
 
-Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
----
- arch/arm64/Kconfig.debug                  | 13 -------------
- arch/arm64/include/asm/memory.h           | 12 +-----------
- drivers/firmware/efi/libstub/arm64-stub.c |  8 +++-----
- 3 files changed, 4 insertions(+), 29 deletions(-)
+There was some effort made somewhat recently to get this area fixed:
+https://lore.kernel.org/linux-fsdevel/1474663238-22134-3-git-send-email-jann@thejh.net/
 
-diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
-index 1c906d932d6b..a1efa246c9ed 100644
---- a/arch/arm64/Kconfig.debug
-+++ b/arch/arm64/Kconfig.debug
-@@ -52,19 +52,6 @@ config DEBUG_WX
- 
- 	  If in doubt, say "Y".
- 
--config DEBUG_ALIGN_RODATA
--	depends on STRICT_KERNEL_RWX
--	bool "Align linker sections up to SECTION_SIZE"
--	help
--	  If this option is enabled, sections that may potentially be marked as
--	  read only or non-executable will be aligned up to the section size of
--	  the kernel. This prevents sections from being split into pages and
--	  avoids a potential TLB penalty. The downside is an increase in
--	  alignment and potentially wasted space. Turn on this option if
--	  performance is more important than memory pressure.
--
--	  If in doubt, say N.
--
- config DEBUG_EFI
- 	depends on EFI && DEBUG_INFO
- 	bool "UEFI debugging"
-diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-index 4d94676e5a8b..3b34f7bde2f2 100644
---- a/arch/arm64/include/asm/memory.h
-+++ b/arch/arm64/include/asm/memory.h
-@@ -119,22 +119,12 @@
- 
- /*
-  * Alignment of kernel segments (e.g. .text, .data).
-- */
--#if defined(CONFIG_DEBUG_ALIGN_RODATA)
--/*
-- *  4 KB granule:   1 level 2 entry
-- * 16 KB granule: 128 level 3 entries, with contiguous bit
-- * 64 KB granule:  32 level 3 entries, with contiguous bit
-- */
--#define SEGMENT_ALIGN		SZ_2M
--#else
--/*
-+ *
-  *  4 KB granule:  16 level 3 entries, with contiguous bit
-  * 16 KB granule:   4 level 3 entries, without contiguous bit
-  * 64 KB granule:   1 level 3 entry
-  */
- #define SEGMENT_ALIGN		SZ_64K
--#endif
- 
- /*
-  * Memory types available.
-diff --git a/drivers/firmware/efi/libstub/arm64-stub.c b/drivers/firmware/efi/libstub/arm64-stub.c
-index db0c1a9c1699..fc9f8ab533a7 100644
---- a/drivers/firmware/efi/libstub/arm64-stub.c
-+++ b/drivers/firmware/efi/libstub/arm64-stub.c
-@@ -75,14 +75,12 @@ efi_status_t handle_kernel_image(unsigned long *image_addr,
- 
- 	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE) && phys_seed != 0) {
- 		/*
--		 * If CONFIG_DEBUG_ALIGN_RODATA is not set, produce a
--		 * displacement in the interval [0, MIN_KIMG_ALIGN) that
--		 * doesn't violate this kernel's de-facto alignment
-+		 * Produce a displacement in the interval [0, MIN_KIMG_ALIGN)
-+		 * that doesn't violate this kernel's de-facto alignment
- 		 * constraints.
- 		 */
- 		u32 mask = (MIN_KIMG_ALIGN - 1) & ~(EFI_KIMG_ALIGN - 1);
--		u32 offset = !IS_ENABLED(CONFIG_DEBUG_ALIGN_RODATA) ?
--			     (phys_seed >> 32) & mask : TEXT_OFFSET;
-+		u32 offset = (phys_seed >> 32) & mask;
- 
- 		/*
- 		 * With CONFIG_RANDOMIZE_TEXT_OFFSET=y, TEXT_OFFSET may not
+Nothing ultimately landed, but it's worth seeing if we could revitalize
+interest. Part of Jann's series was also related to fixing issues with
+cred_guard_mutex, which is getting some traction now too:
+https://lore.kernel.org/lkml/AM6PR03MB5170938306F22C3CF61CC573E4CD0@AM6PR03MB5170.eurprd03.prod.outlook.com/
+
+> In short, if you hold the file descriptor open over an execve() (e.g. share it
+> with child) the old VM is preserved (refcounted) and might be never released.
+> Essentially, mother process' VM will be still in memory (and pointer to it is
+> valid) even if the mother process passed an execve().
+> This is some kind of 'memory leak' scenario. I did a simple test where process
+> open /proc/self/maps file and calls clone() with CLONE_FILES flag. Next mother
+> 'overwrite' itself by executing SUID binary (doesn't need to be SUID), and child
+> was still able to use the original file descriptor - it's valid.
+
+It'd be worth exploring where the resource counting is happening for
+this. I haven't looked to see how much of the VM stays in kernel memory
+in this situation. It probably wouldn't be hard to count it against an
+rlimit or something.
+
+Thanks for the details! I hope someone will have time to look into this.
+It's a bit of a "long timeframe attack", so it's not gotta a lot of
+priority (obviously). :)
+
+-Kees
+
 -- 
-2.17.1
-
+Kees Cook
