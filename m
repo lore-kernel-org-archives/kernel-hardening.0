@@ -1,4 +1,4 @@
-Return-Path: <SRS0=tK88=5P=lists.openwall.com=kernel-hardening-return-18288-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=rYV3=5P=lists.openwall.com=kernel-hardening-return-18289-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
 	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1A317C43331
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 02:23:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4D94FC43331
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 02:24:16 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 75DA42076A
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 02:23:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 75DA42076A
+	by mail.kernel.org (Postfix) with SMTP id A241F20578
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 02:24:15 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A241F20578
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18288-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21621 invoked by uid 550); 30 Mar 2020 02:22:47 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18289-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28407 invoked by uid 550); 30 Mar 2020 02:24:08 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20383 invoked from network); 30 Mar 2020 02:22:45 -0000
+Received: (qmail 28375 invoked from network); 30 Mar 2020 02:24:08 -0000
 From: Jason Yan <yanaijie@huawei.com>
 To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
 	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
@@ -31,9 +31,9 @@ To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
 	<oss@buserror.net>
 CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>,
 	<dja@axtens.net>, Jason Yan <yanaijie@huawei.com>
-Subject: [PATCH v5 5/6] powerpc/fsl_booke/64: clear the original kernel if randomized
-Date: Mon, 30 Mar 2020 10:20:22 +0800
-Message-ID: <20200330022023.3691-6-yanaijie@huawei.com>
+Subject: [PATCH v5 6/6] powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst and add 64bit part
+Date: Mon, 30 Mar 2020 10:20:23 +0800
+Message-ID: <20200330022023.3691-7-yanaijie@huawei.com>
 X-Mailer: git-send-email 2.17.2
 In-Reply-To: <20200330022023.3691-1-yanaijie@huawei.com>
 References: <20200330022023.3691-1-yanaijie@huawei.com>
@@ -42,7 +42,8 @@ Content-Type: text/plain
 X-Originating-IP: [10.175.124.28]
 X-CFilter-Loop: Reflected
 
-The original kernel still exists in the memory, clear it now.
+Now we support both 32 and 64 bit KASLR for fsl booke. Add document for
+64 bit part and rename kaslr-booke32.rst to kaslr-booke.rst.
 
 Signed-off-by: Jason Yan <yanaijie@huawei.com>
 Cc: Scott Wood <oss@buserror.net>
@@ -54,25 +55,84 @@ Cc: Paul Mackerras <paulus@samba.org>
 Cc: Nicholas Piggin <npiggin@gmail.com>
 Cc: Kees Cook <keescook@chromium.org>
 ---
- arch/powerpc/mm/nohash/kaslr_booke.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ Documentation/powerpc/index.rst               |  2 +-
+ .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 ++++++++++++++++---
+ 2 files changed, 32 insertions(+), 5 deletions(-)
+ rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
 
-diff --git a/arch/powerpc/mm/nohash/kaslr_booke.c b/arch/powerpc/mm/nohash/kaslr_booke.c
-index 24ad34641869..6c46f24cc53d 100644
---- a/arch/powerpc/mm/nohash/kaslr_booke.c
-+++ b/arch/powerpc/mm/nohash/kaslr_booke.c
-@@ -382,8 +382,10 @@ notrace void __init kaslr_early_init(void *dt_ptr, phys_addr_t size)
- 	unsigned long kernel_sz;
+diff --git a/Documentation/powerpc/index.rst b/Documentation/powerpc/index.rst
+index 0d45f0fc8e57..3bad36943b22 100644
+--- a/Documentation/powerpc/index.rst
++++ b/Documentation/powerpc/index.rst
+@@ -20,7 +20,7 @@ powerpc
+     hvcs
+     imc
+     isa-versions
+-    kaslr-booke32
++    kaslr-booke
+     mpc52xx
+     papr_hcalls
+     pci_iov_resource_on_powernv
+diff --git a/Documentation/powerpc/kaslr-booke32.rst b/Documentation/powerpc/kaslr-booke.rst
+similarity index 59%
+rename from Documentation/powerpc/kaslr-booke32.rst
+rename to Documentation/powerpc/kaslr-booke.rst
+index 8b259fdfdf03..27a862963242 100644
+--- a/Documentation/powerpc/kaslr-booke32.rst
++++ b/Documentation/powerpc/kaslr-booke.rst
+@@ -1,15 +1,18 @@
+ .. SPDX-License-Identifier: GPL-2.0
  
- 	if (IS_ENABLED(CONFIG_PPC64)) {
--		if (__run_at_load == 1)
-+		if (__run_at_load == 1) {
-+			kaslr_late_init();
- 			return;
-+		}
+-===========================
+-KASLR for Freescale BookE32
+-===========================
++=========================
++KASLR for Freescale BookE
++=========================
  
- 		/* Get the first memblock size */
- 		early_get_first_memblock_info(dt_ptr, &size);
+ The word KASLR stands for Kernel Address Space Layout Randomization.
+ 
+ This document tries to explain the implementation of the KASLR for
+-Freescale BookE32. KASLR is a security feature that deters exploit
++Freescale BookE. KASLR is a security feature that deters exploit
+ attempts relying on knowledge of the location of kernel internals.
+ 
++KASLR for Freescale BookE32
++-------------------------
++
+ Since CONFIG_RELOCATABLE has already supported, what we need to do is
+ map or copy kernel to a proper place and relocate. Freescale Book-E
+ parts expect lowmem to be mapped by fixed TLB entries(TLB1). The TLB1
+@@ -38,5 +41,29 @@ bit of the entropy to decide the index of the 64M zone. Then we chose a
+ 
+                               kernstart_virt_addr
+ 
++
++KASLR for Freescale BookE64
++---------------------------
++
++The implementation for Freescale BookE64 is similar to BookE32. One
++difference is that Freescale BookE64 set up a TLB mapping of 1G during
++booting. Another difference is that ppc64 needs the kernel to be
++64K-aligned. So we can randomize the kernel in this 1G mapping and make
++it 64K-aligned. This can save some code to creat another TLB map at early
++boot. The disadvantage is that we only have about 1G/64K = 16384 slots to
++put the kernel in::
++
++    KERNELBASE
++
++          64K                     |--> kernel <--|
++           |                      |              |
++        +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
++        |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
++        +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
++        |                         |                        1G
++        |----->   offset    <-----|
++
++                              kernstart_virt_addr
++
+ To enable KASLR, set CONFIG_RANDOMIZE_BASE = y. If KASLR is enable and you
+ want to disable it at runtime, add "nokaslr" to the kernel cmdline.
 -- 
 2.17.2
 
