@@ -1,23 +1,22 @@
-Return-Path: <SRS0=an8z=5P=lists.openwall.com=kernel-hardening-return-18303-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=sRWm=5P=lists.openwall.com=kernel-hardening-return-18304-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.3 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9CB1DC2D0EC
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 14:31:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CCDCAC43331
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 14:31:26 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EED0620780
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 14:31:15 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 295FF2073B
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Mar 2020 14:31:25 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="S9Vl7yYd"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EED0620780
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="1fTwnb52"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 295FF2073B
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18303-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30486 invoked by uid 550); 30 Mar 2020 14:31:07 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18304-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32194 invoked by uid 550); 30 Mar 2020 14:31:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,135 +24,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15512 invoked from network); 30 Mar 2020 13:58:17 -0000
+Received: (qmail 25784 invoked from network); 30 Mar 2020 14:22:48 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1585576686;
-	bh=7zK37FVHy3v7qUFeK4usKacOvFgAmVjqXOnAg9/f3tA=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=S9Vl7yYd9CpHQPUnQkvNqlSZqvAC5KlrWdLMkbJNTvrlDPulTyLdlAuCinb5ULJmR
-	 NrU+OduX6yHCFjBpGZUQRuv3xv6lPAHpFvU+8G7i7u+8N6J5HU1sg/YNiFat5l0s6V
-	 +n4wvArUl50YKKRyGMhYJV5PmdeXK2qKj37Ul9EY=
-Subject: Re: [RFC PATCH] arm64: remove CONFIG_DEBUG_ALIGN_RODATA feature
-To: Ard Biesheuvel <ardb@kernel.org>, linux-arm-kernel@lists.infradead.org
-Cc: mark.rutland@arm.com, catalin.marinas@arm.com, will@kernel.org,
- kernel-hardening@lists.openwall.com
-References: <20200329141258.31172-1-ardb@kernel.org>
-From: Laura Abbott <labbott@kernel.org>
-Message-ID: <875f64d9-7f4a-b058-52d4-546af76e96e1@kernel.org>
-Date: Mon, 30 Mar 2020 09:57:39 -0400
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.5.0
+	s=default; t=1585578156;
+	bh=fH7O1vnjJxt1ac2Uw547xPsBs770Wu4tiOEFMUs8fgs=;
+	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
+	b=1fTwnb52eSdhf1TKT27NkYpGKuGWid0DZw/SpeJLLT13q7Y1GwoD9LTsy0q0LYKm2
+	 YDbuBDguYis/56tGqTrCljezz7KcU9a7UaC73IrcOGEDqe5BPs21lXRcMl0SavOcq1
+	 kb6EazJh5c/9AG2aAa1454uk1oFuEN5YNqXwL4vE=
+X-Gm-Message-State: ANhLgQ0qoR0j3JfNqgBuvvH9G0Ze9bZGfTREDPZgSy0MGaHYIxJfw7Zp
+	f6OkgPVY8+QlmJ/tLfjRfTd5zCm6rpaYKdnhT90=
+X-Google-Smtp-Source: ADFU+vsBE+eYBN7ONQHfkbpPTJJjzLBOfC/5ATB/ZyqB2kdDKT6wjPZkUjI8BLqP0y4fIZLpb9MVnNVe/FiUefRdU+g=
+X-Received: by 2002:a05:6e02:551:: with SMTP id i17mr10463790ils.218.1585578156088;
+ Mon, 30 Mar 2020 07:22:36 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <20200329141258.31172-1-ardb@kernel.org>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+References: <20200329141258.31172-1-ardb@kernel.org> <20200330135121.GD10633@willie-the-truck>
+ <CAMj1kXEZARZ1FYZFt4CZ33b-A64zj1JswR0OAHw-eZdzkxiEOQ@mail.gmail.com> <20200330140441.GE10633@willie-the-truck>
+In-Reply-To: <20200330140441.GE10633@willie-the-truck>
+From: Ard Biesheuvel <ardb@kernel.org>
+Date: Mon, 30 Mar 2020 16:22:24 +0200
+X-Gmail-Original-Message-ID: <CAMj1kXHJ5n-EZMgGSYm+ekO-e7XTp7fv-FZ2NJ1EttJ=-kc8fw@mail.gmail.com>
+Message-ID: <CAMj1kXHJ5n-EZMgGSYm+ekO-e7XTp7fv-FZ2NJ1EttJ=-kc8fw@mail.gmail.com>
+Subject: Re: [RFC PATCH] arm64: remove CONFIG_DEBUG_ALIGN_RODATA feature
+To: Will Deacon <will@kernel.org>
+Cc: Linux ARM <linux-arm-kernel@lists.infradead.org>, 
+	kernel-hardening@lists.openwall.com, 
+	Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>
+Content-Type: text/plain; charset="UTF-8"
 
+On Mon, 30 Mar 2020 at 16:04, Will Deacon <will@kernel.org> wrote:
+>
+> On Mon, Mar 30, 2020 at 03:53:04PM +0200, Ard Biesheuvel wrote:
+> > On Mon, 30 Mar 2020 at 15:51, Will Deacon <will@kernel.org> wrote:
+> > >
+> > > On Sun, Mar 29, 2020 at 04:12:58PM +0200, Ard Biesheuvel wrote:
+> > > > When CONFIG_DEBUG_ALIGN_RODATA is enabled, kernel segments mapped with
+> > > > different permissions (r-x for .text, r-- for .rodata, rw- for .data,
+> > > > etc) are rounded up to 2 MiB so they can be mapped more efficiently.
+> > > > In particular, it permits the segments to be mapped using level 2
+> > > > block entries when using 4k pages, which is expected to result in less
+> > > > TLB pressure.
+> > > >
+> > > > However, the mappings for the bulk of the kernel will use level 2
+> > > > entries anyway, and the misaligned fringes are organized such that they
+> > > > can take advantage of the contiguous bit, and use far fewer level 3
+> > > > entries than would be needed otherwise.
+> > > >
+> > > > This makes the value of this feature dubious at best, and since it is not
+> > > > enabled in defconfig or in the distro configs, it does not appear to be
+> > > > in wide use either. So let's just remove it.
+> > > >
+> > > > Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
+> > > > ---
+> > > >  arch/arm64/Kconfig.debug                  | 13 -------------
+> > > >  arch/arm64/include/asm/memory.h           | 12 +-----------
+> > > >  drivers/firmware/efi/libstub/arm64-stub.c |  8 +++-----
+> > > >  3 files changed, 4 insertions(+), 29 deletions(-)
+> > >
+> > > Acked-by: Will Deacon <will@kernel.org>
+> > >
+> > > But I would really like to go a step further and rip out the block mapping
+> > > support altogether so that we can fix non-coherent DMA aliases:
+> > >
+> > > https://lore.kernel.org/lkml/20200224194446.690816-1-hch@lst.de
+> > >
+> >
+> > I'm not sure I follow - is this about mapping parts of the static
+> > kernel Image for non-coherent DMA?
+>
+> Sorry, it's not directly related to your patch, just that if we're removing
+> options relating to kernel mappings then I'd be quite keen on effectively
+> forcing page-granularity on the linear map, as is currently done by default
+> thanks to RODATA_FULL_DEFAULT_ENABLED, so that we can nobble cacheable
+> aliases for non-coherent streaming DMA mappings by hooking into Christoph's
+> series above.
+>
 
+Right. I don't remember seeing any complaints about
+RODATA_FULL_DEFAULT_ENABLED, but maybe it's too early for that.
 
-On 3/29/20 10:12 AM, Ard Biesheuvel wrote:
-> When CONFIG_DEBUG_ALIGN_RODATA is enabled, kernel segments mapped with
-> different permissions (r-x for .text, r-- for .rodata, rw- for .data,
-> etc) are rounded up to 2 MiB so they can be mapped more efficiently.
-> In particular, it permits the segments to be mapped using level 2
-> block entries when using 4k pages, which is expected to result in less
-> TLB pressure.
-> 
-> However, the mappings for the bulk of the kernel will use level 2
-> entries anyway, and the misaligned fringes are organized such that they
-> can take advantage of the contiguous bit, and use far fewer level 3
-> entries than would be needed otherwise.
-> 
-> This makes the value of this feature dubious at best, and since it is not
-> enabled in defconfig or in the distro configs, it does not appear to be
-> in wide use either. So let's just remove it.
-> 
+> This series just reminded me of it because it's another
+> "off-by-default-behaviour-for-block-mappings-probably-because-of-performance-
+> but-never-actually-measured" type of thing which really just gets in the
+> way.
+>
 
-This was supposed to avoid potential performance inconsistencies with
-some memory being in pages vs other in block. It was always a minor
-concern so if it's preventing other work:
-
-Acked-by: Laura Abbott <labbott@kernel.org>
-
-> Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
-> ---
->   arch/arm64/Kconfig.debug                  | 13 -------------
->   arch/arm64/include/asm/memory.h           | 12 +-----------
->   drivers/firmware/efi/libstub/arm64-stub.c |  8 +++-----
->   3 files changed, 4 insertions(+), 29 deletions(-)
-> 
-> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
-> index 1c906d932d6b..a1efa246c9ed 100644
-> --- a/arch/arm64/Kconfig.debug
-> +++ b/arch/arm64/Kconfig.debug
-> @@ -52,19 +52,6 @@ config DEBUG_WX
->   
->   	  If in doubt, say "Y".
->   
-> -config DEBUG_ALIGN_RODATA
-> -	depends on STRICT_KERNEL_RWX
-> -	bool "Align linker sections up to SECTION_SIZE"
-> -	help
-> -	  If this option is enabled, sections that may potentially be marked as
-> -	  read only or non-executable will be aligned up to the section size of
-> -	  the kernel. This prevents sections from being split into pages and
-> -	  avoids a potential TLB penalty. The downside is an increase in
-> -	  alignment and potentially wasted space. Turn on this option if
-> -	  performance is more important than memory pressure.
-> -
-> -	  If in doubt, say N.
-> -
->   config DEBUG_EFI
->   	depends on EFI && DEBUG_INFO
->   	bool "UEFI debugging"
-> diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-> index 4d94676e5a8b..3b34f7bde2f2 100644
-> --- a/arch/arm64/include/asm/memory.h
-> +++ b/arch/arm64/include/asm/memory.h
-> @@ -119,22 +119,12 @@
->   
->   /*
->    * Alignment of kernel segments (e.g. .text, .data).
-> - */
-> -#if defined(CONFIG_DEBUG_ALIGN_RODATA)
-> -/*
-> - *  4 KB granule:   1 level 2 entry
-> - * 16 KB granule: 128 level 3 entries, with contiguous bit
-> - * 64 KB granule:  32 level 3 entries, with contiguous bit
-> - */
-> -#define SEGMENT_ALIGN		SZ_2M
-> -#else
-> -/*
-> + *
->    *  4 KB granule:  16 level 3 entries, with contiguous bit
->    * 16 KB granule:   4 level 3 entries, without contiguous bit
->    * 64 KB granule:   1 level 3 entry
->    */
->   #define SEGMENT_ALIGN		SZ_64K
-> -#endif
->   
->   /*
->    * Memory types available.
-> diff --git a/drivers/firmware/efi/libstub/arm64-stub.c b/drivers/firmware/efi/libstub/arm64-stub.c
-> index db0c1a9c1699..fc9f8ab533a7 100644
-> --- a/drivers/firmware/efi/libstub/arm64-stub.c
-> +++ b/drivers/firmware/efi/libstub/arm64-stub.c
-> @@ -75,14 +75,12 @@ efi_status_t handle_kernel_image(unsigned long *image_addr,
->   
->   	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE) && phys_seed != 0) {
->   		/*
-> -		 * If CONFIG_DEBUG_ALIGN_RODATA is not set, produce a
-> -		 * displacement in the interval [0, MIN_KIMG_ALIGN) that
-> -		 * doesn't violate this kernel's de-facto alignment
-> +		 * Produce a displacement in the interval [0, MIN_KIMG_ALIGN)
-> +		 * that doesn't violate this kernel's de-facto alignment
->   		 * constraints.
->   		 */
->   		u32 mask = (MIN_KIMG_ALIGN - 1) & ~(EFI_KIMG_ALIGN - 1);
-> -		u32 offset = !IS_ENABLED(CONFIG_DEBUG_ALIGN_RODATA) ?
-> -			     (phys_seed >> 32) & mask : TEXT_OFFSET;
-> +		u32 offset = (phys_seed >> 32) & mask;
->   
->   		/*
->   		 * With CONFIG_RANDOMIZE_TEXT_OFFSET=y, TEXT_OFFSET may not
-> 
+Well, even though I agree that the lack of actual numbers is a bit
+disturbing here, I'd hate to penalize all systems even more than they
+already are (due to ARCH_KMALLOC_MINALIGN == ARCH_DMA_MINALIGN) by
+adding another workaround that is only needed on devices that have
+non-coherent masters.
