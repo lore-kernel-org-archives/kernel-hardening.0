@@ -1,24 +1,23 @@
-Return-Path: <SRS0=DRfB=5Q=lists.openwall.com=kernel-hardening-return-18313-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=JaAh=5Q=lists.openwall.com=kernel-hardening-return-18314-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E1776C43331
-	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 01:50:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DA727C43331
+	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 04:49:08 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CEEA5206DB
-	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 01:50:21 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 2776D206DB
+	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 04:49:07 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=russell.cc header.i=@russell.cc header.b="Lpnp+6Qd";
-	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="sHEgQ3pL"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CEEA5206DB
+	dkim=pass (2048-bit key) header.d=russell.cc header.i=@russell.cc header.b="WTVQJnlW";
+	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="rf5sU28a"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2776D206DB
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=russell.cc
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18313-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7344 invoked by uid 550); 31 Mar 2020 01:50:13 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18314-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17562 invoked by uid 550); 31 Mar 2020 04:49:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,318 +25,90 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7312 invoked from network); 31 Mar 2020 01:50:12 -0000
+Received: (qmail 17530 invoked from network); 31 Mar 2020 04:48:59 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=russell.cc; h=
-	message-id:subject:from:to:cc:date:in-reply-to:references
-	:content-type:mime-version:content-transfer-encoding; s=fm1; bh=
-	p2KSOaTwCizI8NrfTNMFOYqWNJj9mQsC7SYLZS210X4=; b=Lpnp+6Qd62r57AI8
-	w5UZSpXqQXuFVfr46N/aPdfOE4qCb+p8IKH4GkK/bPOXdTHbGL+rCXCYMCcbcOQk
-	WWT8URf+8K8K1kJwqckL5JOP2EXWm8OQK9sRswr3S7oBFy++o2GDcP+qa/x4Lcv6
-	v1FCy7AoxA+VqdKq9rWvP1L+E9FWOaUBOOE5AeIQg4mV7e+wXevaOurxuWGAVaC6
-	6lU/e5g4S034JhXtRz3FHTpSXjRGyosMwkUrttW6sP9263OMhrTibiYEJDEbMRyQ
-	Blo/TsrL84uE0ysgvT9jS+EHeH3yjhX0qDZ6hP7J+4xpiS8nudo0x6vziK9cbJKr
-	XUU4ig==
+	from:to:cc:subject:date:message-id:mime-version
+	:content-transfer-encoding; s=fm1; bh=yY8X33qvg/yRwHhINvujWxa4XK
+	uItnDDjdDahuZGPeg=; b=WTVQJnlWEiOA/heukWV5Hwoz7jZwL7h7p0pYQcCp4u
+	2kvFvq08tkHLEQpc55+H1I+1MR8XbcuRw4/Ntpu5FHvzlhQLnu0J0yCYi/HyjQDX
+	1km1XHQ2CfXzt42O5AR+EYPNiddupYpublxsN3CgyD98CFM7UT38yt2DqVSposHJ
+	zd+EFm/zBnb1Xa7EwtyjDBbKauWLzVRErcyAIlapUXIvHewsBgXNjS9xMABz3kAC
+	823ZS/b/34WeSSySGI29pE00KgC4R6Zr/UWga4MWzbBjnSk8seCqhPsYvjOBMRBY
+	lqImRO3eoc18pldJ2njEkRbmMeP6kSeYb0P3Y/5/U2uw==
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-	messagingengine.com; h=cc:content-transfer-encoding:content-type
-	:date:from:in-reply-to:message-id:mime-version:references
-	:subject:to:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender
-	:x-sasl-enc; s=fm2; bh=p2KSOaTwCizI8NrfTNMFOYqWNJj9mQsC7SYLZS210
-	X4=; b=sHEgQ3pLqN4XlzRqunk7ikJyyogVVAUTcpBK4ek00vee9YQGrJ/ulaDvV
-	WD+Zya4vUSFerCi4t2CBJpOH9wH1wkGNA5F4NrN94KSoXjedKKb0EL8hb5dzb3KG
-	90HtF8ELYCeBpq2oXQ4SPA8hOUVo9YGcCBRwU4NcecPyYNugvaUgBYpPcPSYGOtS
-	YkW24dCT9WVOCMpMVVIRxKEPo+T/nvAI12ov0wMottebELNf/K6Mu+ddLEvYSZek
-	FAKwlfLQfR1bcpuOuc+U7UmLv5cISN4rhg3/POWdYEJ1DjL8JZCoTzwyABlURfOP
-	xoqC4WrOdnvi3oACU98Op9D/RsrNA==
-X-ME-Sender: <xms:xqGCXlSkEc0M8jFwOVAOCXDatkG289cklFhiaiaXsPBFsk4fOh4IcQ>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedugedrudeiiedgheduucetufdoteggodetrfdotf
+	messagingengine.com; h=cc:content-transfer-encoding:date:from
+	:message-id:mime-version:subject:to:x-me-proxy:x-me-proxy
+	:x-me-sender:x-me-sender:x-sasl-enc; s=fm2; bh=yY8X33qvg/yRwHhIN
+	vujWxa4XKuItnDDjdDahuZGPeg=; b=rf5sU28amT7+teD62/QPQPQcdO+aAZURi
+	4jrvcCHgCQacTOWvrAF+i8Oqnt/fjwtCw2eHhzBnyKHt1MAuFmk+nuIxLC3LLIy5
+	gfb+lTs2AXq/IBSYY4bButzBAIAiHyz1Z75mNZV9HlR6yzQrPUIMV4XuFZrSFmBL
+	bP3RlAA+hEL97vJP8+j5rcxwlgvkP0gLz3X2nBJcKYkcc2sW5bRT2smLsq6dkU8B
+	nvgCPwgGX1EJSvf/SoYBPWNbcqxvLLcIxz/p2K7J6EI6EPJixonku1u+j+jikO/y
+	ylKp6IlOFRcuvflDNmPp3V86g/zRa5WLyIdwsq0cXjZ5W5oN0RrIg==
+X-ME-Sender: <xms:q8uCXhZ89m7wgrEPr1azLl5QZR58fjOjmz5kTXgFjNJew5ucRiRWkg>
+X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedugedrudeiiedgkeeiucetufdoteggodetrfdotf
     fvucfrrhhofhhilhgvmecuhfgrshhtofgrihhlpdfqfgfvpdfurfetoffkrfgpnffqhgen
-    uceurghilhhouhhtmecufedttdenucgfrhhlucfvnfffucdluddtmdenucfjughrpefkuf
-    fhvfffjghftggfggfgsehtjeertddtreejnecuhfhrohhmpeftuhhsshgvlhhlucevuhhr
-    rhgvhicuoehruhhstghurhesrhhushhsvghllhdrtggtqeenucfkphepuddvuddrgeehrd
-    dvuddvrddvfeelnecuvehluhhsthgvrhfuihiivgeptdenucfrrghrrghmpehmrghilhhf
-    rhhomheprhhushgtuhhrsehruhhsshgvlhhlrdgttg
-X-ME-Proxy: <xmx:xqGCXiBQg7To1wQvKJZWR361wnN5tqiGf84Stgu0T0uOTlYimga05Q>
-    <xmx:xqGCXhfUp7sB7fAHKwat1JULsAl0rbTryGEjQC-WMTRzozkCHzedqQ>
-    <xmx:xqGCXgU7LytCDn1k8n1u_BbgEJGeYcz8-imN0cJUXEBRd2gkSANsIw>
-    <xmx:yKGCXo06zHut1WVVyXNCfyd07JDhzOXJhFEEuA0t2Ya7vy2pQ7HaHw>
-Message-ID: <7b275ce545dc289ec0e072bf79ce03fbf633160c.camel@russell.cc>
-Subject: Re: [PATCH v6 1/7] powerpc/mm: Implement set_memory() routines
+    uceurghilhhouhhtmecufedttdenucgfrhhlucfvnfffucdludehmdenogevohgrshhtrg
+    hlqdfhgeduvddqtddvucdludehtddmnecujfgurhephffvufffkffoggfgsedtkeertder
+    tddtnecuhfhrohhmpeftuhhsshgvlhhlucevuhhrrhgvhicuoehruhhstghurhesrhhush
+    hsvghllhdrtggtqeenucffohhmrghinhepohiilhgrsghsrdhorhhgnecukfhppeduvddu
+    rdeghedrvdduvddrvdefleenucevlhhushhtvghrufhiiigvpedtnecurfgrrhgrmhepmh
+    grihhlfhhrohhmpehruhhstghurhesrhhushhsvghllhdrtggt
+X-ME-Proxy: <xmx:q8uCXogqcm2Iv85hPvg9qfoyXQSuO4ca17wK4VvwCdZEuUi5vhOBZg>
+    <xmx:q8uCXrZgZ9hIm-f06xH2JJul-hbkV1bEe4G4I8LudNzXm1FwC8Awqw>
+    <xmx:q8uCXmNRdq16GQBtZxe_eFJvvu5eWLrNKo6ntuIpxmlCe5IV4DR4WA>
+    <xmx:rcuCXreEe-rdDx-XBwx9KHd2PqAo0db0iIP-UPGVtAwqP-cKRz5ZWA>
 From: Russell Currey <ruscur@russell.cc>
-To: Daniel Axtens <dja@axtens.net>, linuxppc-dev@lists.ozlabs.org
-Cc: christophe.leroy@c-s.fr, joel@jms.id.au, mpe@ellerman.id.au, 
-	ajd@linux.ibm.com, npiggin@gmail.com, kernel-hardening@lists.openwall.com
-Date: Tue, 31 Mar 2020 12:49:52 +1100
-In-Reply-To: <87imjbpgw2.fsf@dja-thinkpad.axtens.net>
-References: <20200310010338.21205-1-ruscur@russell.cc>
-	 <20200310010338.21205-2-ruscur@russell.cc>
-	 <87imjbpgw2.fsf@dja-thinkpad.axtens.net>
-Content-Type: text/plain; charset="UTF-8"
-User-Agent: Evolution 3.36.0 
+To: linuxppc-dev@lists.ozlabs.org
+Cc: Russell Currey <ruscur@russell.cc>,
+	christophe.leroy@c-s.fr,
+	mpe@ellerman.id.au,
+	ajd@linux.ibm.com,
+	dja@axtens.net,
+	npiggin@gmail.com,
+	kernel-hardening@lists.openwall.com
+Subject: [PATCH v7 0/7] set_memory() routines and STRICT_MODULE_RWX
+Date: Tue, 31 Mar 2020 15:48:18 +1100
+Message-Id: <20200331044825.591653-1-ruscur@russell.cc>
+X-Mailer: git-send-email 2.26.0
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 
-On Wed, 2020-03-11 at 17:03 +1100, Daniel Axtens wrote:
-> Russell Currey <ruscur@russell.cc> writes:
-> 
-> > The set_memory_{ro/rw/nx/x}() functions are required for
-> > STRICT_MODULE_RWX,
-> > and are generally useful primitives to have.  This implementation
-> > is
-> > designed to be completely generic across powerpc's many MMUs.
-> > 
-> > It's possible that this could be optimised to be faster for
-> > specific
-> > MMUs, but the focus is on having a generic and safe implementation
-> > for
-> > now.
-> > 
-> > This implementation does not handle cases where the caller is
-> > attempting
-> > to change the mapping of the page it is executing from, or if
-> > another
-> > CPU is concurrently using the page being altered.  These cases
-> > likely
-> > shouldn't happen, but a more complex implementation with MMU-
-> > specific code
-> > could safely handle them, so that is left as a TODO for now.
-> > 
-> > These functions do nothing if STRICT_KERNEL_RWX is not enabled.
-> > 
-> > Signed-off-by: Russell Currey <ruscur@russell.cc>
-> > Signed-off-by: Christophe Leroy <christophe.leroy@c-s.fr>
-> > ---
-> > v6: Merge patch 8/8 from v5, handling RWX not being enabled.
-> >     Add note to change_page_attr() in case it's ever made non-
-> > static
-> > ---
-> >  arch/powerpc/Kconfig                  |  1 +
-> >  arch/powerpc/include/asm/set_memory.h | 32 +++++++++++
-> >  arch/powerpc/mm/Makefile              |  2 +-
-> >  arch/powerpc/mm/pageattr.c            | 79
-> > +++++++++++++++++++++++++++
-> >  4 files changed, 113 insertions(+), 1 deletion(-)
-> >  create mode 100644 arch/powerpc/include/asm/set_memory.h
-> >  create mode 100644 arch/powerpc/mm/pageattr.c
-> > 
-> > diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-> > index 497b7d0b2d7e..bd074246e34e 100644
-> > --- a/arch/powerpc/Kconfig
-> > +++ b/arch/powerpc/Kconfig
-> > @@ -129,6 +129,7 @@ config PPC
-> >  	select ARCH_HAS_PTE_SPECIAL
-> >  	select ARCH_HAS_MEMBARRIER_CALLBACKS
-> >  	select ARCH_HAS_SCALED_CPUTIME		if
-> > VIRT_CPU_ACCOUNTING_NATIVE && PPC_BOOK3S_64
-> > +	select ARCH_HAS_SET_MEMORY
-> >  	select ARCH_HAS_STRICT_KERNEL_RWX	if ((PPC_BOOK3S_64 ||
-> > PPC32) && !HIBERNATION)
-> >  	select ARCH_HAS_TICK_BROADCAST		if
-> > GENERIC_CLOCKEVENTS_BROADCAST
-> >  	select ARCH_HAS_UACCESS_FLUSHCACHE
-> > diff --git a/arch/powerpc/include/asm/set_memory.h
-> > b/arch/powerpc/include/asm/set_memory.h
-> > new file mode 100644
-> > index 000000000000..64011ea444b4
-> > --- /dev/null
-> > +++ b/arch/powerpc/include/asm/set_memory.h
-> > @@ -0,0 +1,32 @@
-> > +/* SPDX-License-Identifier: GPL-2.0 */
-> > +#ifndef _ASM_POWERPC_SET_MEMORY_H
-> > +#define _ASM_POWERPC_SET_MEMORY_H
-> > +
-> > +#define SET_MEMORY_RO	0
-> > +#define SET_MEMORY_RW	1
-> > +#define SET_MEMORY_NX	2
-> > +#define SET_MEMORY_X	3
-> > +
-> > +int change_memory_attr(unsigned long addr, int numpages, long
-> > action);
-> > +
-> > +static inline int set_memory_ro(unsigned long addr, int numpages)
-> > +{
-> > +	return change_memory_attr(addr, numpages, SET_MEMORY_RO);
-> > +}
-> > +
-> > +static inline int set_memory_rw(unsigned long addr, int numpages)
-> > +{
-> > +	return change_memory_attr(addr, numpages, SET_MEMORY_RW);
-> > +}
-> > +
-> > +static inline int set_memory_nx(unsigned long addr, int numpages)
-> > +{
-> > +	return change_memory_attr(addr, numpages, SET_MEMORY_NX);
-> > +}
-> > +
-> > +static inline int set_memory_x(unsigned long addr, int numpages)
-> > +{
-> > +	return change_memory_attr(addr, numpages, SET_MEMORY_X);
-> > +}
-> > +
-> > +#endif
-> > diff --git a/arch/powerpc/mm/Makefile b/arch/powerpc/mm/Makefile
-> > index 5e147986400d..a998fdac52f9 100644
-> > --- a/arch/powerpc/mm/Makefile
-> > +++ b/arch/powerpc/mm/Makefile
-> > @@ -5,7 +5,7 @@
-> >  
-> >  ccflags-$(CONFIG_PPC64)	:= $(NO_MINIMAL_TOC)
-> >  
-> > -obj-y				:= fault.o mem.o pgtable.o
-> > mmap.o \
-> > +obj-y				:= fault.o mem.o pgtable.o
-> > mmap.o pageattr.o \
-> >  				   init_$(BITS).o pgtable_$(BITS).o \
-> >  				   pgtable-frag.o ioremap.o
-> > ioremap_$(BITS).o \
-> >  				   init-common.o mmu_context.o drmem.o
-> > diff --git a/arch/powerpc/mm/pageattr.c
-> > b/arch/powerpc/mm/pageattr.c
-> > new file mode 100644
-> > index 000000000000..748fa56d9db0
-> > --- /dev/null
-> > +++ b/arch/powerpc/mm/pageattr.c
-> > @@ -0,0 +1,79 @@
-> > +// SPDX-License-Identifier: GPL-2.0
-> > +
-> > +/*
-> > + * MMU-generic set_memory implementation for powerpc
-> > + *
-> > + * Copyright 2019, IBM Corporation.
-> > + */
-> > +
-> > +#include <linux/mm.h>
-> > +#include <linux/set_memory.h>
-> > +
-> > +#include <asm/mmu.h>
-> > +#include <asm/page.h>
-> > +#include <asm/pgtable.h>
-> > +
-> > +
-> > +/*
-> > + * Updates the attributes of a page in three steps:
-> > + *
-> > + * 1. invalidate the page table entry
-> > + * 2. flush the TLB
-> > + * 3. install the new entry with the updated attributes
-> > + *
-> > + * This is unsafe if the caller is attempting to change the
-> > mapping of the
-> > + * page it is executing from, or if another CPU is concurrently
-> > using the
-> > + * page being altered.
-> > + *
-> > + * TODO make the implementation resistant to this.
-> > + *
-> > + * NOTE: can be dangerous to call without STRICT_KERNEL_RWX
-> > + */
-> > +static int change_page_attr(pte_t *ptep, unsigned long addr, void
-> > *data)
-> > +{
-> > +	long action = (long)data;
-> > +	pte_t pte;
-> > +
-> > +	spin_lock(&init_mm.page_table_lock);
-> > +
-> > +	/* invalidate the PTE so it's safe to modify */
-> > +	pte = ptep_get_and_clear(&init_mm, addr, ptep);
-> > +	flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
-> > +
-> > +	/* modify the PTE bits as desired, then apply */
-> > +	switch (action) {
-> > +	case SET_MEMORY_RO:
-> > +		pte = pte_wrprotect(pte);
-> > +		break;
-> > +	case SET_MEMORY_RW:
-> > +		pte = pte_mkwrite(pte);
-> > +		break;
-> > +	case SET_MEMORY_NX:
-> > +		pte = pte_exprotect(pte);
-> > +		break;
-> > +	case SET_MEMORY_X:
-> > +		pte = pte_mkexec(pte);
-> > +		break;
-> > +	default:
-> > +		break;
-> 
-> Should this have a WARN_ON_ONCE to let you know you're doing
-> something
-> that doesn't work? I know it's only ever called by things in this
-> file,
-> but still... Anyway it's very minor and I'm not fussed either way.
+Addressing review comments from Daniel Axtens.
 
-True, might as well.
+v6: https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=163335
+v5: https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=160869
 
-> 
-> > +	}
-> > +
-> > +	set_pte_at(&init_mm, addr, ptep, pte);
-> > +	spin_unlock(&init_mm.page_table_lock);
-> 
-> Initially I thought: shouldn't you put the PTL lock/unlock in the
-> outer
-> function? Then I remembered that apply_to_page_range can potentially
-> allocate new page table entries which would deadlock if you held the
-> lock.
-> 
-> Speaking of which - apply_to_page_range will create new pte entries
-> if
-> you apply it over an address range that isn't filled in. That doesn't
-> really make sense here - should you use apply_to_existing_page_range
-> instead?
-> 
-> You _might_ be able to move the PTL lock if you use
-> apply_to_existing_page_range but I'm not completely sure if that's
-> safe
-> or if the speed boost is worth it. You could check mm/memory.c if you
-> wanted.
+Changes since v6:
+	[1/7] and [6/7]: Check for negative values of numpages and use
+	      	  	 apply_to_existing_page_range() thanks to dja
 
-Seems like I should definitely be using apply_to_existing_page_range()
-but I'm not too keen on moving the lock in case it's unsafe - and these
-only get called on module load so it's not a particularly hot path.
+Thanks for the feedback.
 
-> > +
-> > +	return 0;
-> > +}
-> > +
-> > +int change_memory_attr(unsigned long addr, int numpages, long
-> > action)
-> > +{
-> > +	unsigned long start = ALIGN_DOWN(addr, PAGE_SIZE);
-> > +	unsigned long sz = numpages * PAGE_SIZE;
-> > +
-> > +	if (!IS_ENABLED(CONFIG_STRICT_KERNEL_RWX))
-> > +		return 0;
-> > +
-> > +	if (!numpages)
-> > +		return 0;
-> 
-> What happens if numpages is negative? Doesn't the guard need to check
-> for that rather than just for zero?
+Christophe Leroy (2):
+  powerpc/mm: implement set_memory_attr()
+  powerpc/32: use set_memory_attr()
 
-I don't know why numpages isn't unsigned in the set_memory API, that
-sounds like another potential patch.
+Russell Currey (5):
+  powerpc/mm: Implement set_memory() routines
+  powerpc/kprobes: Mark newly allocated probes as RO
+  powerpc/mm/ptdump: debugfs handler for W+X checks at runtime
+  powerpc: Set ARCH_HAS_STRICT_MODULE_RWX
+  powerpc/configs: Enable STRICT_MODULE_RWX in skiroot_defconfig
 
-Anyway, yes.
+ arch/powerpc/Kconfig                   |   2 +
+ arch/powerpc/Kconfig.debug             |   6 +-
+ arch/powerpc/configs/skiroot_defconfig |   1 +
+ arch/powerpc/include/asm/set_memory.h  |  34 ++++++++
+ arch/powerpc/kernel/kprobes.c          |  17 +++-
+ arch/powerpc/mm/Makefile               |   2 +-
+ arch/powerpc/mm/pageattr.c             | 114 +++++++++++++++++++++++++
+ arch/powerpc/mm/pgtable_32.c           |  95 +++------------------
+ arch/powerpc/mm/ptdump/ptdump.c        |  21 ++++-
+ 9 files changed, 199 insertions(+), 93 deletions(-)
+ create mode 100644 arch/powerpc/include/asm/set_memory.h
+ create mode 100644 arch/powerpc/mm/pageattr.c
 
-> With those caveats, and noting that I've been focused only on:
->  - lock/unlock paths
->  - integer arithmetic
->  - stuff about apply_page_range semantics
-> this patch is:
-> 
-> Reviewed-by: Daniel Axtens <dja@axtens.net>
-
-Thanks for the review, I wasn't aware apply_to_existing_page_range()
-existed.
-
-> 
-> Regards,
-> Daniel
-> 
-> > +
-> > +	return apply_to_page_range(&init_mm, start, sz,
-> > change_page_attr, (void *)action);
-> > +}
-> > -- 
-> > 2.25.1
+-- 
+2.26.0
 
