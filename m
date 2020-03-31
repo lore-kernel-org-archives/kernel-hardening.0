@@ -1,23 +1,23 @@
-Return-Path: <SRS0=13Az=5Q=lists.openwall.com=kernel-hardening-return-18322-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pb/c=5Q=lists.openwall.com=kernel-hardening-return-18323-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.4 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A9C71C43331
-	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 09:56:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5438EC43331
+	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 11:36:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C5684207FF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 09:56:45 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 67B2220838
+	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Mar 2020 11:36:32 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=c-s.fr header.i=@c-s.fr header.b="AKb3dfTd"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C5684207FF
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=c-s.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18322-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32627 invoked by uid 550); 31 Mar 2020 09:56:38 -0000
+	dkim=pass (2048-bit key) header.d=pi3.com.pl header.i=@pi3.com.pl header.b="nTgH2VAv";
+	dkim=pass (2048-bit key) header.d=pi3.com.pl header.i=@pi3.com.pl header.b="Rp3+de1H"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 67B2220838
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=pi3.com.pl
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18323-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30389 invoked by uid 550); 31 Mar 2020 11:36:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,212 +25,157 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32595 invoked from network); 31 Mar 2020 09:56:37 -0000
-Authentication-Results: localhost; dkim=pass
-	reason="1024-bit key; insecure key"
-	header.d=c-s.fr header.i=@c-s.fr header.b=AKb3dfTd; dkim-adsp=pass;
-	dkim-atps=neutral
-X-Virus-Scanned: Debian amavisd-new at c-s.fr
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=c-s.fr; s=mail;
-	t=1585648584; bh=ksiUjkzPuWXMi/v1gCBPZyWOve3E6DsSOUfx5uRsxpA=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=AKb3dfTd3Oaxv2vF/0fvmlykVblUYS8gNiouQ8N/m3Wp29vhj7Kv43czJcjCeGFCN
-	 4GIgSYC/trP2iCruuearrtAOp/gOVEdXVxvzfVI9+rdZEkg4zhG8pctMSqYZHyEmsH
-	 GtsUTK8CJRuKrcCsoApBvGz50k0o2WvW9FqhHxA0=
-X-Virus-Scanned: amavisd-new at c-s.fr
-Subject: Re: [PATCH v7 7/7] powerpc/32: use set_memory_attr()
-To: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org
-Cc: mpe@ellerman.id.au, ajd@linux.ibm.com, dja@axtens.net, npiggin@gmail.com,
- kernel-hardening@lists.openwall.com
-References: <20200331044825.591653-1-ruscur@russell.cc>
- <20200331044825.591653-8-ruscur@russell.cc>
-From: Christophe Leroy <christophe.leroy@c-s.fr>
-Message-ID: <e61a1f88-1ad6-ca26-790b-f036faacb790@c-s.fr>
-Date: Tue, 31 Mar 2020 11:56:22 +0200
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:68.0) Gecko/20100101
- Thunderbird/68.6.0
+Received: (qmail 11549 invoked from network); 31 Mar 2020 04:30:09 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=simple/simple; d=pi3.com.pl; s=default;
+	t=1585628997; bh=S/sqsZXh4c0HiC7oiYQrHwHAsYjWmaKQdUkMuQncFzk=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=nTgH2VAvffuUSjBDnqjOcWm2SIAHPhqpPswtjpS/nWdDBofZQfRyDM0VCEM7JnlAy
+	 X8nyQIVtAbjQUmKn2eOVxdCqF2yFjGGF87UNOvsHKDaVtI0MlUHBmrhea6S+LmIUf0
+	 Q7+KJCfh6DjjaJGpyVQ80LWyh5fCp6fseAlG02BOYNd6dCqbMqMyOv09LkoSuxLx9a
+	 QxX7d+A3ZD9PzL5Vd6Ff+i3Muw2SaK4VmVSvz+bW9UfEwWCS+1ocY+De+iPxZJWACs
+	 rlK9Ak3v2Vqjpe1gDnjmtECKKRcgDTPj/0YZa49jwwxt5wHbZCBYyB+pz0qBsNiaSC
+	 avU3udQzl2iRQ==
+X-Virus-Scanned: Debian amavisd-new at pi3.com.pl
+DKIM-Signature: v=1; a=rsa-sha256; c=simple/simple; d=pi3.com.pl; s=default;
+	t=1585628994; bh=S/sqsZXh4c0HiC7oiYQrHwHAsYjWmaKQdUkMuQncFzk=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=Rp3+de1Hs6t8uul8ccFB28NRWTmHQHtkzfTW04o2op8j6cYDC1NwIuTxPdPZDny7w
+	 1V4STuCjBHQKw5wYG4f/jK2nulLt67w09hxmwrDCE4u5XiVDkoK9cgxwfA0MVBwINj
+	 /8TLypBOAm3X5+pV4kWzLt65w0uffrbOLOSDyw0NCO0ksR07KRmstImwjjE9npxUqe
+	 jMeTSDn1gfV+7vIkYH3mPwxXN6zsGXRyGJnrDM+njJ73p+/YMQED0bxHCQm+/YKsjB
+	 nAQb7XbUY0Cvs9DxFDASN2cz3REzf9gcG3olhBXahg8Zo1KgLuq4dlT10S+LckR41U
+	 bo54SIyXCUdNA==
+Date: Tue, 31 Mar 2020 06:29:54 +0200
+From: Adam Zabrocki <pi3@pi3.com.pl>
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
+	Jann Horn <jannh@google.com>, Oleg Nesterov <oleg@redhat.com>,
+	Andy Lutomirski <luto@amacapital.net>,
+	"Eric W. Biederman" <ebiederm@xmission.com>,
+	Bernd Edlinger <bernd.edlinger@hotmail.de>,
+	Solar Designer <solar@openwall.com>
+Subject: Re: Curiosity around 'exec_id' and some problems associated with it
+Message-ID: <20200331042954.GA26058@pi3.com.pl>
+References: <20200324215049.GA3710@pi3.com.pl>
+ <202003291528.730A329@keescook>
 MIME-Version: 1.0
-In-Reply-To: <20200331044825.591653-8-ruscur@russell.cc>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: fr
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <202003291528.730A329@keescook>
+User-Agent: Mutt/1.9.4 (2018-02-28)
 
+Hey,
 
-
-Le 31/03/2020 à 06:48, Russell Currey a écrit :
-> From: Christophe Leroy <christophe.leroy@c-s.fr>
+On Sun, Mar 29, 2020 at 03:43:14PM -0700, Kees Cook wrote:
+> Hi!
 > 
-> Use set_memory_attr() instead of the PPC32 specific change_page_attr()
+> Sorry, I missed this originally because it got filed into my lkml
+> archive and not kernel-hardening, but no one actually reads lkml
+> directly, myself included -- it's mostly a thread archive. I'll update
+> my filters, and I've added a handful of people to CC that might be
+> interested in looking at this too. Here's the full email, I trimmed
+> heavily since it's very detailed:
+> https://lore.kernel.org/lkml/20200324215049.GA3710@pi3.com.pl/
 > 
-> change_page_attr() was checking that the address was not mapped by
-> blocks and was handling highmem, but that's unneeded because the
-> affected pages can't be in highmem and block mapping verification
-> is already done by the callers.
+
+No worries ;-)
+
+> On Tue, Mar 24, 2020 at 10:50:49PM +0100, Adam Zabrocki wrote:
+> > Some curiosities which are interesting to point out:
+> > 
+> >  1) Linus Torvalds in 2012 suspected that such 'overflow' might be possible.
+> >     You can read more about it here:
+> > 
+> >     https://www.openwall.com/lists/kernel-hardening/2012/03/11/4
+> > 
+> >  2) Solar Designer in 1999(!) was aware about the problem that 'exit_signal' can
+> >     be abused. The kernel didn't protect it at all at that time. So he came up
+> >     with the idea to introduce those two counters to deal with that problem.
+> >     Originally, these counters were defined as "long long" type. However, during
+> >     the revising between September 14 and September 16, 1999 he switched from
+> >     "long long" to "int" and introduced integer wraparound handling. His patches
+> >     were merged to the kernel 2.0.39 and 2.0.40.
+> > 
+> >  3) It is worth to read the Solar Designer's message during the discussion about
+> >     the fix for the problem CVE-2012-0056 (I'm referencing this problem later in
+> >     that write-up about "Problem II"):
+> > 
+> >     https://www.openwall.com/lists/kernel-hardening/2012/03/11/12
 > 
-> Signed-off-by: Christophe Leroy <christophe.leroy@c-s.fr>
-> ---
->   arch/powerpc/mm/pgtable_32.c | 95 ++++--------------------------------
->   1 file changed, 10 insertions(+), 85 deletions(-)
+> There was some effort made somewhat recently to get this area fixed:
+> https://lore.kernel.org/linux-fsdevel/1474663238-22134-3-git-send-email-jann@thejh.net/
 > 
-> diff --git a/arch/powerpc/mm/pgtable_32.c b/arch/powerpc/mm/pgtable_32.c
-> index 5fb90edd865e..3d92eaf3ee2f 100644
-> --- a/arch/powerpc/mm/pgtable_32.c
-> +++ b/arch/powerpc/mm/pgtable_32.c
-> @@ -23,6 +23,7 @@
->   #include <linux/highmem.h>
->   #include <linux/memblock.h>
->   #include <linux/slab.h>
-> +#include <linux/set_memory.h>
->   
->   #include <asm/pgtable.h>
->   #include <asm/pgalloc.h>
-> @@ -121,99 +122,20 @@ void __init mapin_ram(void)
->   	}
->   }
->   
-> -/* Scan the real Linux page tables and return a PTE pointer for
-> - * a virtual address in a context.
-> - * Returns true (1) if PTE was found, zero otherwise.  The pointer to
-> - * the PTE pointer is unmodified if PTE is not found.
-> - */
-> -static int
-> -get_pteptr(struct mm_struct *mm, unsigned long addr, pte_t **ptep, pmd_t **pmdp)
 
+These changes looks comprehensive and definitely fix current issue.
 
-This will conflict, get_pteptr() is gone now, see 
-https://github.com/linuxppc/linux/commit/2efc7c085f05870eda6f29ac71eeb83f3bd54415
-
-Christophe
-
-
-
-> -{
-> -        pgd_t	*pgd;
-> -	pud_t	*pud;
-> -        pmd_t	*pmd;
-> -        pte_t	*pte;
-> -        int     retval = 0;
-> -
-> -        pgd = pgd_offset(mm, addr & PAGE_MASK);
-> -        if (pgd) {
-> -		pud = pud_offset(pgd, addr & PAGE_MASK);
-> -		if (pud && pud_present(*pud)) {
-> -			pmd = pmd_offset(pud, addr & PAGE_MASK);
-> -			if (pmd_present(*pmd)) {
-> -				pte = pte_offset_map(pmd, addr & PAGE_MASK);
-> -				if (pte) {
-> -					retval = 1;
-> -					*ptep = pte;
-> -					if (pmdp)
-> -						*pmdp = pmd;
-> -					/* XXX caller needs to do pte_unmap, yuck */
-> -				}
-> -			}
-> -		}
-> -        }
-> -        return(retval);
-> -}
-> -
-> -static int __change_page_attr_noflush(struct page *page, pgprot_t prot)
-> -{
-> -	pte_t *kpte;
-> -	pmd_t *kpmd;
-> -	unsigned long address;
-> -
-> -	BUG_ON(PageHighMem(page));
-> -	address = (unsigned long)page_address(page);
-> -
-> -	if (v_block_mapped(address))
-> -		return 0;
-> -	if (!get_pteptr(&init_mm, address, &kpte, &kpmd))
-> -		return -EINVAL;
-> -	__set_pte_at(&init_mm, address, kpte, mk_pte(page, prot), 0);
-> -	pte_unmap(kpte);
-> -
-> -	return 0;
-> -}
-> -
-> -/*
-> - * Change the page attributes of an page in the linear mapping.
-> - *
-> - * THIS DOES NOTHING WITH BAT MAPPINGS, DEBUG USE ONLY
-> - */
-> -static int change_page_attr(struct page *page, int numpages, pgprot_t prot)
-> -{
-> -	int i, err = 0;
-> -	unsigned long flags;
-> -	struct page *start = page;
-> -
-> -	local_irq_save(flags);
-> -	for (i = 0; i < numpages; i++, page++) {
-> -		err = __change_page_attr_noflush(page, prot);
-> -		if (err)
-> -			break;
-> -	}
-> -	wmb();
-> -	local_irq_restore(flags);
-> -	flush_tlb_kernel_range((unsigned long)page_address(start),
-> -			       (unsigned long)page_address(page));
-> -	return err;
-> -}
-> -
->   void mark_initmem_nx(void)
->   {
-> -	struct page *page = virt_to_page(_sinittext);
->   	unsigned long numpages = PFN_UP((unsigned long)_einittext) -
->   				 PFN_DOWN((unsigned long)_sinittext);
->   
->   	if (v_block_mapped((unsigned long)_stext + 1))
->   		mmu_mark_initmem_nx();
->   	else
-> -		change_page_attr(page, numpages, PAGE_KERNEL);
-> +		set_memory_attr((unsigned long)_sinittext, numpages, PAGE_KERNEL);
->   }
->   
->   #ifdef CONFIG_STRICT_KERNEL_RWX
->   void mark_rodata_ro(void)
->   {
-> -	struct page *page;
->   	unsigned long numpages;
->   
->   	if (v_block_mapped((unsigned long)_sinittext)) {
-> @@ -222,20 +144,18 @@ void mark_rodata_ro(void)
->   		return;
->   	}
->   
-> -	page = virt_to_page(_stext);
->   	numpages = PFN_UP((unsigned long)_etext) -
->   		   PFN_DOWN((unsigned long)_stext);
->   
-> -	change_page_attr(page, numpages, PAGE_KERNEL_ROX);
-> +	set_memory_attr((unsigned long)_stext, numpages, PAGE_KERNEL_ROX);
->   	/*
->   	 * mark .rodata as read only. Use __init_begin rather than __end_rodata
->   	 * to cover NOTES and EXCEPTION_TABLE.
->   	 */
-> -	page = virt_to_page(__start_rodata);
->   	numpages = PFN_UP((unsigned long)__init_begin) -
->   		   PFN_DOWN((unsigned long)__start_rodata);
->   
-> -	change_page_attr(page, numpages, PAGE_KERNEL_RO);
-> +	set_memory_attr((unsigned long)__start_rodata, numpages, PAGE_KERNEL_RO);
->   
->   	// mark_initmem_nx() should have already run by now
->   	ptdump_check_wx();
-> @@ -245,9 +165,14 @@ void mark_rodata_ro(void)
->   #ifdef CONFIG_DEBUG_PAGEALLOC
->   void __kernel_map_pages(struct page *page, int numpages, int enable)
->   {
-> +	unsigned long addr = (unsigned long)page_address(page);
-> +
->   	if (PageHighMem(page))
->   		return;
->   
-> -	change_page_attr(page, numpages, enable ? PAGE_KERNEL : __pgprot(0));
-> +	if (enable)
-> +		set_memory_attr(addr, numpages, PAGE_KERNEL);
-> +	else
-> +		set_memory_attr(addr, numpages, __pgprot(0));
->   }
->   #endif /* CONFIG_DEBUG_PAGEALLOC */
+> Nothing ultimately landed, but it's worth seeing if we could revitalize
+> interest. Part of Jann's series was also related to fixing issues with
+> cred_guard_mutex, which is getting some traction now too:
+> https://lore.kernel.org/lkml/AM6PR03MB5170938306F22C3CF61CC573E4CD0@AM6PR03MB5170.eurprd03.prod.outlook.com/
 > 
+
+Thanks for pointing to that discussion. Definately both of that changes fix 
+problems which I've described (and not only that). However, what are the 
+reasons behind not merging them in? Especially, the first part (exec_id) looks 
+harmless and don't require any other updates.
+
+> > In short, if you hold the file descriptor open over an execve() (e.g. share it
+> > with child) the old VM is preserved (refcounted) and might be never released.
+> > Essentially, mother process' VM will be still in memory (and pointer to it is
+> > valid) even if the mother process passed an execve().
+> > This is some kind of 'memory leak' scenario. I did a simple test where process
+> > open /proc/self/maps file and calls clone() with CLONE_FILES flag. Next mother
+> > 'overwrite' itself by executing SUID binary (doesn't need to be SUID), and child
+> > was still able to use the original file descriptor - it's valid.
+> 
+> It'd be worth exploring where the resource counting is happening for
+> this. I haven't looked to see how much of the VM stays in kernel memory
+> in this situation. It probably wouldn't be hard to count it against an
+> rlimit or something.
+> 
+> Thanks for the details! I hope someone will have time to look into this.
+> It's a bit of a "long timeframe attack", so it's not gotta a lot of
+> priority (obviously). :)
+> 
+
+Thanks :) However, I did not focus on optimizing the '*exec_id overflow' 
+scenario and that's certainly possible. E.g. by creating the code as small as 
+possible, don't link with external libraries (or statically compile them in), 
+etc. In such case the time will be significantly smaller.
+
+Another interesting fact (not possible for performing 'overflow' attack but 
+worth to mention) is that we might increment '*exec_id' and force execve() to 
+fail. Function load_elf_binary() calls setup_new_exec() (which increments the 
+counter) and then continue execution of a more heavy work. In such case an 
+'overflow' would be a matter of hours. However, search_binary_handler() 
+function "protects" from such scenario and in case of error in 
+load_elf_binary() sends SIGSEGV:
+
+    int search_binary_handler(struct linux_binprm *bprm)
+    {
+    ...
+        retval = fmt->load_binary(bprm);
+    ...
+        if (retval < 0 && !bprm->mm) {
+            /* we got to flush_old_exec() and failed after it */
+            read_unlock(&binfmt_lock);
+            force_sigsegv(SIGSEGV, current);
+            return retval;
+        }
+    ...
+    }
+
+flush_old_exec() is called before setup_new_exec().
+
+Thanks,
+Adam
+
+> -Kees
+> 
+> -- 
+> Kees Cook
+
+-- 
+pi3 (pi3ki31ny) - pi3 (at) itsec pl
+http://pi3.com.pl
+
