@@ -1,23 +1,23 @@
-Return-Path: <SRS0=zaEW=5R=lists.openwall.com=kernel-hardening-return-18345-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ELQC=5R=lists.openwall.com=kernel-hardening-return-18346-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-14.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0CC07C2D0E7
-	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 05:51:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 35AFAC2D0E7
+	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 06:35:08 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 345EA2074D
-	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 05:51:17 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 591AA2071A
+	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 06:35:07 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=c-s.fr header.i=@c-s.fr header.b="q0u1J306"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 345EA2074D
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=c-s.fr
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18345-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18046 invoked by uid 550); 1 Apr 2020 05:51:10 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="AI07kurl"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 591AA2071A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18346-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3405 invoked by uid 550); 1 Apr 2020 06:35:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,242 +25,130 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18014 invoked from network); 1 Apr 2020 05:51:09 -0000
-Authentication-Results: localhost; dkim=pass
-	reason="1024-bit key; insecure key"
-	header.d=c-s.fr header.i=@c-s.fr header.b=q0u1J306; dkim-adsp=pass;
-	dkim-atps=neutral
-X-Virus-Scanned: Debian amavisd-new at c-s.fr
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=c-s.fr; s=mail;
-	t=1585720256; bh=7GWEqEq58tW4m2v0Z65LQJeXfEN+M/Za0UY517KJvUU=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=q0u1J306HtXgFZxI/glneLWllakMVRZQUYW+0NdI6Beai3nwXXFjMKvQpz5hhShos
-	 UCsiuyyNDIJx0kogUI8HpZwRGIafQcKKPm8tsiJbHQ5iGPu1eJGGWd1o3/MMrgMAVr
-	 2Mpf/+6jqh6vGK2JoftHJG8l/5XqcHMip0IfN/kA=
-X-Virus-Scanned: amavisd-new at c-s.fr
-Subject: Re: [PATCH v7 7/7] powerpc/32: use set_memory_attr()
-To: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org
-Cc: mpe@ellerman.id.au, ajd@linux.ibm.com, dja@axtens.net, npiggin@gmail.com,
- kernel-hardening@lists.openwall.com
-References: <20200331044825.591653-1-ruscur@russell.cc>
- <20200331044825.591653-8-ruscur@russell.cc>
- <e61a1f88-1ad6-ca26-790b-f036faacb790@c-s.fr>
- <6b003f8d254d1614cec838e1c032c3005d52d44d.camel@russell.cc>
-From: Christophe Leroy <christophe.leroy@c-s.fr>
-Message-ID: <e6651703-000b-6238-d853-d282daebba0f@c-s.fr>
-Date: Wed, 1 Apr 2020 07:50:53 +0200
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:68.0) Gecko/20100101
- Thunderbird/68.6.0
+Received: (qmail 3373 invoked from network); 1 Apr 2020 06:34:59 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=QnA7EYCoVJYIWQO5uMLkeOEOdfqORaBrTcKNEc28yYY=;
+        b=AI07kurlnG+uQ0Sas+oEYHAyqA3uaQjgSu+JcWAX6qnYsXMNTuByTN2lAKb0jPVUYW
+         C4A+Jcz1I32aaxNjVY0aaN+20mWc102bWehMohu4mj6ACawVVeqjnh5C/qiQIT3Ievdx
+         WNIBPU9w+Pl17fSIxFns6zEFF+EHfRgZTJRPN5EaHUegadb63A/Z+Ion1ihZoroyK2fV
+         JnFdwLs3dws+nTVHxnWDYbXynDShMvhUkMjECxgFhKFsMxvoUsifRZBlzOf5gM/KarFx
+         Z4h3n0aEBx/RcKXPRzyJICmpaORRQ/DslOiZyxLs7LdabZA5CO9HlpoRYX9SdfpCeBav
+         tocA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=QnA7EYCoVJYIWQO5uMLkeOEOdfqORaBrTcKNEc28yYY=;
+        b=B8WJ8bHLdyqDeKyygdAc/TF6c0vv439r2jt35we74ndud/Nrv2sKEyUTp9QaZfe4pd
+         qhyuAxnAZFwpPaiVWQzGg6lpCVVM9Be7aEP4Kyt50qtehIYThBw1wKDSCS3doxOp/AHQ
+         hKb+h75A7hvkMOtrhcWl2vKr60sUieAGSwrL7LsSFBslbzr22flNDHM6esNmOymdGCE9
+         OB5RycM67GhAj16c6Qr8CxSfIdNtzV0oOuGrhwQctgOLPFg3m7I4Z9CFWKBmnRW+vMlg
+         ooshgxRaQFsOrUQYu5WpH0elU9Ulev0qFHRdxwD4mUg31p5oYeoxIjz2LGEL+b54mVJZ
+         aXTg==
+X-Gm-Message-State: AGi0PuZoS3rJnYewqIGKjHGFwZ+VLtwIBLRykB1pxFQAbGPylQ3sKJrh
+	e3uIloQPQrTFHbVMJFY/He+jfi2yBTnx9tk6rYZGYA==
+X-Google-Smtp-Source: APiQypJfjS/kXYYGDaXryn4HsRwbBAV96lZ1gvez2EbUJtOV5YWRXj4Zda4APQHF8BW8uwiIYTGorQVuiQXbEq4zc8o=
+X-Received: by 2002:a9d:4b84:: with SMTP id k4mr150225otf.233.1585722887489;
+ Tue, 31 Mar 2020 23:34:47 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <6b003f8d254d1614cec838e1c032c3005d52d44d.camel@russell.cc>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: fr
-Content-Transfer-Encoding: 8bit
+References: <20200324153643.15527-1-will@kernel.org> <20200324153643.15527-4-will@kernel.org>
+ <CANpmjNPWpkxqZQJJOwmx0oqvzfcxhtqErjCzjRO_y0BQSmre8A@mail.gmail.com> <20200331131002.GA30975@willie-the-truck>
+In-Reply-To: <20200331131002.GA30975@willie-the-truck>
+From: Marco Elver <elver@google.com>
+Date: Wed, 1 Apr 2020 08:34:36 +0200
+Message-ID: <CANpmjNN-nN1OfGNXmsaTtM=11sth7YJTJMePzXgBRU73ohkBjQ@mail.gmail.com>
+Subject: Re: [RFC PATCH 03/21] list: Annotate lockless list primitives with data_race()
+To: Will Deacon <will@kernel.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Eric Dumazet <edumazet@google.com>, 
+	Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, 
+	Maddie Stone <maddiestone@google.com>, "Paul E . McKenney" <paulmck@kernel.org>, 
+	Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, kernel-team@android.com, 
+	kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset="UTF-8"
 
+On Tue, 31 Mar 2020 at 15:10, Will Deacon <will@kernel.org> wrote:
+>
+> On Tue, Mar 24, 2020 at 05:23:30PM +0100, Marco Elver wrote:
+> > On Tue, 24 Mar 2020 at 16:37, Will Deacon <will@kernel.org> wrote:
+> > > Some list predicates can be used locklessly even with the non-RCU list
+> > > implementations, since they effectively boil down to a test against
+> > > NULL. For example, checking whether or not a list is empty is safe even
+> > > in the presence of a concurrent, tearing write to the list head pointer.
+> > > Similarly, checking whether or not an hlist node has been hashed is safe
+> > > as well.
+> > >
+> > > Annotate these lockless list predicates with data_race() and READ_ONCE()
+> > > so that KCSAN and the compiler are aware of what's going on. The writer
+> > > side can then avoid having to use WRITE_ONCE() in the non-RCU
+> > > implementation.
+> > >
+> > > Cc: Paul E. McKenney <paulmck@kernel.org>
+> > > Cc: Peter Zijlstra <peterz@infradead.org>
+> > > Cc: Marco Elver <elver@google.com>
+> > > Signed-off-by: Will Deacon <will@kernel.org>
+> > > ---
+> > >  include/linux/list.h       | 10 +++++-----
+> > >  include/linux/list_bl.h    |  5 +++--
+> > >  include/linux/list_nulls.h |  6 +++---
+> > >  include/linux/llist.h      |  2 +-
+> > >  4 files changed, 12 insertions(+), 11 deletions(-)
+> > >
+> > > diff --git a/include/linux/list.h b/include/linux/list.h
+> > > index 4fed5a0f9b77..4d9f5f9ed1a8 100644
+> > > --- a/include/linux/list.h
+> > > +++ b/include/linux/list.h
+> > > @@ -279,7 +279,7 @@ static inline int list_is_last(const struct list_head *list,
+> > >   */
+> > >  static inline int list_empty(const struct list_head *head)
+> > >  {
+> > > -       return READ_ONCE(head->next) == head;
+> > > +       return data_race(READ_ONCE(head->next) == head);
+> >
+> > Double-marking should never be necessary, at least if you want to make
+> > KCSAN happy. From what I gather there is an unmarked write somewhere,
+> > correct? In that case, KCSAN will still complain because if it sees a
+> > race between this read and the other write, then at least one is still
+> > plain (the write).
+>
+> Ok, then I should drop the data_race() annotation and stick to READ_ONCE(),
+> I think (but see below).
+>
+> > Then, my suggestion would be to mark the write with data_race() and
+> > just leave this as a READ_ONCE(). Having a data_race() somewhere only
+> > makes KCSAN stop reporting the race if the paired access is also
+> > marked (be it with data_race() or _ONCE, etc.).
+>
+> The problem with taking that approach is that it ends up much of the
+> list implementation annotated with either WRITE_ONCE() or data_race(),
+> meaning that concurrent, racy list operations will no longer be reported
+> by KCSAN. I think that's a pretty big deal and I'm strongly against
+> annotating the internals of library code such as this because it means
+> that buggy callers will largely go undetected.
+>
+> The situation we have here is that some calls, e.g. hlist_empty() are
+> safe even in the presence of a racy write and I'd like to suppress KCSAN
+> reports without annotating the writes at all.
+>
+> > Alternatively, if marking the write is impossible, you can surround
+> > the access with kcsan_disable_current()/kcsan_enable_current(). Or, as
+> > a last resort, just leaving as-is is fine too, because KCSAN's default
+> > config (still) has KCSAN_ASSUME_PLAIN_WRITES_ATOMIC selected.
+>
+> Hmm, I suppose some bright spark will want to change the default at the some
+> point though, no? ;) I'll look at using
+> kcsan_disable_current()/kcsan_enable_current(), thanks.
 
+I think this will come up again (it did already come up in some other
+patch I reviewed, and Paul also mentioned it), so it seems best to
+change data_race() to match the intuitive semantics of just completely
+ignoring the access marked with it. I.e. marking accesses racing with
+accesses marked with data_race() is now optional:
+  https://lkml.kernel.org/r/20200331193233.15180-1-elver@google.com
 
-Le 01/04/2020 à 04:27, Russell Currey a écrit :
-> On Tue, 2020-03-31 at 11:56 +0200, Christophe Leroy wrote:
->>
->> Le 31/03/2020 à 06:48, Russell Currey a écrit :
->>> From: Christophe Leroy <christophe.leroy@c-s.fr>
->>>
->>> Use set_memory_attr() instead of the PPC32 specific
->>> change_page_attr()
->>>
->>> change_page_attr() was checking that the address was not mapped by
->>> blocks and was handling highmem, but that's unneeded because the
->>> affected pages can't be in highmem and block mapping verification
->>> is already done by the callers.
->>>
->>> Signed-off-by: Christophe Leroy <christophe.leroy@c-s.fr>
->>> ---
->>>    arch/powerpc/mm/pgtable_32.c | 95 ++++---------------------------
->>> -----
->>>    1 file changed, 10 insertions(+), 85 deletions(-)
->>>
->>> diff --git a/arch/powerpc/mm/pgtable_32.c
->>> b/arch/powerpc/mm/pgtable_32.c
->>> index 5fb90edd865e..3d92eaf3ee2f 100644
->>> --- a/arch/powerpc/mm/pgtable_32.c
->>> +++ b/arch/powerpc/mm/pgtable_32.c
->>> @@ -23,6 +23,7 @@
->>>    #include <linux/highmem.h>
->>>    #include <linux/memblock.h>
->>>    #include <linux/slab.h>
->>> +#include <linux/set_memory.h>
->>>    
->>>    #include <asm/pgtable.h>
->>>    #include <asm/pgalloc.h>
->>> @@ -121,99 +122,20 @@ void __init mapin_ram(void)
->>>    	}
->>>    }
->>>    
->>> -/* Scan the real Linux page tables and return a PTE pointer for
->>> - * a virtual address in a context.
->>> - * Returns true (1) if PTE was found, zero otherwise.  The pointer
->>> to
->>> - * the PTE pointer is unmodified if PTE is not found.
->>> - */
->>> -static int
->>> -get_pteptr(struct mm_struct *mm, unsigned long addr, pte_t **ptep,
->>> pmd_t **pmdp)
->>
->> This will conflict, get_pteptr() is gone now, see
->> https://github.com/linuxppc/linux/commit/2efc7c085f05870eda6f29ac71eeb83f3bd54415
->>
->> Christophe
-> 
-> OK cool, so I can just drop that hunk?  Will try that and make sure it
-> rebases on powerpc/next
+In which case, the original patch you had here works just fine.
 
-Well, you still have to remove __change_page_attr_noflush() and 
-change_page_attr(), everything else in this patch should still be the same.
-
-Christophe
-
-> 
-> - Russell
-> 
->>
->>
->>> -{
->>> -        pgd_t	*pgd;
->>> -	pud_t	*pud;
->>> -        pmd_t	*pmd;
->>> -        pte_t	*pte;
->>> -        int     retval = 0;
->>> -
->>> -        pgd = pgd_offset(mm, addr & PAGE_MASK);
->>> -        if (pgd) {
->>> -		pud = pud_offset(pgd, addr & PAGE_MASK);
->>> -		if (pud && pud_present(*pud)) {
->>> -			pmd = pmd_offset(pud, addr & PAGE_MASK);
->>> -			if (pmd_present(*pmd)) {
->>> -				pte = pte_offset_map(pmd, addr &
->>> PAGE_MASK);
->>> -				if (pte) {
->>> -					retval = 1;
->>> -					*ptep = pte;
->>> -					if (pmdp)
->>> -						*pmdp = pmd;
->>> -					/* XXX caller needs to do
->>> pte_unmap, yuck */
->>> -				}
->>> -			}
->>> -		}
->>> -        }
->>> -        return(retval);
->>> -}
->>> -
->>> -static int __change_page_attr_noflush(struct page *page, pgprot_t
->>> prot)
->>> -{
->>> -	pte_t *kpte;
->>> -	pmd_t *kpmd;
->>> -	unsigned long address;
->>> -
->>> -	BUG_ON(PageHighMem(page));
->>> -	address = (unsigned long)page_address(page);
->>> -
->>> -	if (v_block_mapped(address))
->>> -		return 0;
->>> -	if (!get_pteptr(&init_mm, address, &kpte, &kpmd))
->>> -		return -EINVAL;
->>> -	__set_pte_at(&init_mm, address, kpte, mk_pte(page, prot), 0);
->>> -	pte_unmap(kpte);
->>> -
->>> -	return 0;
->>> -}
->>> -
->>> -/*
->>> - * Change the page attributes of an page in the linear mapping.
->>> - *
->>> - * THIS DOES NOTHING WITH BAT MAPPINGS, DEBUG USE ONLY
->>> - */
->>> -static int change_page_attr(struct page *page, int numpages,
->>> pgprot_t prot)
->>> -{
->>> -	int i, err = 0;
->>> -	unsigned long flags;
->>> -	struct page *start = page;
->>> -
->>> -	local_irq_save(flags);
->>> -	for (i = 0; i < numpages; i++, page++) {
->>> -		err = __change_page_attr_noflush(page, prot);
->>> -		if (err)
->>> -			break;
->>> -	}
->>> -	wmb();
->>> -	local_irq_restore(flags);
->>> -	flush_tlb_kernel_range((unsigned long)page_address(start),
->>> -			       (unsigned long)page_address(page));
->>> -	return err;
->>> -}
->>> -
->>>    void mark_initmem_nx(void)
->>>    {
->>> -	struct page *page = virt_to_page(_sinittext);
->>>    	unsigned long numpages = PFN_UP((unsigned long)_einittext) -
->>>    				 PFN_DOWN((unsigned long)_sinittext);
->>>    
->>>    	if (v_block_mapped((unsigned long)_stext + 1))
->>>    		mmu_mark_initmem_nx();
->>>    	else
->>> -		change_page_attr(page, numpages, PAGE_KERNEL);
->>> +		set_memory_attr((unsigned long)_sinittext, numpages,
->>> PAGE_KERNEL);
->>>    }
->>>    
->>>    #ifdef CONFIG_STRICT_KERNEL_RWX
->>>    void mark_rodata_ro(void)
->>>    {
->>> -	struct page *page;
->>>    	unsigned long numpages;
->>>    
->>>    	if (v_block_mapped((unsigned long)_sinittext)) {
->>> @@ -222,20 +144,18 @@ void mark_rodata_ro(void)
->>>    		return;
->>>    	}
->>>    
->>> -	page = virt_to_page(_stext);
->>>    	numpages = PFN_UP((unsigned long)_etext) -
->>>    		   PFN_DOWN((unsigned long)_stext);
->>>    
->>> -	change_page_attr(page, numpages, PAGE_KERNEL_ROX);
->>> +	set_memory_attr((unsigned long)_stext, numpages,
->>> PAGE_KERNEL_ROX);
->>>    	/*
->>>    	 * mark .rodata as read only. Use __init_begin rather than
->>> __end_rodata
->>>    	 * to cover NOTES and EXCEPTION_TABLE.
->>>    	 */
->>> -	page = virt_to_page(__start_rodata);
->>>    	numpages = PFN_UP((unsigned long)__init_begin) -
->>>    		   PFN_DOWN((unsigned long)__start_rodata);
->>>    
->>> -	change_page_attr(page, numpages, PAGE_KERNEL_RO);
->>> +	set_memory_attr((unsigned long)__start_rodata, numpages,
->>> PAGE_KERNEL_RO);
->>>    
->>>    	// mark_initmem_nx() should have already run by now
->>>    	ptdump_check_wx();
->>> @@ -245,9 +165,14 @@ void mark_rodata_ro(void)
->>>    #ifdef CONFIG_DEBUG_PAGEALLOC
->>>    void __kernel_map_pages(struct page *page, int numpages, int
->>> enable)
->>>    {
->>> +	unsigned long addr = (unsigned long)page_address(page);
->>> +
->>>    	if (PageHighMem(page))
->>>    		return;
->>>    
->>> -	change_page_attr(page, numpages, enable ? PAGE_KERNEL :
->>> __pgprot(0));
->>> +	if (enable)
->>> +		set_memory_attr(addr, numpages, PAGE_KERNEL);
->>> +	else
->>> +		set_memory_attr(addr, numpages, __pgprot(0));
->>>    }
->>>    #endif /* CONFIG_DEBUG_PAGEALLOC */
->>>
+Thanks,
+-- Marco
