@@ -1,23 +1,23 @@
-Return-Path: <SRS0=ELQC=5R=lists.openwall.com=kernel-hardening-return-18346-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Wz+R=5R=lists.openwall.com=kernel-hardening-return-18347-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 35AFAC2D0E7
-	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 06:35:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 65416C43331
+	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 07:32:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 591AA2071A
-	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 06:35:07 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B7D0320772
+	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Apr 2020 07:32:49 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="AI07kurl"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 591AA2071A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18346-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3405 invoked by uid 550); 1 Apr 2020 06:35:00 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="eH7GQi4F"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B7D0320772
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18347-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21964 invoked by uid 550); 1 Apr 2020 07:32:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,130 +25,91 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3373 invoked from network); 1 Apr 2020 06:34:59 -0000
+Received: (qmail 21931 invoked from network); 1 Apr 2020 07:32:42 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=QnA7EYCoVJYIWQO5uMLkeOEOdfqORaBrTcKNEc28yYY=;
-        b=AI07kurlnG+uQ0Sas+oEYHAyqA3uaQjgSu+JcWAX6qnYsXMNTuByTN2lAKb0jPVUYW
-         C4A+Jcz1I32aaxNjVY0aaN+20mWc102bWehMohu4mj6ACawVVeqjnh5C/qiQIT3Ievdx
-         WNIBPU9w+Pl17fSIxFns6zEFF+EHfRgZTJRPN5EaHUegadb63A/Z+Ion1ihZoroyK2fV
-         JnFdwLs3dws+nTVHxnWDYbXynDShMvhUkMjECxgFhKFsMxvoUsifRZBlzOf5gM/KarFx
-         Z4h3n0aEBx/RcKXPRzyJICmpaORRQ/DslOiZyxLs7LdabZA5CO9HlpoRYX9SdfpCeBav
-         tocA==
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:content-transfer-encoding:in-reply-to;
+        bh=Q2zlprsjpvbH/CUCgF6/KaFZrKtD3zRPUib4YqmUolQ=;
+        b=eH7GQi4Fb+gecHNihtjNMlPCkT58qolygnegnhh5hSJE1vBUBJ66LNnElFLF0DunMT
+         FDAwRc5Hey0enMXIuTw8vOI9JR6u+IfleFr/zhPd9/fbIfhyQFu1uS1hiiX8gUWqR+RG
+         PBAMcJAeTHpk9Uk9APR8+Vb/7wsuXYEM+S8fs=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=QnA7EYCoVJYIWQO5uMLkeOEOdfqORaBrTcKNEc28yYY=;
-        b=B8WJ8bHLdyqDeKyygdAc/TF6c0vv439r2jt35we74ndud/Nrv2sKEyUTp9QaZfe4pd
-         qhyuAxnAZFwpPaiVWQzGg6lpCVVM9Be7aEP4Kyt50qtehIYThBw1wKDSCS3doxOp/AHQ
-         hKb+h75A7hvkMOtrhcWl2vKr60sUieAGSwrL7LsSFBslbzr22flNDHM6esNmOymdGCE9
-         OB5RycM67GhAj16c6Qr8CxSfIdNtzV0oOuGrhwQctgOLPFg3m7I4Z9CFWKBmnRW+vMlg
-         ooshgxRaQFsOrUQYu5WpH0elU9Ulev0qFHRdxwD4mUg31p5oYeoxIjz2LGEL+b54mVJZ
-         aXTg==
-X-Gm-Message-State: AGi0PuZoS3rJnYewqIGKjHGFwZ+VLtwIBLRykB1pxFQAbGPylQ3sKJrh
-	e3uIloQPQrTFHbVMJFY/He+jfi2yBTnx9tk6rYZGYA==
-X-Google-Smtp-Source: APiQypJfjS/kXYYGDaXryn4HsRwbBAV96lZ1gvez2EbUJtOV5YWRXj4Zda4APQHF8BW8uwiIYTGorQVuiQXbEq4zc8o=
-X-Received: by 2002:a9d:4b84:: with SMTP id k4mr150225otf.233.1585722887489;
- Tue, 31 Mar 2020 23:34:47 -0700 (PDT)
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:content-transfer-encoding
+         :in-reply-to;
+        bh=Q2zlprsjpvbH/CUCgF6/KaFZrKtD3zRPUib4YqmUolQ=;
+        b=bVRItl34sd8bX3qGyHO9833eOXj3VjYodo7hwtEinT/q5Lg3xe9CFT59ZiI6HGMA2L
+         xzio7kGoUqK38ePefWfpNy4kUwz3FdQV0gsfDPZi4nhAvsnfD7m+i5YyQUXlHN1dmUI/
+         YDS3cyo7Zb3dSx92tkqSJjNtszxSGKkc/Tc7N8AohMdIaAZ28ZaoqIftb78YeuDzSmY7
+         FdtffSbay200dMxQqn7EW13iaL4Nd+KFISwybcrlhetMyMY4Yn2Ald/uGqX6okISfLR3
+         d4/Z8H1h9SgD7Lf0G5Y89pL00PLn4VHZSecoEtdCUWshUNzp7q8cSNbIqRml1R/BFbh6
+         Yo0w==
+X-Gm-Message-State: AGi0PubKVFMxiy7fwZwNquuw1PjYbO3KU+7rVJKcmeXytI7eSdyi6f1a
+	RPx9KdgeVfj/5z++NnnReCYHpg==
+X-Google-Smtp-Source: APiQypKmwoN+WlTZJjmydYo5ouItfzTZNL+lOANxC/eXYfxIziyQqxNU1yxknZE8OOqBHFK5Z7Q0QA==
+X-Received: by 2002:a17:90b:4396:: with SMTP id in22mr3252194pjb.10.1585726350003;
+        Wed, 01 Apr 2020 00:32:30 -0700 (PDT)
+Date: Wed, 1 Apr 2020 00:32:28 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Slava Bacherikov <slava@bacher09.org>
+Cc: Andrii Nakryiko <andrii.nakryiko@gmail.com>,
+	Daniel Borkmann <daniel@iogearbox.net>,
+	Jann Horn <jannh@google.com>,
+	Alexei Starovoitov <alexei.starovoitov@gmail.com>,
+	bpf <bpf@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: Re: CONFIG_DEBUG_INFO_BTF and CONFIG_GCC_PLUGIN_RANDSTRUCT
+Message-ID: <202004010029.167BA4AA1F@keescook>
+References: <CAG48ez2sZ58VQ4+LJu39H1M0Y98LhRYR19G_fDAPJPBf7imxuw@mail.gmail.com>
+ <CAADnVQ+Ux3-D_7ytRJx_Pz4fStRLS1vkM=-tGZ0paoD7n+JCLQ@mail.gmail.com>
+ <CAG48ez0ajun-ujQQqhDRooha1F0BZd3RYKvbJ=8SsRiHAQjUzw@mail.gmail.com>
+ <202003301016.D0E239A0@keescook>
+ <c332da87-a770-8cf9-c252-5fb64c06c17e@iogearbox.net>
+ <202003311110.2B08091E@keescook>
+ <CAEf4BzYZsiuQGYVozwB=7nNhVYzCr=fQq6PLgHF3M5AXbhZyig@mail.gmail.com>
+ <202003311257.3372EC63@keescook>
+ <CAEf4BzYODtQtuO79BAn-m=2n8QwPRLd74UP-rwivHj6uLk3ycA@mail.gmail.com>
+ <8962ffa8-69b7-ab6b-3969-3029a95dfcec@bacher09.org>
 MIME-Version: 1.0
-References: <20200324153643.15527-1-will@kernel.org> <20200324153643.15527-4-will@kernel.org>
- <CANpmjNPWpkxqZQJJOwmx0oqvzfcxhtqErjCzjRO_y0BQSmre8A@mail.gmail.com> <20200331131002.GA30975@willie-the-truck>
-In-Reply-To: <20200331131002.GA30975@willie-the-truck>
-From: Marco Elver <elver@google.com>
-Date: Wed, 1 Apr 2020 08:34:36 +0200
-Message-ID: <CANpmjNN-nN1OfGNXmsaTtM=11sth7YJTJMePzXgBRU73ohkBjQ@mail.gmail.com>
-Subject: Re: [RFC PATCH 03/21] list: Annotate lockless list primitives with data_race()
-To: Will Deacon <will@kernel.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Eric Dumazet <edumazet@google.com>, 
-	Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, 
-	Maddie Stone <maddiestone@google.com>, "Paul E . McKenney" <paulmck@kernel.org>, 
-	Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, kernel-team@android.com, 
-	kernel-hardening@lists.openwall.com
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <8962ffa8-69b7-ab6b-3969-3029a95dfcec@bacher09.org>
 
-On Tue, 31 Mar 2020 at 15:10, Will Deacon <will@kernel.org> wrote:
->
-> On Tue, Mar 24, 2020 at 05:23:30PM +0100, Marco Elver wrote:
-> > On Tue, 24 Mar 2020 at 16:37, Will Deacon <will@kernel.org> wrote:
-> > > Some list predicates can be used locklessly even with the non-RCU list
-> > > implementations, since they effectively boil down to a test against
-> > > NULL. For example, checking whether or not a list is empty is safe even
-> > > in the presence of a concurrent, tearing write to the list head pointer.
-> > > Similarly, checking whether or not an hlist node has been hashed is safe
-> > > as well.
-> > >
-> > > Annotate these lockless list predicates with data_race() and READ_ONCE()
-> > > so that KCSAN and the compiler are aware of what's going on. The writer
-> > > side can then avoid having to use WRITE_ONCE() in the non-RCU
-> > > implementation.
-> > >
-> > > Cc: Paul E. McKenney <paulmck@kernel.org>
-> > > Cc: Peter Zijlstra <peterz@infradead.org>
-> > > Cc: Marco Elver <elver@google.com>
-> > > Signed-off-by: Will Deacon <will@kernel.org>
-> > > ---
-> > >  include/linux/list.h       | 10 +++++-----
-> > >  include/linux/list_bl.h    |  5 +++--
-> > >  include/linux/list_nulls.h |  6 +++---
-> > >  include/linux/llist.h      |  2 +-
-> > >  4 files changed, 12 insertions(+), 11 deletions(-)
-> > >
-> > > diff --git a/include/linux/list.h b/include/linux/list.h
-> > > index 4fed5a0f9b77..4d9f5f9ed1a8 100644
-> > > --- a/include/linux/list.h
-> > > +++ b/include/linux/list.h
-> > > @@ -279,7 +279,7 @@ static inline int list_is_last(const struct list_head *list,
-> > >   */
-> > >  static inline int list_empty(const struct list_head *head)
-> > >  {
-> > > -       return READ_ONCE(head->next) == head;
-> > > +       return data_race(READ_ONCE(head->next) == head);
-> >
-> > Double-marking should never be necessary, at least if you want to make
-> > KCSAN happy. From what I gather there is an unmarked write somewhere,
-> > correct? In that case, KCSAN will still complain because if it sees a
-> > race between this read and the other write, then at least one is still
-> > plain (the write).
->
-> Ok, then I should drop the data_race() annotation and stick to READ_ONCE(),
-> I think (but see below).
->
-> > Then, my suggestion would be to mark the write with data_race() and
-> > just leave this as a READ_ONCE(). Having a data_race() somewhere only
-> > makes KCSAN stop reporting the race if the paired access is also
-> > marked (be it with data_race() or _ONCE, etc.).
->
-> The problem with taking that approach is that it ends up much of the
-> list implementation annotated with either WRITE_ONCE() or data_race(),
-> meaning that concurrent, racy list operations will no longer be reported
-> by KCSAN. I think that's a pretty big deal and I'm strongly against
-> annotating the internals of library code such as this because it means
-> that buggy callers will largely go undetected.
->
-> The situation we have here is that some calls, e.g. hlist_empty() are
-> safe even in the presence of a racy write and I'd like to suppress KCSAN
-> reports without annotating the writes at all.
->
-> > Alternatively, if marking the write is impossible, you can surround
-> > the access with kcsan_disable_current()/kcsan_enable_current(). Or, as
-> > a last resort, just leaving as-is is fine too, because KCSAN's default
-> > config (still) has KCSAN_ASSUME_PLAIN_WRITES_ATOMIC selected.
->
-> Hmm, I suppose some bright spark will want to change the default at the some
-> point though, no? ;) I'll look at using
-> kcsan_disable_current()/kcsan_enable_current(), thanks.
+On Wed, Apr 01, 2020 at 12:24:46AM +0300, Slava Bacherikov wrote:
+> 31.03.2020 23:23, Andrii Nakryiko пишет:
+> > On Tue, Mar 31, 2020 at 12:58 PM Kees Cook <keescook@chromium.org> wrote:
+> >> Sure! That'd by fine by me. I'd just like it to be a "|| COMPILE_TEST"
+> >> for GCC_PLUGIN_RANDSTRUCT. Feel free to CC me for an Ack. :)
+> >>
+> > 
+> > +cc Slava
+> > 
+> > I'm unsure what COMPILE_TEST dependency (or is it anti-dependency?)
+> > has to do with BTF generation and reading description in Kconfig
+> > didn't clarify it for me. Can you please elaborate just a bit? Thanks!
+> > 
+> >> -Kees
+> 
+> Hi,
+> 
+> Regarding COMPILE_TEST, DEBUG_INFO has dependency on:
+> 
+> DEBUG_KERNEL && !COMPILE_TEST
+> 
+> And DEBUG_INFO_BTF depends on DEBUG_INFO, so enabling COMPILE_TEST
+> would block DEBUG_INFO and so DEBUG_INFO_BTF as well. Unless I don't
+> understand something and there is some other reason to add it.
 
-I think this will come up again (it did already come up in some other
-patch I reviewed, and Paul also mentioned it), so it seems best to
-change data_race() to match the intuitive semantics of just completely
-ignoring the access marked with it. I.e. marking accesses racing with
-accesses marked with data_race() is now optional:
-  https://lkml.kernel.org/r/20200331193233.15180-1-elver@google.com
+I meant that if you're adjusting the depends for GCC_PLUGIN_RANDSTRUCT,
+I'd like it to be:
 
-In which case, the original patch you had here works just fine.
+	depends on COMPILE_TEST || !DEBUG_INFO
 
-Thanks,
--- Marco
+That way randconfig, all*config, etc, will still select
+GCC_PLUGIN_RANDSTRUCT with everything else, regardless of DEBUG_INFO.
+
+-- 
+Kees Cook
