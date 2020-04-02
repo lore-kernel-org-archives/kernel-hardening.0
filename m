@@ -1,20 +1,22 @@
-Return-Path: <SRS0=V0vP=5S=lists.openwall.com=kernel-hardening-return-18395-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=6qw/=5S=lists.openwall.com=kernel-hardening-return-18396-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 021E9C2BA12
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 18:51:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C7C7CC43331
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 19:06:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 62B82206E9
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 18:51:25 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 62B82206E9
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18395-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13316 invoked by uid 550); 2 Apr 2020 18:51:16 -0000
+	by mail.kernel.org (Postfix) with SMTP id 21DEE20719
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 19:06:03 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=linux-foundation.org header.i=@linux-foundation.org header.b="hvEITigZ"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 21DEE20719
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-foundation.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18396-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3499 invoked by uid 550); 2 Apr 2020 19:05:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,104 +24,106 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11626 invoked from network); 2 Apr 2020 18:48:29 -0000
-Date: Fri, 03 Apr 2020 00:18:06 +0530
-From: "Naveen N. Rao" <naveen.n.rao@linux.ibm.com>
-Subject: Re: [PATCH v8 2/7] powerpc/kprobes: Mark newly allocated probes as RO
-To: linuxppc-dev@lists.ozlabs.org, Russell Currey <ruscur@russell.cc>
-Cc: ajd@linux.ibm.com, dja@axtens.net, kernel-hardening@lists.openwall.com,
-        npiggin@gmail.com
-References: <20200402084053.188537-1-ruscur@russell.cc>
-	<20200402084053.188537-2-ruscur@russell.cc>
-	<1585844035.o235bvxmq0.naveen@linux.ibm.com>
-In-Reply-To: <1585844035.o235bvxmq0.naveen@linux.ibm.com>
+Received: (qmail 3479 invoked from network); 2 Apr 2020 19:05:57 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=linux-foundation.org; s=google;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=RlBOg0dum66ebZmfIZrWlU1IBkKC8efn4oYc6hOU1L0=;
+        b=hvEITigZV32UOF8ubiUjd+p22kCZAiMJFfBqDEEHBqM8+KyLyY3+cjtQPsswx+RUpm
+         HJ1KgeDiJRSfzbkwXPk1cZ6pfQGvYJULSwuj6II4fCP3quqyDwcIFxIxB2CVRWFVsr87
+         Cmk6cMB40cebsPRptNEHYRfJuiAA45R2UT23k=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=RlBOg0dum66ebZmfIZrWlU1IBkKC8efn4oYc6hOU1L0=;
+        b=npPOe8JtlWsYVM56SbZe1OajDA7qmI68ItMeCakHNdDOAfKA5KNh7xLXYjlFGiVRYf
+         LO3LKbMe5oNyKY2YOHYauCbqosOrkxoX7qxtTOTSDTqWo0QUA881Fo4urCVeVSsqgbaq
+         fWgoqJMCY4xx++1nrwcNn8gQl5nEtqSCslJcRTBDF15tD5c/1WKKCD3LspOFkU0Ag/In
+         ORWMQe3KUZKXL87tiYjHKyMbVWk2lKZOGqhk+7ad3A8QLfTkog3XyssUYPVyQ4G20hLt
+         zTeXe8jxruPdghrzJQ/ohXSl/mczXrjPhRhh2BQBNwB1cs3aMMZ2pRANvfLIX6orRgKm
+         F1qQ==
+X-Gm-Message-State: AGi0PuYDn9FmBFHpQHpDPJ4IRWleBdpS4305nX1XFEPKHa/a2N/Pdot+
+	heDObLOx/WhnKWJdSOyw8qtK6vo89Hw=
+X-Google-Smtp-Source: APiQypJMrExtBvPPyamiukkhFnrtARNtGE9sboICmKnLC0vTMJowKO/XcMIuRijDJkea1lda2mHX7g==
+X-Received: by 2002:a2e:b5d1:: with SMTP id g17mr2666366ljn.139.1585850804156;
+        Thu, 02 Apr 2020 11:06:44 -0700 (PDT)
+X-Received: by 2002:a2e:8652:: with SMTP id i18mr2793744ljj.265.1585850802219;
+ Thu, 02 Apr 2020 11:06:42 -0700 (PDT)
 MIME-Version: 1.0
-User-Agent: astroid/v0.15-13-gb675b421
- (https://github.com/astroidmail/astroid)
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: quoted-printable
-X-TM-AS-GCONF: 00
-x-cbid: 20040218-0020-0000-0000-000003C05FAF
-X-IBM-AV-DETECTION: SAVI=unused REMOTE=unused XFE=unused
-x-cbparentid: 20040218-0021-0000-0000-000022190C76
-Message-Id: <1585852977.oiikywo1jz.naveen@linux.ibm.com>
-X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:6.0.138,18.0.676
- definitions=2020-04-02_08:2020-04-02,2020-04-02 signatures=0
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 phishscore=0 impostorscore=0
- suspectscore=0 adultscore=0 priorityscore=1501 mlxscore=0
- lowpriorityscore=0 clxscore=1015 spamscore=0 mlxlogscore=999
- malwarescore=0 bulkscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2003020000 definitions=main-2004020138
+References: <20200324215049.GA3710@pi3.com.pl> <202003291528.730A329@keescook>
+ <87zhbvlyq7.fsf_-_@x220.int.ebiederm.org> <CAG48ez3nYr7dj340Rk5-QbzhsFq0JTKPf2MvVJ1-oi1Zug1ftQ@mail.gmail.com>
+ <CAHk-=wjz0LEi68oGJSQzZ--3JTFF+dX2yDaXDRKUpYxtBB=Zfw@mail.gmail.com>
+ <CAHk-=wgM3qZeChs_1yFt8p8ye1pOaM_cX57BZ_0+qdEPcAiaCQ@mail.gmail.com>
+ <CAG48ez1f82re_V=DzQuRHpy7wOWs1iixrah4GYYxngF1v-moZw@mail.gmail.com>
+ <CAHk-=whks0iE1f=Ka0_vo2PYg774P7FA8Y30YrOdUBGRH-ch9A@mail.gmail.com> <877dyym3r0.fsf@x220.int.ebiederm.org>
+In-Reply-To: <877dyym3r0.fsf@x220.int.ebiederm.org>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Thu, 2 Apr 2020 11:06:02 -0700
+X-Gmail-Original-Message-ID: <CAHk-=wiOS4Fi2tsXQrvLOiW69g4HiJYsqL6RPeTd14b4+2-Ykg@mail.gmail.com>
+Message-ID: <CAHk-=wiOS4Fi2tsXQrvLOiW69g4HiJYsqL6RPeTd14b4+2-Ykg@mail.gmail.com>
+Subject: Re: [PATCH] signal: Extend exec_id to 64bits
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Jann Horn <jannh@google.com>, Alan Stern <stern@rowland.harvard.edu>, 
+	Andrea Parri <parri.andrea@gmail.com>, Will Deacon <will@kernel.org>, 
+	Peter Zijlstra <peterz@infradead.org>, Boqun Feng <boqun.feng@gmail.com>, 
+	Nicholas Piggin <npiggin@gmail.com>, David Howells <dhowells@redhat.com>, 
+	Jade Alglave <j.alglave@ucl.ac.uk>, Luc Maranget <luc.maranget@inria.fr>, 
+	"Paul E. McKenney" <paulmck@kernel.org>, Akira Yokosawa <akiyks@gmail.com>, 
+	Daniel Lustig <dlustig@nvidia.com>, Adam Zabrocki <pi3@pi3.com.pl>, 
+	kernel list <linux-kernel@vger.kernel.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Oleg Nesterov <oleg@redhat.com>, 
+	Andy Lutomirski <luto@amacapital.net>, Bernd Edlinger <bernd.edlinger@hotmail.de>, 
+	Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, 
+	stable <stable@vger.kernel.org>, Marco Elver <elver@google.com>, 
+	Dmitry Vyukov <dvyukov@google.com>, kasan-dev <kasan-dev@googlegroups.com>
+Content-Type: text/plain; charset="UTF-8"
 
-Naveen N. Rao wrote:
-> Russell Currey wrote:
->> With CONFIG_STRICT_KERNEL_RWX=3Dy and CONFIG_KPROBES=3Dy, there will be =
-one
->> W+X page at boot by default.  This can be tested with
->> CONFIG_PPC_PTDUMP=3Dy and CONFIG_PPC_DEBUG_WX=3Dy set, and checking the
->> kernel log during boot.
->>=20
->> powerpc doesn't implement its own alloc() for kprobes like other
->> architectures do, but we couldn't immediately mark RO anyway since we do
->> a memcpy to the page we allocate later.  After that, nothing should be
->> allowed to modify the page, and write permissions are removed well
->> before the kprobe is armed.
->>=20
->> The memcpy() would fail if >1 probes were allocated, so use
->> patch_instruction() instead which is safe for RO.
->>=20
->> Reviewed-by: Daniel Axtens <dja@axtens.net>
->> Signed-off-by: Russell Currey <ruscur@russell.cc>
->> Signed-off-by: Christophe Leroy <christophe.leroy@c-s.fr>
->> ---
->>  arch/powerpc/kernel/kprobes.c | 17 +++++++++++++----
->>  1 file changed, 13 insertions(+), 4 deletions(-)
->>=20
->> diff --git a/arch/powerpc/kernel/kprobes.c b/arch/powerpc/kernel/kprobes=
-.c
->> index 81efb605113e..fa4502b4de35 100644
->> --- a/arch/powerpc/kernel/kprobes.c
->> +++ b/arch/powerpc/kernel/kprobes.c
->> @@ -24,6 +24,8 @@
->>  #include <asm/sstep.h>
->>  #include <asm/sections.h>
->>  #include <linux/uaccess.h>
->> +#include <linux/set_memory.h>
->> +#include <linux/vmalloc.h>
->> =20
->>  DEFINE_PER_CPU(struct kprobe *, current_kprobe) =3D NULL;
->>  DEFINE_PER_CPU(struct kprobe_ctlblk, kprobe_ctlblk);
->> @@ -102,6 +104,16 @@ kprobe_opcode_t *kprobe_lookup_name(const char *nam=
-e, unsigned int offset)
->>  	return addr;
->>  }
->> =20
->> +void *alloc_insn_page(void)
->> +{
->> +	void *page =3D vmalloc_exec(PAGE_SIZE);
->> +
->> +	if (page)
->> +		set_memory_ro((unsigned long)page, 1);
->> +
->> +	return page;
->> +}
->> +
->=20
-> This crashes for me with KPROBES_SANITY_TEST during the kretprobe test. =20
+On Thu, Apr 2, 2020 at 6:14 AM Eric W. Biederman <ebiederm@xmission.com> wrote:
+>
+> Linus Torvalds <torvalds@linux-foundation.org> writes:
+>
+> > tasklist_lock is aboue the hottest lock there is in all of the kernel.
+>
+> Do you know code paths you see tasklist_lock being hot?
 
-That isn't needed to reproduce this. After bootup, disabling optprobes=20
-also shows the crash with kretprobes:
-	sysctl debug.kprobes-optimization=3D0
+It's generally not bad enough to show up on single-socket machines.
 
-The problem happens to be with patch_instruction() in=20
-arch_prepare_kprobe(). During boot, on kprobe init, we register a probe=20
-on kretprobe_trampoline for use with kretprobes (see=20
-arch_init_kprobes()). This results in an instruction slot being=20
-allocated, and arch_prepare_kprobe() to be called for copying the=20
-instruction (nop) at kretprobe_trampoline. patch_instruction() is=20
-failing resulting in corrupt instruction which we try to emulate/single=20
-step causing the crash.
+But the problem with tasklist_lock is that it's one of our remaining
+completely global locks. So it scales like sh*t in some circumstances.
 
+On single-socket machines, most of the truly nasty hot paths aren't a
+huge problem, because they tend to be mostly readers. So you get the
+cacheline bounce, but you don't (usually) get much busy looping. The
+cacheline bounce is "almost free" on a single socket.
 
-- Naveen
+But because it's one of those completely global locks, on big
+multi-socket machines people have reported it as a problem forever.
+Even just readers can cause problems (because of the cacheline
+bouncing even when you just do the reader increment), but you also end
+up having more issues with writers scaling badly.
 
+Don't get me wrong - you can get bad scaling on other locks too, even
+when they aren't really global - we had that with just the reference
+counter increment for the user signal accounting, after all. Neither
+of the reference counts were actually global, but they were just
+effectively single counters under that particular load (ie the count
+was per-user, but the load ran as a single user).
+
+The reason tasklist_lock probably doesn't come up very much is that
+it's _always_ been expensive. It has also caused some fundamental
+issues (I think it's the main reason we have that rule that
+reader-writer locks are unfair to readers, because we have readers
+from interrupt context too, but can't afford to make normal readers
+disable interrupts).
+
+A lot of the tasklist lock readers end up looping quite a bit inside
+the lock (looping over threads etc), which is why it can then be a big
+deal when the rare reader shows up.
+
+We've improved a _lot_ of those loops. That has definitely helped for
+the common cases. But we've never been able to really fix the lock
+itself.
+
+                 Linus
