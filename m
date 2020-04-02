@@ -1,23 +1,22 @@
-Return-Path: <SRS0=GtrH=5S=lists.openwall.com=kernel-hardening-return-18365-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ntng=5S=lists.openwall.com=kernel-hardening-return-18366-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F34EBC43331
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 01:36:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 30C4BC43331
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 02:06:36 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 487952072E
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 01:36:30 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 7817A2072E
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 02:06:35 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Iy/+QP+K"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 487952072E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18365-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14227 invoked by uid 550); 2 Apr 2020 01:36:23 -0000
+	dkim=pass (1024-bit key) header.d=linux-foundation.org header.i=@linux-foundation.org header.b="FEz92/cj"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7817A2072E
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-foundation.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18366-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5704 invoked by uid 550); 2 Apr 2020 02:06:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,44 +24,45 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14183 invoked from network); 2 Apr 2020 01:36:22 -0000
+Received: (qmail 5683 invoked from network); 2 Apr 2020 02:06:28 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
+        d=linux-foundation.org; s=google;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=p4NjOGhfdlS01zHiaiGfeK4n/oNGr20mOQ6J0VtQZkU=;
-        b=Iy/+QP+K5SVCnjZXEYKbe6gJZoALpPVWnCdKolTHVAcRIpAX95p8NjKGPKSonJCPQl
-         f++BgT7PPp9l1iSRQ0/AkB8k2GJ9laThTMzZvs8e1TP/X1f6WX5Cn8xFtFCbwwx3rX8n
-         RnnPYSdakwGWTapISLCz8yL9IB8meP8yGhRhNjjZEBk8dsZU1QIY+BK0XB9LSfeKWt0W
-         o/ZyWF5EEO830dCD5ifrmYe5HtawBOZlRnV6pZmMlt43dZFsqqFubXhVRsFGQQ1NPDqe
-         N9jUDMHkwlob6QtCmqRhRNG5E0keVN4DvKm0VvPZiQO901MdnKX/cFt9MAbYIYKiTjz2
-         h+Gw==
+        bh=xQMUHcx5ZJebHuFeNsiV5oTqPrmJdOW/j745+2PrxT0=;
+        b=FEz92/cjgu/KjeUfKUAamLHbiMYZP/JE8iQyr8PNIMC5adYQCca21soCJysmTW8le/
+         u+EmuDxNfwEIB6iFxacesqUbrDJuUXTQH1CifqeNvpd7zFcILB7eKw8/Qk1LJLcobXrc
+         6HoPfDxgcA61kzOR0e4ZTAsOnzIaIrzLDUVEs=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=p4NjOGhfdlS01zHiaiGfeK4n/oNGr20mOQ6J0VtQZkU=;
-        b=s3FOnO/+olcmSTG0iC54Yc4M7dSBrWCzaF5ExH4KCfH3E6WBFwZU0WKqPD4SYo/rxD
-         tIT9lWrhjtbqLa7qY1F3CCnToJJ2uhdQQbkNVRogfRlHN40DWbN7eZ6S5DDWbHDTi+DX
-         h4vAAyYiT+CbF+WI3iAjLnrQeqahqaEiWw3es1qBux0nNZOgW0v3UdbgsTgM7GveZrbV
-         8QkeWwse+NnES6QaqB6zaVD4ignl414eozsxnGyprAhZSSlZp76Yl892633Y7jl0JC2N
-         r9zvc6JVlsUc4eFL/Ggoj2PhGAwudg+tHEbDbU8NKsHI6o5eNOIM+2NBaFZA+jFlNdx2
-         VGjQ==
-X-Gm-Message-State: AGi0PuYE2RjPYbVjJUj7ul/c+yhGBgS7aF5+Z7YYAz1QtrLOWnE/Rr93
-	VUH/ZhXzaejOAS7ZvOuG5gh9JgBzlJytS5w4Om0PeQ==
-X-Google-Smtp-Source: APiQypJ85uH6hjieFIQ+DVaZ/3dHevVDests4L8XYzQdjxgBwQoqkLkbfa12keCBxd4QZw2RSaoFcAay8z6J77nuKhw=
-X-Received: by 2002:a05:6512:3127:: with SMTP id p7mr583281lfd.108.1585791371001;
- Wed, 01 Apr 2020 18:36:11 -0700 (PDT)
+        bh=xQMUHcx5ZJebHuFeNsiV5oTqPrmJdOW/j745+2PrxT0=;
+        b=WQowKhFzN4RJL92SrgT7Es7Nn59RdQ9H/UIYGa+E8U/UXxFGwpoka2p3XDPWj5XiBT
+         /DwXoiLgBxkpsGchZGSfPO/E1x0sRSKyOyOMYbT8m/x2VZ7DwPNaFMJ2N4dodZNivDsk
+         lINrLncTZ282FHNP8e0Z6wFBlmFWD0dxbB//kI5oEZfD2F8sLPbsXwLiFffyIUmT0oV8
+         6YKkJEPiVLBvNgsobOip0eB9t1VSkQ4Equ+f6GUoaSpW1USaWcCLwIlxmr6EDmP7oM5H
+         KiFgk5E27fUylUXD5oUiVtJ+P8pA1SKfyP1fN+TC+vSoS8Ya6SNLEC8cli9OUSrIOml5
+         CpWA==
+X-Gm-Message-State: AGi0Pub7OtVeZeCoQytz9IWYiViJsz8gD+O4KfSSBEZ6ZjgUq/yUZ3aq
+	VGxOUQwnRDw6DYVSQXqLwz0+9W9xmcI=
+X-Google-Smtp-Source: APiQypLuJzXALIoKw/Y13zWVlk8oZuUrIGt7exXdVoGLI+M2nt5e+dvE5Imaa3ckKwZUoqqfWhxSow==
+X-Received: by 2002:a2e:9789:: with SMTP id y9mr534831lji.207.1585793176843;
+        Wed, 01 Apr 2020 19:06:16 -0700 (PDT)
+X-Received: by 2002:a19:7f96:: with SMTP id a144mr643180lfd.31.1585793175190;
+ Wed, 01 Apr 2020 19:06:15 -0700 (PDT)
 MIME-Version: 1.0
 References: <20200324215049.GA3710@pi3.com.pl> <202003291528.730A329@keescook>
  <87zhbvlyq7.fsf_-_@x220.int.ebiederm.org> <CAG48ez3nYr7dj340Rk5-QbzhsFq0JTKPf2MvVJ1-oi1Zug1ftQ@mail.gmail.com>
- <CAHk-=wjz0LEi68oGJSQzZ--3JTFF+dX2yDaXDRKUpYxtBB=Zfw@mail.gmail.com> <CAHk-=wgM3qZeChs_1yFt8p8ye1pOaM_cX57BZ_0+qdEPcAiaCQ@mail.gmail.com>
-In-Reply-To: <CAHk-=wgM3qZeChs_1yFt8p8ye1pOaM_cX57BZ_0+qdEPcAiaCQ@mail.gmail.com>
-From: Jann Horn <jannh@google.com>
-Date: Thu, 2 Apr 2020 03:35:44 +0200
-Message-ID: <CAG48ez1f82re_V=DzQuRHpy7wOWs1iixrah4GYYxngF1v-moZw@mail.gmail.com>
+ <CAHk-=wjz0LEi68oGJSQzZ--3JTFF+dX2yDaXDRKUpYxtBB=Zfw@mail.gmail.com>
+ <CAHk-=wgM3qZeChs_1yFt8p8ye1pOaM_cX57BZ_0+qdEPcAiaCQ@mail.gmail.com> <CAG48ez1f82re_V=DzQuRHpy7wOWs1iixrah4GYYxngF1v-moZw@mail.gmail.com>
+In-Reply-To: <CAG48ez1f82re_V=DzQuRHpy7wOWs1iixrah4GYYxngF1v-moZw@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Wed, 1 Apr 2020 19:05:59 -0700
+X-Gmail-Original-Message-ID: <CAHk-=whks0iE1f=Ka0_vo2PYg774P7FA8Y30YrOdUBGRH-ch9A@mail.gmail.com>
+Message-ID: <CAHk-=whks0iE1f=Ka0_vo2PYg774P7FA8Y30YrOdUBGRH-ch9A@mail.gmail.com>
 Subject: Re: [PATCH] signal: Extend exec_id to 64bits
-To: Linus Torvalds <torvalds@linux-foundation.org>
+To: Jann Horn <jannh@google.com>
 Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Alan Stern <stern@rowland.harvard.edu>, 
 	Andrea Parri <parri.andrea@gmail.com>, Will Deacon <will@kernel.org>, 
 	Peter Zijlstra <peterz@infradead.org>, Boqun Feng <boqun.feng@gmail.com>, 
@@ -78,44 +78,20 @@ Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Alan Stern <stern@rowland.harva
 	Dmitry Vyukov <dvyukov@google.com>, kasan-dev <kasan-dev@googlegroups.com>
 Content-Type: text/plain; charset="UTF-8"
 
-On Thu, Apr 2, 2020 at 1:55 AM Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Wed, Apr 1, 2020 at 4:51 PM Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
-> >
-> > It's literally testing a sequence counter for equality. If you get
-> > tearing in the high bits on the write (or the read), you'd still need
-> > to have the low bits turn around 4G times to get a matching value.
+On Wed, Apr 1, 2020 at 6:36 PM Jann Horn <jannh@google.com> wrote:
 >
-> Put another way: first you'd have to work however many weeks to do 4
-> billion execve() calls, and then you need to hit basically a
-> single-instruction race to take advantage of it.
->
-> Good luck with that. If you have that kind of God-like capability,
-> whoever you're attacking stands no chance in the first place.
+> Since the read is already protected by the tasklist_lock, an
+> alternative might be to let the execve path also take that lock to
+> protect the sequence number update,
 
-I'm not really worried about someone being able to hit this in
-practice, especially given that the only thing it lets you do is send
-signals; I just think that the code is wrong in principle, and that we
-should avoid having "technically wrong, but works in practice" code in
-the kernel.
+No.
 
-This kind of intentional race might also trip up testing tools like
-the upcoming KCSAN instrumentation, unless it is specifically
-annotated as an intentionally racing instruction. (For now, KCSAN is
-64-bit only, so it won't actually be able to detect this though; and
-the current KCSAN development branch actually incorrectly considers
-WRITE_ONCE() to always be atomic; but still, in principle it's the
-kind of issue KCSAN is supposed to detect, I think.)
+tasklist_lock is aboue the hottest lock there is in all of the kernel.
 
-But even without KCSAN, if we have tearing stores racing with loads, I
-think that we ought to *at least* have a comment noting that we're
-intentionally doing that so that people don't copy this kind of code
-to a place where the high bits change more frequently and correctness
-matters more.
+We're not doing stupid things for theoretical issues.
 
-Since the read is already protected by the tasklist_lock, an
-alternative might be to let the execve path also take that lock to
-protect the sequence number update, given that execve is not a
-particularly hot path. Or we could hand-code the equality check and
-increment operations to be properly race-free.
+Stop this crazy argument.
+
+A comment - sure. 64-bit atomics or very expensive locks? Not a chance.
+
+                   Linus
