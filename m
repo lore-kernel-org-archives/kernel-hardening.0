@@ -1,23 +1,21 @@
-Return-Path: <SRS0=qhVW=5S=lists.openwall.com=kernel-hardening-return-18368-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pb/0=5S=lists.openwall.com=kernel-hardening-return-18369-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+X-Spam-Status: No, score=-8.0 required=3.0 tests=FREEMAIL_FORGED_FROMDOMAIN,
+	FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 54C3EC43331
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 07:19:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 17A92C43331
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 07:23:22 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A575720678
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 07:19:56 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="Mkdjc5J1"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A575720678
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18368-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1094 invoked by uid 550); 2 Apr 2020 07:19:49 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4860120678
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 07:23:21 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4860120678
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=hotmail.de
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18369-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3673 invoked by uid 550); 2 Apr 2020 07:23:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,52 +23,75 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1074 invoked from network); 2 Apr 2020 07:19:48 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=MNcbIL1+RcHP9n1/a7uW2cYhRUPkvEWLMMecHAgQsXw=;
-        b=Mkdjc5J1SEZfYsVao6D+3svMUTOlPWR0GUglETGCp1BLe0DlCeO6EhQvWvFeICMv36
-         FhEx79mg9w4G5l0oE52LrM6gGTrotrudHbeodjWMutpEZgdksa6OfQMqYRb+P06vpBHA
-         5ziM8BNeNC/piG1MVXXvFtq9O6gGtn/zz65nI=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=MNcbIL1+RcHP9n1/a7uW2cYhRUPkvEWLMMecHAgQsXw=;
-        b=joPwF4DitNpW81keTz4bSZV0otYRgdOu+/4/Zj5pT25HkxPgcrR8RYWZ6olpy1JLrv
-         SW9aoH7JKsmgvNtXyG2LKdcEH6joZ79lYEZxwwsYBe35m1PXnRCCdKZocQEMZcIqI5Jb
-         GpL0rOvIr5LFDsFo339Mal0xj4ZQvEI6TFq9Mab9GPgZEPQN3UTcq8vMLiTSCbQXnSlF
-         WBWLcO5M00xQ+25kHf+W1hGjcdRtmYE2y+lWGmSfEBYAQFJgblCMoxLC09LLs1qc6MFO
-         wr8eIl3uKcjZKXBGpQXd8OAHfQO/8NOxu0zPwY4Y5qgF9C9jnfrODbu8311dQy6EtUun
-         ectA==
-X-Gm-Message-State: AGi0PubLECPczFV57p08mY7st5CX3V2opah3Nl/Qx8Cuv5/NWWvWYRmH
-	CuzZLMahhRGcuLPzM+4AzwBCdw==
-X-Google-Smtp-Source: APiQypIgY9efFSF0nGqyq4XrnljhNDsb8eVxK3UTxH/mnTcO3+iTBEtSUKooI7eOyQJMhEFKWznCZA==
-X-Received: by 2002:a17:902:b617:: with SMTP id b23mr1717580pls.285.1585811976162;
-        Thu, 02 Apr 2020 00:19:36 -0700 (PDT)
-Date: Thu, 2 Apr 2020 00:19:34 -0700
-From: Kees Cook <keescook@chromium.org>
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>,
-	Adam Zabrocki <pi3@pi3.com.pl>, linux-kernel@vger.kernel.org,
-	kernel-hardening@lists.openwall.com, Jann Horn <jannh@google.com>,
-	Oleg Nesterov <oleg@redhat.com>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Bernd Edlinger <bernd.edlinger@hotmail.de>,
-	Andrew Morton <akpm@linux-foundation.org>, stable@vger.kernel.org
+Received: (qmail 3510 invoked from network); 2 Apr 2020 07:22:41 -0000
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=SiNOZHMxpkKMBa6yuvQ8xTPdsWHI2ALPl1ggDv5AsaulH/k71k3Kpxb3zJ3c8CroLACqB9jYW3cJE+hwac2mGBNvKkjIZ1gRRcg1Az1QVmKTsPScMkw6kgpicNrHPYcPwPdXJef+LZiLlOCtI87cAJlZ0YnCoj6WmYJcaAx2rKPptk3pesLIMGkaKwDEB1RMCfX2ZE9dfP0nIQ7LSFq/lNtPYKBqdkRlnAAOo2idO0/texpwA6eLlUJwbLxrhp2cMdH0Fj+ISxgFhesFXM6cf+Lqa+g0F/UgzyfCwNjgxWHhyDCkpJPrPufjISDWESW0c/7v5mCW02W2l4VGCOMorg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=qBVJqtgMdQtnFcQSqwHmVcy5aH977kgvW7Xg+tZeWPc=;
+ b=bB9fE1/UyozaAie9fjYcBYQzCDBL0DnzTS1/OAXCcLgPn/iZeQuRlpjcY8Nrrw6uIuY3WACqnVBTzf+QvT9Bmfwtl142ErjsSmPfKqOEElxuGrbq+t418XpS0pMAsGRgasJfI3nPlH0FH9IDaCV/JKrB9IFNO3nTcngWJTtSUikaosIjnha5yjh7hLTkbDg7l7fMCiJn0njPhOoX79RImT8zNi2ajOMiwRxsPjDad3faW9zpPVH8KoNwV7aLWr8cYeX9+HQf3pPm4tmvJOLTiybPxWO5WGITbHqJNqXfFm65IJ0nnj836yUUITnJWzHHcRRrarUb5HqvN+craU4taA==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=hotmail.de; dmarc=pass action=none header.from=hotmail.de;
+ dkim=pass header.d=hotmail.de; arc=none
+X-IncomingTopHeaderMarker:
+ OriginalChecksum:E7B5E17202D6A90C04C325695E3FAE5128698D345945BB92FCDBA0F020470AD7;UpperCasedChecksum:6A14A83A027B343DDFAFF9CF8B12B8576AD0143054F668726F7F8F3A51721EAF;SizeAsReceived:8374;Count:50
 Subject: Re: [PATCH] signal: Extend exec_id to 64bits
-Message-ID: <202004020019.1F1EEC3669@keescook>
-References: <20200324215049.GA3710@pi3.com.pl>
- <202003291528.730A329@keescook>
+To: "Eric W. Biederman" <ebiederm@xmission.com>,
+ Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Adam Zabrocki <pi3@pi3.com.pl>, linux-kernel@vger.kernel.org,
+ kernel-hardening@lists.openwall.com, Jann Horn <jannh@google.com>,
+ Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>,
+ Kees Cook <keescook@chromium.org>, Andrew Morton
+ <akpm@linux-foundation.org>, stable@vger.kernel.org
+References: <20200324215049.GA3710@pi3.com.pl> <202003291528.730A329@keescook>
  <87zhbvlyq7.fsf_-_@x220.int.ebiederm.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+From: Bernd Edlinger <bernd.edlinger@hotmail.de>
+Message-ID:
+ <AM6PR03MB51701153BF3E55EB4285EADFE4C60@AM6PR03MB5170.eurprd03.prod.outlook.com>
+Date: Thu, 2 Apr 2020 09:22:28 +0200
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+ Thunderbird/60.6.1
 In-Reply-To: <87zhbvlyq7.fsf_-_@x220.int.ebiederm.org>
+Content-Type: text/plain; charset=windows-1252
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-ClientProxiedBy: AM0PR10CA0001.EURPRD10.PROD.OUTLOOK.COM
+ (2603:10a6:208:17c::11) To AM6PR03MB5170.eurprd03.prod.outlook.com
+ (2603:10a6:20b:ca::23)
+X-Microsoft-Original-Message-ID:
+ <46ac0369-ff40-733f-bb2a-2a6919a48eee@hotmail.de>
+MIME-Version: 1.0
+X-MS-Exchange-MessageSentRepresentingType: 1
+X-Microsoft-Original-Message-ID:
+ <46ac0369-ff40-733f-bb2a-2a6919a48eee@hotmail.de>
+X-TMN: [tiG2wbnlWRVxx08YkgRHuaN5VFK7C3H0]
+X-MS-PublicTrafficType: Email
+X-IncomingHeaderCount: 50
+X-EOPAttributedMessage: 0
+X-MS-Office365-Filtering-Correlation-Id: 88af6c2b-72f4-43b2-87b2-08d7d6d69a06
+X-MS-TrafficTypeDiagnostic: HE1EUR04HT014:
+X-Microsoft-Antispam: BCL:0;
+X-Microsoft-Antispam-Message-Info:
+	Vm9mxdpuYK8ONT77erL+LkK2OyGrTGQYbgZJWSY+/T8i1UnES7/hfotlBAs3ATJGfbvapvj9SXlb4I0mT2Npabpn5jZ9TRSMRE7Y7dtjLC8wnyRuUUhJ5DWkjAkQX808ADEz8o8gOS16cw9saekcZ6BU6CCEIJAPGfMiQix8wGvTcPp4EQWpl5kwes3Np9d/w4KLKRzfletMS5sO0uU4oIXTtCV1eWnHiZTvEHZIleg=
+X-Forefront-Antispam-Report:
+	CIP:255.255.255.255;CTRY:;LANG:en;SCL:0;SRV:;IPV:NLI;SFV:NSPM;H:AM6PR03MB5170.eurprd03.prod.outlook.com;PTR:;CAT:NONE;SFTY:;SFS:;DIR:OUT;SFP:1901;
+X-MS-Exchange-AntiSpam-MessageData:
+	W+KtyJgIKA9trqB39M/vA4OFmZqevmrFIVXWsvioHdXVYlUUcj1XCSvwrdSnpKwQhEsn64QWA/t5dd7j/k8HimAd71Q1Vuuhltw9TyP4Y10A8A9K1TlaBxCW4ZPgKHEf60NPwB06qfcxRc1jkOuluA==
+X-OriginatorOrg: outlook.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: 88af6c2b-72f4-43b2-87b2-08d7d6d69a06
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 02 Apr 2020 07:22:29.4907
+ (UTC)
+X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
+X-MS-Exchange-CrossTenant-Id: 84df9e7f-e9f6-40af-b435-aaaaaaaaaaaa
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-CrossTenant-RMS-PersistedConsumerOrg:
+	00000000-0000-0000-0000-000000000000
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: HE1EUR04HT014
 
-On Wed, Apr 01, 2020 at 03:47:44PM -0500, Eric W. Biederman wrote:
+
+
+On 4/1/20 10:47 PM, Eric W. Biederman wrote:
 > 
 > Replace the 32bit exec_id with a 64bit exec_id to make it impossible
 > to wrap the exec_id counter.  With care an attacker can cause exec_id
@@ -103,12 +124,11 @@ On Wed, Apr 01, 2020 at 03:47:44PM -0500, Eric W. Biederman wrote:
 > Cc: stable@vger.kernel.org
 > Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
 
-Thanks for chasing this down. :)
+Reviewed-by: Bernd Edlinger <bernd.edlinger@hotmail.de>
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
 
--Kees
-
+Thanks
+Bernd.
 > ---
 > 
 > Linus would you prefer to take this patch directly or I could put it in
@@ -160,9 +180,4 @@ Reviewed-by: Kees Cook <keescook@chromium.org>
 >  			sig = SIGCHLD;
 >  	}
 >  
-> -- 
-> 2.20.1
 > 
-
--- 
-Kees Cook
