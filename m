@@ -1,21 +1,20 @@
-Return-Path: <SRS0=okyy=5S=lists.openwall.com=kernel-hardening-return-18391-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=d/d6=5S=lists.openwall.com=kernel-hardening-return-18392-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4FE5EC43331
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 16:52:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6A666C43331
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 17:01:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A7AED20737
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 16:52:20 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A7AED20737
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18391-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 6090 invoked by uid 550); 2 Apr 2020 16:52:13 -0000
+	by mail.kernel.org (Postfix) with SMTP id 7DAE3206F6
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 17:01:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7DAE3206F6
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18392-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 12018 invoked by uid 550); 2 Apr 2020 17:01:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,87 +22,101 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 6070 invoked from network); 2 Apr 2020 16:52:13 -0000
-Date: Thu, 2 Apr 2020 18:51:56 +0200
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: LKML <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	David Howells <dhowells@redhat.com>
-Subject: Re: [PATCH v10 8/9] proc: use human-readable values for hidehid
-Message-ID: <20200402165156.4mzenof4upvtd3lv@comp-core-i7-2640m-0182e6>
+Received: (qmail 11995 invoked from network); 2 Apr 2020 17:01:27 -0000
+From: ebiederm@xmission.com (Eric W. Biederman)
+To: Alexey Gladkov <gladkov.alexey@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexander Viro <viro@zeniv.linux.org.uk>,  Alexey Dobriyan <adobriyan@gmail.com>,  Alexey Gladkov <legion@kernel.org>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,  Oleg Nesterov <oleg@redhat.com>
 References: <20200327172331.418878-1-gladkov.alexey@gmail.com>
- <20200327172331.418878-9-gladkov.alexey@gmail.com>
- <87d08pkh4u.fsf@x220.int.ebiederm.org>
+	<20200327172331.418878-8-gladkov.alexey@gmail.com>
+Date: Thu, 02 Apr 2020 11:58:28 -0500
+In-Reply-To: <20200327172331.418878-8-gladkov.alexey@gmail.com> (Alexey
+	Gladkov's message of "Fri, 27 Mar 2020 18:23:29 +0100")
+Message-ID: <875zehkeob.fsf@x220.int.ebiederm.org>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <87d08pkh4u.fsf@x220.int.ebiederm.org>
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Thu, 02 Apr 2020 16:52:02 +0000 (UTC)
+Content-Type: text/plain
+X-XM-SPF: eid=1jK3DN-0008NS-8i;;;mid=<875zehkeob.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX1+Ru1GXxpvu1H/HwnkkVQs5oho2OLsbxwc=
+X-SA-Exim-Connect-IP: 68.227.160.95
+X-SA-Exim-Mail-From: ebiederm@xmission.com
+Subject: Re: [PATCH v10 7/9] proc: move hidepid values to uapi as they are user interface to mount
+X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
+X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
 
-On Thu, Apr 02, 2020 at 11:05:21AM -0500, Eric W. Biederman wrote:
-> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
-> 
-> > The hidepid parameter values are becoming more and more and it becomes
-> > difficult to remember what each new magic number means.
-> 
-> In principle I like this change.  In practice I think you have just
-> broken ABI compatiblity with the new mount ABI.
-> 
-> In particular the following line seems broken.
-> 
-> > diff --git a/fs/proc/root.c b/fs/proc/root.c
-> > index dbcd96f07c7a..ba782d6e6197 100644
-> > --- a/fs/proc/root.c
-> > +++ b/fs/proc/root.c
-> > @@ -45,7 +45,7 @@ enum proc_param {
-> >  
-> >  static const struct fs_parameter_spec proc_fs_parameters[] = {
-> >  	fsparam_u32("gid",	Opt_gid),
-> > -	fsparam_u32("hidepid",	Opt_hidepid),
-> > +	fsparam_string("hidepid",	Opt_hidepid),
-> >  	fsparam_string("subset",	Opt_subset),
-> >  	{}
-> >  };
-> 
-> As I read fs_parser.c fs_param_is_u32 handles string inputs and turns them
-> into numbers, and it handles binary numbers.  However fs_param_is_string
-> appears to only handle strings.  It appears to have not capacity to turn
-> raw binary numbers into strings.
 
-I use result only with hidepid_u32_spec and nobody modifies param->string.
-I do not use internal functions here.
+I will just say that I do not understand exporting this to the uapi
+headers.  Why do we want to export the enumeration names?
 
-I don’t follow how a raw number can get here ?
+I understand that the values are uapi.  This looks like it will make it
+difficult to make changes that rename enumeration values to make
+the code more readable.
 
-> So I think we probably need to fix fs_param_is_string to raw binary
-> numbers before we can safely make this change to fs/proc/root.c
-> 
-> David am I reading the fs_parser.c code correctly?  If I am are you ok
-> with a change like the above?
-> 
-> Eric
-> 
+Given that this patchset goes immediately to using string enumerated
+values, I also don't understand the point of exporting
+HIDEPID_NOT_PTRACEABLE.  I don't think we need to ever let
+people use the numeric value.
 
--- 
-Rgrds, legion
+My sense is that if we are switching to string values we should
+just leave the existing numeric values as backwards compatiblity
+and not do anything to make them easier to use.
 
+Eric
+
+
+Alexey Gladkov <gladkov.alexey@gmail.com> writes:
+
+> Suggested-by: Alexey Dobriyan <adobriyan@gmail.com>
+> Reviewed-by: Alexey Dobriyan <adobriyan@gmail.com>
+> Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+> ---
+>  include/linux/proc_fs.h      |  9 +--------
+>  include/uapi/linux/proc_fs.h | 13 +++++++++++++
+>  2 files changed, 14 insertions(+), 8 deletions(-)
+>  create mode 100644 include/uapi/linux/proc_fs.h
+>
+> diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
+> index afd38cae2339..d259817ec913 100644
+> --- a/include/linux/proc_fs.h
+> +++ b/include/linux/proc_fs.h
+> @@ -7,6 +7,7 @@
+>  
+>  #include <linux/types.h>
+>  #include <linux/fs.h>
+> +#include <uapi/linux/proc_fs.h>
+>  
+>  struct proc_dir_entry;
+>  struct seq_file;
+> @@ -27,14 +28,6 @@ struct proc_ops {
+>  	unsigned long (*proc_get_unmapped_area)(struct file *, unsigned long, unsigned long, unsigned long, unsigned long);
+>  };
+>  
+> -/* definitions for hide_pid field */
+> -enum {
+> -	HIDEPID_OFF	  = 0,
+> -	HIDEPID_NO_ACCESS = 1,
+> -	HIDEPID_INVISIBLE = 2,
+> -	HIDEPID_NOT_PTRACEABLE = 4, /* Limit pids to only ptraceable pids */
+> -};
+> -
+>  /* definitions for proc mount option pidonly */
+>  enum {
+>  	PROC_PIDONLY_OFF = 0,
+> diff --git a/include/uapi/linux/proc_fs.h b/include/uapi/linux/proc_fs.h
+> new file mode 100644
+> index 000000000000..dc6d717aa6ec
+> --- /dev/null
+> +++ b/include/uapi/linux/proc_fs.h
+> @@ -0,0 +1,13 @@
+> +/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
+> +#ifndef _UAPI_PROC_FS_H
+> +#define _UAPI_PROC_FS_H
+> +
+> +/* definitions for hide_pid field */
+> +enum {
+> +	HIDEPID_OFF            = 0,
+> +	HIDEPID_NO_ACCESS      = 1,
+> +	HIDEPID_INVISIBLE      = 2,
+> +	HIDEPID_NOT_PTRACEABLE = 4,
+> +};
+> +
+> +#endif
