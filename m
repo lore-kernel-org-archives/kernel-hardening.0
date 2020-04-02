@@ -1,21 +1,24 @@
-Return-Path: <SRS0=pb/0=5S=lists.openwall.com=kernel-hardening-return-18369-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=AyjQ=5S=lists.openwall.com=kernel-hardening-return-18370-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.0 required=3.0 tests=FREEMAIL_FORGED_FROMDOMAIN,
-	FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.8 required=3.0 tests=DATE_IN_PAST_03_06,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 17A92C43331
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 07:23:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EB39EC43331
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 12:32:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4860120678
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 07:23:21 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4860120678
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=hotmail.de
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18369-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3673 invoked by uid 550); 2 Apr 2020 07:23:15 -0000
+	by mail.kernel.org (Postfix) with SMTP id 454C720757
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Apr 2020 12:32:21 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=russell.cc header.i=@russell.cc header.b="s8oKKLCV";
+	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="p4RRk1Kf"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 454C720757
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=russell.cc
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18370-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9669 invoked by uid 550); 2 Apr 2020 12:31:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,161 +26,81 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3510 invoked from network); 2 Apr 2020 07:22:41 -0000
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=SiNOZHMxpkKMBa6yuvQ8xTPdsWHI2ALPl1ggDv5AsaulH/k71k3Kpxb3zJ3c8CroLACqB9jYW3cJE+hwac2mGBNvKkjIZ1gRRcg1Az1QVmKTsPScMkw6kgpicNrHPYcPwPdXJef+LZiLlOCtI87cAJlZ0YnCoj6WmYJcaAx2rKPptk3pesLIMGkaKwDEB1RMCfX2ZE9dfP0nIQ7LSFq/lNtPYKBqdkRlnAAOo2idO0/texpwA6eLlUJwbLxrhp2cMdH0Fj+ISxgFhesFXM6cf+Lqa+g0F/UgzyfCwNjgxWHhyDCkpJPrPufjISDWESW0c/7v5mCW02W2l4VGCOMorg==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=qBVJqtgMdQtnFcQSqwHmVcy5aH977kgvW7Xg+tZeWPc=;
- b=bB9fE1/UyozaAie9fjYcBYQzCDBL0DnzTS1/OAXCcLgPn/iZeQuRlpjcY8Nrrw6uIuY3WACqnVBTzf+QvT9Bmfwtl142ErjsSmPfKqOEElxuGrbq+t418XpS0pMAsGRgasJfI3nPlH0FH9IDaCV/JKrB9IFNO3nTcngWJTtSUikaosIjnha5yjh7hLTkbDg7l7fMCiJn0njPhOoX79RImT8zNi2ajOMiwRxsPjDad3faW9zpPVH8KoNwV7aLWr8cYeX9+HQf3pPm4tmvJOLTiybPxWO5WGITbHqJNqXfFm65IJ0nnj836yUUITnJWzHHcRRrarUb5HqvN+craU4taA==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
- smtp.mailfrom=hotmail.de; dmarc=pass action=none header.from=hotmail.de;
- dkim=pass header.d=hotmail.de; arc=none
-X-IncomingTopHeaderMarker:
- OriginalChecksum:E7B5E17202D6A90C04C325695E3FAE5128698D345945BB92FCDBA0F020470AD7;UpperCasedChecksum:6A14A83A027B343DDFAFF9CF8B12B8576AD0143054F668726F7F8F3A51721EAF;SizeAsReceived:8374;Count:50
-Subject: Re: [PATCH] signal: Extend exec_id to 64bits
-To: "Eric W. Biederman" <ebiederm@xmission.com>,
- Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Adam Zabrocki <pi3@pi3.com.pl>, linux-kernel@vger.kernel.org,
- kernel-hardening@lists.openwall.com, Jann Horn <jannh@google.com>,
- Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>,
- Kees Cook <keescook@chromium.org>, Andrew Morton
- <akpm@linux-foundation.org>, stable@vger.kernel.org
-References: <20200324215049.GA3710@pi3.com.pl> <202003291528.730A329@keescook>
- <87zhbvlyq7.fsf_-_@x220.int.ebiederm.org>
-From: Bernd Edlinger <bernd.edlinger@hotmail.de>
-Message-ID:
- <AM6PR03MB51701153BF3E55EB4285EADFE4C60@AM6PR03MB5170.eurprd03.prod.outlook.com>
-Date: Thu, 2 Apr 2020 09:22:28 +0200
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
- Thunderbird/60.6.1
-In-Reply-To: <87zhbvlyq7.fsf_-_@x220.int.ebiederm.org>
-Content-Type: text/plain; charset=windows-1252
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-ClientProxiedBy: AM0PR10CA0001.EURPRD10.PROD.OUTLOOK.COM
- (2603:10a6:208:17c::11) To AM6PR03MB5170.eurprd03.prod.outlook.com
- (2603:10a6:20b:ca::23)
-X-Microsoft-Original-Message-ID:
- <46ac0369-ff40-733f-bb2a-2a6919a48eee@hotmail.de>
+Received: (qmail 9489 invoked from network); 2 Apr 2020 12:31:49 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=russell.cc; h=
+	from:to:cc:subject:date:message-id:in-reply-to:references
+	:mime-version:content-transfer-encoding; s=fm1; bh=lHgLupnwwVnW8
+	9H6t1yvE2k1Yy07V091CXapypcIwwE=; b=s8oKKLCVGzv7CIWboa5qpXbnjq5mC
+	+c2hxm2CrgUq2nnL0cKLlz0EOh4x/VODGJT3rwPHY2AvS2arQsssz7aeGyl/EkQB
+	f+oP8nPJuzTDJVrTvg907grD8aaAA7Cu+pvSntK3FCFcJM3fDneEZRzWN5W8Lrh0
+	JUAtSuTTqV1qd8pTdAxsTE/TJlFI8iy6IVrzg9EUqbjqTsf2WE6abkL6u3OPOUzx
+	fCPD87TDk8fW7EGy4DlxYjHp8TlW2GAxmqAp6pTNTXu6YVSvBP91cTaSVi6RS7xY
+	kDKYiTo2MhmuU12dJgn4MvJwkjgAVSRoIeRsY1d17zhoGW0W70Y5+HQ+w==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
+	messagingengine.com; h=cc:content-transfer-encoding:date:from
+	:in-reply-to:message-id:mime-version:references:subject:to
+	:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=
+	fm2; bh=lHgLupnwwVnW89H6t1yvE2k1Yy07V091CXapypcIwwE=; b=p4RRk1Kf
+	VQkgMxYgvMSxW7TUIt8RnLu9eNP1MW1TV6bOujW3KeQI/dcfEHmtPJMo8RhTZQ6J
+	y7uT1DEnsFvrNn6qJQWBJdXU3w77RvpiF+i1rUI6g6xRVm3D8IZNkJ9MpYPdzb7e
+	6CjyPI5IELuy4Gw4h1Hkhmld5V+xl1JZ/TzWx8wSzFNZgnSLJPb2Po63/ke0q2x2
+	bqGc5hfMsCzB79XlDkmx+n3brbNRr/kC2hpFt1N+KwIYmc/joe4yYW9lvVThQMwY
+	Au8yGtELY+h3O6LwgxDST4My7q6Dn6ToNceI0rZtZT5cYiytZNU95SvRPUkzE2bI
+	qzmXC69RQXNcEg==
+X-ME-Sender: <xms:N6WFXq0DpMVAhoRa136LkVhnHv_yPObp7aWMUBethJSaNT8aXMDCaw>
+X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgeduhedrtdeggddtgecutefuodetggdotefrodftvf
+    curfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfghnecu
+    uegrihhlohhuthemuceftddtnecusecvtfgvtghiphhivghnthhsucdlqddutddtmdenfg
+    hrlhcuvffnffculdduhedmnecujfgurhephffvufffkffojghfggfgsedtkeertdertddt
+    necuhfhrohhmpeftuhhsshgvlhhlucevuhhrrhgvhicuoehruhhstghurhesrhhushhsvg
+    hllhdrtggtqeenucfkphepuddvuddrgeehrddvuddvrddvfeelnecuvehluhhsthgvrhfu
+    ihiivgepvdenucfrrghrrghmpehmrghilhhfrhhomheprhhushgtuhhrsehruhhsshgvlh
+    hlrdgttg
+X-ME-Proxy: <xmx:N6WFXhX0w4xW3mLKdZSl6pSRIRRROZvqgumRHDO7_OZSfJRlY56Pdg>
+    <xmx:N6WFXt63wPdG4ggakB1c7cbennjt65LJrj99-pu0T7xsH3Mni4Yv6A>
+    <xmx:N6WFXgLH5rXT2O2bJnp1kwbcTLNbV0NhnEa91w21ZfPKsOTpg6Wk_A>
+    <xmx:N6WFXoPmLqat3FmLp5AMg5XsMo5JK4i-pPS1BnZXNmlrPYuV2p91ww>
+From: Russell Currey <ruscur@russell.cc>
+To: linuxppc-dev@lists.ozlabs.org
+Cc: Russell Currey <ruscur@russell.cc>,
+	christophe.leroy@c-s.fr,
+	mpe@ellerman.id.au,
+	ajd@linux.ibm.com,
+	dja@axtens.net,
+	npiggin@gmail.com,
+	kernel-hardening@lists.openwall.com,
+	Joel Stanley <joel@joel.id.au>
+Subject: [PATCH v8 5/7] powerpc/configs: Enable STRICT_MODULE_RWX in skiroot_defconfig
+Date: Thu,  2 Apr 2020 19:40:50 +1100
+Message-Id: <20200402084053.188537-5-ruscur@russell.cc>
+X-Mailer: git-send-email 2.26.0
+In-Reply-To: <20200402084053.188537-1-ruscur@russell.cc>
+References: <20200402084053.188537-1-ruscur@russell.cc>
 MIME-Version: 1.0
-X-MS-Exchange-MessageSentRepresentingType: 1
-X-Microsoft-Original-Message-ID:
- <46ac0369-ff40-733f-bb2a-2a6919a48eee@hotmail.de>
-X-TMN: [tiG2wbnlWRVxx08YkgRHuaN5VFK7C3H0]
-X-MS-PublicTrafficType: Email
-X-IncomingHeaderCount: 50
-X-EOPAttributedMessage: 0
-X-MS-Office365-Filtering-Correlation-Id: 88af6c2b-72f4-43b2-87b2-08d7d6d69a06
-X-MS-TrafficTypeDiagnostic: HE1EUR04HT014:
-X-Microsoft-Antispam: BCL:0;
-X-Microsoft-Antispam-Message-Info:
-	Vm9mxdpuYK8ONT77erL+LkK2OyGrTGQYbgZJWSY+/T8i1UnES7/hfotlBAs3ATJGfbvapvj9SXlb4I0mT2Npabpn5jZ9TRSMRE7Y7dtjLC8wnyRuUUhJ5DWkjAkQX808ADEz8o8gOS16cw9saekcZ6BU6CCEIJAPGfMiQix8wGvTcPp4EQWpl5kwes3Np9d/w4KLKRzfletMS5sO0uU4oIXTtCV1eWnHiZTvEHZIleg=
-X-Forefront-Antispam-Report:
-	CIP:255.255.255.255;CTRY:;LANG:en;SCL:0;SRV:;IPV:NLI;SFV:NSPM;H:AM6PR03MB5170.eurprd03.prod.outlook.com;PTR:;CAT:NONE;SFTY:;SFS:;DIR:OUT;SFP:1901;
-X-MS-Exchange-AntiSpam-MessageData:
-	W+KtyJgIKA9trqB39M/vA4OFmZqevmrFIVXWsvioHdXVYlUUcj1XCSvwrdSnpKwQhEsn64QWA/t5dd7j/k8HimAd71Q1Vuuhltw9TyP4Y10A8A9K1TlaBxCW4ZPgKHEf60NPwB06qfcxRc1jkOuluA==
-X-OriginatorOrg: outlook.com
-X-MS-Exchange-CrossTenant-Network-Message-Id: 88af6c2b-72f4-43b2-87b2-08d7d6d69a06
-X-MS-Exchange-CrossTenant-OriginalArrivalTime: 02 Apr 2020 07:22:29.4907
- (UTC)
-X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
-X-MS-Exchange-CrossTenant-Id: 84df9e7f-e9f6-40af-b435-aaaaaaaaaaaa
-X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
-X-MS-Exchange-CrossTenant-RMS-PersistedConsumerOrg:
-	00000000-0000-0000-0000-000000000000
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: HE1EUR04HT014
+Content-Transfer-Encoding: 8bit
 
+skiroot_defconfig is the only powerpc defconfig with STRICT_KERNEL_RWX
+enabled, and if you want memory protection for kernel text you'd want it
+for modules too, so enable STRICT_MODULE_RWX there.
 
+Acked-by: Joel Stanley <joel@joel.id.au>
+Signed-off-by: Russell Currey <ruscur@russell.cc>
+---
+ arch/powerpc/configs/skiroot_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
 
-On 4/1/20 10:47 PM, Eric W. Biederman wrote:
-> 
-> Replace the 32bit exec_id with a 64bit exec_id to make it impossible
-> to wrap the exec_id counter.  With care an attacker can cause exec_id
-> wrap and send arbitrary signals to a newly exec'd parent.  This
-> bypasses the signal sending checks if the parent changes their
-> credentials during exec.
-> 
-> The severity of this problem can been seen that in my limited testing
-> of a 32bit exec_id it can take as little as 19s to exec 65536 times.
-> Which means that it can take as little as 14 days to wrap a 32bit
-> exec_id.  Adam Zabrocki has succeeded wrapping the self_exe_id in 7
-> days.  Even my slower timing is in the uptime of a typical server.
-> Which means self_exec_id is simply a speed bump today, and if exec
-> gets noticably faster self_exec_id won't even be a speed bump.
-> 
-> Extending self_exec_id to 64bits introduces a problem on 32bit
-> architectures where reading self_exec_id is no longer atomic and can
-> take two read instructions.  Which means that is is possible to hit
-> a window where the read value of exec_id does not match the written
-> value.  So with very lucky timing after this change this still
-> remains expoiltable.
-> 
-> I have updated the update of exec_id on exec to use WRITE_ONCE
-> and the read of exec_id in do_notify_parent to use READ_ONCE
-> to make it clear that there is no locking between these two
-> locations.
-> 
-> Link: https://lore.kernel.org/kernel-hardening/20200324215049.GA3710@pi3.com.pl
-> Fixes: 2.3.23pre2
-> Cc: stable@vger.kernel.org
-> Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
+diff --git a/arch/powerpc/configs/skiroot_defconfig b/arch/powerpc/configs/skiroot_defconfig
+index 1b6bdad36b13..66d20dbe67b7 100644
+--- a/arch/powerpc/configs/skiroot_defconfig
++++ b/arch/powerpc/configs/skiroot_defconfig
+@@ -51,6 +51,7 @@ CONFIG_CMDLINE="console=tty0 console=hvc0 ipr.fast_reboot=1 quiet"
+ # CONFIG_PPC_MEM_KEYS is not set
+ CONFIG_JUMP_LABEL=y
+ CONFIG_STRICT_KERNEL_RWX=y
++CONFIG_STRICT_MODULE_RWX=y
+ CONFIG_MODULES=y
+ CONFIG_MODULE_UNLOAD=y
+ CONFIG_MODULE_SIG_FORCE=y
+-- 
+2.26.0
 
-Reviewed-by: Bernd Edlinger <bernd.edlinger@hotmail.de>
-
-
-Thanks
-Bernd.
-> ---
-> 
-> Linus would you prefer to take this patch directly or I could put it in
-> a brach and send you a pull request.
->  
->  fs/exec.c             | 2 +-
->  include/linux/sched.h | 4 ++--
->  kernel/signal.c       | 2 +-
->  3 files changed, 4 insertions(+), 4 deletions(-)
-> 
-> diff --git a/fs/exec.c b/fs/exec.c
-> index 0e46ec57fe0a..d55710a36056 100644
-> --- a/fs/exec.c
-> +++ b/fs/exec.c
-> @@ -1413,7 +1413,7 @@ void setup_new_exec(struct linux_binprm * bprm)
->  
->  	/* An exec changes our domain. We are no longer part of the thread
->  	   group */
-> -	current->self_exec_id++;
-> +	WRITE_ONCE(current->self_exec_id, current->self_exec_id + 1);
->  	flush_signal_handlers(current, 0);
->  }
->  EXPORT_SYMBOL(setup_new_exec);
-> diff --git a/include/linux/sched.h b/include/linux/sched.h
-> index 04278493bf15..0323e4f0982a 100644
-> --- a/include/linux/sched.h
-> +++ b/include/linux/sched.h
-> @@ -939,8 +939,8 @@ struct task_struct {
->  	struct seccomp			seccomp;
->  
->  	/* Thread group tracking: */
-> -	u32				parent_exec_id;
-> -	u32				self_exec_id;
-> +	u64				parent_exec_id;
-> +	u64				self_exec_id;
->  
->  	/* Protection against (de-)allocation: mm, files, fs, tty, keyrings, mems_allowed, mempolicy: */
->  	spinlock_t			alloc_lock;
-> diff --git a/kernel/signal.c b/kernel/signal.c
-> index 9ad8dea93dbb..5383b562df85 100644
-> --- a/kernel/signal.c
-> +++ b/kernel/signal.c
-> @@ -1926,7 +1926,7 @@ bool do_notify_parent(struct task_struct *tsk, int sig)
->  		 * This is only possible if parent == real_parent.
->  		 * Check if it has changed security domain.
->  		 */
-> -		if (tsk->parent_exec_id != tsk->parent->self_exec_id)
-> +		if (tsk->parent_exec_id != READ_ONCE(tsk->parent->self_exec_id))
->  			sig = SIGCHLD;
->  	}
->  
-> 
