@@ -1,20 +1,22 @@
-Return-Path: <SRS0=NqEB=5T=lists.openwall.com=kernel-hardening-return-18411-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=FVYT=5T=lists.openwall.com=kernel-hardening-return-18412-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C1FC6C43331
-	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 10:06:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E73F4C43331
+	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 18:18:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 29E9E20757
-	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 10:06:22 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 29E9E20757
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18411-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30427 invoked by uid 550); 3 Apr 2020 10:06:15 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4A852206F5
+	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 18:18:04 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4A852206F5
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18412-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30135 invoked by uid 550); 3 Apr 2020 18:17:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,117 +24,127 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30069 invoked from network); 3 Apr 2020 10:03:57 -0000
-Date: Fri, 03 Apr 2020 15:33:35 +0530
-From: "Naveen N. Rao" <naveen.n.rao@linux.ibm.com>
-Subject: Re: [PATCH v8 2/7] powerpc/kprobes: Mark newly allocated probes as RO
-To: linuxppc-dev@lists.ozlabs.org, Russell Currey <ruscur@russell.cc>
-Cc: ajd@linux.ibm.com, dja@axtens.net, kernel-hardening@lists.openwall.com,
-        npiggin@gmail.com
-References: <20200402084053.188537-1-ruscur@russell.cc>
-	<20200402084053.188537-2-ruscur@russell.cc>
-	<1585844035.o235bvxmq0.naveen@linux.ibm.com>
-	<1585852977.oiikywo1jz.naveen@linux.ibm.com>
-	<c336400d5b7765eb72b3090cd9f8a3c57761d0b6.camel@russell.cc>
-	<1585906281.fbqgtc3kpy.naveen@linux.ibm.com>
-	<02c6c3d0483e217a6d879bb7037f0b549c64ba04.camel@russell.cc>
-In-Reply-To: <02c6c3d0483e217a6d879bb7037f0b549c64ba04.camel@russell.cc>
+Received: (qmail 30104 invoked from network); 3 Apr 2020 18:17:52 -0000
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: LKML <linux-kernel@vger.kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux API <linux-api@vger.kernel.org>,
+	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
+	Linux Security Module <linux-security-module@vger.kernel.org>,
+	Akinobu Mita <akinobu.mita@gmail.com>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Alexey Dobriyan <adobriyan@gmail.com>,
+	Alexey Gladkov <legion@kernel.org>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Daniel Micay <danielmicay@gmail.com>,
+	Djalal Harouni <tixxdz@gmail.com>,
+	"Dmitry V . Levin" <ldv@altlinux.org>,
+	"Eric W . Biederman" <ebiederm@xmission.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Ingo Molnar <mingo@kernel.org>,
+	"J . Bruce Fields" <bfields@fieldses.org>,
+	Jeff Layton <jlayton@poochiereds.net>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Oleg Nesterov <oleg@redhat.com>,
+	David Howells <dhowells@redhat.com>
+Subject: [PATCH v11 8/8] proc: use named enums for better readability
+Date: Fri,  3 Apr 2020 20:06:48 +0200
+Message-Id: <20200403180648.721362-9-gladkov.alexey@gmail.com>
+X-Mailer: git-send-email 2.25.2
+In-Reply-To: <20200403180648.721362-1-gladkov.alexey@gmail.com>
+References: <20200403180648.721362-1-gladkov.alexey@gmail.com>
 MIME-Version: 1.0
-User-Agent: astroid/v0.15-13-gb675b421
- (https://github.com/astroidmail/astroid)
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: quoted-printable
-X-TM-AS-GCONF: 00
-x-cbid: 20040310-0008-0000-0000-00000369A365
-X-IBM-AV-DETECTION: SAVI=unused REMOTE=unused XFE=unused
-x-cbparentid: 20040310-0009-0000-0000-00004A8B32B0
-Message-Id: <1585907769.yhied5pgqm.naveen@linux.ibm.com>
-X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:6.0.138,18.0.676
- definitions=2020-04-03_06:2020-04-02,2020-04-03 signatures=0
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 lowpriorityscore=0
- suspectscore=0 impostorscore=0 mlxscore=0 phishscore=0 clxscore=1015
- bulkscore=0 malwarescore=0 spamscore=0 mlxlogscore=999 adultscore=0
- priorityscore=1501 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2003020000 definitions=main-2004030082
+Content-Transfer-Encoding: 8bit
+X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Fri, 03 Apr 2020 18:07:31 +0000 (UTC)
 
-Russell Currey wrote:
-> On Fri, 2020-04-03 at 15:06 +0530, Naveen N. Rao wrote:
->> Russell Currey wrote:
->> > On Fri, 2020-04-03 at 00:18 +0530, Naveen N. Rao wrote:
->> > > Naveen N. Rao wrote:
->> > > > Russell Currey wrote:
->> > > > > =20
->> > > > > +void *alloc_insn_page(void)
->> > > > > +{
->> > > > > +	void *page =3D vmalloc_exec(PAGE_SIZE);
->> > > > > +
->> > > > > +	if (page)
->> > > > > +		set_memory_ro((unsigned long)page, 1);
->> > > > > +
->> > > > > +	return page;
->> > > > > +}
->> > > > > +
->> > > >=20
->> > > > This crashes for me with KPROBES_SANITY_TEST during the
->> > > > kretprobe
->> > > > test. =20
->> > >=20
->> > > That isn't needed to reproduce this. After bootup, disabling
->> > > optprobes=20
->> > > also shows the crash with kretprobes:
->> > > 	sysctl debug.kprobes-optimization=3D0
->> > >=20
->> > > The problem happens to be with patch_instruction() in=20
->> > > arch_prepare_kprobe(). During boot, on kprobe init, we register a
->> > > probe=20
->> > > on kretprobe_trampoline for use with kretprobes (see=20
->> > > arch_init_kprobes()). This results in an instruction slot being=20
->> > > allocated, and arch_prepare_kprobe() to be called for copying
->> > > the=20
->> > > instruction (nop) at kretprobe_trampoline. patch_instruction()
->> > > is=20
->> > > failing resulting in corrupt instruction which we try to
->> > > emulate/single=20
->> > > step causing the crash.
->> >=20
->> > OK I think I've fixed it, KPROBES_SANITY_TEST passes too.  I'd
->> > appreciate it if you could test v9, and thanks again for finding
->> > this -
->> > very embarrassing bug on my side.
->>=20
->> Great! Thanks.
->>=20
->> I think I should also add appropriate error checking to kprobes' use
->> of=20
->> patch_instruction() which would have caught this much more easily.
->=20
-> Only kind of!  It turns out that if the initial setup fails for
-> KPROBES_SANITY_TEST, it silently doesn't run - so you miss the "Kprobe
-> smoke test" text, but you don't get any kind of error either.  I'll
-> send a patch so that it fails more loudly later.
+Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+Reviewed-by: Alexey Dobriyan <adobriyan@gmail.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+---
+ fs/proc/base.c          | 2 +-
+ fs/proc/inode.c         | 2 +-
+ fs/proc/root.c          | 4 ++--
+ include/linux/proc_fs.h | 8 ++++----
+ 4 files changed, 8 insertions(+), 8 deletions(-)
 
-Ha, I see what you mean. Good catch, we should pass the kprobe init=20
-status to the test and have it error out.
-
->=20
->>=20
->> On a related note, I notice that x86 seems to prefer not having any
->> RWX=20
->> pages, and so they continue to do 'module_alloc()' followed by=20
->> 'set_memory_ro()' and then 'set_memory_x()'. Is that something worth=20
->> following for powerpc?
->=20
-> I just noticed that too.  arm64 doesn't set theirs executable, as far
-> as I can tell powerpc doesn't need to.
-
-I didn't follow that. We do need it to be executable so that we can=20
-single step the original instruction.
-
-arm64 does vmalloc_exec(), which looks like it sets the page to RWX,=20
-then marks it RO. There is a small window where the page would be WX. =20
-x86 instead seems to first allocate the page as RW, mark as RO, and only=20
-then enable X - removing that small window where the page is both W and=20
-X.
-
-- Naveen
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 1ebe9eba48ea..2f2f7b36c947 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -699,7 +699,7 @@ int proc_setattr(struct dentry *dentry, struct iattr *attr)
+  */
+ static bool has_pid_permissions(struct proc_fs_info *fs_info,
+ 				 struct task_struct *task,
+-				 int hide_pid_min)
++				 enum proc_hidepid hide_pid_min)
+ {
+ 	/*
+ 	 * If 'hidpid' mount option is set force a ptrace check,
+diff --git a/fs/proc/inode.c b/fs/proc/inode.c
+index d38a9e592352..8f3681723108 100644
+--- a/fs/proc/inode.c
++++ b/fs/proc/inode.c
+@@ -166,7 +166,7 @@ void proc_invalidate_siblings_dcache(struct hlist_head *inodes, spinlock_t *lock
+ 		deactivate_super(old_sb);
+ }
+ 
+-static inline const char *hidepid2str(int v)
++static inline const char *hidepid2str(enum proc_hidepid v)
+ {
+ 	switch (v) {
+ 		case HIDEPID_OFF: return "off";
+diff --git a/fs/proc/root.c b/fs/proc/root.c
+index c6caae9e4308..9d6ce3710f4f 100644
+--- a/fs/proc/root.c
++++ b/fs/proc/root.c
+@@ -32,9 +32,9 @@
+ struct proc_fs_context {
+ 	struct proc_fs_info	*fs_info;
+ 	unsigned int		mask;
+-	int			hidepid;
++	enum proc_hidepid	hidepid;
+ 	int			gid;
+-	int			pidonly;
++	enum proc_pidonly	pidonly;
+ };
+ 
+ enum proc_param {
+diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
+index afd38cae2339..3701f49eb299 100644
+--- a/include/linux/proc_fs.h
++++ b/include/linux/proc_fs.h
+@@ -28,7 +28,7 @@ struct proc_ops {
+ };
+ 
+ /* definitions for hide_pid field */
+-enum {
++enum proc_hidepid {
+ 	HIDEPID_OFF	  = 0,
+ 	HIDEPID_NO_ACCESS = 1,
+ 	HIDEPID_INVISIBLE = 2,
+@@ -36,7 +36,7 @@ enum {
+ };
+ 
+ /* definitions for proc mount option pidonly */
+-enum {
++enum proc_pidonly {
+ 	PROC_PIDONLY_OFF = 0,
+ 	PROC_PIDONLY_ON  = 1,
+ };
+@@ -46,8 +46,8 @@ struct proc_fs_info {
+ 	struct dentry *proc_self;        /* For /proc/self */
+ 	struct dentry *proc_thread_self; /* For /proc/thread-self */
+ 	kgid_t pid_gid;
+-	int hide_pid;
+-	int pidonly;
++	enum proc_hidepid hide_pid;
++	enum proc_pidonly pidonly;
+ };
+ 
+ static inline struct proc_fs_info *proc_sb_info(struct super_block *sb)
+-- 
+2.25.2
 
