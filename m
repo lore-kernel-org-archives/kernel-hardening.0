@@ -1,22 +1,23 @@
-Return-Path: <SRS0=Byex=5T=lists.openwall.com=kernel-hardening-return-18420-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=AzNt=5T=lists.openwall.com=kernel-hardening-return-18421-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-5.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 55297C43331
-	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 18:19:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0E62BC43331
+	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 23:28:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AEB5A206CC
-	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 18:19:42 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AEB5A206CC
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18420-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32267 invoked by uid 550); 3 Apr 2020 18:18:07 -0000
+	by mail.kernel.org (Postfix) with SMTP id 5DB68206CC
+	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Apr 2020 23:28:32 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="HdYhe/Gr"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5DB68206CC
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18421-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32719 invoked by uid 550); 3 Apr 2020 23:28:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,102 +25,54 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32043 invoked from network); 3 Apr 2020 18:18:04 -0000
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: LKML <linux-kernel@vger.kernel.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Alexey Gladkov <legion@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	David Howells <dhowells@redhat.com>
-Subject: [PATCH v11 1/8] proc: rename struct proc_fs_info to proc_fs_opts
-Date: Fri,  3 Apr 2020 20:06:41 +0200
-Message-Id: <20200403180648.721362-2-gladkov.alexey@gmail.com>
-X-Mailer: git-send-email 2.25.2
-In-Reply-To: <20200403180648.721362-1-gladkov.alexey@gmail.com>
-References: <20200403180648.721362-1-gladkov.alexey@gmail.com>
+Received: (qmail 32687 invoked from network); 3 Apr 2020 23:28:24 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=Ig7LwYAL0F3gpSoAsrhhiXcU4mF6WOVfVlihZurEo5s=;
+        b=HdYhe/GrgWmhKkmNme2y2h0124rmBccjJlXtG2zbYNWxp6pU06LyO0WmZ57NnvlIyT
+         CRSCfokhU/mcRtpj1AdbJAf3scEMDJ6MnYkLprA1GI0nUwyGpj2atU3HuufIpmkA+lWa
+         hTd2PEkCx4FR1jabjWgbsBcMNwfzF3Mpobj7s=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=Ig7LwYAL0F3gpSoAsrhhiXcU4mF6WOVfVlihZurEo5s=;
+        b=MoLMm29Cef9/OnJ2DG09TT3LDCyReWHI40EOe5+uph4ndLekzBJzy3RlkpqQ462lAQ
+         AHpTUjYfwSVPPJT0fgT/WJu4q4xEHuLRpj55wj9lj5BC1V8naplWy8ze6nSJTRfisftH
+         22NYXqsm3uBTyKGAg2JYQEK5io6nSme7A6qXFBHAypzQbXtXr118kvrXYEyyVBDVgPWw
+         4uCj7Docs2NMCr3xCW+wcNR8aFU8HB+ab13q8y7IHpfyVmdg8/ocU9gAnCaAJKQBK2Te
+         MhuZ+J5CXrzjIwlVmn+C90xBxHLkdPt/JT/BkEBvwIY/01aTOl3tggDWjLLhL/LMSdIj
+         ZgcA==
+X-Gm-Message-State: AGi0PuZbJ8hvC08VxwC/sfke+r+e9NF124ZRqy67hq4kuu+iXxS2cpYz
+	xxkoAUtY5hKGZN/xkFOdG14LFg==
+X-Google-Smtp-Source: APiQypLWT4pvW2zOZhUgaslgqCEhlYeuzckYBx3ELRPFqvpWGMFKiOTrDXrPFzyJTvbQEK2Kgc7Kig==
+X-Received: by 2002:a17:90a:bf84:: with SMTP id d4mr12693059pjs.82.1585956492395;
+        Fri, 03 Apr 2020 16:28:12 -0700 (PDT)
+Date: Fri, 3 Apr 2020 16:28:10 -0700
+From: Kees Cook <keescook@chromium.org>
+To: "joao@overdrivepizza.com" <joao@overdrivepizza.com>
+Cc: kernel-hardening@lists.openwall.com, vasileios_kemerlis@brown.edu,
+	sandro@ic.unicamp.br
+Subject: Re: kCFI sources
+Message-ID: <202004031626.B2FDF354@keescook>
+References: <3446-5e86ca00-7-77f96080@18228891>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Fri, 03 Apr 2020 18:07:24 +0000 (UTC)
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <3446-5e86ca00-7-77f96080@18228891>
 
-Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
-Reviewed-by: Alexey Dobriyan <adobriyan@gmail.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
----
- fs/proc_namespace.c | 14 +++++++-------
- 1 file changed, 7 insertions(+), 7 deletions(-)
+On Fri, Apr 03, 2020 at 07:29:38AM +0200, joao@overdrivepizza.com wrote:
+> FWIW, In case someone has any interest in looking into it, a month ago I uploaded the old sources for a kernel CFI prototype I implemented back in 2015/2016 (kCFI) here: https://github.com/kcfi/kcfi
 
-diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index 273ee82d8aa9..9a8b624bc3db 100644
---- a/fs/proc_namespace.c
-+++ b/fs/proc_namespace.c
-@@ -37,23 +37,23 @@ static __poll_t mounts_poll(struct file *file, poll_table *wait)
- 	return res;
- }
- 
--struct proc_fs_info {
-+struct proc_fs_opts {
- 	int flag;
- 	const char *str;
- };
- 
- static int show_sb_opts(struct seq_file *m, struct super_block *sb)
- {
--	static const struct proc_fs_info fs_info[] = {
-+	static const struct proc_fs_opts fs_opts[] = {
- 		{ SB_SYNCHRONOUS, ",sync" },
- 		{ SB_DIRSYNC, ",dirsync" },
- 		{ SB_MANDLOCK, ",mand" },
- 		{ SB_LAZYTIME, ",lazytime" },
- 		{ 0, NULL }
- 	};
--	const struct proc_fs_info *fs_infop;
-+	const struct proc_fs_opts *fs_infop;
- 
--	for (fs_infop = fs_info; fs_infop->flag; fs_infop++) {
-+	for (fs_infop = fs_opts; fs_infop->flag; fs_infop++) {
- 		if (sb->s_flags & fs_infop->flag)
- 			seq_puts(m, fs_infop->str);
- 	}
-@@ -63,7 +63,7 @@ static int show_sb_opts(struct seq_file *m, struct super_block *sb)
- 
- static void show_mnt_opts(struct seq_file *m, struct vfsmount *mnt)
- {
--	static const struct proc_fs_info mnt_info[] = {
-+	static const struct proc_fs_opts mnt_opts[] = {
- 		{ MNT_NOSUID, ",nosuid" },
- 		{ MNT_NODEV, ",nodev" },
- 		{ MNT_NOEXEC, ",noexec" },
-@@ -72,9 +72,9 @@ static void show_mnt_opts(struct seq_file *m, struct vfsmount *mnt)
- 		{ MNT_RELATIME, ",relatime" },
- 		{ 0, NULL }
- 	};
--	const struct proc_fs_info *fs_infop;
-+	const struct proc_fs_opts *fs_infop;
- 
--	for (fs_infop = mnt_info; fs_infop->flag; fs_infop++) {
-+	for (fs_infop = mnt_opts; fs_infop->flag; fs_infop++) {
- 		if (mnt->mnt_flags & fs_infop->flag)
- 			seq_puts(m, fs_infop->str);
- 	}
+Great; thanks!
+
+> As is, the code supports kernel 3.19. It is no longer maintained and, given that the upstream Linux kernel may have its own CFI scheme somewhat soon, I don't believe that there is much sense in trying to forward-port it or anything. Either way, if it is useful for anyone, there you go.
+
+Weren't there updates make to LLVM to provide a more fine-grained
+bucketization of the function prototypes? (i.e. instead of all "void
+func(void)" being in one bucket, they got chopped into more buckets?)
+
 -- 
-2.25.2
-
+Kees Cook
