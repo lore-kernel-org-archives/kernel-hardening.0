@@ -1,23 +1,21 @@
-Return-Path: <SRS0=cLsC=5W=lists.openwall.com=kernel-hardening-return-18451-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=IB2i=5X=lists.openwall.com=kernel-hardening-return-18452-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AE5EBC2BA1A
-	for <kernel-hardening@archiver.kernel.org>; Mon,  6 Apr 2020 23:17:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8B4CFC2BA16
+	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Apr 2020 08:00:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 03E2F206C0
-	for <kernel-hardening@archiver.kernel.org>; Mon,  6 Apr 2020 23:17:14 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="SHvDMZKy"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 03E2F206C0
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18451-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24392 invoked by uid 550); 6 Apr 2020 23:16:29 -0000
+	by mail.kernel.org (Postfix) with SMTP id E50C32064A
+	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Apr 2020 08:00:32 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E50C32064A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18452-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15790 invoked by uid 550); 7 Apr 2020 08:00:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,134 +23,121 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24281 invoked from network); 6 Apr 2020 23:16:27 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=6T/7mkz2QJj1i6yBI9rf5y5UrGkfIoNdamdak5bIEr8=;
-        b=SHvDMZKynQoupRAYdyzGP7833YCcGwM4Pjmu4hIlfgEi41IUoIMZIvMFkCimFNo1pC
-         ukiFfjPKn6dwME2ko+g8mNG5D99lrZbhcV9idRFBRE7QuhQxO7LJZsbFMVIn38ydgfCG
-         4qMfQRVb21FqPszfB/2JLkg9/aNX0WWnHNT0E=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=6T/7mkz2QJj1i6yBI9rf5y5UrGkfIoNdamdak5bIEr8=;
-        b=U+gg1G7YdxUBltaNSd3yXEqpRB9EM+6WlYUiGMmdpjF1xFINSTds5wMGK+H0/PSMzG
-         DV+rckuX7Ex5iWmQDR9nLVkm4n3gsP+kHIlBFWLMLwaORanPd/g9gL1ptKW3qTSzhoQY
-         Y5X7EDJZRzXWkGKQB/Sp05eDpoRNzf2QfrphbUmqO8H+4U/FdJFl8UFlpluHiU4pLbo9
-         5koURmGna0vjQvGRA4BLgzJjRvyaa3omKZLGEOUzpI7ZMAQkkvbP88j0SVmGC4tecSvg
-         mkSq2MB78rXdu/hJRbqi1MXVmwSijwg/xk7TUzuFSGTFsih4EYT3Y3vdHIIKOGPIA9w2
-         6DoA==
-X-Gm-Message-State: AGi0PuZg++kXba7o/dedoR6XpPMQ6h3q1oIdGM5+Avu11OoMVW9Yalo1
-	qBZ61Mci+R+khkGXKArkWumsug==
-X-Google-Smtp-Source: APiQypKPb2SK+P7H+McMjGGqVwR7DToHZCme/uHbB59Pjk0ShbX/p0nUYaBfdUBZDv7/4hnnvCIAMQ==
-X-Received: by 2002:a62:d10b:: with SMTP id z11mr1732920pfg.205.1586214975509;
-        Mon, 06 Apr 2020 16:16:15 -0700 (PDT)
-From: Kees Cook <keescook@chromium.org>
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Kees Cook <keescook@chromium.org>,
-	Elena Reshetova <elena.reshetova@intel.com>,
-	x86@kernel.org,
-	Andy Lutomirski <luto@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Will Deacon <will@kernel.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Alexander Potapenko <glider@google.com>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Jann Horn <jannh@google.com>,
-	kernel-hardening@lists.openwall.com,
-	linux-arm-kernel@lists.infradead.org,
-	linux-mm@kvack.org,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH v3 5/5] arm64: entry: Enable random_kstack_offset support
-Date: Mon,  6 Apr 2020 16:16:06 -0700
-Message-Id: <20200406231606.37619-6-keescook@chromium.org>
-X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200406231606.37619-1-keescook@chromium.org>
-References: <20200406231606.37619-1-keescook@chromium.org>
+Received: (qmail 15767 invoked from network); 7 Apr 2020 08:00:25 -0000
+X-Virus-Scanned: by amavisd-new at test-mx.suse.de
+Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches as
+ usercopy caches
+To: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>
+Cc: Christian Borntraeger <borntraeger@de.ibm.com>,
+ Christoph Hellwig <hch@infradead.org>, Christopher Lameter <cl@linux.com>,
+ Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>,
+ Ursula Braun <ubraun@linux.ibm.com>, Alexander Viro
+ <viro@zeniv.linux.org.uk>, kernel list <linux-kernel@vger.kernel.org>,
+ David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>,
+ David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>,
+ Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>,
+ linux-xfs@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>,
+ Andy Lutomirski <luto@kernel.org>, "David S. Miller" <davem@davemloft.net>,
+ Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>,
+ "Martin K. Petersen" <martin.petersen@oracle.com>,
+ Paolo Bonzini <pbonzini@redhat.com>,
+ Christoffer Dall <christoffer.dall@linaro.org>,
+ Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>,
+ Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier
+ <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>,
+ Matthew Garrett <mjg59@google.com>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>,
+ linux-arch <linux-arch@vger.kernel.org>,
+ Network Development <netdev@vger.kernel.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Michal Kubecek <mkubecek@suse.cz>
+References: <201911121313.1097D6EE@keescook> <201911141327.4DE6510@keescook>
+ <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz>
+ <202001271519.AA6ADEACF0@keescook>
+ <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com>
+ <202001281457.FA11CC313A@keescook>
+ <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
+ <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
+ <20200129170939.GA4277@infradead.org>
+ <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
+ <202001300945.7D465B5F5@keescook>
+ <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
+From: Vlastimil Babka <vbabka@suse.cz>
+Message-ID: <7d810f6d-8085-ea2f-7805-47ba3842dc50@suse.cz>
+Date: Tue, 7 Apr 2020 10:00:10 +0200
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.6.0
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-Allow for a randomized stack offset on a per-syscall basis, with roughly
-5 bits of entropy.
+On 1/31/20 1:03 PM, Jann Horn wrote:
 
-In order to avoid unconditional stack canaries on syscall entry, also
-downgrade from -fstack-protector-strong to -fstack-protector to avoid
-triggering checks due to alloca(). Examining the resulting syscall.o,
-sees no changes in canary coverage (none before, none now).
+> I think dma-kmalloc slabs should be handled the same way as normal
+> kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
+> just normal kernel memory - even if it might later be used for DMA -,
+> and it should be perfectly fine to copy_from_user() into such
+> allocations at that point, and to copy_to_user() out of them at the
+> end. If you look at the places where such allocations are created, you
+> can see things like kmemdup(), memcpy() and so on - all normal
+> operations that shouldn't conceptually be different from usercopy in
+> any relevant way.
+ 
+So, let's do that?
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
+----8<----
+From d5190e4e871689a530da3c3fd327be45a88f006a Mon Sep 17 00:00:00 2001
+From: Vlastimil Babka <vbabka@suse.cz>
+Date: Tue, 7 Apr 2020 09:58:00 +0200
+Subject: [PATCH] usercopy: Mark dma-kmalloc caches as usercopy caches
+
+We have seen a "usercopy: Kernel memory overwrite attempt detected to SLUB
+object 'dma-kmalloc-1 k' (offset 0, size 11)!" error on s390x, as IUCV uses
+kmalloc() with __GFP_DMA because of memory address restrictions.
+The issue has been discussed [2] and it has been noted that if all the kmalloc
+caches are marked as usercopy, there's little reason not to mark dma-kmalloc
+caches too. The 'dma' part merely means that __GFP_DMA is used to restrict
+memory address range.
+
+As Jann Horn put it [3]:
+
+"I think dma-kmalloc slabs should be handled the same way as normal
+kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
+just normal kernel memory - even if it might later be used for DMA -,
+and it should be perfectly fine to copy_from_user() into such
+allocations at that point, and to copy_to_user() out of them at the
+end. If you look at the places where such allocations are created, you
+can see things like kmemdup(), memcpy() and so on - all normal
+operations that shouldn't conceptually be different from usercopy in
+any relevant way."
+
+Thus this patch marks the dma-kmalloc-* caches as usercopy.
+
+[1] https://bugzilla.suse.com/show_bug.cgi?id=1156053
+[2] https://lore.kernel.org/kernel-hardening/bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz/
+[3] https://lore.kernel.org/kernel-hardening/CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com/
+
+Signed-off-by: Vlastimil Babka <vbabka@suse.cz>
 ---
- arch/arm64/Kconfig          |  1 +
- arch/arm64/kernel/Makefile  |  4 ++++
- arch/arm64/kernel/syscall.c | 10 ++++++++++
- 3 files changed, 15 insertions(+)
+ mm/slab_common.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index 0b30e884e088..4d5aa4959f72 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -127,6 +127,7 @@ config ARM64
- 	select HAVE_ARCH_MMAP_RND_BITS
- 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
- 	select HAVE_ARCH_PREL32_RELOCATIONS
-+	select HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
- 	select HAVE_ARCH_SECCOMP_FILTER
- 	select HAVE_ARCH_STACKLEAK
- 	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
-diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
-index fc6488660f64..b89005f125d6 100644
---- a/arch/arm64/kernel/Makefile
-+++ b/arch/arm64/kernel/Makefile
-@@ -11,6 +11,10 @@ CFLAGS_REMOVE_ftrace.o = $(CC_FLAGS_FTRACE)
- CFLAGS_REMOVE_insn.o = $(CC_FLAGS_FTRACE)
- CFLAGS_REMOVE_return_address.o = $(CC_FLAGS_FTRACE)
- 
-+# Downgrade to -fstack-protector to avoid triggering unneeded stack canary
-+# checks due to randomize_kstack_offset.
-+CFLAGS_syscall.o	+= $(subst -fstack-protector-strong,-fstack-protector,$(filter -fstack-protector-strong,$(KBUILD_CFLAGS)))
-+
- # Object file lists.
- obj-y			:= debug-monitors.o entry.o irq.o fpsimd.o		\
- 			   entry-common.o entry-fpsimd.o process.o ptrace.o	\
-diff --git a/arch/arm64/kernel/syscall.c b/arch/arm64/kernel/syscall.c
-index a12c0c88d345..238dbd753b44 100644
---- a/arch/arm64/kernel/syscall.c
-+++ b/arch/arm64/kernel/syscall.c
-@@ -5,6 +5,7 @@
- #include <linux/errno.h>
- #include <linux/nospec.h>
- #include <linux/ptrace.h>
-+#include <linux/randomize_kstack.h>
- #include <linux/syscalls.h>
- 
- #include <asm/daifflags.h>
-@@ -42,6 +43,8 @@ static void invoke_syscall(struct pt_regs *regs, unsigned int scno,
- {
- 	long ret;
- 
-+	add_random_kstack_offset();
-+
- 	if (scno < sc_nr) {
- 		syscall_fn_t syscall_fn;
- 		syscall_fn = syscall_table[array_index_nospec(scno, sc_nr)];
-@@ -51,6 +54,13 @@ static void invoke_syscall(struct pt_regs *regs, unsigned int scno,
+diff --git a/mm/slab_common.c b/mm/slab_common.c
+index 5282f881d2f5..ae9486160594 100644
+--- a/mm/slab_common.c
++++ b/mm/slab_common.c
+@@ -1303,7 +1303,8 @@ void __init create_kmalloc_caches(slab_flags_t flags)
+ 			kmalloc_caches[KMALLOC_DMA][i] = create_kmalloc_cache(
+ 				kmalloc_info[i].name[KMALLOC_DMA],
+ 				kmalloc_info[i].size,
+-				SLAB_CACHE_DMA | flags, 0, 0);
++				SLAB_CACHE_DMA | flags, 0,
++				kmalloc_info[i].size);
+ 		}
  	}
- 
- 	regs->regs[0] = ret;
-+
-+	/*
-+	 * Since the compiler chooses a 4 bit alignment for the stack,
-+	 * let's save one additional bit (9 total), which gets us up
-+	 * near 5 bits of entropy.
-+	 */
-+	choose_random_kstack_offset(get_random_int() & 0x1FF);
- }
- 
- static inline bool has_syscall_work(unsigned long flags)
+ #endif
 -- 
-2.20.1
+2.26.0
 
