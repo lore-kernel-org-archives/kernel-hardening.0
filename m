@@ -1,21 +1,24 @@
-Return-Path: <SRS0=IB2i=5X=lists.openwall.com=kernel-hardening-return-18452-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=35iB=5X=lists.openwall.com=kernel-hardening-return-18453-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-11.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8B4CFC2BA16
-	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Apr 2020 08:00:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 35323C2BB1D
+	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Apr 2020 10:16:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E50C32064A
-	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Apr 2020 08:00:32 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E50C32064A
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18452-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15790 invoked by uid 550); 7 Apr 2020 08:00:26 -0000
+	by mail.kernel.org (Postfix) with SMTP id 5ADC520644
+	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Apr 2020 10:16:31 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="JeSo03Bg"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5ADC520644
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18453-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5990 invoked by uid 550); 7 Apr 2020 10:16:24 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,121 +26,171 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15767 invoked from network); 7 Apr 2020 08:00:25 -0000
-X-Virus-Scanned: by amavisd-new at test-mx.suse.de
-Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches as
- usercopy caches
-To: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>
-Cc: Christian Borntraeger <borntraeger@de.ibm.com>,
- Christoph Hellwig <hch@infradead.org>, Christopher Lameter <cl@linux.com>,
- Jiri Slaby <jslaby@suse.cz>, Julian Wiedmann <jwi@linux.ibm.com>,
- Ursula Braun <ubraun@linux.ibm.com>, Alexander Viro
- <viro@zeniv.linux.org.uk>, kernel list <linux-kernel@vger.kernel.org>,
- David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>,
- David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>,
- Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>,
- linux-xfs@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>,
- Andy Lutomirski <luto@kernel.org>, "David S. Miller" <davem@davemloft.net>,
- Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>,
- "Martin K. Petersen" <martin.petersen@oracle.com>,
- Paolo Bonzini <pbonzini@redhat.com>,
- Christoffer Dall <christoffer.dall@linaro.org>,
- Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>,
- Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier
- <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>,
- Matthew Garrett <mjg59@google.com>,
- linux-fsdevel <linux-fsdevel@vger.kernel.org>,
- linux-arch <linux-arch@vger.kernel.org>,
- Network Development <netdev@vger.kernel.org>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Michal Kubecek <mkubecek@suse.cz>
-References: <201911121313.1097D6EE@keescook> <201911141327.4DE6510@keescook>
- <bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz>
- <202001271519.AA6ADEACF0@keescook>
- <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com>
- <202001281457.FA11CC313A@keescook>
- <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
- <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
- <20200129170939.GA4277@infradead.org>
- <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
- <202001300945.7D465B5F5@keescook>
- <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
-From: Vlastimil Babka <vbabka@suse.cz>
-Message-ID: <7d810f6d-8085-ea2f-7805-47ba3842dc50@suse.cz>
-Date: Tue, 7 Apr 2020 10:00:10 +0200
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.6.0
+Received: (qmail 5955 invoked from network); 7 Apr 2020 10:16:23 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=EboS50A6Jdj3Itp9c+B3adS9KCBsSrRq/whyaB+pjFQ=;
+        b=JeSo03BgopngrGGWZWmfQ5SJ//2ldmuO+KVk65RQFeEHA9/Kx9TrnYdJJVmeD9zOm3
+         uPN1tFa0qT2R8/lECn+op8ReGHh+TYP3VZSkw42Og6ZDyI/al9vwQRXyNOYtDWl+GRyl
+         2t01uWU49luYmNx75CQr9cWxUDLaBSIydoLgBStNVp7r1rzGqEQ9V3xp/9q1EX7mBLiq
+         9SUWFjzPu2vzRLriPODqBMDbfbUrX4fQfgRrDTiJnQX5tchNIXTLua4P8Yv7Mfq7ohl0
+         py5kME7YVBmf3SwRLjCtLSWAx/CUVK9tKppDQqrgKweeyUQvPVqHY+eiPHQAYqgAkmj1
+         qJeg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=EboS50A6Jdj3Itp9c+B3adS9KCBsSrRq/whyaB+pjFQ=;
+        b=I4jgIFILPOJiKZLDHzapvBd5Y2/qz7LyIJpX8VBWJEe7uLgd0SkKy1lcMYqnIZP0fx
+         xhRChlNRwCTF/dLHGW6s9Kbq8TT2UKEm5Uj/JSlHHmNKPWDhENUpcWTc/KGs9Zfwu9NR
+         2RuO3fy/qXm2+tVWnpkmLfYcVeDClZpWWCXedD/h/H6tXK+pgxROJ98oOCq7Kfl3hIik
+         /vCTCm1Fc1ZFNurdRM1D+9MjR6bVlXTpsi+5AYvavpIHsGXk2N6DCw6XUdfvjAFeVSx6
+         YupKPv3actk5Zij6xvL343g6wBf6Id4WVHp7dK/qpb3tz2/l2rjY5Aa5vJauHqv0Vgmd
+         2Yvw==
+X-Gm-Message-State: AGi0PuYAlXoIDS+IXpr+/5M38ubZSKeWpmD9Q3CEyOsgNV974SgCbth8
+	Xnh6l9j5B6ieXMToru9HygkDSyYGvArhfJboOmk=
+X-Google-Smtp-Source: APiQypJkVf3xfs1XAwktJ/dvmYZQ3/dKnKkyU5j/ZqPgKSKm5cuE1gcyZgsfmBKZyEJFpTNHbWv3ZbeYMRDK88OVe6Q=
+X-Received: by 2002:adf:aac5:: with SMTP id i5mr1816565wrc.285.1586254572268;
+ Tue, 07 Apr 2020 03:16:12 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+References: <20200406142045.32522-1-levonshe@gmail.com> <20200406142045.32522-2-levonshe@gmail.com>
+ <202004061201.27B0972@keescook>
+In-Reply-To: <202004061201.27B0972@keescook>
+From: "Lev R. Oshvang ." <levonshe@gmail.com>
+Date: Tue, 7 Apr 2020 13:16:00 +0300
+Message-ID: <CAP22eLH8S7LQmFGTm0D3GncyXdNi=MccBFZpDPrWXTfQTYhx+w@mail.gmail.com>
+Subject: Re: [RFC PATCH 1/5] security : hardening : prevent write to proces's
+ read-only pages from another process
+To: Kees Cook <keescook@chromium.org>
+Cc: arnd@arndb.de, kernel-hardening@lists.openwall.com, 
+	Jann Horn <jannh@google.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On 1/31/20 1:03 PM, Jann Horn wrote:
+Hi Kees,
 
-> I think dma-kmalloc slabs should be handled the same way as normal
-> kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
-> just normal kernel memory - even if it might later be used for DMA -,
-> and it should be perfectly fine to copy_from_user() into such
-> allocations at that point, and to copy_to_user() out of them at the
-> end. If you look at the places where such allocations are created, you
-> can see things like kmemdup(), memcpy() and so on - all normal
-> operations that shouldn't conceptually be different from usercopy in
-> any relevant way.
- 
-So, let's do that?
+The patch you referred to is scoped in /proc fs.
 
-----8<----
-From d5190e4e871689a530da3c3fd327be45a88f006a Mon Sep 17 00:00:00 2001
-From: Vlastimil Babka <vbabka@suse.cz>
-Date: Tue, 7 Apr 2020 09:58:00 +0200
-Subject: [PATCH] usercopy: Mark dma-kmalloc caches as usercopy caches
+There is a chance that hackers may use other attack methods except procfs.
+There is process_vm_writev syscall , /dev/mem.
+An attacker can also hijack one of the process threads and write to
+read-only pages.
+I admit that I am the newbie and lack knowledge, but I think my
+solution is more generic and protects from more possible attacks.
+Second, you suggested to control it in run-time with a knob.
+I think that configuration option I propose better fit embedded system needs.
+There is no need in an embedded system to turn it on/off since there is no gdb.
+(the same argument for a production system),  These systems are locked
+down, and perhaps the proper place to put this option is in lockdown
+LSM.
+Thank you for your response.
+Lev
 
-We have seen a "usercopy: Kernel memory overwrite attempt detected to SLUB
-object 'dma-kmalloc-1 k' (offset 0, size 11)!" error on s390x, as IUCV uses
-kmalloc() with __GFP_DMA because of memory address restrictions.
-The issue has been discussed [2] and it has been noted that if all the kmalloc
-caches are marked as usercopy, there's little reason not to mark dma-kmalloc
-caches too. The 'dma' part merely means that __GFP_DMA is used to restrict
-memory address range.
 
-As Jann Horn put it [3]:
-
-"I think dma-kmalloc slabs should be handled the same way as normal
-kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
-just normal kernel memory - even if it might later be used for DMA -,
-and it should be perfectly fine to copy_from_user() into such
-allocations at that point, and to copy_to_user() out of them at the
-end. If you look at the places where such allocations are created, you
-can see things like kmemdup(), memcpy() and so on - all normal
-operations that shouldn't conceptually be different from usercopy in
-any relevant way."
-
-Thus this patch marks the dma-kmalloc-* caches as usercopy.
-
-[1] https://bugzilla.suse.com/show_bug.cgi?id=1156053
-[2] https://lore.kernel.org/kernel-hardening/bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz/
-[3] https://lore.kernel.org/kernel-hardening/CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com/
-
-Signed-off-by: Vlastimil Babka <vbabka@suse.cz>
----
- mm/slab_common.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
-
-diff --git a/mm/slab_common.c b/mm/slab_common.c
-index 5282f881d2f5..ae9486160594 100644
---- a/mm/slab_common.c
-+++ b/mm/slab_common.c
-@@ -1303,7 +1303,8 @@ void __init create_kmalloc_caches(slab_flags_t flags)
- 			kmalloc_caches[KMALLOC_DMA][i] = create_kmalloc_cache(
- 				kmalloc_info[i].name[KMALLOC_DMA],
- 				kmalloc_info[i].size,
--				SLAB_CACHE_DMA | flags, 0, 0);
-+				SLAB_CACHE_DMA | flags, 0,
-+				kmalloc_info[i].size);
- 		}
- 	}
- #endif
--- 
-2.26.0
-
+On Mon, Apr 6, 2020 at 10:16 PM Kees Cook <keescook@chromium.org> wrote:
+>
+> On Mon, Apr 06, 2020 at 05:20:41PM +0300, Lev Olshvang wrote:
+> > The purpose of this patch is produce hardened kernel for Embedded
+> > or Production systems.
+> >
+> > Typically debuggers, such as gdb, write to read-only code [text]
+> > sections of target process.(ptrace)
+> > This kind of page protectiion violation raises minor page fault, but
+> > kernel's fault handler allows it by default.
+> > This is clearly attack surface for adversary.
+> >
+> > The proposed kernel hardening configuration option checks the type of
+> > protection of the foreign vma and blocks writes to read only vma.
+> >
+> > When enabled, it will stop attacks modifying code or jump tables, etc.
+> >
+> > Code of arch_vma_access_permitted() function was extended to
+> > check foreign vma flags.
+> >
+> > Tested on x86_64 and ARM(QEMU) with dd command which writes to
+> > /proc/PID/mem in r--p or r--xp of vma area addresses range
+> >
+> > dd reports IO failure when tries to write to adress taken from
+> > from /proc/PID/maps (PLT or code section)
+>
+> So, just to give some background here: the reason for this behavior is
+> so debuggers can insert software breakpoints in the .text section (0xcc)
+> etc. This is implemented with the "FOLL_FORCE" flag, and an attempt to
+> remove it was made here:
+> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=8ee74a91ac30
+> but it was later reverted (see below).
+>
+> There have been many prior discussions about this behavior, and a
+> good thread (which I link from https://github.com/KSPP/linux/issues/37
+> "Block process from writing to its own /proc/$pid/mem") is this one:
+> https://lore.kernel.org/lkml/CAGXu5j+PHzDwnJxJwMJ=WuhacDn_vJWe9xZx+Kbsh28vxOGRiA@mail.gmail.com/
+>
+> For details on the revert see:
+> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=f511c0b17b08
+>
+> All this said, I think this feature would still be nice to have,
+> available with some kind of knob to control it. Do you get the
+> results you were expecting from just re-applying 8ee74a91ac30? If
+> so, that's a much smaller change, and a single place to apply
+> a knob. It would likely be best implemented with a sysctl and a
+> static_branch(). A possible example for this can be seen here:
+> https://lore.kernel.org/lkml/20200324203231.64324-4-keescook@chromium.org/
+> Though it doesn't use a sysctl. (And perhaps this feature needs to be a
+> per-process setting like "dumpable", but let's start simple with a
+> system-wide control.)
+>
+> Can you test the FOLL_FORCE removal and refactor things to use a
+> static_branch() instead?
+>
+> -Kees
+>
+> > Signed-off-by: Lev Olshvang <levonshe@gmail.com>
+> > ---
+> >  include/asm-generic/mm_hooks.h |  5 +++++
+> >  security/Kconfig               | 10 ++++++++++
+> >  2 files changed, 15 insertions(+)
+> >
+> > diff --git a/include/asm-generic/mm_hooks.h b/include/asm-generic/mm_hooks.h
+> > index 4dbb177d1150..6e1fcce44cc2 100644
+> > --- a/include/asm-generic/mm_hooks.h
+> > +++ b/include/asm-generic/mm_hooks.h
+> > @@ -25,6 +25,11 @@ static inline void arch_unmap(struct mm_struct *mm,
+> >  static inline bool arch_vma_access_permitted(struct vm_area_struct *vma,
+> >               bool write, bool execute, bool foreign)
+> >  {
+> > +#ifdef CONFIG_PROTECT_READONLY_USER_MEMORY
+> > +     /* Forbid write to PROT_READ pages of foreign process */
+> > +     if (write && foreign && (!(vma->vm_flags & VM_WRITE)))
+> > +             return false;
+> > +#endif
+> >       /* by default, allow everything */
+> >       return true;
+> >  }
+> > diff --git a/security/Kconfig b/security/Kconfig
+> > index cd3cc7da3a55..d92e79c90d67 100644
+> > --- a/security/Kconfig
+> > +++ b/security/Kconfig
+> > @@ -143,6 +143,16 @@ config LSM_MMAP_MIN_ADDR
+> >         this low address space will need the permission specific to the
+> >         systems running LSM.
+> >
+> > +config PROTECT_READONLY_USER_MEMORY
+> > +     bool "Protect read only process memory"
+> > +     help
+> > +       Protects read only memory of process code and PLT table
+> > +       from possible attack through /proc/PID/mem or through /dev/mem.
+> > +       Refuses to insert and stop at debuggers breakpoints (prtace,gdb)
+> > +       Mostly advised for embedded and production system.
+> > +       Stops attempts of the malicious process to modify read only memory of another process
+> > +
+> > +
+> >  config HAVE_HARDENED_USERCOPY_ALLOCATOR
+> >       bool
+> >       help
+> > --
+> > 2.17.1
+> >
+>
+> --
+> Kees Cook
