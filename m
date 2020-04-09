@@ -1,4 +1,4 @@
-Return-Path: <SRS0=1ZJy=5Z=lists.openwall.com=kernel-hardening-return-18480-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=xTCD=5Z=lists.openwall.com=kernel-hardening-return-18481-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BEF72C2BB85
-	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Apr 2020 18:12:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 460F5C2BB85
+	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Apr 2020 19:41:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2BACA20771
-	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Apr 2020 18:12:06 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2BACA20771
+	by mail.kernel.org (Postfix) with SMTP id 7710C20757
+	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Apr 2020 19:41:23 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7710C20757
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18480-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32171 invoked by uid 550); 9 Apr 2020 18:11:59 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18481-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13444 invoked by uid 550); 9 Apr 2020 19:41:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,34 +22,36 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32147 invoked from network); 9 Apr 2020 18:11:58 -0000
+Received: (qmail 13418 invoked from network); 9 Apr 2020 19:41:15 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=TdyvtUm+JaP+UMcxYN7jfdZXrh36GT0u3q7s/oAfa58=;
-        b=S+Gg6e8XS69QXS+TwAoztwvVMiBrxfNu5vQWU5CvMBUjqLvKP0NdVLnKUAK1IwO/es
-         HyzRyIjoHsod/Je3wBRBlDDV3AOYiHw8PmyZHxM1qynJ6fESr5NmcfFOqu0zmj/uqtNK
-         Q9cSHPz5xsgimwgBdyXmtIup03Q9UJep1bhfR0SEb7nGWm7vVDK/nzO1QoDb0BiNx40e
-         gA0gFKc0EtlNUIBTbWnCPVNE2ZhdqGT2IxwWgb7D/s/zp0TlWUYLFcDoZkiXkLxeaIOF
-         sLZ2OslCpx+b16yzyJ/yAe8yEyttq2KBTfyZ3Fp5gzC92zBO5VaBMwSNeonJ+sQtI9PS
-         OZbw==
-X-Gm-Message-State: AGi0PuYoM1K/72VEU5S0/JlEsfpf/1sM8eu1C2I+fCdt6Wn8VixrtawN
-	xc7qfzV5K6rj+0xXr3vPRJQ=
-X-Google-Smtp-Source: APiQypLB/RRw4y3gPj9qASZWXc+aeJFWSmNrG5D+ugtRctMK8bktbAI6Z4Jj33KcR9nH0rmKWnGEuQ==
-X-Received: by 2002:a05:651c:119b:: with SMTP id w27mr625366ljo.218.1586455907353;
-        Thu, 09 Apr 2020 11:11:47 -0700 (PDT)
-Subject: Re: [Cocci] Coccinelle rule for CVE-2019-18683
-To: Markus Elfring <Markus.Elfring@web.de>, cocci@systeme.lip6.fr,
- kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org, linux-media@vger.kernel.org,
- Gilles Muller <Gilles.Muller@lip6.fr>, Hans Verkuil <hverkuil@xs4all.nl>,
- Jann Horn <jannh@google.com>, Julia Lawall <Julia.Lawall@lip6.fr>,
- Kees Cook <keescook@chromium.org>, Mauro Carvalho Chehab
- <mchehab@kernel.org>, Michal Marek <michal.lkml@markovi.net>,
- Nicolas Palix <nicolas.palix@imag.fr>
-References: <f6175913-560e-d554-cc2d-080b7f6a264b@web.de>
+        bh=ERTd4mfk8JOS5WQBAswgbozE6klDjp263zhVMIMngac=;
+        b=i9TAb8O92g+dB65/e7zBIe9wfUp7FhW2VAbhJf1fcAeCSGLsrxWRAAPQJ1yYEbpZQs
+         shYw6iXWf4L9pqDL7P8WjddghKxE9JJ1JcSfcyT1ptoWRLoY+N0At/kQ769t5XSZWEJX
+         /UPABcGnECv8A8YcGVtkyGwxVB3o5pboWVPkdlqt7pLQNGW2hQUbdcwxuIePWI7vuIwk
+         m7bHFpFpdqE5c5lmUNGsYb7WgS1MhAtnkzMzLE8X13QGYLUf8vXj9w+NOc2yDOoL/6Ds
+         5/VSN3FsU+r/O7sF7aefNEfH1vYb+suYhJnX/aqp2M6ZvVK5QCJ1vhSBijuUu3OMvRnt
+         L3kg==
+X-Gm-Message-State: AGi0Puakk0MwYbAxKO/Vr2YrqP8W4iM7CeKpKp6iER4o7cE24KCwS89e
+	6/n/e3EyZFCemx1LCASYWlM=
+X-Google-Smtp-Source: APiQypJM8b4r5yXZv6f+xhnXlzrwyTBkfWyVPssfGZtnQh09uCrB6D+KWrqxVnY/46747UJGCzk5Yw==
+X-Received: by 2002:a19:b10:: with SMTP id 16mr220286lfl.133.1586461264044;
+        Thu, 09 Apr 2020 12:41:04 -0700 (PDT)
+Subject: Re: Coccinelle rule for CVE-2019-18683
+To: Jann Horn <jannh@google.com>
+Cc: Julia Lawall <Julia.Lawall@lip6.fr>, Gilles Muller
+ <Gilles.Muller@lip6.fr>, Nicolas Palix <nicolas.palix@imag.fr>,
+ Michal Marek <michal.lkml@markovi.net>, cocci@systeme.lip6.fr,
+ "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
+ Kees Cook <keescook@chromium.org>, Hans Verkuil <hverkuil@xs4all.nl>,
+ Mauro Carvalho Chehab <mchehab@kernel.org>,
+ Linux Media Mailing List <linux-media@vger.kernel.org>,
+ LKML <linux-kernel@vger.kernel.org>, Markus Elfring <Markus.Elfring@web.de>
+References: <fff664e9-06c9-d2fb-738f-e8e591e09569@linux.com>
+ <CAG48ez09gn1Abv-EwwW5Rgjqo2CQsbq6tjDeTfpr_FnJC7f5zA@mail.gmail.com>
 From: Alexander Popov <alex.popov@linux.com>
 Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  mQINBFX15q4BEADZartsIW3sQ9R+9TOuCFRIW+RDCoBWNHhqDLu+Tzf2mZevVSF0D5AMJW4f
@@ -95,31 +97,233 @@ Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  gzBW8J8RW+nUJcTpudX4TC2SGeAOyxnM5O4XJ8yZyDUY334seDRJWtS4wRHxpfYcHKTewR96
  IsP1USE+9ndu6lrMXQ3aFsd1n1m1pfa/y8hiqsSYHy7JQ9Iuo9DxysOj22UNOmOE+OYPK48D
  j3lCqPk=
-Message-ID: <9a562397-ba60-8979-1453-b88153722803@linux.com>
-Date: Thu, 9 Apr 2020 21:11:44 +0300
+Message-ID: <e41fc912-0a4f-70c3-b924-50126f0f185a@linux.com>
+Date: Thu, 9 Apr 2020 22:41:01 +0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.6.0
 MIME-Version: 1.0
-In-Reply-To: <f6175913-560e-d554-cc2d-080b7f6a264b@web.de>
+In-Reply-To: <CAG48ez09gn1Abv-EwwW5Rgjqo2CQsbq6tjDeTfpr_FnJC7f5zA@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-Markus, thanks for your remarks!
+Jann, thanks for your reply!
 
-On 09.04.2020 11:41, Markus Elfring wrote:
-> * The source code search pattern can be too generic.
->   How do you think about to consider additional constraints
->   for safer data control flow analysis?
+On 09.04.2020 01:26, Jann Horn wrote:
+> On Thu, Apr 9, 2020 at 12:01 AM Alexander Popov <alex.popov@linux.com> wrote:
+>> CVE-2019-18683 refers to three similar vulnerabilities caused by the same
+>> incorrect approach to locking that is used in vivid_stop_generating_vid_cap(),
+>> vivid_stop_generating_vid_out(), and sdr_cap_stop_streaming().
+>>
+>> For fixes please see the commit 6dcd5d7a7a29c1e4 (media: vivid: Fix wrong
+>> locking that causes race conditions on streaming stop).
+>>
+>> These three functions are called during streaming stopping with vivid_dev.mutex
+>> locked. And they all do the same mistake while stopping their kthreads, which
+>> need to lock this mutex as well. See the example from
+>> vivid_stop_generating_vid_cap():
+>>     /* shutdown control thread */
+>>     vivid_grab_controls(dev, false);
+>>     mutex_unlock(&dev->mutex);
+>>     kthread_stop(dev->kthread_vid_cap);
+>>     dev->kthread_vid_cap = NULL;
+>>     mutex_lock(&dev->mutex);
+>>
+>> But when this mutex is unlocked, another vb2_fop_read() can lock it instead of
+>> the kthread and manipulate the buffer queue. That causes use-after-free.
+>>
+>> I created a Coccinelle rule that detects mutex_unlock+kthread_stop+mutex_lock
+>> within one function.
+> [...]
+>> mutex_unlock@unlock_p(E)
+>> ...
+>> kthread_stop@stop_p(...)
+>> ...
+>> mutex_lock@lock_p(E)
+> 
+> Is the kthread_stop() really special here? It seems to me like it's
+> pretty much just a normal instance of the "temporarily dropping a
+> lock" pattern - which does tend to go wrong quite often, but can also
+> be correct.
 
-Could you please elaborate on that?
+Right, searching without kthread_stop() gives more cases.
 
-I used 'exists' keyword to find at least one branch that has
-mutex_unlock+kthread_stop+mutex_lock chain.
+> I think it would be interesting though to have a list of places that
+> drop and then re-acquire a mutex/spinlock/... that was not originally
+> acquired in the same block of code (but was instead originally
+> acquired in an outer block, or by a parent function, or something like
+> that). So things like this:
 
-> * Other operation modes might become helpful.
+It's a very good idea. I tried it and got first results (described below).
 
-Thanks! I added 'context' mode, it's very good for this purpose.
+> void X(...) {
+>   mutex_lock(A);
+>   for (...) {
+>     ...
+>     mutex_unlock(A);
+>     ...
+>     mutex_lock(A);
+>     ...
+>   }
+>   mutex_unlock(A);
+> }
 
-Best regards,
+I'm not an expert in SmPL yet. Don't know how to describe this case.
+
+> or like this:
+> 
+> void X(...) {
+>   ... [no mutex operations on A]
+>   mutex_unlock(A);
+>   ...
+>   mutex_lock(A);
+>   ...
+> }
+
+Yes, I adapted the rule for that easier case:
+
+```
+virtual report
+virtual context
+
+@race exists@
+expression E;
+position unlock_p;
+position lock_p;
+@@
+
+... when != mutex_lock(E)
+* mutex_unlock@unlock_p(E)
+...
+* mutex_lock@lock_p(E)
+
+@script:python@
+unlock_p << race.unlock_p;
+lock_p << race.lock_p;
+E << race.E;
+@@
+
+coccilib.report.print_report(unlock_p[0], 'see mutex_unlock(' + E + ') here')
+coccilib.report.print_report(lock_p[0], 'see mutex_lock(' + E + ') here\n')
+```
+
+The command to run it:
+  COCCI=./scripts/coccinelle/kthread_race.cocci make coccicheck MODE=context
+It shows the code context around in a form of diff.
+
+This rule found 195 matches. Not that much!
+
+> But of course, there are places where this kind of behavior is
+> correct; so such a script wouldn't just return report code, just code
+> that could use a bit more scrutiny than normal. 
+
+I've spent some time looking through the results.
+Currently I see 3 types of cases.
+
+
+1. Cases that look legit: a mutex is unlocked for some waiting or sleeping.
+
+Example:
+./fs/io_uring.c:7908:2-14: see mutex_unlock(& ctx -> uring_lock) here
+./fs/io_uring.c:7910:2-12: see mutex_lock(& ctx -> uring_lock) here
+
+diff -u -p ./fs/io_uring.c /tmp/nothing/fs/io_uring.c
+--- ./fs/io_uring.c
++++ /tmp/nothing/fs/io_uring.c
+@@ -7905,9 +7905,7 @@ static int __io_uring_register(struct io
+ 		 * to drop the mutex here, since no new references will come in
+ 		 * after we've killed the percpu ref.
+ 		 */
+-		mutex_unlock(&ctx->uring_lock);
+ 		ret = wait_for_completion_interruptible(&ctx->completions[0]);
+-		mutex_lock(&ctx->uring_lock);
+ 		if (ret) {
+ 			percpu_ref_resurrect(&ctx->refs);
+ 			ret = -EINTR;
+
+
+Another example that looks legit:
+./mm/ksm.c:2709:2-14: see mutex_unlock(& ksm_thread_mutex) here
+./mm/ksm.c:2712:2-12: see mutex_lock(& ksm_thread_mutex) here
+
+diff -u -p ./mm/ksm.c /tmp/nothing/mm/ksm.c
+--- ./mm/ksm.c
++++ /tmp/nothing/mm/ksm.c
+@@ -2706,10 +2706,8 @@ void ksm_migrate_page(struct page *newpa
+ static void wait_while_offlining(void)
+ {
+ 	while (ksm_run & KSM_RUN_OFFLINE) {
+-		mutex_unlock(&ksm_thread_mutex);
+ 		wait_on_bit(&ksm_run, ilog2(KSM_RUN_OFFLINE),
+ 			    TASK_UNINTERRUPTIBLE);
+-		mutex_lock(&ksm_thread_mutex);
+ 	}
+ }
+
+
+2. Weird cases that look like just avoiding a deadlock.
+
+Example. This mutex is unlocked for a while by an interrupt handler:
+./sound/pci/pcxhr/pcxhr_core.c:1210:3-15: see mutex_unlock(& mgr -> lock) here
+./sound/pci/pcxhr/pcxhr_core.c:1212:3-13: see mutex_lock(& mgr -> lock) here
+
+diff -u -p ./sound/pci/pcxhr/pcxhr_core.c /tmp/nothing/sound/pci/pcxhr/pcxhr_core.c
+--- ./sound/pci/pcxhr/pcxhr_core.c
++++ /tmp/nothing/sound/pci/pcxhr/pcxhr_core.c
+@@ -1207,9 +1207,7 @@ static void pcxhr_update_timer_pos(struc
+ 		}
+
+ 		if (elapsed) {
+-			mutex_unlock(&mgr->lock);
+ 			snd_pcm_period_elapsed(stream->substream);
+-			mutex_lock(&mgr->lock);
+ 		}
+ 	}
+ }
+
+Another weird example. Looks a bit similar to V4L2 bugs.
+
+./drivers/net/wireless/broadcom/b43/main.c:4334:1-13: see mutex_unlock(& wl ->
+mutex) here
+./drivers/net/wireless/broadcom/b43/main.c:4338:1-11: see mutex_lock(& wl ->
+mutex) here
+
+diff -u -p ./drivers/net/wireless/broadcom/b43/main.c
+/tmp/nothing/drivers/net/wireless/broadcom/b43/main.c
+--- ./drivers/net/wireless/broadcom/b43/main.c
++++ /tmp/nothing/drivers/net/wireless/broadcom/b43/main.c
+@@ -4331,11 +4331,9 @@ redo:
+ 		return dev;
+
+ 	/* Cancel work. Unlock to avoid deadlocks. */
+-	mutex_unlock(&wl->mutex);
+ 	cancel_delayed_work_sync(&dev->periodic_work);
+ 	cancel_work_sync(&wl->tx_work);
+ 	b43_leds_stop(dev);
+-	mutex_lock(&wl->mutex);
+ 	dev = wl->current_dev;
+ 	if (!dev || b43_status(dev) < B43_STAT_STARTED) {
+ 		/* Whoops, aliens ate up the device while we were unlocked. */
+
+
+3. False positive cases.
+The pointer to mutex changes between unlocking and locking.
+
+Example:
+./fs/ceph/caps.c:2103:4-16: see mutex_unlock(& session -> s_mutex) here
+./fs/ceph/caps.c:2105:3-13: see mutex_lock(& session -> s_mutex) here
+
+@@ -2100,9 +2094,7 @@ retry_locked:
+ 		if (session != cap->session) {
+ 			spin_unlock(&ci->i_ceph_lock);
+ 			if (session)
+-				mutex_unlock(&session->s_mutex);
+ 			session = cap->session;
+-			mutex_lock(&session->s_mutex);
+ 			goto retry;
+ 		}
+ 		if (cap->session->s_state < CEPH_MDS_SESSION_OPEN) {
+
+
+I would be grateful for your ideas and feedback.
 Alexander
