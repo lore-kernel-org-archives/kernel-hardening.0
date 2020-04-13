@@ -1,23 +1,20 @@
-Return-Path: <SRS0=Owfs=53=lists.openwall.com=kernel-hardening-return-18492-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=HdaC=55=lists.openwall.com=kernel-hardening-return-18493-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9BDBBC2BA19
-	for <kernel-hardening@archiver.kernel.org>; Sat, 11 Apr 2020 05:07:45 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D850FC2BB85
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 01:23:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AEA2E2078E
-	for <kernel-hardening@archiver.kernel.org>; Sat, 11 Apr 2020 05:07:44 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=web.de header.i=@web.de header.b="RNbzafop"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AEA2E2078E
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=web.de
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18492-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26151 invoked by uid 550); 11 Apr 2020 05:07:36 -0000
+	by mail.kernel.org (Postfix) with SMTP id 3F24D206C3
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 01:23:58 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3F24D206C3
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18493-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24378 invoked by uid 550); 13 Apr 2020 01:23:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,110 +22,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26124 invoked from network); 11 Apr 2020 05:07:35 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=web.de;
-	s=dbaedf251592; t=1586581641;
-	bh=m5zJFa7Bi3ynYbgurDdzJK27QXRH5oRmlHOh9o5EvCo=;
-	h=X-UI-Sender-Class:Subject:To:Cc:References:From:Date:In-Reply-To;
-	b=RNbzafopABPYm3t0Ym0PSuUcQIj0+pYSu/oFqnH5z/OSkxlgZQfpo93JUL5kIFQkl
-	 9tskA79P4m5QDsUgicmBxLsextRQ9MS7B2CYNpaVRbRNU7t1rwPpqWwAbEEuCi3mtI
-	 IHEd+2VO/OwJlGH3zfH6qhVtJlny6CG2B/lZ7Nec=
-X-UI-Sender-Class: c548c8c5-30a9-4db5-a2e7-cb6cb037b8f9
-Subject: Re: Coccinelle rule for CVE-2019-18683
-To: Alexander Popov <alex.popov@linux.com>, cocci@systeme.lip6.fr,
- kernel-hardening@lists.openwall.com
-Cc: Jann Horn <jannh@google.com>, Julia Lawall <Julia.Lawall@lip6.fr>,
- Gilles Muller <Gilles.Muller@lip6.fr>, Nicolas Palix
- <nicolas.palix@imag.fr>, Michal Marek <michal.lkml@markovi.net>,
- Kees Cook <keescook@chromium.org>, Hans Verkuil <hverkuil@xs4all.nl>,
- Mauro Carvalho Chehab <mchehab@kernel.org>, linux-media@vger.kernel.org,
- LKML <linux-kernel@vger.kernel.org>
-References: <fff664e9-06c9-d2fb-738f-e8e591e09569@linux.com>
- <CAG48ez09gn1Abv-EwwW5Rgjqo2CQsbq6tjDeTfpr_FnJC7f5zA@mail.gmail.com>
- <e41fc912-0a4f-70c3-b924-50126f0f185a@linux.com>
- <b5e4ce83-f053-0121-dc3e-b3d6ddd87d5b@linux.com>
-From: Markus Elfring <Markus.Elfring@web.de>
-Autocrypt: addr=Markus.Elfring@web.de; prefer-encrypt=mutual; keydata=
- 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 FEE=
-Message-ID: <80df111f-8d34-f3c4-add5-4d041410b5a5@web.de>
-Date: Sat, 11 Apr 2020 07:07:13 +0200
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.6.0
+Received: (qmail 24338 invoked from network); 13 Apr 2020 01:23:47 -0000
+Subject: Re: [PATCH v5 0/6] implement KASLR for powerpc/fsl_booke/64
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>,
+	<oss@buserror.net>
+CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>,
+	<dja@axtens.net>
+References: <20200330022023.3691-1-yanaijie@huawei.com>
+From: Jason Yan <yanaijie@huawei.com>
+Message-ID: <433bb006-aa45-524d-c57e-79657d01c685@huawei.com>
+Date: Mon, 13 Apr 2020 09:23:23 +0800
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
+ Thunderbird/68.4.2
 MIME-Version: 1.0
-In-Reply-To: <b5e4ce83-f053-0121-dc3e-b3d6ddd87d5b@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-X-Provags-ID: V03:K1:fV8VYb9bVeNqbgNh5V7KGljYo4S+CmY5yI6o7W0S/ie9K+1xurC
- vg6LaGfW6klTEd1XafY+ZJJmiLFwxFqBwvxagiFAB1TL5bdeztsKfodtAzUbP6gCFN9P1A2
- m0k6zIQGCPiD3LQcJunxl6sNVeiJw4Hm834qttY/yoHagOffmjdc4P7w+L8mWfafgL3yb+9
- uB3L+9V9CNaO/hLUv/V5Q==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:/MoKL/HD388=:piIw0Y/Q5B8sqfV39W15Mu
- 7B0xDk5h7iGk14QPo3/DSpkeu1Wg6+EXgQwRqAkrB+lTHxyZW2m8VLOalFwuPcsWr2DBflPrb
- Ws4c6Ch5Vu+00UyizB8okYvRFj6AEnuXLpe0rhIQk3x2YVbpsTtuSOFwcCYgrsmY2H/DITjDX
- lN5EuuzBZPX4FqWDA4aZpPvfzhT8O5rD9MY+83gTh7z2O+bd2NJSl+eT/9QN8B+A7zf0DO+an
- WGkp0ConzXXHCgIDPzn8gj2a9EGtyltThQ3gzSSz89ZL6KVPl1oYhjUQ5zLQKrchvZzFtQht3
- l3iq96r/LGtZHeDcs6vYfZB1l+/QQRHB4WObkJU4gGOUureOnaLnlGVEjzSPXD51uNXGLhExs
- Cj8tlWZ59ipkw+9kRSZT6jTSXY8h2OE2fs4mT1nyxqupfZjROYFM1kLcCJVKw/QaziIUJv70m
- Vi19eqRZyDWZclOzVze/wRp3gk/gm8UCLPWeX1iU6TrBrV/6YG+4MjW0X4A4y0AqVJTzljfXm
- VHYqP4I6bbgtD4YlBrxglmRPYg7xdT8+mzMexxqEYd/ZWw96PFbLCtcf/fGnK8vx5UBqmQ+h2
- EfZ5hsdcPp+ooD64vb/Coud7UieeKB60cDq+qry0gdaxP3pK86y2CgLh5bXyG2FM4dkRpPlOd
- VGuj7x4nb0Zjssjv3R0UdtEoSy+1nQV9ECQSlrJlX75K50C0Q44H7nm0hXlXutUkZQJcz32ML
- x8pb/Xpt3mBP5l9Ue/8eq4Uo9TwkG2mm+GNcNXdSjUVHjkVqkdlN6yvLHPCRP/3lIAkUHPhdM
- cfXdCpRWbovtqVFJoCRCQTUIZyhJagvIU83UfEWFrXKEuO0zBLmYldXxDmbyLXJKOwww7CssP
- katVIDlphyYGd7FP4uM72xf+cvP8dGLiRKLBXMS/5YEOV1QRo5qyzdBC+Sz4UF5IZkA0F8tT6
- BeitJeO2lFoALjtt4tNfW8gcnWSbRdWP1Y7n6C+N3Ap2KRCZ/5CqWfIFWAeVdsR/EFgpGhwND
- P8g6ACocqJhXT1hTT17UhyaL19yQTBbBfeZcp6dUEYEWu1DZOK4PEk/L8GQdSxbSe/+3KfhIU
- 07zwJSsgRQTgxlKhFOW/L0GzSte/0t/P7GP+GQfq39FdcDxHMQSniH3f9H6pu4xSh/QR2nXJB
- HyI5PCdORvYVZlgdQXGfP5wMLtA9fEsa2h1rBzRsaqRwselDCBOLgaVTqFnco4oJnjeQODjyq
- g5TEs6Pr7Tiz8wgpz
+In-Reply-To: <20200330022023.3691-1-yanaijie@huawei.com>
+Content-Type: text/plain; charset="gbk"; format=flowed
+Content-Transfer-Encoding: 8bit
+X-Originating-IP: [10.173.221.195]
+X-CFilter-Loop: Reflected
 
-> Analysing each matching case would take a lot of time.
+ping...
 
-How many efforts would you like to invest in adjusting the situation?
+ÔÚ 2020/3/30 10:20, Jason Yan Ð´µÀ:
+> This is a try to implement KASLR for Freescale BookE64 which is based on
+> my earlier implementation for Freescale BookE32:
+> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718&state=*
+> 
+> The implementation for Freescale BookE64 is similar as BookE32. One
+> difference is that Freescale BookE64 set up a TLB mapping of 1G during
+> booting. Another difference is that ppc64 needs the kernel to be
+> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
+> it 64K-aligned. This can save some code to creat another TLB map at
+> early boot. The disadvantage is that we only have about 1G/64K = 16384
+> slots to put the kernel in.
+> 
+>      KERNELBASE
+> 
+>            64K                     |--> kernel <--|
+>             |                      |              |
+>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
+>          |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
+>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
+>          |                         |                        1G
+>          |----->   offset    <-----|
+> 
+>                                kernstart_virt_addr
+> 
+> I'm not sure if the slot numbers is enough or the design has any
+> defects. If you have some better ideas, I would be happy to hear that.
+> 
+> Thank you all.
+> 
+> v4->v5:
+>    Fix "-Werror=maybe-uninitialized" compile error.
+>    Fix typo "similar as" -> "similar to".
+> v3->v4:
+>    Do not define __kaslr_offset as a fixed symbol. Reference __run_at_load and
+>      __kaslr_offset by symbol instead of magic offsets.
+>    Use IS_ENABLED(CONFIG_PPC32) instead of #ifdef CONFIG_PPC32.
+>    Change kaslr-booke32 to kaslr-booke in index.rst
+>    Switch some instructions to 64-bit.
+> v2->v3:
+>    Fix build error when KASLR is disabled.
+> v1->v2:
+>    Add __kaslr_offset for the secondary cpu boot up.
+> 
+> Jason Yan (6):
+>    powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and
+>      kaslr_early_init()
+>    powerpc/fsl_booke/64: introduce reloc_kernel_entry() helper
+>    powerpc/fsl_booke/64: implement KASLR for fsl_booke64
+>    powerpc/fsl_booke/64: do not clear the BSS for the second pass
+>    powerpc/fsl_booke/64: clear the original kernel if randomized
+>    powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst
+>      and add 64bit part
+> 
+>   Documentation/powerpc/index.rst               |  2 +-
+>   .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 ++++++-
+>   arch/powerpc/Kconfig                          |  2 +-
+>   arch/powerpc/kernel/exceptions-64e.S          | 23 +++++
+>   arch/powerpc/kernel/head_64.S                 | 13 +++
+>   arch/powerpc/kernel/setup_64.c                |  3 +
+>   arch/powerpc/mm/mmu_decl.h                    | 23 +++--
+>   arch/powerpc/mm/nohash/kaslr_booke.c          | 91 +++++++++++++------
+>   8 files changed, 147 insertions(+), 45 deletions(-)
+>   rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
+> 
 
-Will any more development possibilities picked up to reduce the presentation
-of false positives by the mentioned source code analysis approach considerably?
-
-Regards,
-Markus
