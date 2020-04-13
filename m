@@ -1,20 +1,23 @@
-Return-Path: <SRS0=HdaC=55=lists.openwall.com=kernel-hardening-return-18493-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=7JU/=55=lists.openwall.com=kernel-hardening-return-18494-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D850FC2BB85
-	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 01:23:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8BD08C2BA19
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:00:16 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3F24D206C3
-	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 01:23:58 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3F24D206C3
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18493-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24378 invoked by uid 550); 13 Apr 2020 01:23:48 -0000
+	by mail.kernel.org (Postfix) with SMTP id CE0D62072D
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:00:15 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ll9hdqjW"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CE0D62072D
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18494-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19936 invoked by uid 550); 13 Apr 2020 15:00:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,93 +25,100 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24338 invoked from network); 13 Apr 2020 01:23:47 -0000
-Subject: Re: [PATCH v5 0/6] implement KASLR for powerpc/fsl_booke/64
-To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
-	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
-	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
-	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>,
-	<oss@buserror.net>
-CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>,
-	<dja@axtens.net>
-References: <20200330022023.3691-1-yanaijie@huawei.com>
-From: Jason Yan <yanaijie@huawei.com>
-Message-ID: <433bb006-aa45-524d-c57e-79657d01c685@huawei.com>
-Date: Mon, 13 Apr 2020 09:23:23 +0800
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
- Thunderbird/68.4.2
-MIME-Version: 1.0
-In-Reply-To: <20200330022023.3691-1-yanaijie@huawei.com>
-Content-Type: text/plain; charset="gbk"; format=flowed
-Content-Transfer-Encoding: 8bit
-X-Originating-IP: [10.173.221.195]
-X-CFilter-Loop: Reflected
+Received: (qmail 19901 invoked from network); 13 Apr 2020 15:00:04 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=from:to:cc:subject:date:message-id:status:lines;
+        bh=rUizTQPX2nyMPOOecf8xS9LwtaSU+2YXL7nj+p7VS8g=;
+        b=ll9hdqjWbsIqTIZoTjDBIexMuAefKH1goU0yjr5pE8K27zrpc7uQ2kMUDiSbeZSZMB
+         2+kul45mpVoyD6viIRIm04cVaW7rX7fQa6YSJ+1L8JIVD9Qg4p4rgMa5vlQk6d0kwDB4
+         mBz8blnaRY/H+9N86XV4gehhxKFcrM3af7lI2KWUnnmWfEjcTPBW3N4AzYSvLHCL6hXR
+         QiThkemY/nR9uOlMhgE499lCtGmyuGVy2j2SFnaNHYIuIr4ozd3XIeaMQ8Hp6hsxGd1k
+         DZ51irHRm+/iyKbtx6UHGCMgpOdtA/bVoCVFu+IzkZj1vZxRoRL788uFpfEetySebZl1
+         Gvhg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:status:lines;
+        bh=rUizTQPX2nyMPOOecf8xS9LwtaSU+2YXL7nj+p7VS8g=;
+        b=QB+95HubTXuKhOAzN1fWIwNS4ZEMijJHsXukdTuG4XatPW0BiYgwTqCqDR/TiY+jRe
+         VJJ0B0JBNbnnJlKeVWJR7PMFcUe6WobJ2kcL4fDY+gEqYuw+zyGCjMYbj0l69Q0JrgSS
+         Uewew/OwIxBSVVl7wZmWoaN/oY8HZNoOoXNL9GCQTML46ADbarMfLGN4bwNUudsXOakq
+         lQeg92o4PKNHfggB30RlEGEbtKQ6tcv2c6Sn4OZ1Tz2RwFUEF3dY+y9J7yiVf7JYhswZ
+         76F/ckLz9f/6hOXNJKTvtaLFwVBalcnTfMhnAukwUfRlV1t3Fa1DqTjfEdpCaEsgkfql
+         67Ig==
+X-Gm-Message-State: AGi0Pub4nbsaztbNOBz+k4gcfPe/q59Mwnq0HuLpCIOm2dd6qHgJsgkY
+	lPt44KY5u/EkDGv+brd1G6s=
+X-Google-Smtp-Source: APiQypIsvT3FLNMWUC3842q7RcIeN/NaRmxxxOBw0yw1tqx21lKXtk4hvT0Xw/3itjEpN7toO+PpmA==
+X-Received: by 2002:adf:e403:: with SMTP id g3mr18361291wrm.121.1586789992578;
+        Mon, 13 Apr 2020 07:59:52 -0700 (PDT)
+From: Lev Olshvang <levonshe@gmail.com>
+To: keescook@chromium.orh
+Cc: kernel-hardening@lists.openwall.com,
+	Lev Olshvang <levonshe@gmail.com>
+Subject: [PATCH v1 0/1] hardening : prevent write to proces's read-only pages
+Date: Mon, 13 Apr 2020 17:59:37 +0300
+Message-Id: <20200413145942.27686-1-levonshe@gmail.com>
+X-Mailer: git-send-email 2.17.1
 
-ping...
+v2 --> v3
+	Split patch to architecture independ part and separate patches
+	for architectures that have arch_vma_access_permitted() handler.
+	I tested it only on arm and x86
+v1 --> v2
+	I sent empty v1 patch, just resending
+v0 --> v1
+---
+	Added sysctl_forbid_write_ro_mem to control whether to allow write
+    or deny. (Advised by Kees Cook, KSPP issue 37)
+    It has values range [0-2] and it gets the initial value from
+    CONFIG_PROTECT_READONLY_USER_MEMORY (defaulted to 0, so it cant break)
+    Setting it to 0 disables write checks.
+    Setting it to 1 deny writes from other processes.
+    Setting it to 2 deny writes from any processes including itself
+----
+v0
+----
 
-ÔÚ 2020/3/30 10:20, Jason Yan Ð´µÀ:
-> This is a try to implement KASLR for Freescale BookE64 which is based on
-> my earlier implementation for Freescale BookE32:
-> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718&state=*
-> 
-> The implementation for Freescale BookE64 is similar as BookE32. One
-> difference is that Freescale BookE64 set up a TLB mapping of 1G during
-> booting. Another difference is that ppc64 needs the kernel to be
-> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
-> it 64K-aligned. This can save some code to creat another TLB map at
-> early boot. The disadvantage is that we only have about 1G/64K = 16384
-> slots to put the kernel in.
-> 
->      KERNELBASE
-> 
->            64K                     |--> kernel <--|
->             |                      |              |
->          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->          |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
->          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
->          |                         |                        1G
->          |----->   offset    <-----|
-> 
->                                kernstart_virt_addr
-> 
-> I'm not sure if the slot numbers is enough or the design has any
-> defects. If you have some better ideas, I would be happy to hear that.
-> 
-> Thank you all.
-> 
-> v4->v5:
->    Fix "-Werror=maybe-uninitialized" compile error.
->    Fix typo "similar as" -> "similar to".
-> v3->v4:
->    Do not define __kaslr_offset as a fixed symbol. Reference __run_at_load and
->      __kaslr_offset by symbol instead of magic offsets.
->    Use IS_ENABLED(CONFIG_PPC32) instead of #ifdef CONFIG_PPC32.
->    Change kaslr-booke32 to kaslr-booke in index.rst
->    Switch some instructions to 64-bit.
-> v2->v3:
->    Fix build error when KASLR is disabled.
-> v1->v2:
->    Add __kaslr_offset for the secondary cpu boot up.
-> 
-> Jason Yan (6):
->    powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and
->      kaslr_early_init()
->    powerpc/fsl_booke/64: introduce reloc_kernel_entry() helper
->    powerpc/fsl_booke/64: implement KASLR for fsl_booke64
->    powerpc/fsl_booke/64: do not clear the BSS for the second pass
->    powerpc/fsl_booke/64: clear the original kernel if randomized
->    powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst
->      and add 64bit part
-> 
->   Documentation/powerpc/index.rst               |  2 +-
->   .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 ++++++-
->   arch/powerpc/Kconfig                          |  2 +-
->   arch/powerpc/kernel/exceptions-64e.S          | 23 +++++
->   arch/powerpc/kernel/head_64.S                 | 13 +++
->   arch/powerpc/kernel/setup_64.c                |  3 +
->   arch/powerpc/mm/mmu_decl.h                    | 23 +++--
->   arch/powerpc/mm/nohash/kaslr_booke.c          | 91 +++++++++++++------
->   8 files changed, 147 insertions(+), 45 deletions(-)
->   rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
-> 
+The purpose of this patch is produce hardened kernel for Embedded
+or Production systems.
+This patch shouild close issue 37 opened by Kees Cook in KSPP project
+
+Typically debuggers, such as gdb, write to read-only code [text]
+sections of target process.(ptrace)
+This kind of page protectiion violation raises minor page fault, but
+kernel's fault handler allows it by default.
+This is clearly attack surface for adversary.
+
+The proposed kernel hardening configuration option checks the type of
+protection of the foreign vma and blocks writes to read only vma.
+
+When enabled, it will stop attacks modifying code or jump tables, etc.
+
+Code of arch_vma_access_permitted() function was extended to
+check foreign vma flags.
+
+Tested on x86_64 and ARM(QEMU) with dd command which writes to
+/proc/PID/mem in r--p or r--xp of vma area addresses range
+
+dd reports IO failure when tries to write to adress taken from
+from /proc/PID/maps (PLT or code section)
+
+Lev Olshvang (1):
+  hardening: Do not allow writes to read-only process memory
+
+ arch/powerpc/include/asm/mmu_context.h   | 16 ++++++------
+ arch/powerpc/mm/book3s64/pkeys.c         |  8 +++---
+ arch/um/include/asm/mmu_context.h        | 13 +++++-----
+ arch/unicore32/include/asm/mmu_context.h | 13 +++++-----
+ arch/x86/include/asm/mmu_context.h       |  9 ++++---
+ arch/x86/mm/fault.c                      |  2 +-
+ include/asm-generic/mm_hooks.h           | 12 ++++-----
+ include/linux/mm.h                       | 20 ++++++++++++++-
+ kernel/sysctl.c                          | 31 ++++++++++++++++--------
+ mm/util.c                                |  2 ++
+ security/Kconfig                         | 17 +++++++++----
+ 11 files changed, 93 insertions(+), 50 deletions(-)
+
+--
+2.17.1
 
