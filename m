@@ -1,4 +1,4 @@
-Return-Path: <SRS0=7JU/=55=lists.openwall.com=kernel-hardening-return-18494-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ahfE=55=lists.openwall.com=kernel-hardening-return-18495-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-3.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
 	USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8BD08C2BA19
-	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:00:16 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7CD02C2BA19
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:32:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CE0D62072D
-	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:00:15 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C34442072C
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:32:49 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ll9hdqjW"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CE0D62072D
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="LEpdUCde"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C34442072C
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18494-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19936 invoked by uid 550); 13 Apr 2020 15:00:04 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18495-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17858 invoked by uid 550); 13 Apr 2020 15:32:40 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,39 +25,39 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19901 invoked from network); 13 Apr 2020 15:00:04 -0000
+Received: (qmail 17826 invoked from network); 13 Apr 2020 15:32:40 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
-        h=from:to:cc:subject:date:message-id:status:lines;
-        bh=rUizTQPX2nyMPOOecf8xS9LwtaSU+2YXL7nj+p7VS8g=;
-        b=ll9hdqjWbsIqTIZoTjDBIexMuAefKH1goU0yjr5pE8K27zrpc7uQ2kMUDiSbeZSZMB
-         2+kul45mpVoyD6viIRIm04cVaW7rX7fQa6YSJ+1L8JIVD9Qg4p4rgMa5vlQk6d0kwDB4
-         mBz8blnaRY/H+9N86XV4gehhxKFcrM3af7lI2KWUnnmWfEjcTPBW3N4AzYSvLHCL6hXR
-         QiThkemY/nR9uOlMhgE499lCtGmyuGVy2j2SFnaNHYIuIr4ozd3XIeaMQ8Hp6hsxGd1k
-         DZ51irHRm+/iyKbtx6UHGCMgpOdtA/bVoCVFu+IzkZj1vZxRoRL788uFpfEetySebZl1
-         Gvhg==
+        h=from:to:cc:subject:date:message-id;
+        bh=w/t6B0ThoL3M1gLD5PipnJv8fPikg30LLF2tcIAiJd8=;
+        b=LEpdUCdevt+hkKb5wKAydWfvAvZvctEjJ8f56A6ciIBO6vZhxBh9hEq4WIF+hPgZFh
+         rE29kklXB5R8iH62PlG47UPvp1uU6BDiA/63mzS+hRemW/fsApz+7PxdkIpEt7TsvPlW
+         JIbAjlxnhC0RgbMHmrN0EinMzhuQGtBjk3xv1S3xKDJgfL4tPvBfOcLelSsdX2ID1pKp
+         UmG8QVomYmz1sx+gmf1z9kjlMbtb9NqzweHdE5ryCTrobvHeEeoIPGeX8JRhIJsVJzpW
+         NAkWKOPqKyLjWm9IKnoclIWTjTK4O9GralXqAQ36lpnXzVU7f9U4wXYQtwATzNWCXtf9
+         M/kw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:status:lines;
-        bh=rUizTQPX2nyMPOOecf8xS9LwtaSU+2YXL7nj+p7VS8g=;
-        b=QB+95HubTXuKhOAzN1fWIwNS4ZEMijJHsXukdTuG4XatPW0BiYgwTqCqDR/TiY+jRe
-         VJJ0B0JBNbnnJlKeVWJR7PMFcUe6WobJ2kcL4fDY+gEqYuw+zyGCjMYbj0l69Q0JrgSS
-         Uewew/OwIxBSVVl7wZmWoaN/oY8HZNoOoXNL9GCQTML46ADbarMfLGN4bwNUudsXOakq
-         lQeg92o4PKNHfggB30RlEGEbtKQ6tcv2c6Sn4OZ1Tz2RwFUEF3dY+y9J7yiVf7JYhswZ
-         76F/ckLz9f/6hOXNJKTvtaLFwVBalcnTfMhnAukwUfRlV1t3Fa1DqTjfEdpCaEsgkfql
-         67Ig==
-X-Gm-Message-State: AGi0Pub4nbsaztbNOBz+k4gcfPe/q59Mwnq0HuLpCIOm2dd6qHgJsgkY
-	lPt44KY5u/EkDGv+brd1G6s=
-X-Google-Smtp-Source: APiQypIsvT3FLNMWUC3842q7RcIeN/NaRmxxxOBw0yw1tqx21lKXtk4hvT0Xw/3itjEpN7toO+PpmA==
-X-Received: by 2002:adf:e403:: with SMTP id g3mr18361291wrm.121.1586789992578;
-        Mon, 13 Apr 2020 07:59:52 -0700 (PDT)
+        h=x-gm-message-state:from:to:cc:subject:date:message-id;
+        bh=w/t6B0ThoL3M1gLD5PipnJv8fPikg30LLF2tcIAiJd8=;
+        b=uKZhFOCZ5GEp0nxud55jVaJEG13fUVB/38NvmlBNE6guV/oAYgRfP1R7Vod9nPwxnl
+         bIOYoOKbaUvSrHmokDE1wyIieSewLyHGIq4WWPAEJoQ4eQCGoR3nfYBA6Yp1Hi2lwCIJ
+         nxdpYpVPawh/BDqRd1tebQBldlmGoRsfe9OyycFtMYn3FLorQ18KCq11NHCGNG65uOR3
+         BqUknQaqsLs520nIUY9wS7GjpHN9i5YNyN2wNtsehvGFrlu+ty+t2Sp7tnQojfFRCQl3
+         SKqSw1i9Av3iSEExLWSVZLndAVQOsmQwTAr9yIV2cmtObZ8xIL8YDCFw0OMDk7i8hCib
+         8gCw==
+X-Gm-Message-State: AGi0PubMCz2urXulrix6aGKAUXRI24Tk8HBg9Nvan7XnLu1uLjrKP1uX
+	JVGNMRg8yhSNOeyW1RiYchm7FSOwFYU=
+X-Google-Smtp-Source: APiQypJW5u9KYjdkBBwrKYGb9YGmIWMCVSKEzjw6lL0oifGmJ4yklna0kl15MfiGboMY81jRosCalQ==
+X-Received: by 2002:a1c:6402:: with SMTP id y2mr11593649wmb.116.1586791948901;
+        Mon, 13 Apr 2020 08:32:28 -0700 (PDT)
 From: Lev Olshvang <levonshe@gmail.com>
 To: keescook@chromium.orh
 Cc: kernel-hardening@lists.openwall.com,
 	Lev Olshvang <levonshe@gmail.com>
-Subject: [PATCH v1 0/1] hardening : prevent write to proces's read-only pages
-Date: Mon, 13 Apr 2020 17:59:37 +0300
-Message-Id: <20200413145942.27686-1-levonshe@gmail.com>
+Subject: [PATCH v3 0/5] hardening : prevent write to proces's read-only pages
+Date: Mon, 13 Apr 2020 18:32:06 +0300
+Message-Id: <20200413153211.29876-1-levonshe@gmail.com>
 X-Mailer: git-send-email 2.17.1
 
 v2 --> v3
@@ -103,22 +103,24 @@ Tested on x86_64 and ARM(QEMU) with dd command which writes to
 dd reports IO failure when tries to write to adress taken from
 from /proc/PID/maps (PLT or code section)
 
-Lev Olshvang (1):
-  hardening: Do not allow writes to read-only process memory
 
- arch/powerpc/include/asm/mmu_context.h   | 16 ++++++------
- arch/powerpc/mm/book3s64/pkeys.c         |  8 +++---
- arch/um/include/asm/mmu_context.h        | 13 +++++-----
- arch/unicore32/include/asm/mmu_context.h | 13 +++++-----
- arch/x86/include/asm/mmu_context.h       |  9 ++++---
- arch/x86/mm/fault.c                      |  2 +-
- include/asm-generic/mm_hooks.h           | 12 ++++-----
- include/linux/mm.h                       | 20 ++++++++++++++-
- kernel/sysctl.c                          | 31 ++++++++++++++++--------
- mm/util.c                                |  2 ++
- security/Kconfig                         | 17 +++++++++----
- 11 files changed, 93 insertions(+), 50 deletions(-)
+Lev Olshvang (5):
+  Hardening x86: Forbid writes to read-only memory pages of a process
+  Hardening PowerPC: Forbid writes to read-only memory pages of a
+    process
+  Hardening um: Forbid writes to read-only memory pages of a process
+  Hardening unicore32: Forbid writes to read-only memory pages of a
+    process
+  Hardening : PPC book3s64: Forbid writes to read-only memory pages of a
+    process
 
---
+ arch/powerpc/include/asm/mmu_context.h   | 9 +--------
+ arch/powerpc/mm/book3s64/pkeys.c         | 5 -----
+ arch/um/include/asm/mmu_context.h        | 8 +-------
+ arch/unicore32/include/asm/mmu_context.h | 7 +------
+ arch/x86/include/asm/mmu_context.h       | 8 +-------
+ 5 files changed, 4 insertions(+), 33 deletions(-)
+
+-- 
 2.17.1
 
