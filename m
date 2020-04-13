@@ -1,24 +1,22 @@
-Return-Path: <SRS0=rHzF=55=lists.openwall.com=kernel-hardening-return-18500-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=bVYD=55=lists.openwall.com=kernel-hardening-return-18501-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8DE5EC2BA19
-	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:33:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D2CEFC2BA19
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 17:14:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CD25C2072C
-	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 15:33:40 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 2E9DC2063A
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Apr 2020 17:14:07 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="K3qw7GFb"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CD25C2072C
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18500-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19636 invoked by uid 550); 13 Apr 2020 15:32:46 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="AGrrrp1Q"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2E9DC2063A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18501-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21571 invoked by uid 550); 13 Apr 2020 17:13:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,65 +24,121 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19507 invoked from network); 13 Apr 2020 15:32:45 -0000
+Received: (qmail 21535 invoked from network); 13 Apr 2020 17:13:58 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=xn7OprT8wPCkg7aj43eoXaV9EgIHAs0o3lL8DycAkbE=;
-        b=K3qw7GFby1PNOvs2S59LnmpZ7DnQelyRvUSUMvUWosklORSxFsEvlZocFPQvSRJbXk
-         ucXfGi1d4M42FkTKa64xWRe2ETwgQNowkfX8c6yXT2eyaImcb1Ufcqy4Re5S4LthntZ9
-         rGnKCiOM6k6Vlnw/kOUA3h2RE3rpKK5Wlpo94saOWsz7hyN9JRPVko0d6FZbUFHjZRUd
-         lsz792xADhUD/euDASowFpD9nT/ldRLs0UXIOTNsa1dfS0zgBdvEfdilxwNJovDCykCh
-         x2J8dp2cmDUv1VK3h/nSbuPgMKvrjt7NR4EkILppd5HMbfeYHaArPFQrCCJYApNTxLU5
-         oEbg==
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=pvznC/k/6yS5kBsWNllr1DX6BjWvfpkCIMM35l/endc=;
+        b=AGrrrp1Qa7iMNFBZwsMBgsRWlZape0tqPOrNXX/RiDZqcs64Rq5KDuK9F0d9PWppXt
+         7veJuIi1nPGacFf/p5tT0yDzZa48REQ9TXyTAsQr+OrlBZPX8hnBFrlTAS7+hdbg1gSg
+         PzqMxor7ASl2xhb1lLViF5tCeHStzrPev93gM=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references;
-        bh=xn7OprT8wPCkg7aj43eoXaV9EgIHAs0o3lL8DycAkbE=;
-        b=eRzE1nkIzmu+ogF7kl/M4D8vBVkfsU9gMNxPHnAo0weqlaqZxwWVgtINC/gYj2Ry49
-         ZGiukpxM83x58GNtLx4wmP1Paq9Tz9I6FmjFP38BsX4JoOfJ4MlyAWD1whGwRVnzJ+Ue
-         xxunOsm9qxLIsYgLQngxi/hGNL6zZgudLDl3iuAFY/8CFGhQvzH10Jr8mwugy4Jh6W7I
-         NfwKelo4DwaDIOjsjx31IgGUQAysXrb6DnUbAbaKPE1p1dJhQ0qihm2tZ7hwQfvp/vM4
-         4hSVv3tuZ18NbRko8IXNMdq4KKWWUem9QsvwGcfWJcyvlHSpk/GZCx45AJZZReny2rE/
-         KSFg==
-X-Gm-Message-State: AGi0PuZKYb9Ai6eAqYqQoZdGeSTCpGUxwmVt/8joxVwqdr6RFfBRo5+n
-	2inD84zYd4l7fC3hpXO3+JI=
-X-Google-Smtp-Source: APiQypIbrOKof9nl/IbdDj+hsJVxERTDX7BiwWanAYrXFk0KSFojMZwUIWGNH2t6sthYtlo+cK3MQA==
-X-Received: by 2002:a1c:dc8b:: with SMTP id t133mr19440396wmg.117.1586791954591;
-        Mon, 13 Apr 2020 08:32:34 -0700 (PDT)
-From: Lev Olshvang <levonshe@gmail.com>
-To: keescook@chromium.orh
-Cc: kernel-hardening@lists.openwall.com,
-	Lev Olshvang <levonshe@gmail.com>
-Subject: [PATCH v3 5/5] Hardening : PPC book3s64: Forbid writes to read-only memory pages of a process
-Date: Mon, 13 Apr 2020 18:32:11 +0300
-Message-Id: <20200413153211.29876-6-levonshe@gmail.com>
-X-Mailer: git-send-email 2.17.1
-In-Reply-To: <20200413153211.29876-1-levonshe@gmail.com>
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=pvznC/k/6yS5kBsWNllr1DX6BjWvfpkCIMM35l/endc=;
+        b=XoYzO8BarawxFOf6Pj4WbW2o1Zs1zeiD+ndlU0y+WG4yHYBlxTQqpxEdr0aDAlKHj5
+         mQLRXOLrdev3zWr1hPmfqkWT/6GDsG5p9F4De+HEpCgZATa8X2I2yxM+2SivwYkmI4JS
+         DX3uEk4PTyN27fE0deFLNUgP+dZnZwrscB8gK/RP9QbkH+S+MlJwCAoaSMhpcnFqyeXx
+         yzrjnVvmSuo3lHcC3PBgsVJCprSkZ9YLdak1moYB5J49+dufSV7+mma4Os9oFM5h+0cl
+         +lyDyv3CEfI9MpWgaKJINIqFSZNegQh/+F14om3dZtjZWcSkQT8OiCjFn4vTPEei/DLJ
+         t/ig==
+X-Gm-Message-State: AGi0PubqFCzfaZQVdjs0npejjzcHirIcCS9gj1nL9t6WrdAzTy2CqaiJ
+	P7yrIm4UbZxuU1mbEgIRlA7nFg==
+X-Google-Smtp-Source: APiQypIwB3pzdHgBzH4xUeheZrgGxUtVgQSaT4JDFg7F3y9sQ8WplYc9SXBwHcEoxZ4MZmiU5Hdf8Q==
+X-Received: by 2002:a17:90a:bf86:: with SMTP id d6mr1046041pjs.180.1586798026348;
+        Mon, 13 Apr 2020 10:13:46 -0700 (PDT)
+Date: Mon, 13 Apr 2020 10:13:43 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Lev Olshvang <levonshe@gmail.com>
+Cc: keescook@chromium.orh, kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH v3 0/5] hardening : prevent write to proces's read-only
+ pages
+Message-ID: <202004131012.23C551D90@keescook>
 References: <20200413153211.29876-1-levonshe@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200413153211.29876-1-levonshe@gmail.com>
 
-Signed-off-by: Lev Olshvang <levonshe@gmail.com>
----
- arch/powerpc/mm/book3s64/pkeys.c | 5 -----
- 1 file changed, 5 deletions(-)
+On Mon, Apr 13, 2020 at 06:32:06PM +0300, Lev Olshvang wrote:
+> v2 --> v3
+> 	Split patch to architecture independ part and separate patches
+> 	for architectures that have arch_vma_access_permitted() handler.
+> 	I tested it only on arm and x86
 
-diff --git a/arch/powerpc/mm/book3s64/pkeys.c b/arch/powerpc/mm/book3s64/pkeys.c
-index 4c537af6ab01..1199fc2bfaec 100644
---- a/arch/powerpc/mm/book3s64/pkeys.c
-+++ b/arch/powerpc/mm/book3s64/pkeys.c
-@@ -384,11 +384,6 @@ bool arch_pte_access_permitted(u64 pte, bool write, bool execute)
- bool arch_vma_access_permitted(struct vm_area_struct *vma, bool write,
- 			       bool execute, bool foreign)
- {
--	if (unlikely(!vma_write_allowed(vma, write, execute, foreign))) {
--		pr_err_once("Error : PID[%d] %s writes to read only memory\n",
--			current->tgid, current->comm);
--		return false;
--	}
- 	if (static_branch_likely(&pkey_disabled))
- 		return true;
- 	/*
+Hi; thanks for the update!
+
+It looks like you sent patches inverted (you're showing the removals,
+not the additions) and are missing the new function that does the test?
+
+Please make sure you're testing the patches you send (rather than your
+local tree). :)
+
+-Kees
+
+
+> v1 --> v2
+> 	I sent empty v1 patch, just resending
+> v0 --> v1
+> ---
+> 	Added sysctl_forbid_write_ro_mem to control whether to allow write
+>     or deny. (Advised by Kees Cook, KSPP issue 37)
+>     It has values range [0-2] and it gets the initial value from
+>     CONFIG_PROTECT_READONLY_USER_MEMORY (defaulted to 0, so it cant break)
+>     Setting it to 0 disables write checks.
+>     Setting it to 1 deny writes from other processes.
+>     Setting it to 2 deny writes from any processes including itself
+> ----
+> v0
+> ----
+> 
+> The purpose of this patch is produce hardened kernel for Embedded
+> or Production systems.
+> This patch shouild close issue 37 opened by Kees Cook in KSPP project
+> 
+> Typically debuggers, such as gdb, write to read-only code [text]
+> sections of target process.(ptrace)
+> This kind of page protectiion violation raises minor page fault, but
+> kernel's fault handler allows it by default.
+> This is clearly attack surface for adversary.
+> 
+> The proposed kernel hardening configuration option checks the type of
+> protection of the foreign vma and blocks writes to read only vma.
+> 
+> When enabled, it will stop attacks modifying code or jump tables, etc.
+> 
+> Code of arch_vma_access_permitted() function was extended to
+> check foreign vma flags.
+> 
+> Tested on x86_64 and ARM(QEMU) with dd command which writes to
+> /proc/PID/mem in r--p or r--xp of vma area addresses range
+> 
+> dd reports IO failure when tries to write to adress taken from
+> from /proc/PID/maps (PLT or code section)
+> 
+> 
+> Lev Olshvang (5):
+>   Hardening x86: Forbid writes to read-only memory pages of a process
+>   Hardening PowerPC: Forbid writes to read-only memory pages of a
+>     process
+>   Hardening um: Forbid writes to read-only memory pages of a process
+>   Hardening unicore32: Forbid writes to read-only memory pages of a
+>     process
+>   Hardening : PPC book3s64: Forbid writes to read-only memory pages of a
+>     process
+> 
+>  arch/powerpc/include/asm/mmu_context.h   | 9 +--------
+>  arch/powerpc/mm/book3s64/pkeys.c         | 5 -----
+>  arch/um/include/asm/mmu_context.h        | 8 +-------
+>  arch/unicore32/include/asm/mmu_context.h | 7 +------
+>  arch/x86/include/asm/mmu_context.h       | 8 +-------
+>  5 files changed, 4 insertions(+), 33 deletions(-)
+> 
+> -- 
+> 2.17.1
+> 
+
 -- 
-2.17.1
-
+Kees Cook
