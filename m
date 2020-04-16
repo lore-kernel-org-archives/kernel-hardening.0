@@ -1,21 +1,20 @@
-Return-Path: <SRS0=b3u1=6A=lists.openwall.com=kernel-hardening-return-18519-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=rWGS=6A=lists.openwall.com=kernel-hardening-return-18521-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.8 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 89600C2BB85
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Apr 2020 10:41:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 00E20C2BB85
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Apr 2020 10:41:44 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6854021D93
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Apr 2020 10:41:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6854021D93
+	by mail.kernel.org (Postfix) with SMTP id 2B5E421D92
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Apr 2020 10:41:42 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2B5E421D92
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18519-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17745 invoked by uid 550); 16 Apr 2020 10:40:39 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18521-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17936 invoked by uid 550); 16 Apr 2020 10:40:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17565 invoked from network); 16 Apr 2020 10:40:38 -0000
+Received: (qmail 17834 invoked from network); 16 Apr 2020 10:40:40 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -48,9 +47,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-kselftest@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
 	x86@kernel.org
-Subject: [PATCH v16 05/10] fs,landlock: Support filesystem access-control
-Date: Thu, 16 Apr 2020 12:39:50 +0200
-Message-Id: <20200416103955.145757-6-mic@digikod.net>
+Subject: [PATCH v16 07/10] arch: Wire up landlock() syscall
+Date: Thu, 16 Apr 2020 12:39:52 +0200
+Message-Id: <20200416103955.145757-8-mic@digikod.net>
 X-Mailer: git-send-email 2.26.1
 In-Reply-To: <20200416103955.145757-1-mic@digikod.net>
 References: <20200416103955.145757-1-mic@digikod.net>
@@ -60,889 +59,233 @@ Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
-Thanks to the Landlock objects and ruleset, it is possible to identify
-inodes according to a process's domain.  To enable an unprivileged
-process to express a file hierarchy, it first needs to open a directory
-(or a file) and pass this file descriptor to the kernel through
-landlock(2).  When checking if a file access request is allowed, we walk
-from the requested dentry to the real root, following the different
-mount layers.  The access to each "tagged" inodes are collected
-according to their rule layer level, and ANDed to create access to the
-requested file hierarchy.  This makes possible to identify a lot of
-files without tagging every inodes nor modifying the filesystem, while
-still following the view and understanding the user has from the
-filesystem.
+Wire up the landlock() system call for all architectures.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Cc: Alexander Viro <viro@zeniv.linux.org.uk>
+Cc: Arnd Bergmann <arnd@arndb.de>
 Cc: James Morris <jmorris@namei.org>
 Cc: Jann Horn <jannh@google.com>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Serge E. Hallyn <serge@hallyn.com>
 ---
 
-Changes since v15:
-* Replace layer_levels and layer_depth with a bitfield of layers: this
-  enables to properly manage superset and subset of access rights,
-  whatever their order in the stack of layers.
-  Cf. https://lore.kernel.org/lkml/e07fe473-1801-01cc-12ae-b3167f95250e@digikod.net/
-* Allow to open pipes and similar special files through /proc/self/fd/.
-* Properly handle internal filesystems such as nsfs: always allow these
-  kind of roots because disconnected path cannot be evaluated.
-* Remove the LANDLOCK_ACCESS_FS_LINK_TO and
-  LANDLOCK_ACCESS_FS_RENAME_{TO,FROM}, but use the
-  LANDLOCK_ACCESS_FS_REMOVE_{FILE,DIR} and LANDLOCK_ACCESS_FS_MAKE_*
-  instead.  Indeed, it is not possible for now (and not really useful)
-  to express the semantic of a source and a destination.
-* Check access rights to remove a directory or a file with rename(2).
-* Forbid reparenting when linking or renaming.  This is needed to easily
-  protect against possible privilege escalation by changing the place of
-  a file or directory in relation to an enforced access policy (from the
-  set of layers).  This will be relaxed in the future.
-* Update hooks to take into account replacement of the object's self and
-  beneath access bitfields with one.  Simplify the code.
-* Check file related access rights.
-* Check d_is_negative() instead of !d_backing_inode() in
-  check_access_path_continue(), and continue the path walk while there
-  is no mapped inode e.g., with rename(2).
-* Check private inode in check_access_path().
-* Optimize get_file_access() when dealing with a directory.
-* Add missing atomic.h .
-
 Changes since v14:
-* Simplify the object, rule and ruleset management at the expense of a
-  less aggressive memory freeing (contributed by Jann Horn, with
-  additional modifications):
-  - Rewrite release_inode() to use inode->sb->s_landlock_inode_refs.
-  - Remove useless checks in landlock_release_inodes(), clean object
-    pointer according to the new struct landlock_object and wait for all
-    iput() to complete.
-  - Rewrite get_inode_object() according to the new struct
-    landlock_object.  If there is a race-condition when cleaning up an
-    object, we retry until the concurrent thread finished the object
-    cleaning.
-  Cf. https://lore.kernel.org/lkml/CAG48ez21bEn0wL1bbmTiiu8j9jP5iEWtHOwz4tURUJ+ki0ydYw@mail.gmail.com/
-* Fix nested domains by implementing a notion of layer level and depth:
-  - Check for matching level ranges when walking through a file path.
-  - Only allow access if every layer granted the access request.
-* Handles files without mount points (e.g. pipes).
-* Hardens path walk by checking inode pointer values.
-* Prefetches d_parent when walking to the root directory.
-* Remove useless inode_alloc_security hook() (suggested by Jann Horn):
-  already initialized by lsm_inode_alloc().
-* Remove the inode_free_security hook.
-* Remove access checks that may be required for FD-only requests:
-  truncate, getattr, lock, chmod, chown, chgrp, ioctl.  This will be
-  handle in a future evolution of Landlock, but right now the goal is to
-  lighten the code to ease review.
-* Constify variables.
-* Move ABI checks into syscall.c .
-* Cosmetic variable renames.
+* Add all architectures.
 
-Changes since v11:
-* Add back, revamp and make a fully working filesystem access-control
-  based on paths and inodes.
-* Remove the eBPF dependency.
-
-Previous changes:
-https://lore.kernel.org/lkml/20190721213116.23476-6-mic@digikod.net/
+Changes since v13:
+* New implementation.
 ---
- MAINTAINERS                |   1 +
- fs/super.c                 |   2 +
- include/linux/fs.h         |   5 +
- include/linux/landlock.h   |  22 ++
- security/landlock/Makefile |   2 +-
- security/landlock/fs.c     | 601 +++++++++++++++++++++++++++++++++++++
- security/landlock/fs.h     |  42 +++
- security/landlock/setup.c  |   6 +
- security/landlock/setup.h  |   2 +
- 9 files changed, 682 insertions(+), 1 deletion(-)
- create mode 100644 include/linux/landlock.h
- create mode 100644 security/landlock/fs.c
- create mode 100644 security/landlock/fs.h
+ arch/alpha/kernel/syscalls/syscall.tbl      | 1 +
+ arch/arm/tools/syscall.tbl                  | 1 +
+ arch/arm64/include/asm/unistd.h             | 2 +-
+ arch/arm64/include/asm/unistd32.h           | 2 ++
+ arch/ia64/kernel/syscalls/syscall.tbl       | 1 +
+ arch/m68k/kernel/syscalls/syscall.tbl       | 1 +
+ arch/microblaze/kernel/syscalls/syscall.tbl | 1 +
+ arch/mips/kernel/syscalls/syscall_n32.tbl   | 1 +
+ arch/mips/kernel/syscalls/syscall_n64.tbl   | 1 +
+ arch/mips/kernel/syscalls/syscall_o32.tbl   | 1 +
+ arch/parisc/kernel/syscalls/syscall.tbl     | 1 +
+ arch/powerpc/kernel/syscalls/syscall.tbl    | 1 +
+ arch/s390/kernel/syscalls/syscall.tbl       | 1 +
+ arch/sh/kernel/syscalls/syscall.tbl         | 1 +
+ arch/sparc/kernel/syscalls/syscall.tbl      | 1 +
+ arch/x86/entry/syscalls/syscall_32.tbl      | 1 +
+ arch/x86/entry/syscalls/syscall_64.tbl      | 1 +
+ arch/xtensa/kernel/syscalls/syscall.tbl     | 1 +
+ include/uapi/asm-generic/unistd.h           | 4 +++-
+ 19 files changed, 22 insertions(+), 2 deletions(-)
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index b8b726a0a0f0..4b58dd195ddd 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -9489,6 +9489,7 @@ L:	linux-security-module@vger.kernel.org
- W:	https://landlock.io
- T:	git https://github.com/landlock-lsm/linux.git
- S:	Supported
-+F:	include/linux/landlock.h
- F:	include/uapi/linux/landlock.h
- F:	security/landlock/
- K:	landlock
-diff --git a/fs/super.c b/fs/super.c
-index cd352530eca9..4ad6a64a1706 100644
---- a/fs/super.c
-+++ b/fs/super.c
-@@ -34,6 +34,7 @@
- #include <linux/cleancache.h>
- #include <linux/fscrypt.h>
- #include <linux/fsnotify.h>
-+#include <linux/landlock.h>
- #include <linux/lockdep.h>
- #include <linux/user_namespace.h>
- #include <linux/fs_context.h>
-@@ -454,6 +455,7 @@ void generic_shutdown_super(struct super_block *sb)
- 		evict_inodes(sb);
- 		/* only nonzero refcount inodes can have marks */
- 		fsnotify_sb_delete(sb);
-+		landlock_release_inodes(sb);
+diff --git a/arch/alpha/kernel/syscalls/syscall.tbl b/arch/alpha/kernel/syscalls/syscall.tbl
+index 36d42da7466a..424f1f7f4ea8 100644
+--- a/arch/alpha/kernel/syscalls/syscall.tbl
++++ b/arch/alpha/kernel/syscalls/syscall.tbl
+@@ -477,3 +477,4 @@
+ # 545 reserved for clone3
+ 547	common	openat2				sys_openat2
+ 548	common	pidfd_getfd			sys_pidfd_getfd
++549	common	landlock			sys_landlock
+diff --git a/arch/arm/tools/syscall.tbl b/arch/arm/tools/syscall.tbl
+index 4d1cf74a2caa..46b49724da4a 100644
+--- a/arch/arm/tools/syscall.tbl
++++ b/arch/arm/tools/syscall.tbl
+@@ -451,3 +451,4 @@
+ 435	common	clone3				sys_clone3
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/arm64/include/asm/unistd.h b/arch/arm64/include/asm/unistd.h
+index 803039d504de..3b859596840d 100644
+--- a/arch/arm64/include/asm/unistd.h
++++ b/arch/arm64/include/asm/unistd.h
+@@ -38,7 +38,7 @@
+ #define __ARM_NR_compat_set_tls		(__ARM_NR_COMPAT_BASE + 5)
+ #define __ARM_NR_COMPAT_END		(__ARM_NR_COMPAT_BASE + 0x800)
  
- 		if (sb->s_dio_done_wq) {
- 			destroy_workqueue(sb->s_dio_done_wq);
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 4f6f59b4f22a..384d705ddef3 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -1517,6 +1517,11 @@ struct super_block {
- 	/* Pending fsnotify inode refs */
- 	atomic_long_t s_fsnotify_inode_refs;
+-#define __NR_compat_syscalls		439
++#define __NR_compat_syscalls		440
+ #endif
  
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	/* References to Landlock underlying objects */
-+	atomic_long_t s_landlock_inode_refs;
-+#endif
-+
- 	/* Being remounted read-only */
- 	int s_readonly_remount;
+ #define __ARCH_WANT_SYS_CLONE
+diff --git a/arch/arm64/include/asm/unistd32.h b/arch/arm64/include/asm/unistd32.h
+index c1c61635f89c..a24fe33f7c0d 100644
+--- a/arch/arm64/include/asm/unistd32.h
++++ b/arch/arm64/include/asm/unistd32.h
+@@ -883,6 +883,8 @@ __SYSCALL(__NR_clone3, sys_clone3)
+ __SYSCALL(__NR_openat2, sys_openat2)
+ #define __NR_pidfd_getfd 438
+ __SYSCALL(__NR_pidfd_getfd, sys_pidfd_getfd)
++#define __NR_landlock 439
++__SYSCALL(__NR_landlock, sys_landlock)
  
-diff --git a/include/linux/landlock.h b/include/linux/landlock.h
-new file mode 100644
-index 000000000000..0fb16d130b0a
---- /dev/null
-+++ b/include/linux/landlock.h
-@@ -0,0 +1,22 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+/*
-+ * Landlock LSM - public kernel headers
-+ *
-+ * Copyright © 2016-2019 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2018-2019 ANSSI
-+ */
-+
-+#ifndef _LINUX_LANDLOCK_H
-+#define _LINUX_LANDLOCK_H
-+
-+#include <linux/fs.h>
-+
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+extern void landlock_release_inodes(struct super_block *sb);
-+#else
-+static inline void landlock_release_inodes(struct super_block *sb)
-+{
-+}
-+#endif
-+
-+#endif /* _LINUX_LANDLOCK_H */
-diff --git a/security/landlock/Makefile b/security/landlock/Makefile
-index f1d1eb72fa76..92e3d80ab8ed 100644
---- a/security/landlock/Makefile
-+++ b/security/landlock/Makefile
-@@ -1,4 +1,4 @@
- obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
+ /*
+  * Please add new compat syscalls above this comment and update
+diff --git a/arch/ia64/kernel/syscalls/syscall.tbl b/arch/ia64/kernel/syscalls/syscall.tbl
+index 042911e670b8..c311696e0f5f 100644
+--- a/arch/ia64/kernel/syscalls/syscall.tbl
++++ b/arch/ia64/kernel/syscalls/syscall.tbl
+@@ -358,3 +358,4 @@
+ # 435 reserved for clone3
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/m68k/kernel/syscalls/syscall.tbl b/arch/m68k/kernel/syscalls/syscall.tbl
+index f4f49fcb76d0..d73a43d235d3 100644
+--- a/arch/m68k/kernel/syscalls/syscall.tbl
++++ b/arch/m68k/kernel/syscalls/syscall.tbl
+@@ -437,3 +437,4 @@
+ 435	common	clone3				__sys_clone3
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/microblaze/kernel/syscalls/syscall.tbl b/arch/microblaze/kernel/syscalls/syscall.tbl
+index 4c67b11f9c9e..f3927af7716f 100644
+--- a/arch/microblaze/kernel/syscalls/syscall.tbl
++++ b/arch/microblaze/kernel/syscalls/syscall.tbl
+@@ -443,3 +443,4 @@
+ 435	common	clone3				sys_clone3
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/mips/kernel/syscalls/syscall_n32.tbl b/arch/mips/kernel/syscalls/syscall_n32.tbl
+index 1f9e8ad636cc..e467033ec474 100644
+--- a/arch/mips/kernel/syscalls/syscall_n32.tbl
++++ b/arch/mips/kernel/syscalls/syscall_n32.tbl
+@@ -376,3 +376,4 @@
+ 435	n32	clone3				__sys_clone3
+ 437	n32	openat2				sys_openat2
+ 438	n32	pidfd_getfd			sys_pidfd_getfd
++439	n32	landlock			sys_landlock
+diff --git a/arch/mips/kernel/syscalls/syscall_n64.tbl b/arch/mips/kernel/syscalls/syscall_n64.tbl
+index c0b9d802dbf6..1930ba6c75b7 100644
+--- a/arch/mips/kernel/syscalls/syscall_n64.tbl
++++ b/arch/mips/kernel/syscalls/syscall_n64.tbl
+@@ -352,3 +352,4 @@
+ 435	n64	clone3				__sys_clone3
+ 437	n64	openat2				sys_openat2
+ 438	n64	pidfd_getfd			sys_pidfd_getfd
++439	n64	landlock			sys_landlock
+diff --git a/arch/mips/kernel/syscalls/syscall_o32.tbl b/arch/mips/kernel/syscalls/syscall_o32.tbl
+index ac586774c980..0a66f190ae3d 100644
+--- a/arch/mips/kernel/syscalls/syscall_o32.tbl
++++ b/arch/mips/kernel/syscalls/syscall_o32.tbl
+@@ -425,3 +425,4 @@
+ 435	o32	clone3				__sys_clone3
+ 437	o32	openat2				sys_openat2
+ 438	o32	pidfd_getfd			sys_pidfd_getfd
++439	o32	landlock			sys_landlock
+diff --git a/arch/parisc/kernel/syscalls/syscall.tbl b/arch/parisc/kernel/syscalls/syscall.tbl
+index 52a15f5cd130..93ddc36a660e 100644
+--- a/arch/parisc/kernel/syscalls/syscall.tbl
++++ b/arch/parisc/kernel/syscalls/syscall.tbl
+@@ -435,3 +435,4 @@
+ 435	common	clone3				sys_clone3_wrapper
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/powerpc/kernel/syscalls/syscall.tbl b/arch/powerpc/kernel/syscalls/syscall.tbl
+index 220ae11555f2..34ca2cd82d4e 100644
+--- a/arch/powerpc/kernel/syscalls/syscall.tbl
++++ b/arch/powerpc/kernel/syscalls/syscall.tbl
+@@ -527,3 +527,4 @@
+ 435	spu	clone3				sys_ni_syscall
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/s390/kernel/syscalls/syscall.tbl b/arch/s390/kernel/syscalls/syscall.tbl
+index bd7bd3581a0f..b4233c9c7421 100644
+--- a/arch/s390/kernel/syscalls/syscall.tbl
++++ b/arch/s390/kernel/syscalls/syscall.tbl
+@@ -440,3 +440,4 @@
+ 435  common	clone3			sys_clone3			sys_clone3
+ 437  common	openat2			sys_openat2			sys_openat2
+ 438  common	pidfd_getfd		sys_pidfd_getfd			sys_pidfd_getfd
++439  common	landlock		sys_landlock			sys_landlock
+diff --git a/arch/sh/kernel/syscalls/syscall.tbl b/arch/sh/kernel/syscalls/syscall.tbl
+index c7a30fcd135f..49fd37c18528 100644
+--- a/arch/sh/kernel/syscalls/syscall.tbl
++++ b/arch/sh/kernel/syscalls/syscall.tbl
+@@ -440,3 +440,4 @@
+ # 435 reserved for clone3
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/sparc/kernel/syscalls/syscall.tbl b/arch/sparc/kernel/syscalls/syscall.tbl
+index f13615ecdecc..33e2a9d55bdd 100644
+--- a/arch/sparc/kernel/syscalls/syscall.tbl
++++ b/arch/sparc/kernel/syscalls/syscall.tbl
+@@ -483,3 +483,4 @@
+ # 435 reserved for clone3
+ 437	common	openat2			sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/arch/x86/entry/syscalls/syscall_32.tbl b/arch/x86/entry/syscalls/syscall_32.tbl
+index 54581ac671b4..b350580405b3 100644
+--- a/arch/x86/entry/syscalls/syscall_32.tbl
++++ b/arch/x86/entry/syscalls/syscall_32.tbl
+@@ -442,3 +442,4 @@
+ 435	i386	clone3			sys_clone3
+ 437	i386	openat2			sys_openat2
+ 438	i386	pidfd_getfd		sys_pidfd_getfd
++439	i386	landlock		sys_landlock
+diff --git a/arch/x86/entry/syscalls/syscall_64.tbl b/arch/x86/entry/syscalls/syscall_64.tbl
+index 37b844f839bc..b6efdd813978 100644
+--- a/arch/x86/entry/syscalls/syscall_64.tbl
++++ b/arch/x86/entry/syscalls/syscall_64.tbl
+@@ -359,6 +359,7 @@
+ 435	common	clone3			sys_clone3
+ 437	common	openat2			sys_openat2
+ 438	common	pidfd_getfd		sys_pidfd_getfd
++439	common	landlock		sys_landlock
  
- landlock-y := setup.o object.o ruleset.o \
--	cred.o ptrace.o
-+	cred.o ptrace.o fs.o
-diff --git a/security/landlock/fs.c b/security/landlock/fs.c
-new file mode 100644
-index 000000000000..8287ad190a9c
---- /dev/null
-+++ b/security/landlock/fs.c
-@@ -0,0 +1,601 @@
-+// SPDX-License-Identifier: GPL-2.0-only
-+/*
-+ * Landlock LSM - Filesystem management and hooks
-+ *
-+ * Copyright © 2016-2020 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2018-2020 ANSSI
-+ */
-+
-+#include <linux/atomic.h>
-+#include <linux/compiler_types.h>
-+#include <linux/dcache.h>
-+#include <linux/fs.h>
-+#include <linux/init.h>
-+#include <linux/kernel.h>
-+#include <linux/landlock.h>
-+#include <linux/list.h>
-+#include <linux/lsm_hooks.h>
-+#include <linux/mount.h>
-+#include <linux/namei.h>
-+#include <linux/path.h>
-+#include <linux/prefetch.h>
-+#include <linux/rcupdate.h>
-+#include <linux/spinlock.h>
-+#include <linux/stat.h>
-+#include <linux/types.h>
-+#include <linux/wait_bit.h>
-+#include <linux/workqueue.h>
-+#include <uapi/linux/landlock.h>
-+
-+#include "common.h"
-+#include "cred.h"
-+#include "fs.h"
-+#include "object.h"
-+#include "ruleset.h"
-+#include "setup.h"
-+
-+/* Underlying object management */
-+
-+static void release_inode(struct landlock_object *const object)
-+	__releases(object->lock)
-+{
-+	struct inode *const inode = object->underobj;
-+	struct super_block *sb;
-+
-+	if (!inode) {
-+		spin_unlock(&object->lock);
-+		return;
-+	}
-+
-+	spin_lock(&inode->i_lock);
-+	/*
-+	 * Make sure that if the filesystem is concurrently unmounted,
-+	 * landlock_release_inodes() will wait for us to finish iput().
-+	 */
-+	sb = inode->i_sb;
-+	atomic_long_inc(&sb->s_landlock_inode_refs);
-+	rcu_assign_pointer(inode_landlock(inode)->object, NULL);
-+	spin_unlock(&inode->i_lock);
-+	spin_unlock(&object->lock);
-+	/*
-+	 * Now, new rules can safely be tied to @inode.
-+	 */
-+
-+	iput(inode);
-+	if (atomic_long_dec_and_test(&sb->s_landlock_inode_refs))
-+		wake_up_var(&sb->s_landlock_inode_refs);
-+}
-+
-+static const struct landlock_object_underops landlock_fs_underops = {
-+	.release = release_inode
-+};
-+
-+/*
-+ * Release the inodes used in a security policy.
-+ *
-+ * Cf. fsnotify_unmount_inodes()
-+ */
-+void landlock_release_inodes(struct super_block *const sb)
-+{
-+	struct inode *inode, *iput_inode = NULL;
-+
-+	if (!landlock_initialized)
-+		return;
-+
-+	spin_lock(&sb->s_inode_list_lock);
-+	list_for_each_entry(inode, &sb->s_inodes, i_sb_list) {
-+		struct landlock_inode_security *inode_sec =
-+			inode_landlock(inode);
-+		struct landlock_object *object;
-+		bool do_put = false;
-+
-+		rcu_read_lock();
-+		object = rcu_dereference(inode_sec->object);
-+		if (!object) {
-+			rcu_read_unlock();
-+			continue;
-+		}
-+
-+		spin_lock(&object->lock);
-+		if (object->underobj) {
-+			object->underobj = NULL;
-+			do_put = true;
-+			spin_lock(&inode->i_lock);
-+			rcu_assign_pointer(inode_sec->object, NULL);
-+			spin_unlock(&inode->i_lock);
-+		}
-+		spin_unlock(&object->lock);
-+		rcu_read_unlock();
-+		if (!do_put)
-+			/*
-+			 * A concurrent iput() in release_inode() is ongoing
-+			 * and we will just wait for it to finish.
-+			 */
-+			continue;
-+
-+		/*
-+		 * At this point, we own the ihold() reference that was
-+		 * originally set up by get_inode_object(). Therefore we can
-+		 * drop the list lock and know that the inode won't disappear
-+		 * from under us until the next loop walk.
-+		 */
-+		spin_unlock(&sb->s_inode_list_lock);
-+		/*
-+		 * We can now actually put the previous inode, which is not
-+		 * needed anymore for the loop walk.
-+		 */
-+		if (iput_inode)
-+			iput(iput_inode);
-+		iput_inode = inode;
-+		spin_lock(&sb->s_inode_list_lock);
-+	}
-+	spin_unlock(&sb->s_inode_list_lock);
-+	if (iput_inode)
-+		iput(iput_inode);
-+
-+	/*
-+	 * Wait for pending iput() in release_inode().
-+	 */
-+	wait_var_event(&sb->s_landlock_inode_refs,
-+			!atomic_long_read(&sb->s_landlock_inode_refs));
-+}
-+
-+/* Ruleset management */
-+
-+static struct landlock_object *get_inode_object(struct inode *const inode)
-+{
-+	struct landlock_object *object, *new_object;
-+	struct landlock_inode_security *inode_sec = inode_landlock(inode);
-+
-+	rcu_read_lock();
-+retry:
-+	object = rcu_dereference(inode_sec->object);
-+	if (object) {
-+		if (likely(refcount_inc_not_zero(&object->usage))) {
-+			rcu_read_unlock();
-+			return object;
-+		}
-+		/*
-+		 * We're racing with release_inode(), the object is going away.
-+		 * Wait for release_inode(), then retry.
-+		 */
-+		spin_lock(&object->lock);
-+		spin_unlock(&object->lock);
-+		goto retry;
-+	}
-+	rcu_read_unlock();
-+
-+	/*
-+	 * If there is no object tied to @inode, then create a new one (without
-+	 * holding any locks).
-+	 */
-+	new_object = landlock_create_object(&landlock_fs_underops, inode);
-+
-+	spin_lock(&inode->i_lock);
-+	object = rcu_dereference_protected(inode_sec->object,
-+			lockdep_is_held(&inode->i_lock));
-+	if (unlikely(object)) {
-+		/* Someone else just created the object, bail out and retry. */
-+		kfree(new_object);
-+		spin_unlock(&inode->i_lock);
-+
-+		rcu_read_lock();
-+		goto retry;
-+	} else {
-+		rcu_assign_pointer(inode_sec->object, new_object);
-+		/*
-+		 * @inode will be released by landlock_release_inodes() on its
-+		 * super-block shutdown.
-+		 */
-+		ihold(inode);
-+		spin_unlock(&inode->i_lock);
-+		return new_object;
-+	}
-+}
-+
-+/* All access rights which can be tied to files. */
-+#define ACCESS_FILE ( \
-+	LANDLOCK_ACCESS_FS_EXECUTE | \
-+	LANDLOCK_ACCESS_FS_WRITE_FILE | \
-+	LANDLOCK_ACCESS_FS_READ_FILE)
-+
-+/*
-+ * @path: Should have been checked by get_path_from_fd().
-+ */
-+int landlock_append_fs_rule(struct landlock_ruleset *const ruleset,
-+		const struct path *const path, u32 access_rights)
-+{
-+	int err;
-+	struct landlock_rule rule = {};
-+
-+	/* Files only get access rights that make sense. */
-+	if (!d_is_dir(path->dentry) && (access_rights | ACCESS_FILE) !=
-+			ACCESS_FILE)
-+		return -EINVAL;
-+
-+	/* Transforms relative access rights to absolute ones. */
-+	access_rights |= _LANDLOCK_ACCESS_FS_MASK & ~ruleset->fs_access_mask;
-+	rule.access = access_rights;
-+	rule.object = get_inode_object(d_backing_inode(path->dentry));
-+	mutex_lock(&ruleset->lock);
-+	err = landlock_insert_rule(ruleset, &rule, false);
-+	mutex_unlock(&ruleset->lock);
-+	/*
-+	 * No need to check for an error because landlock_insert_rule()
-+	 * increment the refcount for the new rule, if any.
-+	 */
-+	landlock_put_object(rule.object);
-+	return err;
-+}
-+
-+/* Access-control management */
-+
-+static bool check_access_path_continue(
-+		const struct landlock_ruleset *const domain,
-+		const struct path *const path, const u32 access_request,
-+		bool *const allow, u64 *const layer_mask)
-+{
-+	const struct landlock_rule *rule;
-+	const struct inode *inode;
-+	bool next = true;
-+
-+	prefetch(path->dentry->d_parent);
-+	if (d_is_negative(path->dentry))
-+		/* Continues to walk while there is no mapped inode. */
-+		return true;
-+	inode = d_backing_inode(path->dentry);
-+	rcu_read_lock();
-+	rule = landlock_find_rule(domain,
-+			rcu_dereference(inode_landlock(inode)->object));
-+	rcu_read_unlock();
-+
-+	/* Checks for matching layers. */
-+	if (rule && (rule->layers | *layer_mask)) {
-+		*allow = (rule->access & access_request) == access_request;
-+		if (*allow) {
-+			*layer_mask &= ~rule->layers;
-+			/* Stops when a rule from each layer granted access. */
-+			next = !!*layer_mask;
-+		} else {
-+			next = false;
-+		}
-+	}
-+	return next;
-+}
-+
-+static int check_access_path(const struct landlock_ruleset *const domain,
-+		const struct path *const path, u32 access_request)
-+{
-+	bool allow = false;
-+	struct path walker_path;
-+	u64 layer_mask;
-+
-+	if (WARN_ON_ONCE(!path))
-+		return 0;
-+	/*
-+	 * Allows access to pseudo filesystems that will never be mountable
-+	 * (e.g. sockfs, pipefs), but can still be reachable through
-+	 * /proc/self/fd .
-+	 */
-+	if ((path->dentry->d_sb->s_flags & SB_NOUSER) ||
-+			(d_is_positive(path->dentry) &&
-+			 unlikely(IS_PRIVATE(d_backing_inode(path->dentry)))))
-+		return 0;
-+	if (WARN_ON_ONCE(domain->nb_layers < 1))
-+		return -EACCES;
-+
-+	layer_mask = GENMASK_ULL(domain->nb_layers - 1, 0);
-+	/*
-+	 * An access request which is not handled by the domain should be
-+	 * allowed.
-+	 */
-+	access_request &= domain->fs_access_mask;
-+	if (access_request == 0)
-+		return 0;
-+	walker_path = *path;
-+	path_get(&walker_path);
-+	/*
-+	 * We need to walk through all the hierarchy to not miss any relevant
-+	 * restriction.
-+	 */
-+	while (check_access_path_continue(domain, &walker_path, access_request,
-+				&allow, &layer_mask)) {
-+		struct dentry *parent_dentry;
-+
-+jump_up:
-+		/*
-+		 * Does not work with orphaned/private mounts like overlayfs
-+		 * layers for now (cf. ovl_path_real() and ovl_path_open()).
-+		 */
-+		if (walker_path.dentry == walker_path.mnt->mnt_root) {
-+			if (follow_up(&walker_path)) {
-+				/* Ignores hidden mount points. */
-+				goto jump_up;
-+			} else {
-+				/*
-+				 * Stops at the real root.  Denies access
-+				 * because not all layers have granted access.
-+				 */
-+				allow = false;
-+				break;
-+			}
-+		}
-+		if (unlikely(IS_ROOT(walker_path.dentry))) {
-+			/*
-+			 * Stops at disconnected root directories.  Only allows
-+			 * access to internal filesystems (e.g. nsfs which is
-+			 * reachable through /proc/self/ns).
-+			 */
-+			allow = !!(walker_path.mnt->mnt_flags & MNT_INTERNAL);
-+			break;
-+		}
-+		parent_dentry = dget_parent(walker_path.dentry);
-+		dput(walker_path.dentry);
-+		walker_path.dentry = parent_dentry;
-+	}
-+	path_put(&walker_path);
-+	return allow ? 0 : -EACCES;
-+}
-+
-+static inline int current_check_access_path(const struct path *const path,
-+		const u32 access_request)
-+{
-+	struct landlock_ruleset *dom;
-+
-+	dom = landlock_get_current_domain();
-+	if (!dom)
-+		return 0;
-+	return check_access_path(dom, path, access_request);
-+}
-+
-+/* Super-block hooks */
-+
-+/*
-+ * Because a Landlock security policy is defined according to the filesystem
-+ * layout (i.e. the mount namespace), changing it may grant access to files not
-+ * previously allowed.
-+ *
-+ * To make it simple, deny any filesystem layout modification by landlocked
-+ * processes.  Non-landlocked processes may still change the namespace of a
-+ * landlocked process, but this kind of threat must be handled by a system-wide
-+ * access-control security policy.
-+ *
-+ * This could be lifted in the future if Landlock can safely handle mount
-+ * namespace updates requested by a landlocked process.  Indeed, we could
-+ * update the current domain (which is currently read-only) by taking into
-+ * account the accesses of the source and the destination of a new mount point.
-+ * However, it would also require to make all the child domains dynamically
-+ * inherit these new constraints.  Anyway, for backward compatibility reasons,
-+ * a dedicated user space option would be required (e.g. as a ruleset command
-+ * option).
-+ */
-+static int hook_sb_mount(const char *const dev_name,
-+		const struct path *const path, const char *const type,
-+		const unsigned long flags, void *const data)
-+{
-+	if (!landlock_get_current_domain())
-+		return 0;
-+	return -EPERM;
-+}
-+
-+static int hook_move_mount(const struct path *const from_path,
-+		const struct path *const to_path)
-+{
-+	if (!landlock_get_current_domain())
-+		return 0;
-+	return -EPERM;
-+}
-+
-+/*
-+ * Removing a mount point may reveal a previously hidden file hierarchy, which
-+ * may then grant access to files, which may have previously been forbidden.
-+ */
-+static int hook_sb_umount(struct vfsmount *const mnt, const int flags)
-+{
-+	if (!landlock_get_current_domain())
-+		return 0;
-+	return -EPERM;
-+}
-+
-+static int hook_sb_remount(struct super_block *const sb, void *const mnt_opts)
-+{
-+	if (!landlock_get_current_domain())
-+		return 0;
-+	return -EPERM;
-+}
-+
-+/*
-+ * pivot_root(2), like mount(2), changes the current mount namespace.  It must
-+ * then be forbidden for a landlocked process.
-+ *
-+ * However, chroot(2) may be allowed because it only changes the relative root
-+ * directory of the current process.
-+ */
-+static int hook_sb_pivotroot(const struct path *const old_path,
-+		const struct path *const new_path)
-+{
-+	if (!landlock_get_current_domain())
-+		return 0;
-+	return -EPERM;
-+}
-+
-+/* Path hooks */
-+
-+static inline u32 get_mode_access(const umode_t mode)
-+{
-+	switch (mode & S_IFMT) {
-+	case S_IFLNK:
-+		return LANDLOCK_ACCESS_FS_MAKE_SYM;
-+	case S_IFREG:
-+		return LANDLOCK_ACCESS_FS_MAKE_REG;
-+	case S_IFDIR:
-+		return LANDLOCK_ACCESS_FS_MAKE_DIR;
-+	case S_IFCHR:
-+		return LANDLOCK_ACCESS_FS_MAKE_CHAR;
-+	case S_IFBLK:
-+		return LANDLOCK_ACCESS_FS_MAKE_BLOCK;
-+	case S_IFIFO:
-+		return LANDLOCK_ACCESS_FS_MAKE_FIFO;
-+	case S_IFSOCK:
-+		return LANDLOCK_ACCESS_FS_MAKE_SOCK;
-+	default:
-+		WARN_ON_ONCE(1);
-+		return 0;
-+	}
-+}
-+
-+/*
-+ * Creating multiple links or renaming may lead to privilege escalations if not
-+ * handled properly.  Indeed, we must be sure that the source doesn't gain more
-+ * privileges by being accessible from the destination.  This is getting more
-+ * complex when dealing with multiple layers.  The whole picture can be seen as
-+ * a multilayer partial ordering problem.  A future version of Landlock will
-+ * deal with that.
-+ */
-+static int hook_path_link(struct dentry *const old_dentry,
-+		const struct path *const new_dir,
-+		struct dentry *const new_dentry)
-+{
-+	struct landlock_ruleset *dom;
-+
-+	dom = landlock_get_current_domain();
-+	if (!dom)
-+		return 0;
-+	/* The mount points are the same for old and new paths, cf. EXDEV. */
-+	if (old_dentry->d_parent != new_dir->dentry)
-+		/* For now, forbid reparenting. */
-+		return -EACCES;
-+	if (unlikely(d_is_negative(old_dentry)))
-+		return -EACCES;
-+	return check_access_path(dom, new_dir,
-+			get_mode_access(d_backing_inode(old_dentry)->i_mode));
-+}
-+
-+static inline u32 maybe_remove(const struct dentry *const dentry)
-+{
-+	if (d_is_negative(dentry))
-+		return 0;
-+	return d_is_dir(dentry) ? LANDLOCK_ACCESS_FS_REMOVE_DIR :
-+		LANDLOCK_ACCESS_FS_REMOVE_FILE;
-+}
-+
-+static int hook_path_rename(const struct path *const old_dir,
-+		struct dentry *const old_dentry,
-+		const struct path *const new_dir,
-+		struct dentry *const new_dentry)
-+{
-+	struct landlock_ruleset *dom;
-+
-+	dom = landlock_get_current_domain();
-+	if (!dom)
-+		return 0;
-+	/* The mount points are the same for old and new paths, cf. EXDEV. */
-+	if (old_dir->dentry != new_dir->dentry)
-+		/* For now, forbid reparenting. */
-+		return -EACCES;
-+	if (WARN_ON_ONCE(d_is_negative(old_dentry)))
-+		return -EACCES;
-+	/* RENAME_EXCHANGE is handled because directories are the same. */
-+	return check_access_path(dom, old_dir, maybe_remove(old_dentry) |
-+			maybe_remove(new_dentry) |
-+			get_mode_access(d_backing_inode(old_dentry)->i_mode));
-+}
-+
-+static int hook_path_mkdir(const struct path *const dir,
-+		struct dentry *const dentry, const umode_t mode)
-+{
-+	return current_check_access_path(dir, LANDLOCK_ACCESS_FS_MAKE_DIR);
-+}
-+
-+static int hook_path_mknod(const struct path *const dir,
-+		struct dentry *const dentry, const umode_t mode,
-+		const unsigned int dev)
-+{
-+	return current_check_access_path(dir, get_mode_access(mode));
-+}
-+
-+static int hook_path_symlink(const struct path *const dir,
-+		struct dentry *const dentry, const char *const old_name)
-+{
-+	return current_check_access_path(dir, LANDLOCK_ACCESS_FS_MAKE_SYM);
-+}
-+
-+static int hook_path_unlink(const struct path *const dir,
-+		struct dentry *const dentry)
-+{
-+	return current_check_access_path(dir, LANDLOCK_ACCESS_FS_REMOVE_FILE);
-+}
-+
-+static int hook_path_rmdir(const struct path *const dir,
-+		struct dentry *const dentry)
-+{
-+	return current_check_access_path(dir, LANDLOCK_ACCESS_FS_REMOVE_DIR);
-+}
-+
-+static int hook_path_chroot(const struct path *const path)
-+{
-+	return current_check_access_path(path, LANDLOCK_ACCESS_FS_CHROOT);
-+}
-+
-+/* File hooks */
-+
-+static inline u32 get_file_access(const struct file *const file)
-+{
-+	u32 access = 0;
-+
-+	if (file->f_mode & FMODE_READ) {
-+		/* A directory can only be opened in read mode. */
-+		if (S_ISDIR(file_inode(file)->i_mode))
-+			return LANDLOCK_ACCESS_FS_READ_DIR;
-+		access = LANDLOCK_ACCESS_FS_READ_FILE;
-+	}
-+	/*
-+	 * A LANDLOCK_ACCESS_FS_APPEND could be added but we also need to check
-+	 * fcntl(2).
-+	 */
-+	if (file->f_mode & FMODE_WRITE)
-+		access |= LANDLOCK_ACCESS_FS_WRITE_FILE;
-+	/* __FMODE_EXEC is indeed part of f_flags, not f_mode. */
-+	if (file->f_flags & __FMODE_EXEC)
-+		access |= LANDLOCK_ACCESS_FS_EXECUTE;
-+	return access;
-+}
-+
-+static int hook_file_open(struct file *const file)
-+{
-+	if (WARN_ON_ONCE(!file))
-+		return 0;
-+	if (!file_inode(file))
-+		return -ENOENT;
-+	/*
-+	 * Because a file may be opened with O_PATH, get_file_access() may
-+	 * return 0.  This case will be handled with a future Landlock
-+	 * evolution.
-+	 */
-+	return current_check_access_path(&file->f_path, get_file_access(file));
-+}
-+
-+static struct security_hook_list landlock_hooks[] __lsm_ro_after_init = {
-+	LSM_HOOK_INIT(sb_mount, hook_sb_mount),
-+	LSM_HOOK_INIT(move_mount, hook_move_mount),
-+	LSM_HOOK_INIT(sb_umount, hook_sb_umount),
-+	LSM_HOOK_INIT(sb_remount, hook_sb_remount),
-+	LSM_HOOK_INIT(sb_pivotroot, hook_sb_pivotroot),
-+
-+	LSM_HOOK_INIT(path_link, hook_path_link),
-+	LSM_HOOK_INIT(path_rename, hook_path_rename),
-+	LSM_HOOK_INIT(path_mkdir, hook_path_mkdir),
-+	LSM_HOOK_INIT(path_mknod, hook_path_mknod),
-+	LSM_HOOK_INIT(path_symlink, hook_path_symlink),
-+	LSM_HOOK_INIT(path_unlink, hook_path_unlink),
-+	LSM_HOOK_INIT(path_rmdir, hook_path_rmdir),
-+	LSM_HOOK_INIT(path_chroot, hook_path_chroot),
-+
-+	LSM_HOOK_INIT(file_open, hook_file_open),
-+};
-+
-+__init void landlock_add_hooks_fs(void)
-+{
-+	security_add_hooks(landlock_hooks, ARRAY_SIZE(landlock_hooks),
-+			LANDLOCK_NAME);
-+}
-diff --git a/security/landlock/fs.h b/security/landlock/fs.h
-new file mode 100644
-index 000000000000..2cf55ed1e800
---- /dev/null
-+++ b/security/landlock/fs.h
-@@ -0,0 +1,42 @@
-+/* SPDX-License-Identifier: GPL-2.0-only */
-+/*
-+ * Landlock LSM - Filesystem management and hooks
-+ *
-+ * Copyright © 2017-2020 Mickaël Salaün <mic@digikod.net>
-+ * Copyright © 2018-2020 ANSSI
-+ */
-+
-+#ifndef _SECURITY_LANDLOCK_FS_H
-+#define _SECURITY_LANDLOCK_FS_H
-+
-+#include <linux/fs.h>
-+#include <linux/init.h>
-+#include <linux/rcupdate.h>
-+
-+#include "ruleset.h"
-+#include "setup.h"
-+
-+struct landlock_inode_security {
-+	/*
-+	 * @object: Weak pointer to an allocated object.  All writes (i.e.
-+	 * creating a new object or removing one) are protected by the
-+	 * underlying inode->i_lock.  Disassociating @object from the inode is
-+	 * additionally protected by @object->lock, from the time @object's
-+	 * usage refcount drops to zero to the time this pointer is nulled out.
-+	 * Cf. release_inode().
-+	 */
-+	struct landlock_object __rcu *object;
-+};
-+
-+static inline struct landlock_inode_security *inode_landlock(
-+		const struct inode *const inode)
-+{
-+	return inode->i_security + landlock_blob_sizes.lbs_inode;
-+}
-+
-+__init void landlock_add_hooks_fs(void);
-+
-+int landlock_append_fs_rule(struct landlock_ruleset *const ruleset,
-+		const struct path *const path, u32 access_hierarchy);
-+
-+#endif /* _SECURITY_LANDLOCK_FS_H */
-diff --git a/security/landlock/setup.c b/security/landlock/setup.c
-index 5e7540fdeefa..0bafa94fb2a6 100644
---- a/security/landlock/setup.c
-+++ b/security/landlock/setup.c
-@@ -11,17 +11,23 @@
+ #
+ # x32-specific system call numbers start at 512 to avoid cache impact
+diff --git a/arch/xtensa/kernel/syscalls/syscall.tbl b/arch/xtensa/kernel/syscalls/syscall.tbl
+index 85a9ab1bc04d..84fc6db485ef 100644
+--- a/arch/xtensa/kernel/syscalls/syscall.tbl
++++ b/arch/xtensa/kernel/syscalls/syscall.tbl
+@@ -408,3 +408,4 @@
+ 435	common	clone3				sys_clone3
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
++439	common	landlock			sys_landlock
+diff --git a/include/uapi/asm-generic/unistd.h b/include/uapi/asm-generic/unistd.h
+index 3a3201e4618e..31d5814ddb13 100644
+--- a/include/uapi/asm-generic/unistd.h
++++ b/include/uapi/asm-generic/unistd.h
+@@ -855,9 +855,11 @@ __SYSCALL(__NR_clone3, sys_clone3)
+ __SYSCALL(__NR_openat2, sys_openat2)
+ #define __NR_pidfd_getfd 438
+ __SYSCALL(__NR_pidfd_getfd, sys_pidfd_getfd)
++#define __NR_landlock 439
++__SYSCALL(__NR_landlock, sys_landlock)
  
- #include "common.h"
- #include "cred.h"
-+#include "fs.h"
- #include "ptrace.h"
- #include "setup.h"
+ #undef __NR_syscalls
+-#define __NR_syscalls 439
++#define __NR_syscalls 440
  
-+bool landlock_initialized __lsm_ro_after_init = false;
-+
- struct lsm_blob_sizes landlock_blob_sizes __lsm_ro_after_init = {
- 	.lbs_cred = sizeof(struct landlock_cred_security),
-+	.lbs_inode = sizeof(struct landlock_inode_security),
- };
- 
- static int __init landlock_init(void)
- {
- 	landlock_add_hooks_cred();
- 	landlock_add_hooks_ptrace();
-+	landlock_add_hooks_fs();
-+	landlock_initialized = true;
- 	pr_info("Up and running.\n");
- 	return 0;
- }
-diff --git a/security/landlock/setup.h b/security/landlock/setup.h
-index 9fdbf33fcc33..1daffab1ab4b 100644
---- a/security/landlock/setup.h
-+++ b/security/landlock/setup.h
-@@ -11,6 +11,8 @@
- 
- #include <linux/lsm_hooks.h>
- 
-+extern bool landlock_initialized;
-+
- extern struct lsm_blob_sizes landlock_blob_sizes;
- 
- #endif /* _SECURITY_LANDLOCK_SETUP_H */
+ /*
+  * 32 bit systems traditionally used different
 -- 
 2.26.1
 
