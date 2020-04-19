@@ -1,21 +1,22 @@
-Return-Path: <SRS0=FMZ3=6D=lists.openwall.com=kernel-hardening-return-18559-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=mk2g=6D=lists.openwall.com=kernel-hardening-return-18560-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-6.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0AF1AC38A30
-	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Apr 2020 14:19:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5B179C38A29
+	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Apr 2020 22:36:22 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6712321841
-	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Apr 2020 14:19:39 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6712321841
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18559-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14193 invoked by uid 550); 19 Apr 2020 14:19:32 -0000
+	by mail.kernel.org (Postfix) with SMTP id A2B0A2075E
+	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Apr 2020 22:36:21 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="piifZJ1T"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A2B0A2075E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18560-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19628 invoked by uid 550); 19 Apr 2020 22:36:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,64 +24,85 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14173 invoked from network); 19 Apr 2020 14:19:32 -0000
-Date: Sun, 19 Apr 2020 16:19:15 +0200
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: LKML <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	David Howells <dhowells@redhat.com>
-Subject: Re: [PATCH RESEND v11 7/8] proc: use human-readable values for
- hidepid
-Message-ID: <20200419141915.g4bdjbwvhpre7mra@comp-core-i7-2640m-0182e6>
-References: <20200409123752.1070597-1-gladkov.alexey@gmail.com>
- <20200409123752.1070597-8-gladkov.alexey@gmail.com>
- <87imhyaq5t.fsf@x220.int.ebiederm.org>
+Received: (qmail 19593 invoked from network); 19 Apr 2020 22:36:12 -0000
+DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-04.nifty.com 03JMZTon031403
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
+	s=dec2015msa; t=1587335730;
+	bh=zMWxdUUCCNSYYynmB04/IvDKcTobqxHnW5dxNuMCTfw=;
+	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
+	b=piifZJ1TH1J9hZ6a0+7jSOX9udOXnka8Ms25jI3q5O5YF/lEwwEaIKQrGHU9aX5mw
+	 ZHEWNoJumhu1ULQf74LYpUgMCuQdT5Qztno5hn1EIsqiy+A1qjSUYEI/p7uhDFV35A
+	 0DF/kFRorLMHlQTQ1Dq1zHPYu555C9OzL2V1kZSJRaYU+z1ExR8YGVV5dqAF50q/5/
+	 dRKfHSnYeozlNPrm8ZpJ3gKYEgeY68XTa7IbqHgOXW81v+fH9I0wOBt8rvze1u1Hhs
+	 FDN1KdYj3NlmbUI7wUG4PdQ7nfA3UJSKkWsn0uVgoczXYTSS334CFLsS7+Zjl5t3Pc
+	 7a9qjgO7GD0/w==
+X-Nifty-SrcIP: [209.85.221.173]
+X-Gm-Message-State: AGi0PuaHYC2Es4Efwcaq8f3WYK1eBLCFhjLBXxHnIqqEqvgQLoasF4r7
+	DjD4eO1yd6sdyJbvQfWhLpUT6mst13COK7dXrok=
+X-Google-Smtp-Source: APiQypK3B2oyKlFhDZ3EfF6PD6sZ1oTdgVehCaeITCP3PwttpRCWg8SNYNjXB6TYUlNo379OqDVCczlSDmxSzPaCKEA=
+X-Received: by 2002:a1f:5c03:: with SMTP id q3mr9615938vkb.66.1587335728877;
+ Sun, 19 Apr 2020 15:35:28 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87imhyaq5t.fsf@x220.int.ebiederm.org>
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Sun, 19 Apr 2020 14:19:20 +0000 (UTC)
+References: <20200419215558.GU30496@eidolon.nox.tf>
+In-Reply-To: <20200419215558.GU30496@eidolon.nox.tf>
+From: Masahiro Yamada <masahiroy@kernel.org>
+Date: Mon, 20 Apr 2020 07:34:53 +0900
+X-Gmail-Original-Message-ID: <CAK7LNAS+=hWM=CvMKMWNa0Fb4S7XL6yPBCQ=TnpM2REsuOYniQ@mail.gmail.com>
+Message-ID: <CAK7LNAS+=hWM=CvMKMWNa0Fb4S7XL6yPBCQ=TnpM2REsuOYniQ@mail.gmail.com>
+Subject: Re: gcc extended format checking plugin
+To: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>,
+        Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
+        David Lamparter <equinox@diac24.net>
+Content-Type: text/plain; charset="UTF-8"
 
-On Fri, Apr 17, 2020 at 02:05:50PM -0500, Eric W. Biederman wrote:
-> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
-> 
-> > The hidepid parameter values are becoming more and more and it becomes
-> > difficult to remember what each new magic number means.
-> 
-> So I relooked at the code.  And I think I was misreading things.
-> However I think it is a legitimate concern.
-> 
-> Can you please mention in your description of this change that
-> switching from fsparam_u32 to fs_param_string is safe even when
-> using the new mount api because fsparam_u32 and fs_param_string
-> both are sent from userspace with "fsconfig(fd, FSCONFIG_SET_STRING, ...)".
+FW: GCC-plugin maintainers
 
-Sure.
 
-> Or words to that effect.  Ideally you will even manually test that case
-> to confirm.
 
-I will add a selftest for this.
+On Mon, Apr 20, 2020 at 7:04 AM David Lamparter <equinox@diac24.net> wrote:
+>
+> Hello kernel build hackers,
+>
+>
+> in case it is of interest to anyone, we've recently added an extended
+> format string checking plugin in the FRRouting project.  We took
+> inspiration from the Linux kernel and modified a printf (funnily enough,
+> the one from FreeBSD) to support things like %pI4, and we wanted better
+> warnings for this.  Since the scheme is the same as in the Linux kernel,
+> it may or may not be worth someone's time to take a look.
+>
+> The plugin is found here:
+> https://github.com/FRRouting/frr/tree/master/tools/gcc-plugins
+>
+> It's derived from gcc's "c-format.c", as such it may make sense to look
+> at the diff instead of the straight source.  The original GCC code is in
+> the git history there.  It's tested against gcc 9.3.0, YMMV on other
+> versions.
+>
+> Note that the plugin needs a single-line GCC source code modification:
+> https://github.com/FRRouting/frr/blob/master/tools/gcc-plugins/gcc-retain-typeinfo.patch
+> this is to stop GCC from prematurely stripping information, specifically
+> from casts in function parameters.  It does work without the change, but
+> it may produce false-positive/negative warnings.
+>
+> Aside from %pXX suffix support, the plugin also contains two other
+> changes that are probably irrelevant to kernel land:
+> - it makes some typedefs "final" types since these are not guaranteed to
+>   be consistent in size across platforms and therefore can't be
+>   printf'd without a cast (e.g. pid_t, uid_t, time_t, etc.)
+> - it reserves %Lu for uint64_t
+>
+> Please don't expect too much on its code quality, I'm not a GCC
+> developer and essentially wrote this by trial and error ;)
+>
+> Cheers,
+>
+>
+> -David
+
+
 
 -- 
-Rgrds, legion
-
+Best Regards
+Masahiro Yamada
