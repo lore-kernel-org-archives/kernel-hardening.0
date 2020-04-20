@@ -1,23 +1,20 @@
-Return-Path: <SRS0=1WwL=6E=lists.openwall.com=kernel-hardening-return-18570-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=9ExE=6E=lists.openwall.com=kernel-hardening-return-18571-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1C048C3815B
-	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 17:44:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 15827C3815B
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 17:46:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 49D67206DD
-	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 17:44:00 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="jQBTeSx5"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 49D67206DD
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18570-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32651 invoked by uid 550); 20 Apr 2020 17:43:52 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4B1AB20857
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 17:46:43 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4B1AB20857
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18571-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3965 invoked by uid 550); 20 Apr 2020 17:46:37 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,151 +22,251 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32625 invoked from network); 20 Apr 2020 17:43:51 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=UbWvOzsjdwKmCuURzqakr712Hwz970Vkw5PGIrntIJg=;
-        b=jQBTeSx5RVM7KT1U22GJEb3DH2uZPfcy8Q8n8Z4yMQbR4xX77sT7UNorH68BHXQklv
-         iqyP+lyhtbiw1Z8E6mrIAOVUfrKDbExPTw1eCNreicq7+fmKaKDC0t3L5Z68emnhhiQY
-         F68qqIHfXsfIWhK8AMTQ6lJSl/wFSmFVqe+Fs=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=UbWvOzsjdwKmCuURzqakr712Hwz970Vkw5PGIrntIJg=;
-        b=NGzs2Tn4Cem4gc5PmI7clAauCeYUMhrp1NDnRat+5VZzNwhzP80Gi3r9IIkAp5UBNX
-         asxDAjPplZpciTFIw7H8r/53r1wacwSsAQK2o2f+HIsXV+7G7C9Piw6vMPVJdm9oe7rr
-         gDWTs5wKRBkaIMwtrfmpoahNsK2zZC26TcKxSbtOpVhV7DKsiyyFaSrQaoU829o0Lg6A
-         Dfg71EH5fAdg6Utet6VhQHUYMQ+bQCV1KDb7e6L4fkBwBudkeLAHgQaXYb3k8MZCY++3
-         qOl+fbtuXRA5d8I8cbUNTn6eI/8ohjpl35WQkytLpSv6kkvScHSVaI04I5Qhbf3lshfT
-         jVMg==
-X-Gm-Message-State: AGi0PuYCNwKOnf2K5jJw41Tc9ZP9xMnZw6rbUvCRc3wqxtJJMLURJK9e
-	kB2fTn+qZhgTkakLNpUiQpjvQQ==
-X-Google-Smtp-Source: APiQypLBX8wx/oUkDoqkb/2Bm8ippA2jak1OrscI29iIv8/MVYRimaZ8XN8jTccr1R5iuIwy3W5LTA==
-X-Received: by 2002:a17:902:6b01:: with SMTP id o1mr18181334plk.100.1587404619781;
-        Mon, 20 Apr 2020 10:43:39 -0700 (PDT)
-Date: Mon, 20 Apr 2020 10:43:37 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Jiri Slaby <jslaby@suse.cz>
-Cc: Vlastimil Babka <vbabka@suse.cz>, Jann Horn <jannh@google.com>,
-	Christian Borntraeger <borntraeger@de.ibm.com>,
-	Christoph Hellwig <hch@infradead.org>,
-	Christopher Lameter <cl@linux.com>,
-	Julian Wiedmann <jwi@linux.ibm.com>,
-	Ursula Braun <ubraun@linux.ibm.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	kernel list <linux-kernel@vger.kernel.org>,
-	David Windsor <dave@nullcore.net>,
-	Pekka Enberg <penberg@kernel.org>,
-	David Rientjes <rientjes@google.com>,
-	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	"David S. Miller" <davem@davemloft.net>,
-	Laura Abbott <labbott@redhat.com>,
-	Mark Rutland <mark.rutland@arm.com>,
-	"Martin K. Petersen" <martin.petersen@oracle.com>,
-	Paolo Bonzini <pbonzini@redhat.com>,
-	Christoffer Dall <christoffer.dall@linaro.org>,
-	Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>,
-	Luis de Bethencourt <luisbg@kernel.org>,
-	Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>,
-	Matthew Garrett <mjg59@google.com>,
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	Network Development <netdev@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Michal Kubecek <mkubecek@suse.cz>
-Subject: Re: [kernel-hardening] [PATCH 09/38] usercopy: Mark kmalloc caches
- as usercopy caches
-Message-ID: <202004201043.538A7B3F2@keescook>
-References: <5861936c-1fe1-4c44-d012-26efa0c8b6e7@de.ibm.com>
- <202001281457.FA11CC313A@keescook>
- <alpine.DEB.2.21.2001291640350.1546@www.lameter.com>
- <6844ea47-8e0e-4fb7-d86f-68046995a749@de.ibm.com>
- <20200129170939.GA4277@infradead.org>
- <771c5511-c5ab-3dd1-d938-5dbc40396daa@de.ibm.com>
- <202001300945.7D465B5F5@keescook>
- <CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com>
- <7d810f6d-8085-ea2f-7805-47ba3842dc50@suse.cz>
- <548e6212-7b3c-5925-19f2-699af451fd16@suse.cz>
+Received: (qmail 3932 invoked from network); 20 Apr 2020 17:46:36 -0000
+IronPort-SDR: yQKLGeCWpKD7Vqnz22jNlTudOddNjiuVkUpBN84yP3P4J7Ir9g0EUZAqdLFkIIjB1bBAm+qAfQ
+ 0L+jODkF14Ag==
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+IronPort-SDR: RfJ4A7JXxNGXvqxm7c+sec8ydcwdtqIaHZnIRedDaUSt7OvLBf29y5BX3dfPCuGeh+g9zjr3VQ
+ e6et6oxlIvCw==
+X-IronPort-AV: E=Sophos;i="5.72,407,1580803200"; 
+   d="scan'208";a="401908560"
+Message-ID: <ee16c27406592ffa6c29e00b42fa1da6722fb7ec.camel@linux.intel.com>
+Subject: Re: [PATCH 8/9] kallsyms: hide layout
+From: Kristen Carlson Accardi <kristen@linux.intel.com>
+To: Ard Biesheuvel <ardb@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>,
+  Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
+ hpa@zytor.com, arjan@linux.intel.com, X86 ML <x86@kernel.org>, Linux Kernel
+ Mailing List <linux-kernel@vger.kernel.org>, 
+ kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com
+Date: Mon, 20 Apr 2020 10:46:20 -0700
+In-Reply-To: <CAMj1kXGyQbdmeAwVBy5YPGKeksNq0KkBe-wmZZG=xkGY4Ds0Rg@mail.gmail.com>
+References: <20200415210452.27436-1-kristen@linux.intel.com>
+	 <20200415210452.27436-9-kristen@linux.intel.com>
+	 <CAMj1kXGyQbdmeAwVBy5YPGKeksNq0KkBe-wmZZG=xkGY4Ds0Rg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <548e6212-7b3c-5925-19f2-699af451fd16@suse.cz>
+Content-Transfer-Encoding: 7bit
 
-On Mon, Apr 20, 2020 at 09:53:20AM +0200, Jiri Slaby wrote:
-> On 07. 04. 20, 10:00, Vlastimil Babka wrote:
-> > From d5190e4e871689a530da3c3fd327be45a88f006a Mon Sep 17 00:00:00 2001
-> > From: Vlastimil Babka <vbabka@suse.cz>
-> > Date: Tue, 7 Apr 2020 09:58:00 +0200
-> > Subject: [PATCH] usercopy: Mark dma-kmalloc caches as usercopy caches
+On Mon, 2020-04-20 at 13:58 +0200, Ard Biesheuvel wrote:
+> On Wed, 15 Apr 2020 at 23:06, Kristen Carlson Accardi
+> <kristen@linux.intel.com> wrote:
+> > To support finer grained kaslr (fgkaslr), we need to hide our
+> > sorted
+> > list of symbols, since this will give away our new layout.
+> > This patch makes /proc/kallsyms only visible to priviledged users.
 > > 
-> > We have seen a "usercopy: Kernel memory overwrite attempt detected to SLUB
-> > object 'dma-kmalloc-1 k' (offset 0, size 11)!" error on s390x, as IUCV uses
-> > kmalloc() with __GFP_DMA because of memory address restrictions.
-> > The issue has been discussed [2] and it has been noted that if all the kmalloc
-> > caches are marked as usercopy, there's little reason not to mark dma-kmalloc
-> > caches too. The 'dma' part merely means that __GFP_DMA is used to restrict
-> > memory address range.
-> > 
-> > As Jann Horn put it [3]:
-> > 
-> > "I think dma-kmalloc slabs should be handled the same way as normal
-> > kmalloc slabs. When a dma-kmalloc allocation is freshly created, it is
-> > just normal kernel memory - even if it might later be used for DMA -,
-> > and it should be perfectly fine to copy_from_user() into such
-> > allocations at that point, and to copy_to_user() out of them at the
-> > end. If you look at the places where such allocations are created, you
-> > can see things like kmemdup(), memcpy() and so on - all normal
-> > operations that shouldn't conceptually be different from usercopy in
-> > any relevant way."
-> > 
-> > Thus this patch marks the dma-kmalloc-* caches as usercopy.
-> > 
-> > [1] https://bugzilla.suse.com/show_bug.cgi?id=1156053
-> > [2] https://lore.kernel.org/kernel-hardening/bfca96db-bbd0-d958-7732-76e36c667c68@suse.cz/
-> > [3] https://lore.kernel.org/kernel-hardening/CAG48ez1a4waGk9kB0WLaSbs4muSoK0AYAVk8=XYaKj4_+6e6Hg@mail.gmail.com/
-> > 
-> > Signed-off-by: Vlastimil Babka <vbabka@suse.cz>
 > 
-> Friendly ping.
-> 
-> Acked-by: Jiri Slaby <jslaby@suse.cz>
+> Does it?
 
-Should this go via -mm?
-
--Kees
+Oops, I forgot to update my commit message since I changed algorithms.
+Thanks for catching that. I'll fix it in the next version.
 
 > 
+> > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
 > > ---
-> >  mm/slab_common.c | 3 ++-
-> >  1 file changed, 2 insertions(+), 1 deletion(-)
+> >  kernel/kallsyms.c | 138
+> > +++++++++++++++++++++++++++++++++++++++++++++-
+> >  1 file changed, 137 insertions(+), 1 deletion(-)
 > > 
-> > diff --git a/mm/slab_common.c b/mm/slab_common.c
-> > index 5282f881d2f5..ae9486160594 100644
-> > --- a/mm/slab_common.c
-> > +++ b/mm/slab_common.c
-> > @@ -1303,7 +1303,8 @@ void __init create_kmalloc_caches(slab_flags_t flags)
-> >  			kmalloc_caches[KMALLOC_DMA][i] = create_kmalloc_cache(
-> >  				kmalloc_info[i].name[KMALLOC_DMA],
-> >  				kmalloc_info[i].size,
-> > -				SLAB_CACHE_DMA | flags, 0, 0);
-> > +				SLAB_CACHE_DMA | flags, 0,
-> > +				kmalloc_info[i].size);
-> >  		}
-> >  	}
-> >  #endif
+> > diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
+> > index 16c8c605f4b0..861972b6a879 100644
+> > --- a/kernel/kallsyms.c
+> > +++ b/kernel/kallsyms.c
+> > @@ -25,6 +25,7 @@
+> >  #include <linux/filter.h>
+> >  #include <linux/ftrace.h>
+> >  #include <linux/compiler.h>
+> > +#include <linux/list_sort.h>
 > > 
+> >  /*
+> >   * These will be re-linked against their real values
+> > @@ -446,6 +447,11 @@ struct kallsym_iter {
+> >         int show_value;
+> >  };
+> > 
+> > +struct kallsyms_iter_list {
+> > +       struct kallsym_iter iter;
+> > +       struct list_head next;
+> > +};
+> > +
+> >  int __weak arch_get_kallsym(unsigned int symnum, unsigned long
+> > *value,
+> >                             char *type, char *name)
+> >  {
+> > @@ -660,6 +666,121 @@ int kallsyms_show_value(void)
+> >         }
+> >  }
+> > 
+> > +static int sorted_show(struct seq_file *m, void *p)
+> > +{
+> > +       struct list_head *list = m->private;
+> > +       struct kallsyms_iter_list *iter;
+> > +       int rc;
+> > +
+> > +       if (list_empty(list))
+> > +               return 0;
+> > +
+> > +       iter = list_first_entry(list, struct kallsyms_iter_list,
+> > next);
+> > +
+> > +       m->private = iter;
+> > +       rc = s_show(m, p);
+> > +       m->private = list;
+> > +
+> > +       list_del(&iter->next);
+> > +       kfree(iter);
+> > +
+> > +       return rc;
+> > +}
+> > +
+> > +static void *sorted_start(struct seq_file *m, loff_t *pos)
+> > +{
+> > +       return m->private;
+> > +}
+> > +
+> > +static void *sorted_next(struct seq_file *m, void *p, loff_t *pos)
+> > +{
+> > +       struct list_head *list = m->private;
+> > +
+> > +       (*pos)++;
+> > +
+> > +       if (list_empty(list))
+> > +               return NULL;
+> > +
+> > +       return p;
+> > +}
+> > +
+> > +static const struct seq_operations kallsyms_sorted_op = {
+> > +       .start = sorted_start,
+> > +       .next = sorted_next,
+> > +       .stop = s_stop,
+> > +       .show = sorted_show
+> > +};
+> > +
+> > +static int kallsyms_list_cmp(void *priv, struct list_head *a,
+> > +                               struct list_head *b)
+> > +{
+> > +       struct kallsyms_iter_list *iter_a, *iter_b;
+> > +
+> > +       iter_a = list_entry(a, struct kallsyms_iter_list, next);
+> > +       iter_b = list_entry(b, struct kallsyms_iter_list, next);
+> > +
+> > +       return strcmp(iter_a->iter.name, iter_b->iter.name);
+> > +}
+> > +
+> > +int get_all_symbol_name(void *data, const char *name, struct
+> > module *mod,
+> > +                       unsigned long addr)
+> > +{
+> > +       unsigned long sym_pos;
+> > +       struct kallsyms_iter_list *node, *last;
+> > +       struct list_head *head = (struct list_head *)data;
+> > +
+> > +       node = kmalloc(sizeof(*node), GFP_KERNEL);
+> > +       if (!node)
+> > +               return -ENOMEM;
+> > +
+> > +       if (list_empty(head)) {
+> > +               sym_pos = 0;
+> > +               memset(node, 0, sizeof(*node));
+> > +               reset_iter(&node->iter, 0);
+> > +               node->iter.show_value = kallsyms_show_value();
+> > +       } else {
+> > +               last = list_first_entry(head, struct
+> > kallsyms_iter_list, next);
+> > +               memcpy(node, last, sizeof(*node));
+> > +               sym_pos = last->iter.pos;
+> > +       }
+> > +
+> > +       INIT_LIST_HEAD(&node->next);
+> > +       list_add(&node->next, head);
+> > +
+> > +       /*
+> > +        * update_iter returns false when at end of file
+> > +        * which in this case we don't care about and can
+> > +        * safely ignore. update_iter() will increment
+> > +        * the value of iter->pos, for ksymbol_core.
+> > +        */
+> > +       if (sym_pos >= kallsyms_num_syms)
+> > +               sym_pos++;
+> > +
+> > +       (void) update_iter(&node->iter, sym_pos);
+> > +
+> > +       return 0;
+> > +}
+> > +
+> > +static int kallsyms_sorted_open(struct inode *inode, struct file
+> > *file)
+> > +{
+> > +       int ret;
+> > +       struct list_head *list;
+> > +
+> > +       list = __seq_open_private(file, &kallsyms_sorted_op,
+> > sizeof(*list));
+> > +       if (!list)
+> > +               return -ENOMEM;
+> > +
+> > +       INIT_LIST_HEAD(list);
+> > +
+> > +       ret = kallsyms_on_each_symbol(get_all_symbol_name, list);
+> > +       if (ret != 0)
+> > +               return ret;
+> > +
+> > +       list_sort(NULL, list, kallsyms_list_cmp);
+> > +
 > 
-> thanks,
-> -- 
-> js
-> suse labs
+> Could we do the sort at init time rather than open time
 
--- 
-Kees Cook
+I could do this, but module symbols would not be included, and also we
+would have to maintain a separate symbol list in memory forever since
+we have to keep the list sorted by address for bsearch. So, it does
+increase memory consumption vs. just allocating space, sorting, and
+then deallocating. I personally feel it's a better trade off to sort at
+open.
+
+> 
+> > +       return 0;
+> > +}
+> > +
+> >  static int kallsyms_open(struct inode *inode, struct file *file)
+> >  {
+> >         /*
+> > @@ -704,9 +825,24 @@ static const struct proc_ops kallsyms_proc_ops
+> > = {
+> >         .proc_release   = seq_release_private,
+> >  };
+> > 
+> > +static const struct proc_ops kallsyms_sorted_proc_ops = {
+> > +       .proc_open = kallsyms_sorted_open,
+> > +       .proc_read = seq_read,
+> > +       .proc_lseek = seq_lseek,
+> > +       .proc_release = seq_release_private,
+> > +};
+> > +
+> >  static int __init kallsyms_init(void)
+> >  {
+> > -       proc_create("kallsyms", 0444, NULL, &kallsyms_proc_ops);
+> > +       /*
+> > +        * When fine grained kaslr is enabled, we need to
+> > +        * print out the symbols sorted by name rather than by
+> > +        * by address, because this reveals the randomization
+> > order.
+> > +        */
+> > +       if (!IS_ENABLED(CONFIG_FG_KASLR))
+> > +               proc_create("kallsyms", 0444, NULL,
+> > &kallsyms_proc_ops);
+> > +       else
+> > +               proc_create("kallsyms", 0444, NULL,
+> > &kallsyms_sorted_proc_ops);
+> 
+> Can we just switch to the sorted version unconditionally instead? Or
+> is the output order of /proc/kallsyms considered kernel ABI?
+
+I didn't know the answer to this question, which is why to be safe I
+maintained the existing behavior when my feature is not enabled.
+
+> 
+
