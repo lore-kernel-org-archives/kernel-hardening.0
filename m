@@ -1,20 +1,23 @@
-Return-Path: <SRS0=QzCT=6E=lists.openwall.com=kernel-hardening-return-18575-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=bTF9=6E=lists.openwall.com=kernel-hardening-return-18576-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_2 autolearn=no
+X-Spam-Status: No, score=-10.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 22A95C54FD0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 19:23:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CCFA9C54FD0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 20:42:44 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 785012084D
-	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 19:23:30 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 785012084D
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=goodmis.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18575-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26165 invoked by uid 550); 20 Apr 2020 19:23:22 -0000
+	by mail.kernel.org (Postfix) with SMTP id 20302206E9
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Apr 2020 20:42:43 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="xMeM05XE"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 20302206E9
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18576-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5883 invoked by uid 550); 20 Apr 2020 20:42:36 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,52 +25,46 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26142 invoked from network); 20 Apr 2020 19:23:22 -0000
-Date: Mon, 20 Apr 2020 15:23:06 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Sami Tolvanen
- <samitolvanen@google.com>, Will Deacon <will@kernel.org>, Catalin Marinas
- <catalin.marinas@arm.com>, James Morse <james.morse@arm.com>, Ard
- Biesheuvel <ard.biesheuvel@linaro.org>, Masahiro Yamada
- <masahiroy@kernel.org>, Michal Marek <michal.lkml@markovi.net>, Ingo Molnar
- <mingo@redhat.com>, Juri Lelli <juri.lelli@redhat.com>, Vincent Guittot
- <vincent.guittot@linaro.org>, Dave Martin <Dave.Martin@arm.com>, Kees Cook
- <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Marc Zyngier
- <maz@kernel.org>, Masami Hiramatsu <mhiramat@kernel.org>, Nick Desaulniers
- <ndesaulniers@google.com>, Jann Horn <jannh@google.com>, Miguel Ojeda
- <miguel.ojeda.sandonis@gmail.com>, clang-built-linux@googlegroups.com,
- kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org,
- linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v11 04/12] scs: disable when function graph tracing is
- enabled
-Message-ID: <20200420152306.2d45e3c4@gandalf.local.home>
-In-Reply-To: <20200417154613.GB9529@lakrids.cambridge.arm.com>
-References: <20191018161033.261971-1-samitolvanen@google.com>
-	<20200416161245.148813-1-samitolvanen@google.com>
-	<20200416161245.148813-5-samitolvanen@google.com>
-	<20200417100039.GS20730@hirez.programming.kicks-ass.net>
-	<20200417144620.GA9529@lakrids.cambridge.arm.com>
-	<20200417152645.GH20730@hirez.programming.kicks-ass.net>
-	<20200417154613.GB9529@lakrids.cambridge.arm.com>
-X-Mailer: Claws Mail 3.17.3 (GTK+ 2.24.32; x86_64-pc-linux-gnu)
+Received: (qmail 5846 invoked from network); 20 Apr 2020 20:42:36 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1587415343;
+	bh=SYmDL71+i0dxipydp4fzdeCa0qcgn3q6383QGXptJxI=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=xMeM05XEdBoL/1hRghTVBJkRL92JNBsc0vONEfPdXkSjSKxdOO+hwrPBHdB/Cr1Z9
+	 GOD/PkSOModeIzIKldikpS1QexS3bmWDjnQ1l890YR72ONrmjqRMU1CbRcBJio2bGZ
+	 DiXKGrl9oq/t5wptbUrKeawIy93SgtP0oDiVXJH0=
+Date: Mon, 20 Apr 2020 21:42:18 +0100
+From: Will Deacon <will@kernel.org>
+To: Phong Tran <tranmanphong@gmail.com>
+Cc: catalin.marinas@arm.com, alexios.zavras@intel.com, tglx@linutronix.de,
+	akpm@linux-foundation.org, steven.price@arm.com,
+	steve.capper@arm.com, mark.rutland@arm.com, broonie@kernel.org,
+	keescook@chromium.org, linux-arm-kernel@lists.infradead.org,
+	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH] arm64: add check_wx_pages debugfs for CHECK_WX
+Message-ID: <20200420204217.GA29998@willie-the-truck>
+References: <20200307093926.27145-1-tranmanphong@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200307093926.27145-1-tranmanphong@gmail.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On Fri, 17 Apr 2020 16:46:14 +0100
-Mark Rutland <mark.rutland@arm.com> wrote:
-
-> > > > And doesn't BPF also do stuff like this?  
-> > > 
-> > > Can BPF mess with return addresses now!?  
-> > 
-> > At least on x86 I think it does. But what do I know, I can't operate
-> > that stuff. Rostedt might know.  
+On Sat, Mar 07, 2020 at 04:39:26PM +0700, Phong Tran wrote:
+> follow the suggestion from
+> https://github.com/KSPP/linux/issues/35
 > 
-> Sounds like I might need to do some digging...
+> Signed-off-by: Phong Tran <tranmanphong@gmail.com>
+> ---
+>  arch/arm64/Kconfig.debug        |  3 ++-
+>  arch/arm64/include/asm/ptdump.h |  2 ++
+>  arch/arm64/mm/dump.c            |  1 +
+>  arch/arm64/mm/ptdump_debugfs.c  | 18 ++++++++++++++++++
+>  4 files changed, 23 insertions(+), 1 deletion(-)
 
-May want to ping Alexei. It appears that if BPF adds a direct hook to a
-function, it will prevent the function graph tracer from tracing it. :-/
+Any plans to spin an updated version of this? The review feedback all seemed
+reasonable to me.
 
--- Steve
+Thanks,
+
+Will
