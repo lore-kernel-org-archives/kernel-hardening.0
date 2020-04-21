@@ -1,4 +1,4 @@
-Return-Path: <SRS0=LqdJ=6F=lists.openwall.com=kernel-hardening-return-18592-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=3dwn=6F=lists.openwall.com=kernel-hardening-return-18593-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,17 +8,17 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 54FE8C38A30
-	for <kernel-hardening@archiver.kernel.org>; Tue, 21 Apr 2020 02:16:53 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 00B95C38A30
+	for <kernel-hardening@archiver.kernel.org>; Tue, 21 Apr 2020 02:17:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A7B272082E
-	for <kernel-hardening@archiver.kernel.org>; Tue, 21 Apr 2020 02:16:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E9FA82082E
+	for <kernel-hardening@archiver.kernel.org>; Tue, 21 Apr 2020 02:17:04 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="e31q5D2L"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A7B272082E
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="vRokBmFY"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E9FA82082E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18592-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20184 invoked by uid 550); 21 Apr 2020 02:15:32 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18593-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20444 invoked by uid 550); 21 Apr 2020 02:15:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,41 +26,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20105 invoked from network); 21 Apr 2020 02:15:31 -0000
+Received: (qmail 20329 invoked from network); 21 Apr 2020 02:15:33 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=SV1DVkULqNa+FuGbiBRMBHT4OnEsBDpzGAv6cWsD5ng=;
-        b=e31q5D2LrF426GuLmKIN4uDuIUm2ZlLf+lRFsNEbELVTAOal8baaG14T9DuGBQz14r
-         9Sto7/6FnMn7605IKHg2tf5tw7v+feFsEopk4mtmCip0yo8yDm7Sny62DxKqEH8EV614
-         4cTMwKZcAj3aIykYJCFNeM2dddIQaDNfUJ6G5vsq6dSzq9a93ykfl7fWvHYOYeMBNO4G
-         1AdylY/8z0uA5mBptLxCAUS/3ywEaqpAYW8Opd2HGdYzg2Ovv2fTec1epYlugUIrLtLa
-         hSZOcKEYjSTr5Y6X4B5SgVnahzxKHNojuiY6qPK/Iwbq3wwfF8vt+aWPW3Ij55A/TxGv
-         zh6Q==
+        bh=6eRw7Y3w5tFwzaDk4cwrjvOp2ujNvhfVr2XLQsgcDIc=;
+        b=vRokBmFY5NNEePL9UUwCsAz8nNB111TS5FJYRBEXRDydtXI+YqiiKVNIy2fD/S8uvs
+         S3F6PNMYfM1hZQJZWgHZW89LuxMm3a5opaGt1TlRob7Qtg0WXCmeS0Zg2ORbmp3LuQNQ
+         9VDUjPwwhRocPJXQkTg1QQv/hACEV0f/54QlS19KWe3NrrgzSIYzWyTcWeZM9BdM6IZ8
+         xwyjIjVsjA/3LqGknCFGnQoALP4tcYgn2QEMhFHPYyqyWvbNmH5smQPQzFJGJNXrqK40
+         lL/hW0cnilutMPBFmqRlbMZnC6IchsW9XSRMqEe/f+VhsLQrcez5x2hHDvJfiWLdpDj1
+         Ul4Q==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=SV1DVkULqNa+FuGbiBRMBHT4OnEsBDpzGAv6cWsD5ng=;
-        b=uZD6PspO71kC9Zf8aYVZMp4BHO+BWPgf6C5DABGUgZNzdDtZR22Q6HXVmKiYpIJhxM
-         bRJ/q3BblyE3Z+fCvFbK4h7418FaErj9EPM6DWf1YekIgP6USGLF85QGSyFBbdGKxO7b
-         xewmDOEiiLfgb6AI2D0qFKOGk23p8HIX7s8jfv7gS54m7toOlgdrmiyeUfBGoTgjz4Pw
-         3UiWifYfCfjMmsg3XLfXpjpIGzOiFXvNkwzJx3vaA1jCSWiRKch34y9g5prJTjphInhK
-         UUP3bu8dElS8wweIx/8hUJpfSlaQnqDzBmzlob3jSfurHhrEwIH2Fux0+JCJbqhrJuSp
-         JGSg==
-X-Gm-Message-State: AGi0Pua9Ocl541EYNe5tzld3JzFtM/EEIhOyUJTWkMgo/0LqVgjZeJdU
-	Q8XiMXXUMvMhfRQtGpBTDHRFTWF6xok0jlyCC4c=
-X-Google-Smtp-Source: APiQypJ9tTRXTUL1zr6rmczfjnjv8aBX2IxTWUoRDjJtoqdCJcveKeh8g26L37LntO5tp4a613singP8/fZsqc3oszc=
-X-Received: by 2002:a17:90a:65c5:: with SMTP id i5mr2797895pjs.18.1587435319203;
- Mon, 20 Apr 2020 19:15:19 -0700 (PDT)
-Date: Mon, 20 Apr 2020 19:14:50 -0700
+        bh=6eRw7Y3w5tFwzaDk4cwrjvOp2ujNvhfVr2XLQsgcDIc=;
+        b=KUxLHMYrhIj0OkViGcapmCkwVnH6xxUNhHiB1RxaO7AnD21PbZwl9v17D56tdtT/Yy
+         HBCw1F5PfDCFs7xI5ybEyQ+4KIE+N9/QUg7zY0xL/jdpBuDWerNUVUI2yfTWDxIXyKvo
+         cvCU7XM2B8K4opzfJhshpW/0ImKn+Imw+ZxBKVicPuWovLxPyOJZiRPNAchv+9TqRfD1
+         annS1hZM54xHE6l1MsE6YNqtyAH/w8Ep1TmlXM4wqQ+fsHBczOj6R1fF9qNejOLXMEVa
+         B8UF9SH2vGPIayidN8VJTr+HRF7DljgTshjmKssBqcbm0FkeBp7dkPEYLOZOUZNJLGff
+         c/RQ==
+X-Gm-Message-State: AGi0PuZSv8NBOfV6eOmokjvCo/KxIoHnCn9Edf196C41aBWDF2m4K+ag
+	JpWjnbUNA9/Iommd7/BUq4qwGuiFvwX4cEfd3xo=
+X-Google-Smtp-Source: APiQypLqITkQwYFBJL5fmJ4Scj4591QC2iEfv7D5vdvy8OQNehbWaINW1Ho/mISESA0m1HZ1h0ChyaTi2ZpBK+1Kir8=
+X-Received: by 2002:a17:90a:2645:: with SMTP id l63mr2922202pje.54.1587435321715;
+ Mon, 20 Apr 2020 19:15:21 -0700 (PDT)
+Date: Mon, 20 Apr 2020 19:14:51 -0700
 In-Reply-To: <20200421021453.198187-1-samitolvanen@google.com>
-Message-Id: <20200421021453.198187-10-samitolvanen@google.com>
+Message-Id: <20200421021453.198187-11-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20191018161033.261971-1-samitolvanen@google.com> <20200421021453.198187-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.26.1.301.g55bc3eb7cb9-goog
-Subject: [PATCH v12 09/12] arm64: disable SCS for hypervisor code
+Subject: [PATCH v12 10/12] arm64: implement Shadow Call Stack
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
 	James Morse <james.morse@arm.com>, Steven Rostedt <rostedt@goodmis.org>, 
@@ -77,30 +77,298 @@ Cc: Dave Martin <Dave.Martin@arm.com>, Kees Cook <keescook@chromium.org>,
 	Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Disable SCS for code that runs at a different exception level by
-adding __noscs to __hyp_text.
+This change implements shadow stack switching, initial SCS set-up,
+and interrupt shadow stacks for arm64.
 
-Suggested-by: James Morse <james.morse@arm.com>
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
-Acked-by: Marc Zyngier <maz@kernel.org>
 ---
- arch/arm64/include/asm/kvm_hyp.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ arch/arm64/Kconfig                   |  5 ++++
+ arch/arm64/include/asm/scs.h         | 34 ++++++++++++++++++++++++++++
+ arch/arm64/include/asm/thread_info.h |  3 +++
+ arch/arm64/kernel/Makefile           |  1 +
+ arch/arm64/kernel/asm-offsets.c      |  3 +++
+ arch/arm64/kernel/entry.S            | 33 +++++++++++++++++++++++++--
+ arch/arm64/kernel/head.S             |  8 +++++++
+ arch/arm64/kernel/process.c          |  2 ++
+ arch/arm64/kernel/scs.c              | 16 +++++++++++++
+ arch/arm64/kernel/smp.c              |  4 ++++
+ 10 files changed, 107 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm64/include/asm/scs.h
+ create mode 100644 arch/arm64/kernel/scs.c
 
-diff --git a/arch/arm64/include/asm/kvm_hyp.h b/arch/arm64/include/asm/kvm_hyp.h
-index fe57f60f06a8..875b106c5d98 100644
---- a/arch/arm64/include/asm/kvm_hyp.h
-+++ b/arch/arm64/include/asm/kvm_hyp.h
-@@ -13,7 +13,7 @@
- #include <asm/kvm_mmu.h>
- #include <asm/sysreg.h>
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 40fb05d96c60..c380a16533f6 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -64,6 +64,7 @@ config ARM64
+ 	select ARCH_USE_QUEUED_RWLOCKS
+ 	select ARCH_USE_QUEUED_SPINLOCKS
+ 	select ARCH_SUPPORTS_MEMORY_FAILURE
++	select ARCH_SUPPORTS_SHADOW_CALL_STACK if CC_HAVE_SHADOW_CALL_STACK
+ 	select ARCH_SUPPORTS_ATOMIC_RMW
+ 	select ARCH_SUPPORTS_INT128 if CC_HAS_INT128 && (GCC_VERSION >= 50000 || CC_IS_CLANG)
+ 	select ARCH_SUPPORTS_NUMA_BALANCING
+@@ -1025,6 +1026,10 @@ config ARCH_HAS_CACHE_LINE_SIZE
+ config ARCH_ENABLE_SPLIT_PMD_PTLOCK
+ 	def_bool y if PGTABLE_LEVELS > 2
  
--#define __hyp_text __section(.hyp.text) notrace
-+#define __hyp_text __section(.hyp.text) notrace __noscs
++# Supported by clang >= 7.0
++config CC_HAVE_SHADOW_CALL_STACK
++	def_bool $(cc-option, -fsanitize=shadow-call-stack -ffixed-x18)
++
+ config SECCOMP
+ 	bool "Enable seccomp to safely compute untrusted bytecode"
+ 	---help---
+diff --git a/arch/arm64/include/asm/scs.h b/arch/arm64/include/asm/scs.h
+new file mode 100644
+index 000000000000..27dced9cbaf7
+--- /dev/null
++++ b/arch/arm64/include/asm/scs.h
+@@ -0,0 +1,34 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef _ASM_SCS_H
++#define _ASM_SCS_H
++
++#ifndef __ASSEMBLY__
++
++#include <linux/scs.h>
++
++#ifdef CONFIG_SHADOW_CALL_STACK
++
++static __always_inline void scs_save(struct task_struct *tsk)
++{
++	void *s;
++
++	asm volatile("mov %0, x18" : "=r" (s));
++	task_set_scs(tsk, s);
++}
++
++static inline void scs_overflow_check(struct task_struct *tsk)
++{
++	if (unlikely(scs_corrupted(tsk)))
++		panic("corrupted shadow stack detected inside scheduler\n");
++}
++
++#else /* CONFIG_SHADOW_CALL_STACK */
++
++static inline void scs_save(struct task_struct *tsk) {}
++static inline void scs_overflow_check(struct task_struct *tsk) {}
++
++#endif /* CONFIG_SHADOW_CALL_STACK */
++
++#endif /* __ASSEMBLY __ */
++
++#endif /* _ASM_SCS_H */
+diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+index 512174a8e789..1fb651f73da3 100644
+--- a/arch/arm64/include/asm/thread_info.h
++++ b/arch/arm64/include/asm/thread_info.h
+@@ -41,6 +41,9 @@ struct thread_info {
+ #endif
+ 		} preempt;
+ 	};
++#ifdef CONFIG_SHADOW_CALL_STACK
++	void			*shadow_call_stack;
++#endif
+ };
  
- #define read_sysreg_elx(r,nvh,vh)					\
- 	({								\
+ #define thread_saved_pc(tsk)	\
+diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
+index 4e5b8ee31442..151f28521f1e 100644
+--- a/arch/arm64/kernel/Makefile
++++ b/arch/arm64/kernel/Makefile
+@@ -63,6 +63,7 @@ obj-$(CONFIG_CRASH_CORE)		+= crash_core.o
+ obj-$(CONFIG_ARM_SDE_INTERFACE)		+= sdei.o
+ obj-$(CONFIG_ARM64_SSBD)		+= ssbd.o
+ obj-$(CONFIG_ARM64_PTR_AUTH)		+= pointer_auth.o
++obj-$(CONFIG_SHADOW_CALL_STACK)		+= scs.o
+ 
+ obj-y					+= vdso/ probes/
+ obj-$(CONFIG_COMPAT_VDSO)		+= vdso32/
+diff --git a/arch/arm64/kernel/asm-offsets.c b/arch/arm64/kernel/asm-offsets.c
+index 9981a0a5a87f..777a662888ec 100644
+--- a/arch/arm64/kernel/asm-offsets.c
++++ b/arch/arm64/kernel/asm-offsets.c
+@@ -33,6 +33,9 @@ int main(void)
+   DEFINE(TSK_TI_ADDR_LIMIT,	offsetof(struct task_struct, thread_info.addr_limit));
+ #ifdef CONFIG_ARM64_SW_TTBR0_PAN
+   DEFINE(TSK_TI_TTBR0,		offsetof(struct task_struct, thread_info.ttbr0));
++#endif
++#ifdef CONFIG_SHADOW_CALL_STACK
++  DEFINE(TSK_TI_SCS,		offsetof(struct task_struct, thread_info.shadow_call_stack));
+ #endif
+   DEFINE(TSK_STACK,		offsetof(struct task_struct, stack));
+ #ifdef CONFIG_STACKPROTECTOR
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index ddcde093c433..14f0ff763b39 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -179,6 +179,11 @@ alternative_cb_end
+ 	apply_ssbd 1, x22, x23
+ 
+ 	ptrauth_keys_install_kernel tsk, 1, x20, x22, x23
++
++#ifdef CONFIG_SHADOW_CALL_STACK
++	ldr	x18, [tsk, #TSK_TI_SCS]		// Restore shadow call stack
++	str	xzr, [tsk, #TSK_TI_SCS]		// Limit visibility of saved SCS
++#endif
+ 	.else
+ 	add	x21, sp, #S_FRAME_SIZE
+ 	get_current_task tsk
+@@ -280,6 +285,12 @@ alternative_else_nop_endif
+ 	ct_user_enter
+ 	.endif
+ 
++#ifdef CONFIG_SHADOW_CALL_STACK
++	.if	\el == 0
++	str	x18, [tsk, #TSK_TI_SCS]		// Save shadow call stack
++	.endif
++#endif
++
+ #ifdef CONFIG_ARM64_SW_TTBR0_PAN
+ 	/*
+ 	 * Restore access to TTBR0_EL1. If returning to EL0, no need for SPSR
+@@ -388,6 +399,9 @@ alternative_insn eret, nop, ARM64_UNMAP_KERNEL_AT_EL0
+ 
+ 	.macro	irq_stack_entry
+ 	mov	x19, sp			// preserve the original sp
++#ifdef CONFIG_SHADOW_CALL_STACK
++	mov	x24, x18		// preserve the original shadow stack
++#endif
+ 
+ 	/*
+ 	 * Compare sp with the base of the task stack.
+@@ -405,15 +419,25 @@ alternative_insn eret, nop, ARM64_UNMAP_KERNEL_AT_EL0
+ 
+ 	/* switch to the irq stack */
+ 	mov	sp, x26
++
++#ifdef CONFIG_SHADOW_CALL_STACK
++	/* also switch to the irq shadow stack */
++	adr_this_cpu x18, irq_shadow_call_stack, x26
++#endif
++
+ 9998:
+ 	.endm
+ 
+ 	/*
+-	 * x19 should be preserved between irq_stack_entry and
+-	 * irq_stack_exit.
++	 * The callee-saved regs (x19-x29) should be preserved between
++	 * irq_stack_entry and irq_stack_exit, but note that kernel_entry
++	 * uses x20-x23 to store data for later use.
+ 	 */
+ 	.macro	irq_stack_exit
+ 	mov	sp, x19
++#ifdef CONFIG_SHADOW_CALL_STACK
++	mov	x18, x24
++#endif
+ 	.endm
+ 
+ /* GPRs used by entry code */
+@@ -901,6 +925,11 @@ SYM_FUNC_START(cpu_switch_to)
+ 	mov	sp, x9
+ 	msr	sp_el0, x1
+ 	ptrauth_keys_install_kernel x1, 1, x8, x9, x10
++#ifdef CONFIG_SHADOW_CALL_STACK
++	str	x18, [x0, #TSK_TI_SCS]
++	ldr	x18, [x1, #TSK_TI_SCS]
++	str	xzr, [x1, #TSK_TI_SCS]		// limit visibility of saved SCS
++#endif
+ 	ret
+ SYM_FUNC_END(cpu_switch_to)
+ NOKPROBE(cpu_switch_to)
+diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+index 57a91032b4c2..1514445bbccb 100644
+--- a/arch/arm64/kernel/head.S
++++ b/arch/arm64/kernel/head.S
+@@ -424,6 +424,10 @@ SYM_FUNC_START_LOCAL(__primary_switched)
+ 	stp	xzr, x30, [sp, #-16]!
+ 	mov	x29, sp
+ 
++#ifdef CONFIG_SHADOW_CALL_STACK
++	adr_l	x18, init_shadow_call_stack	// Set shadow call stack
++#endif
++
+ 	str_l	x21, __fdt_pointer, x5		// Save FDT pointer
+ 
+ 	ldr_l	x4, kimage_vaddr		// Save the offset between
+@@ -737,6 +741,10 @@ SYM_FUNC_START_LOCAL(__secondary_switched)
+ 	ldr	x2, [x0, #CPU_BOOT_TASK]
+ 	cbz	x2, __secondary_too_slow
+ 	msr	sp_el0, x2
++#ifdef CONFIG_SHADOW_CALL_STACK
++	ldr	x18, [x2, #TSK_TI_SCS]		// set shadow call stack
++	str	xzr, [x2, #TSK_TI_SCS]		// limit visibility of saved SCS
++#endif
+ 	mov	x29, #0
+ 	mov	x30, #0
+ 	b	secondary_start_kernel
+diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
+index 56be4cbf771f..a35d3318492c 100644
+--- a/arch/arm64/kernel/process.c
++++ b/arch/arm64/kernel/process.c
+@@ -52,6 +52,7 @@
+ #include <asm/mmu_context.h>
+ #include <asm/processor.h>
+ #include <asm/pointer_auth.h>
++#include <asm/scs.h>
+ #include <asm/stacktrace.h>
+ 
+ #if defined(CONFIG_STACKPROTECTOR) && !defined(CONFIG_STACKPROTECTOR_PER_TASK)
+@@ -515,6 +516,7 @@ __notrace_funcgraph struct task_struct *__switch_to(struct task_struct *prev,
+ 	entry_task_switch(next);
+ 	uao_thread_switch(next);
+ 	ssbs_thread_switch(next);
++	scs_overflow_check(next);
+ 
+ 	/*
+ 	 * Complete any pending TLB or cache maintenance on this CPU in case
+diff --git a/arch/arm64/kernel/scs.c b/arch/arm64/kernel/scs.c
+new file mode 100644
+index 000000000000..086ad97bba86
+--- /dev/null
++++ b/arch/arm64/kernel/scs.c
+@@ -0,0 +1,16 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Shadow Call Stack support.
++ *
++ * Copyright (C) 2019 Google LLC
++ */
++
++#include <linux/percpu.h>
++#include <asm/scs.h>
++
++/* Allocate a static per-CPU shadow stack */
++#define DEFINE_SCS(name)						\
++	DEFINE_PER_CPU(unsigned long [SCS_SIZE/sizeof(long)], name)	\
++		__aligned(SCS_SIZE)
++
++DEFINE_SCS(irq_shadow_call_stack);
+diff --git a/arch/arm64/kernel/smp.c b/arch/arm64/kernel/smp.c
+index 061f60fe452f..1d112e34a636 100644
+--- a/arch/arm64/kernel/smp.c
++++ b/arch/arm64/kernel/smp.c
+@@ -46,6 +46,7 @@
+ #include <asm/pgtable.h>
+ #include <asm/pgalloc.h>
+ #include <asm/processor.h>
++#include <asm/scs.h>
+ #include <asm/smp_plat.h>
+ #include <asm/sections.h>
+ #include <asm/tlbflush.h>
+@@ -370,6 +371,9 @@ void cpu_die(void)
+ 	unsigned int cpu = smp_processor_id();
+ 	const struct cpu_operations *ops = get_cpu_ops(cpu);
+ 
++	/* Save the shadow stack pointer before exiting the idle task */
++	scs_save(current);
++
+ 	idle_task_exit();
+ 
+ 	local_daif_mask();
 -- 
 2.26.1.301.g55bc3eb7cb9-goog
 
