@@ -1,23 +1,22 @@
-Return-Path: <SRS0=ilAr=6G=lists.openwall.com=kernel-hardening-return-18605-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=CXEq=6G=lists.openwall.com=kernel-hardening-return-18606-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 06EE5C55185
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Apr 2020 17:46:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 99232C54FCB
+	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Apr 2020 17:51:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5B4D220882
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Apr 2020 17:46:28 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id ECB2B20882
+	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Apr 2020 17:51:23 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="xeCqLIAI"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5B4D220882
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18605-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25660 invoked by uid 550); 22 Apr 2020 17:46:22 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="SbiBDMBj"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org ECB2B20882
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18606-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30632 invoked by uid 550); 22 Apr 2020 17:51:17 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,18 +24,36 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25637 invoked from network); 22 Apr 2020 17:46:21 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1587577569;
-	bh=BZ6+GxqnknwEXTVUtex2UCZYN1TnyT2nFbqPEZvID5Q=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=xeCqLIAIf4jizG2Ckht2qwltfYk8W5t7dkqurW5+DudPXgEs52Se1z8kA6BYPOJvg
-	 zWeehGFavyojT3LhGVeOWARgj6LEsxC0YHGvVxWT4c7cDFTYsZV2It6kXt09f/QSfF
-	 HpAJI7pNWvgcdxfndttxPkynvgEj5eZLoxc5MmEQ=
-Date: Wed, 22 Apr 2020 18:46:02 +0100
-From: Will Deacon <will@kernel.org>
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Catalin Marinas <catalin.marinas@arm.com>,
+Received: (qmail 30604 invoked from network); 22 Apr 2020 17:51:16 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=ZF6h4B8lRkEW+PGdoi5ViWh9NdqvBm+plj3edg+BLxs=;
+        b=SbiBDMBjNOJtZvz674h6CaZCEGdmafbK0qSIOSSMTCWnqd5jMXbDXqcct8K8mtTChe
+         4BmBYx34rurFf5imZkH6NB9jvIu0M0140rWbXixJsCfD/+8yfkJPCm/IHIsm3ZoRWfwb
+         VIyeJQzY1bEBF+t0X5Jqa/2kR8k/V4WASdOqg=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=ZF6h4B8lRkEW+PGdoi5ViWh9NdqvBm+plj3edg+BLxs=;
+        b=B6CZ/FxoHBBnKTORE7Pdxlx+gYZBMEMfTLbwpLGPaBcVhIqoKFhSq5Avd/zymU/xjs
+         SWbUmDjaJ2Mgsmqh92Go/i3hgRPCwUpdfqQpb213VPyQ23J7zd+KHmLaX4nhHylYPuQP
+         RrCuxCF54WkgOqbQgQavj58QuQxpljrS60w5nlVHLeZ1unkvzASlxt2Eg54hw2/rQir8
+         TpsrOi4I+WX9PPVcz3wReECorZrJcM7bH9rftTZRCDq4SryMcavIoUTB3eMk4leD/Im7
+         96TkSDvQ6Tv9OFCOzEDBXyLpmHlvI8zoark+6hGTdngNJgpYJAFPzDvaZfSYBSzBpl5b
+         kTWA==
+X-Gm-Message-State: AGi0PubnqBBNpgR2LWRYFh2SyAVwaazfIik/O4j8KQQH2zS1H8Lmf/+S
+	yn5r+uesNnhp2qXcWqqkCgkNIA==
+X-Google-Smtp-Source: APiQypKgukJRS2MpdwcmV4gR8X/qlLkQhVOoNqLyqZFCT1UTaoEDKt7OxFkygmvQ9SLxUbFYDjP/kg==
+X-Received: by 2002:a63:9e54:: with SMTP id r20mr141098pgo.301.1587577864965;
+        Wed, 22 Apr 2020 10:51:04 -0700 (PDT)
+Date: Wed, 22 Apr 2020 10:51:02 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Will Deacon <will@kernel.org>
+Cc: Sami Tolvanen <samitolvanen@google.com>,
+	Catalin Marinas <catalin.marinas@arm.com>,
 	James Morse <james.morse@arm.com>,
 	Steven Rostedt <rostedt@goodmis.org>,
 	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
@@ -48,7 +65,6 @@ Cc: Catalin Marinas <catalin.marinas@arm.com>,
 	Juri Lelli <juri.lelli@redhat.com>,
 	Vincent Guittot <vincent.guittot@linaro.org>,
 	Dave Martin <Dave.Martin@arm.com>,
-	Kees Cook <keescook@chromium.org>,
 	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
 	Masami Hiramatsu <mhiramat@kernel.org>,
 	Nick Desaulniers <ndesaulniers@google.com>,
@@ -57,65 +73,48 @@ Cc: Catalin Marinas <catalin.marinas@arm.com>,
 	clang-built-linux@googlegroups.com,
 	kernel-hardening@lists.openwall.com,
 	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v12 03/12] scs: add support for stack usage debugging
-Message-ID: <20200422174602.GB3121@willie-the-truck>
+Subject: Re: [PATCH v11 01/12] add support for Clang's Shadow Call Stack (SCS)
+Message-ID: <202004221047.3AEAECC1@keescook>
 References: <20191018161033.261971-1-samitolvanen@google.com>
- <20200421021453.198187-1-samitolvanen@google.com>
- <20200421021453.198187-4-samitolvanen@google.com>
+ <20200416161245.148813-1-samitolvanen@google.com>
+ <20200416161245.148813-2-samitolvanen@google.com>
+ <20200420171727.GB24386@willie-the-truck>
+ <20200420211830.GA5081@google.com>
+ <20200422173938.GA3069@willie-the-truck>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200421021453.198187-4-samitolvanen@google.com>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+In-Reply-To: <20200422173938.GA3069@willie-the-truck>
 
-On Mon, Apr 20, 2020 at 07:14:44PM -0700, Sami Tolvanen wrote:
-> Implements CONFIG_DEBUG_STACK_USAGE for shadow stacks. When enabled,
-> also prints out the highest shadow stack usage per process.
+On Wed, Apr 22, 2020 at 06:39:47PM +0100, Will Deacon wrote:
+> On Mon, Apr 20, 2020 at 02:18:30PM -0700, Sami Tolvanen wrote:
+> > On Mon, Apr 20, 2020 at 06:17:28PM +0100, Will Deacon wrote:
+> > > > +	 * The shadow call stack is aligned to SCS_SIZE, and grows
+> > > > +	 * upwards, so we can mask out the low bits to extract the base
+> > > > +	 * when the task is not running.
+> > > > +	 */
+> > > > +	return (void *)((unsigned long)task_scs(tsk) & ~(SCS_SIZE - 1));
+> > > 
+> > > Could we avoid forcing this alignment it we stored the SCS pointer as a
+> > > (base,offset) pair instead? That might be friendlier on the allocations
+> > > later on.
+> > 
+> > The idea is to avoid storing the current task's shadow stack address in
+> > memory, which is why I would rather not store the base address either.
 > 
-> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-> Reviewed-by: Kees Cook <keescook@chromium.org>
-> ---
->  kernel/scs.c | 38 ++++++++++++++++++++++++++++++++++++++
->  1 file changed, 38 insertions(+)
+> What I mean is that, instead of storing the current shadow stack pointer,
+> we instead store a base and an offset. We can still clear the base, as you
+> do with the pointer today, and I don't see that the offset is useful to
+> an attacker on its own.
 > 
-> diff --git a/kernel/scs.c b/kernel/scs.c
-> index 7eea2d97bd2d..147917e31adf 100644
-> --- a/kernel/scs.c
-> +++ b/kernel/scs.c
-> @@ -68,6 +68,43 @@ int scs_prepare(struct task_struct *tsk, int node)
->  	return 0;
->  }
->  
-> +#ifdef CONFIG_DEBUG_STACK_USAGE
-> +static unsigned long __scs_used(struct task_struct *tsk)
-> +{
-> +	unsigned long *p = __scs_base(tsk);
-> +	unsigned long *end = __scs_magic(p);
-> +	unsigned long s = (unsigned long)p;
-> +
-> +	while (p < end && READ_ONCE_NOCHECK(*p))
-> +		p++;
-> +
-> +	return (unsigned long)p - s;
-> +}
-> +
-> +static void scs_check_usage(struct task_struct *tsk)
-> +{
-> +	static unsigned long highest;
-> +	unsigned long used = __scs_used(tsk);
-> +	unsigned long prev;
-> +	unsigned long curr = highest;
-> +
-> +	while (used > curr) {
-> +		prev = cmpxchg(&highest, curr, used);
+> But more generally, is it really worthwhile to do this clearing at all? Can
+> you (or Kees?) provide some justification for it, please? We don't do it
+> for anything else, e.g. the pointer authentication keys, so something
+> feels amiss here.
 
-I think this can be cmpxchg_relaxed(), since we don't care about ordering
-here afaict.
+It's a hardening step to just reduce the lifetime of a valid address
+exposed in memory. In fact, since there is a cache, I think it should be
+wiped even in scs_release().
 
-With that:
-
-Acked-by: Will Deacon <will@kernel.org>
-
-Cheers,
-
-Will
+-- 
+Kees Cook
