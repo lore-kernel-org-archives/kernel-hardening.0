@@ -1,20 +1,22 @@
-Return-Path: <SRS0=ZYrN=6H=lists.openwall.com=kernel-hardening-return-18616-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=F6jF=6H=lists.openwall.com=kernel-hardening-return-18617-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2AB05C55186
-	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 12:19:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 49181C54FD0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 18:09:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 56C462074F
-	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 12:19:41 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 56C462074F
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18616-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11419 invoked by uid 550); 23 Apr 2020 12:19:34 -0000
+	by mail.kernel.org (Postfix) with SMTP id A099320767
+	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 18:09:48 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="CdFotNnq"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A099320767
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18617-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29922 invoked by uid 550); 23 Apr 2020 18:09:40 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,139 +24,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11388 invoked from network); 23 Apr 2020 12:19:32 -0000
-From: ebiederm@xmission.com (Eric W. Biederman)
-To: Alexey Gladkov <gladkov.alexey@gmail.com>
-Cc: LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux API <linux-api@vger.kernel.org>,  Linux FS Devel <linux-fsdevel@vger.kernel.org>,  Linux Security Module <linux-security-module@vger.kernel.org>,  Akinobu Mita <akinobu.mita@gmail.com>,  Alexander Viro <viro@zeniv.linux.org.uk>,  Alexey Dobriyan <adobriyan@gmail.com>,  Alexey Gladkov <legion@kernel.org>,  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,  Daniel Micay <danielmicay@gmail.com>,  Djalal Harouni <tixxdz@gmail.com>,  "Dmitry V . Levin" <ldv@altlinux.org>,  Greg Kroah-Hartman <gregkh@linuxfoundation.org>,  Ingo Molnar <mingo@kernel.org>,  "J . Bruce Fields" <bfields@fieldses.org>,  Jeff Layton <jlayton@poochiereds.net>,  Jonathan Corbet <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,  Oleg Nesterov <oleg@redhat.com>,  David Howells <dhowells@redhat.com>
-References: <20200419141057.621356-3-gladkov.alexey@gmail.com>
-	<20200423112858.95820-1-gladkov.alexey@gmail.com>
-Date: Thu, 23 Apr 2020 07:16:07 -0500
-In-Reply-To: <20200423112858.95820-1-gladkov.alexey@gmail.com> (Alexey
-	Gladkov's message of "Thu, 23 Apr 2020 13:28:58 +0200")
-Message-ID: <87lfmmz9bs.fsf@x220.int.ebiederm.org>
-User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
+Received: (qmail 29899 invoked from network); 23 Apr 2020 18:09:39 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=KWVTVR9QPt8YpEnS6+rG3cx9IAZdQ2Peqca4Ud6UmSY=;
+        b=CdFotNnqSpurMKkIu6CgBx6OkkmuS4dmePbH5JYO6Yb24rHfaG6bv/j6W3gwVuvGlR
+         64PbSSNPaH8ceQMVqvMs5BZdL4WabMg/+3TPoVNadaUwZ1CIY5Ft1srs/S6AInLWxtLR
+         iKNcf7yWw+tp7Mv+in+N3g014ylhLnJOJ++nc=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=KWVTVR9QPt8YpEnS6+rG3cx9IAZdQ2Peqca4Ud6UmSY=;
+        b=ir3weRnMdd2l51/hoLsEkRkJAhsnHjio/jPIhsp2h/ab6VF4h3WgqAOCYIlNZrm3V9
+         XHswJ8SRdsR1bxv//QFWRBa1Yd9C52hioPa9y6YCdB1qXCcGNcfXcv75BYRhLzUUwZNa
+         ObdJsvrYy+AT7bWgUl9NRV/arT3Zl+sDA8FRzunlnSguzFqdtc2UbLoMTMNQdZAXMYOF
+         6Gcm22aEskmm3ZEkESomoPOSIIvS6hMD5cXXN78X7B0kkrTQzmZEjGjX4I3JAa8RkL89
+         NJFV+Tf43b/iOjoJNibxamYtGCX0hU/tSO3pd0hsboAcTbnbxwL6Zl9WekcbKAI8phh0
+         bZUg==
+X-Gm-Message-State: AGi0PuZn49RROPquj5DYTYeCYY+JuDpiFgIxRjeMrzQQ21IO41sNdNuE
+	lt+fY/t2QjJlTTALFFTHyZ6ybQ==
+X-Google-Smtp-Source: APiQypLMPu77yfYvTCVDe2sNxmi176/dfhJmzHOmLBk67EV18fTOD0x11gPSr7XgMYCWAsHYZmXLuw==
+X-Received: by 2002:a63:5c01:: with SMTP id q1mr4899728pgb.177.1587665367464;
+        Thu, 23 Apr 2020 11:09:27 -0700 (PDT)
+Date: Thu, 23 Apr 2020 11:09:24 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Will Deacon <will@kernel.org>
+Cc: Sami Tolvanen <samitolvanen@google.com>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	James Morse <james.morse@arm.com>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Mark Rutland <mark.rutland@arm.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Michal Marek <michal.lkml@markovi.net>,
+	Ingo Molnar <mingo@redhat.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Juri Lelli <juri.lelli@redhat.com>,
+	Vincent Guittot <vincent.guittot@linaro.org>,
+	Dave Martin <Dave.Martin@arm.com>,
+	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	Jann Horn <jannh@google.com>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com,
+	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v12 01/12] add support for Clang's Shadow Call Stack (SCS)
+Message-ID: <202004231108.1AC704F609@keescook>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20200421021453.198187-1-samitolvanen@google.com>
+ <20200421021453.198187-2-samitolvanen@google.com>
+ <202004221052.489CCFEBC@keescook>
+ <20200422180040.GC3121@willie-the-truck>
 MIME-Version: 1.0
-Content-Type: text/plain
-X-XM-SPF: eid=1jRap3-0005q7-LI;;;mid=<87lfmmz9bs.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX1+iR9pVq9wAKGMb1dkjvzvzUUF2IrtP4AY=
-X-SA-Exim-Connect-IP: 68.227.160.95
-X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: Re: [PATCH v13 2/7] proc: allow to mount many instances of proc in one pid namespace
-X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
-X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200422180040.GC3121@willie-the-truck>
 
+On Wed, Apr 22, 2020 at 07:00:40PM +0100, Will Deacon wrote:
+> On Wed, Apr 22, 2020 at 10:54:45AM -0700, Kees Cook wrote:
+> > On Mon, Apr 20, 2020 at 07:14:42PM -0700, Sami Tolvanen wrote:
+> > > +void scs_release(struct task_struct *tsk)
+> > > +{
+> > > +	void *s;
+> > > +
+> > > +	s = __scs_base(tsk);
+> > > +	if (!s)
+> > > +		return;
+> > > +
+> > > +	WARN_ON(scs_corrupted(tsk));
+> > > +
+> > 
+> > I'd like to have task_set_scs(tsk, NULL) retained here, to avoid need to
+> > depend on the released task memory getting scrubbed at a later time.
+> 
+> Hmm, doesn't it get zeroed almost immediately by kmem_cache_free() if
+> INIT_ON_FREE_DEFAULT_ON is set? That seems much better than special-casing
+> SCS, as there's a tonne of other useful stuff kicking around in the
+> task_struct and treating this specially feels odd to me.
 
-I took a quick look and there is at least one other use in security/tomoyo/realpath.c:
+That's going to be an uncommon config except for the most paranoid of
+system builders. :) Having this get wiped particular thing wiped is just
+a decent best practice for what is otherwise treated as a "secret", just
+like crypto routines wipe their secrets before free().
 
-static char *tomoyo_get_local_path(struct dentry *dentry, char * const buffer,
-				   const int buflen)
-{
-	struct super_block *sb = dentry->d_sb;
-	char *pos = tomoyo_get_dentry_path(dentry, buffer, buflen);
-
-	if (IS_ERR(pos))
-		return pos;
-	/* Convert from $PID to self if $PID is current thread. */
-	if (sb->s_magic == PROC_SUPER_MAGIC && *pos == '/') {
-		char *ep;
-		const pid_t pid = (pid_t) simple_strtoul(pos + 1, &ep, 10);
-
-		if (*ep == '/' && pid && pid ==
-		    task_tgid_nr_ns(current, sb->s_fs_info)) {
-			pos = ep - 5;
-			if (pos < buffer)
-				goto out;
-			memmove(pos, "/self", 5);
-		}
-		goto prepend_filesystem_name;
-	}
-
-Can you make the fixes to locks.c and tomoyo a couple of standalone
-fixes that should be inserted before your patch?
-
-On the odd chance there is a typo they will bisect better, as well
-as just keeping this patch and it's description from expanding in size.
-So that things are small enough for people to really look at and review.
-
-The fix itself looks fine.
-
-Thank you,
-Eric
-
-
-Alexey Gladkov <gladkov.alexey@gmail.com> writes:
-
-> Fixed getting proc_pidns in the lock_get_status() and locks_show() directly from
-> the superblock, which caused a crash:
->
-> === arm64 ===
-> [12140.366814] LTP: starting proc01 (proc01 -m 128)
-> [12149.580943] ==================================================================
-> [12149.589521] BUG: KASAN: out-of-bounds in pid_nr_ns+0x2c/0x90 pid_nr_ns at kernel/pid.c:456
-> [12149.595939] Read of size 4 at addr 1bff000bfa8c0388 by task = proc01/50298
-> [12149.603392] Pointer tag: [1b], memory tag: [fe]
->
-> [12149.610906] CPU: 69 PID: 50298 Comm: proc01 Tainted: G L 5.7.0-rc2-next-20200422 #6
-> [12149.620585] Hardware name: HPE Apollo 70 /C01_APACHE_MB , BIOS L50_5.13_1.11 06/18/2019
-> [12149.631074] Call trace:
-> [12149.634304]  dump_backtrace+0x0/0x22c
-> [12149.638745]  show_stack+0x28/0x34
-> [12149.642839]  dump_stack+0x104/0x194
-> [12149.647110]  print_address_description+0x70/0x3a4
-> [12149.652576]  __kasan_report+0x188/0x238
-> [12149.657169]  kasan_report+0x3c/0x58
-> [12149.661430]  check_memory_region+0x98/0xa0
-> [12149.666303]  __hwasan_load4_noabort+0x18/0x20
-> [12149.671431]  pid_nr_ns+0x2c/0x90
-> [12149.675446]  locks_translate_pid+0xf4/0x1a0
-> [12149.680382]  locks_show+0x68/0x110
-> [12149.684536]  seq_read+0x380/0x930
-> [12149.688604]  pde_read+0x5c/0x78
-> [12149.692498]  proc_reg_read+0x74/0xc0
-> [12149.696813]  __vfs_read+0x84/0x1d0
-> [12149.700939]  vfs_read+0xec/0x124
-> [12149.704889]  ksys_read+0xb0/0x120
-> [12149.708927]  __arm64_sys_read+0x54/0x88
-> [12149.713485]  do_el0_svc+0x128/0x1dc
-> [12149.717697]  el0_sync_handler+0x150/0x250
-> [12149.722428]  el0_sync+0x164/0x180
->
-> [12149.728672] Allocated by task 1:
-> [12149.732624]  __kasan_kmalloc+0x124/0x188
-> [12149.737269]  kasan_kmalloc+0x10/0x18
-> [12149.741568]  kmem_cache_alloc_trace+0x2e4/0x3d4
-> [12149.746820]  proc_fill_super+0x48/0x1fc
-> [12149.751377]  vfs_get_super+0xcc/0x170
-> [12149.755760]  get_tree_nodev+0x28/0x34
-> [12149.760143]  proc_get_tree+0x24/0x30
-> [12149.764439]  vfs_get_tree+0x54/0x158
-> [12149.768736]  do_mount+0x80c/0xaf0
-> [12149.772774]  __arm64_sys_mount+0xe0/0x18c
-> [12149.777504]  do_el0_svc+0x128/0x1dc
-> [12149.781715]  el0_sync_handler+0x150/0x250
-> [12149.786445]  el0_sync+0x164/0x180
-
-> diff --git a/fs/locks.c b/fs/locks.c
-> index b8a31c1c4fff..399c5dbb72c4 100644
-> --- a/fs/locks.c
-> +++ b/fs/locks.c
-> @@ -2823,7 +2823,7 @@ static void lock_get_status(struct seq_file *f, struct file_lock *fl,
->  {
->  	struct inode *inode = NULL;
->  	unsigned int fl_pid;
-> -	struct pid_namespace *proc_pidns = file_inode(f->file)->i_sb->s_fs_info;
-> +	struct pid_namespace *proc_pidns = proc_pid_ns(file_inode(f->file));
->  
->  	fl_pid = locks_translate_pid(fl, proc_pidns);
->  	/*
-> @@ -2901,7 +2901,7 @@ static int locks_show(struct seq_file *f, void *v)
->  {
->  	struct locks_iterator *iter = f->private;
->  	struct file_lock *fl, *bfl;
-> -	struct pid_namespace *proc_pidns = file_inode(f->file)->i_sb->s_fs_info;
-> +	struct pid_namespace *proc_pidns = proc_pid_ns(file_inode(f->file));
->  
->  	fl = hlist_entry(v, struct file_lock, fl_link);
->  
-
-Eric
+-- 
+Kees Cook
