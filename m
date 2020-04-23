@@ -1,23 +1,20 @@
-Return-Path: <SRS0=E0i4=6G=lists.openwall.com=kernel-hardening-return-18613-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Eelz=6H=lists.openwall.com=kernel-hardening-return-18614-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1C4C1C55186
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Apr 2020 23:54:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1FF8CC55185
+	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 01:11:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6EF2D206ED
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Apr 2020 23:54:22 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ul4AvjVQ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6EF2D206ED
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18613-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 23917 invoked by uid 550); 22 Apr 2020 23:54:16 -0000
+	by mail.kernel.org (Postfix) with SMTP id 78FEF2074F
+	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 01:11:58 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 78FEF2074F
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18614-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22361 invoked by uid 550); 23 Apr 2020 01:11:50 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,83 +22,98 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23894 invoked from network); 22 Apr 2020 23:54:16 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=9yta31YHLGTtMTc3kimrMC0tNHi4fPt9ZpXXfvJokHE=;
-        b=ul4AvjVQXbGe+67+07L6i6vBhv+ePFHnNv5wOIO5OLBqKwlga7zXiy6xS1d0X/n/tF
-         6woOlNdImmOPZMJChQsUQyygz5ZseUPmnZAKczKpT7Y7lInJ6k/DDJqqloDP2VpGFDPw
-         OFtrm1ALOx3/hCMPr/YQ3m1N7xm3tLJ/pl95K3DRTQoOWwlka1VKxTJhNX6t7x3uramm
-         2dyep6SUwSuJ79qzMc80b3OzgAHRlzEcC+sG84d0mATYPxu/tkZ16ivMuXJA1CHS9gCY
-         zZTcPJxWLKTN7QTPUPa2eVcTdjKumsRqOxjD1k+RVCHPaHKtuxR9qW1L8MlMmMCCFv+Y
-         LkDg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=9yta31YHLGTtMTc3kimrMC0tNHi4fPt9ZpXXfvJokHE=;
-        b=PxMKnFvKkIOfCVTLDeDH/+qu6A8CKKL5ebEdLrLBw8R5ayM89fi6ab92VQdd5OEbQU
-         XYBRzKFvGumqL97PqZjYXu7ZF+NuHgZYpFknemck4tMv8keW9t+kffAFYkZVX4yPcAx5
-         BnwD94h2MZ4o2ZAwiMomP4WKH0rWUcuorsyT4QUeaaIah5ZzT5VEgHEs+8bV0cI1Otmt
-         tt2WIdbqGNg8pWKIeww5y9W1vjtXlNv7qkTQ1bfUmCddRAMnyh6BBeOdXhb4mIq/avhk
-         0DrVrzY4diLtoQ66CLoi7P5pJoEFbY2bn75gV9+ppPX3311DOKb1I2oQt65GX0NC5X4K
-         BiUw==
-X-Gm-Message-State: AGi0PubVdXpC7OcEnGUh9ocjCKDla5S2rF0jVEB+HsnHHnQRtqQtO3jB
-	YZhyuMUOXxKU1u+gKI1jmEw6fw==
-X-Google-Smtp-Source: APiQypIxgD2CWLnytM507AIaoaby+Reth9qe8JpsU5Egogw5Wrog+ZS/v8kJIWI3ShghE5eGkNfP8g==
-X-Received: by 2002:aa7:8118:: with SMTP id b24mr1011016pfi.321.1587599643609;
-        Wed, 22 Apr 2020 16:54:03 -0700 (PDT)
-Date: Wed, 22 Apr 2020 16:53:56 -0700
-From: Sami Tolvanen <samitolvanen@google.com>
-To: Will Deacon <will@kernel.org>
-Cc: Catalin Marinas <catalin.marinas@arm.com>,
-	James Morse <james.morse@arm.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Michal Marek <michal.lkml@markovi.net>,
-	Ingo Molnar <mingo@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Juri Lelli <juri.lelli@redhat.com>,
-	Vincent Guittot <vincent.guittot@linaro.org>,
-	Dave Martin <Dave.Martin@arm.com>,
-	Kees Cook <keescook@chromium.org>,
-	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
-	Masami Hiramatsu <mhiramat@kernel.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	Jann Horn <jannh@google.com>,
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
-	clang-built-linux@googlegroups.com,
-	kernel-hardening@lists.openwall.com,
-	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v12 03/12] scs: add support for stack usage debugging
-Message-ID: <20200422235356.GA128062@google.com>
-References: <20191018161033.261971-1-samitolvanen@google.com>
- <20200421021453.198187-1-samitolvanen@google.com>
- <20200421021453.198187-4-samitolvanen@google.com>
- <20200422174602.GB3121@willie-the-truck>
+Received: (qmail 22323 invoked from network); 23 Apr 2020 01:11:49 -0000
+Subject: Re: [PATCH v5 0/6] implement KASLR for powerpc/fsl_booke/64
+To: <mpe@ellerman.id.au>, <linuxppc-dev@lists.ozlabs.org>,
+	<diana.craciun@nxp.com>, <christophe.leroy@c-s.fr>,
+	<benh@kernel.crashing.org>, <paulus@samba.org>, <npiggin@gmail.com>,
+	<keescook@chromium.org>, <kernel-hardening@lists.openwall.com>,
+	<oss@buserror.net>
+CC: <linux-kernel@vger.kernel.org>, <zhaohongjiang@huawei.com>,
+	<dja@axtens.net>
+References: <20200330022023.3691-1-yanaijie@huawei.com>
+From: Jason Yan <yanaijie@huawei.com>
+Message-ID: <f9f35d6c-28fe-3527-64f1-0806511cd20d@huawei.com>
+Date: Thu, 23 Apr 2020 09:11:27 +0800
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101
+ Thunderbird/68.4.2
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200422174602.GB3121@willie-the-truck>
+In-Reply-To: <20200330022023.3691-1-yanaijie@huawei.com>
+Content-Type: text/plain; charset="gbk"; format=flowed
+Content-Transfer-Encoding: 8bit
+X-Originating-IP: [10.166.213.7]
+X-CFilter-Loop: Reflected
 
-On Wed, Apr 22, 2020 at 06:46:02PM +0100, Will Deacon wrote:
-> > +static void scs_check_usage(struct task_struct *tsk)
-> > +{
-> > +	static unsigned long highest;
-> > +	unsigned long used = __scs_used(tsk);
-> > +	unsigned long prev;
-> > +	unsigned long curr = highest;
-> > +
-> > +	while (used > curr) {
-> > +		prev = cmpxchg(&highest, curr, used);
+Hi Michael,
+
+What's the status of this series?
+
+Thanks,
+Jason
+
+ÔÚ 2020/3/30 10:20, Jason Yan Ð´µÀ:
+> This is a try to implement KASLR for Freescale BookE64 which is based on
+> my earlier implementation for Freescale BookE32:
+> https://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=131718&state=*
 > 
-> I think this can be cmpxchg_relaxed(), since we don't care about ordering
-> here afaict.
+> The implementation for Freescale BookE64 is similar as BookE32. One
+> difference is that Freescale BookE64 set up a TLB mapping of 1G during
+> booting. Another difference is that ppc64 needs the kernel to be
+> 64K-aligned. So we can randomize the kernel in this 1G mapping and make
+> it 64K-aligned. This can save some code to creat another TLB map at
+> early boot. The disadvantage is that we only have about 1G/64K = 16384
+> slots to put the kernel in.
+> 
+>      KERNELBASE
+> 
+>            64K                     |--> kernel <--|
+>             |                      |              |
+>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
+>          |  |  |  |....|  |  |  |  |  |  |  |  |  |....|  |  |
+>          +--+--+--+    +--+--+--+--+--+--+--+--+--+    +--+--+
+>          |                         |                        1G
+>          |----->   offset    <-----|
+> 
+>                                kernstart_virt_addr
+> 
+> I'm not sure if the slot numbers is enough or the design has any
+> defects. If you have some better ideas, I would be happy to hear that.
+> 
+> Thank you all.
+> 
+> v4->v5:
+>    Fix "-Werror=maybe-uninitialized" compile error.
+>    Fix typo "similar as" -> "similar to".
+> v3->v4:
+>    Do not define __kaslr_offset as a fixed symbol. Reference __run_at_load and
+>      __kaslr_offset by symbol instead of magic offsets.
+>    Use IS_ENABLED(CONFIG_PPC32) instead of #ifdef CONFIG_PPC32.
+>    Change kaslr-booke32 to kaslr-booke in index.rst
+>    Switch some instructions to 64-bit.
+> v2->v3:
+>    Fix build error when KASLR is disabled.
+> v1->v2:
+>    Add __kaslr_offset for the secondary cpu boot up.
+> 
+> Jason Yan (6):
+>    powerpc/fsl_booke/kaslr: refactor kaslr_legal_offset() and
+>      kaslr_early_init()
+>    powerpc/fsl_booke/64: introduce reloc_kernel_entry() helper
+>    powerpc/fsl_booke/64: implement KASLR for fsl_booke64
+>    powerpc/fsl_booke/64: do not clear the BSS for the second pass
+>    powerpc/fsl_booke/64: clear the original kernel if randomized
+>    powerpc/fsl_booke/kaslr: rename kaslr-booke32.rst to kaslr-booke.rst
+>      and add 64bit part
+> 
+>   Documentation/powerpc/index.rst               |  2 +-
+>   .../{kaslr-booke32.rst => kaslr-booke.rst}    | 35 ++++++-
+>   arch/powerpc/Kconfig                          |  2 +-
+>   arch/powerpc/kernel/exceptions-64e.S          | 23 +++++
+>   arch/powerpc/kernel/head_64.S                 | 13 +++
+>   arch/powerpc/kernel/setup_64.c                |  3 +
+>   arch/powerpc/mm/mmu_decl.h                    | 23 +++--
+>   arch/powerpc/mm/nohash/kaslr_booke.c          | 91 +++++++++++++------
+>   8 files changed, 147 insertions(+), 45 deletions(-)
+>   rename Documentation/powerpc/{kaslr-booke32.rst => kaslr-booke.rst} (59%)
+> 
 
-Sure, I'll change this in v13. Thanks.
-
-Sami
