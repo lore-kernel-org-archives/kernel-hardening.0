@@ -1,22 +1,21 @@
-Return-Path: <SRS0=EGYC=6H=lists.openwall.com=kernel-hardening-return-18618-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Y2fE=6H=lists.openwall.com=kernel-hardening-return-18619-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1CFCDC55191
-	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 18:29:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 408F6C54FCB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 20:02:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 746D92071C
-	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 18:29:03 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="b6zdPxuh"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 746D92071C
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18618-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28317 invoked by uid 550); 23 Apr 2020 18:28:55 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9B08420767
+	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 20:02:32 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B08420767
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18619-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30301 invoked by uid 550); 23 Apr 2020 20:02:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,119 +23,165 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28291 invoked from network); 23 Apr 2020 18:28:54 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=6Y/9ITAGgGN1ObZLXZNElUJooxFBQUxzx7tXw0tLGrw=;
-        b=b6zdPxuhwvf6mbGggB4PksAI1ex0t7K0elOYcg58ZwrTjn8AjcWwZGTTkOt8xtEop1
-         QgJUSGvj+wJ1HD5HRDh4RvxxaMJq6yj8Ef8yIBSVdRMjVYw9bGTWpKc07ah08JcYCbF3
-         RdvWKOb7jr8FUoUPlrx507urw3KMBQUv7F7bI=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=6Y/9ITAGgGN1ObZLXZNElUJooxFBQUxzx7tXw0tLGrw=;
-        b=NzsefbLPs3s5EmqSd/5w28PWd9Q5Mq2bUZhaZTA6DJ8RKFIqKe7ueaIZJNtChMDfTD
-         9k+s8C8q4pkd0mpFPFD99hGjDRebj30YI4a1HYZyWREpdM8n64aBEZNlmqXmglvdTPdK
-         X/YmTiBSvKFkJO19eawpxwsi0E4Yl5bPpT4sRIpT9YRczawGLRR0wZFsutO8kZ6Ch67C
-         SZ31Tt4HuZH6ZyoN2oqMMIfkRMw7wI9uUziuTfUxaGj+d3jz7jOgm4k+ehDIRpu8jZKV
-         A+kPj//8BG0JWscLLeJWqzmWNwGUnhCMpSt/biEN8XwBoTFndPjtv0DOMbfm3GDIcs61
-         ngeg==
-X-Gm-Message-State: AGi0PuYGWMHVMXgnaXb3ovLCswD67avVhNqtOPiKMLHU6Zd4KEv4A4cM
-	CgTFLuZKOybBI6WhC35+I2vLhA==
-X-Google-Smtp-Source: APiQypL3X1xlYzw2iOcrrAvDuDiryUSnxNiAeJYrDux+iWD+qj2k8HUN3EnuJVtWslaYhtMemGHUDw==
-X-Received: by 2002:a62:1c97:: with SMTP id c145mr5322854pfc.68.1587666522523;
-        Thu, 23 Apr 2020 11:28:42 -0700 (PDT)
-Date: Thu, 23 Apr 2020 11:28:40 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Will Deacon <will@kernel.org>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	James Morse <james.morse@arm.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Michal Marek <michal.lkml@markovi.net>,
-	Ingo Molnar <mingo@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Juri Lelli <juri.lelli@redhat.com>,
-	Vincent Guittot <vincent.guittot@linaro.org>,
-	Dave Martin <Dave.Martin@arm.com>,
-	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
-	Masami Hiramatsu <mhiramat@kernel.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	Jann Horn <jannh@google.com>,
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
-	clang-built-linux@googlegroups.com,
-	kernel-hardening@lists.openwall.com,
-	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v11 01/12] add support for Clang's Shadow Call Stack (SCS)
-Message-ID: <202004231121.A13FDA100@keescook>
-References: <20191018161033.261971-1-samitolvanen@google.com>
- <20200416161245.148813-1-samitolvanen@google.com>
- <20200416161245.148813-2-samitolvanen@google.com>
- <20200420171727.GB24386@willie-the-truck>
- <20200420211830.GA5081@google.com>
- <20200422173938.GA3069@willie-the-truck>
- <20200422235134.GA211149@google.com>
+Received: (qmail 30275 invoked from network); 23 Apr 2020 20:02:24 -0000
+Date: Thu, 23 Apr 2020 22:01:36 +0200
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: LKML <linux-kernel@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux API <linux-api@vger.kernel.org>,
+	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
+	Linux Security Module <linux-security-module@vger.kernel.org>,
+	Akinobu Mita <akinobu.mita@gmail.com>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Alexey Dobriyan <adobriyan@gmail.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Daniel Micay <danielmicay@gmail.com>,
+	Djalal Harouni <tixxdz@gmail.com>,
+	"Dmitry V . Levin" <ldv@altlinux.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Ingo Molnar <mingo@kernel.org>,
+	"J . Bruce Fields" <bfields@fieldses.org>,
+	Jeff Layton <jlayton@poochiereds.net>,
+	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Oleg Nesterov <oleg@redhat.com>,
+	David Howells <dhowells@redhat.com>
+Subject: Re: [PATCH v13 2/7] proc: allow to mount many instances of proc in
+ one pid namespace
+Message-ID: <20200423200136.zrjzv6d6zghnvvrx@comp-core-i7-2640m-0182e6>
+References: <20200419141057.621356-3-gladkov.alexey@gmail.com>
+ <20200423112858.95820-1-gladkov.alexey@gmail.com>
+ <87lfmmz9bs.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200422235134.GA211149@google.com>
+In-Reply-To: <87lfmmz9bs.fsf@x220.int.ebiederm.org>
+X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Thu, 23 Apr 2020 20:02:13 +0000 (UTC)
 
-On Wed, Apr 22, 2020 at 04:51:34PM -0700, Sami Tolvanen wrote:
-> On Wed, Apr 22, 2020 at 06:39:47PM +0100, Will Deacon wrote:
-> > On Mon, Apr 20, 2020 at 02:18:30PM -0700, Sami Tolvanen wrote:
-> > > On Mon, Apr 20, 2020 at 06:17:28PM +0100, Will Deacon wrote:
-> > > > > +	 * The shadow call stack is aligned to SCS_SIZE, and grows
-> > > > > +	 * upwards, so we can mask out the low bits to extract the base
-> > > > > +	 * when the task is not running.
-> > > > > +	 */
-> > > > > +	return (void *)((unsigned long)task_scs(tsk) & ~(SCS_SIZE - 1));
-> > > > 
-> > > > Could we avoid forcing this alignment it we stored the SCS pointer as a
-> > > > (base,offset) pair instead? That might be friendlier on the allocations
-> > > > later on.
-> > > 
-> > > The idea is to avoid storing the current task's shadow stack address in
-> > > memory, which is why I would rather not store the base address either.
-> > 
-> > What I mean is that, instead of storing the current shadow stack pointer,
-> > we instead store a base and an offset. We can still clear the base, as you
-> > do with the pointer today, and I don't see that the offset is useful to
-> > an attacker on its own.
+On Thu, Apr 23, 2020 at 07:16:07AM -0500, Eric W. Biederman wrote:
 > 
-> I see what you mean. However, even if we store the base address +
-> the offset, we still need aligned allocation if we want to clear
-> the address. This would basically just move __scs_base() logic to
-> cpu_switch_to() / scs_save().
+> I took a quick look and there is at least one other use in security/tomoyo/realpath.c:
+> 
+> static char *tomoyo_get_local_path(struct dentry *dentry, char * const buffer,
+> 				   const int buflen)
+> {
+> 	struct super_block *sb = dentry->d_sb;
+> 	char *pos = tomoyo_get_dentry_path(dentry, buffer, buflen);
+> 
+> 	if (IS_ERR(pos))
+> 		return pos;
+> 	/* Convert from $PID to self if $PID is current thread. */
+> 	if (sb->s_magic == PROC_SUPER_MAGIC && *pos == '/') {
+> 		char *ep;
+> 		const pid_t pid = (pid_t) simple_strtoul(pos + 1, &ep, 10);
+> 
+> 		if (*ep == '/' && pid && pid ==
+> 		    task_tgid_nr_ns(current, sb->s_fs_info)) {
+> 			pos = ep - 5;
+> 			if (pos < buffer)
+> 				goto out;
+> 			memmove(pos, "/self", 5);
+> 		}
+> 		goto prepend_filesystem_name;
+> 	}
 
-Okay, so, I feel like this has gotten off into the weeds, or I'm really
-dense (or both). :) Going back to the original comment:
+Ooops. I missed this one. I thought I found all such cases.
 
-> > > > Could we avoid forcing this alignment it we stored the SCS
-> > > > pointer as a (base,offset) pair instead? That might be friendlier
-> > > > on the allocations later on.
+> Can you make the fixes to locks.c and tomoyo a couple of standalone
+> fixes that should be inserted before your patch?
 
-I think there was some confusion about mixing the "we want to be able to
-wipe the value" combined with the masking in __scs_base(). These are
-unrelated, as was correctly observed with "We can still clear the base".
+Sure.
 
-What I don't understand here is the suggestion to store two values:
-
-Why is two better than storing one? With one, we only need a single access.
-
-Why would storing the base be "friendlier on the allocations later on"?
-This is coming out of a single kmem cache, in 1K chunks. They will be
-naturally aligned to 1K (unless redzoing has been turned on for some
-slab debugging reason). The base masking is a way to avoid needing to
-store two values, and only happens at task death.
-
-Storing two values eats memory for all tasks for seemingly no meaningful
-common benefit. What am I missing here?
+> On the odd chance there is a typo they will bisect better, as well
+> as just keeping this patch and it's description from expanding in size.
+> So that things are small enough for people to really look at and review.
+> 
+> The fix itself looks fine.
+> 
+> Thank you,
+> Eric
+> 
+> 
+> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
+> 
+> > Fixed getting proc_pidns in the lock_get_status() and locks_show() directly from
+> > the superblock, which caused a crash:
+> >
+> > === arm64 ===
+> > [12140.366814] LTP: starting proc01 (proc01 -m 128)
+> > [12149.580943] ==================================================================
+> > [12149.589521] BUG: KASAN: out-of-bounds in pid_nr_ns+0x2c/0x90 pid_nr_ns at kernel/pid.c:456
+> > [12149.595939] Read of size 4 at addr 1bff000bfa8c0388 by task = proc01/50298
+> > [12149.603392] Pointer tag: [1b], memory tag: [fe]
+> >
+> > [12149.610906] CPU: 69 PID: 50298 Comm: proc01 Tainted: G L 5.7.0-rc2-next-20200422 #6
+> > [12149.620585] Hardware name: HPE Apollo 70 /C01_APACHE_MB , BIOS L50_5.13_1.11 06/18/2019
+> > [12149.631074] Call trace:
+> > [12149.634304]  dump_backtrace+0x0/0x22c
+> > [12149.638745]  show_stack+0x28/0x34
+> > [12149.642839]  dump_stack+0x104/0x194
+> > [12149.647110]  print_address_description+0x70/0x3a4
+> > [12149.652576]  __kasan_report+0x188/0x238
+> > [12149.657169]  kasan_report+0x3c/0x58
+> > [12149.661430]  check_memory_region+0x98/0xa0
+> > [12149.666303]  __hwasan_load4_noabort+0x18/0x20
+> > [12149.671431]  pid_nr_ns+0x2c/0x90
+> > [12149.675446]  locks_translate_pid+0xf4/0x1a0
+> > [12149.680382]  locks_show+0x68/0x110
+> > [12149.684536]  seq_read+0x380/0x930
+> > [12149.688604]  pde_read+0x5c/0x78
+> > [12149.692498]  proc_reg_read+0x74/0xc0
+> > [12149.696813]  __vfs_read+0x84/0x1d0
+> > [12149.700939]  vfs_read+0xec/0x124
+> > [12149.704889]  ksys_read+0xb0/0x120
+> > [12149.708927]  __arm64_sys_read+0x54/0x88
+> > [12149.713485]  do_el0_svc+0x128/0x1dc
+> > [12149.717697]  el0_sync_handler+0x150/0x250
+> > [12149.722428]  el0_sync+0x164/0x180
+> >
+> > [12149.728672] Allocated by task 1:
+> > [12149.732624]  __kasan_kmalloc+0x124/0x188
+> > [12149.737269]  kasan_kmalloc+0x10/0x18
+> > [12149.741568]  kmem_cache_alloc_trace+0x2e4/0x3d4
+> > [12149.746820]  proc_fill_super+0x48/0x1fc
+> > [12149.751377]  vfs_get_super+0xcc/0x170
+> > [12149.755760]  get_tree_nodev+0x28/0x34
+> > [12149.760143]  proc_get_tree+0x24/0x30
+> > [12149.764439]  vfs_get_tree+0x54/0x158
+> > [12149.768736]  do_mount+0x80c/0xaf0
+> > [12149.772774]  __arm64_sys_mount+0xe0/0x18c
+> > [12149.777504]  do_el0_svc+0x128/0x1dc
+> > [12149.781715]  el0_sync_handler+0x150/0x250
+> > [12149.786445]  el0_sync+0x164/0x180
+> 
+> > diff --git a/fs/locks.c b/fs/locks.c
+> > index b8a31c1c4fff..399c5dbb72c4 100644
+> > --- a/fs/locks.c
+> > +++ b/fs/locks.c
+> > @@ -2823,7 +2823,7 @@ static void lock_get_status(struct seq_file *f, struct file_lock *fl,
+> >  {
+> >  	struct inode *inode = NULL;
+> >  	unsigned int fl_pid;
+> > -	struct pid_namespace *proc_pidns = file_inode(f->file)->i_sb->s_fs_info;
+> > +	struct pid_namespace *proc_pidns = proc_pid_ns(file_inode(f->file));
+> >  
+> >  	fl_pid = locks_translate_pid(fl, proc_pidns);
+> >  	/*
+> > @@ -2901,7 +2901,7 @@ static int locks_show(struct seq_file *f, void *v)
+> >  {
+> >  	struct locks_iterator *iter = f->private;
+> >  	struct file_lock *fl, *bfl;
+> > -	struct pid_namespace *proc_pidns = file_inode(f->file)->i_sb->s_fs_info;
+> > +	struct pid_namespace *proc_pidns = proc_pid_ns(file_inode(f->file));
+> >  
+> >  	fl = hlist_entry(v, struct file_lock, fl_link);
+> >  
+> 
+> Eric
+> 
 
 -- 
-Kees Cook
+Rgrds, legion
+
