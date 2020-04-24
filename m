@@ -1,24 +1,22 @@
-Return-Path: <SRS0=4AT2=6I=lists.openwall.com=kernel-hardening-return-18630-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=2zcL=6I=lists.openwall.com=kernel-hardening-return-18631-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 61591C2BA1A
-	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Apr 2020 10:53:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EED40C2BA1A
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Apr 2020 11:21:42 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AF97220776
-	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Apr 2020 10:53:39 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1BD7A20736
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Apr 2020 11:21:41 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="Qcq/8rBl"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AF97220776
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18630-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 6052 invoked by uid 550); 24 Apr 2020 10:53:32 -0000
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="y/dWUU1q"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1BD7A20736
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18631-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21559 invoked by uid 550); 24 Apr 2020 11:21:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,151 +24,148 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 6020 invoked from network); 24 Apr 2020 10:53:31 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=cc:subject:to:references:from:message-id:date:user-agent
-         :mime-version:in-reply-to:content-language:content-transfer-encoding;
-        bh=R8t+7888K7kzJGE2cpI0Gewrm7h/D6gEhogwIFx31Lk=;
-        b=Qcq/8rBl9g732jhNkxk/yLJfMtvESceHcAhNq8mjG1GxTvJ8IX7OsX4ULyv5aXcf6A
-         XZK65r0qm0zbgUZaDhunfmvAaUraaq1Y6pUQlG4QNpejre+aIew2/3nYeZhhxpLmaImq
-         Qh00PpyAIBtDR0WZAoXZWMVSkicj+a+lzCswFroD6uPU8b9ctuKg4IKn/3d9UQcjA01j
-         ENSqq8/hZkrORRlXWjzHqqqvZ9p2m5rZkD6K4IF7Uh3fCXN9H36cjfmcn1gmPrrCc4n8
-         Juui253ahHG/SHnntUm/R4FJExyknpHv9GAo8z7R68twYuW74qB9ihE/KeE27+xXQtbc
-         yRbw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:cc:subject:to:references:from:message-id:date
-         :user-agent:mime-version:in-reply-to:content-language
-         :content-transfer-encoding;
-        bh=R8t+7888K7kzJGE2cpI0Gewrm7h/D6gEhogwIFx31Lk=;
-        b=izBZlBHwtlnHGfj+m8LK/xD8SzDADjYLy0+G4XqQhbCxhSQguKkthwKzd+TQRjtlSF
-         cs4u84tnYXg5neJ04sYcofQmsvb7F0Hdjty6+1UIRnQj/T9A/odW2gQ9aK9h10ekluvh
-         /2AI4dUoq2pAfj8ImA+kTGTbf/XNtLXTpeOGjaEv3/2iX1Kr3gHpb1YCgGrzJbx3J4pS
-         X5IRo2C8Fm+vGgEaqIdqrclkWnduthLcKzvhyFObgo5y3DD8D96FX3zlmlifqtUCmSjV
-         zrPej9SFWdEqfUTHErG0udX2ugsCraSeTgGk/HuDW6F/8eJrlxkTs2f1S9KHaTgrscxt
-         v+ew==
-X-Gm-Message-State: AGi0PuZfv20VVMqDhgkjZUO1gTETvxnIrSHeL/e+q/nQVfl8v6TpsGRl
-	7GCHpNXMDhcltsRfKnyd8Ww=
-X-Google-Smtp-Source: APiQypK5+esVN5CdbnzPWeW2IhtsX++39F6f0uikR/CRyclafcDhXyyY7JjiOPtD6LG9xwD0kd49Ew==
-X-Received: by 2002:a17:90a:328f:: with SMTP id l15mr5666046pjb.77.1587725599462;
-        Fri, 24 Apr 2020 03:53:19 -0700 (PDT)
-Cc: tranmanphong@gmail.com, steve.capper@arm.com, steven.price@arm.com,
- keescook@chromium.org, greg@kroah.com, akpm@linux-foundation.org,
- alexios.zavras@intel.com, broonie@kernel.org,
- kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org,
- linux-kernel@vger.kernel.org, tglx@linutronix.de
-Subject: Re: Re: [PATCH v2] arm64: add check_wx_pages debugfs for CHECK_WX
-To: Will Deacon <will@kernel.org>, Mark Rutland <mark.rutland@arm.com>,
- ruscur@russell.cc
-References: <20200307093926.27145-1-tranmanphong@gmail.com>
- <20200421173557.10817-1-tranmanphong@gmail.com>
- <20200422143526.GD54796@lakrids.cambridge.arm.com>
- <20200422152656.GF676@willie-the-truck>
-From: Phong Tran <tranmanphong@gmail.com>
-Message-ID: <e06b1ad1-08ca-ec50-7ca1-7d08bbea81b3@gmail.com>
-Date: Fri, 24 Apr 2020 17:52:41 +0700
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.7.0
+Received: (qmail 21530 invoked from network); 24 Apr 2020 11:21:33 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1587727281;
+	bh=9j66fxXI2jcsWYFYcG/USAvpeLheI4USds77+Y4mP1c=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=y/dWUU1q4sC+WdKi/8sEc/Rgu2id2EVdo9H7mjZK1I7FNZDUkWmXdv7bwDYDS3ilK
+	 gyXfL6Zt+o29RLdzyk2xUpxQ67SHoiceUd1MKcOwgXYYwgp2jZIhj3PzN1/zM9abnU
+	 JSv0jddj1P9Xq7tPBDOLvHb6Pwq+4+ySiruoNKYs=
+Date: Fri, 24 Apr 2020 12:21:14 +0100
+From: Will Deacon <will@kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Sami Tolvanen <samitolvanen@google.com>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	James Morse <james.morse@arm.com>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Mark Rutland <mark.rutland@arm.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Michal Marek <michal.lkml@markovi.net>,
+	Ingo Molnar <mingo@redhat.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Juri Lelli <juri.lelli@redhat.com>,
+	Vincent Guittot <vincent.guittot@linaro.org>,
+	Dave Martin <Dave.Martin@arm.com>,
+	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	Jann Horn <jannh@google.com>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com,
+	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v11 01/12] add support for Clang's Shadow Call Stack (SCS)
+Message-ID: <20200424112113.GC21141@willie-the-truck>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20200416161245.148813-1-samitolvanen@google.com>
+ <20200416161245.148813-2-samitolvanen@google.com>
+ <20200420171727.GB24386@willie-the-truck>
+ <20200420211830.GA5081@google.com>
+ <20200422173938.GA3069@willie-the-truck>
+ <20200422235134.GA211149@google.com>
+ <202004231121.A13FDA100@keescook>
 MIME-Version: 1.0
-In-Reply-To: <20200422152656.GF676@willie-the-truck>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <202004231121.A13FDA100@keescook>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On 4/22/20 10:26 PM, Will Deacon wrote:
-> On Wed, Apr 22, 2020 at 03:35:27PM +0100, Mark Rutland wrote:
->> On Wed, Apr 22, 2020 at 12:35:58AM +0700, Phong Tran wrote:
->>> follow the suggestion from
->>> https://github.com/KSPP/linux/issues/35
->>>
->>> Signed-off-by: Phong Tran <tranmanphong@gmail.com>
->>> ---
->>> Change since v1:
->>> - Update the Kconfig help text
->>> - Don't check the return value of debugfs_create_file()
->>> - Tested on QEMU aarch64
->>
->> As on v1, I think that this should be generic across all architectures
->> with CONFIG_DEBUG_WX. Adding this only on arm64 under
->> CONFIG_PTDUMP_DEBUGFS (which does not generally imply a WX check)
->> doesn't seem right.
->>
->> Maybe we need a new ARCH_HAS_CHECK_WX config to make that simpler, but
->> that seems simple to me.
+On Thu, Apr 23, 2020 at 11:28:40AM -0700, Kees Cook wrote:
+> On Wed, Apr 22, 2020 at 04:51:34PM -0700, Sami Tolvanen wrote:
+> > On Wed, Apr 22, 2020 at 06:39:47PM +0100, Will Deacon wrote:
+> > > On Mon, Apr 20, 2020 at 02:18:30PM -0700, Sami Tolvanen wrote:
+> > > > On Mon, Apr 20, 2020 at 06:17:28PM +0100, Will Deacon wrote:
+> > > > > > +	 * The shadow call stack is aligned to SCS_SIZE, and grows
+> > > > > > +	 * upwards, so we can mask out the low bits to extract the base
+> > > > > > +	 * when the task is not running.
+> > > > > > +	 */
+> > > > > > +	return (void *)((unsigned long)task_scs(tsk) & ~(SCS_SIZE - 1));
+> > > > > 
+> > > > > Could we avoid forcing this alignment it we stored the SCS pointer as a
+> > > > > (base,offset) pair instead? That might be friendlier on the allocations
+> > > > > later on.
+> > > > 
+> > > > The idea is to avoid storing the current task's shadow stack address in
+> > > > memory, which is why I would rather not store the base address either.
+> > > 
+> > > What I mean is that, instead of storing the current shadow stack pointer,
+> > > we instead store a base and an offset. We can still clear the base, as you
+> > > do with the pointer today, and I don't see that the offset is useful to
+> > > an attacker on its own.
+> > 
+> > I see what you mean. However, even if we store the base address +
+> > the offset, we still need aligned allocation if we want to clear
+> > the address. This would basically just move __scs_base() logic to
+> > cpu_switch_to() / scs_save().
 > 
-> Agreed. When I asked about respinning, I assumed this would be done in
-> generic code as you requested on the first version. Phong -- do you think
-> you can take a look at that, please?
+> Okay, so, I feel like this has gotten off into the weeds, or I'm really
+> dense (or both). :) Going back to the original comment:
 > 
+> > > > > Could we avoid forcing this alignment it we stored the SCS
+> > > > > pointer as a (base,offset) pair instead? That might be friendlier
+> > > > > on the allocations later on.
+> 
+> I think there was some confusion about mixing the "we want to be able to
+> wipe the value" combined with the masking in __scs_base(). These are
+> unrelated, as was correctly observed with "We can still clear the base".
 
-sure, plan to make change in mm/ptdump.c with KConfig 
-"ARCH_HAS_CHECK_WX" as suggestion.
+Having just tried to implement this, it turns out they *are* related
+and we can't still clear the base, I was wrong about that :( See below.
 
-Then need align with this patch in PowerPC arch also
+> What I don't understand here is the suggestion to store two values:
+> 
+> Why is two better than storing one? With one, we only need a single access.
+> 
+> Why would storing the base be "friendlier on the allocations later on"?
+> This is coming out of a single kmem cache, in 1K chunks. They will be
+> naturally aligned to 1K (unless redzoing has been turned on for some
+> slab debugging reason). The base masking is a way to avoid needing to
+> store two values, and only happens at task death.
 
-https://lore.kernel.org/kernel-hardening/20200402084053.188537-3-ruscur@russell.cc/
+Fair enough about the kmem_cache, although I'm still worried about these
+things getting bigger in future and the alignment having to increase at
+the same time. We also have a bunch of static/percpu allocations that don't
+use this cache.
 
-diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
-index a1efa246c9ed..50f18e7ff2ae 100644
---- a/arch/arm64/Kconfig.debug
-+++ b/arch/arm64/Kconfig.debug
-@@ -25,6 +25,7 @@ config ARM64_RANDOMIZE_TEXT_OFFSET
+Also, since you mentioned the lack of redzoning, isn't it a bit dodgy
+allocating blindly out of the kmem_cache? It means we don't have a redzone
+or a guard page, so if you can trigger something like a recursion bug then
+could you scribble past the SCS before the main stack overflows? Would this
+clobber somebody else's SCS? The vmap version that I asked Sami to drop
+is at least better in this regard, although the guard page is at the wrong
+end of the stack and we just hope that the allocation below us didn't pass
+VM_NO_GUARD. Looks like the same story for vmap stack :/
 
-  config DEBUG_WX
-         bool "Warn on W+X mappings at boot"
-+       select ARCH_HAS_CHECK_WX
-         select PTDUMP_CORE
-         ---help---
-           Generate a warning if any W+X mappings are found at boot.
-diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-index 0271b22e063f..40c9ac5a4db2 100644
---- a/mm/Kconfig.debug
-+++ b/mm/Kconfig.debug
-@@ -138,3 +138,6 @@ config PTDUMP_DEBUGFS
-           kernel.
+> Storing two values eats memory for all tasks for seemingly no meaningful
+> common benefit. What am I missing here?
 
-           If in doubt, say N.
-+
-+config ARCH_HAS_CHECK_WX
-+       bool
-diff --git a/mm/ptdump.c b/mm/ptdump.c
-index 26208d0d03b7..8f54db007aaa 100644
---- a/mm/ptdump.c
-+++ b/mm/ptdump.c
-@@ -137,3 +137,29 @@ void ptdump_walk_pgd(struct ptdump_state *st, 
-struct mm_struct *mm, pgd_t *pgd)
-         /* Flush out the last page */
-         st->note_page(st, 0, -1, 0);
-  }
-+
-+#ifdef CONFIG_ARCH_HAS_CHECK_WX
-+#include <linux/debugfs.h>
-+#include <asm/ptdump.h>
-+
-+static int check_wx_debugfs_set(void *data, u64 val)
-+{
-+       if (val != 1ULL)
-+               return -EINVAL;
-+
-+       ptdump_check_wx();
-+
-+       return 0;
-+}
-+
-+DEFINE_SIMPLE_ATTRIBUTE(check_wx_fops, NULL, check_wx_debugfs_set, 
-"%llu\n");
-+
-+static int ptdump_debugfs_check_wx_init(void)
-+{
-+       debugfs_create_file("check_wx_pages", 0200, NULL,
-+                       NULL, &check_wx_fops) ? 0 : -ENOMEM;
-+       return 0;
-+}
-+
-+device_initcall(ptdump_debugfs_check_wx_init);
-+#endif
+I would like to remove the alignment requirements for the static and percpu
+allocations. AFAICT, the only reason the alignment is needed is because you
+want to convert an SCS pointer into the base pointer. The only reason *that*
+is needed is because of the questionable wiping of the pointer in the
+thread_info, but I really don't see the benefit of this. Unlike a crypto
+secret (which was your analogy), the SCS pointer is stored in memory in
+at least the following situations:
 
+  * The task isn't running
+  * The task is running in userspace
+  * The task is running a vCPU in KVM
+  * We're calling into EFI
+  * On exception entry from EL1, as part of stacking x18
+  * During CPU suspend
 
-Regards,
-Phong.
+If we split the pointer in two (base, offset) then we could leave the
+base live in the thread_info, not require alignment of the stacks (which
+may allow for unconditional redzoning?) and then just update the offset
+value on context switch, which could be trivially checked as part of the
+existing stack overflow checking on kernel entry.
+
+The base and offset can live in the same cacheline and be loaded with ldp,
+so I don't see there being an access cost compared to a single variable.
+
+Am I missing something (modulo us not agreeing on the utility of wiping
+the pointer)?
+
+Will
