@@ -1,22 +1,22 @@
-Return-Path: <SRS0=08fi=6H=lists.openwall.com=kernel-hardening-return-18628-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=5H+s=6I=lists.openwall.com=kernel-hardening-return-18629-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_ADSP_CUSTOM_MED,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1CE14C54FCB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 20:05:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ECF39C2BA1A
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Apr 2020 10:12:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 20CA120767
-	for <kernel-hardening@archiver.kernel.org>; Thu, 23 Apr 2020 20:05:46 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 20CA120767
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18628-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3391 invoked by uid 550); 23 Apr 2020 20:04:05 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4CE6221569
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Apr 2020 10:12:59 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="kSbPHK0w"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4CE6221569
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18629-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17760 invoked by uid 550); 24 Apr 2020 10:12:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,318 +24,89 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3260 invoked from network); 23 Apr 2020 20:04:03 -0000
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: LKML <linux-kernel@vger.kernel.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux API <linux-api@vger.kernel.org>,
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>,
-	Linux Security Module <linux-security-module@vger.kernel.org>,
-	Akinobu Mita <akinobu.mita@gmail.com>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Alexey Dobriyan <adobriyan@gmail.com>,
-	Alexey Gladkov <legion@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Daniel Micay <danielmicay@gmail.com>,
-	Djalal Harouni <tixxdz@gmail.com>,
-	"Dmitry V . Levin" <ldv@altlinux.org>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Ingo Molnar <mingo@kernel.org>,
-	"J . Bruce Fields" <bfields@fieldses.org>,
-	Jeff Layton <jlayton@poochiereds.net>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	David Howells <dhowells@redhat.com>
-Subject: [PATCH v13 7/8] proc: use human-readable values for hidepid
-Date: Thu, 23 Apr 2020 22:03:15 +0200
-Message-Id: <20200423200316.164518-8-gladkov.alexey@gmail.com>
-X-Mailer: git-send-email 2.25.3
-In-Reply-To: <20200423200316.164518-1-gladkov.alexey@gmail.com>
-References: <20200423200316.164518-1-gladkov.alexey@gmail.com>
+Received: (qmail 17737 invoked from network); 24 Apr 2020 10:12:50 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1587723158;
+	bh=fKU2iKdaO5V4T6aQoOLQEGsSBw4yYPCuYH7VaMC/eI4=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=kSbPHK0wqHUeZAx9aecwnpy9ShuMSbMzEpsNdzkiRkR+RFN1VJhrAPY0PtUxIniT/
+	 /wGBoKmysJ8CLXyd8f+lLlmKyEC4ej+hXUEjlSAbRI/eBWZ8LXlTour55sGrZaQ3Fm
+	 Ed1oqAak/yYVJ2wRfjZdMUjAgrADXoM7Kob9i6ME=
+Date: Fri, 24 Apr 2020 11:12:31 +0100
+From: Will Deacon <will@kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Sami Tolvanen <samitolvanen@google.com>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	James Morse <james.morse@arm.com>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Mark Rutland <mark.rutland@arm.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Michal Marek <michal.lkml@markovi.net>,
+	Ingo Molnar <mingo@redhat.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Juri Lelli <juri.lelli@redhat.com>,
+	Vincent Guittot <vincent.guittot@linaro.org>,
+	Dave Martin <Dave.Martin@arm.com>,
+	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	Jann Horn <jannh@google.com>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com,
+	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v12 01/12] add support for Clang's Shadow Call Stack (SCS)
+Message-ID: <20200424101230.GB21141@willie-the-truck>
+References: <20191018161033.261971-1-samitolvanen@google.com>
+ <20200421021453.198187-1-samitolvanen@google.com>
+ <20200421021453.198187-2-samitolvanen@google.com>
+ <202004221052.489CCFEBC@keescook>
+ <20200422180040.GC3121@willie-the-truck>
+ <202004231108.1AC704F609@keescook>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Thu, 23 Apr 2020 20:03:47 +0000 (UTC)
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <202004231108.1AC704F609@keescook>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-The hidepid parameter values are becoming more and more and it becomes
-difficult to remember what each new magic number means.
+On Thu, Apr 23, 2020 at 11:09:24AM -0700, Kees Cook wrote:
+> On Wed, Apr 22, 2020 at 07:00:40PM +0100, Will Deacon wrote:
+> > On Wed, Apr 22, 2020 at 10:54:45AM -0700, Kees Cook wrote:
+> > > On Mon, Apr 20, 2020 at 07:14:42PM -0700, Sami Tolvanen wrote:
+> > > > +void scs_release(struct task_struct *tsk)
+> > > > +{
+> > > > +	void *s;
+> > > > +
+> > > > +	s = __scs_base(tsk);
+> > > > +	if (!s)
+> > > > +		return;
+> > > > +
+> > > > +	WARN_ON(scs_corrupted(tsk));
+> > > > +
+> > > 
+> > > I'd like to have task_set_scs(tsk, NULL) retained here, to avoid need to
+> > > depend on the released task memory getting scrubbed at a later time.
+> > 
+> > Hmm, doesn't it get zeroed almost immediately by kmem_cache_free() if
+> > INIT_ON_FREE_DEFAULT_ON is set? That seems much better than special-casing
+> > SCS, as there's a tonne of other useful stuff kicking around in the
+> > task_struct and treating this specially feels odd to me.
+> 
+> That's going to be an uncommon config except for the most paranoid of
+> system builders. :)
 
-Backward compatibility is preserved since it is possible to specify
-numerical value for the hidepid parameter. This does not break the
-fsconfig since it is not possible to specify a numerical value through
-it. All numeric values are converted to a string. The type
-FSCONFIG_SET_BINARY cannot be used to indicate a numerical value.
+Sounds like a perfect fit, then ;)
 
-Selftest has been added to verify this behavior.
+> Having this get wiped particular thing wiped is just
+> a decent best practice for what is otherwise treated as a "secret", just
+> like crypto routines wipe their secrets before free().
 
-Suggested-by: Andy Lutomirski <luto@kernel.org>
-Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
-Reviewed-by: Alexey Dobriyan <adobriyan@gmail.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
----
- Documentation/filesystems/proc.rst            | 52 +++++++++----------
- fs/proc/inode.c                               | 15 +++++-
- fs/proc/root.c                                | 38 ++++++++++++--
- tools/testing/selftests/proc/.gitignore       |  1 +
- tools/testing/selftests/proc/Makefile         |  1 +
- .../selftests/proc/proc-fsconfig-hidepid.c    | 50 ++++++++++++++++++
- 6 files changed, 126 insertions(+), 31 deletions(-)
- create mode 100644 tools/testing/selftests/proc/proc-fsconfig-hidepid.c
+Sorry, but I don't buy that analogy. The SCS pointer is stored in memory
+all over the place and if it needs to treated in the same way as crypto
+secrets then this whole thing needs rethinking. On top of that, where
+crypto routines may wipe their secrets, we don't do what is being proposed
+for the SCS pointer to other similar pieces of data, such as pointer
+authentication keys.
 
-diff --git a/Documentation/filesystems/proc.rst b/Documentation/filesystems/proc.rst
-index 360486c7a992..e2ecf248feb5 100644
---- a/Documentation/filesystems/proc.rst
-+++ b/Documentation/filesystems/proc.rst
-@@ -2147,28 +2147,28 @@ The following mount options are supported:
- 	subset=		Show only the specified subset of procfs.
- 	=========	========================================================
- 
--hidepid=0 means classic mode - everybody may access all /proc/<pid>/ directories
--(default).
--
--hidepid=1 means users may not access any /proc/<pid>/ directories but their
--own.  Sensitive files like cmdline, sched*, status are now protected against
--other users.  This makes it impossible to learn whether any user runs
--specific program (given the program doesn't reveal itself by its behaviour).
--As an additional bonus, as /proc/<pid>/cmdline is unaccessible for other users,
--poorly written programs passing sensitive information via program arguments are
--now protected against local eavesdroppers.
--
--hidepid=2 means hidepid=1 plus all /proc/<pid>/ will be fully invisible to other
--users.  It doesn't mean that it hides a fact whether a process with a specific
--pid value exists (it can be learned by other means, e.g. by "kill -0 $PID"),
--but it hides process' uid and gid, which may be learned by stat()'ing
--/proc/<pid>/ otherwise.  It greatly complicates an intruder's task of gathering
--information about running processes, whether some daemon runs with elevated
--privileges, whether other user runs some sensitive program, whether other users
--run any program at all, etc.
--
--hidepid=4 means that procfs should only contain /proc/<pid>/ directories
--that the caller can ptrace.
-+hidepid=off or hidepid=0 means classic mode - everybody may access all
-+/proc/<pid>/ directories (default).
-+
-+hidepid=noaccess or hidepid=1 means users may not access any /proc/<pid>/
-+directories but their own.  Sensitive files like cmdline, sched*, status are now
-+protected against other users.  This makes it impossible to learn whether any
-+user runs specific program (given the program doesn't reveal itself by its
-+behaviour).  As an additional bonus, as /proc/<pid>/cmdline is unaccessible for
-+other users, poorly written programs passing sensitive information via program
-+arguments are now protected against local eavesdroppers.
-+
-+hidepid=invisible or hidepid=2 means hidepid=1 plus all /proc/<pid>/ will be
-+fully invisible to other users.  It doesn't mean that it hides a fact whether a
-+process with a specific pid value exists (it can be learned by other means, e.g.
-+by "kill -0 $PID"), but it hides process' uid and gid, which may be learned by
-+stat()'ing /proc/<pid>/ otherwise.  It greatly complicates an intruder's task of
-+gathering information about running processes, whether some daemon runs with
-+elevated privileges, whether other user runs some sensitive program, whether
-+other users run any program at all, etc.
-+
-+hidepid=ptraceable or hidepid=4 means that procfs should only contain
-+/proc/<pid>/ directories that the caller can ptrace.
- 
- gid= defines a group authorized to learn processes information otherwise
- prohibited by hidepid=.  If you use some daemon like identd which needs to learn
-@@ -2216,8 +2216,8 @@ creates a new procfs instance. Mount options affect own procfs instance.
- It means that it became possible to have several procfs instances
- displaying tasks with different filtering options in one pid namespace.
- 
--# mount -o hidepid=2 -t proc proc /proc
--# mount -o hidepid=1 -t proc proc /tmp/proc
-+# mount -o hidepid=invisible -t proc proc /proc
-+# mount -o hidepid=noaccess -t proc proc /tmp/proc
- # grep ^proc /proc/mounts
--proc /proc proc rw,relatime,hidepid=2 0 0
--proc /tmp/proc proc rw,relatime,hidepid=1 0 0
-+proc /proc proc rw,relatime,hidepid=invisible 0 0
-+proc /tmp/proc proc rw,relatime,hidepid=noaccess 0 0
-diff --git a/fs/proc/inode.c b/fs/proc/inode.c
-index 0d5e68fa842f..cbacac2e892b 100644
---- a/fs/proc/inode.c
-+++ b/fs/proc/inode.c
-@@ -24,6 +24,7 @@
- #include <linux/seq_file.h>
- #include <linux/slab.h>
- #include <linux/mount.h>
-+#include <linux/bug.h>
- 
- #include <linux/uaccess.h>
- 
-@@ -165,6 +166,18 @@ void proc_invalidate_siblings_dcache(struct hlist_head *inodes, spinlock_t *lock
- 		deactivate_super(old_sb);
- }
- 
-+static inline const char *hidepid2str(int v)
-+{
-+	switch (v) {
-+		case HIDEPID_OFF: return "off";
-+		case HIDEPID_NO_ACCESS: return "noaccess";
-+		case HIDEPID_INVISIBLE: return "invisible";
-+		case HIDEPID_NOT_PTRACEABLE: return "ptraceable";
-+	}
-+	WARN_ONCE(1, "bad hide_pid value: %d\n", v);
-+	return "unknown";
-+}
-+
- static int proc_show_options(struct seq_file *seq, struct dentry *root)
- {
- 	struct proc_fs_info *fs_info = proc_sb_info(root->d_sb);
-@@ -172,7 +185,7 @@ static int proc_show_options(struct seq_file *seq, struct dentry *root)
- 	if (!gid_eq(fs_info->pid_gid, GLOBAL_ROOT_GID))
- 		seq_printf(seq, ",gid=%u", from_kgid_munged(&init_user_ns, fs_info->pid_gid));
- 	if (fs_info->hide_pid != HIDEPID_OFF)
--		seq_printf(seq, ",hidepid=%u", fs_info->hide_pid);
-+		seq_printf(seq, ",hidepid=%s", hidepid2str(fs_info->hide_pid));
- 	if (fs_info->pidonly != PROC_PIDONLY_OFF)
- 		seq_printf(seq, ",subset=pid");
- 
-diff --git a/fs/proc/root.c b/fs/proc/root.c
-index baff006a918f..288093261b7f 100644
---- a/fs/proc/root.c
-+++ b/fs/proc/root.c
-@@ -45,7 +45,7 @@ enum proc_param {
- 
- static const struct fs_parameter_spec proc_fs_parameters[] = {
- 	fsparam_u32("gid",	Opt_gid),
--	fsparam_u32("hidepid",	Opt_hidepid),
-+	fsparam_string("hidepid",	Opt_hidepid),
- 	fsparam_string("subset",	Opt_subset),
- 	{}
- };
-@@ -58,6 +58,37 @@ static inline int valid_hidepid(unsigned int value)
- 		value == HIDEPID_NOT_PTRACEABLE);
- }
- 
-+static int proc_parse_hidepid_param(struct fs_context *fc, struct fs_parameter *param)
-+{
-+	struct proc_fs_context *ctx = fc->fs_private;
-+	struct fs_parameter_spec hidepid_u32_spec = fsparam_u32("hidepid", Opt_hidepid);
-+	struct fs_parse_result result;
-+	int base = (unsigned long)hidepid_u32_spec.data;
-+
-+	if (param->type != fs_value_is_string)
-+		return invalf(fc, "proc: unexpected type of hidepid value\n");
-+
-+	if (!kstrtouint(param->string, base, &result.uint_32)) {
-+		if (!valid_hidepid(result.uint_32))
-+			return invalf(fc, "proc: unknown value of hidepid - %s\n", param->string);
-+		ctx->hidepid = result.uint_32;
-+		return 0;
-+	}
-+
-+	if (!strcmp(param->string, "off"))
-+		ctx->hidepid = HIDEPID_OFF;
-+	else if (!strcmp(param->string, "noaccess"))
-+		ctx->hidepid = HIDEPID_NO_ACCESS;
-+	else if (!strcmp(param->string, "invisible"))
-+		ctx->hidepid = HIDEPID_INVISIBLE;
-+	else if (!strcmp(param->string, "ptraceable"))
-+		ctx->hidepid = HIDEPID_NOT_PTRACEABLE;
-+	else
-+		return invalf(fc, "proc: unknown value of hidepid - %s\n", param->string);
-+
-+	return 0;
-+}
-+
- static int proc_parse_subset_param(struct fs_context *fc, char *value)
- {
- 	struct proc_fs_context *ctx = fc->fs_private;
-@@ -97,9 +128,8 @@ static int proc_parse_param(struct fs_context *fc, struct fs_parameter *param)
- 		break;
- 
- 	case Opt_hidepid:
--		if (!valid_hidepid(result.uint_32))
--			return invalf(fc, "proc: unknown value of hidepid.\n");
--		ctx->hidepid = result.uint_32;
-+		if (proc_parse_hidepid_param(fc, param))
-+			return -EINVAL;
- 		break;
- 
- 	case Opt_subset:
-diff --git a/tools/testing/selftests/proc/.gitignore b/tools/testing/selftests/proc/.gitignore
-index 126901c5d6f4..bed4b5318a86 100644
---- a/tools/testing/selftests/proc/.gitignore
-+++ b/tools/testing/selftests/proc/.gitignore
-@@ -2,6 +2,7 @@
- /fd-001-lookup
- /fd-002-posix-eq
- /fd-003-kthread
-+/proc-fsconfig-hidepid
- /proc-loadavg-001
- /proc-multiple-procfs
- /proc-pid-vm
-diff --git a/tools/testing/selftests/proc/Makefile b/tools/testing/selftests/proc/Makefile
-index bf22457256be..8be8a03d2973 100644
---- a/tools/testing/selftests/proc/Makefile
-+++ b/tools/testing/selftests/proc/Makefile
-@@ -20,5 +20,6 @@ TEST_GEN_PROGS += setns-dcache
- TEST_GEN_PROGS += setns-sysvipc
- TEST_GEN_PROGS += thread-self
- TEST_GEN_PROGS += proc-multiple-procfs
-+TEST_GEN_PROGS += proc-fsconfig-hidepid
- 
- include ../lib.mk
-diff --git a/tools/testing/selftests/proc/proc-fsconfig-hidepid.c b/tools/testing/selftests/proc/proc-fsconfig-hidepid.c
-new file mode 100644
-index 000000000000..b9af8f537185
---- /dev/null
-+++ b/tools/testing/selftests/proc/proc-fsconfig-hidepid.c
-@@ -0,0 +1,50 @@
-+/*
-+ * Copyright © 2020 Alexey Gladkov <gladkov.alexey@gmail.com>
-+ *
-+ * Permission to use, copy, modify, and distribute this software for any
-+ * purpose with or without fee is hereby granted, provided that the above
-+ * copyright notice and this permission notice appear in all copies.
-+ *
-+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-+ */
-+#include <assert.h>
-+#include <unistd.h>
-+#include <stdlib.h>
-+#include <errno.h>
-+#include <linux/mount.h>
-+#include <linux/unistd.h>
-+
-+static inline int fsopen(const char *fsname, unsigned int flags)
-+{
-+	return syscall(__NR_fsopen, fsname, flags);
-+}
-+
-+static inline int fsconfig(int fd, unsigned int cmd, const char *key, const void *val, int aux)
-+{
-+	return syscall(__NR_fsconfig, fd, cmd, key, val, aux);
-+}
-+
-+int main(void)
-+{
-+	int fsfd, ret;
-+	int hidepid = 2;
-+
-+	assert((fsfd = fsopen("proc", 0)) != -1);
-+
-+	ret = fsconfig(fsfd, FSCONFIG_SET_BINARY, "hidepid", &hidepid, 0);
-+	assert(ret == -1);
-+	assert(errno == EINVAL);
-+
-+	assert(!fsconfig(fsfd, FSCONFIG_SET_STRING, "hidepid", "2", 0));
-+	assert(!fsconfig(fsfd, FSCONFIG_SET_STRING, "hidepid", "invisible", 0));
-+
-+	assert(!close(fsfd));
-+
-+	return 0;
-+}
--- 
-2.25.3
-
+Will
