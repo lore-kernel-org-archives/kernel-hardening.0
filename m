@@ -1,23 +1,23 @@
-Return-Path: <SRS0=8hsV=6L=lists.openwall.com=kernel-hardening-return-18651-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=P3wb=6L=lists.openwall.com=kernel-hardening-return-18652-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 55C0EC54FCB
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:29:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3907AC54FD0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:33:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6E39220738
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:29:43 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 8722F206D9
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:33:05 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="QALnd6im"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6E39220738
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18651-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20286 invoked by uid 550); 27 Apr 2020 17:29:35 -0000
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="VDbkDiNF"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8722F206D9
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18652-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24082 invoked by uid 550); 27 Apr 2020 17:32:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,186 +25,65 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20245 invoked from network); 27 Apr 2020 17:29:35 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=SHuBjEFsXuCOnXrDPerkRVxxxGJlefJzzkBgVwYtJlA=;
-        b=QALnd6imJ7V1ZuG0QY9Bq/9Z9J1unuBZ9xPj6KDxnYPc7fE4lJB9FjEFiP03awwA3b
-         zb92lKkogwPFCwFlntiLQ99F5H75z+x8WzXhoPMhhvlWFvDQWXj2cYnZUSCLhGNeLVH3
-         Wu6HU4F6I0ezMQ/bFDI9rQDlpnTEZ3wrIJYoZQmdRPTh3pdEsoZAT47tzLqkSGDIjpQy
-         tmlUnZwLfgtwDZ69d33p8fJFSwztMFMQ7TD9ZZwVoht1dQHhyFO54Ny3fBd/zbgLm/MQ
-         W7tuhO0gvn0im4FWdXx/ffwDttk/8EC2jVjhCbp0iO8kAIYiTqIiJjT9kL0duhgGyvCF
-         UcYQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=SHuBjEFsXuCOnXrDPerkRVxxxGJlefJzzkBgVwYtJlA=;
-        b=jgS+oUGbTIuyIXpd3XvoF04kCxI0BBVDdyVGWlKjio3MrhXddLddne9EvnxNDgJCDF
-         7ecgsT2YxF6QEq2aiXXr34AOBftfdqRXgNuAGr85MF9DLgwEjahOeYpn36ZYYp7UM09b
-         1LQQs/eQhrW4GqnzlD+khYed9IFTqce4MyKMhFeeGPs+BFHveChO/dZg+BXQNXLatDaZ
-         ITwPrVYVLcNU6rRtWbjpr6ab6WtxhrBgifFbn+eBYNfpuDWdYbvdKFsoMUCj3vyCydr2
-         R/mKNgcRz9+q2mCxBVd/n22rgYQnOqSVuGPfzLuk6o4uixL8gTvAsdgYh3SoR3Q5qrZ0
-         heIQ==
-X-Gm-Message-State: AGi0Pubgz6Fl7E68+gG6OkNDFA+Nq3vrDvWGLzEgqqx2FXFlyu2nXAr7
-	5H/Tkq8NHIGRfm4K+ZSbldt3yMlpocx/iOAEkemCqw==
-X-Google-Smtp-Source: APiQypLRikU2kj4lwV6Hlv63XRM9RyOKCs8RknvaYiOvJdZc7VVr5C780JaTVTCUKgNwbuwUujWo/vMtAOfrKhTqrI8=
-X-Received: by 2002:a2e:87d3:: with SMTP id v19mr14032917ljj.176.1588008563374;
- Mon, 27 Apr 2020 10:29:23 -0700 (PDT)
+Received: (qmail 28344 invoked from network); 27 Apr 2020 15:26:50 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1588001198;
+	bh=5XTyVa5Wg+vmqCB2Rcj5wWy0tF8BawuaFfCIEA3EHKk=;
+	h=X-UI-Sender-Class:Date:From:To:Subject;
+	b=VDbkDiNF1uWV9pYAjMHKp5+6mdVYYA54ibAeSaRACuqEX7WUR3xyb/Ju/S14pgbpm
+	 QdZAasiGV2H2clqJdh6YvGmCRtm6MFm9UJ6IK+g+ds+uIjTE7cm7uSiV6FOvP5HUIC
+	 2Zg9cnPtspyZ/B950bXqV9/yKJyPxarFwv+364N8=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Mon, 27 Apr 2020 17:26:23 +0200
+From: Oscar Carter <oscar.carter@gmx.com>
+To: kernel-hardening@lists.openwall.com
+Subject: Get involved
+Message-ID: <20200427152623.GA3473@ubuntu>
 MIME-Version: 1.0
-References: <20200427143646.619227-1-christian.brauner@ubuntu.com>
-In-Reply-To: <20200427143646.619227-1-christian.brauner@ubuntu.com>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 27 Apr 2020 19:28:56 +0200
-Message-ID: <CAG48ez3eSJSODADpo=O-j9txJ=2R+EupunRvs5H9t5Wa8mvkRA@mail.gmail.com>
-Subject: Re: [PATCH] nsproxy: attach to namespaces via pidfds
-To: Christian Brauner <christian.brauner@ubuntu.com>
-Cc: kernel list <linux-kernel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, 
-	=?UTF-8?Q?St=C3=A9phane_Graber?= <stgraber@ubuntu.com>, 
-	Linux Containers <containers@lists.linux-foundation.org>, 
-	"Eric W . Biederman" <ebiederm@xmission.com>, Serge Hallyn <serge@hallyn.com>, 
-	Aleksa Sarai <cyphar@cyphar.com>, 
-	linux-security-module <linux-security-module@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+User-Agent: Mutt/1.10.1 (2018-07-13)
+X-Provags-ID: V03:K1:n2WnQB3BjZNR9mtLjAqEHwu5a3OFX1UpavsA+RdOrBIaKge7uDR
+ EgJVfzdUbpFzirofV0O8z1XtVCfhXXtOBislLA6HtcVIpUe6K7JHbY/OC25XDVy+j0IMPsA
+ R6Z//VerAXZeD0p3QUlxq0dk3NJTM2TbCsz2fCNpDsyRdBbGYCV5R0ChNmf42siSUaUuzuz
+ /Qgbhf0ycR5W1t9aDvdMQ==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:GPagnm7DMaQ=:PmtaxzZ+7OJ0EYF8H+1MjA
+ jcM4JMXquN6DC7W6ELNYDIqlz1ilk85I2z9DzRxKpcHzw72weKLMwxfup0J9bF0YD4xMk/jZ1
+ ZQ10S/1ZUrbbJc70xAk0IY7/y3MzoBj0zM0AbqNgXIFw8uEJAc280OmyPGaeCqP2KocZXJ7lQ
+ f7V4WU+lmOr0LbMKJZ8OVvfzq2z4GQVYifdrVx+LJ1E1YYVlru6ZFRBtZ9+ch91ASMImX4q/k
+ sVFQg2RlVflfiRm+uamLc9r8vPSUt9TseAEWWtuHfMjlW7FJ7u2b5rSKtJxTL6gb3r9mIeDlt
+ Jshf11dSQBxWtR2KGwn/SaTDP9bRTliqXpgugfZXABtQdioMS9BVyWadFH+hDV7PdEkafE3hn
+ f0ezaSEj2yUSyXxw3gxbimoTKvoHyWqnyG4+0MOQelTsQ10jsqoK+Q2af9WCbFINY5LlXtvfu
+ 5+xUyEwaUMXBWfGA0QZcnVw3Bczg3XklFL0YOMJb1NiMVfS61PFskAVZ4kkfoFHiyeEYeqYj3
+ pHiCLPl7jd2c5jSwotRXkmStnH7UM+kIh6rq3lRzbp3+vQ0RswWogSoW4VDXAC01w8z/pZ496
+ zNohm5n2MPQX3mIE2OLgQ/JHbKizPTTv9LvLG8U+yxWxgqUrl4D7ZHaEBNaJu/12WlYxj9NPo
+ JkTxU0khcPOIxb1FkTA/fq822VY2srFRNm7YcUPnNLD2pjwz+Olxyk5WvleEqfKuHkUEiZYtb
+ zzryY8FZQpqzqmbKxeN5f53j9QWapQpDNTf9/hTl6fPVRHxJZ/uGLaaEdqVCxtRZpF8Zq9GoG
+ XqU1PfCCB5yjkBa8eAzagccl8bQa+Hg/voCk5Awx96KZ91okp2L+jmaNd+gvyUtytHVdEKliP
+ HaVKK7e8lvxwunwTVs7cg4l31G3v8M7Mrwa3PNNd6QqJsmZiuqWmRKRpyzMmCNU8t567ow1/d
+ PNC8oyZAaJuZ73nTvrpKkaPejx5WvR4BHlT3UiuAuX20uTdAX195l5R6wy+WtCAdZyi8Xq0cb
+ boerOpUDhG/V0Cb0us/Y/DL5r83Fx3oC5yDSv/jZkQjTa7pF4Uvc13V8pOHwo2425lYUrFwJA
+ Cs1RzWDOR4Nc91WazLMNGQe8/f2Jg34rPQCYuI8yFqj4QLcxIXhsK107vmxJfw9Wytzg3a7pe
+ gIAWFcQJrX26X+2ZU3LOTiRfAyiC/WRYLmBMEr/LtGZp7cGQT2SHv93olbaARd7oSOxCKUBF8
+ aLAinNR03q9N/RLIi
 
-On Mon, Apr 27, 2020 at 4:47 PM Christian Brauner
-<christian.brauner@ubuntu.com> wrote:
-> For quite a while we have been thinking about using pidfds to attach to
-> namespaces. This patchset has existed for about a year already but we've
-> wanted to wait to see how the general api would be received and adopted.
-> Now that more and more programs in userspace have started using pidfds
-> for process management it's time to send this one out.
+Hi, my name is Oscar. I would like to get involved in the kernel self protection
+project because I love the software security and I think this is one of the most
+challenging fields.
 
-You can already reliably switch to a specific namespace of another
-process like this given a pidfd and the pid of the process (which, if
-you don't have it, you can get via fdinfo), right?
+I have experience in microcrontrollers and working with low level software, but
+my experience with the linux kernel development is a few commits in the staging
+area.
 
-int switch_ns_to(int pidfd, int pid, char *nstypename) {
-  char ns_path[100];
-  snprintf(ns_path, sizeof(ns_path), "/proc/%d/ns/%s", pid, nstypename);
-  int fd = open(ns_path, O_RDONLY|O_CLOEXEC);
-  int errno_after_open = errno;
+For now, and due to my low experience with the linux kernel code and software
+security, I do not care about the area and task to be done. What I pretend is to
+help this great community and improve my knowledge and skills in this
+challenging field.
 
-  if (pidfd_send_signal(pidfd, 0, NULL, 0))
-    return -1;
+So, I would like to know if I can be assigned to some task that suits me. I've
+taken a look at https://github.com/KSPP/linux/issues but I don't know which task
+to choose and if something else is working on it.
 
-  if (fd == -1) {
-    errno = errno_after_open;
-    return -1;
-  }
+Thanks,
 
-  int ret = setns(fd, 0);
-  close(fd);
-  return ret;
-}
-
-> This patch makes it possible to use pidfds to attach to the namespaces
-> of another process, i.e. they can be passed as the first argument to the
-> setns() syscall. When only a single namespace type is specified the
-> semantics are equivalent to passing an nsfd.
-
-This introduces a difference in terms of security: With the old API,
-you need PTRACE_MODE_READ_FSCREDS on the task whose namespace you're
-attaching to (to dereference the link /proc/*/ns/*) *AND* whatever
-access checks the namespace itself enforces (always includes a check
-for CAP_SYS_ADMIN on the namespace). The ptrace check has the
-advantage, among other things, that it allows an LSM to see the
-relationship between the task that's accessing the namespace (subject)
-and the task whose namespace is being accessed (object).
-
-I feel slightly twitchy about this relaxation, and I'm wondering
-whether we can add a ptrace access check analogous to what you'd have
-needed via procfs.
-
-> That means
-> setns(nsfd, CLONE_NEWNET) equals setns(pidfd, CLONE_NEWNET). However,
-> when a pidfd is passed, multiple namespace flags can be specified in the
-> second setns() argument and setns() will attach the caller to all the
-> specified namespaces all at once or to none of them. If 0 is specified
-> together with a pidfd then setns() will interpret it the same way 0 is
-> interpreted together with a nsfd argument, i.e. attach to any/all
-> namespaces.
-[...]
-> Apart from significiantly reducing the number of syscalls from double
-> digit to single digit which is a decent reason post-spectre/meltdown
-> this also allows to switch to a set of namespaces atomically, i.e.
-> either attaching to all the specified namespaces succeeds or we fail.
-
-Apart from the issues I've pointed out below, I think it's worth
-calling out explicitly that with the current design, the switch will
-not, in fact, be fully atomic - the process will temporarily be in
-intermediate stages where the switches to some namespaces have
-completed while the switches to other namespaces are still pending;
-and while there will be less of these intermediate stages than before,
-it also means that they will be less explicit to userspace.
-
-[...]
-> diff --git a/kernel/nsproxy.c b/kernel/nsproxy.c
-[...]
-> +/*
-> + * Ordering is equivalent to the standard ordering used everywhere
-> + * else during unshare and process creation.
-> + */
-> +static int ns_install(struct nsproxy *nsproxy, struct pid *pid, int flags)
-> +{
-> +       int ret = 0;
-> +       struct task_struct *tsk;
-> +       struct nsproxy *nsp;
-> +
-> +       tsk = get_pid_task(pid, PIDTYPE_PID);
-> +       if (!tsk)
-> +               return -ESRCH;
-> +
-> +       get_nsproxy(tsk->nsproxy);
-> +       nsp = tsk->nsproxy;
-
-How is this correct? Are you holding any locks that protect tsk->nsproxy?
-
-> +#ifdef CONFIG_USER_NS
-> +       if (wants_ns(flags, CLONE_NEWUSER)) {
-> +               struct user_namespace *user_ns;
-> +
-> +               user_ns = get_user_ns(__task_cred(tsk)->user_ns);
-> +               ret = __ns_install(nsproxy, &user_ns->ns);
-
-If ret == 0, then at this point you've already committed the user
-namespace change *to the calling process*. The ->install handler of
-user namespaces doesn't touch the nsproxy at all.
-
-> +               put_user_ns(user_ns);
-> +       }
-> +#else
-> +       if (flags & CLONE_NEWUSER)
-> +               ret = -EINVAL;
-> +#endif
-> +
-> +       if (!ret && wants_ns(flags, CLONE_NEWNS))
-> +               ret = __ns_install(nsproxy, mnt_ns_to_common(nsp->mnt_ns));
-
-And this one might be even worse, because the mount namespace change
-itself is only stored in the nsproxy at this point, but the cwd and
-root paths have already been overwritten on the task's fs_struct.
-
-To actually make sys_set_ns() atomic, I think you'd need some
-moderately complicated prep work, splitting the ->install handlers up
-into prep work and a commit phase that can't fail.
-
-[...]
-> +#ifdef CONFIG_PID_NS
-> +       if (!ret && wants_ns(flags, CLONE_NEWPID)) {
-> +               struct pid_namespace *pidns;
-> +
-> +               pidns = task_active_pid_ns(tsk);
-> +               if (pidns) {
-> +                       get_pid_ns(pidns);
-> +                       ret = __ns_install(nsproxy, &pidns->ns);
-> +                       put_pid_ns(pidns);
-> +               }
-
-If you can't get the task's pidns, shouldn't that be an error?
-
-> +       }
-[...]
+Oscar Carter
