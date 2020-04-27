@@ -1,22 +1,20 @@
-Return-Path: <SRS0=ndax=6L=lists.openwall.com=kernel-hardening-return-18653-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=qdrc=6L=lists.openwall.com=kernel-hardening-return-18654-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 54DB5C4CECC
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:40:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 29B11C4CECD
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 18:15:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A05FB206D9
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:39:59 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="OEG6mbnA"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A05FB206D9
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18653-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28427 invoked by uid 550); 27 Apr 2020 17:39:52 -0000
+	by mail.kernel.org (Postfix) with SMTP id 5E32B214D8
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 18:15:51 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5E32B214D8
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=ubuntu.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18654-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13464 invoked by uid 550); 27 Apr 2020 18:15:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,104 +22,191 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28407 invoked from network); 27 Apr 2020 17:39:51 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1588009180;
-	bh=hrpwDQjnNosOZuDVeZVm9aVGNZZMloN7/cGIPwaOS2E=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=OEG6mbnAPk9Yk6G26yTR/TVVBKEZvPHXDTXfYgvruVQNacNQiflszdd+0GVvZRYy2
-	 rHV46TRK4sOsK5sEMulbd30Ou3kNNmzHcQfrDJhyprXiLmr6/v0Azt6qbGniF3D4Qm
-	 mpIkDvC4ZJOa4fBih6gCRXDIAHa8Yz36RoEypDhA=
-X-Gm-Message-State: AGi0PuYbMhyyHCSJIkChEty5LIJR6Ppdl3m+O0lx5bmMN8pN0kMKD1xC
-	JGVhv8RU1KDV3ddSDdNRWBDrbxGZNwsFpq5+lAE=
-X-Google-Smtp-Source: APiQypKwgbBJU8vwKjnBG/W2/hGRkTtjHMSQFFtwdBypUd4jq0xAuehjbqPR+7Prha81wkO7jJ+QOnSaEJO928BJk1c=
-X-Received: by 2002:a6b:5904:: with SMTP id n4mr22515735iob.142.1588009179242;
- Mon, 27 Apr 2020 10:39:39 -0700 (PDT)
+Received: (qmail 13432 invoked from network); 27 Apr 2020 18:15:42 -0000
+Date: Mon, 27 Apr 2020 20:15:07 +0200
+From: Christian Brauner <christian.brauner@ubuntu.com>
+To: Jann Horn <jannh@google.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	=?utf-8?B?U3TDqXBoYW5l?= Graber <stgraber@ubuntu.com>,
+	Linux Containers <containers@lists.linux-foundation.org>,
+	"Eric W . Biederman" <ebiederm@xmission.com>,
+	Serge Hallyn <serge@hallyn.com>, Aleksa Sarai <cyphar@cyphar.com>,
+	linux-security-module <linux-security-module@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux API <linux-api@vger.kernel.org>
+Subject: Re: [PATCH] nsproxy: attach to namespaces via pidfds
+Message-ID: <20200427181507.ry3hw7ufiifwhi5k@wittgenstein>
+References: <20200427143646.619227-1-christian.brauner@ubuntu.com>
+ <CAG48ez3eSJSODADpo=O-j9txJ=2R+EupunRvs5H9t5Wa8mvkRA@mail.gmail.com>
 MIME-Version: 1.0
-References: <20191018161033.261971-1-samitolvanen@google.com> <20200427160018.243569-1-samitolvanen@google.com>
-In-Reply-To: <20200427160018.243569-1-samitolvanen@google.com>
-From: Ard Biesheuvel <ardb@kernel.org>
-Date: Mon, 27 Apr 2020 19:39:28 +0200
-X-Gmail-Original-Message-ID: <CAMj1kXGASSCjTjvXJh=_iPwEPG50_pVRe2QO1hoRW+KHtugFVQ@mail.gmail.com>
-Message-ID: <CAMj1kXGASSCjTjvXJh=_iPwEPG50_pVRe2QO1hoRW+KHtugFVQ@mail.gmail.com>
-Subject: Re: [PATCH v13 00/12] add support for Clang's Shadow Call Stack
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
-	James Morse <james.morse@arm.com>, Steven Rostedt <rostedt@goodmis.org>, 
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>, 
-	Masahiro Yamada <masahiroy@kernel.org>, Michal Marek <michal.lkml@markovi.net>, 
-	Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, 
-	Juri Lelli <juri.lelli@redhat.com>, Vincent Guittot <vincent.guittot@linaro.org>, 
-	Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Marc Zyngier <maz@kernel.org>, 
-	kernel-hardening@lists.openwall.com, 
-	Nick Desaulniers <ndesaulniers@google.com>, 
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, 
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Masami Hiramatsu <mhiramat@kernel.org>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, Laura Abbott <labbott@redhat.com>, 
-	Dave Martin <Dave.Martin@arm.com>, Linux ARM <linux-arm-kernel@lists.infradead.org>
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <CAG48ez3eSJSODADpo=O-j9txJ=2R+EupunRvs5H9t5Wa8mvkRA@mail.gmail.com>
 
-On Mon, 27 Apr 2020 at 18:00, Sami Tolvanen <samitolvanen@google.com> wrote:
->
-> This patch series adds support for Clang's Shadow Call Stack
-> (SCS) mitigation, which uses a separately allocated shadow stack
-> to protect against return address overwrites. More information
-> can be found here:
->
->   https://clang.llvm.org/docs/ShadowCallStack.html
->
-> SCS provides better protection against traditional buffer
-> overflows than CONFIG_STACKPROTECTOR_*, but it should be noted
-> that SCS security guarantees in the kernel differ from the ones
-> documented for user space. The kernel must store addresses of
-> shadow stacks in memory, which means an attacker capable of
-> reading and writing arbitrary memory may be able to locate them
-> and hijack control flow by modifying the shadow stacks.
->
-> SCS is currently supported only on arm64, where the compiler
-> requires the x18 register to be reserved for holding the current
-> task's shadow stack pointer.
->
-> With -fsanitize=shadow-call-stack, the compiler injects
-> instructions to all non-leaf C functions to store the return
-> address to the shadow stack, and unconditionally load it again
-> before returning. As a result, SCS is incompatible with features
-> that rely on modifying function return addresses in the kernel
-> stack to alter control flow. A copy of the return address is
-> still kept in the kernel stack for compatibility with stack
-> unwinding, for example.
->
-> SCS has a minimal performance overhead, but allocating
-> shadow stacks increases kernel memory usage. The feature is
-> therefore mostly useful on hardware that lacks support for PAC
-> instructions.
->
-> Changes in v13:
->  - Changed thread_info::shadow_call_stack to a base address and
->    an offset instead, and removed the now unneeded __scs_base()
->    and scs_save().
->  - Removed alignment from the kmem_cache and static allocations.
->  - Removed the task_set_scs() helper function.
->  - Moved the assembly code for loading and storing the offset in
->    thread_info to scs_load/save macros.
->  - Added offset checking to scs_corrupted().
->  - Switched to cmpxchg_relaxed() in scs_check_usage().
->
+On Mon, Apr 27, 2020 at 07:28:56PM +0200, Jann Horn wrote:
+> On Mon, Apr 27, 2020 at 4:47 PM Christian Brauner
+> <christian.brauner@ubuntu.com> wrote:
+> > For quite a while we have been thinking about using pidfds to attach to
+> > namespaces. This patchset has existed for about a year already but we've
+> > wanted to wait to see how the general api would be received and adopted.
+> > Now that more and more programs in userspace have started using pidfds
+> > for process management it's time to send this one out.
+> 
+> You can already reliably switch to a specific namespace of another
+> process like this given a pidfd and the pid of the process (which, if
+> you don't have it, you can get via fdinfo), right?
 
-OK, so one thing that came up in an offline discussion about SCS is
-the way it interacts with the vmap'ed stack.
+Yep, of course. See the sample program in my earlier response. But that
+wasn't the point as I've tried to stress in the commit message. 
 
-The vmap'ed stack is great for robustness, but it only works if things
-don't explode for other reasons in the mean time. This means the
-ordinary-to-shadow-call-stack size ratio should be chosen such that it
-is *really* unlikely you could ever overflow the shadow call stack and
-corrupt another task's call stack before hitting the vmap stack's
-guard region.
+> 
+> int switch_ns_to(int pidfd, int pid, char *nstypename) {
+>   char ns_path[100];
+>   snprintf(ns_path, sizeof(ns_path), "/proc/%d/ns/%s", pid, nstypename);
+>   int fd = open(ns_path, O_RDONLY|O_CLOEXEC);
+>   int errno_after_open = errno;
+> 
+>   if (pidfd_send_signal(pidfd, 0, NULL, 0))
+>     return -1;
+> 
+>   if (fd == -1) {
+>     errno = errno_after_open;
+>     return -1;
+>   }
+> 
+>   int ret = setns(fd, 0);
+>   close(fd);
+>   return ret;
+> }
+> 
+> > This patch makes it possible to use pidfds to attach to the namespaces
+> > of another process, i.e. they can be passed as the first argument to the
+> > setns() syscall. When only a single namespace type is specified the
+> > semantics are equivalent to passing an nsfd.
+> 
+> This introduces a difference in terms of security: With the old API,
+> you need PTRACE_MODE_READ_FSCREDS on the task whose namespace you're
+> attaching to (to dereference the link /proc/*/ns/*) *AND* whatever
+> access checks the namespace itself enforces (always includes a check
+> for CAP_SYS_ADMIN on the namespace). The ptrace check has the
+> advantage, among other things, that it allows an LSM to see the
+> relationship between the task that's accessing the namespace (subject)
+> and the task whose namespace is being accessed (object).
+> 
+> I feel slightly twitchy about this relaxation, and I'm wondering
+> whether we can add a ptrace access check analogous to what you'd have
+> needed via procfs.
 
-Alternatively, I wonder if there is a way we could let the SCS and
-ordinary stack share the [bottom of] the vmap'ed region. That would
-give rather nasty results if the ordinary stack overflows into the
-SCS, but for cases where we really recurse out of control, we could
-catch this occurrence on either stack, whichever one occurs first. And
-the nastiness -when it does occur- will not corrupt any state beyond
-the stack of the current task.
+Right, that's probably a sane requirement.
+
+> 
+> > That means
+> > setns(nsfd, CLONE_NEWNET) equals setns(pidfd, CLONE_NEWNET). However,
+> > when a pidfd is passed, multiple namespace flags can be specified in the
+> > second setns() argument and setns() will attach the caller to all the
+> > specified namespaces all at once or to none of them. If 0 is specified
+> > together with a pidfd then setns() will interpret it the same way 0 is
+> > interpreted together with a nsfd argument, i.e. attach to any/all
+> > namespaces.
+> [...]
+> > Apart from significiantly reducing the number of syscalls from double
+> > digit to single digit which is a decent reason post-spectre/meltdown
+> > this also allows to switch to a set of namespaces atomically, i.e.
+> > either attaching to all the specified namespaces succeeds or we fail.
+> 
+> Apart from the issues I've pointed out below, I think it's worth
+> calling out explicitly that with the current design, the switch will
+> not, in fact, be fully atomic - the process will temporarily be in
+> intermediate stages where the switches to some namespaces have
+> completed while the switches to other namespaces are still pending;
+> and while there will be less of these intermediate stages than before,
+> it also means that they will be less explicit to userspace.
+
+Right, that can be fixed by switching to the unshare model of getting a
+new set of credentials and committing it after the nsproxy has been
+installed? Then there shouldn't be an intermediate state anymore or
+rather an intermediate stage where we can still fail somehow.
+
+> 
+> [...]
+> > diff --git a/kernel/nsproxy.c b/kernel/nsproxy.c
+> [...]
+> > +/*
+> > + * Ordering is equivalent to the standard ordering used everywhere
+> > + * else during unshare and process creation.
+> > + */
+> > +static int ns_install(struct nsproxy *nsproxy, struct pid *pid, int flags)
+> > +{
+> > +       int ret = 0;
+> > +       struct task_struct *tsk;
+> > +       struct nsproxy *nsp;
+> > +
+> > +       tsk = get_pid_task(pid, PIDTYPE_PID);
+> > +       if (!tsk)
+> > +               return -ESRCH;
+> > +
+> > +       get_nsproxy(tsk->nsproxy);
+> > +       nsp = tsk->nsproxy;
+> 
+> How is this correct? Are you holding any locks that protect tsk->nsproxy?
+
+You're absolutely right, this misses task_lock().
+
+
+> 
+> > +#ifdef CONFIG_USER_NS
+> > +       if (wants_ns(flags, CLONE_NEWUSER)) {
+> > +               struct user_namespace *user_ns;
+> > +
+> > +               user_ns = get_user_ns(__task_cred(tsk)->user_ns);
+> > +               ret = __ns_install(nsproxy, &user_ns->ns);
+> 
+> If ret == 0, then at this point you've already committed the user
+> namespace change *to the calling process*. The ->install handler of
+> user namespaces doesn't touch the nsproxy at all.
+
+Yeah, I think this can be fixed by copying the unshare model.
+
+> 
+> > +               put_user_ns(user_ns);
+> > +       }
+> > +#else
+> > +       if (flags & CLONE_NEWUSER)
+> > +               ret = -EINVAL;
+> > +#endif
+> > +
+> > +       if (!ret && wants_ns(flags, CLONE_NEWNS))
+> > +               ret = __ns_install(nsproxy, mnt_ns_to_common(nsp->mnt_ns));
+> 
+> And this one might be even worse, because the mount namespace change
+> itself is only stored in the nsproxy at this point, but the cwd and
+> root paths have already been overwritten on the task's fs_struct.
+> 
+> To actually make sys_set_ns() atomic, I think you'd need some
+> moderately complicated prep work, splitting the ->install handlers up
+> into prep work and a commit phase that can't fail.
+
+Wouldn't it be sufficient to move to an unshare like model, i.e.
+creating a new set of creds, and passing the new user_ns to
+create_new_namespaces() as well as having a temporary new_fs struct?
+That should get rid of all intermediate stages.
+
+> 
+> [...]
+> > +#ifdef CONFIG_PID_NS
+> > +       if (!ret && wants_ns(flags, CLONE_NEWPID)) {
+> > +               struct pid_namespace *pidns;
+> > +
+> > +               pidns = task_active_pid_ns(tsk);
+> > +               if (pidns) {
+> > +                       get_pid_ns(pidns);
+> > +                       ret = __ns_install(nsproxy, &pidns->ns);
+> > +                       put_pid_ns(pidns);
+> > +               }
+> 
+> If you can't get the task's pidns, shouldn't that be an error?
+
+Yep, that's right. Thanks!
+
+Christian
