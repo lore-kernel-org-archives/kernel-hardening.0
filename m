@@ -1,23 +1,22 @@
-Return-Path: <SRS0=P3wb=6L=lists.openwall.com=kernel-hardening-return-18652-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ndax=6L=lists.openwall.com=kernel-hardening-return-18653-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3907AC54FD0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:33:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 54DB5C4CECC
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:40:00 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8722F206D9
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:33:05 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A05FB206D9
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 17:39:59 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="VDbkDiNF"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8722F206D9
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18652-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24082 invoked by uid 550); 27 Apr 2020 17:32:53 -0000
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="OEG6mbnA"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A05FB206D9
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18653-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28427 invoked by uid 550); 27 Apr 2020 17:39:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,65 +24,104 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28344 invoked from network); 27 Apr 2020 15:26:50 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1588001198;
-	bh=5XTyVa5Wg+vmqCB2Rcj5wWy0tF8BawuaFfCIEA3EHKk=;
-	h=X-UI-Sender-Class:Date:From:To:Subject;
-	b=VDbkDiNF1uWV9pYAjMHKp5+6mdVYYA54ibAeSaRACuqEX7WUR3xyb/Ju/S14pgbpm
-	 QdZAasiGV2H2clqJdh6YvGmCRtm6MFm9UJ6IK+g+ds+uIjTE7cm7uSiV6FOvP5HUIC
-	 2Zg9cnPtspyZ/B950bXqV9/yKJyPxarFwv+364N8=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Mon, 27 Apr 2020 17:26:23 +0200
-From: Oscar Carter <oscar.carter@gmx.com>
-To: kernel-hardening@lists.openwall.com
-Subject: Get involved
-Message-ID: <20200427152623.GA3473@ubuntu>
+Received: (qmail 28407 invoked from network); 27 Apr 2020 17:39:51 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1588009180;
+	bh=hrpwDQjnNosOZuDVeZVm9aVGNZZMloN7/cGIPwaOS2E=;
+	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
+	b=OEG6mbnAPk9Yk6G26yTR/TVVBKEZvPHXDTXfYgvruVQNacNQiflszdd+0GVvZRYy2
+	 rHV46TRK4sOsK5sEMulbd30Ou3kNNmzHcQfrDJhyprXiLmr6/v0Azt6qbGniF3D4Qm
+	 mpIkDvC4ZJOa4fBih6gCRXDIAHa8Yz36RoEypDhA=
+X-Gm-Message-State: AGi0PuYbMhyyHCSJIkChEty5LIJR6Ppdl3m+O0lx5bmMN8pN0kMKD1xC
+	JGVhv8RU1KDV3ddSDdNRWBDrbxGZNwsFpq5+lAE=
+X-Google-Smtp-Source: APiQypKwgbBJU8vwKjnBG/W2/hGRkTtjHMSQFFtwdBypUd4jq0xAuehjbqPR+7Prha81wkO7jJ+QOnSaEJO928BJk1c=
+X-Received: by 2002:a6b:5904:: with SMTP id n4mr22515735iob.142.1588009179242;
+ Mon, 27 Apr 2020 10:39:39 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-User-Agent: Mutt/1.10.1 (2018-07-13)
-X-Provags-ID: V03:K1:n2WnQB3BjZNR9mtLjAqEHwu5a3OFX1UpavsA+RdOrBIaKge7uDR
- EgJVfzdUbpFzirofV0O8z1XtVCfhXXtOBislLA6HtcVIpUe6K7JHbY/OC25XDVy+j0IMPsA
- R6Z//VerAXZeD0p3QUlxq0dk3NJTM2TbCsz2fCNpDsyRdBbGYCV5R0ChNmf42siSUaUuzuz
- /Qgbhf0ycR5W1t9aDvdMQ==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:GPagnm7DMaQ=:PmtaxzZ+7OJ0EYF8H+1MjA
- jcM4JMXquN6DC7W6ELNYDIqlz1ilk85I2z9DzRxKpcHzw72weKLMwxfup0J9bF0YD4xMk/jZ1
- ZQ10S/1ZUrbbJc70xAk0IY7/y3MzoBj0zM0AbqNgXIFw8uEJAc280OmyPGaeCqP2KocZXJ7lQ
- f7V4WU+lmOr0LbMKJZ8OVvfzq2z4GQVYifdrVx+LJ1E1YYVlru6ZFRBtZ9+ch91ASMImX4q/k
- sVFQg2RlVflfiRm+uamLc9r8vPSUt9TseAEWWtuHfMjlW7FJ7u2b5rSKtJxTL6gb3r9mIeDlt
- Jshf11dSQBxWtR2KGwn/SaTDP9bRTliqXpgugfZXABtQdioMS9BVyWadFH+hDV7PdEkafE3hn
- f0ezaSEj2yUSyXxw3gxbimoTKvoHyWqnyG4+0MOQelTsQ10jsqoK+Q2af9WCbFINY5LlXtvfu
- 5+xUyEwaUMXBWfGA0QZcnVw3Bczg3XklFL0YOMJb1NiMVfS61PFskAVZ4kkfoFHiyeEYeqYj3
- pHiCLPl7jd2c5jSwotRXkmStnH7UM+kIh6rq3lRzbp3+vQ0RswWogSoW4VDXAC01w8z/pZ496
- zNohm5n2MPQX3mIE2OLgQ/JHbKizPTTv9LvLG8U+yxWxgqUrl4D7ZHaEBNaJu/12WlYxj9NPo
- JkTxU0khcPOIxb1FkTA/fq822VY2srFRNm7YcUPnNLD2pjwz+Olxyk5WvleEqfKuHkUEiZYtb
- zzryY8FZQpqzqmbKxeN5f53j9QWapQpDNTf9/hTl6fPVRHxJZ/uGLaaEdqVCxtRZpF8Zq9GoG
- XqU1PfCCB5yjkBa8eAzagccl8bQa+Hg/voCk5Awx96KZ91okp2L+jmaNd+gvyUtytHVdEKliP
- HaVKK7e8lvxwunwTVs7cg4l31G3v8M7Mrwa3PNNd6QqJsmZiuqWmRKRpyzMmCNU8t567ow1/d
- PNC8oyZAaJuZ73nTvrpKkaPejx5WvR4BHlT3UiuAuX20uTdAX195l5R6wy+WtCAdZyi8Xq0cb
- boerOpUDhG/V0Cb0us/Y/DL5r83Fx3oC5yDSv/jZkQjTa7pF4Uvc13V8pOHwo2425lYUrFwJA
- Cs1RzWDOR4Nc91WazLMNGQe8/f2Jg34rPQCYuI8yFqj4QLcxIXhsK107vmxJfw9Wytzg3a7pe
- gIAWFcQJrX26X+2ZU3LOTiRfAyiC/WRYLmBMEr/LtGZp7cGQT2SHv93olbaARd7oSOxCKUBF8
- aLAinNR03q9N/RLIi
+References: <20191018161033.261971-1-samitolvanen@google.com> <20200427160018.243569-1-samitolvanen@google.com>
+In-Reply-To: <20200427160018.243569-1-samitolvanen@google.com>
+From: Ard Biesheuvel <ardb@kernel.org>
+Date: Mon, 27 Apr 2020 19:39:28 +0200
+X-Gmail-Original-Message-ID: <CAMj1kXGASSCjTjvXJh=_iPwEPG50_pVRe2QO1hoRW+KHtugFVQ@mail.gmail.com>
+Message-ID: <CAMj1kXGASSCjTjvXJh=_iPwEPG50_pVRe2QO1hoRW+KHtugFVQ@mail.gmail.com>
+Subject: Re: [PATCH v13 00/12] add support for Clang's Shadow Call Stack
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, 
+	James Morse <james.morse@arm.com>, Steven Rostedt <rostedt@goodmis.org>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>, 
+	Masahiro Yamada <masahiroy@kernel.org>, Michal Marek <michal.lkml@markovi.net>, 
+	Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, 
+	Juri Lelli <juri.lelli@redhat.com>, Vincent Guittot <vincent.guittot@linaro.org>, 
+	Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Marc Zyngier <maz@kernel.org>, 
+	kernel-hardening@lists.openwall.com, 
+	Nick Desaulniers <ndesaulniers@google.com>, 
+	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, 
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Masami Hiramatsu <mhiramat@kernel.org>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, Laura Abbott <labbott@redhat.com>, 
+	Dave Martin <Dave.Martin@arm.com>, Linux ARM <linux-arm-kernel@lists.infradead.org>
+Content-Type: text/plain; charset="UTF-8"
 
-Hi, my name is Oscar. I would like to get involved in the kernel self protection
-project because I love the software security and I think this is one of the most
-challenging fields.
+On Mon, 27 Apr 2020 at 18:00, Sami Tolvanen <samitolvanen@google.com> wrote:
+>
+> This patch series adds support for Clang's Shadow Call Stack
+> (SCS) mitigation, which uses a separately allocated shadow stack
+> to protect against return address overwrites. More information
+> can be found here:
+>
+>   https://clang.llvm.org/docs/ShadowCallStack.html
+>
+> SCS provides better protection against traditional buffer
+> overflows than CONFIG_STACKPROTECTOR_*, but it should be noted
+> that SCS security guarantees in the kernel differ from the ones
+> documented for user space. The kernel must store addresses of
+> shadow stacks in memory, which means an attacker capable of
+> reading and writing arbitrary memory may be able to locate them
+> and hijack control flow by modifying the shadow stacks.
+>
+> SCS is currently supported only on arm64, where the compiler
+> requires the x18 register to be reserved for holding the current
+> task's shadow stack pointer.
+>
+> With -fsanitize=shadow-call-stack, the compiler injects
+> instructions to all non-leaf C functions to store the return
+> address to the shadow stack, and unconditionally load it again
+> before returning. As a result, SCS is incompatible with features
+> that rely on modifying function return addresses in the kernel
+> stack to alter control flow. A copy of the return address is
+> still kept in the kernel stack for compatibility with stack
+> unwinding, for example.
+>
+> SCS has a minimal performance overhead, but allocating
+> shadow stacks increases kernel memory usage. The feature is
+> therefore mostly useful on hardware that lacks support for PAC
+> instructions.
+>
+> Changes in v13:
+>  - Changed thread_info::shadow_call_stack to a base address and
+>    an offset instead, and removed the now unneeded __scs_base()
+>    and scs_save().
+>  - Removed alignment from the kmem_cache and static allocations.
+>  - Removed the task_set_scs() helper function.
+>  - Moved the assembly code for loading and storing the offset in
+>    thread_info to scs_load/save macros.
+>  - Added offset checking to scs_corrupted().
+>  - Switched to cmpxchg_relaxed() in scs_check_usage().
+>
 
-I have experience in microcrontrollers and working with low level software, but
-my experience with the linux kernel development is a few commits in the staging
-area.
+OK, so one thing that came up in an offline discussion about SCS is
+the way it interacts with the vmap'ed stack.
 
-For now, and due to my low experience with the linux kernel code and software
-security, I do not care about the area and task to be done. What I pretend is to
-help this great community and improve my knowledge and skills in this
-challenging field.
+The vmap'ed stack is great for robustness, but it only works if things
+don't explode for other reasons in the mean time. This means the
+ordinary-to-shadow-call-stack size ratio should be chosen such that it
+is *really* unlikely you could ever overflow the shadow call stack and
+corrupt another task's call stack before hitting the vmap stack's
+guard region.
 
-So, I would like to know if I can be assigned to some task that suits me. I've
-taken a look at https://github.com/KSPP/linux/issues but I don't know which task
-to choose and if something else is working on it.
-
-Thanks,
-
-Oscar Carter
+Alternatively, I wonder if there is a way we could let the SCS and
+ordinary stack share the [bottom of] the vmap'ed region. That would
+give rather nasty results if the ordinary stack overflows into the
+SCS, but for cases where we really recurse out of control, we could
+catch this occurrence on either stack, whichever one occurs first. And
+the nastiness -when it does occur- will not corrupt any state beyond
+the stack of the current task.
