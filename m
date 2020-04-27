@@ -1,22 +1,23 @@
-Return-Path: <SRS0=Y1Fk=6L=lists.openwall.com=kernel-hardening-return-18655-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=FQxa=6L=lists.openwall.com=kernel-hardening-return-18656-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 12E3EC4CECD
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 19:24:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ECD89C4CECD
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 19:42:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6A42B214AF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 19:24:42 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 50CBE205C9
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Apr 2020 19:42:07 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=fail reason="signature verification failed" (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="ARK9w/7v"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6A42B214AF
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18655-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5272 invoked by uid 550); 27 Apr 2020 19:24:34 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="MF42SY0y"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 50CBE205C9
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18656-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21953 invoked by uid 550); 27 Apr 2020 19:41:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,132 +25,118 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5240 invoked from network); 27 Apr 2020 19:24:33 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1588015460;
-	bh=Vp0vnRvKFg1r1dD6nYGeZLym1g/qiYVKG/3/dYtACSI=;
-	h=Date:From:To:Cc:Subject:Reply-To:References:In-Reply-To:From;
-	b=ARK9w/7v+ttJmUZ8ezHZ3hnJkjbfAfH6DY8lhhhFAlCzT6Ml+1GrZMnA8IirtO/no
-	 B/j1PZ2ONXnGLAlEz7o+/REseF4JTijbD4eu00/c8xGSp32iifSa8vqJv1r5lKFiJC
-	 GmDIm0lfcj+2i9NN46J6w+TedGgSoNUQJFjjKl18=
-Date: Mon, 27 Apr 2020 12:24:20 -0700
-From: "Paul E. McKenney" <paulmck@kernel.org>
-To: Will Deacon <will@kernel.org>
-Cc: Jann Horn <jannh@google.com>, Peter Zijlstra <peterz@infradead.org>,
-	kernel list <linux-kernel@vger.kernel.org>,
-	Eric Dumazet <edumazet@google.com>,
-	Kees Cook <keescook@chromium.org>,
-	Maddie Stone <maddiestone@google.com>,
-	Marco Elver <elver@google.com>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	kernel-team <kernel-team@android.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Oleg Nesterov <oleg@redhat.com>
-Subject: Re: [RFC PATCH 03/21] list: Annotate lockless list primitives with
- data_race()
-Message-ID: <20200427192420.GL7560@paulmck-ThinkPad-P72>
-References: <20200324153643.15527-1-will@kernel.org>
- <20200324153643.15527-4-will@kernel.org>
- <20200324165128.GS20696@hirez.programming.kicks-ass.net>
- <CAG48ez2WJo5+wqWi1nxstR=WWyseVfZPMnpdDBsZKW5G+Tt3KQ@mail.gmail.com>
- <20200324213200.GA21176@willie-the-truck>
- <20200330231315.GZ19865@paulmck-ThinkPad-P72>
- <20200424173932.GK21141@willie-the-truck>
+Received: (qmail 21918 invoked from network); 27 Apr 2020 19:41:58 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=Xl34K+WyxLr+OBvYQN0aKmiQr358TgE2J+a3gDDkuqM=;
+        b=MF42SY0yJDHJdeoyY2Bjwc+L+5Rr7RvBuYk1vaEDqwpzTy0Ar8l+AbQfdBq1oayuyv
+         SJXbUSShjHhaEBMZLwdk+OxRBeDjhp1VRKMog083j5glNgfGCc+7I5FgZ6vPiIIHhGWh
+         sF7V0Ruklt+nNaNQX+JILLGfdp6vZWflEQ6iV76Id0K1rDOJArWBcMfpAUBaBLoVsXVb
+         ypw+plAYtlWVCBp2m7iOCt6tepzBEZbd2OKkM4g8zh2qfOKC//uFor3uGBjViUMwr4CN
+         VzVmewGExwi+4HTaPdyE/SZ/V0ozK5wjvdksx5p7yrkQWK1+DILp1h1GhuPi1M7VJjv0
+         YM8w==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=Xl34K+WyxLr+OBvYQN0aKmiQr358TgE2J+a3gDDkuqM=;
+        b=cb1EB5d/PLdBq52Zz8FD9roSu7ChvP64cGnAICzXK5PTx4IzoWcSXYy7SEr+73X2bZ
+         4fsCS6Rwnv1vEdra6usIM6gIQyfP18USFUlj6Wa6ipJjboL70cAK+YJkB1vIb1oLLZhn
+         rhsRhUGvSxwIYRzSI4Z1UJ16PnFEPnOxQ2yEK6l49VFTddRssAcmwkPVqxQorgvsWJwq
+         XEGuozrZrB3quFazcwX1OjDkrQoZonVMD4ylH2IK6SQxmseVKMjryYwkOVTnd+/xGMt1
+         kG1oY3CHt5wQcv39ugpGmN2h2R/NNTfWoZh/mygv6/LcvvJf7520LK8qAqUmef2pHczY
+         9ufA==
+X-Gm-Message-State: AGi0PuaYwmMhvMgUcBaaZt+7njHLt55Dh0zp7vfM2fqTGXWXWVzVl0e7
+	rI8LQqeoVkDsVR4r4NzILRl5lWMiN/UdP2S1ljuTWQ==
+X-Google-Smtp-Source: APiQypJB2kkCHuH47L8Yqrr/alg5ajajOgnK9X0cKKMKzoNexUMBYbSy7qjFlCoaorsBN9I9MYaWgib532GjcJ9d3i8=
+X-Received: by 2002:a2e:760c:: with SMTP id r12mr14755084ljc.139.1588016506746;
+ Mon, 27 Apr 2020 12:41:46 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200424173932.GK21141@willie-the-truck>
-User-Agent: Mutt/1.9.4 (2018-02-28)
+References: <20200427143646.619227-1-christian.brauner@ubuntu.com>
+ <CAG48ez3eSJSODADpo=O-j9txJ=2R+EupunRvs5H9t5Wa8mvkRA@mail.gmail.com> <20200427181507.ry3hw7ufiifwhi5k@wittgenstein>
+In-Reply-To: <20200427181507.ry3hw7ufiifwhi5k@wittgenstein>
+From: Jann Horn <jannh@google.com>
+Date: Mon, 27 Apr 2020 21:41:20 +0200
+Message-ID: <CAG48ez2D36QZU0djiXGbirCgcFeAWA02s8PCk6SWEY5MoKg_kg@mail.gmail.com>
+Subject: Re: [PATCH] nsproxy: attach to namespaces via pidfds
+To: Christian Brauner <christian.brauner@ubuntu.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, 
+	=?UTF-8?Q?St=C3=A9phane_Graber?= <stgraber@ubuntu.com>, 
+	Linux Containers <containers@lists.linux-foundation.org>, 
+	"Eric W . Biederman" <ebiederm@xmission.com>, Serge Hallyn <serge@hallyn.com>, 
+	Aleksa Sarai <cyphar@cyphar.com>, 
+	linux-security-module <linux-security-module@vger.kernel.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On Fri, Apr 24, 2020 at 06:39:33PM +0100, Will Deacon wrote:
-> On Mon, Mar 30, 2020 at 04:13:15PM -0700, Paul E. McKenney wrote:
-> > On Tue, Mar 24, 2020 at 09:32:01PM +0000, Will Deacon wrote:
-> > > [mutt crashed while I was sending this; apologies if you receive it twice]
-> > > 
-> > > On Tue, Mar 24, 2020 at 05:56:15PM +0100, Jann Horn wrote:
-> > > > On Tue, Mar 24, 2020 at 5:51 PM Peter Zijlstra <peterz@infradead.org> wrote:
-> > > > > On Tue, Mar 24, 2020 at 03:36:25PM +0000, Will Deacon wrote:
-> > > > > > diff --git a/include/linux/list.h b/include/linux/list.h
-> > > > > > index 4fed5a0f9b77..4d9f5f9ed1a8 100644
-> > > > > > --- a/include/linux/list.h
-> > > > > > +++ b/include/linux/list.h
-> > > > > > @@ -279,7 +279,7 @@ static inline int list_is_last(const struct list_head *list,
-> > > > > >   */
-> > > > > >  static inline int list_empty(const struct list_head *head)
-> > > > > >  {
-> > > > > > -     return READ_ONCE(head->next) == head;
-> > > > > > +     return data_race(READ_ONCE(head->next) == head);
-> > > > > >  }
-> > > > >
-> > > > > list_empty() isn't lockless safe, that's what we have
-> > > > > list_empty_careful() for.
-> > > > 
-> > > > That thing looks like it could also use some READ_ONCE() sprinkled in...
-> > > 
-> > > Crikey, how did I miss that? I need to spend some time understanding the
-> > > ordering there.
-> > > 
-> > > So it sounds like the KCSAN splats relating to list_empty() and loosely
-> > > referred to by 1c97be677f72 ("list: Use WRITE_ONCE() when adding to lists
-> > > and hlists") are indicative of real bugs and we should actually restore
-> > > list_empty() to its former glory prior to 1658d35ead5d ("list: Use
-> > > READ_ONCE() when testing for empty lists"). Alternatively, assuming
-> > > list_empty_careful() does what it says on the tin, we could just make that
-> > > the default.
-> > 
-> > The list_empty_careful() function (suitably annotated) returns false if
-> > the list is non-empty, including when it is in the process of becoming
-> > either empty or non-empty.  It would be fine for the lockless use cases
-> > I have come across.
-> 
-> Hmm, I had a look at the implementation and I'm not at all convinced that
-> it's correct. First of all, the comment above it states:
-> 
->  * NOTE: using list_empty_careful() without synchronization
->  * can only be safe if the only activity that can happen
->  * to the list entry is list_del_init(). Eg. it cannot be used
->  * if another CPU could re-list_add() it.
+On Mon, Apr 27, 2020 at 8:15 PM Christian Brauner
+<christian.brauner@ubuntu.com> wrote:
+> On Mon, Apr 27, 2020 at 07:28:56PM +0200, Jann Horn wrote:
+> > On Mon, Apr 27, 2020 at 4:47 PM Christian Brauner
+> > <christian.brauner@ubuntu.com> wrote:
+[...]
+> > > That means
+> > > setns(nsfd, CLONE_NEWNET) equals setns(pidfd, CLONE_NEWNET). However,
+> > > when a pidfd is passed, multiple namespace flags can be specified in the
+> > > second setns() argument and setns() will attach the caller to all the
+> > > specified namespaces all at once or to none of them. If 0 is specified
+> > > together with a pidfd then setns() will interpret it the same way 0 is
+> > > interpreted together with a nsfd argument, i.e. attach to any/all
+> > > namespaces.
+> > [...]
+> > > Apart from significiantly reducing the number of syscalls from double
+> > > digit to single digit which is a decent reason post-spectre/meltdown
+> > > this also allows to switch to a set of namespaces atomically, i.e.
+> > > either attaching to all the specified namespaces succeeds or we fail.
+> >
+> > Apart from the issues I've pointed out below, I think it's worth
+> > calling out explicitly that with the current design, the switch will
+> > not, in fact, be fully atomic - the process will temporarily be in
+> > intermediate stages where the switches to some namespaces have
+> > completed while the switches to other namespaces are still pending;
+> > and while there will be less of these intermediate stages than before,
+> > it also means that they will be less explicit to userspace.
+>
+> Right, that can be fixed by switching to the unshare model of getting a
+> new set of credentials and committing it after the nsproxy has been
+> installed? Then there shouldn't be an intermediate state anymore or
+> rather an intermediate stage where we can still fail somehow.
 
-Huh.  This thing is unchanged since 2.6.12-rc2, back in 2005:
+It still wouldn't be atomic (in the sense of parallelism, not in the
+sense of intermediate error handling) though; for example, if task B
+does setns(<pidfd_of_task_a>, 0) and task C concurrently does
+setns(<pidfd_of_task_b>, 0), then task C may end up with the new mount
+namespace of task B but the old user namespace, or something like
+that. If C is more privileged than B, that may cause C to have more
+privileges through its configuration of namespaces than B does (e.g.
+by running in the &init_user_ns but with a mount namespace owned by an
+unprivileged user), which C may not expect. Same thing for racing
+between unshare() and setns().
 
-static inline int list_empty_careful(const struct list_head *head)
-{
-	struct list_head *next = head->next;
-	return (next == head) && (next == head->prev);
-}
+[...]
+> > > +               put_user_ns(user_ns);
+> > > +       }
+> > > +#else
+> > > +       if (flags & CLONE_NEWUSER)
+> > > +               ret = -EINVAL;
+> > > +#endif
+> > > +
+> > > +       if (!ret && wants_ns(flags, CLONE_NEWNS))
+> > > +               ret = __ns_install(nsproxy, mnt_ns_to_common(nsp->mnt_ns));
+> >
+> > And this one might be even worse, because the mount namespace change
+> > itself is only stored in the nsproxy at this point, but the cwd and
+> > root paths have already been overwritten on the task's fs_struct.
+> >
+> > To actually make sys_set_ns() atomic, I think you'd need some
+> > moderately complicated prep work, splitting the ->install handlers up
+> > into prep work and a commit phase that can't fail.
+>
+> Wouldn't it be sufficient to move to an unshare like model, i.e.
+> creating a new set of creds, and passing the new user_ns to
+> create_new_namespaces() as well as having a temporary new_fs struct?
+> That should get rid of all intermediate stages.
 
-I can imagine compiler value-caching optimizations that would cause
-trouble, for example, if a previous obsolete fetch from head->prev was
-lying around in a register, causing this function to say "not empty" when
-it was in fact empty.  Of course, if obsolete values for both head->next
-and head->prev were lying around, pretty much anything could happen.
-
-> but it seems that people disregard this note and instead use it as a
-> general-purpose lockless test, taking a lock and rechecking if it returns
-> non-empty. It would also mean we'd have to keep the WRITE_ONCE() in
-> INIT_LIST_HEAD, which is something that I've been trying to remove.
-> 
-> In the face of something like a concurrent list_add(); list_add_tail()
-> sequence, then the tearing writes to the head->{prev,next} pointers could
-> cause list_empty_careful() to indicate that the list is momentarily empty.
-> 
-> I've started looking at whether we can use a NULL next pointer to indicate
-> an empty list, which might allow us to kill the __list_del_clearprev() hack
-> at the same time, but I've not found enough time to really get my teeth into
-> it yet.
-
-In the delete-only case, I kind of get it, other than the potential for
-optimization.  Once the list becomes empty, it will forever remain empty.
-And the additional test of head->prev avoids this returning true while the
-deletion is half done (again, aside from the potential for optimization).
-
-If insertions are allowed, the thing I haven't quite figured out yet is
-what is being gained by the additional check of head->prev.  After all,
-if updates are not excluded, the return value can become obsolete
-immediately anyhow.  Yes, it could be used as a heuristic, but it could
-report empty immediately before a list_add(), so there would need to
-either be a careful wakeup protocol or a periodic poll of the list.
-
-Or am I missing a trick here?
-
-							Thanx, Paul
+Ah, good point, I didn't realize that that already exists for unshare().
