@@ -1,21 +1,21 @@
-Return-Path: <SRS0=w3Nv=6M=lists.openwall.com=kernel-hardening-return-18662-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=EA1t=6M=lists.openwall.com=kernel-hardening-return-18663-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.8 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 33602C8300A
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Apr 2020 17:52:12 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 17837C83009
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Apr 2020 17:52:22 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6889C20757
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Apr 2020 17:52:11 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6889C20757
+	by mail.kernel.org (Postfix) with SMTP id 781BE214AF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Apr 2020 17:52:21 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 781BE214AF
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18662-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16063 invoked by uid 550); 28 Apr 2020 17:51:53 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18663-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16182 invoked by uid 550); 28 Apr 2020 17:51:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15887 invoked from network); 28 Apr 2020 17:51:52 -0000
+Received: (qmail 16068 invoked from network); 28 Apr 2020 17:51:54 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -58,9 +58,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-api@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
 	linux-fsdevel@vger.kernel.org
-Subject: [PATCH v3 1/5] fs: Add support for a RESOLVE_MAYEXEC flag on openat2(2)
-Date: Tue, 28 Apr 2020 19:51:25 +0200
-Message-Id: <20200428175129.634352-2-mic@digikod.net>
+Subject: [PATCH v3 2/5] fs: Add a MAY_EXECMOUNT flag to infer the noexec mount property
+Date: Tue, 28 Apr 2020 19:51:26 +0200
+Message-Id: <20200428175129.634352-3-mic@digikod.net>
 X-Mailer: git-send-email 2.26.2
 In-Reply-To: <20200428175129.634352-1-mic@digikod.net>
 References: <20200428175129.634352-1-mic@digikod.net>
@@ -70,124 +70,53 @@ Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
-When the RESOLVE_MAYEXEC flag is passed, openat2(2) may be subject to
-additional restrictions depending on a security policy managed by the
-kernel through a sysctl or implemented by an LSM thanks to the
-inode_permission hook.
+An LSM doesn't get path information related to an access request to open
+an inode.  This new (internal) MAY_EXECMOUNT flag enables an LSM to
+check if the underlying mount point of an inode is marked as executable.
+This is useful to implement a security policy taking advantage of the
+noexec mount option.
 
-The underlying idea is to be able to restrict scripts interpretation
-according to a policy defined by the system administrator.  For this to
-be possible, script interpreters must use the RESOLVE_MAYEXEC flag
-appropriately.  To be fully effective, these interpreters also need to
-handle the other ways to execute code: command line parameters (e.g.,
-option -e for Perl), module loading (e.g., option -m for Python), stdin,
-file sourcing, environment variables, configuration files...  According
-to the threat model, it may be acceptable to allow some script
-interpreters (e.g. Bash) to interpret commands from stdin, may it be a
-TTY or a pipe, because it may not be enough to (directly) perform
-syscalls.  Further documentation can be found in a following patch.
-
-A simple security policy implementation, configured through a dedicated
-sysctl, is available in a following patch.
-
-This is an updated subset of the patch initially written by Vincent
-Strubel for CLIP OS 4:
-https://github.com/clipos-archive/src_platform_clip-patches/blob/f5cb330d6b684752e403b4e41b39f7004d88e561/1901_open_mayexec.patch
-This patch has been used for more than 11 years with customized script
-interpreters.  Some examples (with the original name O_MAYEXEC) can be
-found here:
-https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC
+This flag is set according to path_noexec(), which checks if a mount
+point is mounted with MNT_NOEXEC or if the underlying superblock is
+SB_I_NOEXEC.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Signed-off-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Signed-off-by: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
+Reviewed-by: Philippe Trébuchet <philippe.trebuchet@ssi.gouv.fr>
+Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
 Cc: Aleksa Sarai <cyphar@cyphar.com>
 Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: Kees Cook <keescook@chromium.org>
 ---
+ fs/namei.c         | 2 ++
+ include/linux/fs.h | 2 ++
+ 2 files changed, 4 insertions(+)
 
-Changes since v2:
-* Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).  This change
-  enables to not break existing application using bogus O_* flags that
-  may be ignored by current kernels by using a new dedicated flag, only
-  usable through openat2(2) (suggested by Jeff Layton).  Using this flag
-  will results in an error if the running kernel does not support it.
-  User space needs to manage this case, as with other RESOLVE_* flags.
-  The best effort approach to security (for most common distros) will
-  simply consists of ignoring such an error and retry without
-  RESOLVE_MAYEXEC.  However, a fully controlled system may which to
-  error out if such an inconsistency is detected.
-
-Changes since v1:
-* Set __FMODE_EXEC when using O_MAYEXEC to make this information
-  available through the new fanotify/FAN_OPEN_EXEC event (suggested by
-  Jan Kara and Matthew Bobrowski).
----
- fs/open.c                    | 6 ++++++
- include/linux/fcntl.h        | 2 +-
- include/linux/fs.h           | 2 ++
- include/uapi/linux/openat2.h | 6 ++++++
- 4 files changed, 15 insertions(+), 1 deletion(-)
-
-diff --git a/fs/open.c b/fs/open.c
-index 719b320ede52..ca5a145761a2 100644
---- a/fs/open.c
-+++ b/fs/open.c
-@@ -1029,6 +1029,12 @@ inline int build_open_flags(const struct open_how *how, struct open_flags *op)
- 	if (flags & __O_SYNC)
- 		flags |= O_DSYNC;
+diff --git a/fs/namei.c b/fs/namei.c
+index a320371899cf..33b6d372e74a 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -2849,6 +2849,8 @@ static int may_open(const struct path *path, int acc_mode, int flag)
+ 		break;
+ 	}
  
-+	/* Checks execution permissions on open. */
-+	if (how->resolve & RESOLVE_MAYEXEC) {
-+		acc_mode |= MAY_OPENEXEC;
-+		flags |= __FMODE_EXEC;
-+	}
-+
- 	op->open_flag = flags;
- 
- 	/* O_TRUNC implies we need access checks for write permissions */
-diff --git a/include/linux/fcntl.h b/include/linux/fcntl.h
-index 7bcdcf4f6ab2..a37e213220ad 100644
---- a/include/linux/fcntl.h
-+++ b/include/linux/fcntl.h
-@@ -19,7 +19,7 @@
- /* List of all valid flags for the how->resolve argument: */
- #define VALID_RESOLVE_FLAGS \
- 	(RESOLVE_NO_XDEV | RESOLVE_NO_MAGICLINKS | RESOLVE_NO_SYMLINKS | \
--	 RESOLVE_BENEATH | RESOLVE_IN_ROOT)
-+	 RESOLVE_BENEATH | RESOLVE_IN_ROOT | RESOLVE_MAYEXEC)
- 
- /* List of all open_how "versions". */
- #define OPEN_HOW_SIZE_VER0	24 /* sizeof first published struct */
++	/* Pass the mount point executability. */
++	acc_mode |= path_noexec(path) ? 0 : MAY_EXECMOUNT;
+ 	error = inode_permission(inode, MAY_OPEN | acc_mode);
+ 	if (error)
+ 		return error;
 diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 4f6f59b4f22a..f5be4be7c01d 100644
+index f5be4be7c01d..9213147d8636 100644
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
-@@ -101,6 +101,8 @@ typedef int (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
- #define MAY_CHDIR		0x00000040
- /* called from RCU mode, don't block */
+@@ -103,6 +103,8 @@ typedef int (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
  #define MAY_NOT_BLOCK		0x00000080
-+/* the inode is opened with RESOLVE_MAYEXEC */
-+#define MAY_OPENEXEC		0x00000100
+ /* the inode is opened with RESOLVE_MAYEXEC */
+ #define MAY_OPENEXEC		0x00000100
++/* the mount point is marked as executable */
++#define MAY_EXECMOUNT		0x00000200
  
  /*
   * flags in file.f_mode.  Note that FMODE_READ and FMODE_WRITE must correspond
-diff --git a/include/uapi/linux/openat2.h b/include/uapi/linux/openat2.h
-index 58b1eb711360..86ed0a2321c3 100644
---- a/include/uapi/linux/openat2.h
-+++ b/include/uapi/linux/openat2.h
-@@ -35,5 +35,11 @@ struct open_how {
- #define RESOLVE_IN_ROOT		0x10 /* Make all jumps to "/" and ".."
- 					be scoped inside the dirfd
- 					(similar to chroot(2)). */
-+#define RESOLVE_MAYEXEC		0x20 /* Code execution from the target file is
-+					intended, checks such permission.  A
-+					simple policy can be enforced
-+					system-wide as explained in
-+					Documentation/admin-guide/sysctl/fs.rst
-+					*/
- 
- #endif /* _UAPI_LINUX_OPENAT2_H */
 -- 
 2.26.2
 
