@@ -1,20 +1,20 @@
-Return-Path: <SRS0=mnoF=6N=lists.openwall.com=kernel-hardening-return-18678-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=XW7A=6N=lists.openwall.com=kernel-hardening-return-18679-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 75625C83003
-	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Apr 2020 08:39:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E84F3C83003
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Apr 2020 08:50:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CA4A420731
-	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Apr 2020 08:39:57 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CA4A420731
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=ACULAB.COM
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18678-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5908 invoked by uid 550); 29 Apr 2020 08:39:49 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4F7D420775
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Apr 2020 08:50:41 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F7D420775
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18679-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19681 invoked by uid 550); 29 Apr 2020 08:50:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,86 +22,92 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5885 invoked from network); 29 Apr 2020 08:39:48 -0000
-X-MC-Unique: r75nPERROFeEoEJIwkJHxw-1
-From: David Laight <David.Laight@ACULAB.COM>
-To: 'Sami Tolvanen' <samitolvanen@google.com>, Ard Biesheuvel
-	<ardb@kernel.org>
-CC: Will Deacon <will@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>,
-	James Morse <james.morse@arm.com>, Steven Rostedt <rostedt@goodmis.org>, "Ard
- Biesheuvel" <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>,
-	Masahiro Yamada <masahiroy@kernel.org>, Michal Marek
-	<michal.lkml@markovi.net>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra
-	<peterz@infradead.org>, Juri Lelli <juri.lelli@redhat.com>, Vincent Guittot
-	<vincent.guittot@linaro.org>, Kees Cook <keescook@chromium.org>, Jann Horn
-	<jannh@google.com>, Marc Zyngier <maz@kernel.org>,
-	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
-	Nick Desaulniers <ndesaulniers@google.com>, Linux Kernel Mailing List
-	<linux-kernel@vger.kernel.org>, Miguel Ojeda
-	<miguel.ojeda.sandonis@gmail.com>, Masami Hiramatsu <mhiramat@kernel.org>,
-	clang-built-linux <clang-built-linux@googlegroups.com>, Laura Abbott
-	<labbott@redhat.com>, Dave Martin <Dave.Martin@arm.com>, Linux ARM
-	<linux-arm-kernel@lists.infradead.org>
-Subject: RE: [PATCH v13 00/12] add support for Clang's Shadow Call Stack
-Thread-Topic: [PATCH v13 00/12] add support for Clang's Shadow Call Stack
-Thread-Index: AQHWHOCVWHSK1xvpOUef91FgkS/f7KiPxyTg
-Date: Wed, 29 Apr 2020 08:39:33 +0000
-Message-ID: <6762b8d0974d49de80c3b398d714b3fb@AcuMS.aculab.com>
-References: <20191018161033.261971-1-samitolvanen@google.com>
- <20200427160018.243569-1-samitolvanen@google.com>
- <CAMj1kXGASSCjTjvXJh=_iPwEPG50_pVRe2QO1hoRW+KHtugFVQ@mail.gmail.com>
- <CAMj1kXFYv6YQJ0KGnFh=d6_K-39PYW+2bUj9TDnutA04czhOjQ@mail.gmail.com>
- <20200427220942.GB80713@google.com>
-In-Reply-To: <20200427220942.GB80713@google.com>
-Accept-Language: en-GB, en-US
-Content-Language: en-US
-X-MS-Has-Attach: 
-X-MS-TNEF-Correlator: 
-x-ms-exchange-transport-fromentityheader: Hosted
-x-originating-ip: [10.202.205.107]
+Received: (qmail 19657 invoked from network); 29 Apr 2020 08:50:33 -0000
+Subject: Re: [PATCH v3 0/5] Add support for RESOLVE_MAYEXEC
+To: Jann Horn <jannh@google.com>, Florian Weimer <fw@deneb.enyo.de>
+Cc: kernel list <linux-kernel@vger.kernel.org>,
+ Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
+ Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>,
+ Christian Heimes <christian@python.org>,
+ Daniel Borkmann <daniel@iogearbox.net>,
+ Deven Bowers <deven.desai@linux.microsoft.com>,
+ Eric Chiang <ericchiang@google.com>, James Morris <jmorris@namei.org>,
+ Jan Kara <jack@suse.cz>, Jonathan Corbet <corbet@lwn.net>,
+ Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>,
+ Matthew Wilcox <willy@infradead.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>,
+ =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
+ Mimi Zohar <zohar@linux.ibm.com>,
+ =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+ Scott Shell <scottsh@microsoft.com>,
+ Sean Christopherson <sean.j.christopherson@intel.com>,
+ Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+ Steve Grubb <sgrubb@redhat.com>,
+ Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+ Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Linux API <linux-api@vger.kernel.org>,
+ linux-security-module <linux-security-module@vger.kernel.org>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>
+References: <20200428175129.634352-1-mic@digikod.net>
+ <CAG48ez1bKzh1YvbD_Lcg0AbMCH_cdZmrRRumU7UCJL=qPwNFpQ@mail.gmail.com>
+ <87blnb48a3.fsf@mid.deneb.enyo.de>
+ <CAG48ez2TphTj-VdDaSjvnr0Q8BhNmT3n86xYz4bF3wRJmAMsMw@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <ece281a5-8944-65fd-2a76-e4479a0cccaf@digikod.net>
+Date: Wed, 29 Apr 2020 10:50:19 +0200
+User-Agent:
 MIME-Version: 1.0
-X-Mimecast-Spam-Score: 0
-X-Mimecast-Originator: aculab.com
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <CAG48ez2TphTj-VdDaSjvnr0Q8BhNmT3n86xYz4bF3wRJmAMsMw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-From: Sami Tolvanen
-> Sent: 27 April 2020 23:10
-...
-> > > Alternatively, I wonder if there is a way we could let the SCS and
-> > > ordinary stack share the [bottom of] the vmap'ed region. That would
-> > > give rather nasty results if the ordinary stack overflows into the
-> > > SCS, but for cases where we really recurse out of control, we could
-> > > catch this occurrence on either stack, whichever one occurs first. An=
-d
-> > > the nastiness -when it does occur- will not corrupt any state beyond
-> > > the stack of the current task.
-> >
-> > Hmm, I guess that would make it quite hard to keep the SCS address
-> > secret though :-(
->=20
-> Yes, and the stack potentially overflowing into the SCS sort of defeats
-> the purpose. I'm fine with increasing the SCS size to something safer,
-> but using a vmapped shadow stack seems like the correct solution to this
-> problem, at least on devices where allocating a full page isn't an issue.
 
-Wouldn't you do it the other way around - so shadow stack overflow
-corrupts the bottom of the normal stack?
-That can be detected 'after the fact' in a few places (eg process
-switch and return to user)
 
-Actually you might want to do syscall entry at the base of stack area,
-then (effectively) allocate an on-stack buffer for the shadow stack.
+On 29/04/2020 00:01, Jann Horn wrote:
+> On Tue, Apr 28, 2020 at 11:21 PM Florian Weimer <fw@deneb.enyo.de> wrote:
+>> * Jann Horn:
+>>
+>>> Just as a comment: You'd probably also have to use RESOLVE_MAYEXEC in
+>>> the dynamic linker.
+>>
+>> Absolutely.  In typical configurations, the kernel does not enforce
+>> that executable mappings must be backed by files which are executable.
+>> It's most obvious with using an explicit loader invocation to run
+>> executables on noexec mounts.  RESOLVE_MAYEXEC is much more useful
+>> than trying to reimplement the kernel permission checks (or what some
+>> believe they should be) in userspace.
 
-I'd have though that kernel code could be the shadow stack address
-by just reading r18?
-Userspace isn't supposed to be able to get the main kernel stack
-address either.
+Indeed it makes sense to use RESOLVE_MAYEXEC for the dynamic linker too.
+Only the noexec mount option is taken into account for mmap(2) with
+PROT_EXEC, and if you can trick the dynamic linker with JOP as Jann
+explained, it may enable to execute new code. However, a kernel which
+forbids remapping memory with PROT_EXEC still enables to implement a W^X
+policy. Any JOP/ROP still enables unexpected code execution though.
 
-=09David
+> 
+> Oh, good point.
+> 
+> That actually seems like something Mickaël could add to his series? If
+> someone turns on that knob for "When an interpreter wants to execute
+> something, enforce that we have execute access to it", they probably
+> also don't want it to be possible to just map files as executable? So
+> perhaps when that flag is on, the kernel should either refuse to map
+> anything as executable if it wasn't opened with RESOLVE_MAYEXEC or
+> (less strict) if RESOLVE_MAYEXEC wasn't used, print a warning, then
+> check whether the file is executable and bail out if not?
+> 
+> A configuration where interpreters verify that scripts are executable,
+> but other things can just mmap executable pages, seems kinda
+> inconsistent...
 
--
-Registered Address Lakeside, Bramley Road, Mount Farm, Milton Keynes, MK1 1=
-PT, UK
-Registration No: 1397386 (Wales)
-
+As it is written in the documentation patch, this RESOLVE_MAYEXEC
+feature is an important missing piece, but to implement a consistent
+security policy we need to enable other restrictions starting with a
+noexec mount point policy. The purpose of this patch series is not to
+bring a full-feature LSM with process states handling, but it brings
+what is needed for LSMs such as SELinux, IMA or IPE to extend their
+capabilities to reach what you would expect.
