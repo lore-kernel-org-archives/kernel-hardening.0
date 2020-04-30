@@ -1,23 +1,20 @@
-Return-Path: <SRS0=7rj4=6O=lists.openwall.com=kernel-hardening-return-18684-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=vq+H=6O=lists.openwall.com=kernel-hardening-return-18685-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C3FB9C8300A
-	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Apr 2020 11:01:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E796FC8300B
+	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Apr 2020 13:24:00 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1D9422078D
-	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Apr 2020 11:01:50 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="f5VuDmhy"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1D9422078D
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18684-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1097 invoked by uid 550); 30 Apr 2020 11:01:43 -0000
+	by mail.kernel.org (Postfix) with SMTP id 50B9B20757
+	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Apr 2020 13:24:00 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 50B9B20757
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18685-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17518 invoked by uid 550); 30 Apr 2020 13:23:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,108 +22,135 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1065 invoked from network); 30 Apr 2020 11:01:43 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc:content-transfer-encoding;
-        bh=lFFxK4DtytcE6RpAFl8YJiEBCoYUrJi5EC/p8/Y25iA=;
-        b=f5VuDmhyUjEspScUeszN5n8DPGcEiF/Kok9r2XQcaRe8HDfwuUTjWP4f00L9FgVpR6
-         NwrnkORD6lm6KvLluh5w59qQbKGxSAS44/NqciSnz039zIu/mHcI+vU5AHQsV+NmkfVr
-         2wk0iYhDyLiGTZFSRNC7xo8I9oxNI1yh7E8bUl9fe+UMfMfdBO5QFMqgwxpgtqJixBIJ
-         nzKHb0khXvNE1r3a2NF9Ib5NUDnWpC51UlhYpkPtdJXUcSg/2kdiJzqetXJ7v7YWlZr/
-         RRuw/gMakeQ5lAPHyVeiUFgbvw9ZfIwxNWNJ87QjflMf7FFzL6O7O7DWFFSgP58BUTAu
-         l+BA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc:content-transfer-encoding;
-        bh=lFFxK4DtytcE6RpAFl8YJiEBCoYUrJi5EC/p8/Y25iA=;
-        b=YCEHgMYMVScqD5j1GaoDc7QWoEvMvAAHlLCN8MeAFF1l66rqCyBqpDPUjYj7IyhUFB
-         sQD4WzdeR3wmDpfNiyK2xL4HbJ8MAfW/at8q4KmFuAhz2vVnc7hlEL5iFcwKfphJGub/
-         CfEKYTWXZ80YPcXnrSRTg1/0FFjC+0B8wfeLMWyqnA28WI5+wEPvJuVL63kOUoE6ihyf
-         zv0YdL9TMyRHfhWel4STWSqVCEWGjww+IMY17I0k/yEdqhDHbptL8nUaG1znA/kiJ9Rz
-         CFher7i+LlI/e1Vp5BHRad6IGt+2BQ/NNd3QJvo26PwStSaGTQhYF/XVAPhuozACyNGs
-         Codw==
-X-Gm-Message-State: AGi0PuZf+sIxUTQ55TBPyMmxJY/BNzCtyimB/c92DO5LSdCHRXMHAJIN
-	Q5BG2AufKCnswEi3NykqxBkB4p5cDg0+2Ej2KYQ=
-X-Google-Smtp-Source: APiQypLouP4lVbKqpnSX7OlYl+j6EOSiT1pw349EOnWeumTX5PjyI+H/ngeTt/eryzVdA1cq5n6/uYXQL49LzeEGesE=
-X-Received: by 2002:a1c:a512:: with SMTP id o18mr2301640wme.138.1588244491958;
- Thu, 30 Apr 2020 04:01:31 -0700 (PDT)
+Received: (qmail 17492 invoked from network); 30 Apr 2020 13:23:52 -0000
+From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
+To: linux-kernel@vger.kernel.org
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
+	Aleksa Sarai <cyphar@cyphar.com>,
+	Alexei Starovoitov <ast@kernel.org>,
+	Al Viro <viro@zeniv.linux.org.uk>,
+	Andy Lutomirski <luto@kernel.org>,
+	Christian Heimes <christian@python.org>,
+	Daniel Borkmann <daniel@iogearbox.net>,
+	Deven Bowers <deven.desai@linux.microsoft.com>,
+	Eric Chiang <ericchiang@google.com>,
+	Florian Weimer <fweimer@redhat.com>,
+	James Morris <jmorris@namei.org>,
+	Jan Kara <jack@suse.cz>,
+	Jann Horn <jannh@google.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Matthew Garrett <mjg59@google.com>,
+	Matthew Wilcox <willy@infradead.org>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>,
+	Mimi Zohar <zohar@linux.ibm.com>,
+	=?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+	Scott Shell <scottsh@microsoft.com>,
+	Sean Christopherson <sean.j.christopherson@intel.com>,
+	Shuah Khan <shuah@kernel.org>,
+	Steve Dower <steve.dower@python.org>,
+	Steve Grubb <sgrubb@redhat.com>,
+	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+	kernel-hardening@lists.openwall.com,
+	linux-api@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org
+Subject: [PATCH v4 0/5] Add support for O_MAYEXEC
+Date: Thu, 30 Apr 2020 15:23:15 +0200
+Message-Id: <20200430132320.699508-1-mic@digikod.net>
+X-Mailer: git-send-email 2.26.2
 MIME-Version: 1.0
-References: <20200428175129.634352-1-mic@digikod.net> <20200430015429.wuob7m5ofdewubui@yavin.dot.cyphar.com>
-In-Reply-To: <20200430015429.wuob7m5ofdewubui@yavin.dot.cyphar.com>
-From: "Lev R. Oshvang ." <levonshe@gmail.com>
-Date: Thu, 30 Apr 2020 14:01:21 +0300
-Message-ID: <CAP22eLE6DA5P+Cx6aVP=eq3tKRGz=+P+w8omk3CcEXVo0f1Nfg@mail.gmail.com>
-Subject: Re: [PATCH v3 0/5] Add support for RESOLVE_MAYEXEC
-To: Aleksa Sarai <cyphar@cyphar.com>, viro@zeniv.linux.org.uk
-Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, 
-	Eric Chiang <ericchiang@google.com>, Jonathan Corbet <corbet@lwn.net>, 
-	Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>, 
-	=?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mickael.salaun@ssi.gouv.fr>, 
-	Mimi Zohar <zohar@linux.ibm.com>, kernel-hardening@lists.openwall.com, 
-	LSM List <linux-security-module@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-On Thu, Apr 30, 2020 at 4:55 AM Aleksa Sarai <cyphar@cyphar.com> wrote:
->
-> On 2020-04-28, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> wrote:
-> > The goal of this patch series is to enable to control script execution
-> > with interpreters help.  A new RESOLVE_MAYEXEC flag, usable through
-> > openat2(2), is added to enable userspace script interpreter to delegate
-> > to the kernel (and thus the system security policy) the permission to
-> > interpret/execute scripts or other files containing what can be seen as
-> > commands.
-> >
-> > This third patch series mainly differ from the previous one by relying
-> > on the new openat2(2) system call to get rid of the undefined behavior
-> > of the open(2) flags.  Thus, the previous O_MAYEXEC flag is now replace=
-d
-> > with the new RESOLVE_MAYEXEC flag and benefits from the openat2(2)
-> > strict check of this kind of flags.
->
-> My only strong upfront objection is with this being a RESOLVE_ flag.
->
-> RESOLVE_ flags have a specific meaning (they generally apply to all
-> components, and affect the rules of path resolution). RESOLVE_MAYEXEC
-> does neither of these things and so seems out of place among the other
-> RESOLVE_ flags.
->
-> I would argue this should be an O_ flag, but not supported for the
-> old-style open(2). This is what the O_SPECIFIC_FD patchset does[1] and I
-> think it's a reasonable way of solving such problems.
->
-> --
-> Aleksa Sarai
-> Senior Software Engineer (Containers)
-> SUSE Linux GmbH
-> <https://www.cyphar.com/>
+Hi,
 
-I see that we discuss here the problem which was originated due to the
-lack of flags checks at open()
-As a newbie in kernel I want to propose maybe naive approach - add
-missing flag cheeks to open().
-In order to not break badly coded  application at once (applications
-hat pass full u32 number I propose to introduce
-2 new sysctls:
-fs.verify_open_flags =3D BITMASK of flags open() uses in this kernel,
-i.r O_CREAT||O_RDOBLY|O_RDWR,,
-fs.verify_open_flags_action =3D NONE|WARN
-1) fs.verify_open_flags  and flags_action  knobs will allow
-distributions and package maintainers to detect and fix bad code. On
-the other hand, it will allow to finally verify flags. passed to open
-2) It will show kernel ABI to libc
+The goal of this patch series is to enable to control script execution
+with interpreters help.  A new O_MAYEXEC flag, usable through
+openat2(2), is added to enable userspace script interpreter to delegate
+to the kernel (and thus the system security policy) the permission to
+interpret/execute scripts or other files containing what can be seen as
+commands.
 
-3) The semantics of O_MAYEXEC is clear and is long waited for.
-I think that O_MAYEXEC pretty well describes the intention of
-application to treat the file as the source of actions, whether it is
-ELF or script or another format. (not necessary Posix permissions
-case)
-This intention is passed to the kernel and then to LSM, IMA.
+This fourth patch series switch back from RESOLVE_MAYEXEC to O_MAYEXEC
+which is more appropriate.  However, this new flag is only taken into
+account by openat2(2), but not open(2) nor openat(2).
 
-4) since we need to rewrite interpretersin order to use this flag, we
-can also query fs.verify_open_flags to see whether it is available.
+A simple system-wide security policy can be enforced by the system
+administrator through a sysctl configuration consistent with the mount
+points or the file access rights.  The documentation patch explains the
+prerequisites.
 
-I hope I added my 2 cents.
+Furthermore, the security policy can also be delegated to an LSM, either
+a MAC system or an integrity system.  For instance, the new kernel
+MAY_OPENEXEC flag closes a major IMA measurement/appraisal interpreter
+integrity gap by bringing the ability to check the use of scripts [1].
+Other uses are expected, such as for openat2(2) [2], SGX integration
+[3], bpffs [4] or IPE [5].
+
+Userspace needs to adapt to take advantage of this new feature.  For
+example, the PEP 578 [6] (Runtime Audit Hooks) enables Python 3.8 to be
+extended with policy enforcement points related to code interpretation,
+which can be used to align with the PowerShell audit features.
+Additional Python security improvements (e.g. a limited interpreter
+withou -c, stdin piping of code) are on their way.
+
+The initial idea come from CLIP OS 4 and the original implementation has
+been used for more than 11 years:
+https://github.com/clipos-archive/clipos4_doc
+
+An introduction to O_MAYEXEC was given at the Linux Security Summit
+Europe 2018 - Linux Kernel Security Contributions by ANSSI:
+https://www.youtube.com/watch?v=chNjCRtPKQY&t=17m15s
+The "write xor execute" principle was explained at Kernel Recipes 2018 -
+CLIP OS: a defense-in-depth OS:
+https://www.youtube.com/watch?v=PjRE0uBtkHU&t=11m14s
+
+This patch series can be applied on top of v5.7-rc3.  This can be tested
+with CONFIG_SYSCTL.  I would really appreciate constructive comments on
+this patch series.
+
+Previous version:
+https://lore.kernel.org/lkml/20200428175129.634352-1-mic@digikod.net/
+
+
+[1] https://lore.kernel.org/lkml/1544647356.4028.105.camel@linux.ibm.com/
+[2] https://lore.kernel.org/lkml/20190904201933.10736-6-cyphar@cyphar.com/
+[3] https://lore.kernel.org/lkml/CALCETrVovr8XNZSroey7pHF46O=kj_c5D9K8h=z2T_cNrpvMig@mail.gmail.com/
+[4] https://lore.kernel.org/lkml/CALCETrVeZ0eufFXwfhtaG_j+AdvbzEWE0M3wjXMWVEO7pj+xkw@mail.gmail.com/
+[5] https://lore.kernel.org/lkml/20200406221439.1469862-12-deven.desai@linux.microsoft.com/
+[6] https://www.python.org/dev/peps/pep-0578/
+
+Regards,
+
+Mickaël Salaün (5):
+  fs: Add support for an O_MAYEXEC flag on openat2(2)
+  fs: Add a MAY_EXECMOUNT flag to infer the noexec mount property
+  fs: Enable to enforce noexec mounts or file exec through O_MAYEXEC
+  selftest/openat2: Add tests for O_MAYEXEC enforcing
+  doc: Add documentation for the fs.open_mayexec_enforce sysctl
+
+ Documentation/admin-guide/sysctl/fs.rst       |  44 +++
+ fs/fcntl.c                                    |   2 +-
+ fs/namei.c                                    |  74 +++-
+ fs/open.c                                     |   8 +
+ include/linux/fcntl.h                         |   2 +-
+ include/linux/fs.h                            |   7 +
+ include/uapi/asm-generic/fcntl.h              |   7 +
+ kernel/sysctl.c                               |   7 +
+ tools/testing/selftests/kselftest_harness.h   |   3 +
+ tools/testing/selftests/openat2/Makefile      |   3 +-
+ tools/testing/selftests/openat2/config        |   1 +
+ tools/testing/selftests/openat2/helpers.h     |   1 +
+ .../testing/selftests/openat2/omayexec_test.c | 330 ++++++++++++++++++
+ 13 files changed, 485 insertions(+), 4 deletions(-)
+ create mode 100644 tools/testing/selftests/openat2/config
+ create mode 100644 tools/testing/selftests/openat2/omayexec_test.c
+
+-- 
+2.26.2
+
