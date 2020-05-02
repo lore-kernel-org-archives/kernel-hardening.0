@@ -1,23 +1,22 @@
-Return-Path: <SRS0=sJsb=6P=lists.openwall.com=kernel-hardening-return-18705-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=e/pH=6Q=lists.openwall.com=kernel-hardening-return-18706-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A6BF4C47254
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 May 2020 23:09:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C71C8C47254
+	for <kernel-hardening@archiver.kernel.org>; Sat,  2 May 2020 00:06:51 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 01FBB208DB
-	for <kernel-hardening@archiver.kernel.org>; Fri,  1 May 2020 23:09:34 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 257D12072E
+	for <kernel-hardening@archiver.kernel.org>; Sat,  2 May 2020 00:06:50 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="jgkKa20r"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 01FBB208DB
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18705-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7600 invoked by uid 550); 1 May 2020 23:09:28 -0000
+	dkim=pass (2048-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="oXv897Q6"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 257D12072E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zx2c4.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18706-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26480 invoked by uid 550); 2 May 2020 00:06:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,149 +24,54 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7578 invoked from network); 1 May 2020 23:09:27 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1588374554;
-	bh=rKN9EDVmXwn6takeqycZAn+iqfP/Fn3tjtdzjzy8GbQ=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=jgkKa20r7/fHkDNLCHyCSdAjcrAkaceeB1q1vetTljZaUzXtmFilQ+Nnt61QjIue0
-	 bKJrEME1vDq48Z51WRRfi91SvVk/fObnz0+rlYvBZ2C15p76I2fvKP0pLecbiFy2cJ
-	 h8UUMKpm37OHM/Dr8yPtDwww/SI7lTOtbRpQuit8=
-Date: Fri, 1 May 2020 16:09:13 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: dhowells@redhat.com, keyrings@vger.kernel.org,
-	Andy Lutomirski <luto@kernel.org>,
-	Greg KH <gregkh@linuxfoundation.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH] security/keys: rewrite big_key crypto to use Zinc
-Message-ID: <20200501230913.GB915@sol.localdomain>
-References: <20200501222357.543312-1-Jason@zx2c4.com>
+Received: (qmail 26457 invoked from network); 2 May 2020 00:06:42 -0000
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=zx2c4.com; h=mime-version
+	:references:in-reply-to:from:date:message-id:subject:to:cc
+	:content-type; s=mail; bh=v8CEPhtYy//8RVs7R9SE4WuHeYE=; b=oXv897
+	Q657xkDx/uTHMf9tPN9nwUAQKO4+uNSl0I4BzWTpQD+fXRjW9/RBEepdFdig2xm1
+	nllfFwoutRERVt9h2VPXOQwngBptHZ+g88UyXsiiAGWrA5Jsd5x5W1f6V2dk7SQM
+	Um+odStnhnbqZSTFEmeognyKhSBX8xxc2zJ9t4oFL4Shp2WkdMPHs4tx+/pj7rlM
+	7tCn3j8chGy9TGVWXTkWehTQHBGXeL3dAMAGw0vmeuDcl3BCMkYlu8iHIoXZWCOt
+	DooFfXksUk36UMDPV0X5xIgFwvmST/l1mtxbWVFxP33k9xqVFB6MbFa3gPPcUg91
+	bdPq7HrSovZP7A+Q==
+X-Gm-Message-State: AGi0PuZUPKDiEjZJiQxnwf5mEnRqJp1YuH0nBEHWP7gyu+nsaG5knsbZ
+	OxGwpjioemngrMIC6Hp56YXHAGqL6Lwo4b6mdxc=
+X-Google-Smtp-Source: APiQypJoG+c/aoKfXrAe0iv4v3ahcNqsCH+3jY9kSos4Xyt4xRI+UMJRcq73LeyQxG8swvg4SEpyofOIyMbfD9cBDZI=
+X-Received: by 2002:a92:d4c4:: with SMTP id o4mr6399787ilm.38.1588377988977;
+ Fri, 01 May 2020 17:06:28 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200501222357.543312-1-Jason@zx2c4.com>
+References: <20200501222357.543312-1-Jason@zx2c4.com> <20200501230913.GB915@sol.localdomain>
+In-Reply-To: <20200501230913.GB915@sol.localdomain>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Fri, 1 May 2020 18:06:17 -0600
+X-Gmail-Original-Message-ID: <CAHmME9rpZGiwrK93=+6z8qBdDVs273MaR_boDd1xjjZRwbqpKQ@mail.gmail.com>
+Message-ID: <CAHmME9rpZGiwrK93=+6z8qBdDVs273MaR_boDd1xjjZRwbqpKQ@mail.gmail.com>
+Subject: Re: [PATCH] security/keys: rewrite big_key crypto to use Zinc
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, 
+	Andy Lutomirski <luto@kernel.org>, Greg KH <gregkh@linuxfoundation.org>, 
+	Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset="UTF-8"
 
-On Fri, May 01, 2020 at 04:23:57PM -0600, Jason A. Donenfeld wrote:
-> A while back, I noticed that the crypto and crypto API usage in big_keys
-> were entirely broken in multiple ways, so I rewrote it. Now, I'm
-> rewriting it again, but this time using Zinc's ChaCha20Poly1305
-> function. This makes the file considerably more simple; the diffstat
-> alone should justify this commit. It also should be faster, since it no
-> longer requires a mutex around the "aead api object" (nor allocations),
-> allowing us to encrypt multiple items in parallel. We also benefit from
-> being able to pass any type of pointer, so we can get rid of the
-> ridiculously complex custom page allocator that big_key really doesn't
-> need.
-> 
-> Cc: David Howells <dhowells@redhat.com>
-> Cc: Andy Lutomirski <luto@kernel.org>
-> Cc: Greg KH <gregkh@linuxfoundation.org>
-> Cc: Linus Torvalds <torvalds@linux-foundation.org>
-> Cc: kernel-hardening@lists.openwall.com
-> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-> ---
-> I finally got around to updating this patch from the mailing list posts
-> back in 2017-2018, using the library interface that we eventually merged
-> in 2019. I haven't retested this for functionality, but nothing much has
-> changed, so I suspect things should still be good to go.
-> 
->  security/keys/Kconfig   |   4 +-
->  security/keys/big_key.c | 230 +++++-----------------------------------
->  2 files changed, 28 insertions(+), 206 deletions(-)
-> 
-> diff --git a/security/keys/Kconfig b/security/keys/Kconfig
-> index 47c041563d41..5aa442490d52 100644
-> --- a/security/keys/Kconfig
-> +++ b/security/keys/Kconfig
-> @@ -60,9 +60,7 @@ config BIG_KEYS
->  	bool "Large payload keys"
->  	depends on KEYS
->  	depends on TMPFS
-> -	select CRYPTO
-> -	select CRYPTO_AES
-> -	select CRYPTO_GCM
-> +	select CRYPTO_LIB_CHACHA20POLY1305
->  	help
->  	  This option provides support for holding large keys within the kernel
->  	  (for example Kerberos ticket caches).  The data may be stored out to
+Hey Eric,
 
-The 'select CRYPTO' is actually still needed because CRYPTO_LIB_CHACHA20POLY1305
-is under the CRYPTO menuconfig:
+Thanks for the review.
 
-make allnoconfig
-cat >> .config << EOF
-CONFIG_SHMEM=y
-CONFIG_TMPFS=y
-CONFIG_KEYS=y
-CONFIG_BIG_KEYS=y
-EOF
-make olddefconfig
+I'll add `select CONFIG` as you suggested. I agree about trying to
+move as much as possible out of crypto and into lib/crypto. Breaking
+those dependency cycles won't be easy but perhaps it'll be possible to
+chip away at that gradually. (I'd also lib a
+lib/crypto/arch/{arch}/..., but I guess that's a separate discussion.)
 
-WARNING: unmet direct dependencies detected for CRYPTO_LIB_CHACHA20POLY1305
-  Depends on [n]: CRYPTO [=n] && (CRYPTO_ARCH_HAVE_LIB_CHACHA [=n] || !CRYPTO_ARCH_HAVE_LIB_CHACHA [=n]) && (CRYPTO_ARCH_HAVE_LIB_POLY1305 [=n] || !CRYPTO_ARCH_HAVE_LIB_POLY1305 [=n])
-  Selected by [y]:
-  - BIG_KEYS [=y] && KEYS [=y] && TMPFS [=y]
+I'll also change -EINVAL to -EBADMSG. Nice catch.
 
+Regarding the buffer zeroing... are you sure? These buffers are
+already being copied into filesystem caches and all sorts of places
+over which we have zero control. At that point, does it matter? Or do
+you argue that because it's still technically key material, we should
+zero out both the plaintext and ciphertext everywhere we can, and
+hopefully at some point the places where we can't will go away? IOW,
+I'm fine doing that, but would like to learn your explicit reasoning
+before.
 
-Maybe the 'source "lib/crypto/Kconfig"' in crypto/Kconfig should be moved to
-lib/Kconfig so that it's under "Library routines" and the crypto library options
-can be selected without the full CRYPTO framework?
-
-But lib/crypto/libchacha.c uses crypto_xor_cpy(), and
-lib/crypto/chacha20poly1305.c uses crypto_memneq().  So those functions would
-first need to be pulled into lib/crypto/ too.
-
-> @@ -265,7 +121,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
->  		*path = file->f_path;
->  		path_get(path);
->  		fput(file);
-> -		big_key_free_buffer(buf);
-> +		kvfree(buf);
->  	} else {
->  		/* Just store the data in a buffer */
->  		void *data = kmalloc(datalen, GFP_KERNEL);
-> @@ -283,7 +139,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
->  err_enckey:
->  	kzfree(enckey);
->  error:
-> -	big_key_free_buffer(buf);
-> +	kvfree(buf);
->  	return ret;
->  }
-
-There should be a 'memzero_explicit(buf, enclen);' before the above two calls to
-kvfree().
-
-Or even better these should use kvfree_sensitive(), but that hasn't been merged
-yet.  It was under discussion last month:
-https://lkml.kernel.org/lkml/20200407200318.11711-1-longman@redhat.com/
-
->  
-> -		ret = big_key_crypt(BIG_KEY_DEC, buf, enclen, enckey);
-> -		if (ret)
-> +		ret = chacha20poly1305_decrypt(buf, buf, enclen, NULL, 0, 0,
-> +					       enckey) ? 0 : -EINVAL;
-> +		if (unlikely(ret))
->  			goto err_fput;
-
--EINVAL is often unclear, since everyone uses it for everything.  How about
-using -EBADMSG, which is what was used before via crypto_aead_decrypt()?
-
->  
->  		ret = datalen;
->  
->  		/* copy out decrypted data */
-> -		memcpy(buffer, buf->virt, datalen);
-> +		memcpy(buffer, buf, datalen);
->  
->  err_fput:
->  		fput(file);
->  error:
-> -		big_key_free_buffer(buf);
-> +		kvfree(buf);
-
-Likewise, the buffer should be zeroed before freeing here.
-
-- Eric
+Jason
