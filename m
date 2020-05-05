@@ -1,22 +1,22 @@
-Return-Path: <SRS0=M6XA=6S=lists.openwall.com=kernel-hardening-return-18713-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=+cCu=6T=lists.openwall.com=kernel-hardening-return-18714-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 302B1C47258
-	for <kernel-hardening@archiver.kernel.org>; Mon,  4 May 2020 18:06:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 76834C47254
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 May 2020 10:44:31 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 804C02075A
-	for <kernel-hardening@archiver.kernel.org>; Mon,  4 May 2020 18:06:27 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C1919206A5
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 May 2020 10:44:30 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="VfjjNs3D"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 804C02075A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18713-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7936 invoked by uid 550); 4 May 2020 18:06:20 -0000
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="umfSfVmA"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C1919206A5
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18714-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3917 invoked by uid 550); 5 May 2020 10:44:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,96 +24,72 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7913 invoked from network); 4 May 2020 18:06:20 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=5H5y0GT0IX1bjv46W43wTOmcN/3DzOsesayYr+f385c=;
-        b=VfjjNs3D1ejtb+5tDVnv4xIxeWbWw/o38mrHwOZ5Gwkc82EKTZ7pb9asTgtjF5BOl5
-         Zqs4vbc5AMjqxgNOipERymQfeg78d3WB44sQWSCPyzc8fjFCFil4qhPuqg1dVU2c7TEV
-         A6XlZfrUYCmdVmssHy2yO3uNUZUiSM/Gfc3ko=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=5H5y0GT0IX1bjv46W43wTOmcN/3DzOsesayYr+f385c=;
-        b=PAnR2oS5p4sk5JtPZ0VTWvKOUr8tfEQrC1fxjvsa8fwcJF03pYWK6G4+nu9xkSH0oz
-         A7x2ro4TcYBaTmWvZqrfst9Uac8SKZXv8EzXCF5HT83G/ZQZO3otU5b+DjiFlAMGsDLg
-         MTRf/KvMDT2kO9MbJy/gS2FIlpxWtkSOHzqUWUOQHNOcALxBZE/BL4aQHRac8WJ8tj7/
-         ByMnKzIfPYs4FJJJuJtZUDHCQrYt+AN6bM7pYI/M1ki2dMyX7puEcfoHUatTiasG6iu/
-         GL99uunUgGVNY1qN+BDCL78floRdLV/UQBgCCcHZEF/mWR212961i8iKgifbh2Tv3cMZ
-         gLdQ==
-X-Gm-Message-State: AGi0PuYvq5qi9jX9JVmviFcFaYVBqi5oLyIVp93gB7S8FCuO2NyYzAGE
-	nVfXFdJQDiWb44UhwsuA7PeEFQ==
-X-Google-Smtp-Source: APiQypIlcStIRBl6cHaGQp3N0+X9MfO14Oi4jnSZEiTTEcv+6ntBV7uerro/crzxcPaqm3zz3v5luA==
-X-Received: by 2002:a65:4c83:: with SMTP id m3mr201796pgt.128.1588615568087;
-        Mon, 04 May 2020 11:06:08 -0700 (PDT)
-Date: Mon, 4 May 2020 11:06:06 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Will Deacon <will@kernel.org>
-Cc: Sami Tolvanen <samitolvanen@google.com>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	James Morse <james.morse@arm.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Michal Marek <michal.lkml@markovi.net>,
-	Ingo Molnar <mingo@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Juri Lelli <juri.lelli@redhat.com>,
-	Vincent Guittot <vincent.guittot@linaro.org>,
-	Dave Martin <Dave.Martin@arm.com>,
-	Laura Abbott <labbott@redhat.com>, Marc Zyngier <maz@kernel.org>,
-	Masami Hiramatsu <mhiramat@kernel.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	Jann Horn <jannh@google.com>,
-	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
-	clang-built-linux@googlegroups.com,
+Received: (qmail 3877 invoked from network); 5 May 2020 10:44:22 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1588675449;
+	bh=GEhF2tEU4XkWefXPE5udcRA2Y0YzSMAJ2YekTBmZRN8=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=umfSfVmAzQRn1jZ3bKYhL7bz38WXiQuVIirVZy0mTX6WcttQ58u31IvMAtuwooHlI
+	 zAg67Rt+mmAcMu69MDpIYRff/zJipCTQzdMaBVWDy4jcVv2gFlg5jJGS3SGHf7E1rl
+	 7ZzUXD/6ZKX4GNHL37htRHoduxFXkj5zNfDqSsKA=
+Date: Tue, 5 May 2020 11:44:06 +0100
+From: Will Deacon <will@kernel.org>
+To: Ard Biesheuvel <ardb@kernel.org>
+Cc: Catalin Marinas <catalin.marinas@arm.com>,
+	Linux ARM <linux-arm-kernel@lists.infradead.org>,
 	kernel-hardening@lists.openwall.com,
-	linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v11 01/12] add support for Clang's Shadow Call Stack (SCS)
-Message-ID: <202005041050.7E29A56637@keescook>
-References: <20200416161245.148813-1-samitolvanen@google.com>
- <20200416161245.148813-2-samitolvanen@google.com>
- <20200420171727.GB24386@willie-the-truck>
- <20200420211830.GA5081@google.com>
- <20200422173938.GA3069@willie-the-truck>
- <20200422235134.GA211149@google.com>
- <202004231121.A13FDA100@keescook>
- <20200424112113.GC21141@willie-the-truck>
- <20200427204546.GA80713@google.com>
- <20200504165227.GB1833@willie-the-truck>
+	Mark Rutland <mark.rutland@arm.com>
+Subject: Re: [RFC PATCH] arm64: remove CONFIG_DEBUG_ALIGN_RODATA feature
+Message-ID: <20200505104404.GB19710@willie-the-truck>
+References: <20200329141258.31172-1-ardb@kernel.org>
+ <20200330135121.GD10633@willie-the-truck>
+ <CAMj1kXEZARZ1FYZFt4CZ33b-A64zj1JswR0OAHw-eZdzkxiEOQ@mail.gmail.com>
+ <20200330140441.GE10633@willie-the-truck>
+ <CAMj1kXHJ5n-EZMgGSYm+ekO-e7XTp7fv-FZ2NJ1EttJ=-kc8fw@mail.gmail.com>
+ <20200330142805.GA11312@willie-the-truck>
+ <CAMj1kXFcvHcU2kzP=N4bHgSkw_eE7wvbPJ=7w1pNeCWHbcPvTQ@mail.gmail.com>
+ <20200402113033.GD21087@mbp>
+ <CAMj1kXGLMWqTHbWftoAq=WdVqyf+i=6SvsMogzWHh6SL3b=4sQ@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200504165227.GB1833@willie-the-truck>
+In-Reply-To: <CAMj1kXGLMWqTHbWftoAq=WdVqyf+i=6SvsMogzWHh6SL3b=4sQ@mail.gmail.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On Mon, May 04, 2020 at 05:52:28PM +0100, Will Deacon wrote:
-> On Mon, Apr 27, 2020 at 01:45:46PM -0700, Sami Tolvanen wrote:
-> > On Fri, Apr 24, 2020 at 12:21:14PM +0100, Will Deacon wrote:
-> > > The vmap version that I asked Sami to drop
-> > > is at least better in this regard, although the guard page is at the wrong
-> > > end of the stack and we just hope that the allocation below us didn't pass
-> > > VM_NO_GUARD. Looks like the same story for vmap stack :/
-> > 
-> > SCS grows up and the guard page is after the allocation, so how is it at
-> > the wrong end? Am I missing something here?
+On Fri, Apr 03, 2020 at 10:58:51AM +0200, Ard Biesheuvel wrote:
+> On Thu, 2 Apr 2020 at 13:30, Catalin Marinas <catalin.marinas@arm.com> wrote:
+> > On Mon, Mar 30, 2020 at 04:32:31PM +0200, Ard Biesheuvel wrote:
+> > > On Mon, 30 Mar 2020 at 16:28, Will Deacon <will@kernel.org> wrote:
+> > > > Fair enough, but I'd still like to see some numbers. If they're compelling,
+> > > > then we could explore something like CONFIG_OF_DMA_DEFAULT_COHERENT, but
+> > > > that doesn't really help the kconfig maze :(
+> >
+> > I'd prefer not to have a config option, we could easily break single
+> > Image at some point.
+> >
+> > > Could we make this a runtime thing? E.g., remap the entire linear
+> > > region down to pages under stop_machine() the first time we probe a
+> > > device that uses non-coherent DMA?
+> >
+> > That could be pretty expensive at run-time. With the ARMv8.4-TTRem
+> > feature, I wonder whether we could do this lazily when allocating
+> > non-coherent DMA buffers.
+> >
+> > (I still hope there isn't a problem at all with this mismatch ;)).
+> >
 > 
-> Sorry, I'd got the SCS upside-down in my head (hey, that second 'S' stands
-> for 'Stack'!). But I think I'm right about vmap stack, which feels a
-> little fragile even though it seems to work out today with the very limited
-> uses of VM_NO_GUARD.
+> Now that we have the pieces to easily remap the linear region down to
+> pages, and [apparently] some generic infrastructure to manage the
+> linear aliases, the only downside is the alleged performance hit
+> resulting from increased TLB pressure. This is obviously highly
+> micro-architecture dependent, but with Xgene1 and ThunderX1 out of the
+> picture, I wonder if the tradeoffs are different now. Maybe by now, we
+> should just suck it up (Note that we had no complaints afaik regarding
+> the fact that we map the linear map down to pages by default now)
 
-Yeah, when VMAP_STACK was originally being developed, IIRC, there was
-an effort made to eliminate all the users of VM_NO_GUARD, and it looks
-like it's mostly there. Really the only use left is arm64's kernel image
-mapping routines, and then it's not actually used in the traditional
-sense -- it's just a boolean for whether to toss in a guard page at the
-end of the data section, and the VMAs are built manually. I think that
-code could actually be refactored to drop it too and then the only user
-would be KASAN, which, IIUC, wants to build consecutive vmap areas.
+I'd be in favour of that fwiw.
 
--- 
-Kees Cook
+Catalin -- did you get anything back from the architects about the cache
+hit behaviour?
+
+Will
