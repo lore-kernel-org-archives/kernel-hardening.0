@@ -1,22 +1,20 @@
-Return-Path: <SRS0=+cCu=6T=lists.openwall.com=kernel-hardening-return-18714-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8+Q7=6T=lists.openwall.com=kernel-hardening-return-18715-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 76834C47254
-	for <kernel-hardening@archiver.kernel.org>; Tue,  5 May 2020 10:44:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 71B80C47247
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 May 2020 14:58:00 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C1919206A5
-	for <kernel-hardening@archiver.kernel.org>; Tue,  5 May 2020 10:44:30 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="umfSfVmA"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C1919206A5
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18714-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3917 invoked by uid 550); 5 May 2020 10:44:23 -0000
+	by mail.kernel.org (Postfix) with SMTP id BD844206B9
+	for <kernel-hardening@archiver.kernel.org>; Tue,  5 May 2020 14:57:59 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BD844206B9
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18715-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3433 invoked by uid 550); 5 May 2020 14:57:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,72 +22,105 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3877 invoked from network); 5 May 2020 10:44:22 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1588675449;
-	bh=GEhF2tEU4XkWefXPE5udcRA2Y0YzSMAJ2YekTBmZRN8=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=umfSfVmAzQRn1jZ3bKYhL7bz38WXiQuVIirVZy0mTX6WcttQ58u31IvMAtuwooHlI
-	 zAg67Rt+mmAcMu69MDpIYRff/zJipCTQzdMaBVWDy4jcVv2gFlg5jJGS3SGHf7E1rl
-	 7ZzUXD/6ZKX4GNHL37htRHoduxFXkj5zNfDqSsKA=
-Date: Tue, 5 May 2020 11:44:06 +0100
-From: Will Deacon <will@kernel.org>
-To: Ard Biesheuvel <ardb@kernel.org>
-Cc: Catalin Marinas <catalin.marinas@arm.com>,
-	Linux ARM <linux-arm-kernel@lists.infradead.org>,
-	kernel-hardening@lists.openwall.com,
-	Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [RFC PATCH] arm64: remove CONFIG_DEBUG_ALIGN_RODATA feature
-Message-ID: <20200505104404.GB19710@willie-the-truck>
-References: <20200329141258.31172-1-ardb@kernel.org>
- <20200330135121.GD10633@willie-the-truck>
- <CAMj1kXEZARZ1FYZFt4CZ33b-A64zj1JswR0OAHw-eZdzkxiEOQ@mail.gmail.com>
- <20200330140441.GE10633@willie-the-truck>
- <CAMj1kXHJ5n-EZMgGSYm+ekO-e7XTp7fv-FZ2NJ1EttJ=-kc8fw@mail.gmail.com>
- <20200330142805.GA11312@willie-the-truck>
- <CAMj1kXFcvHcU2kzP=N4bHgSkw_eE7wvbPJ=7w1pNeCWHbcPvTQ@mail.gmail.com>
- <20200402113033.GD21087@mbp>
- <CAMj1kXGLMWqTHbWftoAq=WdVqyf+i=6SvsMogzWHh6SL3b=4sQ@mail.gmail.com>
+Received: (qmail 3407 invoked from network); 5 May 2020 14:57:51 -0000
+Subject: Re: [PATCH v3 0/5] Add support for RESOLVE_MAYEXEC
+To: Christian Heimes <christian@python.org>, Jann Horn <jannh@google.com>,
+ Florian Weimer <fw@deneb.enyo.de>
+Cc: kernel list <linux-kernel@vger.kernel.org>,
+ Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
+ Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>,
+ Daniel Borkmann <daniel@iogearbox.net>,
+ Deven Bowers <deven.desai@linux.microsoft.com>,
+ Eric Chiang <ericchiang@google.com>, James Morris <jmorris@namei.org>,
+ Jan Kara <jack@suse.cz>, Jonathan Corbet <corbet@lwn.net>,
+ Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>,
+ Matthew Wilcox <willy@infradead.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>,
+ =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
+ Mimi Zohar <zohar@linux.ibm.com>,
+ =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+ Scott Shell <scottsh@microsoft.com>,
+ Sean Christopherson <sean.j.christopherson@intel.com>,
+ Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+ Steve Grubb <sgrubb@redhat.com>,
+ Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+ Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Linux API <linux-api@vger.kernel.org>,
+ linux-security-module <linux-security-module@vger.kernel.org>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>
+References: <20200428175129.634352-1-mic@digikod.net>
+ <CAG48ez1bKzh1YvbD_Lcg0AbMCH_cdZmrRRumU7UCJL=qPwNFpQ@mail.gmail.com>
+ <87blnb48a3.fsf@mid.deneb.enyo.de>
+ <CAG48ez2TphTj-VdDaSjvnr0Q8BhNmT3n86xYz4bF3wRJmAMsMw@mail.gmail.com>
+ <b78d2d0d-04cf-c0a9-bd88-20c6ec6705fd@python.org>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <8d47dfe6-1ff7-e5fe-d4d0-c2493db3fd63@digikod.net>
+Date: Tue, 5 May 2020 16:57:36 +0200
+User-Agent:
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAMj1kXGLMWqTHbWftoAq=WdVqyf+i=6SvsMogzWHh6SL3b=4sQ@mail.gmail.com>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+In-Reply-To: <b78d2d0d-04cf-c0a9-bd88-20c6ec6705fd@python.org>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-On Fri, Apr 03, 2020 at 10:58:51AM +0200, Ard Biesheuvel wrote:
-> On Thu, 2 Apr 2020 at 13:30, Catalin Marinas <catalin.marinas@arm.com> wrote:
-> > On Mon, Mar 30, 2020 at 04:32:31PM +0200, Ard Biesheuvel wrote:
-> > > On Mon, 30 Mar 2020 at 16:28, Will Deacon <will@kernel.org> wrote:
-> > > > Fair enough, but I'd still like to see some numbers. If they're compelling,
-> > > > then we could explore something like CONFIG_OF_DMA_DEFAULT_COHERENT, but
-> > > > that doesn't really help the kconfig maze :(
-> >
-> > I'd prefer not to have a config option, we could easily break single
-> > Image at some point.
-> >
-> > > Could we make this a runtime thing? E.g., remap the entire linear
-> > > region down to pages under stop_machine() the first time we probe a
-> > > device that uses non-coherent DMA?
-> >
-> > That could be pretty expensive at run-time. With the ARMv8.4-TTRem
-> > feature, I wonder whether we could do this lazily when allocating
-> > non-coherent DMA buffers.
-> >
-> > (I still hope there isn't a problem at all with this mismatch ;)).
-> >
+
+On 01/05/2020 13:47, Christian Heimes wrote:
+> On 29/04/2020 00.01, Jann Horn wrote:
+>> On Tue, Apr 28, 2020 at 11:21 PM Florian Weimer <fw@deneb.enyo.de> wrote:
+>>> * Jann Horn:
+>>>
+>>>> Just as a comment: You'd probably also have to use RESOLVE_MAYEXEC in
+>>>> the dynamic linker.
+>>>
+>>> Absolutely.  In typical configurations, the kernel does not enforce
+>>> that executable mappings must be backed by files which are executable.
+>>> It's most obvious with using an explicit loader invocation to run
+>>> executables on noexec mounts.  RESOLVE_MAYEXEC is much more useful
+>>> than trying to reimplement the kernel permission checks (or what some
+>>> believe they should be) in userspace.
+>>
+>> Oh, good point.
+>>
+>> That actually seems like something Mickaël could add to his series? If
+>> someone turns on that knob for "When an interpreter wants to execute
+>> something, enforce that we have execute access to it", they probably
+>> also don't want it to be possible to just map files as executable? So
+>> perhaps when that flag is on, the kernel should either refuse to map
+>> anything as executable if it wasn't opened with RESOLVE_MAYEXEC or
+>> (less strict) if RESOLVE_MAYEXEC wasn't used, print a warning, then
+>> check whether the file is executable and bail out if not?
+>>
+>> A configuration where interpreters verify that scripts are executable,
+>> but other things can just mmap executable pages, seems kinda
+>> inconsistent...
 > 
-> Now that we have the pieces to easily remap the linear region down to
-> pages, and [apparently] some generic infrastructure to manage the
-> linear aliases, the only downside is the alleged performance hit
-> resulting from increased TLB pressure. This is obviously highly
-> micro-architecture dependent, but with Xgene1 and ThunderX1 out of the
-> picture, I wonder if the tradeoffs are different now. Maybe by now, we
-> should just suck it up (Note that we had no complaints afaik regarding
-> the fact that we map the linear map down to pages by default now)
+> +1
+> 
+> I worked with Steve Downer on Python PEP 578 [1] that added audit hooks
+> and PyFile_OpenCode() to CPython. A PyFile_OpenCode() implementation
+> with RESOLVE_MAYEXEC will hep to secure loading of Python code. But
+> Python also includes a wrapper of libffi. ctypes or cffi can load native
+> code from either shared libraries with dlopen() or execute native code
+> from mmap() regions. For example SnakeEater [2] is a clever attack that
+> abused memfd_create syscall and proc filesystem to execute code.
+> 
+> A consistent security policy must also ensure that mmap() PROT_EXEC
+> enforces the same restrictions as RESOLVE_MAYEXEC. The restriction
+> doesn't have be part of this patch, though.
+> 
+> Christian
+> 
+> [1] https://www.python.org/dev/peps/pep-0578/
+> [2] https://github.com/nullbites/SnakeEater/blob/master/SnakeEater2.py
 
-I'd be in favour of that fwiw.
+To be consistent, a "noexec" policy must indeed also restricts features
+such as mprotect(2) and mmap(2) which may enable to set arbitrary memory
+as executable. This can be restricted with SELinux (i.e. execmem,
+execmod,execheap and execstack permissions), PaX MPROTECT [1] or SARA [2].
 
-Catalin -- did you get anything back from the architects about the cache
-hit behaviour?
-
-Will
+[1] https://pax.grsecurity.net/docs/mprotect.txt
+[2]
+https://lore.kernel.org/lkml/1562410493-8661-1-git-send-email-s.mesoraca16@gmail.com/
