@@ -1,24 +1,24 @@
-Return-Path: <SRS0=W1VM=6Y=lists.openwall.com=kernel-hardening-return-18744-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=3vaQ=6Y=lists.openwall.com=kernel-hardening-return-18745-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 75607C54E49
-	for <kernel-hardening@archiver.kernel.org>; Sun, 10 May 2020 11:10:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AE253C38A2A
+	for <kernel-hardening@archiver.kernel.org>; Sun, 10 May 2020 16:32:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7485620737
-	for <kernel-hardening@archiver.kernel.org>; Sun, 10 May 2020 11:10:30 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 08BFD2080C
+	for <kernel-hardening@archiver.kernel.org>; Sun, 10 May 2020 16:32:29 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="pAtgrC29"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7485620737
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18744-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17409 invoked by uid 550); 10 May 2020 11:10:21 -0000
+	dkim=pass (2048-bit key) header.d=yahoo.fr header.i=@yahoo.fr header.b="qoeUm5A6"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 08BFD2080C
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=yahoo.fr
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18745-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26608 invoked by uid 550); 10 May 2020 16:32:21 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,272 +26,54 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21561 invoked from network); 10 May 2020 02:16:49 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:from:date:message-id:subject:to;
-        bh=TtTB5TO3fTW6HQB1mIqgLNDGofoYahTz9Ca6Q7MMAis=;
-        b=pAtgrC290GXhBPMZ58rEzWSARfYR323SlcjCDpwiLbJHkdzF8FxD2BFLZr/MvTTnap
-         7vcP0jDP/C9VSzhojKIGW+SIuQiZ6jafl6bBXkhAxishOnu9k4RHWLpysPbqrAzoDGnj
-         hGS/v/5idftFUEj33jVxVaW+g/DAt3O5vB6jGoRQ7DYvPXsV+j+1EtIRxqfMBIGukLbT
-         9v5Y2GNSfwGaRA/O+Al/h1e3juxmK0WCdOl9Cr+UHg0pYXuBpzEVE1FmFmmVJfTQ4EPJ
-         b8VJbeKhNbMXtXByKiOHsuQqAXEKvTeMkPSIVptCSz8+oCqEZEJETO7oItQLg3a1TsDG
-         wcXg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:from:date:message-id:subject:to;
-        bh=TtTB5TO3fTW6HQB1mIqgLNDGofoYahTz9Ca6Q7MMAis=;
-        b=XhSkksRHwNpHWiKUbnv1YVlC1lvX8gV4ZYNjlpJAZkDMbBH9NhfueBO6dFqEZ3C/0A
-         eLrnB81YCdN7PsE7X+DiJMJlyinQhPggBTLU9mLUHY4ZKcXMlax249vuYeflZmc0/SXl
-         zVfNXa/RHt1lu4m7H5AnAURpCVMRodSyJAObXVafp6LImZDiCRheR2cOZZgVBbpIxVQB
-         13oLwckWk+pnDJSYgPtQy26tRmwugJQw0wqxjMOtGEFwCna+70nVmYPz1g4eSTtcDvNj
-         +tcd9Yv3eYgXQEfTQoMbZLNmkkubR4b6LJtqeXVNkMlyd979dIk8r0cJyL46hrd10ely
-         HSqQ==
-X-Gm-Message-State: AOAM53234gw8IhspTfQOpfiVkphmxHVFawhsCzowyhULqbbEetC3iFkw
-	CtVJWK0LTqCrPbhQOa4YFJx1zdBdcqxvWp/YVFGG3+gA
-X-Google-Smtp-Source: ABdhPJwcG63rYO/6QJ3W546CzVGrm6bJZseIOGmDArSdrhD9Y99ZAHQWcd0i3PBeFpZY9stcBmHaurXkpJppGaX7vS8=
-X-Received: by 2002:ac5:c5b8:: with SMTP id f24mr2944828vkl.50.1589076996839;
- Sat, 09 May 2020 19:16:36 -0700 (PDT)
-MIME-Version: 1.0
-From: wzt wzt <wzt.wzt@gmail.com>
-Date: Sun, 10 May 2020 10:16:25 +0800
-Message-ID: <CAEQi4beJgmNfZ0NsWSHCok9-5H_qLze_sFJ_G=1j8CBz9qi2rQ@mail.gmail.com>
-Subject: Open source a new kernel harden project
+Received: (qmail 13959 invoked from network); 10 May 2020 16:12:24 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yahoo.fr; s=s2048; t=1589127130; bh=hoSSJQq0JWCyGwPoM0tISkHWN+wq3rbjti4FmGFu/yM=; h=Subject:To:References:From:Date:In-Reply-To:From:Subject; b=qoeUm5A6lYEEHu0ZdT1c/1cWx+NcZgcAk+plGfNrTwaK8A2N/ZtqF9bFlQSNVJwnQC3AuzHZW2FcNbPlTCjfVWC28AMOUuT4f5GCJK7ncBiyUTE1WrmmbGlMbdAVjQWPpOAlYAE4BN/BwrIqeXxPvMm2UO08UCzupgh1nm99WzgQiBYsgbcdbn4hKse0+jG//2c5FMaVfbx0B+uqwtuNFVloPCnkp4L/A/1i+IARutt68UoL5OUyKInnCTK52iejMLQKAH6eWQelg5tzUSVI3bAqYhpUsLkhgbzZCKGEwzx3FQgX7Rp7azkjUy8TShd/Q+Q9YRfAbWxF2N+pnFb9VQ==
+X-YMail-OSG: SBlfqXIVM1n6_0Ikm8dnAD_P_gmtEp0bQpdDIa785v02tVRZN6vJgdXRh4wQwnM
+ aZS2mW0FFNNqQI2y5fVU4kB1tsw2Us7rIxMczVk6G_bPfe4Z9dFl9Z9tnLoJZCh41vDWIZppAgjJ
+ l_c1DHQtztSQjt41H1wrctCwXyZUkhqlI9Yk5OJaik06p2Rd_3r8iiip3HqcAZ.IoT76d5LISygU
+ FJjfG.0uKBX.B86fAOe0OlG1NXZbOAyM33GqVXYRdHbmj3nKHwgztzWoZnf9mbVa37lLmPfk5qpM
+ ctpe7xp4ldd4m3xfRXGhuYhE0w8kOo31LjbneQI5ccvW70D38tYcTdAOxqc5aL1G0iKIXg2flod9
+ 4ydKTRhLJOucuogryBvt7RHRbLNSC7723.yfStXbzsozxSUSbbw5W9K5MXd4a0ZwFCVZoij19FOB
+ xuA_E2wyzEgcivS0ON6MiZD96buNwcUOO8q0ii19jS0p.tobkzrUVAt0z0puBs4028lrZJVRyCBl
+ GqQV03eRgv1VZ2pyjLBiBL1fUiGhLiHxDRlYvYnS751aPK0HJk7ftdrxQPqBtJq8Twa9tPKJ8acZ
+ BNXLb0Ma8HL7QRWYGhvS4nAwCNVUIV1RGNfZamMmnmh3kCDzeQHgmPLJildSyYAtPe3_MZI21cKM
+ 1x4l9vEANqaErWRszi8sXENidYkArFcIln68OeJqtYhliT72lufzGUxPH8IQs0YYQcKX3.eHOkTj
+ LpknsqhZDEIZP3lkLSFWSIjowAqR3uXiZ4F4Bqbh1eRKtbfEVRsjyY85CrLuxr__cOMhCASLJdn3
+ FzFs46MjoSxyeTAV0xBOnlrP10trqKMwUfrtjC9cetLTXxdamwapp_ihh.E1lJMQQk2r7aN0Ok0F
+ aaYoOlEOsXlk_huu3L2QJEiHHY1odc3HCjOrc9HqsmwzPGGIwGAui904iP1Esn_d8M77xJpI1cB5
+ EnVH5SYJgkGaNh0R6Vgt6tkAQwOucSYH7EneoE8IyTaGJ.MSMXDsgzDODfUHbv_McHR.9tdGr3Ht
+ KPgK2D_8z_EkUzxVNAUGcYOo5wIJUAFZVp7oQqFjurVO9kSSlRnKOUatncHifrSw.63x9haRmcg3
+ nNQxc3KI7L_vW7rcDQlDQI2krbUS9NLk97tcF_h_41ftT3UGf0HxjubvgqwvyIoAlqIYHHQfnDx.
+ XIepVAsilSQDJmr7ZhVvCs2GepxiTs1VPH5HBrfLYPF2TS.ftFIYpl2ZwzBVyTrvRDce_adfbold
+ lwNFDqsnS7lsiSHutje5FbuBJ13ChnSSyOd7ZvTa8T_G6YjX7BwnhmxmsZhnyJEl9KERa2WY2k4e
+ HVcE4MedVKFWrqL4JjvQaHtfErGxRFJd303gpUeIMsafx_Vy3h0y6yABWRV0Yd7ZDa8qIa2K0yxu
+ e.ttmOus.vNHYdUK4bpeHf2K35eSxyZ6ZHWNuVmkSFD388zx4KRbxKHhmW9wbsqLhoA7wegLAsZU
+ SkXQaUC9OvYWhF1_FR2ktqsFC1CY1
+Subject: Re: Open source a new kernel harden project
 To: kernel-hardening@lists.openwall.com
-Content-Type: multipart/alternative; boundary="000000000000eadc2905a541d1ca"
+References: <CAEQi4beJgmNfZ0NsWSHCok9-5H_qLze_sFJ_G=1j8CBz9qi2rQ@mail.gmail.com>
+From: Lionel Debroux <lionel_debroux@yahoo.fr>
+Message-ID: <62f8bcee-ac3c-e344-b95e-18ef86903f55@yahoo.fr>
+Date: Sun, 10 May 2020 18:12:06 +0200
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:76.0) Gecko/20100101
+ Thunderbird/76.0
+MIME-Version: 1.0
+In-Reply-To: <CAEQi4beJgmNfZ0NsWSHCok9-5H_qLze_sFJ_G=1j8CBz9qi2rQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-Mailer: WebService/1.1.15902 hermes Apache-HttpAsyncClient/4.1.4 (Java/11.0.6)
 
---000000000000eadc2905a541d1ca
-Content-Type: text/plain; charset="UTF-8"
+Hi,
 
-hi:
-    This is a new kernel harden project called hksp(huawei kernel self
-protection),  hope some of the mitigation ideas may help you, thanks.
-    patch: https://github.com/cloudsec/hksp
+ >      This is a new kernel harden project called hksp(huawei kernel
+ > self protection),  hope some of the mitigation ideas may help you,
+ > thanks.
+ >      patch: https://github.com/cloudsec/hksp
+ > [...]
+See also
+https://grsecurity.net/huawei_hksp_introduces_trivially_exploitable_vulnerability
 
-=============================
-Huawei kernel self protection
-=============================
 
-Cred guard
-----------
-- random cred's magic.
-  most kernel exploit try to find some offsets in struct cred,
-  but it depends on CONFIG_DEBUG_CREDENTIALS, then need to compute
-  the right offset by that kernel config, so mostly the exploit code
-  is something like that:
-  if (tmp0 == 0x43736564 || tmp0 == 0x44656144)
-        i += 4;
-- detect shellcode like:
-  commit_creds(prepare_kernel_cred(0));
-  the common kernel code is never write like that.
-
-Namespace Guard
----------------
-This feature detects pid namespace escape via kernel exploits.
-The current public method to bypass namespace is hijack init_nsproxy
-to current process:
-  switch_task_namespaces_p(current, init_nsproxy_p);
-  commit_creds(prepare_kernel_cred(0));
-
-Rop stack pivot
---------------
-- user process stack can't be is mmap area.
-- check kernel stack range at each system call ret.
-  the rsp pointer can point below __PAGE_OFFSET.
-
-Slub harden
------------
-- redzone/poison randomization.
-- double free enhance.
-  old slub can only detect continuous double free bugs.
-  kfree(obj1)
-  kfree(obj1)
-
-  hksp can detect no continuous double/multi free bugs.
-  kfree(obj1)
-  kfree(obj2)
-  kfree(obj1)
-
-  or
-
-  kfree(obj1)
-  kfree(obj2)
-  kfree(obj3)
-  kfree(obj1)
-- clear the next object address information when using kmalloc function.
-
-Proc info leak
---------------
-Protect important file with no read access for non root user.
-set /proc/{modules,keys,key-users},
-/proc/sys/kernel/{panic,panic_on_oops,dmesg_restrict,kptr_restrict,keys},
-/proc/sys/vm/{mmap_min_addr} as 0640.
-
-Aslr hardended
---------------
-User stack aslr enhanced.
-Old user process's stack is between 0-1G on 64bit.
-the actually random range is 0-2^24.
-we introduce STACK_RND_BITS to control the range dynamically.
-
-echo "24" > /proc/sys/vm/stack_rnd_bits
-
-we also randomize the space between elf_info and environ.
-And randomize the space between stack and elf_info.
-
-Ptrace hardened
----------------
-Disallow attach to non child process.
-This can prevent process memory inject via ptrace.
-
-Sm*p hardened
--------------
-Check smap&smep when return from kernel space via a syscall,
-this can detect some kernel exploit code to bypass smap & smep
-feature via rop attack technology.
-
-Raw socket enhance
-------------------
-Enhance raw socket for ipv4 protocol.
-- TCP data cannot be sent over raw sockets.
-  echo 1 > /proc/sys/net/ipv4/raw_tcp_disabled
-- UDP datagrams with an invalid source address cannot be sent
-  over raw sockets. The IP source address for any outgoing UDP
-  datagram must exist on a network interface or the datagram is
-  dropped. This change was made to limit the ability of malicious
-  code to create distributed denial-of-service attacks and limits
-  the ability to send spoofed packets (TCP/IP packets with a forged
-  source IP address).
-  echo 1 > /proc/sys/net/ipv4/raw_udp_verify
-- A call to the bind function with a raw socket for the IPPROTO_TCP
-  protocol is not allowed.
-  echo 1 > /proc/sys/net/ipv4/raw_bind_disabled
-
-Kernel self guard
------------------
-Ksguard is an anti rootkit tool on kernel level.
-Currently it can detect 4 types of kernel rootkits,
-These are the most popluar rootkits type on unix world.
-
-- keyboard notifer rootkits.
-- netfilter hooks rootkits.
-- tty sniffer rootkits and other DKOM(direct kernel object modify) rootkits.
-- system call table hijack rootkits.
-
-Install:
-/sbin/insmod /lib/modules/5.6.7/kernel/security/ksguard/ksguard.ko
-
-Feature:
-Detect keyboard notifer rootkits:
-echo "1" > /proc/ksguard/state
-
-Detect netfilter hooks rootkits:
-echo "2" > /proc/ksguard/state
-
-Detect tty sniffer rootkits:
-echo "3" > /proc/ksguard/state
-
-Detect syscall table pointer:
-echo "4" > /proc/ksguard/state
-
-Arbitrary code guard
---------------------
-we extended the libc personality() to support:
-- mmap can't memory with PROT_WRITE|PROT_EXEC.
-- mprtect can't change PROT_WRITE to PROT_EXEC.
-
-Code integrity guard
---------------------
-To support certificate for user process execve.
-it can prevent some internet explorer to load
-third party so librarys.
-
-Hide symbol
------------
-Hide symbols from /proc/kallsyms.
-
---000000000000eadc2905a541d1ca
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr"><div dir=3D"ltr"><div dir=3D"ltr"><div>hi:</div><div>=C2=
-=A0 =C2=A0 This is a new kernel harden project called hksp(huawei kernel se=
-lf protection),=C2=A0 hope some of the mitigation ideas may help you, thank=
-s.</div><div>=C2=A0 =C2=A0 patch:=C2=A0<a href=3D"https://github.com/clouds=
-ec/hksp">https://github.com/cloudsec/hksp</a></div><div><br></div><div><spa=
-n style=3D"text-align:left;color:rgb(36,41,46);text-transform:none;text-ind=
-ent:0px;letter-spacing:normal;font-family:SFMono-Regular,Consolas,Liberatio=
-n Mono,Menlo,monospace;font-size:12px;font-style:normal;font-variant:normal=
-;font-weight:400;text-decoration:none;word-spacing:0px;display:inline;white=
--space:pre-wrap;float:none;background-color:rgb(255,255,255)">=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-<br>Huawei kernel self protection<br>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D<br><br>Cred guard<br>--=
---------<br>- random cred&#39;s magic.<br>=C2=A0 most kernel exploit try to=
- find some offsets in struct cred,<br>=C2=A0 but it depends on CONFIG_DEBUG=
-_CREDENTIALS, then need to compute<br>=C2=A0 the right offset by that kerne=
-l config, so mostly the exploit code<br>=C2=A0 is something like that:<br>=
-=C2=A0 if (tmp0 =3D=3D 0x43736564 || tmp0 =3D=3D 0x44656144)<br>=C2=A0=C2=
-=A0=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0 i +=3D 4;<br>- detect shellcode like:<br>=
-=C2=A0 commit_creds(prepare_kernel_cred(0));<br>=C2=A0 the common kernel co=
-de is never write like that.<br><br>Namespace Guard<br>---------------<br>T=
-his feature detects pid namespace escape via kernel exploits.<br>The curren=
-t public method to bypass namespace is hijack init_nsproxy<br>to current pr=
-ocess:<br>=C2=A0 switch_task_namespaces_p(current, init_nsproxy_p);<br>=C2=
-=A0 commit_creds(prepare_kernel_cred(0)); <br><br>Rop stack pivot<br>------=
---------<br>- user process stack can&#39;t be is mmap area.<br>- check kern=
-el stack range at each system call ret.<br>=C2=A0 the rsp pointer can point=
- below __PAGE_OFFSET.<br><br>Slub harden<br>-----------<br>- redzone/poison=
- randomization.<br>- double free enhance.<br>=C2=A0 old slub can only detec=
-t continuous double free bugs.<br>=C2=A0 kfree(obj1)<br>=C2=A0 kfree(obj1)<=
-br><br>=C2=A0 hksp can detect no continuous double/multi free bugs.<br>=C2=
-=A0 kfree(obj1)<br>=C2=A0 kfree(obj2)<br>=C2=A0 kfree(obj1)<br><br>=C2=A0 o=
-r<br><br>=C2=A0 kfree(obj1)<br>=C2=A0 kfree(obj2)<br>=C2=A0 kfree(obj3)<br>=
-=C2=A0 kfree(obj1)<br>- clear the next object address information when usin=
-g kmalloc function.<br> <br>Proc info leak<br>--------------<br>Protect imp=
-ortant file with no read access for non root user.<br>set /proc/{modules,ke=
-ys,key-users},<br>/proc/sys/kernel/{panic,panic_on_oops,dmesg_restrict,kptr=
-_restrict,keys},<br>/proc/sys/vm/{mmap_min_addr} as 0640.<br><br>Aslr harde=
-nded<br>--------------<br>User stack aslr enhanced.<br>Old user process&#39=
-;s stack is between 0-1G on 64bit.<br>the actually random range is 0-2^24.<=
-br>we introduce STACK_RND_BITS to control the range dynamically.<br><br>ech=
-o &quot;24&quot; &gt; /proc/sys/vm/stack_rnd_bits<br><br>we also randomize =
-the space between elf_info and environ.<br>And randomize the space between =
-stack and elf_info.<br><br>Ptrace hardened<br>---------------<br>Disallow a=
-ttach to non child process.<br>This can prevent process memory inject via p=
-trace.<br><br>Sm*p hardened<br>-------------<br>Check smap&amp;smep when re=
-turn from kernel space via a syscall,<br>this can detect some kernel exploi=
-t code to bypass smap &amp; smep<br>feature via rop attack technology.<br><=
-br>Raw socket enhance<br>------------------<br>Enhance raw socket for ipv4 =
-protocol.<br>- TCP data cannot be sent over raw sockets.<br>=C2=A0 echo 1 &=
-gt; /proc/sys/net/ipv4/raw_tcp_disabled<br>- UDP datagrams with an invalid =
-source address cannot be sent<br>=C2=A0 over raw sockets. The IP source add=
-ress for any outgoing UDP<br>=C2=A0 datagram must exist on a network interf=
-ace or the datagram is<br>=C2=A0 dropped. This change was made to limit the=
- ability of malicious<br>=C2=A0 code to create distributed denial-of-servic=
-e attacks and limits<br>=C2=A0 the ability to send spoofed packets (TCP/IP =
-packets with a forged<br>=C2=A0 source IP address).<br>=C2=A0 echo 1 &gt; /=
-proc/sys/net/ipv4/raw_udp_verify<br>- A call to the bind function with a ra=
-w socket for the IPPROTO_TCP<br>=C2=A0 protocol is not allowed.<br>=C2=A0 e=
-cho 1 &gt; /proc/sys/net/ipv4/raw_bind_disabled<br><br>Kernel self guard<br=
->-----------------<br>Ksguard is an anti rootkit tool on kernel level.<br>C=
-urrently it can detect 4 types of kernel rootkits,<br>These are the most po=
-pluar rootkits type on unix world.<br><br>- keyboard notifer rootkits.<br>-=
- netfilter hooks rootkits.<br>- tty sniffer rootkits and other DKOM(direct =
-kernel object modify) rootkits.<br>- system call table hijack rootkits.<br>=
-<br>Install:<br>/sbin/insmod /lib/modules/5.6.7/kernel/security/ksguard/ksg=
-uard.ko<br><br>Feature:<br>Detect keyboard notifer rootkits:<br>echo &quot;=
-1&quot; &gt; /proc/ksguard/state<br><br>Detect netfilter hooks rootkits:<br=
->echo &quot;2&quot; &gt; /proc/ksguard/state<br><br>Detect tty sniffer root=
-kits:<br>echo &quot;3&quot; &gt; /proc/ksguard/state<br><br>Detect syscall =
-table pointer:<br>echo &quot;4&quot; &gt; /proc/ksguard/state<br><br>Arbitr=
-ary code guard<br>--------------------<br>we extended the libc personality(=
-) to support:<br>- mmap can&#39;t memory with PROT_WRITE|PROT_EXEC.<br>- mp=
-rtect can&#39;t change PROT_WRITE to PROT_EXEC.<br><br>Code integrity guard=
-<br>--------------------<br>To support certificate for user process execve.=
-<br>it can prevent some internet explorer to load<br>third party so library=
-s.<br><br>Hide symbol<br>-----------<br>Hide symbols from /proc/kallsyms.<b=
-r></span><b></b><i></i><u></u><sub></sub><sup></sup><strike></strike><br></=
-div></div></div></div>
-
---000000000000eadc2905a541d1ca--
+Regards,
+Lionel Debroux.
