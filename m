@@ -1,23 +1,20 @@
-Return-Path: <SRS0=qxVV=6Z=lists.openwall.com=kernel-hardening-return-18750-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=jC3r=6Z=lists.openwall.com=kernel-hardening-return-18751-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.0 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-8.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 446DEC54E8E
-	for <kernel-hardening@archiver.kernel.org>; Mon, 11 May 2020 16:15:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 79FF9C54E8D
+	for <kernel-hardening@archiver.kernel.org>; Mon, 11 May 2020 19:22:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 98686206DB
-	for <kernel-hardening@archiver.kernel.org>; Mon, 11 May 2020 16:15:39 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="UDnQ8rb5"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 98686206DB
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18750-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1045 invoked by uid 550); 11 May 2020 16:15:33 -0000
+	by mail.kernel.org (Postfix) with SMTP id B0F512075E
+	for <kernel-hardening@archiver.kernel.org>; Mon, 11 May 2020 19:22:32 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B0F512075E
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18751-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30326 invoked by uid 550); 11 May 2020 19:22:17 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,75 +22,216 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32752 invoked from network); 11 May 2020 16:15:32 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=UXxWyws2LadwTX+een4hFyGMT5uLqqad3ucVUoN1fJM=;
-        b=UDnQ8rb5Up4aZykhqT13QD+yq8GS9TgGsCtjb+B8kZ1s2IYczQPA5n09ToCZHLmolC
-         psySCzF993GZ9uJ1ltr5wjxtA4emnYvtq1gp+At7iqurdhWjE0DQyg/MD3chLb3Zho0L
-         SMU5AkyHfEwO+WuQ+a1TwcUDGgO5LTfN26OfU=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=UXxWyws2LadwTX+een4hFyGMT5uLqqad3ucVUoN1fJM=;
-        b=CEi+8gdLdrCOl3+u8mkDgurB/2a7GGvLSs4PVk+qLXdrr1IkERRu+kA0KuOgxAJH2D
-         25G0PN5ZuF5NBx6QwlVbesBYQM3ENttP7fWyQmE+cZ2JTJ5JXdE9ZuzH1BF2TrFSU2FR
-         C7jcEoOirWr5orkZPgLiJyd5WAeu2UgA+pTB0u8yI44aUHZqITUeXSEiWsvjaZRnKWBI
-         sCueJ6fSCElhxQsYUntlPP3tUjxpH9NPcCJ5zYIS2NEQaz/xMpqogMibC70r6iPzYasE
-         fiB7v50IeMv4Y0LDEvDP4rfiSLdfZRvzN5bqrp6sely103XDGo/sZpGPAfJJa5yMTgma
-         P9+Q==
-X-Gm-Message-State: AGi0PuZetI66vtSxUWNEwANActFP7lR29QIgr8wN401NC9xTs1U/rRZJ
-	z8wRM1ZIfSU+MFNClwcN3vcurQ==
-X-Google-Smtp-Source: APiQypJN7McBO3fRNpsMnCmhYSAlFJx2x6BEk70EbXm0tbh06oHndOZBLKc7kK0LZS3+CE+ghmOlNg==
-X-Received: by 2002:a62:e51a:: with SMTP id n26mr16708082pff.301.1589213720211;
-        Mon, 11 May 2020 09:15:20 -0700 (PDT)
-Date: Mon, 11 May 2020 09:15:18 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Oscar Carter <oscar.carter@gmx.com>
-Cc: kernel-hardening@lists.openwall.com
-Subject: Re: Get involved in the KSPP
-Message-ID: <202005110912.3A26AF11@keescook>
-References: <20200509122007.GA5356@ubuntu>
+Received: (qmail 30293 invoked from network); 11 May 2020 19:22:16 -0000
+From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
+To: linux-kernel@vger.kernel.org
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
+	Al Viro <viro@zeniv.linux.org.uk>,
+	Andy Lutomirski <luto@amacapital.net>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	James Morris <jmorris@namei.org>,
+	Jann Horn <jannh@google.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>,
+	"Serge E . Hallyn" <serge@hallyn.com>,
+	Shuah Khan <shuah@kernel.org>,
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+	kernel-hardening@lists.openwall.com,
+	linux-api@vger.kernel.org,
+	linux-arch@vger.kernel.org,
+	linux-doc@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	x86@kernel.org
+Subject: [PATCH v17 00/10] Landlock LSM
+Date: Mon, 11 May 2020 21:21:46 +0200
+Message-Id: <20200511192156.1618284-1-mic@digikod.net>
+X-Mailer: git-send-email 2.26.2
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200509122007.GA5356@ubuntu>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-On Sat, May 09, 2020 at 02:20:08PM +0200, Oscar Carter wrote:
-> Hi, my name is Oscar. I would like to get involved in the kernel self protection
-> project because I love the software security and I think this is one of the most
-> challenging fields.
+Hi,
 
-Hi Oscar! Welcome to the mailing list. :)
+This new patch series brings some improvements and add new tests:
 
-> I have experience in microcrontrollers and working with low level software, but
-> my experience with the linux kernel development is a few commits in the staging
-> area.
-> 
-> For now, and due to my low experience with the linux kernel code and software
-> security, I do not care about the area and task to be done. What I pretend is to
-> help this great community and improve my knowledge and skills in this
-> challenging field.
-> 
-> So, I would like to know if I can be assigned to some task that suits me. I've
-> taken a look at https://github.com/KSPP/linux/issues but I don't know which task
-> to choose and if someone else is working on it.
+Use smaller userspace structures (attributes) to save space, and check
+at built time that every attribute don't contain hole and are 8-bits
+aligned.
 
-There's "good first issue" label that might help you choose things:
-https://github.com/KSPP/linux/labels/good%20first%20issue
+Allow enforcement of empty ruleset, which enables deny-all policies
+(useful for strict sandboxes).
 
-One mostly mechanical bit of work would be this:
-https://github.com/KSPP/linux/issues/20
-There are likely more fixes needed to build the kernel with
--Wcast-function-type (especially on non-x86 kernels). So that would let
-you learn about cross-compiling, etc.
+I found that UML may not keep the same internal struct inode for an open
+file.  Because the Landlock filesystem access-control relies on internal
+kernel states, special architectures such as UML can't support Landlock.
+Add a new ARCH_EPHEMERAL_STATES to identify such architectures.
 
-Let us know what you think!
+Add a size_attr_features field to struct landlock_attr_features for
+self-introspection
 
-Take care,
+Switch syscall attribute pointer and size arguments to follow similar
+syscalls argument order (e.g. bpf, clone3, openat2).
+
+
+The SLOC count is 1288 for security/landlock/ and 1740 for
+tools/testing/selftest/landlock/ .  Test coverage for security/landlock/
+is 93.6% of lines.  The code not covered only deals with internal kernel
+errors (e.g. memory allocation) and race conditions.
+
+The compiled documentation is available here:
+https://landlock.io/linux-doc/landlock-v17/security/landlock/index.html
+
+This series can be applied on top of v5.7-rc5.  This can be tested with
+CONFIG_SECURITY_LANDLOCK and CONFIG_SAMPLE_LANDLOCK.  This patch series
+can be found in a Git repository here:
+https://github.com/landlock-lsm/linux/commits/landlock-v17
+I would really appreciate constructive comments on this patch series.
+
+
+# Landlock LSM
+
+The goal of Landlock is to enable to restrict ambient rights (e.g.
+global filesystem access) for a set of processes.  Because Landlock is a
+stackable LSM [2], it makes possible to create safe security sandboxes
+as new security layers in addition to the existing system-wide
+access-controls. This kind of sandbox is expected to help mitigate the
+security impact of bugs or unexpected/malicious behaviors in user-space
+applications. Landlock empowers any process, including unprivileged
+ones, to securely restrict themselves.
+
+Landlock is inspired by seccomp-bpf but instead of filtering syscalls
+and their raw arguments, a Landlock rule can restrict the use of kernel
+objects like file hierarchies, according to the kernel semantic.
+Landlock also takes inspiration from other OS sandbox mechanisms: XNU
+Sandbox, FreeBSD Capsicum or OpenBSD Pledge/Unveil.
+
+
+Previous version:
+https://lore.kernel.org/lkml/20200416103955.145757-1-mic@digikod.net/
+
+
+[1] https://lore.kernel.org/lkml/e07fe473-1801-01cc-12ae-b3167f95250e@digikod.net/
+[2] https://lore.kernel.org/lkml/50db058a-7dde-441b-a7f9-f6837fe8b69f@schaufler-ca.com/
+
+Regards,
+
+Mickaël Salaün (10):
+  landlock: Add object management
+  landlock: Add ruleset and domain management
+  landlock: Set up the security framework and manage credentials
+  landlock: Add ptrace restrictions
+  fs,landlock: Support filesystem access-control
+  landlock: Add syscall implementation
+  arch: Wire up landlock() syscall
+  selftests/landlock: Add initial tests
+  samples/landlock: Add a sandbox manager example
+  landlock: Add user and kernel documentation
+
+ Documentation/security/index.rst              |    1 +
+ Documentation/security/landlock/index.rst     |   18 +
+ Documentation/security/landlock/kernel.rst    |   69 +
+ Documentation/security/landlock/user.rst      |  268 +++
+ MAINTAINERS                                   |   12 +
+ arch/Kconfig                                  |    7 +
+ arch/alpha/kernel/syscalls/syscall.tbl        |    1 +
+ arch/arm/tools/syscall.tbl                    |    1 +
+ arch/arm64/include/asm/unistd.h               |    2 +-
+ arch/arm64/include/asm/unistd32.h             |    2 +
+ arch/ia64/kernel/syscalls/syscall.tbl         |    1 +
+ arch/m68k/kernel/syscalls/syscall.tbl         |    1 +
+ arch/microblaze/kernel/syscalls/syscall.tbl   |    1 +
+ arch/mips/kernel/syscalls/syscall_n32.tbl     |    1 +
+ arch/mips/kernel/syscalls/syscall_n64.tbl     |    1 +
+ arch/mips/kernel/syscalls/syscall_o32.tbl     |    1 +
+ arch/parisc/kernel/syscalls/syscall.tbl       |    1 +
+ arch/powerpc/kernel/syscalls/syscall.tbl      |    1 +
+ arch/s390/kernel/syscalls/syscall.tbl         |    1 +
+ arch/sh/kernel/syscalls/syscall.tbl           |    1 +
+ arch/sparc/kernel/syscalls/syscall.tbl        |    1 +
+ arch/um/Kconfig                               |    1 +
+ arch/x86/entry/syscalls/syscall_32.tbl        |    1 +
+ arch/x86/entry/syscalls/syscall_64.tbl        |    1 +
+ arch/xtensa/kernel/syscalls/syscall.tbl       |    1 +
+ fs/super.c                                    |    2 +
+ include/linux/fs.h                            |    5 +
+ include/linux/landlock.h                      |   22 +
+ include/linux/syscalls.h                      |    3 +
+ include/uapi/asm-generic/unistd.h             |    4 +-
+ include/uapi/linux/landlock.h                 |  302 +++
+ kernel/sys_ni.c                               |    3 +
+ samples/Kconfig                               |    7 +
+ samples/Makefile                              |    1 +
+ samples/landlock/.gitignore                   |    1 +
+ samples/landlock/Makefile                     |   15 +
+ samples/landlock/sandboxer.c                  |  228 +++
+ security/Kconfig                              |   11 +-
+ security/Makefile                             |    2 +
+ security/landlock/Kconfig                     |   18 +
+ security/landlock/Makefile                    |    4 +
+ security/landlock/common.h                    |   20 +
+ security/landlock/cred.c                      |   46 +
+ security/landlock/cred.h                      |   58 +
+ security/landlock/fs.c                        |  601 ++++++
+ security/landlock/fs.h                        |   42 +
+ security/landlock/object.c                    |   66 +
+ security/landlock/object.h                    |   91 +
+ security/landlock/ptrace.c                    |  120 ++
+ security/landlock/ptrace.h                    |   14 +
+ security/landlock/ruleset.c                   |  342 ++++
+ security/landlock/ruleset.h                   |  161 ++
+ security/landlock/setup.c                     |   39 +
+ security/landlock/setup.h                     |   18 +
+ security/landlock/syscall.c                   |  532 +++++
+ tools/testing/selftests/Makefile              |    1 +
+ tools/testing/selftests/landlock/.gitignore   |    2 +
+ tools/testing/selftests/landlock/Makefile     |   29 +
+ tools/testing/selftests/landlock/base_test.c  |  170 ++
+ tools/testing/selftests/landlock/common.h     |  108 +
+ tools/testing/selftests/landlock/config       |    5 +
+ tools/testing/selftests/landlock/fs_test.c    | 1729 +++++++++++++++++
+ .../testing/selftests/landlock/ptrace_test.c  |  293 +++
+ tools/testing/selftests/landlock/true.c       |    5 +
+ 64 files changed, 5509 insertions(+), 7 deletions(-)
+ create mode 100644 Documentation/security/landlock/index.rst
+ create mode 100644 Documentation/security/landlock/kernel.rst
+ create mode 100644 Documentation/security/landlock/user.rst
+ create mode 100644 include/linux/landlock.h
+ create mode 100644 include/uapi/linux/landlock.h
+ create mode 100644 samples/landlock/.gitignore
+ create mode 100644 samples/landlock/Makefile
+ create mode 100644 samples/landlock/sandboxer.c
+ create mode 100644 security/landlock/Kconfig
+ create mode 100644 security/landlock/Makefile
+ create mode 100644 security/landlock/common.h
+ create mode 100644 security/landlock/cred.c
+ create mode 100644 security/landlock/cred.h
+ create mode 100644 security/landlock/fs.c
+ create mode 100644 security/landlock/fs.h
+ create mode 100644 security/landlock/object.c
+ create mode 100644 security/landlock/object.h
+ create mode 100644 security/landlock/ptrace.c
+ create mode 100644 security/landlock/ptrace.h
+ create mode 100644 security/landlock/ruleset.c
+ create mode 100644 security/landlock/ruleset.h
+ create mode 100644 security/landlock/setup.c
+ create mode 100644 security/landlock/setup.h
+ create mode 100644 security/landlock/syscall.c
+ create mode 100644 tools/testing/selftests/landlock/.gitignore
+ create mode 100644 tools/testing/selftests/landlock/Makefile
+ create mode 100644 tools/testing/selftests/landlock/base_test.c
+ create mode 100644 tools/testing/selftests/landlock/common.h
+ create mode 100644 tools/testing/selftests/landlock/config
+ create mode 100644 tools/testing/selftests/landlock/fs_test.c
+ create mode 100644 tools/testing/selftests/landlock/ptrace_test.c
+ create mode 100644 tools/testing/selftests/landlock/true.c
 
 -- 
-Kees Cook
+2.26.2
+
