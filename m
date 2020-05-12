@@ -1,23 +1,22 @@
-Return-Path: <SRS0=+twZ=62=lists.openwall.com=kernel-hardening-return-18768-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=i6c5=62=lists.openwall.com=kernel-hardening-return-18769-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.0 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B3A07C2D0F8
-	for <kernel-hardening@archiver.kernel.org>; Tue, 12 May 2020 21:10:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 44BF1C2D0F8
+	for <kernel-hardening@archiver.kernel.org>; Tue, 12 May 2020 21:39:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 03A0A20659
-	for <kernel-hardening@archiver.kernel.org>; Tue, 12 May 2020 21:10:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 94D5320740
+	for <kernel-hardening@archiver.kernel.org>; Tue, 12 May 2020 21:39:09 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="kvOR1LBv"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 03A0A20659
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18768-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12277 invoked by uid 550); 12 May 2020 21:09:56 -0000
+	dkim=pass (2048-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="MvD3LboV"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 94D5320740
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zx2c4.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18769-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26131 invoked by uid 550); 12 May 2020 21:39:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,126 +24,51 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12257 invoked from network); 12 May 2020 21:09:55 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=4SiIjIE0HqgktULUkxH4huGvPI4IR97vaLn7SaMgRvw=;
-        b=kvOR1LBvbXHsTdtL2TP6eGDZfFC1ooMf5iQTDsBYgNoJtSbpgX4ulckTUbNODBqoP7
-         riZzlWq93xqkYi3zXErNHAHy+/gZ9NrBfN7Gye2AF282HV8iGeljGnl6WQLR0VRh/DEO
-         vErb11z8cHI5SW+sUPYZCGttNjJuR7vSpITj4=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=4SiIjIE0HqgktULUkxH4huGvPI4IR97vaLn7SaMgRvw=;
-        b=keECMyAWlASm/Z/Tr/bVUhuuzVc0UUfdIhWSpZttkc3IjAxeSzQBXnqprqCmd8yhv5
-         U10Hj4nxT0Zl4VXIEgPBYT0sI7CILYq80PFJ98r8EA0/1U7IbgT1jL8njX2jhM/4oC5i
-         /j7SYGSfxANafC6aVKwhUW06P1gi0qRR5aR3fChecG9NNVZsMHdRktQWj92OqNDyJuC8
-         yUEkiK9H6+j2EZ9tU+KxBYcK/YkV8hjsxnswvyv5RsyBxChrniysZSBxmwEsC51dhdVP
-         1rGHN5KvQ68bUAL3vFps1TjG0Vo75QAZmm5YHgHlNT13zWvCF1FxwE6xPsbSdmmktRCv
-         s4VA==
-X-Gm-Message-State: AOAM5320VYyEF0xZbw9q8PhJRgSsgQE0MJ57FSi7Iy/2B96GxCeUR6Bc
-	I38hs4UAbdGcBUifCakg3Piajw==
-X-Google-Smtp-Source: ABdhPJxt840LEl+4pcP5gOb8tskJnRcbgXJ1+UHrDACNk2Ju97S34FmnGoVr6OI4La30DBmSgA2nPQ==
-X-Received: by 2002:a63:c04a:: with SMTP id z10mr8594229pgi.430.1589317783313;
-        Tue, 12 May 2020 14:09:43 -0700 (PDT)
-Date: Tue, 12 May 2020 14:09:41 -0700
-From: Kees Cook <keescook@chromium.org>
-To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
-	Alexei Starovoitov <ast@kernel.org>,
-	Al Viro <viro@zeniv.linux.org.uk>,
-	Andy Lutomirski <luto@kernel.org>,
-	Christian Heimes <christian@python.org>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Eric Chiang <ericchiang@google.com>,
-	Florian Weimer <fweimer@redhat.com>,
-	James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
-	Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,
-	Matthew Wilcox <willy@infradead.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mickael.salaun@ssi.gouv.fr>,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	Philippe =?iso-8859-1?Q?Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Sean Christopherson <sean.j.christopherson@intel.com>,
-	Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
-	Steve Grubb <sgrubb@redhat.com>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-	linux-integrity@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org
-Subject: Re: [PATCH v5 2/6] fs: Add a MAY_EXECMOUNT flag to infer the noexec
- mount property
-Message-ID: <202005121407.A339D31A@keescook>
-References: <20200505153156.925111-1-mic@digikod.net>
- <20200505153156.925111-3-mic@digikod.net>
+Received: (qmail 26111 invoked from network); 12 May 2020 21:39:02 -0000
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=zx2c4.com; h=mime-version
+	:references:in-reply-to:from:date:message-id:subject:to:cc
+	:content-type; s=mail; bh=QHZdxdAznvbCsAtmKjiWvIM9Rkw=; b=MvD3Lb
+	oVsAoirYLJSrJWid+5RlALnx2IRewi5D0XBFtensY47q3F11/1CtwFB5Eegu/rI1
+	Pid6Wx2EvUYjZPfmZGjw9K8P6wYoy6QkCFrPmSyueGYQT0ehJ+ObAbPUH/MO80YR
+	lgG2lkNpdMeTNMDZJrtZbEKLjK/ohUsVlltq0XSXirzYqVDik4HdhkLxhPByleUi
+	nIVklcGJio1YXP5DG4ogblcqJZJ0R7MUkdxyQhzMhK8vZhyd40aaYk8jf5X45I5k
+	3BNLQAauYx/2QdATKBVB+tr2WW5c6Ps2riW9WvCxzbdw/kouf6sYczcIznGhlmMf
+	v+IXNN0GTccJmRDQ==
+X-Gm-Message-State: AGi0PuZQYjKJvWqaJKN3DxGt6SVL6wGwT6r/xbSsQdDP6bTJ5rHBa3zH
+	1VuHyx6CuO+32rta6t5bky2gKGDC2fXklwyBnlE=
+X-Google-Smtp-Source: APiQypJzMvF0pm2HCVQ5PwdpsSCqC6FjWIGTFESdbJ/delouG0Mi5pZJuKDQJHB5ZYDpPpJ7fdbGT//MYh2mBmx/jhU=
+X-Received: by 2002:a92:8752:: with SMTP id d18mr6109118ilm.224.1589319528551;
+ Tue, 12 May 2020 14:38:48 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20200505153156.925111-3-mic@digikod.net>
+References: <CAHmME9oXiTmVuOYmG=K3ijWK+zP2yB9a2CFjbLx_5fkDiH30Tg@mail.gmail.com>
+ <20200511215101.302530-1-Jason@zx2c4.com> <2620780.1589289425@warthog.procyon.org.uk>
+In-Reply-To: <2620780.1589289425@warthog.procyon.org.uk>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 12 May 2020 15:38:37 -0600
+X-Gmail-Original-Message-ID: <CAHmME9q-TxHo5o63rxHzKwV_kWV9u+MoxBQM5Yz3hODGCj7RhQ@mail.gmail.com>
+Message-ID: <CAHmME9q-TxHo5o63rxHzKwV_kWV9u+MoxBQM5Yz3hODGCj7RhQ@mail.gmail.com>
+Subject: Re: [PATCH v3] security/keys: rewrite big_key crypto to use library interface
+To: David Howells <dhowells@redhat.com>
+Cc: keyrings@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, 
+	Andy Lutomirski <luto@kernel.org>, Greg KH <gregkh@linuxfoundation.org>, 
+	Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, 
+	Eric Biggers <ebiggers@google.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On Tue, May 05, 2020 at 05:31:52PM +0200, Mickaël Salaün wrote:
-> This new MAY_EXECMOUNT flag enables to check if the underlying mount
-> point of an inode is marked as executable.  This is useful to implement
-> a security policy taking advantage of the noexec mount option.
-> 
-> This flag is set according to path_noexec(), which checks if a mount
-> point is mounted with MNT_NOEXEC or if the underlying superblock is
-> SB_I_NOEXEC.
-> 
-> Signed-off-by: Mickaël Salaün <mic@digikod.net>
-> Reviewed-by: Philippe Trébuchet <philippe.trebuchet@ssi.gouv.fr>
-> Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-> Cc: Aleksa Sarai <cyphar@cyphar.com>
-> Cc: Al Viro <viro@zeniv.linux.org.uk>
-> Cc: Kees Cook <keescook@chromium.org>
-> ---
->  fs/namei.c         | 2 ++
->  include/linux/fs.h | 2 ++
->  2 files changed, 4 insertions(+)
-> 
-> diff --git a/fs/namei.c b/fs/namei.c
-> index a320371899cf..33b6d372e74a 100644
-> --- a/fs/namei.c
-> +++ b/fs/namei.c
-> @@ -2849,6 +2849,8 @@ static int may_open(const struct path *path, int acc_mode, int flag)
->  		break;
->  	}
->  
-> +	/* Pass the mount point executability. */
-> +	acc_mode |= path_noexec(path) ? 0 : MAY_EXECMOUNT;
->  	error = inode_permission(inode, MAY_OPEN | acc_mode);
->  	if (error)
->  		return error;
-> diff --git a/include/linux/fs.h b/include/linux/fs.h
-> index 313c934de9ee..79435fca6c3e 100644
-> --- a/include/linux/fs.h
-> +++ b/include/linux/fs.h
-> @@ -103,6 +103,8 @@ typedef int (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
->  #define MAY_NOT_BLOCK		0x00000080
->  /* the inode is opened with O_MAYEXEC */
->  #define MAY_OPENEXEC		0x00000100
-> +/* the mount point is marked as executable */
-> +#define MAY_EXECMOUNT		0x00000200
->  
->  /*
->   * flags in file.f_mode.  Note that FMODE_READ and FMODE_WRITE must correspond
+Hi David,
 
-I find this name unintuitive, but I cannot think of anything better,
-since I think my problem is that "MAY" doesn't map to the language I
-want to use to describe what this flag is indicating.
+So long as that ->update function:
+1. Deletes the old on-disk data.
+2. Deletes the old key from the inode.
+3. Generates a new key using get_random_bytes.
+4. Stores that new key in the inode.
+5. Encrypts the updated data afresh with the new key.
+6. Puts the updated data onto disk,
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+then this is fine with me, and feel free to have my Acked-by if you
+want. But if it doesn't do that -- i.e. if it tries to reuse the old
+key or similar -- then this isn't fine. But it sounds like from what
+you've described that things are actually fine, in which case, I guess
+it makes sense to apply your patch ontop of mine and commit these.
 
--- 
-Kees Cook
+Jason
