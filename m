@@ -1,20 +1,20 @@
-Return-Path: <SRS0=hXTJ=63=lists.openwall.com=kernel-hardening-return-18779-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=u+i1=63=lists.openwall.com=kernel-hardening-return-18780-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A47D6CA90AF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 13 May 2020 11:18:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 11E87CA90AF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 13 May 2020 11:20:48 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0CC65206E5
-	for <kernel-hardening@archiver.kernel.org>; Wed, 13 May 2020 11:18:21 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0CC65206E5
+	by mail.kernel.org (Postfix) with SMTP id 6C95920753
+	for <kernel-hardening@archiver.kernel.org>; Wed, 13 May 2020 11:20:47 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6C95920753
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18779-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11331 invoked by uid 550); 13 May 2020 11:18:14 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18780-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13719 invoked by uid 550); 13 May 2020 11:20:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,9 +22,9 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11306 invoked from network); 13 May 2020 11:18:14 -0000
-Subject: Re: [PATCH v5 4/6] selftest/openat2: Add tests for O_MAYEXEC
- enforcing
+Received: (qmail 13692 invoked from network); 13 May 2020 11:20:40 -0000
+Subject: Re: [PATCH v5 5/6] doc: Add documentation for the
+ fs.open_mayexec_enforce sysctl
 To: Kees Cook <keescook@chromium.org>
 Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
  Alexei Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>,
@@ -50,80 +50,32 @@ Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
  linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
  linux-fsdevel@vger.kernel.org
 References: <20200505153156.925111-1-mic@digikod.net>
- <20200505153156.925111-5-mic@digikod.net> <202005121452.4DED41A@keescook>
+ <20200505153156.925111-6-mic@digikod.net> <202005121459.158C3AE75@keescook>
 From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <6fc6bbe4-da18-1b8d-a61c-558f5a4a4908@digikod.net>
-Date: Wed, 13 May 2020 13:18:00 +0200
+Message-ID: <cb487ed9-30a3-635a-04a8-e9038bde87d4@digikod.net>
+Date: Wed, 13 May 2020 13:20:27 +0200
 User-Agent:
 MIME-Version: 1.0
-In-Reply-To: <202005121452.4DED41A@keescook>
+In-Reply-To: <202005121459.158C3AE75@keescook>
 Content-Type: text/plain; charset=iso-8859-15
-Content-Language: en-US
+Content-Language: fr
 Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
 
-On 12/05/2020 23:57, Kees Cook wrote:
-> On Tue, May 05, 2020 at 05:31:54PM +0200, Mickaël Salaün wrote:
->> Test propagation of noexec mount points or file executability through
->> files open with or without O_MAYEXEC, thanks to the
->> fs.open_mayexec_enforce sysctl.
+On 13/05/2020 00:00, Kees Cook wrote:
+> On Tue, May 05, 2020 at 05:31:55PM +0200, Mickaël Salaün wrote:
+>> This sysctl enables to propagate executable permission to userspace
+>> thanks to the O_MAYEXEC flag.
 >>
 >> Signed-off-by: Mickaël Salaün <mic@digikod.net>
 >> Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
 >> Cc: Aleksa Sarai <cyphar@cyphar.com>
 >> Cc: Al Viro <viro@zeniv.linux.org.uk>
+>> Cc: Jonathan Corbet <corbet@lwn.net>
 >> Cc: Kees Cook <keescook@chromium.org>
->> Cc: Shuah Khan <shuah@kernel.org>
 > 
-> Yay tests! :) Notes below...
-> 
->> diff --git a/tools/testing/selftests/openat2/Makefile b/tools/testing/selftests/openat2/Makefile
->> index 4b93b1417b86..cb98bdb4d5b1 100644
->> --- a/tools/testing/selftests/openat2/Makefile
->> +++ b/tools/testing/selftests/openat2/Makefile
->> @@ -1,7 +1,8 @@
->>  # SPDX-License-Identifier: GPL-2.0-or-later
->>  
->>  CFLAGS += -Wall -O2 -g -fsanitize=address -fsanitize=undefined
->> -TEST_GEN_PROGS := openat2_test resolve_test rename_attack_test
->> +LDLIBS += -lcap
->> +TEST_GEN_PROGS := openat2_test resolve_test rename_attack_test omayexec_test
-> 
-> I realize the others have _test in their name, but that feels intensely
-> redundant to me. :)
+> I think this should be folded into the patch that adds the sysctl.
 
-It is redundant in the path name but it is useful to match the generated
-files e.g., in gitignore.
-
-> 
->> [...]
->> diff --git a/tools/testing/selftests/openat2/omayexec_test.c b/tools/testing/selftests/openat2/omayexec_test.c
->> new file mode 100644
->> index 000000000000..7052c852daf8
->> --- /dev/null
->> +++ b/tools/testing/selftests/openat2/omayexec_test.c
->> [...]
->> +FIXTURE_DATA(mount_exec_file_exec) { };
-> 
-> For each of these, Please use "FIXTURE" not "FIXTURE_DATA". See:
-> 1ae81d78a8b2 ("selftests/seccomp: Adjust test fixture counts")
-
-Indeed.
-
-> 
->> +FIXTURE_SETUP(mount_exec_file_exec)
->> +{
->> +	create_workspace(_metadata, 1, 1);
-> 
-> Maybe save the system's original sysctl in create_workspace() instead
-> of always restoring it to 0 in delete_workspace()?
-
-Right.
-
-> 
-> Otherwise, looks good!
-> 
-
-Thanks.
+OK, I guess it is fine for the documentation maintainers too?
