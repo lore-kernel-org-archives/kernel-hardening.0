@@ -1,20 +1,23 @@
-Return-Path: <SRS0=Ypvg=64=lists.openwall.com=kernel-hardening-return-18801-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=dRm8=64=lists.openwall.com=kernel-hardening-return-18802-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 88C4FC433DF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 18:49:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8AA3DC433E1
+	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 18:52:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E37D820657
-	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 18:49:50 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E37D820657
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18801-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17896 invoked by uid 550); 14 May 2020 18:49:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id D615F20722
+	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 18:52:14 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="UYkJC83R"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D615F20722
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18802-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20436 invoked by uid 550); 14 May 2020 18:52:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,62 +25,112 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17859 invoked from network); 14 May 2020 18:49:44 -0000
-Subject: Re: [PATCH v17 05/10] fs,landlock: Support filesystem access-control
-To: James Morris <jmorris@namei.org>
-Cc: Casey Schaufler <casey@schaufler-ca.com>, linux-kernel@vger.kernel.org,
- Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
- Arnd Bergmann <arnd@arndb.de>, Jann Horn <jannh@google.com>,
- Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
- linux-fsdevel@vger.kernel.org, linux-kselftest@vger.kernel.org,
- linux-security-module@vger.kernel.org, x86@kernel.org
-References: <20200511192156.1618284-1-mic@digikod.net>
- <20200511192156.1618284-6-mic@digikod.net>
- <alpine.LRH.2.21.2005141335280.30052@namei.org>
- <c159d845-6108-4b67-6527-405589fa5382@digikod.net>
- <alpine.LRH.2.21.2005150329580.26489@namei.org>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <2561827e-020c-9a76-98ae-9514904c69f9@digikod.net>
-Date: Thu, 14 May 2020 20:49:31 +0200
-User-Agent:
+Received: (qmail 20399 invoked from network); 14 May 2020 18:52:07 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1589482314;
+	bh=gdd5JmHs0veB59rm39sCYztS+yPmh9hn9aPXEvVy/xk=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+	b=UYkJC83RjsFthUKAIiPttdaAftrCVxsTairgXbHny3EDf1aEwG25uTqwSiwGuvv8b
+	 SX+t9qWMbhSoKDf6dN83mN5fOO+KVM3e0EXcn9FVUirzPSHD9WZ4mviy4fgdrtf0Qy
+	 zgpnyCiTExvowinbiNE2uOmReZTll88Q85eHtkKo=
+From: Sasha Levin <sashal@kernel.org>
+To: linux-kernel@vger.kernel.org,
+	stable@vger.kernel.org
+Cc: =?UTF-8?q?Fr=C3=A9d=C3=A9ric=20Pierret=20=28fepitre=29?= <frederic.pierret@qubes-os.org>,
+	Kees Cook <keescook@chromium.org>,
+	Sasha Levin <sashal@kernel.org>,
+	kernel-hardening@lists.openwall.com
+Subject: [PATCH AUTOSEL 5.6 04/62] gcc-common.h: Update for GCC 10
+Date: Thu, 14 May 2020 14:50:49 -0400
+Message-Id: <20200514185147.19716-4-sashal@kernel.org>
+X-Mailer: git-send-email 2.20.1
+In-Reply-To: <20200514185147.19716-1-sashal@kernel.org>
+References: <20200514185147.19716-1-sashal@kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <alpine.LRH.2.21.2005150329580.26489@namei.org>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
+Content-Type: text/plain; charset=UTF-8
+X-stable: review
+X-Patchwork-Hint: Ignore
 Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
 
+From: Frédéric Pierret (fepitre) <frederic.pierret@qubes-os.org>
 
-On 14/05/2020 19:31, James Morris wrote:
-> On Thu, 14 May 2020, Mickaël Salaün wrote:
-> 
->>> This needs to be converted to the LSM API via superblock blob stacking.
->>>
->>> See Casey's old patch: 
->>> https://lore.kernel.org/linux-security-module/20190829232935.7099-2-casey@schaufler-ca.com/
->>
->> s_landlock_inode_refs is quite similar to s_fsnotify_inode_refs, but I
->> can do it once the superblock security blob patch is upstream. Is it a
->> blocker for now? What is the current status of lbs_superblock?
-> 
-> Yes it is a blocker. Landlock should not be adding its own functions in 
-> core code, it should be using the LSM API (and extending that as needed).
+[ Upstream commit c7527373fe28f97d8a196ab562db5589be0d34b9 ]
 
-OK, I'll use that in the next series.
+Remove "params.h" include, which has been dropped in GCC 10.
 
-> 
->> Anyway, we also need to have a call to landlock_release_inodes() in
->> generic_shutdown_super(), which does not fit the LSM framework, and I
->> think it is not an issue. Landlock handling of inodes is quite similar
->> to fsnotify.
-> 
-> fsnotify is not an LSM.
+Remove is_a_helper() macro, which is now defined in gimple.h, as seen
+when running './scripts/gcc-plugin.sh g++ g++ gcc':
 
-Yes, so I'll need to add a new LSM hook for this (release) call, right?
+In file included from <stdin>:1:
+./gcc-plugins/gcc-common.h:852:13: error: redefinition of ‘static bool is_a_helper<T>::test(U*) [with U = const gimple; T = const ggoto*]’
+  852 | inline bool is_a_helper<const ggoto *>::test(const_gimple gs)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from ./gcc-plugins/gcc-common.h:125,
+                 from <stdin>:1:
+/usr/lib/gcc/x86_64-redhat-linux/10/plugin/include/gimple.h:1037:1: note: ‘static bool is_a_helper<T>::test(U*) [with U = const gimple; T = const ggoto*]’ previously declared here
+ 1037 | is_a_helper <const ggoto *>::test (const gimple *gs)
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add -Wno-format-diag to scripts/gcc-plugins/Makefile to avoid
+meaningless warnings from error() formats used by plugins:
+
+scripts/gcc-plugins/structleak_plugin.c: In function ‘int plugin_init(plugin_name_args*, plugin_gcc_version*)’:
+scripts/gcc-plugins/structleak_plugin.c:253:12: warning: unquoted sequence of 2 consecutive punctuation characters ‘'-’ in format [-Wformat-diag]
+  253 |   error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Signed-off-by: Frédéric Pierret (fepitre) <frederic.pierret@qubes-os.org>
+Link: https://lore.kernel.org/r/20200407113259.270172-1-frederic.pierret@qubes-os.org
+[kees: include -Wno-format-diag for plugin builds]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+---
+ scripts/gcc-plugins/Makefile     | 1 +
+ scripts/gcc-plugins/gcc-common.h | 4 ++++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/scripts/gcc-plugins/Makefile b/scripts/gcc-plugins/Makefile
+index f2ee8bd7abc62..1d0b9382e759d 100644
+--- a/scripts/gcc-plugins/Makefile
++++ b/scripts/gcc-plugins/Makefile
+@@ -11,6 +11,7 @@ else
+   HOST_EXTRACXXFLAGS += -I$(GCC_PLUGINS_DIR)/include -I$(src) -std=gnu++98 -fno-rtti
+   HOST_EXTRACXXFLAGS += -fno-exceptions -fasynchronous-unwind-tables -ggdb
+   HOST_EXTRACXXFLAGS += -Wno-narrowing -Wno-unused-variable
++  HOST_EXTRACXXFLAGS += -Wno-format-diag
+   export HOST_EXTRACXXFLAGS
+ endif
+ 
+diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
+index 17f06079a7123..9ad76b7f3f10e 100644
+--- a/scripts/gcc-plugins/gcc-common.h
++++ b/scripts/gcc-plugins/gcc-common.h
+@@ -35,7 +35,9 @@
+ #include "ggc.h"
+ #include "timevar.h"
+ 
++#if BUILDING_GCC_VERSION < 10000
+ #include "params.h"
++#endif
+ 
+ #if BUILDING_GCC_VERSION <= 4009
+ #include "pointer-set.h"
+@@ -847,6 +849,7 @@ static inline gimple gimple_build_assign_with_ops(enum tree_code subcode, tree l
+ 	return gimple_build_assign(lhs, subcode, op1, op2 PASS_MEM_STAT);
+ }
+ 
++#if BUILDING_GCC_VERSION < 10000
+ template <>
+ template <>
+ inline bool is_a_helper<const ggoto *>::test(const_gimple gs)
+@@ -860,6 +863,7 @@ inline bool is_a_helper<const greturn *>::test(const_gimple gs)
+ {
+ 	return gs->code == GIMPLE_RETURN;
+ }
++#endif
+ 
+ static inline gasm *as_a_gasm(gimple stmt)
+ {
+-- 
+2.20.1
+
