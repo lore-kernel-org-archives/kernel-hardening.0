@@ -1,23 +1,23 @@
-Return-Path: <SRS0=fwkt=64=lists.openwall.com=kernel-hardening-return-18797-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=LJpm=64=lists.openwall.com=kernel-hardening-return-18798-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2D0F0C433DF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 16:47:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F13D1C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 17:31:11 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3D1B62065F
-	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 16:47:26 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3E59F206D8
+	for <kernel-hardening@archiver.kernel.org>; Thu, 14 May 2020 17:31:11 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ME8yQCgb"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3D1B62065F
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18797-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5919 invoked by uid 550); 14 May 2020 16:47:19 -0000
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="N1/XdDHF"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3E59F206D8
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18798-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7934 invoked by uid 550); 14 May 2020 17:31:03 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,128 +25,111 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3979 invoked from network); 14 May 2020 16:10:54 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=D5CbZd976r0FX8cps+cJg5GK1CX9lUZ+rR6vnN8xQ1g=;
-        b=ME8yQCgbH2SZIDcdab7oOsHlv314+eYedrIFbgnDiv53fMIMW6h9hp1VKmEFSyrYZI
-         ZSs829U1wHjFRgb8Z16vo5mQfCn03DReReAjYmZtQ2fcNZlTCtKTUnI1QwBesLOPRl0W
-         d6vcjzwONEDKS9hHqk07r5NGbdWF3yHtjy/r+Rr5V0YC3Dp2aEo4V12d2OectxjEIosS
-         WdY7O9cXLsRXiweqFenSDiCPZmyIDpM4iTXd71EmDlwoyHHu3I7PSr8magZZobs/ZFZB
-         fiIstOhiEvBiglPKnuaRHDddwv4WaI/VifjsX4Xw/CdRzk8xvmHD8S4XS0Uz/yRBSm0f
-         gNeA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=D5CbZd976r0FX8cps+cJg5GK1CX9lUZ+rR6vnN8xQ1g=;
-        b=XyxddEP0ywiRHzE6g27sVO/ePlxfOe32TTJjifI7rgTCqNKQ6IkXSG4vHRztm/4Gf1
-         GODMsKcUzP8/XrUjfY9g05Gra9KOSrHFYfKYytYdYKua9nooyTUG0bIRs+hXnpMbkldD
-         jQdPR/ZjzS/d+y2KQoJuZBxOpyokZQn3X3NIwRF6hUiLEPMYek5P7XbnIDwhNwRXKyS2
-         B1E01OvYe7HA7gqLtSxWEMqmydDfdiC7Rbuh+TNirddaHjIFX7XPqD4PVpsMBxSQ3xYW
-         0ri0dAjL1sM+nHuYu4+oVhYgdESQrBls5Bth59WsdGG3MBsxP0zM/xKMSBZJuwXvh/mv
-         xf6g==
-X-Gm-Message-State: AGi0PuYVjioAvnTugUnSzmVchHU494b4BIWPGVjWalmPL/ldOVTjQQNO
-	6unZL0AdfZ0LLX82rnnQxCmuMkY6M9YcLhGdm5M=
-X-Google-Smtp-Source: APiQypKtIw3xzkHAtALvSyqt4k9eNzYlxJoUxyheJsa+r6YEEdui4LketFU7MqwuU2v/F0vGykL4KdxDlzE9Lo0hTmQ=
-X-Received: by 2002:aca:5e0b:: with SMTP id s11mr29579870oib.160.1589472642862;
- Thu, 14 May 2020 09:10:42 -0700 (PDT)
-MIME-Version: 1.0
-References: <20200505153156.925111-1-mic@digikod.net> <20200505153156.925111-4-mic@digikod.net>
- <CAEjxPJ7y2G5hW0WTH0rSrDZrorzcJ7nrQBjfps2OWV5t1BUYHw@mail.gmail.com>
- <202005131525.D08BFB3@keescook> <202005132002.91B8B63@keescook>
- <CAEjxPJ7WjeQAz3XSCtgpYiRtH+Jx-UkSTaEcnVyz_jwXKE3dkw@mail.gmail.com> <202005140830.2475344F86@keescook>
-In-Reply-To: <202005140830.2475344F86@keescook>
-From: Stephen Smalley <stephen.smalley.work@gmail.com>
-Date: Thu, 14 May 2020 12:10:31 -0400
-Message-ID: <CAEjxPJ4R_juwvRbKiCg5OGuhAi1ZuVytK4fKCDT_kT6VKc8iRg@mail.gmail.com>
-Subject: Re: [PATCH v5 3/6] fs: Enable to enforce noexec mounts or file exec
- through O_MAYEXEC
+Received: (qmail 32575 invoked from network); 14 May 2020 17:21:02 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1589476851;
+	bh=ikf0Vp4M3S8wf9kpA/SaCsaALn3lIT48+uJW12r/eB4=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=N1/XdDHFUuFjNYK/Z9QgCbOd99c4TlV6L0iW/fQ2X+Z4ANvRSrVgEIfm3LRe211ZL
+	 hWNQ499H2ut35MiUWzDF5ECXI9KKZ2IiOPx6XunpNgk8d9Y47q1Elb3lkAx2Zfu3Fe
+	 izfPq4Gn4kAPX3UG7WcIbuQrxlO+Hp3klm9agBWE=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Thu, 14 May 2020 19:20:37 +0200
+From: Oscar Carter <oscar.carter@gmx.com>
 To: Kees Cook <keescook@chromium.org>
-Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, 
-	linux-kernel <linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, 
-	Alexei Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, 
-	Andy Lutomirski <luto@kernel.org>, Christian Heimes <christian@python.org>, 
-	Daniel Borkmann <daniel@iogearbox.net>, Deven Bowers <deven.desai@linux.microsoft.com>, 
-	Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>, 
-	James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>, Jann Horn <jannh@google.com>, 
-	Jonathan Corbet <corbet@lwn.net>, Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, 
-	Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>, 
-	Michael Kerrisk <mtk.manpages@gmail.com>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mickael.salaun@ssi.gouv.fr>, 
-	Mimi Zohar <zohar@linux.ibm.com>, 
-	=?UTF-8?Q?Philippe_Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>, 
-	Scott Shell <scottsh@microsoft.com>, 
-	Sean Christopherson <sean.j.christopherson@intel.com>, Shuah Khan <shuah@kernel.org>, 
-	Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, 
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, 
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, 
-	linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, 
-	LSM List <linux-security-module@vger.kernel.org>, 
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Cc: Oscar Carter <oscar.carter@gmx.com>,
+	kernel-hardening@lists.openwall.com
+Subject: Re: Get involved in the KSPP
+Message-ID: <20200514172037.GA3127@ubuntu>
+References: <20200509122007.GA5356@ubuntu>
+ <202005110912.3A26AF11@keescook>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <202005110912.3A26AF11@keescook>
+User-Agent: Mutt/1.10.1 (2018-07-13)
+X-Provags-ID: V03:K1:lDe6E8QpSSloS6SZvCrLfqG0NnL3g0GtHVf9jMliLfZZowN/Ptk
+ 4QGMiSI9ErZAby9tQ9MW63ROdvqRWzdTSI8FYkNnOjmvaCKeqUrRyWxI63XlBUgOKsmIvrv
+ 0dq5JkNxrQka1LIBeoF0Pva0Prrab9CRQc3q4wPyVzw5ZSS3nS5tJqbPIKdBTdanHp1g5kl
+ Ql8CoOYBcoduUvfmK47yg==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:Tqia1oiB8DU=:vQrZfJ9Ip+twdfueggTg14
+ 0I+kr1aAOlgd6402cgiZ4FJI4jHDmCblfMjm3YxMM909OR6WEUI8jPV702zuIOXSKzC4X3PZ9
+ u77RXJYj9kkF/AeBl+MjnyxQf8qBH6h+t9ff9tqdrkHjqA0+5VvKlDGsctj8UBDwA25fw6uyV
+ tGCUapxBAfxq8v+W2va8u+xDDnJRV0Rf1gJdpouHaRxCevU1/tfmQ9A6f14N9U2wmjLGGAVen
+ esvHMajCkEtCy12aYw3GPBedfzHDNDbVoBIwu2MrkR6tHoG078gya1bQ/lXwlMgKleE3XxXgn
+ 1WeaCOO0AwnuNkTtY64rodIcilBegQMHGB3wwVcmUvxGWfXm+CXVVzGwTbTMBz3ALKlVlLlKN
+ IaYViOLg+nyTc0INXXIPIaQNpqcMag/dsboWTfcYQ6Gkli7gDen15nKq4Ziqe1jhjCZDPFp4i
+ ghIJnEaD1bNgpbyV7kD1FDt/kc6ODlV+PCc7DWPkp78SPeMGZvybEmHRKN4iM4YPRB3ka5LCj
+ 3T2O2aokkAR4CvRXDkgPMlLB9P0Pb3mAn4hS9rIF6NTqAvbVhZSZ8upF3zlT7uoT8OHe1sUXy
+ MmzwtMoqWztWwuSKd1NNlJA7Rp3+8TnV27vC9pN4xXjVt/BOwwer/Ybod+KtiE99qTKxz55ip
+ k4H4+6apZ3ixHlkdz+IdYr/ebVPP7cH0FlzvyRP53dvjrYVC3iM+W0HsHGi5KVbr2rNS9XxW1
+ j8AnmC7NLtOatU32kvDaTFuwN6+uRnkoXH1r47xdIgkCnnWSGlHMORwF959fgx96PnGA3Kiri
+ k35W05A8gzChc2sVd0IG3QmGmIfqwk1BKNjUE+owKNj3pkaL+DrzxWdWcRhrrvEC5ENzYUEgl
+ AvL0q95rr6N0oInejRt4PmOHTDgUtbVHA6fUq0ih1QVqAq6OJ/4fsnmBIwufGmQrpsh2apaLU
+ OMmttez0wnG09qVGXyAeVNw8CkNLcMOJGAxMYHTrMuY8UZ26Yhe1cU6OR2MlZJynkWf+3qpX7
+ 5QX1me3jg4gC+IeQVOXGO84/yd4EGesvtR8/EuJFq2I5XgohkhwKeRDb0FBnJb5sNhFIA3/KY
+ u8mRQyiFloft4ctkMeKwgkeWTeXHM5UinTJr/fg5Tyv4v1StDS+X8u0fU3EVxrK6/uzaaT9jY
+ Wmvk8zPMBxsp5/nD5PCK8v1bCRsE40NHzmnVKv5ejXF3J0YWO523i6LSP3TwFdSBlK4S8DFFC
+ PTqeznSPclwwx5kg7
+Content-Transfer-Encoding: quoted-printable
 
-On Thu, May 14, 2020 at 11:45 AM Kees Cook <keescook@chromium.org> wrote:
+On Mon, May 11, 2020 at 09:15:18AM -0700, Kees Cook wrote:
+> On Sat, May 09, 2020 at 02:20:08PM +0200, Oscar Carter wrote:
+> > Hi, my name is Oscar. I would like to get involved in the kernel self =
+protection
+> > project because I love the software security and I think this is one o=
+f the most
+> > challenging fields.
 >
-> On Thu, May 14, 2020 at 08:22:01AM -0400, Stephen Smalley wrote:
-> > On Wed, May 13, 2020 at 11:05 PM Kees Cook <keescook@chromium.org> wrote:
-> > >
-> > > On Wed, May 13, 2020 at 04:27:39PM -0700, Kees Cook wrote:
-> > > > Like, couldn't just the entire thing just be:
-> > > >
-> > > > diff --git a/fs/namei.c b/fs/namei.c
-> > > > index a320371899cf..0ab18e19f5da 100644
-> > > > --- a/fs/namei.c
-> > > > +++ b/fs/namei.c
-> > > > @@ -2849,6 +2849,13 @@ static int may_open(const struct path *path, int acc_mode, int flag)
-> > > >               break;
-> > > >       }
-> > > >
-> > > > +     if (unlikely(mask & MAY_OPENEXEC)) {
-> > > > +             if (sysctl_omayexec_enforce & OMAYEXEC_ENFORCE_MOUNT &&
-> > > > +                 path_noexec(path))
-> > > > +                     return -EACCES;
-> > > > +             if (sysctl_omayexec_enforce & OMAYEXEC_ENFORCE_FILE)
-> > > > +                     acc_mode |= MAY_EXEC;
-> > > > +     }
-> > > >       error = inode_permission(inode, MAY_OPEN | acc_mode);
-> > > >       if (error)
-> > > >               return error;
-> > > >
-> > >
-> > > FYI, I've confirmed this now. Effectively with patch 2 dropped, patch 3
-> > > reduced to this plus the Kconfig and sysctl changes, the self tests
-> > > pass.
-> > >
-> > > I think this makes things much cleaner and correct.
+> Hi Oscar! Welcome to the mailing list. :)
+
+Hi, thanks for the welcome.
+
+> > I have experience in microcrontrollers and working with low level soft=
+ware, but
+> > my experience with the linux kernel development is a few commits in th=
+e staging
+> > area.
 > >
-> > I think that covers inode-based security modules but not path-based
-> > ones (they don't implement the inode_permission hook).  For those, I
-> > would tentatively guess that we need to make sure FMODE_EXEC is set on
-> > the open file and then they need to check for that in their file_open
-> > hooks.
+> > For now, and due to my low experience with the linux kernel code and s=
+oftware
+> > security, I do not care about the area and task to be done. What I pre=
+tend is to
+> > help this great community and improve my knowledge and skills in this
+> > challenging field.
+> >
+> > So, I would like to know if I can be assigned to some task that suits =
+me. I've
+> > taken a look at https://github.com/KSPP/linux/issues but I don't know =
+which task
+> > to choose and if someone else is working on it.
 >
-> I kept confusing myself about what order things happened in, so I made
-> these handy notes about the call graph:
->
-> openat2(dfd, char * filename, open_how)
->     do_filp_open(dfd, filename, open_flags)
->         path_openat(nameidata, open_flags, flags)
->             do_open(nameidata, file, open_flags)
->                 may_open(path, acc_mode, open_flag)
->                     inode_permission(inode, MAY_OPEN | acc_mode)
->                         security_inode_permission(inode, acc_mode)
->                 vfs_open(path, file)
->                     do_dentry_open(file, path->dentry->d_inode, open)
->                         if (unlikely(f->f_flags & FMODE_EXEC && !S_ISREG(inode->i_mode))) ...
->                         security_file_open(f)
->                         open()
->
-> So, it looks like adding FMODE_EXEC into f_flags in do_open() is needed in
-> addition to injecting MAY_EXEC into acc_mode in do_open()? Hmmm
+> There's "good first issue" label that might help you choose things:
+> https://github.com/KSPP/linux/labels/good%20first%20issue
 
-Just do both in build_open_flags() and be done with it? Looks like he
-was already setting FMODE_EXEC in patch 1 so we just need to teach
-AppArmor/TOMOYO to check for it and perform file execute checking in
-that case if !current->in_execve?
+I saw it, but even so it's difficult to me to choose with my knowledge abo=
+ut
+this field. Sorry.
+
+> One mostly mechanical bit of work would be this:
+> https://github.com/KSPP/linux/issues/20
+> There are likely more fixes needed to build the kernel with
+> -Wcast-function-type (especially on non-x86 kernels). So that would let
+> you learn about cross-compiling, etc.
+>
+> Let us know what you think!
+
+Great. This task seems good to me. I'm already working on it but I would l=
+ike to
+know if it's correct to compile my work against the master branch of Linus=
+ tree
+or if there is some other better branch and tree.
+
+> Take care,
+>
+> --
+> Kees Cook
+
+Thanks for your advices and comments.
+
+Oscar Carter
