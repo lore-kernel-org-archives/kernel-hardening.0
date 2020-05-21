@@ -1,4 +1,4 @@
-Return-Path: <SRS0=+lEO=7D=lists.openwall.com=kernel-hardening-return-18849-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=2wHG=7D=lists.openwall.com=kernel-hardening-return-18850-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-6.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D3DCEC433DF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 21 May 2020 21:14:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 41500C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 21 May 2020 21:33:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 08823208A7
-	for <kernel-hardening@archiver.kernel.org>; Thu, 21 May 2020 21:14:28 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 582FC204EA
+	for <kernel-hardening@archiver.kernel.org>; Thu, 21 May 2020 21:33:44 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="B1edwXeQ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 08823208A7
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="ON7xsWQ5"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 582FC204EA
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18849-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 6034 invoked by uid 550); 21 May 2020 21:14:23 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18850-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16240 invoked by uid 550); 21 May 2020 21:33:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,243 +25,310 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 6011 invoked from network); 21 May 2020 21:14:22 -0000
+Received: (qmail 16217 invoked from network); 21 May 2020 21:33:37 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=XZZ5vGtImoL01xyzR64KCWDKUfIuis772xDEHmF3ldI=;
-        b=B1edwXeQk42Z1UZf7gfSthKXb4bIu1l9sihaGaa2vq6i4vtytY9bF5qGzoIrZtPfQZ
-         2fc1l3wCb6wiviHILp6lflGHUcIiulV00r1Ba3iJ7MdKuH2TB63+4Oojgy/ZExBIxvPi
-         9W8NbphL55tG1O+Q+rdZWeUa5k2IvGMec5tmM=
+        bh=f7SOHt7sxysbQhISuJcL8sq3HGKnb8Oi+mcD6TRvFU0=;
+        b=ON7xsWQ5i9dYvWU2OO54F/ZfavtKBw/51WPEks46T0Ud0ynraAJkqChU42w+tWjRLj
+         lb/zWhD+/iN3A2S9vM2I2aUo/Nhvf5CtahLC1pRsFmoLlLBp76vNPaH+Lue2/EOzY3y9
+         tWmTpTxVoYRZpvmUxSXAScutuF/nenCsIiRms=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=XZZ5vGtImoL01xyzR64KCWDKUfIuis772xDEHmF3ldI=;
-        b=sf7f4zZGM5OY3AoIQ68cHhkVsO3PsFwZGReb+7FnirDhKbgFY5rkD8cqL5tvGE9V4F
-         p06shZRpKKBhH0KmEge3lnH+DbA7ORMoDibJfGCx8MwZgFFAORtgdxCXFEiMfAbGYL3r
-         jKMWbPxvO8F8T84p+k8clqklz4hxrdNrRqAIPFHHTnnqwo9EBENsqd32Uj7VmZNU33Tm
-         NiY6c975jaB4eiktvXHaoAJNEDYgLKk44JJqt9CsMCJNnaFYRhf7i0wRdy4TXh0A8lqg
-         7pp7pEZ3VbrmvdG+XPX5raAKHPnDrBFe+cGDD4UcUeE2GOoW9erEOCEE35btGHYVrn77
-         snYQ==
-X-Gm-Message-State: AOAM532L8Nye98AdfNM+MxcrxaCXKobUrU6aAdC6A0hzaK9cEuNbIOrl
-	6VsisjzLOfXnH7fBU1RDOYmq3Q==
-X-Google-Smtp-Source: ABdhPJz5ZgIVwn633Wd8ontnJLCwdyIuRN7Je5MIDycy8URZX6MgTMECk1Rzp83xOtKruPX7kkcYfA==
-X-Received: by 2002:a62:760e:: with SMTP id r14mr644628pfc.92.1590095650015;
-        Thu, 21 May 2020 14:14:10 -0700 (PDT)
-Date: Thu, 21 May 2020 14:14:08 -0700
+        bh=f7SOHt7sxysbQhISuJcL8sq3HGKnb8Oi+mcD6TRvFU0=;
+        b=oh/u5NTjmk8ZAnZiAfjZxdlYWwJ1eADfECyN0UVHnR+EAMVeiqso/uUQ+iItplQ82V
+         ItP0Yl/eYZ5CIOiWPS9x0eF66ik0jB4fhJJaSc3cY3ra/70wJMDu6HkZFfBULu3T2OAO
+         Jk0QLbiNRCWx7/7Qyo0pn08QO/Uh/Loa1upI/bYXzCgUVS+UzHLXmn9lQcQjNLaBzTzY
+         l9AFaEX6kxkOHhc3/85zn660RGdrfGDTnegpuKxC2zKJjGwlPofs5PVPV1PcfNizLzOc
+         SrRuhLKEthek14IC+oReqCVxu71Xmrx7gxC17quCQahREWlYIYgTidUGM7Ehk2RQqySe
+         vGPg==
+X-Gm-Message-State: AOAM532VqNz3W4tMqQLZQIjF4VZ+ZSolbfCUK8X9SzZWAWjnWg7IpJBh
+	Y9+aoHTIzaSDcZGNy0HU1W+J0w==
+X-Google-Smtp-Source: ABdhPJwuoTJfwmQictWCcNULrGfSKV3uQsQu0LZOMukycdi47y0GpBRiBq/zJ7+nwPPAW13xpc9BmA==
+X-Received: by 2002:a17:902:b217:: with SMTP id t23mr8920844plr.183.1590096805141;
+        Thu, 21 May 2020 14:33:25 -0700 (PDT)
+Date: Thu, 21 May 2020 14:33:22 -0700
 From: Kees Cook <keescook@chromium.org>
 To: Kristen Carlson Accardi <kristen@linux.intel.com>
-Cc: tglx@linutronix.de, mingo@redhat.com, bp@alien8.de,
-	arjan@linux.intel.com, x86@kernel.org, linux-kernel@vger.kernel.org,
+Cc: tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, x86@kernel.org,
+	"H. Peter Anvin" <hpa@zytor.com>, Jessica Yu <jeyu@kernel.org>,
+	arjan@linux.intel.com, linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com,
-	Tony Luck <tony.luck@intel.com>
-Subject: Re: [PATCH v2 8/9] kallsyms: Hide layout
-Message-ID: <202005211409.3C314DF@keescook>
+	Ard Biesheuvel <ardb@kernel.org>, Tony Luck <tony.luck@intel.com>
+Subject: Re: [PATCH v2 9/9] module: Reorder functions
+Message-ID: <202005211415.5A1ECC638@keescook>
 References: <20200521165641.15940-1-kristen@linux.intel.com>
- <20200521165641.15940-9-kristen@linux.intel.com>
+ <20200521165641.15940-10-kristen@linux.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200521165641.15940-9-kristen@linux.intel.com>
+In-Reply-To: <20200521165641.15940-10-kristen@linux.intel.com>
 
-On Thu, May 21, 2020 at 09:56:39AM -0700, Kristen Carlson Accardi wrote:
-> This patch makes /proc/kallsyms display alphabetically by symbol
-> name rather than sorted by address in order to hide the newly
-> randomized address layout.
+On Thu, May 21, 2020 at 09:56:40AM -0700, Kristen Carlson Accardi wrote:
+> Introduce a new config option to allow modules to be re-ordered
+> by function. This option can be enabled independently of the
+> kernel text KASLR or FG_KASLR settings so that it can be used
+> by architectures that do not support either of these features.
+> This option will be selected by default if CONFIG_FG_KASLR is
+> selected.
+> 
+> If a module has functions split out into separate text sections
+> (i.e. compiled with the -ffunction-sections flag), reorder the
+> functions to provide some code diversification to modules.
 > 
 > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> Acked-by: Ard Biesheuvel <ardb@kernel.org>
+> Tested-by: Ard Biesheuvel <ardb@kernel.org>
 > Reviewed-by: Tony Luck <tony.luck@intel.com>
 > Tested-by: Tony Luck <tony.luck@intel.com>
 > ---
->  kernel/kallsyms.c | 138 +++++++++++++++++++++++++++++++++++++++++++++-
->  1 file changed, 137 insertions(+), 1 deletion(-)
+>  arch/x86/Kconfig  |  1 +
+>  arch/x86/Makefile |  3 ++
+>  init/Kconfig      | 11 +++++++
+>  kernel/module.c   | 81 +++++++++++++++++++++++++++++++++++++++++++++++
+>  4 files changed, 96 insertions(+)
 > 
-> diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
-> index 16c8c605f4b0..558963b275ec 100644
-> --- a/kernel/kallsyms.c
-> +++ b/kernel/kallsyms.c
-> @@ -25,6 +25,7 @@
->  #include <linux/filter.h>
->  #include <linux/ftrace.h>
->  #include <linux/compiler.h>
-> +#include <linux/list_sort.h>
+> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> index 50e83ea57d70..d0bdd5c8c432 100644
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -2187,6 +2187,7 @@ config FG_KASLR
+>  	bool "Function Granular Kernel Address Space Layout Randomization"
+>  	depends on $(cc-option, -ffunction-sections)
+>  	depends on RANDOMIZE_BASE && X86_64
+> +	select MODULE_FG_KASLR
+>  	help
+>  	  This option improves the randomness of the kernel text
+>  	  over basic Kernel Address Space Layout Randomization (KASLR)
+> diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+> index b65ec63c7db7..8c830c37c74c 100644
+> --- a/arch/x86/Makefile
+> +++ b/arch/x86/Makefile
+> @@ -51,6 +51,9 @@ ifdef CONFIG_X86_NEED_RELOCS
+>          LDFLAGS_vmlinux := --emit-relocs --discard-none
+>  endif
 >  
->  /*
->   * These will be re-linked against their real values
-> @@ -446,6 +447,11 @@ struct kallsym_iter {
->  	int show_value;
->  };
+> +ifdef CONFIG_MODULE_FG_KASLR
+> +	KBUILD_CFLAGS_MODULE += -ffunction-sections
+> +endif
+
+With CONFIG_FG_KASLR=y, will -ffunction-sections appear twice on the
+compiler command line?
+
+>  #
+>  # Prevent GCC from generating any FP code by mistake.
+>  #
+> diff --git a/init/Kconfig b/init/Kconfig
+> index 74a5ac65644f..b19920413bcc 100644
+> --- a/init/Kconfig
+> +++ b/init/Kconfig
+> @@ -2227,6 +2227,17 @@ config UNUSED_KSYMS_WHITELIST
+>  	  one per line. The path can be absolute, or relative to the kernel
+>  	  source tree.
 >  
-> +struct kallsyms_iter_list {
-> +	struct kallsym_iter iter;
-> +	struct list_head next;
-> +};
+> +config MODULE_FG_KASLR
+
+Oh, er, yes. I'd suggested moving 'config FG_KASLR' into arch/Kconfig,
+but I think init/Kconfig is more correct.
+
+> +	depends on $(cc-option, -ffunction-sections)
+
+Oh! And I am reminded suddenly about CONFIG_FG_KASLR needing to interact
+correctly with CONFIG_LD_DEAD_CODE_DATA_ELIMINATION in that we do NOT
+want the sections to be collapsed at link time:
+
+#ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+#define TEXT_MAIN .text .text.[0-9a-zA-Z_]*
+
+(I think I had fixed this in some earlier version?)
+
+I think you want this (untested):
+
+
+diff --git a/Makefile b/Makefile
+index 04f5662ae61a..a0d9acd3b900 100644
+--- a/Makefile
++++ b/Makefile
+@@ -853,8 +853,11 @@ ifdef CONFIG_DEBUG_SECTION_MISMATCH
+ KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
+ endif
+ 
++ifneq ($(CONFIG_LD_DEAD_CODE_DATA_ELIMINATION)$(CONFIG_FG_KASLR),)
++KBUILD_CFLAGS_KERNEL += -ffunction-sections
++endif
+ ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+-KBUILD_CFLAGS_KERNEL += -ffunction-sections -fdata-sections
++KBUILD_CFLAGS_KERNEL += -fdata-sections
+ LDFLAGS_vmlinux += --gc-sections
+ endif
+ 
+diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
+index 71e387a5fe90..5f5c692751dd 100644
+--- a/include/asm-generic/vmlinux.lds.h
++++ b/include/asm-generic/vmlinux.lds.h
+@@ -93,20 +93,31 @@
+  * sections to be brought in with rodata.
+  */
+ #ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+-#define TEXT_MAIN .text .text.[0-9a-zA-Z_]*
+ #define DATA_MAIN .data .data.[0-9a-zA-Z_]* .data..LPBX*
+ #define SDATA_MAIN .sdata .sdata.[0-9a-zA-Z_]*
+ #define RODATA_MAIN .rodata .rodata.[0-9a-zA-Z_]*
+ #define BSS_MAIN .bss .bss.[0-9a-zA-Z_]*
+ #define SBSS_MAIN .sbss .sbss.[0-9a-zA-Z_]*
+ #else
+-#define TEXT_MAIN .text
+ #define DATA_MAIN .data
+ #define SDATA_MAIN .sdata
+ #define RODATA_MAIN .rodata
+ #define BSS_MAIN .bss
+ #define SBSS_MAIN .sbss
+ #endif
++/*
++ * Both LD_DEAD_CODE_DATA_ELIMINATION and CONFIG_FG_KASLR options enable
++ * -ffunction-sections, which produces separately named .text sections. In
++ * the case of CONFIG_FG_KASLR, they need to stay distinct so they can be
++ * separately randomized. Without CONFIG_FG_KASLR, the separate .text
++ * sections can be collected back into a common section, which makes the
++ * resulting image slightly smaller.
++ */
++#if defined(CONFIG_LD_DEAD_CODE_DATA_ELIMINATION) && !defined(CONFIG_FG_KASLR)
++#define TEXT_MAIN .text .text.[0-9a-zA-Z_]*
++#else
++#define TEXT_MAIN .text
++#endif
+ 
+ /*
+  * Align to a 32 byte boundary equal to the
+
+
+> +	bool "Module Function Granular Layout Randomization"
+> +	help
+> +	  This option randomizes the module text section by reordering the text
+> +	  section by function at module load time. In order to use this
+> +	  feature, the module must have been compiled with the
+> +	  -ffunction-sections compiler flag.
 > +
->  int __weak arch_get_kallsym(unsigned int symnum, unsigned long *value,
->  			    char *type, char *name)
->  {
-> @@ -660,6 +666,121 @@ int kallsyms_show_value(void)
->  	}
+> +	  If unsure, say N.
+> +
+>  endif # MODULES
+>  
+>  config MODULES_TREE_LOOKUP
+> diff --git a/kernel/module.c b/kernel/module.c
+> index 646f1e2330d2..e3cd619c60c2 100644
+> --- a/kernel/module.c
+> +++ b/kernel/module.c
+> @@ -53,6 +53,7 @@
+>  #include <linux/bsearch.h>
+>  #include <linux/dynamic_debug.h>
+>  #include <linux/audit.h>
+> +#include <linux/random.h>
+>  #include <uapi/linux/module.h>
+>  #include "module-internal.h"
+>  
+> @@ -2370,6 +2371,83 @@ static long get_offset(struct module *mod, unsigned int *size,
+>  	return ret;
 >  }
 >  
-> +static int sorted_show(struct seq_file *m, void *p)
+> +/*
+> + * shuffle_text_list()
+> + * Use a Fisher Yates algorithm to shuffle a list of text sections.
+> + */
+> +static void shuffle_text_list(Elf_Shdr **list, int size)
 > +{
-> +	struct list_head *list = m->private;
-> +	struct kallsyms_iter_list *iter;
-> +	int rc;
+> +	int i;
+> +	unsigned int j;
+> +	Elf_Shdr *temp;
 > +
-> +	if (list_empty(list))
-> +		return 0;
+> +	for (i = size - 1; i > 0; i--) {
+> +		/*
+> +		 * pick a random index from 0 to i
+> +		 */
+> +		get_random_bytes(&j, sizeof(j));
+> +		j = j % (i + 1);
 > +
-> +	iter = list_first_entry(list, struct kallsyms_iter_list, next);
-> +
-> +	m->private = iter;
-> +	rc = s_show(m, p);
-> +	m->private = list;
-> +
-> +	list_del(&iter->next);
-> +	kfree(iter);
-> +
-> +	return rc;
+> +		temp = list[i];
+> +		list[i] = list[j];
+> +		list[j] = temp;
+> +	}
 > +}
 > +
-> +static void *sorted_start(struct seq_file *m, loff_t *pos)
+> +/*
+> + * randomize_text()
+> + * Look through the core section looking for executable code sections.
+> + * Store sections in an array and then shuffle the sections
+> + * to reorder the functions.
+> + */
+> +static void randomize_text(struct module *mod, struct load_info *info)
 > +{
-> +	return m->private;
-> +}
+> +	int i;
+> +	int num_text_sections = 0;
+> +	Elf_Shdr **text_list;
+> +	int size = 0;
+> +	int max_sections = info->hdr->e_shnum;
+> +	unsigned int sec = find_sec(info, ".text");
 > +
-> +static void *sorted_next(struct seq_file *m, void *p, loff_t *pos)
-> +{
-> +	struct list_head *list = m->private;
+> +	if (sec == 0)
+> +		return;
 > +
-> +	(*pos)++;
+> +	text_list = kmalloc_array(max_sections, sizeof(*text_list), GFP_KERNEL);
+> +	if (!text_list)
+> +		return;
 > +
-> +	if (list_empty(list))
-> +		return NULL;
+> +	for (i = 0; i < max_sections; i++) {
+> +		Elf_Shdr *shdr = &info->sechdrs[i];
+> +		const char *sname = info->secstrings + shdr->sh_name;
 > +
-> +	return p;
-> +}
+> +		if (!(shdr->sh_flags & SHF_ALLOC) ||
+> +		    !(shdr->sh_flags & SHF_EXECINSTR) ||
+> +		    strstarts(sname, ".init"))
+> +			continue;
 > +
-> +static const struct seq_operations kallsyms_sorted_op = {
-> +	.start = sorted_start,
-> +	.next = sorted_next,
-> +	.stop = s_stop,
-> +	.show = sorted_show
-> +};
-> +
-> +static int kallsyms_list_cmp(void *priv, struct list_head *a,
-> +			     struct list_head *b)
-> +{
-> +	struct kallsyms_iter_list *iter_a, *iter_b;
-> +
-> +	iter_a = list_entry(a, struct kallsyms_iter_list, next);
-> +	iter_b = list_entry(b, struct kallsyms_iter_list, next);
-> +
-> +	return strcmp(iter_a->iter.name, iter_b->iter.name);
-> +}
-> +
-> +int get_all_symbol_name(void *data, const char *name, struct module *mod,
-> +			unsigned long addr)
-> +{
-> +	unsigned long sym_pos;
-> +	struct kallsyms_iter_list *node, *last;
-> +	struct list_head *head = (struct list_head *)data;
-> +
-> +	node = kmalloc(sizeof(*node), GFP_KERNEL);
-> +	if (!node)
-> +		return -ENOMEM;
-> +
-> +	if (list_empty(head)) {
-> +		sym_pos = 0;
-> +		memset(node, 0, sizeof(*node));
-> +		reset_iter(&node->iter, 0);
-> +		node->iter.show_value = kallsyms_show_value();
-> +	} else {
-> +		last = list_first_entry(head, struct kallsyms_iter_list, next);
-> +		memcpy(node, last, sizeof(*node));
-> +		sym_pos = last->iter.pos;
+> +		text_list[num_text_sections] = shdr;
+> +		num_text_sections++;
 > +	}
 > +
-> +	INIT_LIST_HEAD(&node->next);
-> +	list_add(&node->next, head);
+> +	shuffle_text_list(text_list, num_text_sections);
 > +
-> +	/*
-> +	 * update_iter returns false when at end of file
-> +	 * which in this case we don't care about and can
-> +	 * safely ignore. update_iter() will increment
-> +	 * the value of iter->pos, for ksymbol_core.
-> +	 */
-> +	if (sym_pos >= kallsyms_num_syms)
-> +		sym_pos++;
+> +	for (i = 0; i < num_text_sections; i++) {
+> +		Elf_Shdr *shdr = text_list[i];
 > +
-> +	(void)update_iter(&node->iter, sym_pos);
+> +		/*
+> +		 * get_offset has a section index for it's last
+> +		 * argument, that is only used by arch_mod_section_prepend(),
+> +		 * which is only defined by parisc. Since this this type
+> +		 * of randomization isn't supported on parisc, we can
+> +		 * safely pass in zero as the last argument, as it is
+> +		 * ignored.
+> +		 */
+> +		shdr->sh_entsize = get_offset(mod, &size, shdr, 0);
+> +	}
 > +
-> +	return 0;
+> +	kfree(text_list);
 > +}
 > +
-> +static int kallsyms_sorted_open(struct inode *inode, struct file *file)
-> +{
-> +	int ret;
-> +	struct list_head *list;
+>  /* Lay out the SHF_ALLOC sections in a way not dissimilar to how ld
+>     might -- code, read-only data, read-write data, small data.  Tally
+>     sizes, and place the offsets into sh_entsize fields: high bit means it
+> @@ -2460,6 +2538,9 @@ static void layout_sections(struct module *mod, struct load_info *info)
+>  			break;
+>  		}
+>  	}
 > +
-> +	list = __seq_open_private(file, &kallsyms_sorted_op, sizeof(*list));
-> +	if (!list)
-> +		return -ENOMEM;
-> +
-> +	INIT_LIST_HEAD(list);
-> +
-> +	ret = kallsyms_on_each_symbol(get_all_symbol_name, list);
-> +	if (ret != 0)
-> +		return ret;
-> +
-> +	list_sort(NULL, list, kallsyms_list_cmp);
-> +
-> +	return 0;
-> +}
-> +
->  static int kallsyms_open(struct inode *inode, struct file *file)
->  {
->  	/*
-> @@ -704,9 +825,24 @@ static const struct proc_ops kallsyms_proc_ops = {
->  	.proc_release	= seq_release_private,
->  };
+> +	if (IS_ENABLED(CONFIG_MODULE_FG_KASLR))
+> +		randomize_text(mod, info);
+>  }
 >  
-> +static const struct proc_ops kallsyms_sorted_proc_ops = {
-> +	.proc_open = kallsyms_sorted_open,
-> +	.proc_read = seq_read,
-> +	.proc_lseek = seq_lseek,
-> +	.proc_release = seq_release_private,
-> +};
-> +
->  static int __init kallsyms_init(void)
->  {
-> -	proc_create("kallsyms", 0444, NULL, &kallsyms_proc_ops);
-> +	/*
-> +	 * When fine grained kaslr is enabled, we need to
-> +	 * print out the symbols sorted by name rather than by
-> +	 * by address, because this reveals the randomization order.
-> +	 */
-> +	if (!IS_ENABLED(CONFIG_FG_KASLR))
-> +		proc_create("kallsyms", 0444, NULL, &kallsyms_proc_ops);
-> +	else
-> +		proc_create("kallsyms", 0444, NULL, &kallsyms_sorted_proc_ops);
->  	return 0;
+>  static void set_license(struct module *mod, const char *license)
+> -- 
+> 2.20.1
+> 
 
-Since this is compile-time selected, instead of the separate name and
-test here, how about just redefine kallsyms_open initializer instead?
-
-#ifdef CONFIG_FG_KASLR
-...sorting routines...
-static int kallsyms_open(struct inode *inode, struct file *file)
-{ ... sorted version ... }
-#else
-static int kallsyms_open(struct inode *inode, struct file *file)
-{ ... normal version ... }
-#endif
-
-(And then just move the comment to the sorted open version.)
+Everything else looks good.
 
 -- 
 Kees Cook
