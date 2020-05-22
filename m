@@ -1,20 +1,23 @@
-Return-Path: <SRS0=Nxc1=7D=lists.openwall.com=kernel-hardening-return-18856-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=tgxR=7E=lists.openwall.com=kernel-hardening-return-18857-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D399CC433DF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 21 May 2020 23:44:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1C0ADC433DF
+	for <kernel-hardening@archiver.kernel.org>; Fri, 22 May 2020 17:36:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 28BBB207D8
-	for <kernel-hardening@archiver.kernel.org>; Thu, 21 May 2020 23:44:33 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 28BBB207D8
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18856-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14096 invoked by uid 550); 21 May 2020 23:44:28 -0000
+	by mail.kernel.org (Postfix) with SMTP id 65BFA20723
+	for <kernel-hardening@archiver.kernel.org>; Fri, 22 May 2020 17:36:26 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="BeLXgfkA"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 65BFA20723
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18857-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15636 invoked by uid 550); 22 May 2020 17:36:19 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,108 +25,104 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14076 invoked from network); 21 May 2020 23:44:28 -0000
-IronPort-SDR: gIhI9dN8liAZTlQey2cT6SFPcCIjN0wRtVcpZ2o56+KZ1xcpwcSn2Yz7nCTcjUykQ/ECSs3xMm
- Z9tMdGr4jKEQ==
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-IronPort-SDR: 0Ms5Qy+jno190pF+/VTAi0QhFUMONNvfXaCA2V4ASdMuxWdGUsEUQ+7ZP1RgIq5Zf8SXnKN58n
- zUjnknN4USiA==
-X-IronPort-AV: E=Sophos;i="5.73,419,1583222400"; 
-   d="scan'208";a="255448928"
-Message-ID: <7540b2c7b5b037922bd235203d406acd27a9bd7f.camel@linux.intel.com>
-Subject: Re: [PATCH v2 0/9] Function Granular KASLR
-From: Kristen Carlson Accardi <kristen@linux.intel.com>
-To: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>
-Cc: mingo@redhat.com, bp@alien8.de, arjan@linux.intel.com, x86@kernel.org, 
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, 
-	rick.p.edgecombe@intel.com
-Date: Thu, 21 May 2020 16:44:12 -0700
-In-Reply-To: <202005211604.86AE1C2@keescook>
-References: <20200521165641.15940-1-kristen@linux.intel.com>
-	 <87367sudpl.fsf@nanos.tec.linutronix.de> <202005211604.86AE1C2@keescook>
-Content-Type: text/plain; charset="UTF-8"
-User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
+Received: (qmail 15600 invoked from network); 22 May 2020 17:36:19 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1590168963;
+	bh=L8OHkKiGCB/f+IXGOvXlrA5dVZpPxKv0KWhPeCEfQiU=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=BeLXgfkAIYebk7dPy/b/dHEAFaJjpOKqtoTzjnKVAW06ogNORfIBepC20GqIxMD4h
+	 zFf8XH+aqqUE9rOOAVt7tRhQ8iAzw1u9Fn/jzKYz3gz5wy76dVx5rnFmiyYWgXqG/8
+	 zS41n3XBx7P/lOPsGptgJBPdUEv4ekgyuFVGwTos=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Fri, 22 May 2020 19:35:49 +0200
+From: Oscar Carter <oscar.carter@gmx.com>
+To: Takashi Sakamoto <o-takashi@sakamocchi.jp>, keescook@chromium.org,
+	mchehab@kernel.org, clemens@ladisch.de, tiwai@suse.de,
+	perex@perex.cz
+Cc: Oscar Carter <oscar.carter@gmx.com>,
+	kernel-hardening@lists.openwall.com,
+	linux1394-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org,
+	linux-media@vger.kernel.org, levonshe@gmail.com,
+	alsa-devel@alsa-project.org, stefanr@s5r6.in-berlin.de
+Subject: Re: [PATCH 0/2] firewire: obsolete cast of function callback toward
+ CFI
+Message-ID: <20200522173549.GA3059@ubuntu>
+References: <20200520064726.31838-1-o-takashi@sakamocchi.jp>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200520064726.31838-1-o-takashi@sakamocchi.jp>
+User-Agent: Mutt/1.10.1 (2018-07-13)
+X-Provags-ID: V03:K1:FBWJEV1Z+urCsYOxGe/qn+1ueZnIfzXJgXzE4sYXx2E6pTYxzTv
+ z+vuWi/c+ugAv7NWN04Ae5Py94IM94abNLP1X0yCKYKEFIpu63slErlj9Fhy71e4OHzYglB
+ +lQqRKUx5IjQ07W1dZ28vMOnrvIxckwJzFlxHK/OLsyentYpWqqW6H0z/J+wo+Rho3M4EOR
+ yy6Jf31X/2ADUl48LCMBA==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:qQZnxhBV1OE=:rHKO2Cr/IEWABaxDAPPKV6
+ o3uezfePqPg8YTDyafPdmkb+4ckMJPNxVRQkNHKzYeHo+Os6qkNQUSxxTHCmQFDhfBQb0jNHh
+ BdBqwZG+aGRrCkMv5CdCwkQ/d4GyQt9bgCR4jlFZ3jv49X5MW7L0b7Dmpbpa8g1BZ6mcyNDVH
+ JFRDJGUlEAZFnnpwaHhJCBD3LS5z+DD4ubbcGszKZYshC6FDJERTbifdP0VSzin5thJm4wMLl
+ s+Pqk3W+LI/3M2B2Ot5cHoHa2TmxhrYXisqjRtZNNrvr2G9PUbJxPUV2jRf/9MlCz7zvtx7w2
+ IhWpaXJbAvi/KoT2F5zMykbYL3rrOmkRqwmvw8cQZmEtJgUUIBZdOEgJU0WVGBTf4IQou6u8y
+ yfBXCYXnSXmc7UqZn+Xr+wkFqRiBd4AEjqzDYOIMOOproICCTYf3XOvSuf+jdUXvW8nbbY3M9
+ 3lvNG0t8kNHp/P/0p5WO3EsA7AObaFik3wTY32uWwIJH4b8U4h7wbNSR+0TWc76+PLLSZWnnw
+ WFpv4AzhWrXeSCXgpeabnNO9lDgc3aDUW3oMeIO8NTErhmEJztO/Md2W3YtHrt4rXPankumz9
+ lMAQTUARY+TKYggs6JnZQrfRsmfP4N/6EjPWvVbp4Xi333kuxYEGyoMLu4yHcXZJHi4mAaihJ
+ EfJyvM+pNSejc0KDT/mrCEuZ7ODbAXJsIo6FYU83i7jv+2kVtURdOgPdsTv3bgnC/9gU5Wo2p
+ qO8l/TM+osXKI7V7SBWWh8XsBndANr8TxGGJ9SS4gFG2ZmV5cXw5KsganYsF0rT/b804BTW/p
+ bL0mRLhw5i+gXNVqYUrA7hfSTNq83sw1cJHT6P6L+T+VHC6QLeQo1X+scEuKtTeQIL+A/zibh
+ aikX9N2HOSiKma4BOujmTmP2sFZbygP3CmxmYE5oI1eg8fsxyzzT1fsM4MaKQ1VwueAxyPxv/
+ QLQUlcvW09MYGaIgN2THxOeQSa8zuDJWMglQ19+o3DqtjSGi/H0BAtvukYx46jFOUu1kwDtTg
+ ooprer23ED/ADxKx4B7Ym+/ptHya3yxwKz/9nJ1xPgCMd7p8bbbtKAnowRofqh5PdmFBWuryE
+ sIkYM2rpcNAYV4c+6ui8wgVr9kWwnSx8bqUTEKF2biSG45/AE4bEItsUyOXejHsTjvmTSQZ4m
+ opPsBqRorwR0fA0Y4Xif41sZWA/dty4A+hdK2FyzhaEC5O4xhBisLmMxCbRO/tAqcGH+ysXFZ
+ ZmLIFobfRvFTtpOLP
+Content-Transfer-Encoding: quoted-printable
 
-On Thu, 2020-05-21 at 16:30 -0700, Kees Cook wrote:
-> On Fri, May 22, 2020 at 12:26:30AM +0200, Thomas Gleixner wrote:
-> > I understand how this is supposed to work, but I fail to find an
-> > explanation how all of this is preserving the text subsections we
-> > have,
-> > i.e. .kprobes.text, .entry.text ...?
-> 
-> I had the same question when I first started looking at earlier
-> versions
-> of this series! :)
+Hi,
 
-Thanks for responding - clearly I do need to update the cover letter
-and documentation.
+On Wed, May 20, 2020 at 03:47:24PM +0900, Takashi Sakamoto wrote:
+> Hi,
+>
+> Oscar Carter works for Control Flow Integrity build. Any cast
+> of function callback is inconvenient for the work. Unfortunately,
+> current code of firewire-core driver includes the cast[1] and Oscar
+> posted some patches to remove it[2]. The patch is itself good. However,
+> it includes changes existent kernel API and all of drivers as user
+> of the API get affects from the change.
+>
+> This patchset is an alternative idea to add a new kernel API specific
+> for multichannel isoc context. The existent kernel API and drivers is
+> left as is.
+>
+> Practically, no in-kernel drivers use the additional API. Although the
+> API is exported in the patchset, it's better to discuss about unexportin=
+g
+> the API.
+>
+> [1] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/t=
+ree/drivers/firewire/core-cdev.c#n985
+> [2] https://lore.kernel.org/lkml/20200519173425.4724-1-oscar.carter@gmx.=
+com/
+>
+> Regards
+>
+> Takashi Sakamoto (2):
+>   firewire-core: add kernel API to construct multichannel isoc context
+>   firewire-core: obsolete cast of function callback
+>
+>  drivers/firewire/core-cdev.c | 44 +++++++++++++++++++-----------------
+>  drivers/firewire/core-iso.c  | 17 ++++++++++++++
+>  include/linux/firewire.h     |  3 +++
+>  3 files changed, 43 insertions(+), 21 deletions(-)
+>
+> --
+> 2.25.1
+>
+Thanks for your work and new proposal. I've done a test build an it cleans=
+ the
+-Wcast-function-type warning without the need to change the current API. S=
+o, it
+looks good to me.
 
-> 
-> > I assume that the functions in these subsections are reshuffled
-> > within
-> > their own randomized address space so that __xxx_text_start and
-> > __xxx_text_end markers still make sense, right?
-> 
-> No, but perhaps in the future. Right now, they are entirely ignored
-> and
-> left untouched. The current series only looks at the sections
-> produced
-> by -ffunction-sections, which is to say only things named
-> ".text.$thing"
-> (e.g. ".text.func1", ".text.func2"). Since the "special" text
-> sections
-> in the kernel are named ".$thing.text" (specifically to avoid other
-> long-standing linker logic that does similar .text.* pattern matches)
-> they get ignored by FGKASLR right now too.
-> 
-> Even more specifically, they're ignored because all of these special
-> _input_ sections are actually manually collected by the linker script
-> into the ".text" _output_ section, which FGKASLR ignores -- it can
-> only
-> randomize the final output sections (and has no basic block
-> visibility
-> into the section contents), so everything in .text is untouched.
-> Because
-> these special sections are collapsed into the single .text output
-> section is why we've needed the __$thing_start and __$thing_end
-> symbols
-> manually constructed by the linker scripts: we lose input section
-> location/size details once the linker collects them into an output
-> section.
-> 
-> > I'm surely too tired to figure it out from the patches, but you
-> > really
-> > want to explain that very detailed for mere mortals who are not
-> > deep
-> > into this magic as you are.
-> 
-> Yeah, it's worth calling out, especially since it's an area of future
-> work -- I think if we can move the special sections out of .text into
-> their own output sections that can get randomized and we'll have
-> section
-> position/size information available without the manual ..._start/_end
-> symbols. But this will require work with the compiler and linker to
-> get
-> what's needed relative to -ffunction-sections, teach the kernel about
-> the new way of getting _start/_end, etc etc.
-> 
-> So, before any of that, just .text.* is a good first step, and after
-> that I think next would be getting .text randomized relative to the
-> other
-> .text.* sections (IIUC, it is entirely untouched currently, so only
-> the
-> standard KASLR base offset moves it around). Only after that do we
-> start
-> poking around trying to munge the special section contents (which
-> requires use solving a few problems simultaneously). :)
-> 
-
-That's right - we keep .text unrandomized, so any special sections that
-are collected into .text are still in their original layout. Like you
-said, they still get to take advantage of normal KASLR (base address
-randomization).
-
-
+Thanks,
+Oscar Carter
