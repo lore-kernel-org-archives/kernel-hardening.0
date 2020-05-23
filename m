@@ -1,23 +1,22 @@
-Return-Path: <SRS0=nIql=7E=lists.openwall.com=kernel-hardening-return-18858-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=xKAB=7F=lists.openwall.com=kernel-hardening-return-18859-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7F22FC433DF
-	for <kernel-hardening@archiver.kernel.org>; Fri, 22 May 2020 17:44:12 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 477B4C433DF
+	for <kernel-hardening@archiver.kernel.org>; Sat, 23 May 2020 01:51:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C5A6520738
-	for <kernel-hardening@archiver.kernel.org>; Fri, 22 May 2020 17:44:11 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9B23F2072C
+	for <kernel-hardening@archiver.kernel.org>; Sat, 23 May 2020 01:51:51 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="Hjb4bMhd"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C5A6520738
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18858-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20199 invoked by uid 550); 22 May 2020 17:44:06 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="EP3CkkiM"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B23F2072C
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=alum.mit.edu
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18859-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22210 invoked by uid 550); 23 May 2020 01:51:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,89 +24,79 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20163 invoked from network); 22 May 2020 17:44:05 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1590169391;
-	bh=7erRvSoNhA31wmPB9BbJ7P0hKnwItvhoaIS4kuMC6eU=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=Hjb4bMhdlR7sHNtV5d99R1eTX76MUX6R8s19tj8FxXmSqZm7UWLO3ZUNpjUo7IH2o
-	 h3bW8Xfb9O/dq0ewfIpoSfoDR+iULVdTEEaTuQpdOJgDNJ6zlv1k1v82zqJHSwKDCf
-	 aEtdaMHfhJenrWaYH8+6zqeH1tUdh9Y8OTnWl+/c=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Fri, 22 May 2020 19:43:08 +0200
-From: Oscar Carter <oscar.carter@gmx.com>
-To: Takashi Sakamoto <o-takashi@sakamocchi.jp>
-Cc: Oscar Carter <oscar.carter@gmx.com>, Kees Cook <keescook@chromium.org>,
-	Stefan Richter <stefanr@s5r6.in-berlin.de>,
-	Mauro Carvalho Chehab <mchehab@kernel.org>,
-	Clemens Ladisch <clemens@ladisch.de>,
-	Jaroslav Kysela <perex@perex.cz>, Takashi Iwai <tiwai@suse.com>,
+Received: (qmail 22173 invoked from network); 23 May 2020 01:51:43 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=sender:from:date:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=dl+KxsROb4cPj2iQZSsr1bvDaOCEwSXc+9sPYn2MtWc=;
+        b=EP3CkkiMjXBNO33JU9tRJ5LOwWZYredBb+mvwPWhXXCKQAWAlsiQQsQRPkFQPC0nRx
+         ZkbxSuoT6LV4EXeZ4pWL3Yhlfo8nx80UCABTT4KAbIxUlWTcaOC87qRpVUQnN1IlECSU
+         /f+YDMuL2deibxh4BYYOUk4wDVykqh2S0uUepuWSGiRzpC4QkrCSzFjtTeDpiepWSJeA
+         69mziKBIWAi7G48ZvWI8Rlrg0FIyT63r8u1qZR+xIGts5r6/I3G/fPw2tZOQnL8WoJLm
+         RhlPUh8PkYbfgy0f++xZ7SI/Er7oQu6UxF6+uaIp1H+2mLVxKbQZCpilU8MEltoMVjjs
+         8dlQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:from:date:to:cc:subject:message-id
+         :references:mime-version:content-disposition:in-reply-to;
+        bh=dl+KxsROb4cPj2iQZSsr1bvDaOCEwSXc+9sPYn2MtWc=;
+        b=HbmiTlQZMwnmPYpvyu8EXOkfXzz8f/+nnwbX11HkjJPenBcG0YO5dSXSTHMbjAjYQC
+         aIy93yXLqYBZXvj2RzlfRDtD3pS+pp9VkmdX8CgNXVvUXd9fNp7yie75qkMAaID+haE9
+         d8vcG/nKFKt73+F+clDN7HfdoJXwtEEPBa/IviMUyQuVsJO9/NVjKlOaC3D35uQlJNEk
+         yZlZQyrWQAlH0T0KDNvFKE35o+pyBIJJeLFtSE3OiVYOEQCM7rZpxQUJ9KJ+XNanfTX+
+         mrHhMuAesL5gjoILHXQt57eTvrJ3In2KT5fkBf6AVDfpTOelUkvYqSZt/9dLI3TBZQVs
+         59zg==
+X-Gm-Message-State: AOAM532UvhseboIk+m8a/End3vfqXLtwOm0FS2CM60R0mAXfYR4qnvId
+	8D57Myav3fLtkEo/+b4kQOs=
+X-Google-Smtp-Source: ABdhPJwzByhTsHMepg7YrKn+Hzag2OKQNukvBSM7yD5thAMQVpVOrtmWv5O46EbvlNY9CVs+/Upmng==
+X-Received: by 2002:ac8:699a:: with SMTP id o26mr18085807qtq.92.1590198691654;
+        Fri, 22 May 2020 18:51:31 -0700 (PDT)
+Sender: Arvind Sankar <niveditas98@gmail.com>
+From: Arvind Sankar <nivedita@alum.mit.edu>
+X-Google-Original-From: Arvind Sankar <arvind@rani.riverdale.lan>
+Date: Fri, 22 May 2020 21:51:29 -0400
+To: Arvind Sankar <nivedita@alum.mit.edu>
+Cc: "Tobin C . Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>,
 	kernel-hardening@lists.openwall.com,
-	linux1394-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org,
-	linux-media@vger.kernel.org, alsa-devel@alsa-project.org,
-	"Lev R . Oshvang ." <levonshe@gmail.com>
-Subject: Re: [PATCH v2] firewire: Remove function callback casts
-Message-ID: <20200522174308.GB3059@ubuntu>
-References: <20200519173425.4724-1-oscar.carter@gmx.com>
- <20200520061624.GA25690@workstation>
+	Kees Cook <keescook@chromium.org>,
+	Dave Hansen <dave.hansen@linux.intel.com>,
+	Andy Lutomirski <luto@kernel.org>,
+	Peter Zijlstra <peterz@infradead.org>, x86@kernel.org,
+	linux-kernel@vger.kernel.org
+Subject: Re: [PATCH] x86/mm/init: Stop printing pgt_buf addresses
+Message-ID: <20200523015129.GA717759@rani.riverdale.lan>
+References: <20200229231120.1147527-1-nivedita@alum.mit.edu>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <20200520061624.GA25690@workstation>
-User-Agent: Mutt/1.10.1 (2018-07-13)
-X-Provags-ID: V03:K1:jDAMWBN6i5llv7LuCYMCYADueBSFhw0jntdkKB6FtXgQAyx1hJ0
- UK/B3pkqK3wWld06+HtcL3GkrxXPNbPMNAqzx2IiY12Voy7K4SX+svFljoBoq5qXh/T7Rig
- z25dmI8qQlmwS63YSWgzLAI0IC/I/rDgLrfpj7LYiKY5vHVkg4mYH0yBuPPN1gBnQLtb+F/
- AguVGShVfnafJ5CncWSSg==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:GoeMsB1jtDE=:f9abdmhLj0xQdohvGCIalV
- RRr72hC0sw4q03hwh9q6iZsJqgjZL+erf6n/hPv891ZNZ0EmrMajxwVeV1piFHMEQ1PNxe9ZO
- R0CO+94Jkk6VaWfPzxD9WWVfMD1U4o4Q60bshu6W94Eb+DpNjgwzqbt8XaiXgu4xF/kxgi6AD
- jTnjNbZ/5YXPsL+VKZk7f1eEjyeJ49Vml8+aKYzKc+M+z1hMOIQFbTZcDK+2E0UPmx6rT7A5V
- 6DxS0MTInOhwCEMAldomHIUzDTGkCVGqLc7uqYH0u/t6ctXaoMXNdKVGyjKqDbjcHkYwdoenv
- 7Rlz1ho0CewPY8rdpdsRPCVNzQ3yAk63kjdEmJTlvK76723QOu8KuVG9KSjL85dCi0y1i0Up6
- mfUX8KdAyBqk3hf8STiJ6E9lf5bbWiGgN8BYDG3QvaaMi2YVbNqjbG/NgU2HZBBuo+2JZXKk/
- /RO6puoh0Woykd4I2glBIzHgoAn4Lm8BDBi1OY5/Chx1sKBTxYAqtmFW7KmNyq9zg7QSAKSze
- Lzdw+ZUtuDWpZgNWftZur8yIMd24KzXcT5VM26Vq4dwIFzYkbhyvr1d2Ui2z/8b4bV8rohOfW
- 32F+csIz3oVjEsS3MF0Qzd7nW6mBKSaQSPJ817BPh8aWgtqfx6jt2fbCPTNZR4xHli8rF2Kxc
- 4Z8cJSGrGyeUIw1GpWX1isqAVFz9P1kQBAgWPf1gg9o6gEJY01D49F5OJdOWBpOYV0MiRQP+j
- QGddvUqdWnbHx0kBirh/xHbESmUmMoWcnfCWBZF7Yxq89CSxY3NaFO8H/EIdn4wjyK5BMIM/o
- 6fFodZTD9HBhh7mJA0xto2tGLlexg1gcOxdERLm9d/idYGQz4D1847at8QQoHSjofFSlTJnIo
- TGv4kc770h463ljQXj5ail7euijbHEgqol3fyuxrS5r5ss4S8qDIgxVF0pjjKXvWauJ02QfFj
- m/9N/VKLX+uuZfnzAcDwFI0KxrH/Wf8m3KGiO16g5Jt+5tnbkKagWmBFtzL+s7fSGlC/bNXMx
- FfaAaWscHhBfqIf7OKdh4iagaUAftDCCttPxJuTLv7kgQsiN3VcrhMVZw+WWDVgo0bxORmirk
- Y0VTuutuRLEuSNhnNz0XNqyeNiKTtJ+lptB3svnF70r/OsHJYeypP3rd69hSDygUEhgAHpjVX
- K8/xowWz3py24xUVPm8BaobxgIuMgGrnIOw1/BGo/XnGZ4MM2390yOLpjMIepLDJ1bccAq4uj
- eatIuI5MNkUo7Kj9P
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20200229231120.1147527-1-nivedita@alum.mit.edu>
 
-Hi,
+On Sat, Feb 29, 2020 at 06:11:20PM -0500, Arvind Sankar wrote:
+> This currently leaks kernel physical addresses into userspace.
+> 
+> Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
+> ---
+>  arch/x86/mm/init.c | 2 --
+>  1 file changed, 2 deletions(-)
+> 
+> diff --git a/arch/x86/mm/init.c b/arch/x86/mm/init.c
+> index e7bb483557c9..dc4711f09cdc 100644
+> --- a/arch/x86/mm/init.c
+> +++ b/arch/x86/mm/init.c
+> @@ -121,8 +121,6 @@ __ref void *alloc_low_pages(unsigned int num)
+>  	} else {
+>  		pfn = pgt_buf_end;
+>  		pgt_buf_end += num;
+> -		printk(KERN_DEBUG "BRK [%#010lx, %#010lx] PGTABLE\n",
+> -			pfn << PAGE_SHIFT, (pgt_buf_end << PAGE_SHIFT) - 1);
+>  	}
+>  
+>  	for (i = 0; i < num; i++) {
+> -- 
+> 2.24.1
+> 
 
-On Wed, May 20, 2020 at 03:16:24PM +0900, Takashi Sakamoto wrote:
-> Hi,
->
-> I'm an author of ALSA firewire stack and thanks for the patch. I agree w=
-ith
-> your intention to remove the cast of function callback toward CFI build.
->
-> Practically, the isochronous context with FW_ISO_CONTEXT_RECEIVE_MULTICH=
-ANNEL
-> is never used by in-kernel drivers. Here, I propose to leave current
-> kernel API (fw_iso_context_create() with fw_iso_callback_t) as is.
-> Alternatively, a new kernel API for the context (e.g.
-> fw_iso_mc_context_create() with fw_iso_mc_callback_t). This idea leaves
-> current drivers as is and the change is done inner firewire-core driver,
-> therefore existent kernel API is not changed.
->
-It sounds good to me.
+Ping.
 
-> Later I post two patches for the proposal. I'd like you to review it and
-> I'm glad to receive your comments.
->
-I will take a look at your proposal. Thanks for your time and work.
->
-> Regards
->
-> Takashi Sakamoto
-
-Thanks,
-Oscar Carter
+https://lore.kernel.org/lkml/20200229231120.1147527-1-nivedita@alum.mit.edu/
