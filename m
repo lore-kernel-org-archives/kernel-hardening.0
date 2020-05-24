@@ -1,23 +1,23 @@
-Return-Path: <SRS0=AhjM=7G=lists.openwall.com=kernel-hardening-return-18865-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=nFpe=7G=lists.openwall.com=kernel-hardening-return-18866-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_2 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4E49DC433DF
-	for <kernel-hardening@archiver.kernel.org>; Sun, 24 May 2020 09:16:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 974DCC433DF
+	for <kernel-hardening@archiver.kernel.org>; Sun, 24 May 2020 11:46:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A2A572076C
-	for <kernel-hardening@archiver.kernel.org>; Sun, 24 May 2020 09:16:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E83AE2075F
+	for <kernel-hardening@archiver.kernel.org>; Sun, 24 May 2020 11:46:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="h4Ys1wia"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A2A572076C
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18865-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 27853 invoked by uid 550); 24 May 2020 09:16:10 -0000
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="cqN2XUbI"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E83AE2075F
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18866-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18128 invoked by uid 550); 24 May 2020 11:46:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,139 +25,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27830 invoked from network); 24 May 2020 09:16:09 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1590311748;
-	bh=ARG58TJZqL4LOYQHfQdm/GMzrgiav1S9xozdFHT2etQ=;
-	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
-	b=h4Ys1wiaxQx23PPlL46GKPZuRSOzJ8vvN57fnJwPbpKoIvo6wCQFsCVeLK26Thr76
-	 PHBP9VoBF2K5MRtEqyDspQYTtguCtdFiBp31yqFKxhUa2/V4ZItrYMcW+9U3wT+/Jv
-	 6C89nAOZ6AybveCqx70GdG3R5ov3/bJXhHNkM3Gg=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-From: Oscar Carter <oscar.carter@gmx.com>
-To: Kees Cook <keescook@chromium.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Cc: kernel-hardening@lists.openwall.com,
-	Colin Ian King <colin.king@canonical.com>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Jakub Kicinski <kuba@kernel.org>,
-	Pan Bian <bianpan2016@163.com>,
-	Oscar Carter <oscar.carter@gmx.com>,
-	Derek Robson <robsonde@gmail.com>,
-	"Michael S . Tsirkin" <mst@redhat.com>,
-	Michael Straube <straube.linux@gmail.com>,
-	devel@driverdev.osuosl.org,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH] staging/rtl8192e: Remove function callback casts
-Date: Sun, 24 May 2020 11:15:15 +0200
-Message-Id: <20200524091515.21799-1-oscar.carter@gmx.com>
-X-Mailer: git-send-email 2.20.1
+Received: (qmail 18084 invoked from network); 24 May 2020 11:46:49 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1590320797;
+	bh=t6FPAdbmqROUcprpTUToZ+d/YaWfRUyQrPNoUSm1fAw=;
+	h=Date:From:To:Cc:Subject:In-Reply-To:References:From;
+	b=cqN2XUbILAoV9pd917Y0YLJE2EmAh1kSZaKzNlmUo2iDeQEhrEZh5RrBbzcZ79TOp
+	 6VkATfU0PrHNKD2uf/XSWvnFhWpWpNI1qyOabp3zd1F7bziXsZK5Ojb85tFeb6CiL+
+	 p9RJ69/W0dJKyj2scd7LS2AO2NSS0VVdguLH3lf4=
+Date: Sun, 24 May 2020 12:46:34 +0100
+From: Marc Zyngier <maz@kernel.org>
+To: Oscar Carter <oscar.carter@gmx.com>
+Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>,
+ Jason Cooper <jason@lakedaemon.net>, kernel-hardening@lists.openwall.com,
+ linux-kernel@vger.kernel.org
+Subject: Re: [PATCH] drivers/irqchip: Remove function callback casts
+Message-ID: <20200524124634.113203f6@why>
+In-Reply-To: <20200524080910.13087-1-oscar.carter@gmx.com>
+References: <20200524080910.13087-1-oscar.carter@gmx.com>
+Organization: Approximate
+X-Mailer: Claws Mail 3.17.5 (GTK+ 2.24.32; x86_64-pc-linux-gnu)
 MIME-Version: 1.0
-Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:dJ70coFbqKi13dNoflxM6pg+cQq5o+SYkbZH6/Uf5Vb9nIO2hd9
- KI7T5Y1NLZZ/cAyoVFESuHtCaBI/7YwMtDi3Ir5frvZMRxa8OhsZBBsJ6IRddD302MVO5cT
- 3kcteE5PghZZdbvoMK650TPsxI9b+/X8zT6VmAZOy4SA91HJy4Ow4b68zbUIrNTxjl1y+Rx
- UWeejXBrD5GKVN+iPqRNg==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:FNHUp8kSDug=:OfmwnDaotEN9a8MAHcjcpX
- AZa4IBMG9z0FjmlCWntsDxE8121LromUI6b40G0jKClUDjwY5IWaVKAZJDJY7L+QNVyXHwNX8
- I76gJPS4jHQUxVfxpa2wcBATwX+KqvJ2DXyQgYsL7ILAzkbnDJT6NI+H/Kbag2xe0iMBCRRwN
- ceeOnF/feVJL1eg1fMmH8qsLZcC+aTZpvCj278vkJRhOpq2Vy10VfaV05S66NfmH5O3BjIEdG
- xwQrNP6xyxaRtpva/hP93OXcoVG+CY7BlSF0cIml+CSSHIoFO+D8NlC5iWAYpUSglNrcfZZbu
- OAXi9MkYNe+TeflyP7uZPniwG6GLem0lalgSV7UjyBq5vxlrFwYuUqeB/ZI1WN6Xxdlwi36Qe
- 9SLnCvKT+enQuyzvDxprcKQfTTRpTE4jK6YWtpcHxSfodZacYzg1etPA+RSIzfBudObMy4WGB
- 6gaZ7xQKNf56aUtDYCcc9u7a8qxoMs1ziVsqi8/VAMSWsMHw6yu2m/t435cl4NcbU7poDBWVD
- gqxZ+AbeO9/7yk4HD50H4uvWZ7Isl4nbbN6XRGlbIpD+PT5RPz68Ci53rdNcMvYsFd7vkkK0B
- 0Fr/bgjOhqAI1X8mnmWZXi1GbZZRgUzVAzI+Qr27Tm4jKlDhKkFEjnelHj4VdlU8DL39G2zh5
- N784TkLOE+OlDKdvLzPQPCXi88AwIJcwZzPezFcVH97fyeI73hAyoevDDkzesn3Kf33TLOz8d
- PIeWkCx4/nbNs3LGvejtqIr7+7zYuBG5rb8qWt1JqRGwM6Httn0uJOmbNtqoHxQ2Fm9TKSjg0
- 9/wxCBnOI8xMWq9DdUYSAsiTKFReSRcuunKj8HGkeLppPsfQyRfmDPyRzG4bTkjLc3Ed0NUv1
- 3DwL74LsU402wf3eIfTba6A1qb/5AO2nHKDWdJHIOzlCKcvKS/KEeQyCebQ91IDfAZMROHDHZ
- CwrLPGwbOpl8K4LP4KgObyllRQnOFhtEVuPlhzh1PKtqAqImZW1Ap2uBhmymztBKfpaD324u8
- HvDSj762s99AenQ/OuA4KE498tMzx8b79J8Xo8mJu7JqB4lCakMXwWqRzOYRAq5sEwF1byfYM
- t9dTvlrOhRjYNeXZGQfQntGi1+hIgNiQiLgQCRo28dYklHtsB10PalZgVVXPt+Vkwo2x/Ab3E
- Uc4ZnY6XcMDaVWMTmykB0oQ5II4qLNmVybqqmn0vPIx7JW+66RGmPsfPpmDH0/HLVZg6YwoY6
- a4BP4/TZeDUSdG5Gn
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+X-SA-Exim-Connect-IP: 62.31.163.78
+X-SA-Exim-Rcpt-To: oscar.carter@gmx.com, keescook@chromium.org, tglx@linutronix.de, jason@lakedaemon.net, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+X-SA-Exim-Mail-From: maz@kernel.org
+X-SA-Exim-Scanned: No (on disco-boy.misterjones.org); SAEximRunCond expanded to false
 
-In an effort to enable -Wcast-function-type in the top-level Makefile to
-support Control Flow Integrity builds, remove all the function callback
-casts.
+On Sun, 24 May 2020 10:09:10 +0200
+Oscar Carter <oscar.carter@gmx.com> wrote:
 
-To do this modify the function prototypes accordingly.
+Hi Oscar,
 
-Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
-=2D--
- drivers/staging/rtl8192e/rtl8192e/rtl_core.c | 24 +++++++++++---------
- 1 file changed, 13 insertions(+), 11 deletions(-)
+Thanks for this. Comments below.
 
-diff --git a/drivers/staging/rtl8192e/rtl8192e/rtl_core.c b/drivers/stagin=
-g/rtl8192e/rtl8192e/rtl_core.c
-index d3664e508cbe..a7cd4de65b28 100644
-=2D-- a/drivers/staging/rtl8192e/rtl8192e/rtl_core.c
-+++ b/drivers/staging/rtl8192e/rtl8192e/rtl_core.c
-@@ -81,8 +81,8 @@ static int _rtl92e_hard_start_xmit(struct sk_buff *skb, =
-struct net_device *dev);
- static void _rtl92e_tx_cmd(struct net_device *dev, struct sk_buff *skb);
- static short _rtl92e_tx(struct net_device *dev, struct sk_buff *skb);
- static short _rtl92e_pci_initdescring(struct net_device *dev);
--static void _rtl92e_irq_tx_tasklet(struct r8192_priv *priv);
--static void _rtl92e_irq_rx_tasklet(struct r8192_priv *priv);
-+static void _rtl92e_irq_tx_tasklet(unsigned long data);
-+static void _rtl92e_irq_rx_tasklet(unsigned long data);
- static void _rtl92e_cancel_deferred_work(struct r8192_priv *priv);
- static int _rtl92e_up(struct net_device *dev, bool is_silent_reset);
- static int _rtl92e_try_up(struct net_device *dev);
-@@ -516,8 +516,9 @@ static int _rtl92e_handle_assoc_response(struct net_de=
-vice *dev,
- 	return 0;
- }
+> In an effort to enable -Wcast-function-type in the top-level Makefile to
+> support Control Flow Integrity builds, remove all the function callback
+> casts.
+> 
+> To do this, modify the IRQCHIP_ACPI_DECLARE macro initializing the
+> acpi_probe_entry struct directly instead of use the existent macro
+> ACPI_DECLARE_PROBE_ENTRY.
+> 
+> In this new initialization use the probe_subtbl field instead of the
+> probe_table field use in the ACPI_DECLARE_PROBE_ENTRY macro.
 
--static void _rtl92e_prepare_beacon(struct r8192_priv *priv)
-+static void _rtl92e_prepare_beacon(unsigned long data)
- {
-+	struct r8192_priv *priv =3D (struct r8192_priv *)data;
- 	struct net_device *dev =3D priv->rtllib->dev;
- 	struct sk_buff *pskb =3D NULL, *pnewskb =3D NULL;
- 	struct cb_desc *tcb_desc =3D NULL;
-@@ -1007,14 +1008,11 @@ static void _rtl92e_init_priv_task(struct net_devi=
-ce *dev)
- 			      (void *)rtl92e_hw_wakeup_wq, dev);
- 	INIT_DELAYED_WORK_RSL(&priv->rtllib->hw_sleep_wq,
- 			      (void *)rtl92e_hw_sleep_wq, dev);
--	tasklet_init(&priv->irq_rx_tasklet,
--		     (void(*)(unsigned long))_rtl92e_irq_rx_tasklet,
-+	tasklet_init(&priv->irq_rx_tasklet, _rtl92e_irq_rx_tasklet,
- 		     (unsigned long)priv);
--	tasklet_init(&priv->irq_tx_tasklet,
--		     (void(*)(unsigned long))_rtl92e_irq_tx_tasklet,
-+	tasklet_init(&priv->irq_tx_tasklet, _rtl92e_irq_tx_tasklet,
- 		     (unsigned long)priv);
--	tasklet_init(&priv->irq_prepare_beacon_tasklet,
--		     (void(*)(unsigned long))_rtl92e_prepare_beacon,
-+	tasklet_init(&priv->irq_prepare_beacon_tasklet, _rtl92e_prepare_beacon,
- 		     (unsigned long)priv);
- }
+Please add *why* this is a valid transformation (probe_table and
+probe_subtbl are part of a union).
 
-@@ -2113,13 +2111,17 @@ static void _rtl92e_tx_resume(struct net_device *d=
-ev)
- 	}
- }
+> 
+> Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
+> ---
+>  include/linux/irqchip.h | 10 ++++++++--
+>  1 file changed, 8 insertions(+), 2 deletions(-)
+> 
+> diff --git a/include/linux/irqchip.h b/include/linux/irqchip.h
+> index 950e4b2458f0..1f464fd10df0 100644
+> --- a/include/linux/irqchip.h
+> +++ b/include/linux/irqchip.h
+> @@ -39,8 +39,14 @@
+>   * @fn: initialization function
+>   */
+>  #define IRQCHIP_ACPI_DECLARE(name, subtable, validate, data, fn)	\
+> -	ACPI_DECLARE_PROBE_ENTRY(irqchip, name, ACPI_SIG_MADT, 		\
+> -				 subtable, validate, data, fn)
+> +	static const struct acpi_probe_entry __acpi_probe_##name	\
+> +		__used __section(__irqchip_acpi_probe_table) = {	\
+> +			.id = ACPI_SIG_MADT,				\
+> +			.type = subtable,				\
+> +			.subtable_valid = validate,			\
+> +			.probe_subtbl = (acpi_tbl_entry_handler)fn,	\
+> +			.driver_data = data,				\
+> +		}
+> 
 
--static void _rtl92e_irq_tx_tasklet(struct r8192_priv *priv)
-+static void _rtl92e_irq_tx_tasklet(unsigned long data)
- {
-+	struct r8192_priv *priv =3D (struct r8192_priv *)data;
-+
- 	_rtl92e_tx_resume(priv->rtllib->dev);
- }
+I'd rather you add an ACPI_DECLARE_SUBTABLE_PROBE_ENTRY to acpi.h, and
+use that here so that we can keep the ACPI gunk in a single place.
 
--static void _rtl92e_irq_rx_tasklet(struct r8192_priv *priv)
-+static void _rtl92e_irq_rx_tasklet(unsigned long data)
- {
-+	struct r8192_priv *priv =3D (struct r8192_priv *)data;
-+
- 	_rtl92e_rx_normal(priv->rtllib->dev);
+>  #ifdef CONFIG_IRQCHIP
+>  void irqchip_init(void);
+> --
+> 2.20.1
+> 
+> 
 
- 	rtl92e_writel(priv->rtllib->dev, INTA_MASK,
-=2D-
-2.20.1
+Thanks,
 
+	M.
+-- 
+Jazz is not dead. It just smells funny...
