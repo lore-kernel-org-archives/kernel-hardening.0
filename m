@@ -1,24 +1,23 @@
-Return-Path: <SRS0=y4Gn=7F=lists.openwall.com=kernel-hardening-return-18863-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=fJlA=7G=lists.openwall.com=kernel-hardening-return-18864-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 85F12C433E0
-	for <kernel-hardening@archiver.kernel.org>; Sat, 23 May 2020 10:31:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A8945C433DF
+	for <kernel-hardening@archiver.kernel.org>; Sun, 24 May 2020 08:10:19 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C9B67206DD
-	for <kernel-hardening@archiver.kernel.org>; Sat, 23 May 2020 10:31:35 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id F405E2072C
+	for <kernel-hardening@archiver.kernel.org>; Sun, 24 May 2020 08:10:18 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=sakamocchi.jp header.i=@sakamocchi.jp header.b="H3rWb5HU";
-	dkim=pass (2048-bit key) header.d=messagingengine.com header.i=@messagingengine.com header.b="CcVRcc9i"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C9B67206DD
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=sakamocchi.jp
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18863-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11548 invoked by uid 550); 23 May 2020 10:31:27 -0000
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="UkZ5fwVE"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F405E2072C
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18864-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24495 invoked by uid 550); 24 May 2020 08:10:10 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,119 +25,90 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30383 invoked from network); 23 May 2020 07:59:15 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sakamocchi.jp;
-	 h=date:from:to:cc:subject:message-id:references:mime-version
-	:content-type:in-reply-to; s=fm1; bh=K9bdneoooJ1uSBw5jkomBqz3iW0
-	HsoKgOxHBuN88dzA=; b=H3rWb5HUYcQn7iZXb7kBxoSo164u2D2hVvlNCeXfw33
-	vPfXrucVHEPaNFgPKynsNfLu9sswkct6TBU+ulxNIaw6VejbT3wIjZSh1SBgRWed
-	37G/3vgYwnuytM7AUt8VmRelj55JNfHGl1DFJBnkktNp8gbthsSgRqUD1vb3Dioo
-	oApBMjnbaUmoQHmdsXR/FXiAtvFI3xc/C56alJZluumRtFOFuQWhJ6VtYXGn29mx
-	/uHQLUxc7EcEWeJSmD0RVHQVwxL4y6E+vJ36WC4ktDt+GWzQYna8G67frcbar58V
-	WkkaAGX9eKQ7ZdE0czbjq4KF00ZmXPj+KX9G9WSf7qA==
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-	messagingengine.com; h=cc:content-type:date:from:in-reply-to
-	:message-id:mime-version:references:subject:to:x-me-proxy
-	:x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=fm2; bh=K9bdne
-	oooJ1uSBw5jkomBqz3iW0HsoKgOxHBuN88dzA=; b=CcVRcc9iulo5FrFWsvMwNI
-	lnO1f6CwgY494tKBtmumqn8rFALyNsIivbS9xjEuFDxNvieYN9l7bH8WRLr+piIR
-	Hj1jylf3k9X9SMeOYOzEMKd1s/EJHu1VdQ7/+FqtPUVATE/KUoEHME8/ctLx+itm
-	eagXQ48TrSjcTD6En5e10/SVYN8DPtqRQZIwzDFDZ6T4+ggwg+Z5pKCf5SwFjZNy
-	H1xpeXO1XhBuis4MzAWZOClWQIJIggq4HU8TTMcNqQr+dMJbbRE/O5YaYggluu+v
-	hkouwGdlZiV8+Gw6yhghDLUytmFQ+kUM8upUDnJlv3Gq1dPGRi5Cmr7Q6VFMCqQA
-	==
-X-ME-Sender: <xms:xNfIXpIYAmfqIChvyJM_rKIA0yUIxHG6Z0AgyhTnotb0mwkBuTquYA>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgeduhedruddugedguddvvdcutefuodetggdotefrod
-    ftvfcurfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfgh
-    necuuegrihhlohhuthemuceftddtnecusecvtfgvtghiphhivghnthhsucdlqddutddtmd
-    enucfjughrpeffhffvuffkfhggtggujgesthdtredttddtvdenucfhrhhomhepvfgrkhgr
-    shhhihcuufgrkhgrmhhothhouceoohdqthgrkhgrshhhihesshgrkhgrmhhotggthhhird
-    hjpheqnecuggftrfgrthhtvghrnhephfefleekfeevgffhhfehudetkeeivdeuvdelgeej
-    jefhffegkeffffdugfevudetnecuffhomhgrihhnpehgihhthhhusgdrtghomhdprghlsh
-    grqdhprhhojhgvtghtrdhorhhgnecukfhppedukedtrddvfeehrdefrdehgeenucevlhhu
-    shhtvghrufhiiigvpedtnecurfgrrhgrmhepmhgrihhlfhhrohhmpehoqdhtrghkrghshh
-    hisehsrghkrghmohgttghhihdrjhhp
-X-ME-Proxy: <xmx:xNfIXlK-hUj2c_B-TJAeEP4Nv8ItDjNR79jB0y4kcSeRYV0cYVe9Ng>
-    <xmx:xNfIXhsN6JBRk4ydpuWG_Wqdcl1Uy2vhIKaqbVVFOHa-B7fcj_lI2w>
-    <xmx:xNfIXqZCW_JuSxoblr1zefmM5ZBES2YNtOCd4SmdkHLQMAoGY4rc-Q>
-    <xmx:xdfIXqDiHCJPhSs3amiBVLQ9b3oEfEyPZLCS9vGA9sPVJvr-kmK65UXOCtI>
-Date: Sat, 23 May 2020 16:58:54 +0900
-From: Takashi Sakamoto <o-takashi@sakamocchi.jp>
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: Oscar Carter <oscar.carter@gmx.com>, stable <stable@vger.kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	Stefan Richter <stefanr@s5r6.in-berlin.de>,
-	Mauro Carvalho Chehab <mchehab@kernel.org>,
-	Clemens Ladisch <clemens@ladisch.de>,
-	Jaroslav Kysela <perex@perex.cz>, Takashi Iwai <tiwai@suse.com>,
-	kernel-hardening@lists.openwall.com,
-	linux1394-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org,
-	linux-media@vger.kernel.org, alsa-devel@alsa-project.org,
-	"Lev R . Oshvang ." <levonshe@gmail.com>
-Subject: Re: [PATCH v2] firewire: Remove function callback casts
-Message-ID: <20200523075854.GA170441@workstation>
-Mail-Followup-To: Greg KH <gregkh@linuxfoundation.org>,
-	Oscar Carter <oscar.carter@gmx.com>,
-	stable <stable@vger.kernel.org>, Kees Cook <keescook@chromium.org>,
-	Stefan Richter <stefanr@s5r6.in-berlin.de>,
-	Mauro Carvalho Chehab <mchehab@kernel.org>,
-	Clemens Ladisch <clemens@ladisch.de>,
-	Jaroslav Kysela <perex@perex.cz>, Takashi Iwai <tiwai@suse.com>,
-	kernel-hardening@lists.openwall.com,
-	linux1394-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org,
-	linux-media@vger.kernel.org, alsa-devel@alsa-project.org,
-	"Lev R . Oshvang ." <levonshe@gmail.com>
-References: <20200519173425.4724-1-oscar.carter@gmx.com>
- <20200520061624.GA25690@workstation>
- <20200522174308.GB3059@ubuntu>
- <20200523061033.GB3131938@kroah.com>
+Received: (qmail 24460 invoked from network); 24 May 2020 08:10:09 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1590307797;
+	bh=Yh4A99YJCgkA9UbuO3RfCVtF8HiYdKwmMW3V19IImEM=;
+	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
+	b=UkZ5fwVEuQEPo519I9Bim3bwomLEMCwU16ReQvnBT1hYayPucK9Kd/yr2CyAsCfsP
+	 cttCbWQFQ+AwXocbrl/2yj2bOPxeQILT1EJ4VN6HvtCFnMNjIHAmeqNFd5LCOMtyGP
+	 ty0Qy/7xjEr6EN2mDa78Ajhq/ex8OuT/Dtbn6Sgc=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+From: Oscar Carter <oscar.carter@gmx.com>
+To: Kees Cook <keescook@chromium.org>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Jason Cooper <jason@lakedaemon.net>,
+	Marc Zyngier <maz@kernel.org>
+Cc: kernel-hardening@lists.openwall.com,
+	linux-kernel@vger.kernel.org,
+	Oscar Carter <oscar.carter@gmx.com>
+Subject: [PATCH] drivers/irqchip: Remove function callback casts
+Date: Sun, 24 May 2020 10:09:10 +0200
+Message-Id: <20200524080910.13087-1-oscar.carter@gmx.com>
+X-Mailer: git-send-email 2.20.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200523061033.GB3131938@kroah.com>
+Content-Transfer-Encoding: quoted-printable
+X-Provags-ID: V03:K1:DPSzdRpyRux4A5kUtqLHMEMr9pHGkwQE+bKYyADNmfAZpC447sS
+ BVR1oCo6gXQUg+ZC3B0H4u04qrR/36ilTAe4FoXmoduPjLqwXF8dgtNgUX7zQfXCaDLMl9U
+ oz9L2o6IP2ZpdOHJ79dk10pmPl8bLERfuJOzdfmR/oZMiqlr7HgSMGiXXXPiKGSEveS1lFn
+ hljV+i1ABOCLBauvj1Kcw==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:2CgksPlfxEg=:lbVsvV8SCTgDDaPaOCYklz
+ OyoJ6CqTZX6vsMElVRTIXKQwIb3GZdtmDPZDs9f/O/96geY1kGCEiqcYmC7CedcxyBpwFr2aX
+ RCuQT4JR2Wyj0Wy70477E/I4TmTwLiu8gvL13Ep9+LjfMj+EWq8wyBXCQKGh0NAdT7ZM1trs1
+ 2H4f7T5JO1YBNnSJ4OazykSas5qGy1P/0F9GHi46HbHW0vHQ0QjfTmsXIfZzMNQIMh0CsXfI2
+ na6JQTMFrQfAfwtR2To6AHhqdiPNGeVTnEWtd4FA3XPvr7S+1ryLSideOgaFmrnDGRhuxmNAI
+ wdk73/mK63o/ucMKYgVTwcZO2rnsq7G9j9Fcb5vfPXtArZpdm5iUYYr9Qka6giv2Pokl8slQ/
+ gXZWJBpcggcBpPJIEeKdXfryDuOiAgxWhRH7wzR3458FMyxgD/fZM27BqRLAGLd7ieLU/nmHo
+ 6JcfeCYyKqxoegB3iqbdPB8xjkPjxeMQ79nMf4/u2Fs4WQqe4/PcFZ3LqNf+vG3t24Mlxf+d2
+ U6HoYDNSU7RRG7Gac9ZEFwc+jK6cKdHzhnXShBr5L57xBhQ83uLHjkH0oLuEbsONdVZeElBJh
+ 2ZsqJmwCJPcQn/t7v/EGCnMM659/FCkxRqTSuVNj+OVvQbrJqSxIkJo4/38eg6d656wTrUkn+
+ PChQmeMS7PBLoIiuUPhqMPCEas/xFGR/sZ2dk0i8tMXurbIWxzHBthGtLghuJ3SuJFkuBawie
+ yeIs2j2KjFvs4jZy/BmfJMg8BNWCx1UJXD9QS/sPF0b89IY0LSa6N2Fv2URQwOIvYCbz9Co5D
+ yP75P5QmwF6bTFNune7Z37zG82/UhUwDxqrOmqwGbLmwMFZ8YXDtSg9b7sXzfRyGs1K8ihISy
+ WB5h/sPxKrWwUleT+Vdn4YUFlXs29iwc7yFsvWUJzpAZDhPXpum+2IZOw8cSt+7xf/1O+RlHG
+ RuhDlB7F8ERpxPd80LqKSuv99HmhUSkvHNiFv/q2WjvTrhnmES2Uy7T7aEsxaL5P4N/PmyRxm
+ cWAMc5ng/qSMQ26ItQkTq+SfTLw9aWwqZSjxeftA0KqnxpZ0NRs7kHqq/GKDe4cy9i430bJbP
+ qwkM8mxZpOcwCGgWbqA9xPu/LyYn6HZoUvdc+Iz/mm0eabzMqmXGQLiSsXrY6CW51kLz9eQ32
+ MlsBGLENs4MZcXsYLBrpSsb7ilQnPGG160geMK6xFdZbEgCAaK7gv2CearH0mPtDkhCopX63C
+ +sfOsXti/aMf+X76y
 
-Hi Greg,
+In an effort to enable -Wcast-function-type in the top-level Makefile to
+support Control Flow Integrity builds, remove all the function callback
+casts.
 
-On Sat, May 23, 2020 at 08:10:33AM +0200, Greg KH wrote:
-> On Fri, May 22, 2020 at 07:43:08PM +0200, Oscar Carter wrote:
-> > Hi,
-> > 
-> > On Wed, May 20, 2020 at 03:16:24PM +0900, Takashi Sakamoto wrote:
-> > > Hi,
-> > >
-> > > I'm an author of ALSA firewire stack and thanks for the patch. I agree with
-> > > your intention to remove the cast of function callback toward CFI build.
-> > >
-> > > Practically, the isochronous context with FW_ISO_CONTEXT_RECEIVE_MULTICHANNEL
-> > > is never used by in-kernel drivers. Here, I propose to leave current
-> > > kernel API (fw_iso_context_create() with fw_iso_callback_t) as is.
-> 
-> If it's not used by anyone, why is it still there?  Can't we just delete
-> it?
+To do this, modify the IRQCHIP_ACPI_DECLARE macro initializing the
+acpi_probe_entry struct directly instead of use the existent macro
+ACPI_DECLARE_PROBE_ENTRY.
 
-For this patchset, I followed to the theory to keep backward compatibility
-when adding any change, and it's what I'd like to discuss.
+In this new initialization use the probe_subtbl field instead of the
+probe_table field use in the ACPI_DECLARE_PROBE_ENTRY macro.
 
-The isoc context of multichannel mode is also available for userspace
-applications, and libhinoko[1] uses it. In a point of backward
-compatibility for userspace, we can't delete the mode.
+Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
+=2D--
+ include/linux/irqchip.h | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
 
-(Practically, the mode is useful for the purpose of packet sniffing in
-bus and helpful to my work for development of ALSA firewire stack[2].)
+diff --git a/include/linux/irqchip.h b/include/linux/irqchip.h
+index 950e4b2458f0..1f464fd10df0 100644
+=2D-- a/include/linux/irqchip.h
++++ b/include/linux/irqchip.h
+@@ -39,8 +39,14 @@
+  * @fn: initialization function
+  */
+ #define IRQCHIP_ACPI_DECLARE(name, subtable, validate, data, fn)	\
+-	ACPI_DECLARE_PROBE_ENTRY(irqchip, name, ACPI_SIG_MADT, 		\
+-				 subtable, validate, data, fn)
++	static const struct acpi_probe_entry __acpi_probe_##name	\
++		__used __section(__irqchip_acpi_probe_table) =3D {	\
++			.id =3D ACPI_SIG_MADT,				\
++			.type =3D subtable,				\
++			.subtable_valid =3D validate,			\
++			.probe_subtbl =3D (acpi_tbl_entry_handler)fn,	\
++			.driver_data =3D data,				\
++		}
 
-On the other hand, there's no unit driver to use the mode in upstream
-kernel. It's unlikely to use the mode for unit driver since the mode is
-not specific to unit functionality. In my opinion, it's reasonable to
-lose backward compatibility slightly by hiding the multichannel mode
-from in-kernel unit driver.
+ #ifdef CONFIG_IRQCHIP
+ void irqchip_init(void);
+=2D-
+2.20.1
 
-I'll post v2 patchset later and I'd like you to merge them if no
-objections from the others for the loss of backward compatibility.
-
-[1] https://github.com/takaswie/libhinoko
-[2] https://mailman.alsa-project.org/pipermail/alsa-devel/2019-April/147862.html
-
-
-Regards
-
-Takashi Sakamoto
