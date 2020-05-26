@@ -1,22 +1,20 @@
-Return-Path: <SRS0=vFQj=7I=lists.openwall.com=kernel-hardening-return-18877-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=3HWD=7I=lists.openwall.com=kernel-hardening-return-18878-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B860FC433E2
-	for <kernel-hardening@archiver.kernel.org>; Tue, 26 May 2020 19:51:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A8072C433E5
+	for <kernel-hardening@archiver.kernel.org>; Tue, 26 May 2020 20:53:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1949F207D8
-	for <kernel-hardening@archiver.kernel.org>; Tue, 26 May 2020 19:51:50 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="Cnt67Dt2"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1949F207D8
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18877-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16194 invoked by uid 550); 26 May 2020 19:51:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id DA1AA208FE
+	for <kernel-hardening@archiver.kernel.org>; Tue, 26 May 2020 20:53:48 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DA1AA208FE
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18878-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17792 invoked by uid 550); 26 May 2020 20:53:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,151 +22,217 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16150 invoked from network); 26 May 2020 19:51:43 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1590522690;
-	bh=ojp6/YpHEc1NW2ePcbFEVlErml7dvQ+2552G/h+0Ss4=;
-	h=Date:From:To:Cc:Subject:In-Reply-To:References:From;
-	b=Cnt67Dt2wLXOxwpUvPU/At41OYlrB9eXq7uQQvCL07XpgX5MFuMc5h5hvOEQfaDN2
-	 JKi8I23q0M8jv+IaPdhSIkuHfjwGNdmfxNILnDXv1VZ2yhHJ66/ch/jRyXIplwTCW5
-	 Sh7daajd/aAVa9IgYUOtwQ7sCi64sYamhulyYmWE=
-Date: Tue, 26 May 2020 20:51:27 +0100
-Message-ID: <87sgfmzd8g.wl-maz@kernel.org>
-From: Marc Zyngier <maz@kernel.org>
-To: Oscar Carter <oscar.carter@gmx.com>
-Cc: Kees Cook <keescook@chromium.org>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Jason Cooper <jason@lakedaemon.net>,
+Received: (qmail 17758 invoked from network); 26 May 2020 20:53:40 -0000
+From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
+To: linux-kernel@vger.kernel.org
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
+	Al Viro <viro@zeniv.linux.org.uk>,
+	Andy Lutomirski <luto@amacapital.net>,
+	Anton Ivanov <anton.ivanov@cambridgegreys.com>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	James Morris <jmorris@namei.org>,
+	Jann Horn <jannh@google.com>,
+	Jeff Dike <jdike@addtoit.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>,
+	Richard Weinberger <richard@nod.at>,
+	"Serge E . Hallyn" <serge@hallyn.com>,
+	Shuah Khan <shuah@kernel.org>,
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
 	kernel-hardening@lists.openwall.com,
-	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v2] drivers/irqchip: Remove function callback casts
-In-Reply-To: <20200526172527.GA3465@ubuntu>
-References: <20200524162220.10186-1-oscar.carter@gmx.com>
-	<87tv04z3kq.wl-maz@kernel.org>
-	<20200526172527.GA3465@ubuntu>
-User-Agent: Wanderlust/2.15.9 (Almost Unreal) SEMI-EPG/1.14.7 (Harue)
- FLIM/1.14.9 (=?UTF-8?B?R29qxY0=?=) APEL/10.8 EasyPG/1.0.0 Emacs/26
- (x86_64-pc-linux-gnu) MULE/6.0 (HANACHIRUSATO)
-MIME-Version: 1.0 (generated by SEMI-EPG 1.14.7 - "Harue")
-Content-Type: text/plain; charset=US-ASCII
-X-SA-Exim-Connect-IP: 62.31.163.78
-X-SA-Exim-Rcpt-To: oscar.carter@gmx.com, keescook@chromium.org, tglx@linutronix.de, jason@lakedaemon.net, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
-X-SA-Exim-Mail-From: maz@kernel.org
-X-SA-Exim-Scanned: No (on disco-boy.misterjones.org); SAEximRunCond expanded to false
+	linux-api@vger.kernel.org,
+	linux-arch@vger.kernel.org,
+	linux-doc@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	x86@kernel.org
+Subject: [PATCH v18 00/12] Landlock LSM
+Date: Tue, 26 May 2020 22:53:10 +0200
+Message-Id: <20200526205322.23465-1-mic@digikod.net>
+X-Mailer: git-send-email 2.26.2
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-On Tue, 26 May 2020 18:25:27 +0100,
-Oscar Carter <oscar.carter@gmx.com> wrote:
-> 
-> On Mon, May 25, 2020 at 11:55:33AM +0100, Marc Zyngier wrote:
-> > On Sun, 24 May 2020 17:22:20 +0100,
-> > Oscar Carter <oscar.carter@gmx.com> wrote:
-> > >
-> > >  include/linux/acpi.h    | 11 +++++++++++
-> >
-> > You now need to Cc the ACPI maintainers.
-> 
-> Sorry for forgetting.
+Hi,
 
-No worries. In general, use scripts/get_maintainers.pl to find out who
-to Cc.
+This new patch series mainly extend the LSM framework and fixes some
+issues:
+* Replace landlock_release_inodes() with a new LSM hook
+  security_sb_delete() which is called at superblock shutdown (before
+  unmount).
+* Replace struct super_block->s_landlock_inode_refs with the LSM
+  infrastructure management of the superblock: Casey Schaufler's work on
+  LSM stacking.
 
-> 
-> > >  include/linux/irqchip.h |  5 +++--
-> > >  2 files changed, 14 insertions(+), 2 deletions(-)
-> > >
-> > > diff --git a/include/linux/acpi.h b/include/linux/acpi.h
-> > > index d661cd0ee64d..fed49b276a90 100644
-> > > --- a/include/linux/acpi.h
-> > > +++ b/include/linux/acpi.h
-> > > @@ -1154,6 +1154,17 @@ struct acpi_probe_entry {
-> > >  			.driver_data = data, 				\
-> > >  		   }
-> > >
-> > > +#define ACPI_DECLARE_SUBTABLE_PROBE_ENTRY(table, name, table_id,	\
-> > > +					  subtable, valid, data, fn)	\
-> > > +	static const struct acpi_probe_entry __acpi_probe_##name	\
-> > > +		__used __section(__##table##_acpi_probe_table) = {	\
-> > > +			.id = table_id,					\
-> > > +			.type = subtable,				\
-> > > +			.subtable_valid = valid,			\
-> > > +			.probe_subtbl = (acpi_tbl_entry_handler)fn,	\
-> >
-> > It strikes me that under the guise of removing function casts, you are
-> > actually adding one! And this cast is actually hiding all sorts of
-> > sins (remove it, and see things exploding).
-> 
-> Yes, if I remove it I see things exploiding. I'm very sorry.
 
-No need to be sorry. We all learn from past mistakes.
+The SLOC count is 1304 for security/landlock/ and 1733 for
+tools/testing/selftest/landlock/ .  Test coverage for security/landlock/
+is 93.6% of lines.  The code not covered only deals with internal kernel
+errors (e.g. memory allocation) and race conditions.
 
-> 
-> > I've fixed it with the patch below (ACPI is such a mess of data
-> > structure case...).
-> 
-> > diff --git a/drivers/irqchip/irq-gic-v3.c b/drivers/irqchip/irq-gic-v3.c
-> > index d7006ef18a0d..3870e9d4d3a8 100644
-> > --- a/drivers/irqchip/irq-gic-v3.c
-> > +++ b/drivers/irqchip/irq-gic-v3.c
-> > @@ -2117,7 +2117,7 @@ static void __init gic_acpi_setup_kvm_info(void)
-> >  }
-> >
-> >  static int __init
-> > -gic_acpi_init(struct acpi_subtable_header *header, const unsigned long end)
-> > +gic_acpi_init(union acpi_subtable_headers *header, const unsigned long end)
-> >  {
-> >  	struct acpi_madt_generic_distributor *dist;
-> >  	struct fwnode_handle *domain_handle;
-> > diff --git a/drivers/irqchip/irq-gic.c b/drivers/irqchip/irq-gic.c
-> > index 30ab623343d3..fc431857ce90 100644
-> > --- a/drivers/irqchip/irq-gic.c
-> > +++ b/drivers/irqchip/irq-gic.c
-> > @@ -1593,7 +1593,7 @@ static void __init gic_acpi_setup_kvm_info(void)
-> >  	gic_set_kvm_info(&gic_v2_kvm_info);
-> >  }
-> >
-> > -static int __init gic_v2_acpi_init(struct acpi_subtable_header *header,
-> > +static int __init gic_v2_acpi_init(union acpi_subtable_headers *header,
-> >  				   const unsigned long end)
-> >  {
-> >  	struct acpi_madt_generic_distributor *dist;
-> > diff --git a/include/linux/acpi.h b/include/linux/acpi.h
-> > index fed49b276a90..4f4ddbfce3d3 100644
-> > --- a/include/linux/acpi.h
-> > +++ b/include/linux/acpi.h
-> > @@ -1150,7 +1150,7 @@ struct acpi_probe_entry {
-> >  			.id = table_id,					\
-> >  			.type = subtable,				\
-> >  			.subtable_valid = valid,			\
-> > -			.probe_table = (acpi_tbl_table_handler)fn,	\
-> > +			.probe_table = fn,				\
-> >  			.driver_data = data, 				\
-> >  		   }
-> >
-> > @@ -1161,7 +1161,7 @@ struct acpi_probe_entry {
-> >  			.id = table_id,					\
-> >  			.type = subtable,				\
-> >  			.subtable_valid = valid,			\
-> > -			.probe_subtbl = (acpi_tbl_entry_handler)fn,	\
-> > +			.probe_subtbl = fn,				\
-> >  			.driver_data = data,				\
-> >  		}
-> >
-> 
-> Thanks for your help with this patch. I will do all the necessary changes
-> and I will resend a new version.
-> 
-> Do you mind if I add these two lines:
-> 
-> Co-developed-by: Marc Zyngier <maz@kernel.org>
-> Signed-off-by: Marc Zyngier <maz@kernel.org>
-> 
-> in the next version to give you credit?
+The compiled documentation is available here:
+https://landlock.io/linux-doc/landlock-v18/security/landlock/index.html
 
-Sure, that's very kind of you to offer.
+This series can be applied on top of v5.7-rc7.  This can be tested with
+CONFIG_SECURITY_LANDLOCK and CONFIG_SAMPLE_LANDLOCK.  This patch series
+can be found in a Git repository here:
+https://github.com/landlock-lsm/linux/commits/landlock-v18
+I would really appreciate constructive comments on this patch series.
 
-Thanks,
 
-	M.
+# Landlock LSM
+
+The goal of Landlock is to enable to restrict ambient rights (e.g.
+global filesystem access) for a set of processes.  Because Landlock is a
+stackable LSM [2], it makes possible to create safe security sandboxes
+as new security layers in addition to the existing system-wide
+access-controls. This kind of sandbox is expected to help mitigate the
+security impact of bugs or unexpected/malicious behaviors in user-space
+applications. Landlock empowers any process, including unprivileged
+ones, to securely restrict themselves.
+
+Landlock is inspired by seccomp-bpf but instead of filtering syscalls
+and their raw arguments, a Landlock rule can restrict the use of kernel
+objects like file hierarchies, according to the kernel semantic.
+Landlock also takes inspiration from other OS sandbox mechanisms: XNU
+Sandbox, FreeBSD Capsicum or OpenBSD Pledge/Unveil.
+
+
+Previous version:
+https://lore.kernel.org/lkml/20200511192156.1618284-1-mic@digikod.net/
+
+
+[1] https://lore.kernel.org/lkml/e07fe473-1801-01cc-12ae-b3167f95250e@digikod.net/
+[2] https://lore.kernel.org/lkml/50db058a-7dde-441b-a7f9-f6837fe8b69f@schaufler-ca.com/
+
+
+Casey Schaufler (1):
+  LSM: Infrastructure management of the superblock
+
+Mickaël Salaün (11):
+  landlock: Add object management
+  landlock: Add ruleset and domain management
+  landlock: Set up the security framework and manage credentials
+  landlock: Add ptrace restrictions
+  fs,security: Add sb_delete hook
+  landlock: Support filesystem access-control
+  landlock: Add syscall implementation
+  arch: Wire up landlock() syscall
+  selftests/landlock: Add initial tests
+  samples/landlock: Add a sandbox manager example
+  landlock: Add user and kernel documentation
+
+ Documentation/security/index.rst              |    1 +
+ Documentation/security/landlock/index.rst     |   18 +
+ Documentation/security/landlock/kernel.rst    |   69 +
+ Documentation/security/landlock/user.rst      |  268 +++
+ MAINTAINERS                                   |   12 +
+ arch/Kconfig                                  |    7 +
+ arch/alpha/kernel/syscalls/syscall.tbl        |    1 +
+ arch/arm/tools/syscall.tbl                    |    1 +
+ arch/arm64/include/asm/unistd.h               |    2 +-
+ arch/arm64/include/asm/unistd32.h             |    2 +
+ arch/ia64/kernel/syscalls/syscall.tbl         |    1 +
+ arch/m68k/kernel/syscalls/syscall.tbl         |    1 +
+ arch/microblaze/kernel/syscalls/syscall.tbl   |    1 +
+ arch/mips/kernel/syscalls/syscall_n32.tbl     |    1 +
+ arch/mips/kernel/syscalls/syscall_n64.tbl     |    1 +
+ arch/mips/kernel/syscalls/syscall_o32.tbl     |    1 +
+ arch/parisc/kernel/syscalls/syscall.tbl       |    1 +
+ arch/powerpc/kernel/syscalls/syscall.tbl      |    1 +
+ arch/s390/kernel/syscalls/syscall.tbl         |    1 +
+ arch/sh/kernel/syscalls/syscall.tbl           |    1 +
+ arch/sparc/kernel/syscalls/syscall.tbl        |    1 +
+ arch/um/Kconfig                               |    1 +
+ arch/x86/entry/syscalls/syscall_32.tbl        |    1 +
+ arch/x86/entry/syscalls/syscall_64.tbl        |    1 +
+ arch/xtensa/kernel/syscalls/syscall.tbl       |    1 +
+ fs/super.c                                    |    1 +
+ include/linux/lsm_hook_defs.h                 |    1 +
+ include/linux/lsm_hooks.h                     |    3 +
+ include/linux/security.h                      |    4 +
+ include/linux/syscalls.h                      |    3 +
+ include/uapi/asm-generic/unistd.h             |    4 +-
+ include/uapi/linux/landlock.h                 |  302 +++
+ kernel/sys_ni.c                               |    3 +
+ samples/Kconfig                               |    7 +
+ samples/Makefile                              |    1 +
+ samples/landlock/.gitignore                   |    1 +
+ samples/landlock/Makefile                     |   15 +
+ samples/landlock/sandboxer.c                  |  228 +++
+ security/Kconfig                              |   11 +-
+ security/Makefile                             |    2 +
+ security/landlock/Kconfig                     |   18 +
+ security/landlock/Makefile                    |    4 +
+ security/landlock/common.h                    |   20 +
+ security/landlock/cred.c                      |   46 +
+ security/landlock/cred.h                      |   58 +
+ security/landlock/fs.c                        |  610 ++++++
+ security/landlock/fs.h                        |   60 +
+ security/landlock/object.c                    |   66 +
+ security/landlock/object.h                    |   91 +
+ security/landlock/ptrace.c                    |  120 ++
+ security/landlock/ptrace.h                    |   14 +
+ security/landlock/ruleset.c                   |  342 ++++
+ security/landlock/ruleset.h                   |  157 ++
+ security/landlock/setup.c                     |   40 +
+ security/landlock/setup.h                     |   18 +
+ security/landlock/syscall.c                   |  532 +++++
+ security/security.c                           |   51 +-
+ security/selinux/hooks.c                      |   58 +-
+ security/selinux/include/objsec.h             |    6 +
+ security/selinux/ss/services.c                |    3 +-
+ security/smack/smack.h                        |    6 +
+ security/smack/smack_lsm.c                    |   35 +-
+ tools/testing/selftests/Makefile              |    1 +
+ tools/testing/selftests/landlock/.gitignore   |    2 +
+ tools/testing/selftests/landlock/Makefile     |   29 +
+ tools/testing/selftests/landlock/base_test.c  |  163 ++
+ tools/testing/selftests/landlock/common.h     |  108 +
+ tools/testing/selftests/landlock/config       |    5 +
+ tools/testing/selftests/landlock/fs_test.c    | 1730 +++++++++++++++++
+ .../testing/selftests/landlock/ptrace_test.c  |  293 +++
+ tools/testing/selftests/landlock/true.c       |    5 +
+ 71 files changed, 5596 insertions(+), 77 deletions(-)
+ create mode 100644 Documentation/security/landlock/index.rst
+ create mode 100644 Documentation/security/landlock/kernel.rst
+ create mode 100644 Documentation/security/landlock/user.rst
+ create mode 100644 include/uapi/linux/landlock.h
+ create mode 100644 samples/landlock/.gitignore
+ create mode 100644 samples/landlock/Makefile
+ create mode 100644 samples/landlock/sandboxer.c
+ create mode 100644 security/landlock/Kconfig
+ create mode 100644 security/landlock/Makefile
+ create mode 100644 security/landlock/common.h
+ create mode 100644 security/landlock/cred.c
+ create mode 100644 security/landlock/cred.h
+ create mode 100644 security/landlock/fs.c
+ create mode 100644 security/landlock/fs.h
+ create mode 100644 security/landlock/object.c
+ create mode 100644 security/landlock/object.h
+ create mode 100644 security/landlock/ptrace.c
+ create mode 100644 security/landlock/ptrace.h
+ create mode 100644 security/landlock/ruleset.c
+ create mode 100644 security/landlock/ruleset.h
+ create mode 100644 security/landlock/setup.c
+ create mode 100644 security/landlock/setup.h
+ create mode 100644 security/landlock/syscall.c
+ create mode 100644 tools/testing/selftests/landlock/.gitignore
+ create mode 100644 tools/testing/selftests/landlock/Makefile
+ create mode 100644 tools/testing/selftests/landlock/base_test.c
+ create mode 100644 tools/testing/selftests/landlock/common.h
+ create mode 100644 tools/testing/selftests/landlock/config
+ create mode 100644 tools/testing/selftests/landlock/fs_test.c
+ create mode 100644 tools/testing/selftests/landlock/ptrace_test.c
+ create mode 100644 tools/testing/selftests/landlock/true.c
 
 -- 
-Without deviation from the norm, progress is not possible.
+2.26.2
+
