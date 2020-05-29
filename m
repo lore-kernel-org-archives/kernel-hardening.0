@@ -1,20 +1,23 @@
-Return-Path: <SRS0=W3Hx=7L=lists.openwall.com=kernel-hardening-return-18892-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=oNca=7L=lists.openwall.com=kernel-hardening-return-18893-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.5 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 75D60C433E1
-	for <kernel-hardening@archiver.kernel.org>; Fri, 29 May 2020 11:29:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 76AF5C433E0
+	for <kernel-hardening@archiver.kernel.org>; Fri, 29 May 2020 17:19:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D2F302074D
-	for <kernel-hardening@archiver.kernel.org>; Fri, 29 May 2020 11:29:46 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D2F302074D
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18892-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16003 invoked by uid 550); 29 May 2020 11:29:38 -0000
+	by mail.kernel.org (Postfix) with SMTP id CA2372075A
+	for <kernel-hardening@archiver.kernel.org>; Fri, 29 May 2020 17:19:32 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="BshcmY9k"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CA2372075A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18893-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5715 invoked by uid 550); 29 May 2020 17:19:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,136 +25,97 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15969 invoked from network); 29 May 2020 11:29:37 -0000
-Subject: Re: [PATCH v18 07/12] landlock: Support filesystem access-control
-To: Amir Goldstein <amir73il@gmail.com>
-Cc: linux-kernel <linux-kernel@vger.kernel.org>,
- Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
- Anton Ivanov <anton.ivanov@cambridgegreys.com>, Arnd Bergmann
- <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
- James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>,
- Jeff Dike <jdike@addtoit.com>, Jonathan Corbet <corbet@lwn.net>,
- Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
- Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>,
- Shuah Khan <shuah@kernel.org>,
- Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, Linux API <linux-api@vger.kernel.org>,
- linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
- linux-fsdevel <linux-fsdevel@vger.kernel.org>,
- linux-kselftest@vger.kernel.org,
- LSM List <linux-security-module@vger.kernel.org>, x86@kernel.org
-References: <20200526205322.23465-1-mic@digikod.net>
- <20200526205322.23465-8-mic@digikod.net>
- <CAOQ4uxibpDTyjCJWLGG9jr-Gv9PwO==o50b9O8HGQeUfVMDFag@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <8e76c2ed-1725-f0a5-bcfc-317c4277af3b@digikod.net>
-Date: Fri, 29 May 2020 13:29:20 +0200
-User-Agent:
+Received: (qmail 5683 invoked from network); 29 May 2020 17:19:25 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1590772753;
+	bh=zkGJm1xLC+g8Ug4Cc2rYdtiWz2ihMopfD0re3TQO3z4=;
+	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
+	b=BshcmY9kRl14wxkX1Rf9nj6CDqOBwQ3P2TNTa1+cTSgzt+jESE9Dax4vX4aGW/dSV
+	 6Ts0kXTohXxuE97Ds//ga+cLcMEY5H6gr33bOtbXtqsT2JM0LUZ5TWQBitn66YKbS2
+	 7cS7HQ58pNB0RuJXzvPHQX+ewa38pDwKYjt08BFk=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+From: Oscar Carter <oscar.carter@gmx.com>
+To: Kees Cook <keescook@chromium.org>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Jason Cooper <jason@lakedaemon.net>,
+	Marc Zyngier <maz@kernel.org>,
+	"Rafael J. Wysocki" <rjw@rjwysocki.net>,
+	Len Brown <lenb@kernel.org>
+Cc: Oscar Carter <oscar.carter@gmx.com>,
+	kernel-hardening@lists.openwall.com,
+	linux-kernel@vger.kernel.org,
+	linux-acpi@vger.kernel.org
+Subject: [PATCH v3 0/2] drivers/irqchip: Remove function callback casts
+Date: Fri, 29 May 2020 19:18:45 +0200
+Message-Id: <20200529171847.10267-1-oscar.carter@gmx.com>
+X-Mailer: git-send-email 2.20.1
 MIME-Version: 1.0
-In-Reply-To: <CAOQ4uxibpDTyjCJWLGG9jr-Gv9PwO==o50b9O8HGQeUfVMDFag@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
+Content-Transfer-Encoding: quoted-printable
+X-Provags-ID: V03:K1:3F47Cf3CCrsTEcrbYC/MIzrnF+WKS5gj28qusV2C+LXXadlg0ai
+ +IEGA/UMqP92lxdUrLo89mgSiH18hwOyNf0VFwe9vveC5IZRsp3aYij0taCpo/qvAOJqP4U
+ IwXDocxFDvqE+lAbQPC0rE1YjRLxvEmB9IedznwiL9YL+7cwTerlljoQ0z3AOuOthLF3fiK
+ DZpEidceS8MAcbIRO9l8A==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:R7fhh1BPNKs=:gtjNyxYX1lS7HX0Auo4ON2
+ PMqXKc4miOpddUhUmHL6K6Dsxj4qk5QKPi/mrYrQf+7b94Vgs55TGTiLIKQ5lNsQqcmP5L1Zg
+ 7uGYcwUDR4xmkLpUU1e3h/cXDD66vzjL/L6vMNCnbeYmmWfQ7BBjUxh0KF8KAy7zu6ADJWrQv
+ jzhYOJ0LrJ9NmK06+fxLNzjQzKDhYrNbcCt/ixpZ/oT0r3jGilT3nYH3gUrFlnBZwuX2XPbKg
+ FUdQq34InIZZPD9J2LHL49Bw6Taq0b8yKqsqVLga7Cw+3cqMWU635pPf08bEXoresRHvzuX1g
+ 7Sw9zXTn0+RfI2e66f172Pz+coP3u4OK5LUJqAc6B5sw9C2RVnKWDoDHkKJFZpJEhFsVLtWsj
+ gfdmGeyB4bZlH3Qi8rw+6uvPAq1sA17c0W3J5/o6bBu6JumUfAroGF0v8DZZEZaU/orzCyaft
+ ubfna5xtjWZ0TZVHrlghmK0pniHTb1aRyV6u1xZqMcsjDyquka3HQjtHJvNifDEZAX8TgdbdB
+ AP6PjjJ+OZa7Yj8R4B/Y5k2cBOS+9fN2cxP8Me2Z0RePOmV7G3ufH2V3bI7HsEidrHCl5sBJ7
+ JF7P70rWPmsGusI2T0qM5+KDlXn6CE+pjNmcx8IW28OwIh8XN4VBJpbbLp3jsaWAx4aFtXiyI
+ gDCDGfrXmx99ul0mDnJd8y4HFuZJ9g2keAGSwrGtd+BcGGQDIMbtpaSfx3xW7CsStiGm92/0F
+ HfLDZ80/QRofG7x2K/ufn971IJDMoLZgAX8JjoSSjtgpHOAlBBmBL9gAa8KCZBn6921Edo885
+ 3bhXToXHVwET/uzxEdPcVGeqQtAm2r6IAC+Pu63j38Y0FFFl26zvQfi/iXVjbdXx5xgomM9po
+ zBycpihMo0VcKPcaBiJ/o5uD/FtT7EcMbpPU/WmxNxc3rMMQCCURFtEka+vxqaECxYzj0DMaY
+ 3l2YnRwCiPdKDliVMIOyYVTTAG8deKqZm1lcwWzUex2gKKdp8xXsYljEi2xkh2PJ2o6dkt+Rs
+ OryoecRwimNBrP3f1GTXiZnfPQMQAr5XELQ/ZI0e3qonMZUcvy6kjPGxFa39uQKMLVkN5sp7H
+ motcmU36oSHOR6bPDcNcgvxjtCXPG8htautOLyHgNOVLncxN7YcxiaerZYa5ZOMBsY/U0NVYt
+ 6t3IwS/+SODYKOvcLi2ZtxQvArNXAQLWhBVUbO977jdX4j/1JbUt0lwtITK0b7k7eYTIt6Py6
+ OdvN3Bu1UmzRaZBfV
 
+In an effort to enable -Wcast-function-type in the top-level Makefile to
+support Control Flow Integrity builds, there are the need to remove all
+the function callback casts.
 
-On 27/05/2020 05:07, Amir Goldstein wrote:
-> On Wed, May 27, 2020 at 3:36 AM Mickaël Salaün <mic@digikod.net> wrote:
->>
->> Thanks to the Landlock objects and ruleset, it is possible to identify
->> inodes according to a process's domain.  To enable an unprivileged
->> process to express a file hierarchy, it first needs to open a directory
->> (or a file) and pass this file descriptor to the kernel through
->> landlock(2).  When checking if a file access request is allowed, we walk
->> from the requested dentry to the real root, following the different
->> mount layers.  The access to each "tagged" inodes are collected
->> according to their rule layer level, and ANDed to create access to the
->> requested file hierarchy.  This makes possible to identify a lot of
->> files without tagging every inodes nor modifying the filesystem, while
->> still following the view and understanding the user has from the
->> filesystem.
->>
-> 
-> Hi Mickael,
-> 
-> Nice work! I am interested in the problem of system wide file access
-> rules based on directory hierarchy [1][2]. Not the same problem, but
-> with obvious overlaps.
+The first patch creates a macro called ACPI_DECLARE_SUBTABLE_PROBE_ENTRY
+to initialize the acpi_probe_entry struct using the probe_subtbl field
+instead of the probe_table field to avoid function cast mismatches.
 
-Interesting. Landlock's goal is to restrict a set of processes, which
-can be a container.
+The second patch modifies the IRQCHIP_ACPI_DECLARE macro to use the new
+defined macro ACPI_DECLARE_SUBTABLE_PROBE_ENTRY instead of the macro
+ACPI_DECLARE_PROBE_ENTRY. Also, modifies the prototype of the functions
+used by the invocation of the IRQCHIP_ACPI_DECLARE macro to match all the
+parameters.
 
-> 
-> I sketched this untested POC [2] a while ago -
-> It introduces the concept of "border control" LSM hooks to avoid the
-> need to check which sections in the hierarchy an inode belongs to
-> on every syscall.
-> 
-> With this, you could cache a topology with id's per section and
-> cache the section id + topology generation in the inode's security state.
-> When inode crosses border control hooks, it's section id is updated.
-> When directory hierarchy topology changes, some or all of the cached
-> section id's are invalidated and rules <-> sections relations may need
-> to be changed.
-> 
-> Do you think something like that could be useful for landlock?
+Changelog v1->v2
+- Add more details in the commit changelog to clarify the changes (Marc
+  Zyngier)
+- Declare a new macro called ACPI_DECLARE_SUBTABLE_PROBE_ENTRY (Marc
+  Zyngier)
+- In the IRQCHIP_ACPI_DECLARE use the new defined macro (Marc Zyngier)
 
-Because Landlock deals with unprivileged sandboxing, we must manage
-multiple layers. The current implementation in Landlock, according to
-the unprivileged constraints, is explained here:
-https://lore.kernel.org/lkml/e07fe473-1801-01cc-12ae-b3167f95250e@digikod.net/
+Changelog v2->v3
+- Remove the cast of the macro ACPI_DECLARE_SUBTABLE_PROBE_ENTRY (Marc
+  Zyngier)
+- Change the prototype of the functions used by the invocation of the
+  macro IRQCHIP_ACPI_DECLARE (Marc Zyngier)
+- Split the changes in two patches.
+- Add these two lines, to give credit to Marc Zyngier
+  Signed-off-by: Marc Zyngier <maz@kernel.org>
+  Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
 
-As briefly explained in this patch [1] [2], in the case of Landlock,
-being able to change the filesystem layout/topology may lead to
-privilege escalation. Currently, Landlock forbids inode reparenting, but
-I plan to implement a multilayer partial ordering mechanism to relax
-this constraint while still enforcing all layered policies. A short-term
-approach could also relaxes the first layer, but we need to think
-carefully about the potential implications (including ABI compatibility).
+Oscar Carter (2):
+  drivers/irqchip: Add new macro ACPI_DECLARE_SUBTABLE_PROBE_ENTRY
+  drivers/irqchip: Use new macro ACPI_DECLARE_SUBTABLE_PROBE_ENTRY
 
-[1]
-https://github.com/landlock-lsm/linux/commit/b670df6c5add5cf96870327871c35fccb97a0dd8#diff-39adb7412180a73fe7c6b91ae5435a5bR354
-(must clic on "Load diff")
-[2]
-https://github.com/landlock-lsm/linux/commit/b670df6c5add5cf96870327871c35fccb97a0dd8#diff-39adb7412180a73fe7c6b91ae5435a5bR450
-(must clic on "Load diff")
+ drivers/irqchip/irq-gic-v3.c |  2 +-
+ drivers/irqchip/irq-gic.c    |  2 +-
+ include/linux/acpi.h         | 11 +++++++++++
+ include/linux/irqchip.h      |  5 +++--
+ 4 files changed, 16 insertions(+), 4 deletions(-)
 
-I think Landlock could help in your use case, but could you clarify your
-thread model please?
+=2D-
+2.20.1
 
-The main issue right now with Landlock is to deal with overlayfs.
-Indeed, Landlock's check_access_path() does not work with
-orphaned/private mounts like overlayfs layers (cf. ovl_path_real() and
-ovl_path_open()). Do you have an idea how to solve this properly? Could
-we add a "virtual" mount point to these layers to identify dentries they
-are anchored to?
-
-> 
-> Note that the POC is using d_mountpoint() as the only type of "fence"
-> mark. It is sufficient for controlling rename in and out of containers, so
-> I just used an already available dentry flag for "fence".
-> If the border control hook concept is useful, this could be extended to
-> a more generic d_border_passing(), with some internal kernel API
-> to manage it and with all the bike shedding that comes with it...
-
-Why not just compare struct path->mnt using the current hooks?
-
-About performances, I also thought that walking through every path
-directories would be an important issue, but after some quick benchmark
-(with and for Landlock) I'm not sure anymore. A caching mechanism may be
-useful but it should not be needed from the start.
-
-> 
-> Thanks,
-> Amir.
-
-I would like to be in Cc in your next "fanotify and LSM path hooks"
-emails. Thanks.
-
-> 
-> [1] https://lore.kernel.org/linux-fsdevel/CAOQ4uxhBVhyyJv0+xSFQiGQEj60AbD3SADfKK40uAiC4GF2p9Q@mail.gmail.com/
-> [2] https://lore.kernel.org/linux-fsdevel/CAOQ4uxgn=YNj8cJuccx2KqxEVGZy1z3DBVYXrD=Mc7Dc=Je+-w@mail.gmail.com/
-> [3] https://github.com/amir73il/linux/commits/rename_xmnt
-> 
