@@ -1,23 +1,23 @@
-Return-Path: <SRS0=tB6X=7L=lists.openwall.com=kernel-hardening-return-18895-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Mvhz=7M=lists.openwall.com=kernel-hardening-return-18896-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-9.5 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4038DC433E0
-	for <kernel-hardening@archiver.kernel.org>; Fri, 29 May 2020 17:19:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3B006C433DF
+	for <kernel-hardening@archiver.kernel.org>; Sat, 30 May 2020 09:09:46 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 969002074D
-	for <kernel-hardening@archiver.kernel.org>; Fri, 29 May 2020 17:19:48 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5C0EA2074B
+	for <kernel-hardening@archiver.kernel.org>; Sat, 30 May 2020 09:09:45 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="T1T9LR/w"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 969002074D
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="HdLlBiLs"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5C0EA2074B
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18895-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7984 invoked by uid 550); 29 May 2020 17:19:37 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18896-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19510 invoked by uid 550); 30 May 2020 09:09:36 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,124 +25,242 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7897 invoked from network); 29 May 2020 17:19:37 -0000
+Received: (qmail 19478 invoked from network); 30 May 2020 09:09:36 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1590772765;
-	bh=neh9UrSP9bO+wKS/cV7Mb81hOYu1y9//cRNSX6IME/o=;
-	h=X-UI-Sender-Class:From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=T1T9LR/w3kBuqWO8Su09Op1EFM06tPZn4twLi9YwSV4LstFuZw8hrEoa5l5R8Ij+u
-	 ZhaED2tY7CVwC6hqKCXXxiMNO5bZyR/xtHF6Uuq1dsQs6PfCfmY/avjTdNxiXYzpcP
-	 EFtXIpEhp+7VbeTeVLwOTO8oifcEU8hmbUULqkx4=
+	s=badeba3b8450; t=1590829759;
+	bh=pbrG6w0w7nNvrUY2FZy0bHWEVivzVWnGVN71mAetFSo=;
+	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
+	b=HdLlBiLskbL8tRi7O2IEXnG7Hl+hP1gjafEnnB6usxNSZxdfki9caynYN3AS9fBgl
+	 DxVTZiQ0ESk4W78gBSW4fabhB2FTZdghWlw1XM9Km7liXDB4m+rCfoygHYEgT1AUOl
+	 gtue2VfPU20QVOWgrjMIqAdE3+HtIK7H2kt4FUyU=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
 From: Oscar Carter <oscar.carter@gmx.com>
 To: Kees Cook <keescook@chromium.org>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Jason Cooper <jason@lakedaemon.net>,
-	Marc Zyngier <maz@kernel.org>,
-	"Rafael J. Wysocki" <rjw@rjwysocki.net>,
-	Len Brown <lenb@kernel.org>
-Cc: Oscar Carter <oscar.carter@gmx.com>,
-	kernel-hardening@lists.openwall.com,
+	Stefan Richter <stefanr@s5r6.in-berlin.de>,
+	Takashi Sakamoto <o-takashi@sakamocchi.jp>
+Cc: kernel-hardening@lists.openwall.com,
+	linux1394-devel@lists.sourceforge.net,
 	linux-kernel@vger.kernel.org,
-	linux-acpi@vger.kernel.org
-Subject: [PATCH v3 2/2] drivers/irqchip: Use new macro ACPI_DECLARE_SUBTABLE_PROBE_ENTRY
-Date: Fri, 29 May 2020 19:18:47 +0200
-Message-Id: <20200529171847.10267-3-oscar.carter@gmx.com>
+	Oscar Carter <oscar.carter@gmx.com>
+Subject: [PATCH v3] firewire: Remove function callback casts
+Date: Sat, 30 May 2020 11:08:39 +0200
+Message-Id: <20200530090839.7895-1-oscar.carter@gmx.com>
 X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200529171847.10267-1-oscar.carter@gmx.com>
-References: <20200529171847.10267-1-oscar.carter@gmx.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:Xbh6bc2AmKF5eUpe1JkLy04Gyi3Hb9L75YPMV4IOuT+BURFd86X
- QvCGG2899ZFmQmHxw4xv0sgrlbLGNr6vXbyyEUTV/j7WUl1KXnS/cSM5ZOFaWzMkqwMOUlh
- lAJfFVQQErGpc1+tiKPw+AKBMTpJ+duPgHDtZcDIR2dt98493If6An2WKlqLdDcZVvsdgWm
- i4pAUsQPQz8viQ6vtuxGA==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:cK5pSdYPuYw=:cgBVRC43BeXuVFlw7NN1y5
- UBXR7VOvd0fbpnIL6EOPaqUSD23+KtXJCFi13A1RPvw8934ONa3QUNJ7HeK/a5bELNDW7b3YV
- KpTux8y6DvlapqfhfKnBO7UQdH1mCUag5uLd2i182hO7RMvZGeS3z2oacIuSL+RSGk9WNlv6z
- zO65gGkxuJ6zKQ40vXqeWeExhzToVnsnUvPQrWtay+tn2biPumJz7OW9gs+hg7UnsZC5UBNt4
- 6sLnj3EAJ3+rCMalXr4hJZEqzF7QkGNjfZPQuhEQGvoNptSDGoNK/SVDnIlNONYolOex5b2xF
- l4OR1jWPkPgpgfCimojidEoKin2EOE4GIiWTIYemXBeDT5ge8tpjsgam6RyakcNL3vKFnimRp
- OEeEoFVAhbQx7ag34TEdyZNAIBIMA1UbLQqAYE7UkKe88alRgBcxkIUGwFrM4VrlFFKpnf0zq
- aMeMXpeLnwN/me1S6Ua/QQDh6a9GKaBI24WI5MBAV/NTT3Nb8A1uIEIXbhIK+6DI8Vjw7i8ZH
- FXPpQyQVgxAbv79UcORvXb3CIqQOendix1Wv+xVum9hlR8DnSa9SNwDBgcWkgNO66s4P/xOkR
- LHbYU5feM+QDugil6JBHIp4zng6vfNOivSdrlQYGqGBBXO0FH+6PulUw9HPSvYtbQALOjgUuj
- SzSkhRkjkJxNsKX5V69hnISQApJtYKEsS+hVrDq1aQUL2oT2xEeBtowactJKMHGJjJyzTJ74B
- CErkJPo9H2mmYdekKODtaN1f5AciV2dquEQ4TrZYhT6odGevQ8b+AFAYy7T9QffDiTmmxMD+7
- d++FsMUhOU14+kbGAMHvURc2e/4+sQdmHgD30AO3P+5TxeP+0wsXY1OpbkjU0uyMy+heXlkXt
- MQU0HWuo5plfNxf7lFqtCMHCtBr6EvywqKFZdock4Ux28MYfR3Tkmc30hxehESkh9eNpqkot+
- +9MQOnIjBslV8o/OIIKFBqwCEYQEJV0mnvxcfqJaPTWGLI6wLp6WDMiavYTxiQ1Wn5MI5cH+a
- zJEV44S/t+juj945Snbv+AyrmHKEqXYFjXN9vOjkVfdeT0MUYHUAXcn1WZqgDj+lETTD2cNAv
- 87YicXY4DNA7+t58loMex8QgKKsG5fwW32QziQXxbLGxAsg5JSB9xgtQwlT5O57mZF8YIRkFM
- 3hjnCIOTRWMXbjZvmAls+EGFwqVP0BBo3O6nDyTf1bbPduV0ReV+HL6X+e28Bxod0ZNLwFl13
- qMzqawkInlseylrYd
+X-Provags-ID: V03:K1:fVsyCVUWXyO4nX+jvehqta4m03FRys0QSfi+JfpgIUb/+1FFk35
+ 01/lh+/L0yseb5P7TApLqfIegGQQ4Ma2eqP3aKAoBioZ/EMvMI0kfge86nYssr2v+JA5Ye7
+ LMN23/mvvH99AYmCnoryK0hxcGs1e0h8wMaCAsLIOJPAAmFZN7GCu7C4aJDrE4dOs6MnjNp
+ yF7JzFRjqm275sOv127uA==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:wK+LOJDdfVM=:0HjSIV9RIwUfRt1X7lLzFq
+ bHfktVFbRQwlxG8nVGBy8Z8r7/TDkSFzS4go1WEP+NKSO82v/1iGr8+WtJnDZgzSmM/0XwoA+
+ o1VQ1hh7rch4ajU1WwZlZC4+RQzzn2uUqSqCAXaSHIyerKBCCwESJIs07TGHH0fK4ltbMIsr7
+ r6WD5feCB6dXd+RWk9XSzQjt/DsJXWr6bCTVCezO7miKEJmjPo8+B6oe8vKz78TcxjlzzQvR9
+ 8116t4YcuOd9EgpkaepIgc2i1eBHCvBw36YsTNjB/gxfuFukIiEvsR10fZyge4glnsB8Ac26v
+ NoYA7OBmdm48fN52pq0yth7VKmZIQmjaa0SQpJTrXSNBZnliWrGyJkFvpe13OJa/NpkykZ3kG
+ c5fwed0fgIjbfSsYCvwDM3rxbViJyhfSkHDGraHifeDuYHC0/jnFiVHpc5xSpP0rywnAPBaDS
+ FePX49dAtJNSAePybi/CyjpFRuIRlIXJeJLbc0zVeUjrd5s1dFKtZBboL2ekMxUDFji/hzkBU
+ tQFokngaVjQ6aYGAQ+BKZ3x+kGEoiBUuHUDUpFgX51gwiv224QBMiBYzByBvG2d5XRTf3Lbhj
+ UsztIeQoHNk7QoqjcIjA49sImGE3pzxKdvIGAKtUUMH9sgd56bts7+Jti46RqtWYlWzh4KjYm
+ ie99VfH7QVaA7dxi/3h99hGgvZu5uu1JP1ZT4/6/cmuCjt5sXi19tZSEGKpbC+NwrrA26T6cH
+ DBxFWeP1zWT/HaDpsWhmqv+WtGkEKgWVuvPyyCoR7Ah74TpLEdwwYhHl+D7HBa/oL4anfobmA
+ JCtcRaLPK/qQDZjr3JFoyLRL9l1kUqcxzUQS4gOyUXuE0UPdEEVCTpmQ75X5vCeWOo7GWKm9s
+ uK9idte0v07ZiWXUHMyP4+Z6sj6Voxd/MubY2ZcEn0Hb5uNmxATOo/Bt+tnz/Q4/vLxfzN31f
+ 9/earCnr2/H6xd9rrbTPggIeNk9oLTNKnj6S3BrXaN8PfWyhnLhWh2P4xY6gFDX0UTr9DZIoG
+ APVZRBxRv2XmLayRX+emux8eIDRD24khyYABTv1TX/VydcA7y7a1PEMDtgzD0u0hXTMLjgWc1
+ fDn+UzON2OO3LxH7Z0tmUB+EmAY1XG+Bvt8kVK78w0jywGjTG/QZGRgk4nrogaF0HGGDXFmu9
+ wX7vQ+AjuOGMGzydS8lJ6p4DnCcdhqJ9p8UCC2Y2J2pHUL4jxqH0qReHt/i0E3BiVrBA3Q1TN
+ 7xH4f5uDHrwmgNdXe
 
-In an effort to enable -Wcast-function-type in the top-level Makefile to
-support Control Flow Integrity builds, there are the need to remove all
-the function callback casts.
+In 1394 OHCI specification, Isochronous Receive DMA context has several
+modes. One of mode is 'BufferFill' and Linux FireWire stack uses it to
+receive isochronous packets for multiple isochronous channel as
+FW_ISO_CONTEXT_RECEIVE_MULTICHANNEL.
 
-To do this, modify the IRQCHIP_ACPI_DECLARE macro to use the new defined
-macro ACPI_DECLARE_SUBTABLE_PROBE_ENTRY instead of the macro
-ACPI_DECLARE_PROBE_ENTRY. This is necessary to be able to initialize the
-the acpi_probe_entry struct using the probe_subtbl field instead of the
-probe_table field and avoid function cast mismatches.
+The mode is not used by in-kernel driver, while it's available for
+userspace. The character device driver in firewire-core includes
+cast of function callback for the mode since the type of callback
+function is different from the other modes. The case is inconvenient
+to effort of Control Flow Integrity builds due to
+-Wcast-function-type warning.
 
-Also, modify the prototype of the functions used by the invocation of the
-IRQCHIP_ACPI_DECLARE macro to match all the parameters.
+This commit removes the cast. A static helper function is newly added
+to initialize isochronous context for the mode. The helper function
+arranges isochronous context to assign specific callback function
+after call of existent kernel API. It's noticeable that the number of
+isochronous channel, speed, and the size of header are not required for
+the mode. The helper function is used for the mode by character device
+driver instead of direct call of existent kernel API.
 
-Co-developed-by: Marc Zyngier <maz@kernel.org>
-Signed-off-by: Marc Zyngier <maz@kernel.org>
+The same goal can be achieved (in the ioctl_create_iso_context function)
+without this helper function as follows:
+- Call the fw_iso_context_create function passing NULL to the callback
+  parameter.
+- Then setting the context->callback.sc or context->callback.mc
+  variables based on the a->type value.
+
+However using the helper function created in this patch makes code more
+clear and declarative. This way avoid the call to a function with one
+purpose to achieved another one.
+
+Co-developed-by: Takashi Sakamoto <o-takashi@sakamocchi.jp>
+Signed-off-by: Takashi Sakamoto <o-takashi@sakamocchi.jp>
+Co-developed-by: Stefan Richter <stefanr@s5r6.in-berlin.de>
+Signed-off-by: Stefan Richter <stefanr@s5r6.in-berlin.de>
 Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
 =2D--
- drivers/irqchip/irq-gic-v3.c | 2 +-
- drivers/irqchip/irq-gic.c    | 2 +-
- include/linux/irqchip.h      | 5 +++--
- 3 files changed, 5 insertions(+), 4 deletions(-)
+Hi,
 
-diff --git a/drivers/irqchip/irq-gic-v3.c b/drivers/irqchip/irq-gic-v3.c
-index d7006ef18a0d..3870e9d4d3a8 100644
-=2D-- a/drivers/irqchip/irq-gic-v3.c
-+++ b/drivers/irqchip/irq-gic-v3.c
-@@ -2117,7 +2117,7 @@ static void __init gic_acpi_setup_kvm_info(void)
+this is another proposal to achieved the goal of remove function callback
+cast start by me with the first [1] and second [2] versions, and followed
+by the work of Takashi Sakamoto with his first [3] and second [4] versions=
+,
+and the code of Stefan Richter [5].
+
+The purpose of this third version is to put together all the work done
+until now following the comments of all reviewed patches.
+
+I've added the "Co-developed-by" and "Signed-off-by" tags to give credit t=
+o
+Takashi Sakamoto and Stefan Richter if there are no objections.
+
+Changelog v1->v2
+-Set explicity to NULL the "ctx->callback.sc" variable and return an error
+ code in "fw_iso_context_create" function if both callback parameters are
+ NULL as Lev R. Oshvang suggested.
+-Modify the commit changelog accordingly.
+
+Changelog v2->v3
+-Put togeher all the work done in different patches by different authors.
+-Modify the previous work following the comments in the reviewed patches.
+
+[1] https://lore.kernel.org/lkml/20200516173934.31527-1-oscar.carter@gmx.c=
+om/
+[2] https://lore.kernel.org/lkml/20200519173425.4724-1-oscar.carter@gmx.co=
+m/
+[3] https://lore.kernel.org/lkml/20200520064726.31838-1-o-takashi@sakamocc=
+hi.jp/
+[4] https://lore.kernel.org/lkml/20200524132048.243223-1-o-takashi@sakamoc=
+chi.jp/
+[5] https://lore.kernel.org/lkml/20200525015532.0055f9df@kant/
+
+ drivers/firewire/core-cdev.c | 32 ++++++++++++++++++++++++++------
+ include/linux/firewire.h     | 11 +++++++----
+ 2 files changed, 33 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/firewire/core-cdev.c b/drivers/firewire/core-cdev.c
+index 6e291d8f3a27..f7212331f245 100644
+=2D-- a/drivers/firewire/core-cdev.c
++++ b/drivers/firewire/core-cdev.c
+@@ -10,6 +10,7 @@
+ #include <linux/delay.h>
+ #include <linux/device.h>
+ #include <linux/dma-mapping.h>
++#include <linux/err.h>
+ #include <linux/errno.h>
+ #include <linux/firewire.h>
+ #include <linux/firewire-cdev.h>
+@@ -953,11 +954,25 @@ static enum dma_data_direction iso_dma_direction(str=
+uct fw_iso_context *context)
+ 			return DMA_FROM_DEVICE;
  }
 
- static int __init
--gic_acpi_init(struct acpi_subtable_header *header, const unsigned long en=
-d)
-+gic_acpi_init(union acpi_subtable_headers *header, const unsigned long en=
-d)
++static struct fw_iso_context *fw_iso_mc_context_create(struct fw_card *ca=
+rd,
++						fw_iso_mc_callback_t callback,
++						void *callback_data)
++{
++	struct fw_iso_context *ctx;
++
++	ctx =3D fw_iso_context_create(card, FW_ISO_CONTEXT_RECEIVE_MULTICHANNEL,
++				    0, 0, 0, NULL, callback_data);
++	if (!IS_ERR(ctx))
++		ctx->callback.mc =3D callback;
++
++	return ctx;
++}
++
+ static int ioctl_create_iso_context(struct client *client, union ioctl_ar=
+g *arg)
  {
- 	struct acpi_madt_generic_distributor *dist;
- 	struct fwnode_handle *domain_handle;
-diff --git a/drivers/irqchip/irq-gic.c b/drivers/irqchip/irq-gic.c
-index 30ab623343d3..fc431857ce90 100644
-=2D-- a/drivers/irqchip/irq-gic.c
-+++ b/drivers/irqchip/irq-gic.c
-@@ -1593,7 +1593,7 @@ static void __init gic_acpi_setup_kvm_info(void)
- 	gic_set_kvm_info(&gic_v2_kvm_info);
- }
+ 	struct fw_cdev_create_iso_context *a =3D &arg->create_iso_context;
+ 	struct fw_iso_context *context;
+-	fw_iso_callback_t cb;
++	union fw_iso_callback cb;
+ 	int ret;
 
--static int __init gic_v2_acpi_init(struct acpi_subtable_header *header,
-+static int __init gic_v2_acpi_init(union acpi_subtable_headers *header,
- 				   const unsigned long end)
- {
- 	struct acpi_madt_generic_distributor *dist;
-diff --git a/include/linux/irqchip.h b/include/linux/irqchip.h
-index 950e4b2458f0..447f22880a69 100644
-=2D-- a/include/linux/irqchip.h
-+++ b/include/linux/irqchip.h
-@@ -39,8 +39,9 @@
-  * @fn: initialization function
-  */
- #define IRQCHIP_ACPI_DECLARE(name, subtable, validate, data, fn)	\
--	ACPI_DECLARE_PROBE_ENTRY(irqchip, name, ACPI_SIG_MADT, 		\
--				 subtable, validate, data, fn)
-+	ACPI_DECLARE_SUBTABLE_PROBE_ENTRY(irqchip, name,		\
-+					  ACPI_SIG_MADT, subtable,	\
-+					  validate, data, fn)
+ 	BUILD_BUG_ON(FW_CDEV_ISO_CONTEXT_TRANSMIT !=3D FW_ISO_CONTEXT_TRANSMIT |=
+|
+@@ -970,7 +985,7 @@ static int ioctl_create_iso_context(struct client *cli=
+ent, union ioctl_arg *arg)
+ 		if (a->speed > SCODE_3200 || a->channel > 63)
+ 			return -EINVAL;
 
- #ifdef CONFIG_IRQCHIP
- void irqchip_init(void);
+-		cb =3D iso_callback;
++		cb.sc =3D iso_callback;
+ 		break;
+
+ 	case FW_ISO_CONTEXT_RECEIVE:
+@@ -978,19 +993,24 @@ static int ioctl_create_iso_context(struct client *c=
+lient, union ioctl_arg *arg)
+ 		    a->channel > 63)
+ 			return -EINVAL;
+
+-		cb =3D iso_callback;
++		cb.sc =3D iso_callback;
+ 		break;
+
+ 	case FW_ISO_CONTEXT_RECEIVE_MULTICHANNEL:
+-		cb =3D (fw_iso_callback_t)iso_mc_callback;
++		cb.mc =3D iso_mc_callback;
+ 		break;
+
+ 	default:
+ 		return -EINVAL;
+ 	}
+
+-	context =3D fw_iso_context_create(client->device->card, a->type,
+-			a->channel, a->speed, a->header_size, cb, client);
++	if (a->type =3D=3D FW_ISO_CONTEXT_RECEIVE_MULTICHANNEL)
++		context =3D fw_iso_mc_context_create(client->device->card, cb.mc,
++						   client);
++	else
++		context =3D fw_iso_context_create(client->device->card, a->type,
++						a->channel, a->speed,
++						a->header_size, cb.sc, client);
+ 	if (IS_ERR(context))
+ 		return PTR_ERR(context);
+ 	if (client->version < FW_CDEV_VERSION_AUTO_FLUSH_ISO_OVERFLOW)
+diff --git a/include/linux/firewire.h b/include/linux/firewire.h
+index aec8f30ab200..07967a450eaa 100644
+=2D-- a/include/linux/firewire.h
++++ b/include/linux/firewire.h
+@@ -436,6 +436,12 @@ typedef void (*fw_iso_callback_t)(struct fw_iso_conte=
+xt *context,
+ 				  void *header, void *data);
+ typedef void (*fw_iso_mc_callback_t)(struct fw_iso_context *context,
+ 				     dma_addr_t completed, void *data);
++
++union fw_iso_callback {
++	fw_iso_callback_t sc;
++	fw_iso_mc_callback_t mc;
++};
++
+ struct fw_iso_context {
+ 	struct fw_card *card;
+ 	int type;
+@@ -443,10 +449,7 @@ struct fw_iso_context {
+ 	int speed;
+ 	bool drop_overflow_headers;
+ 	size_t header_size;
+-	union {
+-		fw_iso_callback_t sc;
+-		fw_iso_mc_callback_t mc;
+-	} callback;
++	union fw_iso_callback callback;
+ 	void *callback_data;
+ };
+
 =2D-
 2.20.1
 
