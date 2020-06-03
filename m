@@ -1,20 +1,20 @@
-Return-Path: <SRS0=ONLU=7Q=lists.openwall.com=kernel-hardening-return-18908-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=4zQG=7Q=lists.openwall.com=kernel-hardening-return-18909-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1995FC433DF
-	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 05:18:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 22784C433DF
+	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 05:18:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 74C2720678
-	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 05:18:00 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 74C2720678
+	by mail.kernel.org (Postfix) with SMTP id 7B2CA2072F
+	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 05:18:08 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7B2CA2072F
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18908-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28466 invoked by uid 550); 3 Jun 2020 05:17:50 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18909-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29754 invoked by uid 550); 3 Jun 2020 05:17:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,143 +22,95 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28428 invoked from network); 3 Jun 2020 05:17:49 -0000
+Received: (qmail 28471 invoked from network); 3 Jun 2020 05:17:51 -0000
 From: "Christopher M. Riedl" <cmr@informatik.wtf>
 To: linuxppc-dev@lists.ozlabs.org,
 	kernel-hardening@lists.openwall.com
-Subject: [PATCH 0/5] Use per-CPU temporary mappings for patching
-Date: Wed,  3 Jun 2020 00:19:07 -0500
-Message-Id: <20200603051912.23296-1-cmr@informatik.wtf>
+Subject: [PATCH 2/5] powerpc/lib: Initialize a temporary mm for code patching
+Date: Wed,  3 Jun 2020 00:19:09 -0500
+Message-Id: <20200603051912.23296-3-cmr@informatik.wtf>
 X-Mailer: git-send-email 2.26.2
+In-Reply-To: <20200603051912.23296-1-cmr@informatik.wtf>
+References: <20200603051912.23296-1-cmr@informatik.wtf>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 X-Virus-Scanned: ClamAV using ClamSMTP
 
-When compiled with CONFIG_STRICT_KERNEL_RWX, the kernel must create
-temporary mappings when patching itself. These mappings temporarily
-override the strict RWX text protections to permit a write. Currently,
-powerpc allocates a per-CPU VM area for patching. Patching occurs as
-follows:
+When code patching a STRICT_KERNEL_RWX kernel the page containing the
+address to be patched is temporarily mapped with permissive memory
+protections. Currently, a per-cpu vmalloc patch area is used for this
+purpose. While the patch area is per-cpu, the temporary page mapping is
+inserted into the kernel page tables for the duration of the patching.
+The mapping is exposed to CPUs other than the patching CPU - this is
+undesirable from a hardening perspective.
 
-	1. Map page of text to be patched to per-CPU VM area w/
-	   PAGE_KERNEL protection
-	2. Patch text
-	3. Remove the temporary mapping
+Use the `poking_init` init hook to prepare a temporary mm and patching
+address. Initialize the temporary mm by copying the init mm. Choose a
+randomized patching address inside the temporary mm userspace address
+portion. The next patch uses the temporary mm and patching address for
+code patching.
 
-While the VM area is per-CPU, the mapping is actually inserted into the
-kernel page tables. Presumably, this could allow another CPU to access
-the normally write-protected text - either malicously or accidentally -
-via this same mapping if the address of the VM area is known. Ideally,
-the mapping should be kept local to the CPU doing the patching (or any
-other sensitive operations requiring temporarily overriding memory
-protections) [0].
+Based on x86 implementation:
 
-x86 introduced "temporary mm" structs which allow the creation of
-mappings local to a particular CPU [1]. This series intends to bring the
-notion of a temporary mm to powerpc and harden powerpc by using such a
-mapping for patching a kernel with strict RWX permissions.
+commit 4fc19708b165
+("x86/alternatives: Initialize temporary mm for patching")
 
-The first patch introduces the temporary mm struct and API for powerpc
-along with a new function to retrieve a current hw breakpoint.
+Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
+---
+ arch/powerpc/lib/code-patching.c | 33 ++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
 
-The second patch uses the `poking_init` init hook added by the x86
-patches to initialize a temporary mm and patching address. The patching
-address is randomized between 0 and DEFAULT_MAP_WINDOW-PAGE_SIZE. The
-upper limit is necessary due to how the hash MMU operates - by default
-the space above DEFAULT_MAP_WINDOW is not available. For now, both hash
-and radix randomize inside this range. The number of possible random
-addresses is dependent on PAGE_SIZE and limited by DEFAULT_MAP_WINDOW.
-
-Bits of entropy with 64K page size on BOOK3S_64:
-
-	bits of entropy = log2(DEFAULT_MAP_WINDOW_USER64 / PAGE_SIZE)
-
-	PAGE_SIZE=64K, DEFAULT_MAP_WINDOW_USER64=128TB
-	bits of entropy = log2(128TB / 64K)
-	bits of entropy = 31
-
-Randomization occurs only once during initialization at boot.
-
-The third patch replaces the VM area with the temporary mm in the
-patching code. The page for patching has to be mapped PAGE_SHARED with
-the hash MMU since hash prevents the kernel from accessing userspace
-pages with PAGE_PRIVILEGED bit set. On the radix MMU the page is mapped with
-PAGE_KERNEL which has the added benefit that we can skip KUAP. 
-
-The fourth and fifth patches implement an LKDTM test "proof-of-concept" which
-exploits the previous vulnerability (ie. the mapping during patching is exposed
-in kernel page tables and accessible by other CPUS). The LKDTM test is somewhat
-"rough" in that it uses a brute-force approach - I am open to any suggestions
-and/or ideas to improve this. Currently, the LKDTM test passes with this series
-on POWER8 (hash) and POWER9 (radix, hash) and fails without this series (ie.
-the temporary mapping for patching is exposed to CPUs other than the patching
-CPU).
-
-The test can be applied to a tree without this new series by first
-adding this in /arch/powerpc/lib/code-patching.c:
-
+diff --git a/arch/powerpc/lib/code-patching.c b/arch/powerpc/lib/code-patching.c
+index 5ecf0d635a8d..599114f63b44 100644
+--- a/arch/powerpc/lib/code-patching.c
++++ b/arch/powerpc/lib/code-patching.c
+@@ -11,6 +11,8 @@
+ #include <linux/cpuhotplug.h>
+ #include <linux/slab.h>
+ #include <linux/uaccess.h>
++#include <linux/sched/task.h>
++#include <linux/random.h>
+ 
+ #include <asm/pgtable.h>
+ #include <asm/tlbflush.h>
+@@ -45,6 +47,37 @@ int raw_patch_instruction(struct ppc_inst *addr, struct ppc_inst instr)
+ }
+ 
  #ifdef CONFIG_STRICT_KERNEL_RWX
- static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
-
-+#ifdef CONFIG_LKDTM
-+unsigned long read_cpu_patching_addr(unsigned int cpu)
-+{
-+       return (unsigned long)(per_cpu(text_poke_area, cpu))->addr;
-+}
-+#endif
 +
++static struct mm_struct *patching_mm __ro_after_init;
++static unsigned long patching_addr __ro_after_init;
++
++void __init poking_init(void)
++{
++	spinlock_t *ptl; /* for protecting pte table */
++	pte_t *ptep;
++
++	/*
++	 * Some parts of the kernel (static keys for example) depend on
++	 * successful code patching. Code patching under STRICT_KERNEL_RWX
++	 * requires this setup - otherwise we cannot patch at all. We use
++	 * BUG_ON() here and later since an early failure is preferred to
++	 * buggy behavior and/or strange crashes later.
++	 */
++	patching_mm = copy_init_mm();
++	BUG_ON(!patching_mm);
++
++	/*
++	 * In hash we cannot go above DEFAULT_MAP_WINDOW easily.
++	 * XXX: Do we want additional bits of entropy for radix?
++	 */
++	patching_addr = (get_random_long() & PAGE_MASK) %
++		(DEFAULT_MAP_WINDOW - PAGE_SIZE);
++
++	ptep = get_locked_pte(patching_mm, patching_addr, &ptl);
++	BUG_ON(!ptep);
++	pte_unmap_unlock(ptep, ptl);
++}
++
+ static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
+ 
  static int text_area_cpu_up(unsigned int cpu)
- {
-        struct vm_struct *area;
-
-And then applying the last patch of this series which adds the LKDTM test,
-(powerpc: Add LKDTM test to hijack a patch mapping).
-
-Tested on QEMU (POWER8, POWER9), POWER8 VM, and a Blackbird (8-core POWER9).
-
-v1:	* Rebase on linuxppc/next (4336b9337824)
-	* Save and restore second hw watchpoint
-	* Use new ppc_inst_* functions for patching check and in LKDTM
-	  test
-
-rfc-v2:	* Many fixes and improvements mostly based on extensive feedback and
-          testing by Christophe Leroy (thanks!).
-	* Make patching_mm and patching_addr static and mode '__ro_after_init'
-	  to after the variable name (more common in other parts of the kernel)
-	* Use 'asm/debug.h' header instead of 'asm/hw_breakpoint.h' to fix
-	  PPC64e compile
-	* Add comment explaining why we use BUG_ON() during the init call to
-	  setup for patching later
-	* Move ptep into patch_mapping to avoid walking page tables a second
-	  time when unmapping the temporary mapping
-	* Use KUAP under non-radix, also manually dirty the PTE for patch
-	  mapping on non-BOOK3S_64 platforms
-	* Properly return any error from __patch_instruction
-	* Do not use 'memcmp' where a simple comparison is appropriate
-	* Simplify expression for patch address by removing pointer maths
-	* Add LKDTM test
-
-
-[0]: https://github.com/linuxppc/issues/issues/224
-[1]: https://lore.kernel.org/kernel-hardening/20190426232303.28381-1-nadav.amit@gmail.com/
-
-
-Christopher M. Riedl (5):
-  powerpc/mm: Introduce temporary mm
-  powerpc/lib: Initialize a temporary mm for code patching
-  powerpc/lib: Use a temporary mm for code patching
-  powerpc/lib: Add LKDTM accessor for patching addr
-  powerpc: Add LKDTM test to hijack a patch mapping
-
- arch/powerpc/include/asm/debug.h       |   1 +
- arch/powerpc/include/asm/mmu_context.h |  64 +++++++++
- arch/powerpc/kernel/process.c          |   5 +
- arch/powerpc/lib/code-patching.c       | 172 +++++++++++++------------
- drivers/misc/lkdtm/core.c              |   1 +
- drivers/misc/lkdtm/lkdtm.h             |   1 +
- drivers/misc/lkdtm/perms.c             | 101 +++++++++++++++
- 7 files changed, 260 insertions(+), 85 deletions(-)
-
 -- 
 2.26.2
 
