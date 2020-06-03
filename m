@@ -1,20 +1,20 @@
-Return-Path: <SRS0=AHLo=7Q=lists.openwall.com=kernel-hardening-return-18913-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=D6RL=7Q=lists.openwall.com=kernel-hardening-return-18914-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+X-Spam-Status: No, score=-8.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0A5B0C433DF
-	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 05:18:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BF7B6C433DF
+	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 10:38:26 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6738420678
-	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 05:18:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6738420678
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18913-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30209 invoked by uid 550); 3 Jun 2020 05:17:57 -0000
+	by mail.kernel.org (Postfix) with SMTP id 25C9C20679
+	for <kernel-hardening@archiver.kernel.org>; Wed,  3 Jun 2020 10:38:25 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 25C9C20679
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=csgroup.eu
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18914-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18213 invoked by uid 550); 3 Jun 2020 10:38:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,192 +22,170 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30048 invoked from network); 3 Jun 2020 05:17:56 -0000
-From: "Christopher M. Riedl" <cmr@informatik.wtf>
-To: linuxppc-dev@lists.ozlabs.org,
-	kernel-hardening@lists.openwall.com
-Subject: [PATCH 5/5] powerpc: Add LKDTM test to hijack a patch mapping
-Date: Wed,  3 Jun 2020 00:19:12 -0500
-Message-Id: <20200603051912.23296-6-cmr@informatik.wtf>
-X-Mailer: git-send-email 2.26.2
-In-Reply-To: <20200603051912.23296-1-cmr@informatik.wtf>
+Received: (qmail 28041 invoked from network); 3 Jun 2020 06:58:58 -0000
+X-Virus-Scanned: Debian amavisd-new at c-s.fr
+X-Virus-Scanned: amavisd-new at c-s.fr
+Subject: Re: [PATCH 1/5] powerpc/mm: Introduce temporary mm
+To: "Christopher M. Riedl" <cmr@informatik.wtf>,
+ linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com
 References: <20200603051912.23296-1-cmr@informatik.wtf>
+ <20200603051912.23296-2-cmr@informatik.wtf>
+From: Christophe Leroy <christophe.leroy@csgroup.eu>
+Message-ID: <ff05b833-720e-e1e2-f43b-8285d520a563@csgroup.eu>
+Date: Wed, 3 Jun 2020 08:58:44 +0200
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:68.0) Gecko/20100101
+ Thunderbird/68.8.1
 MIME-Version: 1.0
+In-Reply-To: <20200603051912.23296-2-cmr@informatik.wtf>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Language: fr
 Content-Transfer-Encoding: 8bit
-X-Virus-Scanned: ClamAV using ClamSMTP
 
-When live patching with STRICT_KERNEL_RWX, the CPU doing the patching
-must use a temporary mapping which allows for writing to kernel text.
-During the entire window of time when this temporary mapping is in use,
-another CPU could write to the same mapping and maliciously alter kernel
-text. Implement a LKDTM test to attempt to exploit such a openings when
-a CPU is patching under STRICT_KERNEL_RWX. The test is only implemented
-on powerpc for now.
 
-The LKDTM "hijack" test works as follows:
 
-	1. A CPU executes an infinite loop to patch an instruction.
-	   This is the "patching" CPU.
-	2. Another CPU attempts to write to the address of the temporary
-	   mapping used by the "patching" CPU. This other CPU is the
-	   "hijacker" CPU. The hijack either fails with a segfault or
-	   succeeds, in which case some kernel text is now overwritten.
+Le 03/06/2020 à 07:19, Christopher M. Riedl a écrit :
+> x86 supports the notion of a temporary mm which restricts access to
+> temporary PTEs to a single CPU. A temporary mm is useful for situations
+> where a CPU needs to perform sensitive operations (such as patching a
+> STRICT_KERNEL_RWX kernel) requiring temporary mappings without exposing
+> said mappings to other CPUs. A side benefit is that other CPU TLBs do
+> not need to be flushed when the temporary mm is torn down.
+> 
+> Mappings in the temporary mm can be set in the userspace portion of the
+> address-space.
+> 
+> Interrupts must be disabled while the temporary mm is in use. HW
+> breakpoints, which may have been set by userspace as watchpoints on
+> addresses now within the temporary mm, are saved and disabled when
+> loading the temporary mm. The HW breakpoints are restored when unloading
+> the temporary mm. All HW breakpoints are indiscriminately disabled while
+> the temporary mm is in use.
+> 
+> Based on x86 implementation:
+> 
+> commit cefa929c034e
+> ("x86/mm: Introduce temporary mm structs")
+> 
+> Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
+> ---
+>   arch/powerpc/include/asm/debug.h       |  1 +
+>   arch/powerpc/include/asm/mmu_context.h | 64 ++++++++++++++++++++++++++
+>   arch/powerpc/kernel/process.c          |  5 ++
+>   3 files changed, 70 insertions(+)
+> 
+> diff --git a/arch/powerpc/include/asm/debug.h b/arch/powerpc/include/asm/debug.h
+> index ec57daf87f40..827350c9bcf3 100644
+> --- a/arch/powerpc/include/asm/debug.h
+> +++ b/arch/powerpc/include/asm/debug.h
+> @@ -46,6 +46,7 @@ static inline int debugger_fault_handler(struct pt_regs *regs) { return 0; }
+>   #endif
+>   
+>   void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk);
+> +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk);
+>   bool ppc_breakpoint_available(void);
+>   #ifdef CONFIG_PPC_ADV_DEBUG_REGS
+>   extern void do_send_trap(struct pt_regs *regs, unsigned long address,
+> diff --git a/arch/powerpc/include/asm/mmu_context.h b/arch/powerpc/include/asm/mmu_context.h
+> index 1a474f6b1992..9269c7c7b04e 100644
+> --- a/arch/powerpc/include/asm/mmu_context.h
+> +++ b/arch/powerpc/include/asm/mmu_context.h
+> @@ -10,6 +10,7 @@
+>   #include <asm/mmu.h>	
+>   #include <asm/cputable.h>
+>   #include <asm/cputhreads.h>
+> +#include <asm/debug.h>
+>   
+>   /*
+>    * Most if the context management is out of line
+> @@ -300,5 +301,68 @@ static inline int arch_dup_mmap(struct mm_struct *oldmm,
+>   	return 0;
+>   }
+>   
+> +struct temp_mm {
+> +	struct mm_struct *temp;
+> +	struct mm_struct *prev;
+> +	bool is_kernel_thread;
+> +	struct arch_hw_breakpoint brk[HBP_NUM_MAX];
+> +};
+> +
+> +static inline void init_temp_mm(struct temp_mm *temp_mm, struct mm_struct *mm)
+> +{
+> +	temp_mm->temp = mm;
+> +	temp_mm->prev = NULL;
+> +	temp_mm->is_kernel_thread = false;
+> +	memset(&temp_mm->brk, 0, sizeof(temp_mm->brk));
+> +}
+> +
+> +static inline void use_temporary_mm(struct temp_mm *temp_mm)
+> +{
+> +	lockdep_assert_irqs_disabled();
+> +
+> +	temp_mm->is_kernel_thread = current->mm == NULL;
+> +	if (temp_mm->is_kernel_thread)
+> +		temp_mm->prev = current->active_mm;
+> +	else
+> +		temp_mm->prev = current->mm;
 
-How to run the test:
+Is that necessary to make different for kernel threads ? When I look at 
+x86 implementation, they don't do such a thing.
 
-	mount -t debugfs none /sys/kernel/debug
-	(echo HIJACK_PATCH > /sys/kernel/debug/provoke-crash/DIRECT)
+> +
+> +	/*
+> +	 * Hash requires a non-NULL current->mm to allocate a userspace address
+> +	 * when handling a page fault. Does not appear to hurt in Radix either.
+> +	 */
+> +	current->mm = temp_mm->temp;
+> +	switch_mm_irqs_off(NULL, temp_mm->temp, current);
+> +
+> +	if (ppc_breakpoint_available()) {
+> +		struct arch_hw_breakpoint null_brk = {0};
+> +		int i = 0;
+> +
+> +		for (; i < nr_wp_slots(); ++i) {
+> +			__get_breakpoint(i, &temp_mm->brk[i]);
+> +			if (temp_mm->brk[i].type != 0)
+> +				__set_breakpoint(i, &null_brk);
+> +		}
+> +	}
+> +}
+> +
+> +static inline void unuse_temporary_mm(struct temp_mm *temp_mm)
+> +{
+> +	lockdep_assert_irqs_disabled();
+> +
+> +	if (temp_mm->is_kernel_thread)
+> +		current->mm = NULL;
+> +	else
+> +		current->mm = temp_mm->prev;
+> +	switch_mm_irqs_off(NULL, temp_mm->prev, current);
+> +
+> +	if (ppc_breakpoint_available()) {
+> +		int i = 0;
+> +
+> +		for (; i < nr_wp_slots(); ++i)
+> +			if (temp_mm->brk[i].type != 0)
+> +				__set_breakpoint(i, &temp_mm->brk[i]);
+> +	}
+> +}
+> +
+>   #endif /* __KERNEL__ */
+>   #endif /* __ASM_POWERPC_MMU_CONTEXT_H */
+> diff --git a/arch/powerpc/kernel/process.c b/arch/powerpc/kernel/process.c
+> index 048d64c4e115..3973144f6980 100644
+> --- a/arch/powerpc/kernel/process.c
+> +++ b/arch/powerpc/kernel/process.c
+> @@ -825,6 +825,11 @@ static inline int set_breakpoint_8xx(struct arch_hw_breakpoint *brk)
+>   	return 0;
+>   }
+>   
+> +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk)
+> +{
+> +	memcpy(brk, this_cpu_ptr(&current_brk[nr]), sizeof(*brk));
+> +}
+> +
+>   void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk)
+>   {
+>   	memcpy(this_cpu_ptr(&current_brk[nr]), brk, sizeof(*brk));
+> 
 
-Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
----
- drivers/misc/lkdtm/core.c  |   1 +
- drivers/misc/lkdtm/lkdtm.h |   1 +
- drivers/misc/lkdtm/perms.c | 101 +++++++++++++++++++++++++++++++++++++
- 3 files changed, 103 insertions(+)
-
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index a5e344df9166..482e72f6a1e1 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -145,6 +145,7 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(WRITE_RO),
- 	CRASHTYPE(WRITE_RO_AFTER_INIT),
- 	CRASHTYPE(WRITE_KERN),
-+	CRASHTYPE(HIJACK_PATCH),
- 	CRASHTYPE(REFCOUNT_INC_OVERFLOW),
- 	CRASHTYPE(REFCOUNT_ADD_OVERFLOW),
- 	CRASHTYPE(REFCOUNT_INC_NOT_ZERO_OVERFLOW),
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index 601a2156a0d4..bfcf3542370d 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -62,6 +62,7 @@ void lkdtm_EXEC_USERSPACE(void);
- void lkdtm_EXEC_NULL(void);
- void lkdtm_ACCESS_USERSPACE(void);
- void lkdtm_ACCESS_NULL(void);
-+void lkdtm_HIJACK_PATCH(void);
- 
- /* lkdtm_refcount.c */
- void lkdtm_REFCOUNT_INC_OVERFLOW(void);
-diff --git a/drivers/misc/lkdtm/perms.c b/drivers/misc/lkdtm/perms.c
-index 62f76d506f04..8bda3b56bc78 100644
---- a/drivers/misc/lkdtm/perms.c
-+++ b/drivers/misc/lkdtm/perms.c
-@@ -9,6 +9,7 @@
- #include <linux/vmalloc.h>
- #include <linux/mman.h>
- #include <linux/uaccess.h>
-+#include <linux/kthread.h>
- #include <asm/cacheflush.h>
- 
- /* Whether or not to fill the target memory area with do_nothing(). */
-@@ -213,6 +214,106 @@ void lkdtm_ACCESS_NULL(void)
- 	*ptr = tmp;
- }
- 
-+#if defined(CONFIG_PPC) && defined(CONFIG_STRICT_KERNEL_RWX)
-+#include <include/asm/code-patching.h>
-+
-+extern unsigned long read_cpu_patching_addr(unsigned int cpu);
-+
-+static struct ppc_inst * const patch_site = (struct ppc_inst *)&do_nothing;
-+
-+static int lkdtm_patching_cpu(void *data)
-+{
-+	int err = 0;
-+	struct ppc_inst insn = ppc_inst(0xdeadbeef);
-+
-+	pr_info("starting patching_cpu=%d\n", smp_processor_id());
-+	do {
-+		err = patch_instruction(patch_site, insn);
-+	} while (ppc_inst_equal(ppc_inst_read(READ_ONCE(patch_site)), insn) &&
-+			!err && !kthread_should_stop());
-+
-+	if (err)
-+		pr_warn("patch_instruction returned error: %d\n", err);
-+
-+	set_current_state(TASK_INTERRUPTIBLE);
-+	while (!kthread_should_stop()) {
-+		schedule();
-+		set_current_state(TASK_INTERRUPTIBLE);
-+	}
-+
-+	return err;
-+}
-+
-+void lkdtm_HIJACK_PATCH(void)
-+{
-+	struct task_struct *patching_kthrd;
-+	struct ppc_inst original_insn;
-+	int patching_cpu, hijacker_cpu, attempts;
-+	unsigned long addr;
-+	bool hijacked;
-+
-+	if (num_online_cpus() < 2) {
-+		pr_warn("need at least two cpus\n");
-+		return;
-+	}
-+
-+	original_insn = ppc_inst_read(READ_ONCE(patch_site));
-+
-+	hijacker_cpu = smp_processor_id();
-+	patching_cpu = cpumask_any_but(cpu_online_mask, hijacker_cpu);
-+
-+	patching_kthrd = kthread_create_on_node(&lkdtm_patching_cpu, NULL,
-+						cpu_to_node(patching_cpu),
-+						"lkdtm_patching_cpu");
-+	kthread_bind(patching_kthrd, patching_cpu);
-+	wake_up_process(patching_kthrd);
-+
-+	addr = offset_in_page(patch_site) | read_cpu_patching_addr(patching_cpu);
-+
-+	pr_info("starting hijacker_cpu=%d\n", hijacker_cpu);
-+	for (attempts = 0; attempts < 100000; ++attempts) {
-+		/* Use __put_user to catch faults without an Oops */
-+		hijacked = !__put_user(0xbad00bad, (unsigned int *)addr);
-+
-+		if (hijacked) {
-+			if (kthread_stop(patching_kthrd))
-+				goto out;
-+			break;
-+		}
-+	}
-+	pr_info("hijack attempts: %d\n", attempts);
-+
-+	if (hijacked) {
-+		if (*(unsigned int *)READ_ONCE(patch_site) == 0xbad00bad)
-+			pr_err("overwrote kernel text\n");
-+		/*
-+		 * There are window conditions where the hijacker cpu manages to
-+		 * write to the patch site but the site gets overwritten again by
-+		 * the patching cpu. We still consider that a "successful" hijack
-+		 * since the hijacker cpu did not fault on the write.
-+		 */
-+		pr_err("FAIL: wrote to another cpu's patching area\n");
-+	} else {
-+		kthread_stop(patching_kthrd);
-+	}
-+
-+out:
-+	/* Restore the original insn for any future lkdtm tests */
-+	patch_instruction(patch_site, original_insn);
-+}
-+
-+#else
-+
-+void lkdtm_HIJACK_PATCH(void)
-+{
-+	if (!IS_ENABLED(CONFIG_PPC))
-+		pr_err("XFAIL: this test is powerpc-only\n");
-+	if (!IS_ENABLED(CONFIG_STRICT_KERNEL_RWX))
-+		pr_err("XFAIL: this test requires CONFIG_STRICT_KERNEL_RWX\n");
-+}
-+
-+#endif /* CONFIG_PPC && CONFIG_STRICT_KERNEL_RWX */
-+
- void __init lkdtm_perms_init(void)
- {
- 	/* Make sure we can write to __ro_after_init values during __init */
--- 
-2.26.2
-
+Christophe
