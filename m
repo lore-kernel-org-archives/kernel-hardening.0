@@ -1,21 +1,22 @@
-Return-Path: <SRS0=Sr9G=7W=lists.openwall.com=kernel-hardening-return-18938-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=bs8r=7W=lists.openwall.com=kernel-hardening-return-18939-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=BAD_ENC_HEADER,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C0952C433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jun 2020 04:47:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 89358C433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jun 2020 18:39:34 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 90740207ED
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jun 2020 04:47:01 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 90740207ED
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18938-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28077 invoked by uid 550); 9 Jun 2020 04:46:55 -0000
+	by mail.kernel.org (Postfix) with SMTP id DD4E820691
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jun 2020 18:39:33 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="muEdWnYf"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DD4E820691
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18939-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 10067 invoked by uid 550); 9 Jun 2020 18:39:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,366 +24,121 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28039 invoked from network); 9 Jun 2020 04:46:54 -0000
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset=UTF-8
-In-Reply-To: <6fcbff8c-fe24-f35c-ec95-84fdaa3b869c@csgroup.eu>
-Originaldate: Wed Jun 3, 2020 at 9:20 AM
-Originalfrom: "Christophe Leroy" <christophe.leroy@csgroup.eu>
-Original: =?utf-8?q?=0D=0A=0D=0ALe_03/06/2020_
- =C3=A0_07:19,_Christopher_M._Riedl_a_?= =?utf-8?q?=C3=A9crit=C2=A0:
- =0D=0A>_When_live_patching_with_STRICT=5FKERNE?= =?utf-8?q?L
- =5FRWX,_the_CPU_doing_the_patching=0D=0A>_must_use_a_temporary?=
- =?utf-8?q?_mapping_which_allows_for_writing_to_kernel_text.=0D=0A>_During?=
- =?utf-8?q?_the_entire_window_of_time_when_this_temporary_mapping_is_in_us?=
- =?utf-8?q?e,=0D=0A>_another_CPU_could_write_to_the_same_mapping_and_malic?=
- =?utf-8?q?iously_alter_kernel=0D=0A>_text._Implement_a_LKDTM_test_to_atte?=
- =?utf-8?q?mpt_to_exploit_such_a_openings_when=0D=0A>_a_CPU_is_patching_un?=
- =?utf-8?q?der_STRICT=5FKERNEL=5FRWX._The_test_is_only_implemented=0D=0A>_?=
- =?utf-8?q?on_powerpc_for_now.=0D=0A>_=0D=0A>_The_LKDTM_"hijack"_test_work?=
- =?utf-8?q?s_as_follows:=0D=0A>_=0D=0A>_=091._A_CPU_executes_an_infinite_l?=
- =?utf-8?q?oop_to_patch_an_instruction.=0D=0A>_=09___This_is_the_"patching?=
- =?utf-8?q?"_CPU.=0D=0A>_=092._Another_CPU_attempts_to_write_to_the_addres?=
- =?utf-8?q?s_of_the_temporary=0D=0A>_=09___mapping_used_by_the_"patching"_?=
- =?utf-8?q?CPU._This_other_CPU_is_the=0D=0A>_=09___"hijacker"_CPU._The_hij?=
- =?utf-8?q?ack_either_fails_with_a_segfault_or=0D=0A>_=09___succeeds,_in_w?=
- =?utf-8?q?hich_case_some_kernel_text_is_now_overwritten.=0D=0A>_=0D=0A>_H?=
- =?utf-8?q?ow_to_run_the_test:=0D=0A>_=0D=0A>_=09mount_-t_debugfs_none_/sy?=
- =?utf-8?q?s/kernel/debug=0D=0A>_=09(echo_HIJACK=5FPATCH_>_/sys/kernel/deb?=
- =?utf-8?q?ug/provoke-crash/DIRECT)=0D=0A>_=0D=0A>_Signed-off-by:_Christop?=
- =?utf-8?q?her_M._Riedl_<cmr@informatik.wtf>=0D=0A>_---=0D=0A>___drivers/m?=
- =?utf-8?q?isc/lkdtm/core.c__|___1_+=0D=0A>___drivers/misc/lkdtm/lkdtm.h_|?=
- =?utf-8?q?___1_+=0D=0A>___drivers/misc/lkdtm/perms.c_|_101_++++++++++++++?=
- =?utf-8?q?+++++++++++++++++++++++=0D=0A>___3_files_changed,_103_insertion?=
- =?utf-8?q?s(+)=0D=0A>_=0D=0A>_diff_--git_a/drivers/misc/lkdtm/core.c_b/dr?=
- =?utf-8?q?ivers/misc/lkdtm/core.c=0D=0A>_index_a5e344df9166..482e72f6a1e1?=
- =?utf-8?q?_100644=0D=0A>_---_a/drivers/misc/lkdtm/core.c=0D=0A>_+++_b/dri?=
- =?utf-8?q?vers/misc/lkdtm/core.c=0D=0A>_@@_-145,6_+145,7_@@_static_const_?=
- =?utf-8?q?struct_crashtype_crashtypes[]_=3D_{=0D=0A>___=09CRASHTYPE(WRITE?=
- =?utf-8?q?=5FRO),=0D=0A>___=09CRASHTYPE(WRITE=5FRO=5FAFTER=5FINIT),=0D=0A?=
- =?utf-8?q?>___=09CRASHTYPE(WRITE=5FKERN),=0D=0A>_+=09CRASHTYPE(HIJACK=5FP?=
- =?utf-8?q?ATCH),=0D=0A>___=09CRASHTYPE(REFCOUNT=5FINC=5FOVERFLOW),=0D=0A>?=
- =?utf-8?q?___=09CRASHTYPE(REFCOUNT=5FADD=5FOVERFLOW),=0D=0A>___=09CRASHTY?=
- =?utf-8?q?PE(REFCOUNT=5FINC=5FNOT=5FZERO=5FOVERFLOW),=0D=0A>_diff_--git_a?=
- =?utf-8?q?/drivers/misc/lkdtm/lkdtm.h_b/drivers/misc/lkdtm/lkdtm.h=0D=0A>?=
- =?utf-8?q?_index_601a2156a0d4..bfcf3542370d_100644=0D=0A>_---_a/drivers/m?=
- =?utf-8?q?isc/lkdtm/lkdtm.h=0D=0A>_+++_b/drivers/misc/lkdtm/lkdtm.h=0D=0A?=
- =?utf-8?q?>_@@_-62,6_+62,7_@@_void_lkdtm=5FEXEC=5FUSERSPACE(void);=0D=0A>?=
- =?utf-8?q?___void_lkdtm=5FEXEC=5FNULL(void);=0D=0A>___void_lkdtm=5FACCESS?=
- =?utf-8?q?=5FUSERSPACE(void);=0D=0A>___void_lkdtm=5FACCESS=5FNULL(void);?=
- =?utf-8?q?=0D=0A>_+void_lkdtm=5FHIJACK=5FPATCH(void);=0D=0A>___=0D=0A>___?=
- =?utf-8?q?/*_lkdtm=5Frefcount.c_*/=0D=0A>___void_lkdtm=5FREFCOUNT=5FINC?=
- =?utf-8?q?=5FOVERFLOW(void);=0D=0A>_diff_--git_a/drivers/misc/lkdtm/perms?=
- =?utf-8?q?.c_b/drivers/misc/lkdtm/perms.c=0D=0A>_index_62f76d506f04..8bda?=
- =?utf-8?q?3b56bc78_100644=0D=0A>_---_a/drivers/misc/lkdtm/perms.c=0D=0A>_?=
- =?utf-8?q?+++_b/drivers/misc/lkdtm/perms.c=0D=0A>_@@_-9,6_+9,7_@@=0D=0A>_?=
- =?utf-8?q?__#include_<linux/vmalloc.h>=0D=0A>___#include_<linux/mman.h>?=
- =?utf-8?q?=0D=0A>___#include_<linux/uaccess.h>=0D=0A>_+#include_<linux/kt?=
- =?utf-8?q?hread.h>=0D=0A>___#include_<asm/cacheflush.h>=0D=0A>___=0D=0A>_?=
- =?utf-8?q?__/*_Whether_or_not_to_fill_the_target_memory_area_with_do=5Fno?=
- =?utf-8?q?thing()._*/=0D=0A>_@@_-213,6_+214,106_@@_void_lkdtm=5FACCESS=5F?=
- =?utf-8?q?NULL(void)=0D=0A>___=09*ptr_=3D_tmp;=0D=0A>___}=0D=0A>___=0D=0A?=
- =?utf-8?q?>_+#if_defined(CONFIG=5FPPC)_&&_defined(CONFIG=5FSTRICT=5FKERNE?=
- =?utf-8?q?L=5FRWX)=0D=0A=0D=0AWhy_only_PPC_=3F_I_understood_that_this_app?=
- =?utf-8?q?lies_also_to_x86._And_=0D=0Aregarless,_the_test_should_be_able_?=
- =?utf-8?q?to_run_on_other_architectures,_=0D=0Aallthought_for_sure_it_wil?=
- =?utf-8?q?l_fail._That's_the_case_for_other_tests.=0D=0A=0D=0A>_+#include?=
- =?utf-8?q?_<include/asm/code-patching.h>=0D=0A>_+=0D=0A>_+extern_unsigned?=
- =?utf-8?q?_long_read=5Fcpu=5Fpatching=5Faddr(unsigned_int_cpu);=0D=0A=0D?=
- =?utf-8?q?=0A'extern'_keyword_is_useless_for_functions_and_shall_be_banne?=
- =?utf-8?q?d.=0D=0A=0D=0AShouldn't_this_declaration_be_in_asm/code-patchin?=
- =?utf-8?q?g.h_=3F=0D=0A=0D=0A>_+=0D=0A>_+static_struct_ppc=5Finst_*_const?=
- =?utf-8?q?_patch=5Fsite_=3D_(struct_ppc=5Finst_*)&do=5Fnothing;=0D=0A>_+?=
- =?utf-8?q?=0D=0A>_+static_int_lkdtm=5Fpatching=5Fcpu(void_*data)=0D=0A>_+?=
- =?utf-8?q?{=0D=0A>_+=09int_err_=3D_0;=0D=0A>_+=09struct_ppc=5Finst_insn_?=
- =?utf-8?q?=3D_ppc=5Finst(0xdeadbeef);=0D=0A>_+=0D=0A>_+=09pr=5Finfo("star?=
- =?utf-8?q?ting_patching=5Fcpu=3D%d\n",_smp=5Fprocessor=5Fid());=0D=0A>_+?=
- =?utf-8?q?=09do_{=0D=0A>_+=09=09err_=3D_patch=5Finstruction(patch=5Fsite,?=
- =?utf-8?q?_insn);=0D=0A>_+=09}_while_(ppc=5Finst=5Fequal(ppc=5Finst=5Frea?=
- =?utf-8?q?d(READ=5FONCE(patch=5Fsite)),_insn)_&&=0D=0A>_+=09=09=09!err_&&?=
- =?utf-8?q?_!kthread=5Fshould=5Fstop());=0D=0A>_+=0D=0A>_+=09if_(err)=0D?=
- =?utf-8?q?=0A>_+=09=09pr=5Fwarn("patch=5Finstruction_returned_error:_%d\n?=
- =?utf-8?q?",_err);=0D=0A>_+=0D=0A>_+=09set=5Fcurrent=5Fstate(TASK=5FINTER?=
- =?utf-8?q?RUPTIBLE);=0D=0A>_+=09while_(!kthread=5Fshould=5Fstop())_{=0D?=
- =?utf-8?q?=0A>_+=09=09schedule();=0D=0A>_+=09=09set=5Fcurrent=5Fstate(TAS?=
- =?utf-8?q?K=5FINTERRUPTIBLE);=0D=0A>_+=09}=0D=0A>_+=0D=0A>_+=09return_err?=
- =?utf-8?q?;=0D=0A>_+}=0D=0A>_+=0D=0A>_+void_lkdtm=5FHIJACK=5FPATCH(void)?=
- =?utf-8?q?=0D=0A>_+{=0D=0A>_+=09struct_task=5Fstruct_*patching=5Fkthrd;?=
- =?utf-8?q?=0D=0A>_+=09struct_ppc=5Finst_original=5Finsn;=0D=0A>_+=09int_p?=
- =?utf-8?q?atching=5Fcpu,_hijacker=5Fcpu,_attempts;=0D=0A>_+=09unsigned_lo?=
- =?utf-8?q?ng_addr;=0D=0A>_+=09bool_hijacked;=0D=0A>_+=0D=0A>_+=09if_(num?=
- =?utf-8?q?=5Fonline=5Fcpus()_<_2)_{=0D=0A>_+=09=09pr=5Fwarn("need_at_leas?=
- =?utf-8?q?t_two_cpus\n");=0D=0A>_+=09=09return;=0D=0A>_+=09}=0D=0A>_+=0D?=
- =?utf-8?q?=0A>_+=09original=5Finsn_=3D_ppc=5Finst=5Fread(READ=5FONCE(patc?=
- =?utf-8?q?h=5Fsite));=0D=0A>_+=0D=0A>_+=09hijacker=5Fcpu_=3D_smp=5Fproces?=
- =?utf-8?q?sor=5Fid();=0D=0A>_+=09patching=5Fcpu_=3D_cpumask=5Fany=5Fbut(c?=
- =?utf-8?q?pu=5Fonline=5Fmask,_hijacker=5Fcpu);=0D=0A>_+=0D=0A>_+=09patchi?=
- =?utf-8?q?ng=5Fkthrd_=3D_kthread=5Fcreate=5Fon=5Fnode(&lkdtm=5Fpatching?=
- =?utf-8?q?=5Fcpu,_NULL,=0D=0A>_+=09=09=09=09=09=09cpu=5Fto=5Fnode(patchin?=
- =?utf-8?q?g=5Fcpu),=0D=0A>_+=09=09=09=09=09=09"lkdtm=5Fpatching=5Fcpu");?=
- =?utf-8?q?=0D=0A>_+=09kthread=5Fbind(patching=5Fkthrd,_patching=5Fcpu);?=
- =?utf-8?q?=0D=0A>_+=09wake=5Fup=5Fprocess(patching=5Fkthrd);=0D=0A>_+=0D?=
- =?utf-8?q?=0A>_+=09addr_=3D_offset=5Fin=5Fpage(patch=5Fsite)_|_read=5Fcpu?=
- =?utf-8?q?=5Fpatching=5Faddr(patching=5Fcpu);=0D=0A>_+=0D=0A>_+=09pr=5Fin?=
- =?utf-8?q?fo("starting_hijacker=5Fcpu=3D%d\n",_hijacker=5Fcpu);=0D=0A>_+?=
- =?utf-8?q?=09for_(attempts_=3D_0;_attempts_<_100000;_++attempts)_{=0D=0A>?=
- =?utf-8?q?_+=09=09/*_Use_=5F=5Fput=5Fuser_to_catch_faults_without_an_Oops?=
- =?utf-8?q?_*/=0D=0A>_+=09=09hijacked_=3D_!=5F=5Fput=5Fuser(0xbad00bad,_(u?=
- =?utf-8?q?nsigned_int_*)addr);=0D=0A>_+=0D=0A>_+=09=09if_(hijacked)_{=0D?=
- =?utf-8?q?=0A>_+=09=09=09if_(kthread=5Fstop(patching=5Fkthrd))=0D=0A>_+?=
- =?utf-8?q?=09=09=09=09goto_out;=0D=0A>_+=09=09=09break;=0D=0A>_+=09=09}?=
- =?utf-8?q?=0D=0A>_+=09}=0D=0A>_+=09pr=5Finfo("hijack_attempts:_%d\n",_att?=
- =?utf-8?q?empts);=0D=0A>_+=0D=0A>_+=09if_(hijacked)_{=0D=0A>_+=09=09if_(*?=
- =?utf-8?q?(unsigned_int_*)READ=5FONCE(patch=5Fsite)_=3D=3D_0xbad00bad)=0D?=
- =?utf-8?q?=0A>_+=09=09=09pr=5Ferr("overwrote_kernel_text\n");=0D=0A>_+=09?=
- =?utf-8?q?=09/*=0D=0A>_+=09=09_*_There_are_window_conditions_where_the_hi?=
- =?utf-8?q?jacker_cpu_manages_to=0D=0A>_+=09=09_*_write_to_the_patch_site_?=
- =?utf-8?q?but_the_site_gets_overwritten_again_by=0D=0A>_+=09=09_*_the_pat?=
- =?utf-8?q?ching_cpu._We_still_consider_that_a_"successful"_hijack=0D=0A>_?=
- =?utf-8?q?+=09=09_*_since_the_hijacker_cpu_did_not_fault_on_the_write.=0D?=
- =?utf-8?q?=0A>_+=09=09_*/=0D=0A>_+=09=09pr=5Ferr("FAIL:_wrote_to_another_?=
- =?utf-8?q?cpu's_patching_area\n");=0D=0A>_+=09}_else_{=0D=0A>_+=09=09kthr?=
- =?utf-8?q?ead=5Fstop(patching=5Fkthrd);=0D=0A>_+=09}=0D=0A>_+=0D=0A>_+out?=
- =?utf-8?q?:=0D=0A>_+=09/*_Restore_the_original_insn_for_any_future_lkdtm_?=
- =?utf-8?q?tests_*/=0D=0A>_+=09patch=5Finstruction(patch=5Fsite,_original?=
- =?utf-8?q?=5Finsn);=0D=0A>_+}=0D=0A>_+=0D=0A>_+#else=0D=0A>_+=0D=0A>_+voi?=
- =?utf-8?q?d_lkdtm=5FHIJACK=5FPATCH(void)=0D=0A>_+{=0D=0A>_+=09if_(!IS=5FE?=
- =?utf-8?q?NABLED(CONFIG=5FPPC))=0D=0A>_+=09=09pr=5Ferr("XFAIL:_this_test_?=
- =?utf-8?q?is_powerpc-only\n");=0D=0A>_+=09if_(!IS=5FENABLED(CONFIG=5FSTRI?=
- =?utf-8?q?CT=5FKERNEL=5FRWX))=0D=0A>_+=09=09pr=5Ferr("XFAIL:_this_test_re?=
- =?utf-8?q?quires_CONFIG=5FSTRICT=5FKERNEL=5FRWX\n");=0D=0A>_+}=0D=0A>_+?=
- =?utf-8?q?=0D=0A>_+#endif_/*_CONFIG=5FPPC_&&_CONFIG=5FSTRICT=5FKERNEL=5FR?=
- =?utf-8?q?WX_*/=0D=0A>_+=0D=0A>___void_=5F=5Finit_lkdtm=5Fperms=5Finit(vo?=
- =?utf-8?q?id)=0D=0A>___{=0D=0A>___=09/*_Make_sure_we_can_write_to_=5F=5Fr?=
- =?utf-8?q?o=5Fafter=5Finit_values_during_=5F=5Finit_*/=0D=0A>_=0D=0A=0D?=
- =?utf-8?q?=0AChristophe=0D=0A?=
-Date: Mon, 08 Jun 2020 23:48:33 -0500
-From: "Christopher M. Riedl" <cmr@informatik.wtf>
-To: "Christophe Leroy" <christophe.leroy@csgroup.eu>,
- <linuxppc-dev@lists.ozlabs.org>, <kernel-hardening@lists.openwall.com>
-Subject: Re: [PATCH 5/5] powerpc: Add LKDTM test to hijack a patch mapping
-Message-Id: <C3CASUZ4AV39.P3GJNYIARL4V@geist>
-X-Virus-Scanned: ClamAV using ClamSMTP
+Received: (qmail 10047 invoked from network); 9 Jun 2020 18:39:25 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=oUUlKxLjSlKhbNUJ+/fS04FbBkWKQBhciBLdETtik1Q=;
+        b=muEdWnYfglQpo6mlvoIfHWOj2y/b2HPEYx/I/P/+afdRB9/f6IdVu5VnGI/3lcvXLS
+         I9FafGnjLFcRGiW36DCgnPzai2sfXVCBdgJRXMrqAW3e7b14inpyi/jwHBpjdNDnVDY1
+         GBTg1KJ1wEa1aW+kWXIDPsZzAOyVi1GSGs3y4=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=oUUlKxLjSlKhbNUJ+/fS04FbBkWKQBhciBLdETtik1Q=;
+        b=GFIxb9vDcyd8+fmV8IbboZ2Rrku7eHAK9/Jc60gCuSreuQyU3RBmfLctd+QX6Lwomx
+         Y8LCpVGbs38DarT9FwfEnV10AlC49VRKMCe5rvWfLUsyqohof3s79giDYI+9Gs1N6ALa
+         +xh2wAiqASHTOcUBfadI2s/BfCnlR/ItKxZTaWS8DNhAhywZPIyV/Y6LhYs8/VJyTtPv
+         aHb/MP73t4u+E3w+3ZmCb6ZebhdgxwLr4zbkH6fu8hJu775mu8bu9W0Qy+l9QqOWJn26
+         LYrgMEMJB+b0q8HrNQh2hNDh37THCYhsaXED3tGIWkwQbfOGEcEFeeSmiaqEwImNybtv
+         42FA==
+X-Gm-Message-State: AOAM5306V27m5udH9cSkosXzcLU5Hq3XWvnL0lALzF7CZ2+TLc1BYCFE
+	gwpb6JUozQvzlRTCWyRMbDQqlw==
+X-Google-Smtp-Source: ABdhPJwtO8ctv+axOrlGnu6BhxO/Dmuz6uhavpkS9vfR+Ml1dYIGadDqm0xyQLuzwR4BmnGnulrmGw==
+X-Received: by 2002:a17:90b:4d10:: with SMTP id mw16mr6182260pjb.143.1591727953613;
+        Tue, 09 Jun 2020 11:39:13 -0700 (PDT)
+Date: Tue, 9 Jun 2020 11:39:11 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Jann Horn <jannh@google.com>,
+	Elena Reshetova <elena.reshetova@intel.com>,
+	Emese Revfy <re.emese@gmail.com>,
+	Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Michal Marek <michal.lkml@markovi.net>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Masahiro Yamada <yamada.masahiro@socionext.com>,
+	Thiago Jung Bauermann <bauerman@linux.ibm.com>,
+	Luis Chamberlain <mcgrof@kernel.org>, Jessica Yu <jeyu@kernel.org>,
+	Sven Schnelle <svens@stackframe.org>,
+	Iurii Zaikin <yzaikin@google.com>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Will Deacon <will@kernel.org>,
+	Vincenzo Frascino <vincenzo.frascino@arm.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Peter Collingbourne <pcc@google.com>,
+	Naohiro Aota <naohiro.aota@wdc.com>,
+	Alexander Monakov <amonakov@ispras.ru>,
+	Mathias Krause <minipli@googlemail.com>,
+	PaX Team <pageexec@freemail.hu>,
+	Brad Spengler <spender@grsecurity.net>,
+	Laura Abbott <labbott@redhat.com>,
+	Florian Weimer <fweimer@redhat.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	linux-kbuild@vger.kernel.org,
+	the arch/x86 maintainers <x86@kernel.org>,
+	Linux ARM <linux-arm-kernel@lists.infradead.org>,
+	kernel list <linux-kernel@vger.kernel.org>, gcc@gcc.gnu.org,
+	notify@kernel.org
+Subject: Re: [PATCH 1/5] gcc-plugins/stackleak: Exclude alloca() from the
+ instrumentation logic
+Message-ID: <202006091133.412F0E89@keescook>
+References: <20200604134957.505389-1-alex.popov@linux.com>
+ <20200604134957.505389-2-alex.popov@linux.com>
+ <CAG48ez05JOvqzYGr3PvyQGwFURspFWvNvf-b8Y613PX0biug8w@mail.gmail.com>
+ <70319f78-2c7c-8141-d751-07f28203db7c@linux.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <70319f78-2c7c-8141-d751-07f28203db7c@linux.com>
 
-On Wed Jun 3, 2020 at 9:20 AM, Christophe Leroy wrote:
->
->=20
->
->=20
-> Le 03/06/2020 =C3=A0 07:19, Christopher M. Riedl a =C3=A9crit :
-> > When live patching with STRICT_KERNEL_RWX, the CPU doing the patching
-> > must use a temporary mapping which allows for writing to kernel text.
-> > During the entire window of time when this temporary mapping is in use,
-> > another CPU could write to the same mapping and maliciously alter kerne=
-l
-> > text. Implement a LKDTM test to attempt to exploit such a openings when
-> > a CPU is patching under STRICT_KERNEL_RWX. The test is only implemented
-> > on powerpc for now.
-> >=20
-> > The LKDTM "hijack" test works as follows:
-> >=20
-> > 	1. A CPU executes an infinite loop to patch an instruction.
-> > 	   This is the "patching" CPU.
-> > 	2. Another CPU attempts to write to the address of the temporary
-> > 	   mapping used by the "patching" CPU. This other CPU is the
-> > 	   "hijacker" CPU. The hijack either fails with a segfault or
-> > 	   succeeds, in which case some kernel text is now overwritten.
-> >=20
-> > How to run the test:
-> >=20
-> > 	mount -t debugfs none /sys/kernel/debug
-> > 	(echo HIJACK_PATCH > /sys/kernel/debug/provoke-crash/DIRECT)
-> >=20
-> > Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
-> > ---
-> >   drivers/misc/lkdtm/core.c  |   1 +
-> >   drivers/misc/lkdtm/lkdtm.h |   1 +
-> >   drivers/misc/lkdtm/perms.c | 101 ++++++++++++++++++++++++++++++++++++=
-+
-> >   3 files changed, 103 insertions(+)
-> >=20
-> > diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-> > index a5e344df9166..482e72f6a1e1 100644
-> > --- a/drivers/misc/lkdtm/core.c
-> > +++ b/drivers/misc/lkdtm/core.c
-> > @@ -145,6 +145,7 @@ static const struct crashtype crashtypes[] =3D {
-> >   	CRASHTYPE(WRITE_RO),
-> >   	CRASHTYPE(WRITE_RO_AFTER_INIT),
-> >   	CRASHTYPE(WRITE_KERN),
-> > +	CRASHTYPE(HIJACK_PATCH),
-> >   	CRASHTYPE(REFCOUNT_INC_OVERFLOW),
-> >   	CRASHTYPE(REFCOUNT_ADD_OVERFLOW),
-> >   	CRASHTYPE(REFCOUNT_INC_NOT_ZERO_OVERFLOW),
-> > diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-> > index 601a2156a0d4..bfcf3542370d 100644
-> > --- a/drivers/misc/lkdtm/lkdtm.h
-> > +++ b/drivers/misc/lkdtm/lkdtm.h
-> > @@ -62,6 +62,7 @@ void lkdtm_EXEC_USERSPACE(void);
-> >   void lkdtm_EXEC_NULL(void);
-> >   void lkdtm_ACCESS_USERSPACE(void);
-> >   void lkdtm_ACCESS_NULL(void);
-> > +void lkdtm_HIJACK_PATCH(void);
-> >  =20
-> >   /* lkdtm_refcount.c */
-> >   void lkdtm_REFCOUNT_INC_OVERFLOW(void);
-> > diff --git a/drivers/misc/lkdtm/perms.c b/drivers/misc/lkdtm/perms.c
-> > index 62f76d506f04..8bda3b56bc78 100644
-> > --- a/drivers/misc/lkdtm/perms.c
-> > +++ b/drivers/misc/lkdtm/perms.c
-> > @@ -9,6 +9,7 @@
-> >   #include <linux/vmalloc.h>
-> >   #include <linux/mman.h>
-> >   #include <linux/uaccess.h>
-> > +#include <linux/kthread.h>
-> >   #include <asm/cacheflush.h>
-> >  =20
-> >   /* Whether or not to fill the target memory area with do_nothing(). *=
-/
-> > @@ -213,6 +214,106 @@ void lkdtm_ACCESS_NULL(void)
-> >   	*ptr =3D tmp;
-> >   }
-> >  =20
-> > +#if defined(CONFIG_PPC) && defined(CONFIG_STRICT_KERNEL_RWX)
->
->=20
-> Why only PPC ? I understood that this applies also to x86. And
-> regarless, the test should be able to run on other architectures,
-> allthought for sure it will fail. That's the case for other tests.
->
+On Thu, Jun 04, 2020 at 06:23:38PM +0300, Alexander Popov wrote:
+> On 04.06.2020 17:01, Jann Horn wrote:
+> > On Thu, Jun 4, 2020 at 3:51 PM Alexander Popov <alex.popov@linux.com> wrote:
+> >> Some time ago Variable Length Arrays (VLA) were removed from the kernel.
+> >> The kernel is built with '-Wvla'. Let's exclude alloca() from the
+> >> instrumentation logic and make it simpler. The build-time assertion
+> >> against alloca() is added instead.
+> > [...]
+> >> +                       /* Variable Length Arrays are forbidden in the kernel */
+> >> +                       gcc_assert(!is_alloca(stmt));
+> > 
+> > There is a patch series from Elena and Kees on the kernel-hardening
+> > list that deliberately uses __builtin_alloca() in the syscall entry
+> > path to randomize the stack pointer per-syscall - see
+> > <https://lore.kernel.org/kernel-hardening/20200406231606.37619-4-keescook@chromium.org/>.
+> 
+> Thanks, Jann.
+> 
+> At first glance, leaving alloca() handling in stackleak instrumentation logic
+> would allow to integrate stackleak and this version of random_kstack_offset.
 
-I think the code patching details are different between architectures
-and (for now) I am only comfortable enough with PPC to implement
-something meaningful. The intent of the RFC versions was to try to get
-some interest (hence the distribution to the hardening list) or feedback
-about how this could work on other architectures.
+Right, it seems there would be a need for this coverage to remain,
+otherwise the depth of stack erasure might be incorrect.
 
-There are a few other tests which are arch specific in LKDTM so it's not
-completely unheard of :)
+It doesn't seem like the other patches strictly depend on alloca()
+support being removed, though?
 
->=20
-> > +#include <include/asm/code-patching.h>
-> > +
-> > +extern unsigned long read_cpu_patching_addr(unsigned int cpu);
->
->=20
-> 'extern' keyword is useless for functions and shall be banned.
->
->=20
-> Shouldn't this declaration be in asm/code-patching.h ?
->
+> Kees, Elena, did you try random_kstack_offset with upstream stackleak?
 
-Yes, left-over from the RFC version, this will be fixed in the next
-spin.
+I didn't try that combination yet, no. It seemed there would likely
+still be further discussion about the offset series first (though the
+thread has been silent -- I'll rebase and resend it after rc2).
 
->=20
-> > +
-> > +static struct ppc_inst * const patch_site =3D (struct ppc_inst *)&do_n=
-othing;
-> > +
-> > +static int lkdtm_patching_cpu(void *data)
-> > +{
-> > +	int err =3D 0;
-> > +	struct ppc_inst insn =3D ppc_inst(0xdeadbeef);
-> > +
-> > +	pr_info("starting patching_cpu=3D%d\n", smp_processor_id());
-> > +	do {
-> > +		err =3D patch_instruction(patch_site, insn);
-> > +	} while (ppc_inst_equal(ppc_inst_read(READ_ONCE(patch_site)), insn) &=
-&
-> > +			!err && !kthread_should_stop());
-> > +
-> > +	if (err)
-> > +		pr_warn("patch_instruction returned error: %d\n", err);
-> > +
-> > +	set_current_state(TASK_INTERRUPTIBLE);
-> > +	while (!kthread_should_stop()) {
-> > +		schedule();
-> > +		set_current_state(TASK_INTERRUPTIBLE);
-> > +	}
-> > +
-> > +	return err;
-> > +}
-> > +
-> > +void lkdtm_HIJACK_PATCH(void)
-> > +{
-> > +	struct task_struct *patching_kthrd;
-> > +	struct ppc_inst original_insn;
-> > +	int patching_cpu, hijacker_cpu, attempts;
-> > +	unsigned long addr;
-> > +	bool hijacked;
-> > +
-> > +	if (num_online_cpus() < 2) {
-> > +		pr_warn("need at least two cpus\n");
-> > +		return;
-> > +	}
-> > +
-> > +	original_insn =3D ppc_inst_read(READ_ONCE(patch_site));
-> > +
-> > +	hijacker_cpu =3D smp_processor_id();
-> > +	patching_cpu =3D cpumask_any_but(cpu_online_mask, hijacker_cpu);
-> > +
-> > +	patching_kthrd =3D kthread_create_on_node(&lkdtm_patching_cpu, NULL,
-> > +						cpu_to_node(patching_cpu),
-> > +						"lkdtm_patching_cpu");
-> > +	kthread_bind(patching_kthrd, patching_cpu);
-> > +	wake_up_process(patching_kthrd);
-> > +
-> > +	addr =3D offset_in_page(patch_site) | read_cpu_patching_addr(patching=
-_cpu);
-> > +
-> > +	pr_info("starting hijacker_cpu=3D%d\n", hijacker_cpu);
-> > +	for (attempts =3D 0; attempts < 100000; ++attempts) {
-> > +		/* Use __put_user to catch faults without an Oops */
-> > +		hijacked =3D !__put_user(0xbad00bad, (unsigned int *)addr);
-> > +
-> > +		if (hijacked) {
-> > +			if (kthread_stop(patching_kthrd))
-> > +				goto out;
-> > +			break;
-> > +		}
-> > +	}
-> > +	pr_info("hijack attempts: %d\n", attempts);
-> > +
-> > +	if (hijacked) {
-> > +		if (*(unsigned int *)READ_ONCE(patch_site) =3D=3D 0xbad00bad)
-> > +			pr_err("overwrote kernel text\n");
-> > +		/*
-> > +		 * There are window conditions where the hijacker cpu manages to
-> > +		 * write to the patch site but the site gets overwritten again by
-> > +		 * the patching cpu. We still consider that a "successful" hijack
-> > +		 * since the hijacker cpu did not fault on the write.
-> > +		 */
-> > +		pr_err("FAIL: wrote to another cpu's patching area\n");
-> > +	} else {
-> > +		kthread_stop(patching_kthrd);
-> > +	}
-> > +
-> > +out:
-> > +	/* Restore the original insn for any future lkdtm tests */
-> > +	patch_instruction(patch_site, original_insn);
-> > +}
-> > +
-> > +#else
-> > +
-> > +void lkdtm_HIJACK_PATCH(void)
-> > +{
-> > +	if (!IS_ENABLED(CONFIG_PPC))
-> > +		pr_err("XFAIL: this test is powerpc-only\n");
-> > +	if (!IS_ENABLED(CONFIG_STRICT_KERNEL_RWX))
-> > +		pr_err("XFAIL: this test requires CONFIG_STRICT_KERNEL_RWX\n");
-> > +}
-> > +
-> > +#endif /* CONFIG_PPC && CONFIG_STRICT_KERNEL_RWX */
-> > +
-> >   void __init lkdtm_perms_init(void)
-> >   {
-> >   	/* Make sure we can write to __ro_after_init values during __init */
-> >=20
->
->=20
-> Christophe
->
->=20
->
->=20
+> It looks to me that without stackleak erasing random_kstack_offset can be
+> weaker. I mean, if next syscall has a bigger stack randomization gap, the data
+> on thread stack from the previous syscall is not overwritten and can be used. Am
+> I right?
 
+That's correct. I think the combination is needed, but I don't think
+they need to be strictly tied together.
+
+> Another aspect: CONFIG_STACKLEAK_METRICS can be used for guessing kernel stack
+> offset, which is bad. It should be disabled if random_kstack_offset is on.
+
+Agreed.
+
+-- 
+Kees Cook
