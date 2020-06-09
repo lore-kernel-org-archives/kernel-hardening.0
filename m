@@ -1,23 +1,20 @@
-Return-Path: <SRS0=YQgq=7V=lists.openwall.com=kernel-hardening-return-18936-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=24z3=7W=lists.openwall.com=kernel-hardening-return-18937-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-6.7 required=3.0 tests=BAD_ENC_HEADER,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BD829C433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jun 2020 23:14:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C718CC433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jun 2020 04:39:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1EC5B20C09
-	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jun 2020 23:14:36 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="DzH8LcgR"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1EC5B20C09
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18936-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15647 invoked by uid 550); 8 Jun 2020 23:14:29 -0000
+	by mail.kernel.org (Postfix) with SMTP id 19F842078C
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Jun 2020 04:39:08 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 19F842078C
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18937-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20472 invoked by uid 550); 9 Jun 2020 04:39:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,112 +22,98 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15609 invoked from network); 8 Jun 2020 23:14:28 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1591658056;
-	bh=c9bfCRccB/4P5xUTEw8y/UDb8M3T4Sojj4tD8tv3o3I=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=DzH8LcgRpPqyi/YB7HPie1yEu/9qEkECBp3UtrIR8bAdVUA21rAN1o2/11xU0M2YI
-	 ARLdlu7yUe+5Sld3kLJOtQ2200yzFMlrXXp0HIV7yH6C+iaAFOeTlP3pXRWUfzOKYf
-	 XMwiTnTv5gclMOohm8vFwXllNUYf+rbYKtrkHQEc=
-From: Sasha Levin <sashal@kernel.org>
-To: linux-kernel@vger.kernel.org,
-	stable@vger.kernel.org
-Cc: =?UTF-8?q?Fr=C3=A9d=C3=A9ric=20Pierret=20=28fepitre=29?= <frederic.pierret@qubes-os.org>,
-	Kees Cook <keescook@chromium.org>,
-	Sasha Levin <sashal@kernel.org>,
-	kernel-hardening@lists.openwall.com
-Subject: [PATCH AUTOSEL 5.6 103/606] gcc-common.h: Update for GCC 10
-Date: Mon,  8 Jun 2020 19:03:48 -0400
-Message-Id: <20200608231211.3363633-103-sashal@kernel.org>
-X-Mailer: git-send-email 2.25.1
-In-Reply-To: <20200608231211.3363633-1-sashal@kernel.org>
-References: <20200608231211.3363633-1-sashal@kernel.org>
-MIME-Version: 1.0
+Received: (qmail 20437 invoked from network); 9 Jun 2020 04:39:01 -0000
+Content-Transfer-Encoding: quoted-printable
 Content-Type: text/plain; charset=UTF-8
-X-stable: review
-X-Patchwork-Hint: Ignore
-Content-Transfer-Encoding: 8bit
+Originaldate: Wed Jun 3, 2020 at 9:14 AM
+Originalfrom: "Christophe Leroy" <christophe.leroy@csgroup.eu>
+Original: =?utf-8?q?=0D=0A=0D=0ALe_03/06/2020_
+ =C3=A0_07:19,_Christopher_M._Riedl_a_?= =?utf-8?q?=C3=A9crit=C2=A0:
+ =0D=0A>_When_live_patching_a_STRICT=5FRWX_kern?=
+ =?utf-8?q?el,_a_mapping_is_installed_at_a=0D=0A>_"patching_address"_with_?=
+ =?utf-8?q?temporary_write_permissions._Provide_a=0D=0A>_LKDTM-only_access?=
+ =?utf-8?q?or_function_for_this_address_in_preparation_for_a_LKDTM=0D=0A>_?=
+ =?utf-8?q?test_which_attempts_to_"hijack"_this_mapping_by_writing_to_it_f?=
+ =?utf-8?q?rom=0D=0A>_another_CPU.=0D=0A>_=0D=0A>_Signed-off-by:_Christoph?=
+ =?utf-8?q?er_M._Riedl_<cmr@informatik.wtf>=0D=0A>_---=0D=0A>___arch/power?=
+ =?utf-8?q?pc/lib/code-patching.c_|_7_+++++++=0D=0A>___1_file_changed,_7_i?=
+ =?utf-8?q?nsertions(+)=0D=0A>_=0D=0A>_diff_--git_a/arch/powerpc/lib/code-?=
+ =?utf-8?q?patching.c_b/arch/powerpc/lib/code-patching.c=0D=0A>_index_df07?=
+ =?utf-8?q?65845204..c23453049116_100644=0D=0A>_---_a/arch/powerpc/lib/cod?=
+ =?utf-8?q?e-patching.c=0D=0A>_+++_b/arch/powerpc/lib/code-patching.c=0D?=
+ =?utf-8?q?=0A>_@@_-52,6_+52,13_@@_int_raw=5Fpatch=5Finstruction(struct_pp?=
+ =?utf-8?q?c=5Finst_*addr,_struct_ppc=5Finst_instr)=0D=0A>___static_struct?=
+ =?utf-8?q?_mm=5Fstruct_*patching=5Fmm_=5F=5Fro=5Fafter=5Finit;=0D=0A>___s?=
+ =?utf-8?q?tatic_unsigned_long_patching=5Faddr_=5F=5Fro=5Fafter=5Finit;=0D?=
+ =?utf-8?q?=0A>___=0D=0A>_+#ifdef_CONFIG=5FLKDTM=0D=0A>_+unsigned_long_rea?=
+ =?utf-8?q?d=5Fcpu=5Fpatching=5Faddr(unsigned_int_cpu)=0D=0A=0D=0AIf_this_?=
+ =?utf-8?q?fonction_is_not_static,_it_means_it_is_intended_to_be_used_from?=
+ =?utf-8?q?_=0D=0Asome_other_C_file,_so_it_should_be_declared_in_a_.h_too.?=
+ =?utf-8?q?=0D=0A=0D=0AChristophe=0D=0A=0D=0A>_+{=0D=0A>_+=09return_patchi?=
+ =?utf-8?q?ng=5Faddr;=0D=0A>_+}=0D=0A>_+#endif=0D=0A>_+=0D=0A>___void_=5F?=
+ =?utf-8?q?=5Finit_poking=5Finit(void)=0D=0A>___{=0D=0A>___=09spinlock=5Ft?=
+ =?utf-8?q?_*ptl;_/*_for_protecting_pte_table_*/=0D=0A>_=0D=0A?=
+In-Reply-To: <a458667c-fb8d-a01f-130b-0fef733dd001@csgroup.eu>
+Date: Mon, 08 Jun 2020 23:40:41 -0500
+Subject: Re: [PATCH 4/5] powerpc/lib: Add LKDTM accessor for patching addr
+From: "Christopher M. Riedl" <cmr@informatik.wtf>
+To: "Christophe Leroy" <christophe.leroy@csgroup.eu>,
+ <linuxppc-dev@lists.ozlabs.org>, <kernel-hardening@lists.openwall.com>
+Message-Id: <C3CAMU7CT62Z.1A5IZ7HO4BF80@geist>
+X-Virus-Scanned: ClamAV using ClamSMTP
 
-From: Frédéric Pierret (fepitre) <frederic.pierret@qubes-os.org>
-
-[ Upstream commit c7527373fe28f97d8a196ab562db5589be0d34b9 ]
-
-Remove "params.h" include, which has been dropped in GCC 10.
-
-Remove is_a_helper() macro, which is now defined in gimple.h, as seen
-when running './scripts/gcc-plugin.sh g++ g++ gcc':
-
-In file included from <stdin>:1:
-./gcc-plugins/gcc-common.h:852:13: error: redefinition of ‘static bool is_a_helper<T>::test(U*) [with U = const gimple; T = const ggoto*]’
-  852 | inline bool is_a_helper<const ggoto *>::test(const_gimple gs)
-      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
-In file included from ./gcc-plugins/gcc-common.h:125,
-                 from <stdin>:1:
-/usr/lib/gcc/x86_64-redhat-linux/10/plugin/include/gimple.h:1037:1: note: ‘static bool is_a_helper<T>::test(U*) [with U = const gimple; T = const ggoto*]’ previously declared here
- 1037 | is_a_helper <const ggoto *>::test (const gimple *gs)
-      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Add -Wno-format-diag to scripts/gcc-plugins/Makefile to avoid
-meaningless warnings from error() formats used by plugins:
-
-scripts/gcc-plugins/structleak_plugin.c: In function ‘int plugin_init(plugin_name_args*, plugin_gcc_version*)’:
-scripts/gcc-plugins/structleak_plugin.c:253:12: warning: unquoted sequence of 2 consecutive punctuation characters ‘'-’ in format [-Wformat-diag]
-  253 |   error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
-      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Signed-off-by: Frédéric Pierret (fepitre) <frederic.pierret@qubes-os.org>
-Link: https://lore.kernel.org/r/20200407113259.270172-1-frederic.pierret@qubes-os.org
-[kees: include -Wno-format-diag for plugin builds]
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Sasha Levin <sashal@kernel.org>
----
- scripts/gcc-plugins/Makefile     | 1 +
- scripts/gcc-plugins/gcc-common.h | 4 ++++
- 2 files changed, 5 insertions(+)
-
-diff --git a/scripts/gcc-plugins/Makefile b/scripts/gcc-plugins/Makefile
-index f2ee8bd7abc6..1d0b9382e759 100644
---- a/scripts/gcc-plugins/Makefile
-+++ b/scripts/gcc-plugins/Makefile
-@@ -11,6 +11,7 @@ else
-   HOST_EXTRACXXFLAGS += -I$(GCC_PLUGINS_DIR)/include -I$(src) -std=gnu++98 -fno-rtti
-   HOST_EXTRACXXFLAGS += -fno-exceptions -fasynchronous-unwind-tables -ggdb
-   HOST_EXTRACXXFLAGS += -Wno-narrowing -Wno-unused-variable
-+  HOST_EXTRACXXFLAGS += -Wno-format-diag
-   export HOST_EXTRACXXFLAGS
- endif
- 
-diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
-index 17f06079a712..9ad76b7f3f10 100644
---- a/scripts/gcc-plugins/gcc-common.h
-+++ b/scripts/gcc-plugins/gcc-common.h
-@@ -35,7 +35,9 @@
- #include "ggc.h"
- #include "timevar.h"
- 
-+#if BUILDING_GCC_VERSION < 10000
- #include "params.h"
-+#endif
- 
- #if BUILDING_GCC_VERSION <= 4009
- #include "pointer-set.h"
-@@ -847,6 +849,7 @@ static inline gimple gimple_build_assign_with_ops(enum tree_code subcode, tree l
- 	return gimple_build_assign(lhs, subcode, op1, op2 PASS_MEM_STAT);
- }
- 
-+#if BUILDING_GCC_VERSION < 10000
- template <>
- template <>
- inline bool is_a_helper<const ggoto *>::test(const_gimple gs)
-@@ -860,6 +863,7 @@ inline bool is_a_helper<const greturn *>::test(const_gimple gs)
- {
- 	return gs->code == GIMPLE_RETURN;
- }
-+#endif
- 
- static inline gasm *as_a_gasm(gimple stmt)
- {
--- 
-2.25.1
+On Wed Jun 3, 2020 at 9:14 AM, Christophe Leroy wrote:
+>
+>=20
+>
+>=20
+> Le 03/06/2020 =C3=A0 07:19, Christopher M. Riedl a =C3=A9crit :
+> > When live patching a STRICT_RWX kernel, a mapping is installed at a
+> > "patching address" with temporary write permissions. Provide a
+> > LKDTM-only accessor function for this address in preparation for a LKDT=
+M
+> > test which attempts to "hijack" this mapping by writing to it from
+> > another CPU.
+> >=20
+> > Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
+> > ---
+> >   arch/powerpc/lib/code-patching.c | 7 +++++++
+> >   1 file changed, 7 insertions(+)
+> >=20
+> > diff --git a/arch/powerpc/lib/code-patching.c b/arch/powerpc/lib/code-p=
+atching.c
+> > index df0765845204..c23453049116 100644
+> > --- a/arch/powerpc/lib/code-patching.c
+> > +++ b/arch/powerpc/lib/code-patching.c
+> > @@ -52,6 +52,13 @@ int raw_patch_instruction(struct ppc_inst *addr, str=
+uct ppc_inst instr)
+> >   static struct mm_struct *patching_mm __ro_after_init;
+> >   static unsigned long patching_addr __ro_after_init;
+> >  =20
+> > +#ifdef CONFIG_LKDTM
+> > +unsigned long read_cpu_patching_addr(unsigned int cpu)
+>
+>=20
+> If this fonction is not static, it means it is intended to be used from
+> some other C file, so it should be declared in a .h too.
+>
+Yup agreed. This was left-over from the RFC to simplify using the LKDTM
+test on a tree without this series. Will fix this in the next spin.
+>=20
+> Christophe
+>
+>=20
+> > +{
+> > +	return patching_addr;
+> > +}
+> > +#endif
+> > +
+> >   void __init poking_init(void)
+> >   {
+> >   	spinlock_t *ptl; /* for protecting pte table */
+> >=20
+>
+>=20
+>
+>=20
 
