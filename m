@@ -1,20 +1,20 @@
-Return-Path: <SRS0=Kl83=7X=lists.openwall.com=kernel-hardening-return-18952-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pDf0=7X=lists.openwall.com=kernel-hardening-return-18953-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C085BC433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:47:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 504ADC433DF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:52:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F0D0E2070B
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:47:53 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F0D0E2070B
+	by mail.kernel.org (Postfix) with SMTP id 75221206F4
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:52:46 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 75221206F4
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18952-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14236 invoked by uid 550); 10 Jun 2020 15:47:47 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18953-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18133 invoked by uid 550); 10 Jun 2020 15:52:40 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,26 +22,25 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14216 invoked from network); 10 Jun 2020 15:47:46 -0000
+Received: (qmail 18113 invoked from network); 10 Jun 2020 15:52:39 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=6sU72hfmvoXtRpb7yrYdgKGitdA0Zo5oyFodEYtk0us=;
-        b=WFkfxQucqtWfdX3CY0fnYGBQJBoWWeoAcEmUoBjpNl7mDeCi7NcKYr+BDPxHpf7+Az
-         9IPEpMbvMbPus1onq3MuGJ571IapwEPQeOIvidXZZkTTMM9J6wWID7pQ8vitTIBcpE59
-         BodshkjdpmqOZjs4d6Y8WlLeMTwECGaJMnghhsjoojVcxlbAbr7vZ92MU042ta6MFFW1
-         DmqB8tP027YSMV0M9ho9/siZeSIE3RWD8uz2iQFl97tTuELXOavlw8/129p51qoYrz0e
-         JGyI7YUI/vNayProQGDg59C/6R3B9yYxVQWqnPh607gYU1GKm42PazpUGeOKh09HSZ32
-         1Slw==
-X-Gm-Message-State: AOAM533IjZVHHl999VBpn6XKoVwYoZkHPyWxoTpIuB4ep5JGhh4yyXvI
-	bLssc3o9ffxLNyiVuCOeZtZHlsy7V9uDOw==
-X-Google-Smtp-Source: ABdhPJw2jleHxl3BXvvI6W2dCEPdssYybRp9F62QQnkxdm77EFHHEjNNBH+8JAEMFV5K5Y4cVxXFgA==
-X-Received: by 2002:ac2:5cd1:: with SMTP id f17mr1951677lfq.4.1591804055359;
-        Wed, 10 Jun 2020 08:47:35 -0700 (PDT)
-Subject: Re: [PATCH 2/5] gcc-plugins/stackleak: Use asm instrumentation to
- avoid useless register saving
+        bh=11ALgSq9gv/d3zitAChNViLeQS5L5+FuUfOqP20opAs=;
+        b=g1sX2xwskL4c/+N40Pa/XBLCDa5yhjgTx23plg+dqT19blf81AYN5hPd1X1YPAFguC
+         6LLfXwvzDZXMXmi/a2mAM+51K+4YFw/JutwaKz12fryDzQCMHjXhNErKVZvuMQPpgD6M
+         SiRqZbH2n5wBs7pAAqwTrTpg41fZaQlDyk2zezQSDEs5huqdEED1ZrrOcYPoalXqIcuJ
+         xZ6uX2oWwcISvTenX9b+pCpo7UC/1tfZxHjRUsNjwzEXM9LN0C4dhRziTueBVgmOO2tV
+         40vzwjHrfuWutLQxr8XK4nQKM4TEuxYDiqOWuXVWG+S9UKtF1/wHHGGFX+Bw5yUuVIg3
+         Rx9g==
+X-Gm-Message-State: AOAM533+wV/vt1HZVo0Dtg211z8r439dZHZdWS29virWb2Jwzz1cV6ML
+	7Or3wxwP9dJqK0A4mZt5D0Y=
+X-Google-Smtp-Source: ABdhPJxOf6x8h9JgbevXiRilQVr0KtvSmXKyYKWZvP/YIghJt7szxiaNzNcR6ibSpZohdi77kgx7cw==
+X-Received: by 2002:a2e:9a4d:: with SMTP id k13mr2102395ljj.43.1591804348403;
+        Wed, 10 Jun 2020 08:52:28 -0700 (PDT)
+Subject: Re: [PATCH 3/5] gcc-plugins/stackleak: Add 'verbose' plugin parameter
 To: Kees Cook <keescook@chromium.org>
 Cc: Emese Revfy <re.emese@gmail.com>,
  Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
@@ -63,8 +62,8 @@ Cc: Emese Revfy <re.emese@gmail.com>,
  linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org,
  gcc@gcc.gnu.org, notify@kernel.org
 References: <20200604134957.505389-1-alex.popov@linux.com>
- <20200604134957.505389-3-alex.popov@linux.com>
- <202006091143.AD1A662@keescook>
+ <20200604134957.505389-4-alex.popov@linux.com>
+ <202006091147.193047096C@keescook>
 From: Alexander Popov <alex.popov@linux.com>
 Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  mQINBFX15q4BEADZartsIW3sQ9R+9TOuCFRIW+RDCoBWNHhqDLu+Tzf2mZevVSF0D5AMJW4f
@@ -110,63 +109,33 @@ Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  gzBW8J8RW+nUJcTpudX4TC2SGeAOyxnM5O4XJ8yZyDUY334seDRJWtS4wRHxpfYcHKTewR96
  IsP1USE+9ndu6lrMXQ3aFsd1n1m1pfa/y8hiqsSYHy7JQ9Iuo9DxysOj22UNOmOE+OYPK48D
  j3lCqPk=
-Message-ID: <757cbafb-1e13-8989-e30d-33c557d33cc4@linux.com>
-Date: Wed, 10 Jun 2020 18:47:14 +0300
+Message-ID: <fb051386-4913-9442-f051-23ed25802c9e@linux.com>
+Date: Wed, 10 Jun 2020 18:52:10 +0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.6.0
 MIME-Version: 1.0
-In-Reply-To: <202006091143.AD1A662@keescook>
+In-Reply-To: <202006091147.193047096C@keescook>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-On 09.06.2020 21:46, Kees Cook wrote:
-> On Thu, Jun 04, 2020 at 04:49:54PM +0300, Alexander Popov wrote:
->> Let's improve the instrumentation to avoid this:
+On 09.06.2020 21:47, Kees Cook wrote:
+> On Thu, Jun 04, 2020 at 04:49:55PM +0300, Alexander Popov wrote:
+>> Add 'verbose' plugin parameter for stackleak gcc plugin.
+>> It can be used for printing additional info about the kernel code
+>> instrumentation.
 >>
->> 1. Make stackleak_track_stack() save all register that it works with.
->> Use no_caller_saved_registers attribute for that function. This attribute
->> is available for x86_64 and i386 starting from gcc-7.
+>> For using it add the following to scripts/Makefile.gcc-plugins:
+>>   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STACKLEAK) \
+>>     += -fplugin-arg-stackleak_plugin-verbose
 >>
->> 2. Insert calling stackleak_track_stack() in asm:
->>   asm volatile("call stackleak_track_stack" :: "r" (current_stack_pointer))
->> Here we use ASM_CALL_CONSTRAINT trick from arch/x86/include/asm/asm.h.
->> The input constraint is taken into account during gcc shrink-wrapping
->> optimization. It is needed to be sure that stackleak_track_stack() call is
->> inserted after the prologue of the containing function, when the stack
->> frame is prepared.
+>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
 > 
-> Very cool; nice work!
-> 
->> +static void add_stack_tracking(gimple_stmt_iterator *gsi)
->> +{
->> +	/*
->> +	 * The 'no_caller_saved_registers' attribute is used for
->> +	 * stackleak_track_stack(). If the compiler supports this attribute for
->> +	 * the target arch, we can add calling stackleak_track_stack() in asm.
->> +	 * That improves performance: we avoid useless operations with the
->> +	 * caller-saved registers in the functions from which we will remove
->> +	 * stackleak_track_stack() call during the stackleak_cleanup pass.
->> +	 */
->> +	if (lookup_attribute_spec(get_identifier("no_caller_saved_registers")))
->> +		add_stack_tracking_gasm(gsi);
->> +	else
->> +		add_stack_tracking_gcall(gsi);
->> +}
-> 
-> The build_for_x86 flag is only ever used as an assert() test against
-> no_caller_saved_registers, but we're able to test for that separately.
-> Why does the architecture need to be tested? (i.e. when this flag
-> becomes supported o other architectures, why must it still be x86-only?)
+> Acked-by: Kees Cook <keescook@chromium.org>
 
-The inline asm statement that is used for instrumentation is arch-specific.
-Trying to add
-  asm volatile("call stackleak_track_stack")
-in gcc plugin on aarch64 makes gcc break spectacularly.
-I pass the target arch name to the plugin and check it explicitly to avoid that.
-
-Moreover, I'm going to create a gcc enhancement request for supporting
-no_caller_saved_registers attribute on aarch64.
+I see that I will change this patch after leaving alloca() support.
+I'm going to add debug printing about functions that call alloca().
+I have to omit your 'acked-by' for the changed patch, right?
 
 Best regards,
 Alexander
