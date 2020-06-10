@@ -1,21 +1,20 @@
-Return-Path: <SRS0=UD1w=7X=lists.openwall.com=kernel-hardening-return-18950-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=sX3Z=7X=lists.openwall.com=kernel-hardening-return-18951-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 54496C433DF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:19:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6F2D4C433E1
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:24:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 870FA20823
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:19:18 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 870FA20823
+	by mail.kernel.org (Postfix) with SMTP id A06D520734
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Jun 2020 15:24:48 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A06D520734
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18950-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21884 invoked by uid 550); 10 Jun 2020 15:19:12 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18951-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24494 invoked by uid 550); 10 Jun 2020 15:24:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,28 +22,29 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21864 invoked from network); 10 Jun 2020 15:19:12 -0000
+Received: (qmail 24474 invoked from network); 10 Jun 2020 15:24:41 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=xlB9zSIbCB49nQpORVwnN87PaGtPgyhKMGLcmEDPueA=;
-        b=Km9BPj+NHI7LCOd3zf9XivarPGhvnJBOKO9/ANthGNRDTV/Ytj2MD3BY05Izu+YQWf
-         ac9KWokP2v+zWa85cB+hXNectFXlmvHh6jN9MhL3atzlsxOkHvXWUn5rPqKqri+qJOiA
-         t7duF3LBqfhZKW9ia3Atpr8+jwj14TBsCN+ezoPfEXuHC/9djsL+cs7P1R2ECz82NwM9
-         qcPX7qADaTIkLEeGjx9UXEcv6lFPkmkrNHZolvDkiDNF7sOYF6hlP5/J+AEFX47qyFpy
-         RF784Q9UScEf6ik4VKsiYhy4LAIY8eU7kzDm/G2tKezdEYbz4IHmcswfbYLw5K8kNpLL
-         MgQQ==
-X-Gm-Message-State: AOAM533mlpwcUK6UeQVObcyZBD2nO+9efgs9JajZhyaAetbvQIGAl7yc
-	MzxrgyqHLOKO66frIVEMpZM=
-X-Google-Smtp-Source: ABdhPJwXhM2EMDMfligFHYdXLDaxqiDxr/8LNq7wNRKFqIFZzpPrAjqctudTfyvI29HV6rsLzO0x3Q==
-X-Received: by 2002:a2e:a0cc:: with SMTP id f12mr1956505ljm.250.1591802340594;
-        Wed, 10 Jun 2020 08:19:00 -0700 (PDT)
-Subject: Re: [PATCH 5/5] gcc-plugins/stackleak: Don't instrument
- vgettimeofday.c in arm64 VDSO
-To: Will Deacon <will@kernel.org>, Kees Cook <keescook@chromium.org>
-Cc: Emese Revfy <re.emese@gmail.com>,
+        bh=w3siWejRAPilHiUC6jsI5xYy2gYaS5P9S9XuSxXXOMQ=;
+        b=IPfLPR8SxDzN+BcVia4GKXWm22nvXSVN1ndyM6p0JN7Cv8Ho71iGwXhRPgm5UVhzIc
+         kdZ6c2LVKfTFEoMVW/7THaek8aKbvBdK6Xu9xSZFFMDg176naC1l0ljndS5jJiXq/Q6w
+         Ux4lkRiPYVJ+UnOcq6e9l0CGLpucFCsl0WFAZOu62Y0E2Cj8lE7dGQOgKNajK/gSBiiB
+         NYcRTxyJ+cDlWgqwYOCUkSNAIyTvn5X1Mih4PguCmRji0lii/zlgqpg4ZrCoe86+Gmiq
+         C9s6bWBDYH7HAUjB0XlHKyRTVs+pruGaEIS7PMJ+PtfhZOhDoF+ZhOujHtJ1yAIGrzAB
+         UDTQ==
+X-Gm-Message-State: AOAM530ZAnjxV+g+XoJS/lDzb09YD0lusBzbECMTCL46I0uipE8g0Uwe
+	6uMCjUTVPUPvrae90+V+kTA=
+X-Google-Smtp-Source: ABdhPJxowAcpKm07CSV2XZBXzUPwDoILgauuX3JgUNqRvEamsMNgGVkLU/8gw9B1bFDjcmHx26rgIA==
+X-Received: by 2002:a05:651c:2d0:: with SMTP id f16mr1971844ljo.387.1591802670288;
+        Wed, 10 Jun 2020 08:24:30 -0700 (PDT)
+Subject: Re: [PATCH 1/5] gcc-plugins/stackleak: Exclude alloca() from the
+ instrumentation logic
+To: Kees Cook <keescook@chromium.org>
+Cc: Jann Horn <jannh@google.com>, Elena Reshetova
+ <elena.reshetova@intel.com>, Emese Revfy <re.emese@gmail.com>,
  Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
  Masahiro Yamada <masahiroy@kernel.org>,
  Michal Marek <michal.lkml@markovi.net>,
@@ -53,20 +53,23 @@ Cc: Emese Revfy <re.emese@gmail.com>,
  Thiago Jung Bauermann <bauerman@linux.ibm.com>,
  Luis Chamberlain <mcgrof@kernel.org>, Jessica Yu <jeyu@kernel.org>,
  Sven Schnelle <svens@stackframe.org>, Iurii Zaikin <yzaikin@google.com>,
- Catalin Marinas <catalin.marinas@arm.com>,
+ Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will@kernel.org>,
  Vincenzo Frascino <vincenzo.frascino@arm.com>,
  Thomas Gleixner <tglx@linutronix.de>, Peter Collingbourne <pcc@google.com>,
  Naohiro Aota <naohiro.aota@wdc.com>, Alexander Monakov <amonakov@ispras.ru>,
  Mathias Krause <minipli@googlemail.com>, PaX Team <pageexec@freemail.hu>,
  Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>,
- Florian Weimer <fweimer@redhat.com>, kernel-hardening@lists.openwall.com,
- linux-kbuild@vger.kernel.org, x86@kernel.org,
- linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org,
- gcc@gcc.gnu.org, notify@kernel.org
+ Florian Weimer <fweimer@redhat.com>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ linux-kbuild@vger.kernel.org, the arch/x86 maintainers <x86@kernel.org>,
+ Linux ARM <linux-arm-kernel@lists.infradead.org>,
+ kernel list <linux-kernel@vger.kernel.org>, gcc@gcc.gnu.org,
+ notify@kernel.org
 References: <20200604134957.505389-1-alex.popov@linux.com>
- <20200604134957.505389-6-alex.popov@linux.com>
- <20200604135806.GA3170@willie-the-truck> <202006091149.6C78419@keescook>
- <20200610073046.GA15939@willie-the-truck>
+ <20200604134957.505389-2-alex.popov@linux.com>
+ <CAG48ez05JOvqzYGr3PvyQGwFURspFWvNvf-b8Y613PX0biug8w@mail.gmail.com>
+ <70319f78-2c7c-8141-d751-07f28203db7c@linux.com>
+ <202006091133.412F0E89@keescook>
 From: Alexander Popov <alex.popov@linux.com>
 Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  mQINBFX15q4BEADZartsIW3sQ9R+9TOuCFRIW+RDCoBWNHhqDLu+Tzf2mZevVSF0D5AMJW4f
@@ -112,85 +115,67 @@ Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  gzBW8J8RW+nUJcTpudX4TC2SGeAOyxnM5O4XJ8yZyDUY334seDRJWtS4wRHxpfYcHKTewR96
  IsP1USE+9ndu6lrMXQ3aFsd1n1m1pfa/y8hiqsSYHy7JQ9Iuo9DxysOj22UNOmOE+OYPK48D
  j3lCqPk=
-Message-ID: <bceea4f8-4b8e-f9ab-f275-572e448e3ec1@linux.com>
-Date: Wed, 10 Jun 2020 18:18:09 +0300
+Message-ID: <3b194cd9-909d-7186-0cc4-bf0a0358fe5d@linux.com>
+Date: Wed, 10 Jun 2020 18:24:20 +0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.6.0
 MIME-Version: 1.0
-In-Reply-To: <20200610073046.GA15939@willie-the-truck>
+In-Reply-To: <202006091133.412F0E89@keescook>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-On 10.06.2020 10:30, Will Deacon wrote:
-> On Tue, Jun 09, 2020 at 12:09:27PM -0700, Kees Cook wrote:
->> On Thu, Jun 04, 2020 at 02:58:06PM +0100, Will Deacon wrote:
->>> On Thu, Jun 04, 2020 at 04:49:57PM +0300, Alexander Popov wrote:
->>>> Don't try instrumenting functions in arch/arm64/kernel/vdso/vgettimeofday.c.
->>>> Otherwise that can cause issues if the cleanup pass of stackleak gcc plugin
->>>> is disabled.
->>>>
->>>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
->>>> ---
->>>>  arch/arm64/kernel/vdso/Makefile | 3 ++-
->>>>  1 file changed, 2 insertions(+), 1 deletion(-)
->>>>
->>>> diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
->>>> index 3862cad2410c..9b84cafbd2da 100644
->>>> --- a/arch/arm64/kernel/vdso/Makefile
->>>> +++ b/arch/arm64/kernel/vdso/Makefile
->>>> @@ -32,7 +32,8 @@ UBSAN_SANITIZE			:= n
->>>>  OBJECT_FILES_NON_STANDARD	:= y
->>>>  KCOV_INSTRUMENT			:= n
->>>>  
->>>> -CFLAGS_vgettimeofday.o = -O2 -mcmodel=tiny -fasynchronous-unwind-tables
->>>> +CFLAGS_vgettimeofday.o = -O2 -mcmodel=tiny -fasynchronous-unwind-tables \
->>>> +		$(DISABLE_STACKLEAK_PLUGIN)
+On 09.06.2020 21:39, Kees Cook wrote:
+> On Thu, Jun 04, 2020 at 06:23:38PM +0300, Alexander Popov wrote:
+>> On 04.06.2020 17:01, Jann Horn wrote:
+>>> On Thu, Jun 4, 2020 at 3:51 PM Alexander Popov <alex.popov@linux.com> wrote:
+>>>> Some time ago Variable Length Arrays (VLA) were removed from the kernel.
+>>>> The kernel is built with '-Wvla'. Let's exclude alloca() from the
+>>>> instrumentation logic and make it simpler. The build-time assertion
+>>>> against alloca() is added instead.
+>>> [...]
+>>>> +                       /* Variable Length Arrays are forbidden in the kernel */
+>>>> +                       gcc_assert(!is_alloca(stmt));
 >>>
->>> I can pick this one up via arm64, thanks. Are there any other plugins we
->>> should be wary of? It looks like x86 filters out $(GCC_PLUGINS_CFLAGS)
->>> when building the vDSO.
+>>> There is a patch series from Elena and Kees on the kernel-hardening
+>>> list that deliberately uses __builtin_alloca() in the syscall entry
+>>> path to randomize the stack pointer per-syscall - see
+>>> <https://lore.kernel.org/kernel-hardening/20200406231606.37619-4-keescook@chromium.org/>.
 >>
->> I didn't realize/remember that arm64 retained the kernel build flags for
->> vDSO builds. (I'm used to x86 throwing all its flags away for its vDSO.)
+>> Thanks, Jann.
 >>
->> How does 32-bit ARM do its vDSO?
->>
->> My quick run-through on plugins:
->>
->> arm_ssp_per_task_plugin.c
->> 	32-bit ARM only (but likely needs disabling for 32-bit ARM vDSO?)
+>> At first glance, leaving alloca() handling in stackleak instrumentation logic
+>> would allow to integrate stackleak and this version of random_kstack_offset.
 > 
-> On arm64, the 32-bit toolchain is picked up via CC_COMPAT -- does that still
-> get the plugins?
+> Right, it seems there would be a need for this coverage to remain,
+> otherwise the depth of stack erasure might be incorrect.
 > 
->> cyc_complexity_plugin.c
->> 	compile-time reporting only
->>
->> latent_entropy_plugin.c
->> 	this shouldn't get triggered for the vDSO (no __latent_entropy
->> 	nor __init attributes in vDSO), but perhaps explicitly disabling
->> 	it would be a sensible thing to do, just for robustness?
->>
->> randomize_layout_plugin.c
->> 	this shouldn't get triggered (again, lacking attributes), but
->> 	should likely be disabled too.
->>
->> sancov_plugin.c
->> 	This should be tracking the KCOV directly (see
->> 	scripts/Makefile.kcov), which is already disabled here.
->>
->> structleak_plugin.c
->> 	This should be fine in the vDSO, but there's not security
->> 	boundary here, so it wouldn't be important to KEEP it enabled.
-> 
-> Thanks for going through these. In general though, it seems like an
-> opt-in strategy would make more sense, as it doesn't make an awful lot
-> of sense to me for the plugins to be used to build the vDSO.
-> 
-> So I would prefer that this patch filters out $(GCC_PLUGINS_CFLAGS).
+> It doesn't seem like the other patches strictly depend on alloca()
+> support being removed, though?
 
-Ok, I will do that in the v2 of the patch series.
+Ok, I will leave alloca() support, reorganize the patch series and send v2.
+
+>> Kees, Elena, did you try random_kstack_offset with upstream stackleak?
+> 
+> I didn't try that combination yet, no. It seemed there would likely
+> still be further discussion about the offset series first (though the
+> thread has been silent -- I'll rebase and resend it after rc2).
+
+Ok, please add me to CC list.
 
 Best regards,
 Alexander
+
+>> It looks to me that without stackleak erasing random_kstack_offset can be
+>> weaker. I mean, if next syscall has a bigger stack randomization gap, the data
+>> on thread stack from the previous syscall is not overwritten and can be used. Am
+>> I right?
+> 
+> That's correct. I think the combination is needed, but I don't think
+> they need to be strictly tied together.
+> 
+>> Another aspect: CONFIG_STACKLEAK_METRICS can be used for guessing kernel stack
+>> offset, which is bad. It should be disabled if random_kstack_offset is on.
+> 
+> Agreed.
+
