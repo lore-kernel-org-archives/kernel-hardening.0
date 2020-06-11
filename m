@@ -1,21 +1,20 @@
-Return-Path: <SRS0=64Yz=7Y=lists.openwall.com=kernel-hardening-return-18958-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8ly8=7Y=lists.openwall.com=kernel-hardening-return-18959-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=BAD_ENC_HEADER,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 548DEC433E0
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jun 2020 03:33:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 60BC1C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jun 2020 23:45:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 597702075F
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jun 2020 03:33:33 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 597702075F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18958-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14184 invoked by uid 550); 11 Jun 2020 03:33:27 -0000
+	by mail.kernel.org (Postfix) with SMTP id 838E120853
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Jun 2020 23:45:24 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 838E120853
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18959-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3492 invoked by uid 550); 11 Jun 2020 23:45:16 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,292 +22,129 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14152 invoked from network); 11 Jun 2020 03:33:26 -0000
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset=UTF-8
-Originaldate: Wed Jun 3, 2020 at 8:58 AM
-Originalfrom: "Christophe Leroy" <christophe.leroy@csgroup.eu>
-Original: =?utf-8?q?=0D=0A=0D=0ALe_03/06/2020_
- =C3=A0_07:19,_Christopher_M._Riedl_a_?= =?utf-8?q?=C3=A9crit=C2=A0:
- =0D=0A>_x86_supports_the_notion_of_a_temporary?=
- =?utf-8?q?_mm_which_restricts_access_to=0D=0A>_temporary_PTEs_to_a_single?=
- =?utf-8?q?_CPU._A_temporary_mm_is_useful_for_situations=0D=0A>_where_a_CP?=
- =?utf-8?q?U_needs_to_perform_sensitive_operations_(such_as_patching_a=0D?=
- =?utf-8?q?=0A>_STRICT=5FKERNEL=5FRWX_kernel)_requiring_temporary_mappings?=
- =?utf-8?q?_without_exposing=0D=0A>_said_mappings_to_other_CPUs._A_side_be?=
- =?utf-8?q?nefit_is_that_other_CPU_TLBs_do=0D=0A>_not_need_to_be_flushed_w?=
- =?utf-8?q?hen_the_temporary_mm_is_torn_down.=0D=0A>_=0D=0A>_Mappings_in_t?=
- =?utf-8?q?he_temporary_mm_can_be_set_in_the_userspace_portion_of_the=0D?=
- =?utf-8?q?=0A>_address-space.=0D=0A>_=0D=0A>_Interrupts_must_be_disabled_?=
- =?utf-8?q?while_the_temporary_mm_is_in_use._HW=0D=0A>_breakpoints,_which_?=
- =?utf-8?q?may_have_been_set_by_userspace_as_watchpoints_on=0D=0A>_address?=
- =?utf-8?q?es_now_within_the_temporary_mm,_are_saved_and_disabled_when=0D?=
- =?utf-8?q?=0A>_loading_the_temporary_mm._The_HW_breakpoints_are_restored_?=
- =?utf-8?q?when_unloading=0D=0A>_the_temporary_mm._All_HW_breakpoints_are_?=
- =?utf-8?q?indiscriminately_disabled_while=0D=0A>_the_temporary_mm_is_in_u?=
- =?utf-8?q?se.=0D=0A>_=0D=0A>_Based_on_x86_implementation:=0D=0A>_=0D=0A>_?=
- =?utf-8?q?commit_cefa929c034e=0D=0A>_("x86/mm:_Introduce_temporary_mm_str?=
- =?utf-8?q?ucts")=0D=0A>_=0D=0A>_Signed-off-by:_Christopher_M._Riedl_<cmr@?=
- =?utf-8?q?informatik.wtf>=0D=0A>_---=0D=0A>___arch/powerpc/include/asm/de?=
- =?utf-8?q?bug.h_______|__1_+=0D=0A>___arch/powerpc/include/asm/mmu=5Fcont?=
- =?utf-8?q?ext.h_|_64_++++++++++++++++++++++++++=0D=0A>___arch/powerpc/ker?=
- =?utf-8?q?nel/process.c__________|__5_++=0D=0A>___3_files_changed,_70_ins?=
- =?utf-8?q?ertions(+)=0D=0A>_=0D=0A>_diff_--git_a/arch/powerpc/include/asm?=
- =?utf-8?q?/debug.h_b/arch/powerpc/include/asm/debug.h=0D=0A>_index_ec57da?=
- =?utf-8?q?f87f40..827350c9bcf3_100644=0D=0A>_---_a/arch/powerpc/include/a?=
- =?utf-8?q?sm/debug.h=0D=0A>_+++_b/arch/powerpc/include/asm/debug.h=0D=0A>?=
- =?utf-8?q?_@@_-46,6_+46,7_@@_static_inline_int_debugger=5Ffault=5Fhandler?=
- =?utf-8?q?(struct_pt=5Fregs_*regs)_{_return_0;_}=0D=0A>___#endif=0D=0A>__?=
- =?utf-8?q?_=0D=0A>___void_=5F=5Fset=5Fbreakpoint(int_nr,_struct_arch=5Fhw?=
- =?utf-8?q?=5Fbreakpoint_*brk);=0D=0A>_+void_=5F=5Fget=5Fbreakpoint(int_nr?=
- =?utf-8?q?,_struct_arch=5Fhw=5Fbreakpoint_*brk);=0D=0A>___bool_ppc=5Fbrea?=
- =?utf-8?q?kpoint=5Favailable(void);=0D=0A>___#ifdef_CONFIG=5FPPC=5FADV=5F?=
- =?utf-8?q?DEBUG=5FREGS=0D=0A>___extern_void_do=5Fsend=5Ftrap(struct_pt=5F?=
- =?utf-8?q?regs_*regs,_unsigned_long_address,=0D=0A>_diff_--git_a/arch/pow?=
- =?utf-8?q?erpc/include/asm/mmu=5Fcontext.h_b/arch/powerpc/include/asm/mmu?=
- =?utf-8?q?=5Fcontext.h=0D=0A>_index_1a474f6b1992..9269c7c7b04e_100644=0D?=
- =?utf-8?q?=0A>_---_a/arch/powerpc/include/asm/mmu=5Fcontext.h=0D=0A>_+++_?=
- =?utf-8?q?b/arch/powerpc/include/asm/mmu=5Fcontext.h=0D=0A>_@@_-10,6_+10,?=
- =?utf-8?q?7_@@=0D=0A>___#include_<asm/mmu.h>=09=0D=0A>___#include_<asm/cp?=
- =?utf-8?q?utable.h>=0D=0A>___#include_<asm/cputhreads.h>=0D=0A>_+#include?=
- =?utf-8?q?_<asm/debug.h>=0D=0A>___=0D=0A>___/*=0D=0A>____*_Most_if_the_co?=
- =?utf-8?q?ntext_management_is_out_of_line=0D=0A>_@@_-300,5_+301,68_@@_sta?=
- =?utf-8?q?tic_inline_int_arch=5Fdup=5Fmmap(struct_mm=5Fstruct_*oldmm,=0D?=
- =?utf-8?q?=0A>___=09return_0;=0D=0A>___}=0D=0A>___=0D=0A>_+struct_temp=5F?=
- =?utf-8?q?mm_{=0D=0A>_+=09struct_mm=5Fstruct_*temp;=0D=0A>_+=09struct_mm?=
- =?utf-8?q?=5Fstruct_*prev;=0D=0A>_+=09bool_is=5Fkernel=5Fthread;=0D=0A>_+?=
- =?utf-8?q?=09struct_arch=5Fhw=5Fbreakpoint_brk[HBP=5FNUM=5FMAX];=0D=0A>_+?=
- =?utf-8?q?};=0D=0A>_+=0D=0A>_+static_inline_void_init=5Ftemp=5Fmm(struct_?=
- =?utf-8?q?temp=5Fmm_*temp=5Fmm,_struct_mm=5Fstruct_*mm)=0D=0A>_+{=0D=0A>_?=
- =?utf-8?q?+=09temp=5Fmm->temp_=3D_mm;=0D=0A>_+=09temp=5Fmm->prev_=3D_NULL?=
- =?utf-8?q?;=0D=0A>_+=09temp=5Fmm->is=5Fkernel=5Fthread_=3D_false;=0D=0A>_?=
- =?utf-8?q?+=09memset(&temp=5Fmm->brk,_0,_sizeof(temp=5Fmm->brk));=0D=0A>_?=
- =?utf-8?q?+}=0D=0A>_+=0D=0A>_+static_inline_void_use=5Ftemporary=5Fmm(str?=
- =?utf-8?q?uct_temp=5Fmm_*temp=5Fmm)=0D=0A>_+{=0D=0A>_+=09lockdep=5Fassert?=
- =?utf-8?q?=5Firqs=5Fdisabled();=0D=0A>_+=0D=0A>_+=09temp=5Fmm->is=5Fkerne?=
- =?utf-8?q?l=5Fthread_=3D_current->mm_=3D=3D_NULL;=0D=0A>_+=09if_(temp=5Fm?=
- =?utf-8?q?m->is=5Fkernel=5Fthread)=0D=0A>_+=09=09temp=5Fmm->prev_=3D_curr?=
- =?utf-8?q?ent->active=5Fmm;=0D=0A>_+=09else=0D=0A>_+=09=09temp=5Fmm->prev?=
- =?utf-8?q?_=3D_current->mm;=0D=0A=0D=0AIs_that_necessary_to_make_differen?=
- =?utf-8?q?t_for_kernel_threads_=3F_When_I_look_at_=0D=0Ax86_implementatio?=
- =?utf-8?q?n,_they_don't_do_such_a_thing.=0D=0A=0D=0A>_+=0D=0A>_+=09/*=0D?=
- =?utf-8?q?=0A>_+=09_*_Hash_requires_a_non-NULL_current->mm_to_allocate_a_?=
- =?utf-8?q?userspace_address=0D=0A>_+=09_*_when_handling_a_page_fault._Doe?=
- =?utf-8?q?s_not_appear_to_hurt_in_Radix_either.=0D=0A>_+=09_*/=0D=0A>_+?=
- =?utf-8?q?=09current->mm_=3D_temp=5Fmm->temp;=0D=0A>_+=09switch=5Fmm=5Fir?=
- =?utf-8?q?qs=5Foff(NULL,_temp=5Fmm->temp,_current);=0D=0A>_+=0D=0A>_+=09i?=
- =?utf-8?q?f_(ppc=5Fbreakpoint=5Favailable())_{=0D=0A>_+=09=09struct_arch?=
- =?utf-8?q?=5Fhw=5Fbreakpoint_null=5Fbrk_=3D_{0};=0D=0A>_+=09=09int_i_=3D_?=
- =?utf-8?q?0;=0D=0A>_+=0D=0A>_+=09=09for_(;_i_<_nr=5Fwp=5Fslots();_++i)_{?=
- =?utf-8?q?=0D=0A>_+=09=09=09=5F=5Fget=5Fbreakpoint(i,_&temp=5Fmm->brk[i])?=
- =?utf-8?q?;=0D=0A>_+=09=09=09if_(temp=5Fmm->brk[i].type_!=3D_0)=0D=0A>_+?=
- =?utf-8?q?=09=09=09=09=5F=5Fset=5Fbreakpoint(i,_&null=5Fbrk);=0D=0A>_+=09?=
- =?utf-8?q?=09}=0D=0A>_+=09}=0D=0A>_+}=0D=0A>_+=0D=0A>_+static_inline_void?=
- =?utf-8?q?_unuse=5Ftemporary=5Fmm(struct_temp=5Fmm_*temp=5Fmm)=0D=0A>_+{?=
- =?utf-8?q?=0D=0A>_+=09lockdep=5Fassert=5Firqs=5Fdisabled();=0D=0A>_+=0D?=
- =?utf-8?q?=0A>_+=09if_(temp=5Fmm->is=5Fkernel=5Fthread)=0D=0A>_+=09=09cur?=
- =?utf-8?q?rent->mm_=3D_NULL;=0D=0A>_+=09else=0D=0A>_+=09=09current->mm_?=
- =?utf-8?q?=3D_temp=5Fmm->prev;=0D=0A>_+=09switch=5Fmm=5Firqs=5Foff(NULL,_?=
- =?utf-8?q?temp=5Fmm->prev,_current);=0D=0A>_+=0D=0A>_+=09if_(ppc=5Fbreakp?=
- =?utf-8?q?oint=5Favailable())_{=0D=0A>_+=09=09int_i_=3D_0;=0D=0A>_+=0D=0A?=
- =?utf-8?q?>_+=09=09for_(;_i_<_nr=5Fwp=5Fslots();_++i)=0D=0A>_+=09=09=09if?=
- =?utf-8?q?_(temp=5Fmm->brk[i].type_!=3D_0)=0D=0A>_+=09=09=09=09=5F=5Fset?=
- =?utf-8?q?=5Fbreakpoint(i,_&temp=5Fmm->brk[i]);=0D=0A>_+=09}=0D=0A>_+}=0D?=
- =?utf-8?q?=0A>_+=0D=0A>___#endif_/*_=5F=5FKERNEL=5F=5F_*/=0D=0A>___#endif?=
- =?utf-8?q?_/*_=5F=5FASM=5FPOWERPC=5FMMU=5FCONTEXT=5FH_*/=0D=0A>_diff_--gi?=
- =?utf-8?q?t_a/arch/powerpc/kernel/process.c_b/arch/powerpc/kernel/process?=
- =?utf-8?q?.c=0D=0A>_index_048d64c4e115..3973144f6980_100644=0D=0A>_---_a/?=
- =?utf-8?q?arch/powerpc/kernel/process.c=0D=0A>_+++_b/arch/powerpc/kernel/?=
- =?utf-8?q?process.c=0D=0A>_@@_-825,6_+825,11_@@_static_inline_int_set=5Fb?=
- =?utf-8?q?reakpoint=5F8xx(struct_arch=5Fhw=5Fbreakpoint_*brk)=0D=0A>___?=
- =?utf-8?q?=09return_0;=0D=0A>___}=0D=0A>___=0D=0A>_+void_=5F=5Fget=5Fbrea?=
- =?utf-8?q?kpoint(int_nr,_struct_arch=5Fhw=5Fbreakpoint_*brk)=0D=0A>_+{=0D?=
- =?utf-8?q?=0A>_+=09memcpy(brk,_this=5Fcpu=5Fptr(&current=5Fbrk[nr]),_size?=
- =?utf-8?q?of(*brk));=0D=0A>_+}=0D=0A>_+=0D=0A>___void_=5F=5Fset=5Fbreakpo?=
- =?utf-8?q?int(int_nr,_struct_arch=5Fhw=5Fbreakpoint_*brk)=0D=0A>___{=0D?=
- =?utf-8?q?=0A>___=09memcpy(this=5Fcpu=5Fptr(&current=5Fbrk[nr]),_brk,_siz?=
- =?utf-8?q?eof(*brk));=0D=0A>_=0D=0A=0D=0AChristophe=0D=0A?=
-In-Reply-To: <ff05b833-720e-e1e2-f43b-8285d520a563@csgroup.eu>
-Date: Wed, 10 Jun 2020 22:34:42 -0500
-From: "Christopher M. Riedl" <cmr@informatik.wtf>
-To: "Christophe Leroy" <christophe.leroy@csgroup.eu>,
- <linuxppc-dev@lists.ozlabs.org>, <kernel-hardening@lists.openwall.com>
-Subject: Re: [PATCH 1/5] powerpc/mm: Introduce temporary mm
-Message-Id: <C3DYHECUQCQV.A48HK99GLB15@geist>
-X-Virus-Scanned: ClamAV using ClamSMTP
+Received: (qmail 3472 invoked from network); 11 Jun 2020 23:45:16 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
+         :message-id:date:user-agent:mime-version:in-reply-to
+         :content-language:content-transfer-encoding;
+        bh=ft307+szVgLZXjW9CxkDEOAOObsFbHb6rd+Kv88V1Kg=;
+        b=CbxpbdFn/+oFsnc45A21fNx7KnZW/Dzhnqb9FSMahOSFPB8qyV0mmAA3WKtNPELwqD
+         MjBc3KyeZoKkHUoFFX6DkTK7lYVyuocqBORskCGpRPvB6bjROQxLUpAeepqkd5+gFP+D
+         niaGh3ZfruRMiMa+kyG3FuD6QHOVGaABEUGY6x/8LoWtIiFVUh34VbqC5DViUKk9iUV2
+         zNMfp9uzWjNT+fijXr/TUK67LP8Fu1BXQZ6fM5o+5PxP40SIu2OslNmCEaJCqa7Fv0W6
+         einTmYOnuzckEAw+xnLd9fI2p7zADnQLet2X03kYAk2D7Xb2Gra/ZumGE1uUVyxoz1yF
+         TAwA==
+X-Gm-Message-State: AOAM531SlFgFB/gbw8A8CpHWXCl76748rzzKZUlM04HWxs8bdNQAJW3F
+	+n1BEmrbjs1JzxPHSvuZrtE=
+X-Google-Smtp-Source: ABdhPJy0GHY5zQXyEfR649zBdC7vqtui6dkfTw+LBz753dbYLiVxtXZadi+bu45ey4xDscNWzHWxsg==
+X-Received: by 2002:a50:ee01:: with SMTP id g1mr8947818eds.44.1591919105118;
+        Thu, 11 Jun 2020 16:45:05 -0700 (PDT)
+Subject: Re: [PATCH 2/5] gcc-plugins/stackleak: Use asm instrumentation to
+ avoid useless register saving
+To: Kees Cook <keescook@chromium.org>
+Cc: Emese Revfy <re.emese@gmail.com>,
+ Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
+ Masahiro Yamada <masahiroy@kernel.org>,
+ Michal Marek <michal.lkml@markovi.net>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ Masahiro Yamada <yamada.masahiro@socionext.com>,
+ Thiago Jung Bauermann <bauerman@linux.ibm.com>,
+ Luis Chamberlain <mcgrof@kernel.org>, Jessica Yu <jeyu@kernel.org>,
+ Sven Schnelle <svens@stackframe.org>, Iurii Zaikin <yzaikin@google.com>,
+ Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will@kernel.org>,
+ Vincenzo Frascino <vincenzo.frascino@arm.com>,
+ Thomas Gleixner <tglx@linutronix.de>, Peter Collingbourne <pcc@google.com>,
+ Naohiro Aota <naohiro.aota@wdc.com>, Alexander Monakov <amonakov@ispras.ru>,
+ Mathias Krause <minipli@googlemail.com>, PaX Team <pageexec@freemail.hu>,
+ Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>,
+ Florian Weimer <fweimer@redhat.com>, kernel-hardening@lists.openwall.com,
+ linux-kbuild@vger.kernel.org, x86@kernel.org,
+ linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org,
+ gcc@gcc.gnu.org, notify@kernel.org
+References: <20200604134957.505389-1-alex.popov@linux.com>
+ <20200604134957.505389-3-alex.popov@linux.com>
+ <202006091143.AD1A662@keescook>
+ <757cbafb-1e13-8989-e30d-33c557d33cc4@linux.com>
+ <202006101302.AC218FA1@keescook>
+From: Alexander Popov <alex.popov@linux.com>
+Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
+ 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
+ j3lCqPk=
+Message-ID: <ee1a5921-c151-33a9-bdac-c5d039a94bdc@linux.com>
+Date: Fri, 12 Jun 2020 02:45:00 +0300
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.8.0
+MIME-Version: 1.0
+In-Reply-To: <202006101302.AC218FA1@keescook>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-On Wed Jun 3, 2020 at 8:58 AM, Christophe Leroy wrote:
->
->=20
->
->=20
-> Le 03/06/2020 =C3=A0 07:19, Christopher M. Riedl a =C3=A9crit :
-> > x86 supports the notion of a temporary mm which restricts access to
-> > temporary PTEs to a single CPU. A temporary mm is useful for situations
-> > where a CPU needs to perform sensitive operations (such as patching a
-> > STRICT_KERNEL_RWX kernel) requiring temporary mappings without exposing
-> > said mappings to other CPUs. A side benefit is that other CPU TLBs do
-> > not need to be flushed when the temporary mm is torn down.
-> >=20
-> > Mappings in the temporary mm can be set in the userspace portion of the
-> > address-space.
-> >=20
-> > Interrupts must be disabled while the temporary mm is in use. HW
-> > breakpoints, which may have been set by userspace as watchpoints on
-> > addresses now within the temporary mm, are saved and disabled when
-> > loading the temporary mm. The HW breakpoints are restored when unloadin=
-g
-> > the temporary mm. All HW breakpoints are indiscriminately disabled whil=
-e
-> > the temporary mm is in use.
-> >=20
-> > Based on x86 implementation:
-> >=20
-> > commit cefa929c034e
-> > ("x86/mm: Introduce temporary mm structs")
-> >=20
-> > Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
-> > ---
-> >   arch/powerpc/include/asm/debug.h       |  1 +
-> >   arch/powerpc/include/asm/mmu_context.h | 64 +++++++++++++++++++++++++=
-+
-> >   arch/powerpc/kernel/process.c          |  5 ++
-> >   3 files changed, 70 insertions(+)
-> >=20
-> > diff --git a/arch/powerpc/include/asm/debug.h b/arch/powerpc/include/as=
-m/debug.h
-> > index ec57daf87f40..827350c9bcf3 100644
-> > --- a/arch/powerpc/include/asm/debug.h
-> > +++ b/arch/powerpc/include/asm/debug.h
-> > @@ -46,6 +46,7 @@ static inline int debugger_fault_handler(struct pt_re=
-gs *regs) { return 0; }
-> >   #endif
-> >  =20
-> >   void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk);
-> > +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk);
-> >   bool ppc_breakpoint_available(void);
-> >   #ifdef CONFIG_PPC_ADV_DEBUG_REGS
-> >   extern void do_send_trap(struct pt_regs *regs, unsigned long address,
-> > diff --git a/arch/powerpc/include/asm/mmu_context.h b/arch/powerpc/incl=
-ude/asm/mmu_context.h
-> > index 1a474f6b1992..9269c7c7b04e 100644
-> > --- a/arch/powerpc/include/asm/mmu_context.h
-> > +++ b/arch/powerpc/include/asm/mmu_context.h
-> > @@ -10,6 +10,7 @@
-> >   #include <asm/mmu.h>=09
-> >   #include <asm/cputable.h>
-> >   #include <asm/cputhreads.h>
-> > +#include <asm/debug.h>
-> >  =20
-> >   /*
-> >    * Most if the context management is out of line
-> > @@ -300,5 +301,68 @@ static inline int arch_dup_mmap(struct mm_struct *=
-oldmm,
-> >   	return 0;
-> >   }
-> >  =20
-> > +struct temp_mm {
-> > +	struct mm_struct *temp;
-> > +	struct mm_struct *prev;
-> > +	bool is_kernel_thread;
-> > +	struct arch_hw_breakpoint brk[HBP_NUM_MAX];
-> > +};
-> > +
-> > +static inline void init_temp_mm(struct temp_mm *temp_mm, struct mm_str=
-uct *mm)
-> > +{
-> > +	temp_mm->temp =3D mm;
-> > +	temp_mm->prev =3D NULL;
-> > +	temp_mm->is_kernel_thread =3D false;
-> > +	memset(&temp_mm->brk, 0, sizeof(temp_mm->brk));
-> > +}
-> > +
-> > +static inline void use_temporary_mm(struct temp_mm *temp_mm)
-> > +{
-> > +	lockdep_assert_irqs_disabled();
-> > +
-> > +	temp_mm->is_kernel_thread =3D current->mm =3D=3D NULL;
-> > +	if (temp_mm->is_kernel_thread)
-> > +		temp_mm->prev =3D current->active_mm;
-> > +	else
-> > +		temp_mm->prev =3D current->mm;
->
->=20
-> Is that necessary to make different for kernel threads ? When I look at
-> x86 implementation, they don't do such a thing.
->
+On 10.06.2020 23:03, Kees Cook wrote:
+> On Wed, Jun 10, 2020 at 06:47:14PM +0300, Alexander Popov wrote:
+>> On 09.06.2020 21:46, Kees Cook wrote:
+>> The inline asm statement that is used for instrumentation is arch-specific.
+>> Trying to add
+>>   asm volatile("call stackleak_track_stack")
+>> in gcc plugin on aarch64 makes gcc break spectacularly.
+> 
+> Ah! Thank you, that eluded my eyes. :)
+> 
+>> I pass the target arch name to the plugin and check it explicitly to avoid that.
+>>
+>> Moreover, I'm going to create a gcc enhancement request for supporting
+>> no_caller_saved_registers attribute on aarch64.
+> 
+> For arm64 right now it looks like the plugin will just remain
+> "inefficient" in these cleanup, as before, yes?
 
-Yup, in do_slb_fault we error out if the current->mm is NULL resulting
-in spectacular fails during patching w/ hash mmu.
+Yes, for arm64 the instrumentation didn't change in this patch series.
+I checked the disasm and see the similar issue with useless register saving.
 
->=20
-> > +
-> > +	/*
-> > +	 * Hash requires a non-NULL current->mm to allocate a userspace addre=
-ss
-> > +	 * when handling a page fault. Does not appear to hurt in Radix eithe=
-r.
-> > +	 */
-> > +	current->mm =3D temp_mm->temp;
-> > +	switch_mm_irqs_off(NULL, temp_mm->temp, current);
-> > +
-> > +	if (ppc_breakpoint_available()) {
-> > +		struct arch_hw_breakpoint null_brk =3D {0};
-> > +		int i =3D 0;
-> > +
-> > +		for (; i < nr_wp_slots(); ++i) {
-> > +			__get_breakpoint(i, &temp_mm->brk[i]);
-> > +			if (temp_mm->brk[i].type !=3D 0)
-> > +				__set_breakpoint(i, &null_brk);
-> > +		}
-> > +	}
-> > +}
-> > +
-> > +static inline void unuse_temporary_mm(struct temp_mm *temp_mm)
-> > +{
-> > +	lockdep_assert_irqs_disabled();
-> > +
-> > +	if (temp_mm->is_kernel_thread)
-> > +		current->mm =3D NULL;
-> > +	else
-> > +		current->mm =3D temp_mm->prev;
-> > +	switch_mm_irqs_off(NULL, temp_mm->prev, current);
-> > +
-> > +	if (ppc_breakpoint_available()) {
-> > +		int i =3D 0;
-> > +
-> > +		for (; i < nr_wp_slots(); ++i)
-> > +			if (temp_mm->brk[i].type !=3D 0)
-> > +				__set_breakpoint(i, &temp_mm->brk[i]);
-> > +	}
-> > +}
-> > +
-> >   #endif /* __KERNEL__ */
-> >   #endif /* __ASM_POWERPC_MMU_CONTEXT_H */
-> > diff --git a/arch/powerpc/kernel/process.c b/arch/powerpc/kernel/proces=
-s.c
-> > index 048d64c4e115..3973144f6980 100644
-> > --- a/arch/powerpc/kernel/process.c
-> > +++ b/arch/powerpc/kernel/process.c
-> > @@ -825,6 +825,11 @@ static inline int set_breakpoint_8xx(struct arch_h=
-w_breakpoint *brk)
-> >   	return 0;
-> >   }
-> >  =20
-> > +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk)
-> > +{
-> > +	memcpy(brk, this_cpu_ptr(&current_brk[nr]), sizeof(*brk));
-> > +}
-> > +
-> >   void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk)
-> >   {
-> >   	memcpy(this_cpu_ptr(&current_brk[nr]), brk, sizeof(*brk));
-> >=20
->
->=20
-> Christophe
->
->=20
->
->=20
+I'm going to add asm instrumentation for arm64 when (I hope) the
+no_caller_saved_registers attribute becomes available for that platform.
 
+Best regards,
+Alexander
