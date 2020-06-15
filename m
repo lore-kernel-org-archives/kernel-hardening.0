@@ -1,21 +1,22 @@
-Return-Path: <SRS0=JhCb=74=lists.openwall.com=kernel-hardening-return-18977-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=chWM=74=lists.openwall.com=kernel-hardening-return-18978-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.2 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7C6E9C433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 09:35:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5B00FC433E0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 10:28:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CEAF52065F
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 09:35:57 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CEAF52065F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18977-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30272 invoked by uid 550); 15 Jun 2020 09:35:49 -0000
+	by mail.kernel.org (Postfix) with SMTP id AE7C020707
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 10:28:48 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="kZswaULy"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AE7C020707
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zx2c4.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18978-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15775 invoked by uid 550); 15 Jun 2020 10:27:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,47 +24,47 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9739 invoked from network); 15 Jun 2020 09:04:57 -0000
-Subject: Re: [PATCH] f2fs: Eliminate usage of uninitialized_var() macro
-To: Jason Yan <yanaijie@huawei.com>, <jaegeuk@kernel.org>, <chao@kernel.org>,
-	<linux-f2fs-devel@lists.sourceforge.net>, <linux-kernel@vger.kernel.org>
-CC: <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>
-References: <20200615085132.166470-1-yanaijie@huawei.com>
-From: Chao Yu <yuchao0@huawei.com>
-Message-ID: <daff3367-a486-0514-99a7-567b9b549e47@huawei.com>
-Date: Mon, 15 Jun 2020 17:04:36 +0800
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:52.0) Gecko/20100101
- Thunderbird/52.9.1
+Received: (qmail 15713 invoked from network); 15 Jun 2020 10:27:01 -0000
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=zx2c4.com; h=mime-version
+	:from:date:message-id:subject:to:cc:content-type; s=mail; bh=lRN
+	65Oo0mc0F8r+DDWtw/MlluDk=; b=kZswaULynlWF7sUmn/S+Wf4vXyg4TwnY3od
+	O5GhovqKcyRqGHxIJOJ9yNFmfnGMaWiNoKv6xs8QbvIwLDczGT6+CNi5gIgdtoX+
+	qXfw+1VIROj31TKltcGorCqGsPNqevrneEZ/hFSwXlgoXpfdeJUKGqovJzsCTzzf
+	I4gpHOJyES9f1nNEs00hqCwRXkuH8NPSHJwx8L5/shr1v/Vwi4weme+9OBZki7rO
+	Mzu7YaruKWBmwypPdCcglUaOTNs5FBZaLLO9WSbnf7LAD7qU52LlGX71+/Cg7qAd
+	vzqWdsmXG5jAw1t/Hh+PUCOh8Sma1rc4vELqQNkHUmFssGEmfRA==
+X-Gm-Message-State: AOAM5319sE5+LpgOganxaOJiY/wlxAo7evku78x6/v3oFr2Uj7vqfyTL
+	xEEmzbgVrzvNwQNAJN5tzqmgoxA4OqFwNTfFSIc=
+X-Google-Smtp-Source: ABdhPJzSj8LwcKc9aY9w/6THuVZEOYoB+hlUyjHk6QP5O7EW9Yn2eEdLsBKYY2DjP/t7jJbqHTBjUDx25k5Bw9yRChs=
+X-Received: by 2002:a6b:5a07:: with SMTP id o7mr26860787iob.67.1592216808485;
+ Mon, 15 Jun 2020 03:26:48 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <20200615085132.166470-1-yanaijie@huawei.com>
-Content-Type: text/plain; charset="windows-1252"
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-Originating-IP: [10.134.22.195]
-X-CFilter-Loop: Reflected
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Mon, 15 Jun 2020 04:26:37 -0600
+X-Gmail-Original-Message-ID: <CAHmME9rmAznrAmEQTOaLeMM82iMFTfCNfpxDGXw4CJjuVEF_gQ@mail.gmail.com>
+Message-ID: <CAHmME9rmAznrAmEQTOaLeMM82iMFTfCNfpxDGXw4CJjuVEF_gQ@mail.gmail.com>
+Subject: lockdown bypass on mainline kernel for loading unsigned modules
+To: oss-security <oss-security@lists.openwall.com>
+Cc: linux-security-module@vger.kernel.org, linux-acpi@vger.kernel.org, 
+	Matthew Garrett <mjg59@srcf.ucam.org>, kernel-hardening@lists.openwall.com, 
+	Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On 2020/6/15 16:51, Jason Yan wrote:
-> This is an effort to eliminate the uninitialized_var() macro[1].
-> 
-> The use of this macro is the wrong solution because it forces off ANY
-> analysis by the compiler for a given variable. It even masks "unused
-> variable" warnings.
-> 
-> Quoted from Linus[2]:
-> 
-> "It's a horrible thing to use, in that it adds extra cruft to the
-> source code, and then shuts up a compiler warning (even the _reliable_
-> warnings from gcc)."
-> 
-> Fix it by remove this variable since it is not needed at all.
-> 
-> [1] https://github.com/KSPP/linux/issues/81
-> [2] https://lore.kernel.org/lkml/CA+55aFz2500WfbKXAx8s67wrm9=yVJu65TpLgN_ybYNv0VEOKA@mail.gmail.com/
-> 
-> Cc: Kees Cook <keescook@chromium.org>
-> Suggested-by: Chao Yu <yuchao0@huawei.com>
-> Signed-off-by: Jason Yan <yanaijie@huawei.com>
+Hi everyone,
 
-Reviewed-by: Chao Yu <yuchao0@huawei.com>
+Yesterday, I found a lockdown bypass in Ubuntu 18.04's kernel using
+ACPI table tricks via the efi ssdt variable [1]. Today I found another
+one that's a bit easier to exploit and appears to be unpatched on
+mainline, using acpi_configfs to inject an ACPI table. The tricks are
+basically the same as the first one, but this one appears to be
+unpatched, at least on my test machine. Explanation is in the header
+of the PoC:
 
-Thanks,
+https://git.zx2c4.com/american-unsigned-language/tree/american-unsigned-language-2.sh
+
+I need to get some sleep, but if nobody posts a patch in the
+meanwhile, I'll try to post a fix tomorrow.
+
+Jason
+
+[1] https://www.openwall.com/lists/oss-security/2020/06/14/1
