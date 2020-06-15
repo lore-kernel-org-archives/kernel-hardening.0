@@ -1,22 +1,22 @@
-Return-Path: <SRS0=8kJI=74=lists.openwall.com=kernel-hardening-return-18981-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=bFqh=74=lists.openwall.com=kernel-hardening-return-18982-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 99FA5C433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 16:25:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E980BC433DF
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 17:00:51 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id ED345207DA
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 16:25:04 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1C4112078E
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Jun 2020 17:00:50 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=oracle.com header.i=@oracle.com header.b="GWDefzid"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org ED345207DA
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=oracle.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18981-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28447 invoked by uid 550); 15 Jun 2020 16:24:49 -0000
+	dkim=pass (2048-bit key) header.d=kernel-dk.20150623.gappssmtp.com header.i=@kernel-dk.20150623.gappssmtp.com header.b="D7/vpemZ"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1C4112078E
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=kernel.dk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18982-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 12208 invoked by uid 550); 15 Jun 2020 17:00:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,98 +24,173 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15549 invoked from network); 15 Jun 2020 16:22:53 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=oracle.com; h=from : message-id :
- content-type : mime-version : subject : date : in-reply-to : cc : to :
- references; s=corp-2020-01-29;
- bh=9LPSGGeBHXZlI3mrDl11xSAyahEZRFnjRlfXvOp90rc=;
- b=GWDefzidqVC2brxh0WZ3BGv+lh9SaJibEB6XXXxy2sL7OaZ40fA/VnAXniUJaDb2gaM0
- Xwj7QVdaun1tZYVMybjnzyekweavZr8nAXjscgFvk7s2NiIZvOMF/UB/iMqnDsgdwbeA
- RuzTwdBqjHlq73celgtaC97LyUFdnTlecx10KisqhUI8UiHAo8yren4tbhN5bTJbyh17
- Xke5C46mrV6hox4mDesf8ltppp5BYCARQRJKSmszeUOQuXp6+jckSvIngOFxptwDq8BT
- Rfu9rSdNlqzlyJ5kATvbU4eNnlSskbxM5uX/JTmo6dR8exoG8byklEZDlteCk6YESe7J xA== 
-From: John Haxby <john.haxby@oracle.com>
-Message-Id: <206DB19C-0117-4F4B-AFF7-212E40CB8C75@oracle.com>
-Content-Type: multipart/signed;
-	boundary="Apple-Mail=_79F4D81D-D509-4941-8339-0DAC46A53B1C";
-	protocol="application/pgp-signature";
-	micalg=pgp-sha256
-Mime-Version: 1.0 (Mac OS X Mail 13.4 \(3608.80.23.2.2\))
-Subject: Re: [oss-security] lockdown bypass on mainline kernel for loading
- unsigned modules
-Date: Mon, 15 Jun 2020 17:22:27 +0100
-In-Reply-To: <CAHmME9rmAznrAmEQTOaLeMM82iMFTfCNfpxDGXw4CJjuVEF_gQ@mail.gmail.com>
-Cc: linux-security-module@vger.kernel.org, linux-acpi@vger.kernel.org,
-        Matthew Garrett <mjg59@srcf.ucam.org>,
-        kernel-hardening@lists.openwall.com,
-        Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>
-To: oss-security@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>
-References: <CAHmME9rmAznrAmEQTOaLeMM82iMFTfCNfpxDGXw4CJjuVEF_gQ@mail.gmail.com>
-X-Mailer: Apple Mail (2.3608.80.23.2.2)
-X-Proofpoint-Virus-Version: vendor=nai engine=6000 definitions=9653 signatures=668680
-X-Proofpoint-Spam-Details: rule=notspam policy=default score=0 spamscore=0 adultscore=0 suspectscore=0
- mlxlogscore=999 mlxscore=0 phishscore=0 bulkscore=0 malwarescore=0
- classifier=spam adjust=0 reason=mlx scancount=1 engine=8.12.0-2004280000
- definitions=main-2006150126
-X-Proofpoint-Virus-Version: vendor=nai engine=6000 definitions=9653 signatures=668680
-X-Proofpoint-Spam-Details: rule=notspam policy=default score=0 lowpriorityscore=0 impostorscore=0
- clxscore=1034 mlxscore=0 mlxlogscore=999 priorityscore=1501 phishscore=0
- malwarescore=0 suspectscore=0 spamscore=0 cotscore=-2147483648 bulkscore=0
- adultscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2004280000 definitions=main-2006150127
-
-
---Apple-Mail=_79F4D81D-D509-4941-8339-0DAC46A53B1C
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain;
-	charset=us-ascii
-
-Hi Jason,
-
-
-> On 15 Jun 2020, at 11:26, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
->=20
-> Hi everyone,
->=20
-> Yesterday, I found a lockdown bypass in Ubuntu 18.04's kernel using
-> ACPI table tricks via the efi ssdt variable [1]. Today I found another
-> one that's a bit easier to exploit and appears to be unpatched on
-> mainline, using acpi_configfs to inject an ACPI table. The tricks are
-> basically the same as the first one, but this one appears to be
-> unpatched, at least on my test machine. Explanation is in the header
-> of the PoC:
->=20
-> =
-https://git.zx2c4.com/american-unsigned-language/tree/american-unsigned-la=
-nguage-2.sh
->=20
-> I need to get some sleep, but if nobody posts a patch in the
-> meanwhile, I'll try to post a fix tomorrow.
->=20
-> Jason
->=20
-> [1] https://www.openwall.com/lists/oss-security/2020/06/14/1
-
-
-This looks CVE-worthy.   Are you going to ask for a CVE for it?
-
-jch
-
---Apple-Mail=_79F4D81D-D509-4941-8339-0DAC46A53B1C
+Received: (qmail 12185 invoked from network); 15 Jun 2020 17:00:40 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=kernel-dk.20150623.gappssmtp.com; s=20150623;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-language:content-transfer-encoding;
+        bh=OLDj84Vf2Ss3CuVG8EdpeZlmuGFVkaaeH3C9J5Xc5Bc=;
+        b=D7/vpemZ134Hy2F2MsWvELrx79i0dwbyRMmbh/c++JsBNsfHrWHn6ix+6duSzfhWx7
+         qNGo8XY24NuO9bSQ+jg3JAHTXH0iTOSD2dEPPoNt3/3Q5sWmP4X9/Latt007So2xiK6w
+         dcevu25BEyQQJYbJZXCRNYnG+1gtdfXW9HYVkmMe//fxkEqn1/PY7TN0RvXr5T3/7Oyt
+         o3jmABfIsxp+KxtK1pouEv40qo+T/rdH8RdFkuG0hkFVSFPVKaIcRNpg6b6gD0bf51K1
+         a49YsUmbTHUJ0XISzhaPbuMQgQCFCto05DDzWIXk+On5NDpv4QmB/Vum/ALbTZTul7X3
+         HiOg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
+         :content-transfer-encoding;
+        bh=OLDj84Vf2Ss3CuVG8EdpeZlmuGFVkaaeH3C9J5Xc5Bc=;
+        b=hvuNnbKVqOXT5Ehryqku3oAQ8xZUdC5sLUDZC8qFFBPxUJ0HzT7xQA2PvRfvh/duDR
+         Lzl/QE7ms9A7Tb/QkSudzEKMgbbfJFgcz/1ZaiBMgD5/DfMZmRo7GGNRXb8ttKplqVJ0
+         YcU09/f1Jd6jp9ZO1dG6bzl7SFlHJcLBLF2ZIaWz5SJabNT+Gicb+Fg8m4ztpikLuny/
+         t2khO+KGLi4h6P0K5CNa+UUW8t7zAoerywaiRxo0IWCr+XoQ2AIV9RV4g44mFX7pTLL+
+         dQKreiw4RUxbxxiIuOKFhjaVZ7hXjgcJqBANSgLa1RGM//cMT8f7QEVOTzn1/PdDdkvW
+         h3PA==
+X-Gm-Message-State: AOAM531hgn6WgWNQ3hiUUF5O+J3mNYbPEN8qqHCXquaSsQo5JuB+9PDH
+	QtMM41ysROlkhhPIDsr9YZJzic9om0JOwA==
+X-Google-Smtp-Source: ABdhPJwY6m4VGHVURwtAfMzxZXrIApQH9lo2o827yDWAKxrUQHiEaorTUtS6dokTRo9IxGCGENBcFw==
+X-Received: by 2002:a17:902:7008:: with SMTP id y8mr21928133plk.84.1592240427957;
+        Mon, 15 Jun 2020 10:00:27 -0700 (PDT)
+Subject: Re: [RFC] io_uring: add restrictions to support untrusted
+ applications and guests
+To: Stefano Garzarella <sgarzare@redhat.com>, Jann Horn <jannh@google.com>
+Cc: Kees Cook <keescook@chromium.org>,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ Sargun Dhillon <sargun@sargun.me>, Aleksa Sarai <asarai@suse.de>,
+ Stefan Hajnoczi <stefanha@redhat.com>, Jeff Moyer <jmoyer@redhat.com>,
+ io-uring <io-uring@vger.kernel.org>,
+ kernel list <linux-kernel@vger.kernel.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>
+References: <20200609142406.upuwpfmgqjeji4lc@steredhat>
+ <CAG48ez3kdNKjif==MbX36cKNYDpZwEPMZaJQ1rrpXZZjGZwbKw@mail.gmail.com>
+ <20200615133310.qwdmnctrir5zgube@steredhat>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <f7f2841e-3dbb-377f-f8f8-826506a938a6@kernel.dk>
+Date: Mon, 15 Jun 2020 11:00:25 -0600
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.8.0
+MIME-Version: 1.0
+In-Reply-To: <20200615133310.qwdmnctrir5zgube@steredhat>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
 Content-Transfer-Encoding: 7bit
-Content-Disposition: attachment;
-	filename=signature.asc
-Content-Type: application/pgp-signature;
-	name=signature.asc
-Content-Description: Message signed with OpenPGP
 
------BEGIN PGP SIGNATURE-----
-Comment: GPGTools - http://gpgtools.org
+On 6/15/20 7:33 AM, Stefano Garzarella wrote:
+> On Mon, Jun 15, 2020 at 11:04:06AM +0200, Jann Horn wrote:
+>> +Kees, Christian, Sargun, Aleksa, kernel-hardening for their opinions
+>> on seccomp-related aspects
+>>
+>> On Tue, Jun 9, 2020 at 4:24 PM Stefano Garzarella <sgarzare@redhat.com> wrote:
+>>> Hi Jens,
+>>> Stefan and I have a proposal to share with io_uring community.
+>>> Before implementing it we would like to discuss it to receive feedbacks and
+>>> to see if it could be accepted:
+>>>
+>>> Adding restrictions to io_uring
+>>> =====================================
+>>> The io_uring API provides submission and completion queues for performing
+>>> asynchronous I/O operations. The queues are located in memory that is
+>>> accessible to both the host userspace application and the kernel, making it
+>>> possible to monitor for activity through polling instead of system calls. This
+>>> design offers good performance and this makes exposing io_uring to guests an
+>>> attractive idea for improving I/O performance in virtualization.
+>> [...]
+>>> Restrictions
+>>> ------------
+>>> This document proposes io_uring API changes that safely allow untrusted
+>>> applications or guests to use io_uring. io_uring's existing security model is
+>>> that of kernel system call handler code. It is designed to reject invalid
+>>> inputs from host userspace applications. Supporting guests as io_uring API
+>>> clients adds a new trust domain with access to even fewer resources than host
+>>> userspace applications.
+>>>
+>>> Guests do not have direct access to host userspace application file descriptors
+>>> or memory. The host userspace application, a Virtual Machine Monitor (VMM) such
+>>> as QEMU, grants access to a subset of its file descriptors and memory. The
+>>> allowed file descriptors are typically the disk image files belonging to the
+>>> guest. The memory is typically the virtual machine's RAM that the VMM has
+>>> allocated on behalf of the guest.
+>>>
+>>> The following extensions to the io_uring API allow the host application to
+>>> grant access to some of its file descriptors.
+>>>
+>>> These extensions are designed to be applicable to other use cases besides
+>>> untrusted guests and are not virtualization-specific. For example, the
+>>> restrictions can be used to allow only a subset of sqe operations available to
+>>> an application similar to seccomp syscall whitelisting.
+>>>
+>>> An address translation and memory restriction mechanism would also be
+>>> necessary, but we can discuss this later.
+>>>
+>>> The IOURING_REGISTER_RESTRICTIONS opcode
+>>> ----------------------------------------
+>>> The new io_uring_register(2) IOURING_REGISTER_RESTRICTIONS opcode permanently
+>>> installs a feature whitelist on an io_ring_ctx. The io_ring_ctx can then be
+>>> passed to untrusted code with the knowledge that only operations present in the
+>>> whitelist can be executed.
+>>
+>> This approach of first creating a normal io_uring instance and then
+>> installing restrictions separately in a second syscall means that it
+>> won't be possible to use seccomp to restrict newly created io_uring
+>> instances; code that should be subject to seccomp restrictions and
+>> uring restrictions would only be able to use preexisting io_uring
+>> instances that have already been configured by trusted code.
+>>
+>> So I think that from the seccomp perspective, it might be preferable
+>> to set up these restrictions in the io_uring_setup() syscall. It might
+>> also be a bit nicer from a code cleanliness perspective, since you
+>> won't have to worry about concurrently changing restrictions.
+>>
+> 
+> Thank you for these details!
+> 
+> It seems feasible to include the restrictions during io_uring_setup().
+> 
+> The only doubt concerns the possibility of allowing the trusted code to
+> do some operations, before passing queues to the untrusted code, for
+> example registering file descriptors, buffers, eventfds, etc.
+> 
+> To avoid this, I should include these operations in io_uring_setup(),
+> adding some code that I wanted to avoid by reusing io_uring_register().
+> 
+> If I add restrictions in io_uring_setup() and then add an operation to
+> go into safe mode (e.g. a flag in io_uring_enter()), we would have the same
+> problem, right?
+> 
+> Just to be clear, I mean something like this:
+> 
+>     /* params will include restrictions */
+>     fd = io_uring_setup(entries, params);
+> 
+>     /* trusted code */
+>     io_uring_register_files(fd, ...);
+>     io_uring_register_buffers(fd, ...);
+>     io_uring_register_eventfd(fd, ...);
+> 
+>     /* enable safe mode */
+>     io_uring_enter(fd, ..., IORING_ENTER_ENABLE_RESTRICTIONS);
+> 
+> 
+> Anyway, including a list of things to register in the 'params', passed
+> to io_uring_setup(), should be feasible, if Jens agree :-)
 
-iHUEAREIAB0WIQT+pxvb11CFWUkNSOVFC7t+lC+jyAUCXuegQwAKCRBFC7t+lC+j
-yItsAQCs9qh0q24Rr/pL5VTN/Nt6fJj38GzSCQNVyCcBs8X55gD+OdD6c88Q91b/
-tFCKvrk8joQsG5RiFiqNQpod8AORs+s=
-=x0MT
------END PGP SIGNATURE-----
+I wonder how best to deal with this, in terms of ring visibility vs
+registering restrictions. We could potentially start the ring in a
+disabled mode, if asked to. It'd still be visible in terms of having
+the fd installed, but it'd just error requests. That'd leave you with
+time to do the various setup routines needed before then flagging it
+as enabled. My only worry on that would be adding overhead for doing
+that. It'd be cheap enough to check for IORING_SETUP_DISABLED in
+ctx->flags in io_uring_enter(), and return -EBADFD or something if
+that's the case. That doesn't cover the SQPOLL case though, but maybe we
+just don't start the sq thread if IORING_SETUP_DISABLED is set.
 
---Apple-Mail=_79F4D81D-D509-4941-8339-0DAC46A53B1C--
+We'd need a way to clear IORING_SETUP_DISABLED through
+io_uring_register(). When clearing, that could then start the sq thread
+as well, when SQPOLL is set.
+
+-- 
+Jens Axboe
+
