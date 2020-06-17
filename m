@@ -1,22 +1,20 @@
-Return-Path: <SRS0=xL+b=76=lists.openwall.com=kernel-hardening-return-18998-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pNZs=76=lists.openwall.com=kernel-hardening-return-18999-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.7 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0B42BC433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 17:14:53 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 07799C433E2
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 19:05:28 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0641920810
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 17:14:51 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=intel.onmicrosoft.com header.i=@intel.onmicrosoft.com header.b="IiHma/vc"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0641920810
+	by mail.kernel.org (Postfix) with SMTP id 12C5D2075E
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 19:05:26 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 12C5D2075E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18998-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32162 invoked by uid 550); 17 Jun 2020 17:14:43 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-18999-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7572 invoked by uid 550); 17 Jun 2020 19:05:19 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,130 +22,403 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18270 invoked from network); 17 Jun 2020 16:52:28 -0000
-IronPort-SDR: OCzMqwW0e97tkP/XecQSO33Sxisd20QnNvHwvfeEFAoSgVOyxGw+/OuRmx5TF2HUiipew7Qfd6
- lf+xn8SlO2Ng==
+Received: (qmail 7552 invoked from network); 17 Jun 2020 19:05:18 -0000
+IronPort-SDR: kRT9tGn5egQj74/BgiG1csKuooNIHIUk2ga3FSzgWn9prgVG/4dXbAxviFgGZoda7IwGGipgAC
+ IQOWpnDIM4Kg==
 X-Amp-Result: SKIPPED(no attachment in message)
 X-Amp-File-Uploaded: False
-IronPort-SDR: 6IrQiFjxiXU3WZNWBJtiw/66HsmjxW4Vr3c188ayiwHop36+UMPCZYC9KXb6zzsLCydOYBAgeP
- Oz/wCLiaLuLA==
+IronPort-SDR: f4PG7rOzUp9wJxnaGIS99b7kAedDAFG1mwUMnkZiMuYr+yJgZN+GU8YukTeTJ/vMUngKvmiene
+ 3v5dNH4Wg0Qg==
 X-ExtLoop1: 1
 X-IronPort-AV: E=Sophos;i="5.73,523,1583222400"; 
-   d="scan'208";a="352136298"
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=axXXcPySwtTg55qdfO8km7B4tqJusj5KGXz8nMzu6m1Pe5hd0nms3hmkWwV5qbQp8g184xhvK3rDPH1Oz2SM9o77qjf1ajQkO9bxXYJIAQPus7L7qkDglE6FhD7NAZ2zg5B6gsPh+1rPUYj5x6FaVJfaK44KE6jUvp9oSp979EaGeOsGloK2A/SplA/AChrxfLqz6jeUjwDCcNqpsG64kViC3IYnUOwV+dy22AgcD4wFAOMccssj93uVXLdyDkeLsex1w9ChHGfBeGpN2PkFNscpsLpLP6LTktvFMVnU4jkUYM2En+4/T5mFHYXsxdNRtANyfdlwQT3CRIs2xzMuDg==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=ynMvoLm6hH+Cyr6zWtHq98snUN/c5qEBF9Dj1fHAl8g=;
- b=n57Z8uUGQBjO8Mbv+Sutfz/Fy0F2iPnDjQqmBHx90gfgvyX0C8JCtk8TfFViMFPiP+580c6ZljekTWZdf9KzzFLmLPtM3F26P32gm6dNSDUjEAyvkzV+dT5n5A1A0euS4cFlmFozAMHVw9KXhRpD331GmnKRetJeTPaFebz6uko3aIukWWnwvovgds5AXj7ibITU/3hGMMXAO//Tn4oS0DFO/6g8SeiAG1wUlVupIt8/ST8KqKf9pHCXQdbjzNj837x8RseUho1kD/Tbsrd6+VC87sYG9GLii/VJLfwNZNOGYsAYgVCelklWL9Fdpgy9bqPLJ8Tznwox51siHg/UHA==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
- smtp.mailfrom=intel.com; dmarc=pass action=none header.from=intel.com;
- dkim=pass header.d=intel.com; arc=none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=intel.onmicrosoft.com;
- s=selector2-intel-onmicrosoft-com;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=ynMvoLm6hH+Cyr6zWtHq98snUN/c5qEBF9Dj1fHAl8g=;
- b=IiHma/vcIlkfAXOmsTxUOQX1/QrD6kc/gC7t6Iw+IsPx/Qw79XUoQPaf73YbSgK1xJm/LbXKx4Jp7JCQA5auvm/MVc10MZNRxxQ8dB+RRE+LnzhJscvUVcJKCLFbSr0qWhGcXuqX6l2wQMjrRdctTyhvvSUw/ZEoDjJ+Ilqp37A=
-From: "Kaneda, Erik" <erik.kaneda@intel.com>
-To: Ard Biesheuvel <ardb@kernel.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>
-CC: Len Brown <lenb@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, LKML
-	<linux-kernel@vger.kernel.org>, ACPI Devel Maling List
-	<linux-acpi@vger.kernel.org>, Kernel Hardening
-	<kernel-hardening@lists.openwall.com>
-Subject: RE: [PATCH] acpi: disallow loading configfs acpi tables when locked
- down
-Thread-Topic: [PATCH] acpi: disallow loading configfs acpi tables when locked
- down
-Thread-Index: AQHWQwHsDapEE1DdX0qlaUS5GJuxS6jb0rmAgACscACAAIbWMA==
-Date: Wed, 17 Jun 2020 16:52:10 +0000
-Message-ID: <MWHPR11MB159995958420653FBC6D2DE2F09A0@MWHPR11MB1599.namprd11.prod.outlook.com>
-References: <CAHmME9rmAznrAmEQTOaLeMM82iMFTfCNfpxDGXw4CJjuVEF_gQ@mail.gmail.com>
- <20200615104332.901519-1-Jason@zx2c4.com>
- <CAHmME9oemScgo2mg8fzqtJCbKJfu-op0WvG5RcpBCS1hHNmpZw@mail.gmail.com>
- <CAMj1kXGWma7T+C5TJ2wYZ22MJr=3FQRqDjF--YuGuzFdAygP-g@mail.gmail.com>
-In-Reply-To: <CAMj1kXGWma7T+C5TJ2wYZ22MJr=3FQRqDjF--YuGuzFdAygP-g@mail.gmail.com>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach:
-X-MS-TNEF-Correlator:
-dlp-version: 11.2.0.6
-dlp-product: dlpe-windows
-dlp-reaction: no-action
-authentication-results: kernel.org; dkim=none (message not signed)
- header.d=none;kernel.org; dmarc=none action=none header.from=intel.com;
-x-originating-ip: [192.55.52.195]
-x-ms-publictraffictype: Email
-x-ms-office365-filtering-correlation-id: 76760d82-dcd5-4c0b-5bd2-08d812dec73a
-x-ms-traffictypediagnostic: MWHPR11MB1454:
-x-microsoft-antispam-prvs: <MWHPR11MB1454CC52F68E9C445A5E98E5F09A0@MWHPR11MB1454.namprd11.prod.outlook.com>
-x-ms-oob-tlc-oobclassifiers: OLM:9508;
-x-forefront-prvs: 04371797A5
-x-ms-exchange-senderadcheck: 1
-x-microsoft-antispam: BCL:0;
-x-microsoft-antispam-message-info: YfTGTBweMDFnhK/Q4/ttxdfqBnC1PD5BLtQSWZxSmB6Ntxu5fFBrOl2xGg+Y4ipH/k4G3YbSc5cOW803wZNEOnuJigtxBl1qG51NUQqmibLKWfVxAzRBebXVEKrjF0VQ1m6M8YIprlRGsQbY1ErrkrSXBlONJsRbOrEHuPr7Ctz5hK3kYyFClzWg9atnNKwwF3cY9fiRLgpJ/8b6W9Y8gWPD814U6WbovPC5JAVS8kefGza2HXh9PYp8Cmm7yaOkD6Nz0ppndDZzkSp9kHTkSAysr/Y3JKO9/fdpcIt+wsAmKZ5fdrKsNySDTHId6CZNPof36AKbM/KCejoiLRSoz4qvhu0rhO2kH9RimNyJCmH0Tby3ay5JmiTmKWhQd88+Ok9ieeoUcKiL7+uEfJR4Qw==
-x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:MWHPR11MB1599.namprd11.prod.outlook.com;PTR:;CAT:NONE;SFTY:;SFS:(4636009)(376002)(366004)(346002)(39860400002)(136003)(396003)(5660300002)(316002)(86362001)(52536014)(55016002)(54906003)(9686003)(110136005)(33656002)(4326008)(186003)(71200400001)(26005)(76116006)(66446008)(66946007)(8676002)(966005)(8936002)(64756008)(478600001)(6506007)(53546011)(45080400002)(7696005)(66476007)(66556008)(83380400001)(2906002);DIR:OUT;SFP:1102;
-x-ms-exchange-antispam-messagedata: p+64fFfgdJ6s8b3CCIYFdptTvNQOX9MJfoWz5yVByVdkL1ze8kNzK+37VfTFMEX3oH4QcfzUYqPnM0HaubrBiBussfDGLDyyK84I0eZd2JG+pkSCxJCw/LrWv2cSYlUAaUT+3LV9+9s+yYq5FNPw6zerm0Jboi2b+SczgRKXi4vXy+/w9IOjDoV9nVFYEWG38oeY6jnLyBHu0I46fq4Nkmr5nHVBFL/DGPoT71Fzfk44+8DTHCV4ztSc4nw6E6MAzzbZQ409hZuB0hsJZUBcObDt/FWk+Z0FNbZKtrEOHl03C6xckEmP2RTgACWzCOn4cVMm6VjIY0W5kpAZXYuqliV3TdlhP7M4zDJ7PejBOXr8k0qwxgQxEEu4BcU6gBNI3iZxrVBYnUgaNJ3eu0351yZ+UWNbDVVC4ACVLNU18p64elCfYue2SGwkIoVWq4+vZ9JsN6H8YPZhp4O3Ay+K4pNYv8Dgxm9/RqC2siGYugo=
-x-ms-exchange-transport-forked: True
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+   d="scan'208";a="273609545"
+From: John Andersen <john.s.andersen@intel.com>
+To: corbet@lwn.net,
+	pbonzini@redhat.com,
+	tglx@linutronix.de,
+	mingo@redhat.com,
+	bp@alien8.de,
+	x86@kernel.org,
+	hpa@zytor.com,
+	shuah@kernel.org,
+	sean.j.christopherson@intel.com,
+	liran.alon@oracle.com,
+	drjones@redhat.com,
+	rick.p.edgecombe@intel.com,
+	kristen@linux.intel.com
+Cc: vkuznets@redhat.com,
+	wanpengli@tencent.com,
+	jmattson@google.com,
+	joro@8bytes.org,
+	mchehab+huawei@kernel.org,
+	gregkh@linuxfoundation.org,
+	paulmck@kernel.org,
+	pawan.kumar.gupta@linux.intel.com,
+	jgross@suse.com,
+	mike.kravetz@oracle.com,
+	oneukum@suse.com,
+	luto@kernel.org,
+	peterz@infradead.org,
+	fenghua.yu@intel.com,
+	reinette.chatre@intel.com,
+	vineela.tummalapalli@intel.com,
+	dave.hansen@linux.intel.com,
+	john.s.andersen@intel.com,
+	arjan@linux.intel.com,
+	caoj.fnst@cn.fujitsu.com,
+	bhe@redhat.com,
+	nivedita@alum.mit.edu,
+	keescook@chromium.org,
+	dan.j.williams@intel.com,
+	eric.auger@redhat.com,
+	aaronlewis@google.com,
+	peterx@redhat.com,
+	makarandsonare@google.com,
+	linux-doc@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	kvm@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: [PATCH 0/4] Paravirtualized Control Register pinning
+Date: Wed, 17 Jun 2020 12:07:53 -0700
+Message-Id: <20200617190757.27081-1-john.s.andersen@intel.com>
+X-Mailer: git-send-email 2.21.0
 MIME-Version: 1.0
-X-MS-Exchange-CrossTenant-Network-Message-Id: 76760d82-dcd5-4c0b-5bd2-08d812dec73a
-X-MS-Exchange-CrossTenant-originalarrivaltime: 17 Jun 2020 16:52:10.5786
- (UTC)
-X-MS-Exchange-CrossTenant-fromentityheader: Hosted
-X-MS-Exchange-CrossTenant-id: 46c98d88-e344-4ed4-8496-4ed7712e255d
-X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
-X-MS-Exchange-CrossTenant-userprincipalname: r9LQXjqJ3DrOdpm3PdRQCRtn4xEN2LIyM1I+/Q5bs/JIZkhR9NTnEKKQlFMaZn/P6Nug1AbtbAn1RULSCcclEw==
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: MWHPR11MB1454
-X-OriginatorOrg: intel.com
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogbGludXgtYWNwaS1vd25l
-ckB2Z2VyLmtlcm5lbC5vcmcgPGxpbnV4LWFjcGktDQo+IG93bmVyQHZnZXIua2VybmVsLm9yZz4g
-T24gQmVoYWxmIE9mIEFyZCBCaWVzaGV1dmVsDQo+IFNlbnQ6IFdlZG5lc2RheSwgSnVuZSAxNywg
-MjAyMCAxOjM4IEFNDQo+IFRvOiBKYXNvbiBBLiBEb25lbmZlbGQgPEphc29uQHp4MmM0LmNvbT4N
-Cj4gQ2M6IExlbiBCcm93biA8bGVuYkBrZXJuZWwub3JnPjsgUmFmYWVsIEouIFd5c29ja2kgPHJq
-d0Byand5c29ja2kubmV0PjsNCj4gTEtNTCA8bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZz47
-IEFDUEkgRGV2ZWwgTWFsaW5nIExpc3QgPGxpbnV4LQ0KPiBhY3BpQHZnZXIua2VybmVsLm9yZz47
-IEtlcm5lbCBIYXJkZW5pbmcgPGtlcm5lbC0NCj4gaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNv
-bT4NCj4gU3ViamVjdDogUmU6IFtQQVRDSF0gYWNwaTogZGlzYWxsb3cgbG9hZGluZyBjb25maWdm
-cyBhY3BpIHRhYmxlcyB3aGVuIGxvY2tlZA0KPiBkb3duDQo+IA0KPiBPbiBXZWQsIDE3IEp1biAy
-MDIwIGF0IDAwOjIxLCBKYXNvbiBBLiBEb25lbmZlbGQgPEphc29uQHp4MmM0LmNvbT4NCj4gd3Jv
-dGU6DQo+ID4NCj4gPiBIaSBSYWZhZWwsIExlbiwNCj4gPg0KPiA+IExvb2tzIGxpa2UgSSBzaG91
-bGQgaGF2ZSBDQydkIHlvdSBvbiB0aGlzIHBhdGNoLiBUaGlzIGlzIHByb2JhYmx5DQo+ID4gc29t
-ZXRoaW5nIHdlIHNob3VsZCBnZXQgaW50byA1LjgtcmMyLCBzbyB0aGF0IGl0IGNhbiB0aGVuIGdl
-dCBwdXQgaW50bw0KPiA+IHN0YWJsZSBrZXJuZWxzLCBhcyBzb21lIHBlb3BsZSB0aGluayB0aGlz
-IGlzIHNlY3VyaXR5IHNlbnNpdGl2ZS4NCj4gPiBCaWdnZXIgcGljdHVyZSBpcyB0aGlzOg0KPiA+
-DQo+ID4gaHR0cHM6Ly9kYXRhLnp4MmM0LmNvbS9hbWVyaWNhbi11bnNpZ25lZC1sYW5ndWFnZS0y
-LmdpZg0KPiA+IGh0dHBzOi8vZGF0YS56eDJjNC5jb20vYW1lcmljYW4tdW5zaWduZWQtbGFuZ3Vh
-Z2UtMi1mZWRvcmEtNS44LnBuZw0KPiA+DQpIaSwNCg0KPiA+IEFsc28sIHNvbWVib2R5IG1lbnRp
-b25lZCB0byBtZSB0aGF0IE1pY3Jvc29mdCdzIEFDUEkgaW1wbGVtZW50YXRpb24NCj4gPiBkaXNh
-bGxvd3Mgd3JpdGVzIHRvIHN5c3RlbSBtZW1vcnkgYXMgYSBzZWN1cml0eSBtaXRpZ2F0aW9uLiBJ
-IGhhdmVuJ3QNCj4gPiBsb29rZWQgYXQgd2hhdCB0aGF0IGFjdHVhbGx5IGVudGFpbHMsIGJ1dCBJ
-IHdvbmRlciBpZiBlbnRpcmVseQ0KPiA+IGRpc2FibGluZyBzdXBwb3J0IGZvciBBQ1BJX0FEUl9T
-UEFDRV9TWVNURU1fTUVNT1JZIHdvdWxkIGJlDQo+IHNlbnNpYmxlLg0KDQpObywgV2luZG93cyB1
-c2VzIHRoZXNlIGFzIHdlbGwuIFRoZXkgbWlnaHQgaGF2ZSBzb21lIHJlc3RyaWN0aW9uIG9uIHdo
-aWNoIGFyZWFzIGFyZSBhbGxvd2VkIHRob3VnaC4NCldpdGggdGhhdCBzYWlkLCB0aGVyZSBhcmUg
-cGxlbnR5IG9mIHVzZSBjYXNlcyAoU01JIGhhbmRsZXJzLCBwb3dlciBtYW5hZ2VtZW50LCBldGMp
-IHdoZXJlIHRoaXMgaXMgbmVlZGVkLg0KRGlzYWJsaW5nIFN5c3RlbU1lbW9yeSB3b3VsZCBkZWZp
-bml0ZWx5IGJyZWFrIGV4aXN0aW5nIHN5c3RlbXMuDQoNCkVyaWsNCj4gPiBJIGhhdmVuJ3QgbG9v
-a2VkIGF0IHRvbyBtYW55IERTRFRzLiBXb3VsZCB0aGF0IGJyZWFrIHJlYWwgaGFyZHdhcmUsIG9y
-DQo+ID4gZG9lcyBub2JvZHkgZG8gdGhhdD8gQWx0ZXJuYXRpdmVseSwgdGhlIHJhbmdlIG9mIGFj
-Y2VwdGFibGUgYWRkcmVzc2VzDQo+ID4gZm9yIFN5c3RlbU1lbW9yeSBjb3VsZCBleGNsdWRlIGtl
-cm5lbCBtZW1vcnkuIFdvdWxkIHRoYXQgYnJlYWsNCj4gPiBhbnl0aGluZz8gSGF2ZSB5b3UgaGVh
-cmQgYWJvdXQgTWljcm9zb2Z0J3MgbWl0aWdhdGlvbiB0byBrbm93IG1vcmUNCj4gPiBkZXRhaWxz
-IG9uIHdoYXQgdGhleSBmaWd1cmVkIG91dCB0aGV5IGNvdWxkIHNhZmVseSByZXN0cmljdCB3aXRo
-b3V0DQo+ID4gYnJlYWtpbmcgaGFyZHdhcmU/IEVpdGhlciB3YXksIGZvb2QgZm9yIHRob3VnaHQg
-SSBzdXBwb3NlLg0KPiA+DQo+IA0KPiBBQ1BJX0FEUl9TUEFDRV9TWVNURU1fTUVNT1JZIG1heSBi
-ZSB1c2VkIGZvciBldmVyeXRoaW5nIHRoYXQgaXMNCj4gbWVtb3J5DQo+IG1hcHBlZCwgaS5lLiwg
-UENJZSBFQ0FNIHNwYWNlLCBHUElPIGNvbnRyb2wgcmVnaXN0ZXJzIGV0Yy4NCj4gDQo+IEkgYWdy
-ZWUgdGhhdCB1c2luZyBBQ1BJX0FEUl9TUEFDRV9TWVNURU1fTUVNT1JZIGZvciBhbnkgbWVtb3J5
-IHRoYXQNCj4gaXMNCj4gdW5kZXIgdGhlIGtlcm5lbCdzIGNvbnRyb2wgaXMgYSBiYWQgaWRlYSwg
-YW5kIHRoaXMgc2hvdWxkIGJlIGVhc3kgdG8NCj4gZmlsdGVyIG91dDogdGhlIFN5c3RlbU1lbW9y
-eSBhZGRyZXNzIHNwYWNlIGhhbmRsZXIgbmVlZHMgdGhlIEFDUEkNCj4gc3VwcG9ydCByb3V0aW5l
-cyB0byBtYXAgdGhlIHBoeXNpY2FsIGFkZHJlc3NlcyB1c2VkIGJ5IEFNTCBpbnRvDQo+IHZpcnR1
-YWwga2VybmVsIGFkZHJlc3Nlcywgc28gYWxsIHRoZXNlIGFjY2Vzc2VzIGdvIHRocm91Z2gNCj4g
-YWNwaV9vc19pb3JlbWFwKCkuIFNvIGFzIGEgZmlyc3Qgc3RlcCwgaXQgc2hvdWxkIGJlIHJlYXNv
-bmFibGUgdG8gcHV0DQo+IGEgbG9ja2Rvd24gY2hlY2sgdGhlcmUsIGFuZCBmYWlsIGFueSBhY2Nl
-c3MgdG8gT1Mgb3duZWQgbWVtb3J5IGlmDQo+IGxvY2tkb3duIGlzIGVuYWJsZWQsIGFuZCBwcmlu
-dCBhIHdhcm5pbmcgaWYgaXQgaXMgbm90Lg0KDQo=
+The paravirtualized CR pinning patchset is a strengthened version of
+existing control registers pinning for paravritualized guests. It
+protects KVM guests from ROP based attacks which attempt to disable key
+security features. Virtualized Linux guests such as Kata Containers, AWS
+Lambda, and Chromos Termina will get this protection enabled by default
+when they update their kernel / configs. Using virtualization allows us
+to provide a stronger version of a proven exploit mitigation technique.
+
+We’ve patched KVM to create 6 new KVM specific MSRs used to query which
+bits may be pinned, and to set which bits are pinned high or low in
+control registers 0 and 4. Linux guest support was added so that
+non-kexec guests will be able to take advantage of this strengthened
+protection by default. A plan for enabling guests with kexec is proposed
+in this cover letter. As part of that plan, we add a command line flag
+that allows users to opt-in to the protection on boot if they have kexec
+built into their kernel, effectively opting out of kexec support.
+Hibernation and suspend to ram were enabled by updating the location
+where bits in control register 4 were saved to and restored from. The
+work also includes minor patches for QEMU to ensure reboot works by
+clearing the added MSRs and exposing the new CPUID feature bit. There is
+one SMM related selftest added in this patchset and another patch for
+kvm-unit-tests that will be sent separately.
+
+Thank you to Sean and Drew who reviewed v2, to Boris, Paolo, Andy, and
+Liran who reviewed v1, and to Sean, Dave, Kristen, and Rick who've
+provided feedback throughout. I appreciate your time spent reviewing and
+feedback.
+
+Here are the previous RFC versions of this patchset for reference
+
+RFC v2: https://lkml.org/lkml/2020/2/18/1162
+RFC v1: https://lkml.org/lkml/2019/12/24/380
+
+
+
+=== High level overview of the changes ===
+
+- A CPUID feature bit as well as MSRs were added to KVM. Guests can use
+  the CPUID feature bit to determine if MSRs are available. Reading the
+  first 2 MSRs returns the bits which may be pinned for CR0/4
+  respectively. The next 4 MSRs are writeable and allow the guest and
+  host userspace to set which bits are pinned low or pinned high for
+  CR0/4.
+
+- Hibernation and suspend-to-RAM are supported. This was done by
+  updating mmu_cr4_features on feature identification of the boot CPU.
+  As such, mmu_cr4_features is no longer read only after init.
+
+- CPU hotplug is supported. Pinning is per vCPU. When running as a guest
+  pinning is requested after CPU identification for non-boot CPUs. The
+  boot CPU requests pinning a directly after existing pinning is setup.
+
+- Nested virtualization is supported. SVM / VMX restore pinned bits on
+  VM-Exit if they had been unset in the host VMCB / VMCS.
+
+- As suggested by Sean, unpinning of pinned bits on return from SMM due
+  to modification of SMRAM will cause an unhandleable emulation fault
+  resulting in termination of the guest.
+
+- kexec support is still pending, since the plan is a bit long it's been
+  moved to the end of the cover letter. It talks about the decision to
+  make a command line parameter, why we opt in to pinning (and
+  effectively out of kexec). Being that those changes wouldn't be
+  localized to KVM (and this patchset is on top of kvm/next).
+
+- As Paolo requested, a patch will be sent immediately following this
+  patchset for kvm-unit-tests with the unit tests for general
+  functionality. selftests are included for SMM specific functionality.
+
+
+
+=== Chanages since RFCv2 ===
+
+- Related to Drew's comments
+
+  - Used linux/stringify.h in selftests
+
+  - Added comments on why we don't use GUEST_* due to SMM trickiness.
+    We opt not to use GUEST_SYNC() because we also have to make a sync call
+    from SMM. As such, the address of the ucall struct we'd need to pass isn't
+    something we can put into the machine code in a maintainable way. At least
+    so far as I could tell.
+
+- Related to Sean's comments
+
+  - Allowed pinning bits high or low rather than just high
+
+  - Cleaner code path for guest and host when writing to MSRs
+
+    - Didn't use read modify write behavior due to that requiring changes to
+      selftest save restore code which made me suspect that there might be
+      issues with other VMMs. The issue was because we read CR0/4 in the RWM
+      operation on the MSR, we must do KVM_SET_REGS before KVM_SET_MSRS, we also
+      had to call KVM_SET_SREGS and add checks for if we're in SMM or not. This
+      made it a bit more messy overall so I went with the first approach Sean
+      suggested where we just have pin high/low semantics.
+
+  - If the guest writes values to the allowed MSRs that are not the correct
+    value the wrmsr fails.
+
+  - If SMRAM modification would result in unpinning bits we bail with
+    X86EMUL_UNHANDLEABLE
+
+  - Added silent restoration of pinned bits for SVM and VMX when they may have
+    been modified in VMCB / VMCS. This didn't seem like a place were we'd want
+    to inject a fault, please let me know if we should.
+
+
+
+=== Description of changes and rational ===
+
+Paravirtualized Control Register pinning is a strengthened version of
+existing protections on the Write Protect, Supervisor Mode Execution /
+Access Protection, and User-Mode Instruction Prevention bits. The
+existing protections prevent native_write_cr*() functions from writing
+values which disable those bits. This patchset prevents any guest
+writes to control registers from disabling pinned bits, not just writes
+from native_write_cr*(). This stops attackers within the guest from
+using ROP to disable protection bits.
+
+https://web.archive.org/web/20171029060939/http://www.blackbunny.io/linux-kernel-x86-64-bypass-smep-kaslr-kptr_restric/
+
+The protection is implemented by adding MSRs to KVM which contain the
+bits that are allowed to be pinned, and the bits which are pinned. The
+guest or userspace can enable bit pinning by reading MSRs to check
+which bits are allowed to be pinned, and then writing MSRs to set which
+bits they want pinned.
+
+Other hypervisors such as HyperV have implemented similar protections
+for Control Registers and MSRs; which security researchers have found
+effective.
+
+https://www.abatchy.com/2018/01/kernel-exploitation-4
+
+We add a CR pin feature bit to the KVM cpuid, read only MSRs which
+guests use to identify which bits they may request be pinned, and CR
+pinned low/high MSRs which contain the pinned bits. Guests can request
+that KVM pin bits within control register 0 or 4 via the CR pinned MSRs.
+Writes to the MSRs fail if they include bits that aren't allowed to be
+pinned. Host userspace may clear or modify pinned bits at any time. Once
+pinned bits are set, the guest may pin more allowed bits, but may never
+clear pinned bits.
+
+In the event that the guest vCPU attempts to disable any of the pinned
+bits, the vCPU that issued the write is sent a general protection
+fault, and the register is left unchanged.
+
+When running with KVM guest support and paravirtualized CR pinning
+enabled, paravirtualized and existing pinning are setup at the same
+point on the boot CPU. Non-boot CPUs setup pinning upon identification.
+
+Pinning is not active when running in SMM. Entering SMM disables pinned
+bits. Writes to control registers within SMM would therefore trigger
+general protection faults if pinning was enforced. Upon exit from SMM,
+SMRAM is modified to ensure the values of CR0/4 that will be restored
+contain the correct values for pinned bits. CR0/4 values are then
+restored from SMRAM as usual.
+
+When running with nested virtualization, should pinned bits be cleared
+from host VMCS / VMCB, on VM-Exit, they will be silently restored.
+
+Should userspace expose the CR pining CPUID feature bit, it must zero
+CR pinned MSRs on reboot. If it does not, it runs the risk of having
+the guest enable pinning and subsequently cause general protection
+faults on next boot due to early boot code setting control registers to
+values which do not contain the pinned bits.
+
+Hibernation to disk and suspend-to-RAM are supported. identify_cpu was
+updated to ensure SMEP/SMAP/UMIP are present in mmu_cr4_features. This
+is necessary to ensure protections stay active during hibernation image
+restoration.
+
+Guests using the kexec system call currently do not support
+paravirtualized control register pinning. This is due to early boot
+code writing known good values to control registers, these values do
+not contain the protected bits. This is due to CPU feature
+identification being done at a later time, when the kernel properly
+checks if it can enable protections. As such, the pv_cr_pin command
+line option has been added which instructs the kernel to disable kexec
+in favor of enabling paravirtualized control register pinning.
+crashkernel is also disabled when the pv_cr_pin parameter is specified
+due to its reliance on kexec.
+
+When we make kexec compatible, we will still need a way for a kernel
+with support to know if the kernel it is attempting to load has
+support. If a kernel with this enabled attempts to kexec a kernel where
+this is not supported, it would trigger a fault almost immediately.
+
+Liran suggested adding a section to the built image acting as a flag to
+signify support for being kexec'd by a kernel with pinning enabled.
+Should that approach be implemented, it is likely that the command line
+flag (pv_cr_pin) would still be desired for some deprecation period. We
+wouldn't want the default behavior to change from being able to kexec
+older kernels to not being able to, as this might break some users
+workflows. Since we require that the user opt-in to break kexec we've
+held off on attempting to fix kexec in this patchset. This way no one
+sees any behavior they are not explicitly opting in to.
+
+Security conscious kernel configurations disable kexec already, per
+KSPP guidelines. Projects such as Kata Containers, AWS Lambda, ChromeOS
+Termina, and others using KVM to virtualize Linux will benefit from
+this protection without the need to specify pv_cr_pin on the command
+line.
+
+Pinning of sensitive CR bits has already been implemented to protect
+against exploits directly calling native_write_cr*(). The current
+protection cannot stop ROP attacks which jump directly to a MOV CR
+instruction. Guests running with paravirtualized CR pinning are now
+protected against the use of ROP to disable CR bits. The same bits that
+are being pinned natively may be pinned via the CR pinned MSRs. These
+bits are WP in CR0, and SMEP, SMAP, and UMIP in CR4.
+
+Future patches could implement similar MSRs to protect bits in MSRs.
+The NXE bit of the EFER MSR is a prime candidate.
+
+
+
+=== Plan for kexec support ===
+
+Andy's suggestion of a boot option has been incorporated as the
+pv_cr_pin command line option. Boris mentioned that short-term
+solutions become immutable. However, for the reasons outlined below
+we need a way for the user to opt-in to pinning over kexec if both
+are compiled in, and the command line parameter seems to be a good
+way to do that. Liran's proposed solution of a flag within the ELF
+would allow us to identify which kernels have support is assumed to
+be implemented in the following scenarios.
+
+We then have the following cases (without the addition of pv_cr_pin):
+
+
+- Kernel running without pinning enabled kexecs kernel with pinning.
+
+  - Loaded kernel has kexec
+
+    - Do not enable pinning
+
+  - Loaded kernel lacks kexec
+
+    - Enable pinning
+
+- Kernel running with pinning enabled kexecs kernel with pinning (as
+  identified by ELF addition).
+
+  - Okay
+
+- Kernel running with pinning enabled kexecs kernel without pinning
+  (as identified by lack of ELF addition).
+
+  - User is presented with an error saying that they may not kexec
+    a kernel without pinning support.
+
+
+With the addition of pv_cr_pin we have the following situations:
+
+
+- Kernel running without pinning enabled kexecs kernel with pinning.
+
+  - Loaded kernel has kexec
+
+    - pv_cr_pin command line parameter present for new kernel
+
+      - Enable pinning
+
+    - pv_cr_pin command line parameter not present for new kernel
+
+      - Do not enable pinning
+
+  - Loaded kernel lacks kexec
+
+    - Enable pinning
+
+- Kernel running with pinning enabled kexecs kernel with pinning (as
+  identified by ELF addition).
+
+  - Okay
+
+- Kernel running with kexec and pinning enabled (opt-in via pv_cr_pin)
+  kexecs kernel without pinning (as identified by lack of ELF addition).
+
+  - User is presented with an error saying that they have opted
+    into pinning support and may not kexec a kernel without pinning
+    support.
+
+
+Without the command line parameter I'm not sure how we could preserve
+users workflows which might rely on kexecing older kernels (ones
+which wouldn't have support). I see the benefit here being that users
+have to opt-in to the possibility of breaking their workflow, via
+their addition of the pv_cr_pin command line flag. Which could of
+course also be called nokexec. A deprecation period could then be
+chosen where eventually pinning takes preference over kexec and users
+are presented with the error if they try to kexec an older kernel.
+Input on this would be much appreciated, as well as if this is the
+best way to handle things or if there's another way that would be
+preferred. This is just what we were able to come up with to ensure
+users didn't get anything broken they didn't agree to have broken.
+
+
+Thanks,
+John
+
+John Andersen (4):
+  X86: Update mmu_cr4_features during feature identification
+  KVM: x86: Introduce paravirt feature CR0/CR4 pinning
+  selftests: kvm: add test for CR pinning with SMM
+  X86: Use KVM CR pin MSRs
+
+ .../admin-guide/kernel-parameters.txt         |  11 +
+ Documentation/virt/kvm/msr.rst                |  53 +++++
+ arch/x86/Kconfig                              |  10 +
+ arch/x86/include/asm/kvm_host.h               |   7 +
+ arch/x86/include/asm/kvm_para.h               |  28 +++
+ arch/x86/include/uapi/asm/kvm_para.h          |   7 +
+ arch/x86/kernel/cpu/common.c                  |  11 +-
+ arch/x86/kernel/kvm.c                         |  39 ++++
+ arch/x86/kernel/setup.c                       |  12 +-
+ arch/x86/kvm/cpuid.c                          |   3 +-
+ arch/x86/kvm/emulate.c                        |   3 +-
+ arch/x86/kvm/kvm_emulate.h                    |   2 +-
+ arch/x86/kvm/svm/nested.c                     |  11 +-
+ arch/x86/kvm/vmx/nested.c                     |  10 +-
+ arch/x86/kvm/x86.c                            | 106 ++++++++-
+ tools/testing/selftests/kvm/.gitignore        |   1 +
+ tools/testing/selftests/kvm/Makefile          |   1 +
+ .../selftests/kvm/include/x86_64/processor.h  |  13 ++
+ .../selftests/kvm/x86_64/smm_cr_pin_test.c    | 207 ++++++++++++++++++
+ 19 files changed, 521 insertions(+), 14 deletions(-)
+ create mode 100644 tools/testing/selftests/kvm/x86_64/smm_cr_pin_test.c
+
+
+base-commit: 49b3deaad3452217d62dbd78da8df24eb0c7e169
+-- 
+2.21.0
+
