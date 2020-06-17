@@ -1,20 +1,21 @@
-Return-Path: <SRS0=laxU=76=lists.openwall.com=kernel-hardening-return-19004-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=33Cj=76=lists.openwall.com=kernel-hardening-return-19005-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_2
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_2 autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C7F89C433DF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 20:28:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 69081C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 20:56:38 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 20B5F214DB
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 20:28:22 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 20B5F214DB
+	by mail.kernel.org (Postfix) with SMTP id B153B21556
+	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 20:56:37 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B153B21556
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=goodmis.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19004-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22267 invoked by uid 550); 17 Jun 2020 20:28:16 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19005-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13439 invoked by uid 550); 17 Jun 2020 20:56:31 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,38 +23,45 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22242 invoked from network); 17 Jun 2020 20:28:15 -0000
-Date: Wed, 17 Jun 2020 16:28:00 -0400
+Received: (qmail 13407 invoked from network); 17 Jun 2020 20:56:30 -0000
+Date: Wed, 17 Jun 2020 16:56:16 -0400
 From: Steven Rostedt <rostedt@goodmis.org>
-To: Oscar Carter <oscar.carter@gmx.com>
-Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>,
- kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH] kernel/trace: Remove function callback casts
-Message-ID: <20200617162800.05a12502@oasis.local.home>
-In-Reply-To: <20200615162245.13d3feff@oasis.local.home>
-References: <20200614070154.6039-1-oscar.carter@gmx.com>
-	<20200615161738.18d07ce6@oasis.local.home>
-	<20200615162245.13d3feff@oasis.local.home>
+To: LKML <linux-kernel@vger.kernel.org>
+Cc: Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>,
+ kernel-hardening@lists.openwall.com, Oscar Carter <oscar.carter@gmx.com>,
+ Andrew Morton <akpm@linux-foundation.org>
+Subject: [PATCH] tracing: Use linker magic instead of recasting
+ ftrace_ops_list_func()
+Message-ID: <20200617165616.52241bde@oasis.local.home>
 X-Mailer: Claws Mail 3.17.3 (GTK+ 2.24.32; x86_64-pc-linux-gnu)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
 
-On Mon, 15 Jun 2020 16:22:45 -0400
-Steven Rostedt <rostedt@goodmis.org> wrote:
+From: "Steven Rostedt (VMware)" <rostedt@goodmis.org>
 
-> As I was saying. This typecast is being paranoid, as archs will call
-> the ftrace_ops_list_func directly, and only pass in two parameters.
-> 
-> Now one way around this is to instead of having the typecast, I could
-> use linker magic to create another function that I can define without
-> the typecast to get the same effect. Similar to what I did in commit:
-> 
-> 46f9469247c6f ("ftrace: Rename ftrace_graph_stub to ftrace_stub_graph")
+In an effort to enable -Wcast-function-type in the top-level Makefile to
+support Control Flow Integrity builds, all function casts need to be
+removed.
 
-Would something like this work for you?
+This means that ftrace_ops_list_func() can no longer be defined as
+ftrace_ops_no_ops(). The reason for ftrace_ops_no_ops() is to use that when
+an architecture calls ftrace_ops_list_func() with only two parameters
+(called from assembly). And to make sure there's no C side-effects, those
+archs call ftrace_ops_no_ops() which only has two parameters, as
+ftrace_ops_list_func() has four parameters.
 
--- Steve
+Instead of a typecast, use vmlinux.lds.h to define ftrace_ops_list_func() to
+arch_ftrace_ops_list_func() that will define the proper set of parameters.
+
+Link: https://lore.kernel.org/r/20200614070154.6039-1-oscar.carter@gmx.com
+
+Requested-by: Oscar Carter <oscar.carter@gmx.com>
+Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
+---
+ include/asm-generic/vmlinux.lds.h |  7 ++++++-
+ kernel/trace/ftrace.c             | 23 ++++++++++-------------
+ 2 files changed, 16 insertions(+), 14 deletions(-)
 
 diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
 index db600ef218d7..120babd9ba44 100644
@@ -130,3 +138,6 @@ index f060838e9cbb..b775d399026e 100644
  
  /*
   * If there's only one function registered but it does not support
+-- 
+2.25.4
+
