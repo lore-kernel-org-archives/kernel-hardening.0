@@ -1,20 +1,20 @@
-Return-Path: <SRS0=IipU=77=lists.openwall.com=kernel-hardening-return-19021-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=MeLu=77=lists.openwall.com=kernel-hardening-return-19022-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9716EC433E1
-	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Jun 2020 14:41:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A04F9C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Jun 2020 14:51:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9B9A520885
-	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Jun 2020 14:41:32 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B9A520885
+	by mail.kernel.org (Postfix) with SMTP id C47FF20739
+	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Jun 2020 14:51:51 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C47FF20739
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19021-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7860 invoked by uid 550); 18 Jun 2020 14:41:25 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19022-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13588 invoked by uid 550); 18 Jun 2020 14:51:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,26 +22,26 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7837 invoked from network); 18 Jun 2020 14:41:24 -0000
-IronPort-SDR: NFcstPQ6eCW6fdGHdawYZ5YPGy3iVRXvzB7gWNDfNlCt6ho5patdddg6Tn2KgL0lCypIGqxK+W
- R+/5nbMKH14w==
-X-IronPort-AV: E=McAfee;i="6000,8403,9655"; a="204080191"
-X-IronPort-AV: E=Sophos;i="5.75,526,1589266800"; 
-   d="scan'208";a="204080191"
+Received: (qmail 13565 invoked from network); 18 Jun 2020 14:51:44 -0000
+IronPort-SDR: ZRLqmiFAzKHG1XO1lVxyWBq41UCqdYNzO6sTErdDgrRWzHsloi7yPHzxeMt4wimZkejh9PFDcy
+ IwSbI/qdQiwg==
+X-IronPort-AV: E=McAfee;i="6000,8403,9655"; a="140100537"
+X-IronPort-AV: E=Sophos;i="5.75,251,1589266800"; 
+   d="scan'208";a="140100537"
 X-Amp-Result: SKIPPED(no attachment in message)
 X-Amp-File-Uploaded: False
-IronPort-SDR: jqIabIwAQ3v6Gt37K8Vc1ybzA+mx9gmrW8OLBOMAVcVmb1iaSBAIanmkVCJc3Eds4bvpjLGV/2
- zf9hq49K6rpA==
+IronPort-SDR: dO6AxF1y1cue5QV4nymJ0uWPGEs0nyFjFXHsHvaW0nkWys+iOMeUQXJrBUjzLn9mrlk9W7e/+l
+ 06Mfn4RWrhEg==
 X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="5.73,526,1583222400"; 
-   d="scan'208";a="277643425"
-Subject: Re: [PATCH 4/4] X86: Use KVM CR pin MSRs
-To: John Andersen <john.s.andersen@intel.com>, corbet@lwn.net,
- pbonzini@redhat.com, tglx@linutronix.de, mingo@redhat.com, bp@alien8.de,
- x86@kernel.org, hpa@zytor.com, shuah@kernel.org,
- sean.j.christopherson@intel.com, liran.alon@oracle.com, drjones@redhat.com,
- rick.p.edgecombe@intel.com, kristen@linux.intel.com
-Cc: vkuznets@redhat.com, wanpengli@tencent.com, jmattson@google.com,
+X-IronPort-AV: E=Sophos;i="5.75,526,1589266800"; 
+   d="scan'208";a="277645745"
+Subject: Re: [PATCH 2/4] KVM: x86: Introduce paravirt feature CR0/CR4 pinning
+To: "Andersen, John" <john.s.andersen@intel.com>
+Cc: corbet@lwn.net, pbonzini@redhat.com, tglx@linutronix.de,
+ mingo@redhat.com, bp@alien8.de, x86@kernel.org, hpa@zytor.com,
+ shuah@kernel.org, sean.j.christopherson@intel.com, liran.alon@oracle.com,
+ drjones@redhat.com, rick.p.edgecombe@intel.com, kristen@linux.intel.com,
+ vkuznets@redhat.com, wanpengli@tencent.com, jmattson@google.com,
  joro@8bytes.org, mchehab+huawei@kernel.org, gregkh@linuxfoundation.org,
  paulmck@kernel.org, pawan.kumar.gupta@linux.intel.com, jgross@suse.com,
  mike.kravetz@oracle.com, oneukum@suse.com, luto@kernel.org,
@@ -54,7 +54,9 @@ Cc: vkuznets@redhat.com, wanpengli@tencent.com, jmattson@google.com,
  linux-kernel@vger.kernel.org, kvm@vger.kernel.org,
  linux-kselftest@vger.kernel.org, kernel-hardening@lists.openwall.com
 References: <20200617190757.27081-1-john.s.andersen@intel.com>
- <20200617190757.27081-5-john.s.andersen@intel.com>
+ <20200617190757.27081-3-john.s.andersen@intel.com>
+ <0fa9682e-59d4-75f7-366f-103d6b8e71b8@intel.com>
+ <20200618144314.GB23@258ff54ff3c0>
 From: Dave Hansen <dave.hansen@intel.com>
 Autocrypt: addr=dave.hansen@intel.com; keydata=
  xsFNBE6HMP0BEADIMA3XYkQfF3dwHlj58Yjsc4E5y5G67cfbt8dvaUq2fx1lR0K9h1bOI6fC
@@ -99,225 +101,46 @@ Autocrypt: addr=dave.hansen@intel.com; keydata=
  OPsw5tV/LmQ5GXH0JQ/TZXWygyRFyyI2FqNTx4WHqUn3yFj8rwTAU1tluRUYyeLy0ayUlKBH
  ybj0N71vWO936MqP6haFERzuPAIpxj2ezwu0xb1GjTk4ynna6h5GjnKgdfOWoRtoWndMZxbA
  z5cecg==
-Message-ID: <b5d791f9-1708-9715-e03d-4618d1b27d05@intel.com>
-Date: Thu, 18 Jun 2020 07:41:04 -0700
+Message-ID: <124a59a3-a603-701b-e3bb-61e83d70b20d@intel.com>
+Date: Thu, 18 Jun 2020 07:51:10 -0700
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.8.0
 MIME-Version: 1.0
-In-Reply-To: <20200617190757.27081-5-john.s.andersen@intel.com>
+In-Reply-To: <20200618144314.GB23@258ff54ff3c0>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 8bit
 
-On 6/17/20 12:07 PM, John Andersen wrote:
-> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-> index 89386f6f3ab6..54fb2b5ab8fc 100644
-> --- a/Documentation/admin-guide/kernel-parameters.txt
-> +++ b/Documentation/admin-guide/kernel-parameters.txt
-> @@ -3926,6 +3926,17 @@
->  			[KNL] Number of legacy pty's. Overwrites compiled-in
->  			default number.
->  
-> +	pv_cr_pin	[SECURITY,X86]
-> +			Enable paravirtualized control register pinning. When
-> +			running paravirutalized under KVM, request that KVM not
-> +			allow the guest to disable kernel protection features
-> +			set in CPU control registers. Specifying this option
-> +			will disable kexec (and crashkernel). If kexec support
-> +			has not been compiled into the kernel and host KVM
-> +			supports paravirtualized control register pinning, it
-> +			will be active by default without the need to specify
-> +			this parameter.
+On 6/18/20 7:43 AM, Andersen, John wrote:
+> On Thu, Jun 18, 2020 at 07:18:09AM -0700, Dave Hansen wrote:
+>> On 6/17/20 12:07 PM, John Andersen wrote:
+>>> +#define KVM_CR0_PIN_ALLOWED	(X86_CR0_WP)
+>>> +#define KVM_CR4_PIN_ALLOWED	(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP)
+>>
+>> Why *is* there an allowed set?  Why don't we just allow everything?
+>>
+>> Shouldn't we also pin any unknown bits?  The CR4.FSGSBASE bit is an
+>> example of something that showed up CPUs without Linux knowing about it.
+>>  If set, it causes problems.  This set couldn't have helped FSGSBASE
+>> because it is not in the allowed set.
+>>
+>> Let's say Intel loses its marbles and adds a CR4 bit that lets userspace
+>> write to kernel memory.  Linux won't set it, but an attacker would go
+>> after it, first thing.
+> 
+> The allowed set came about because there were comments from internal review
+> where it was said that allowing the guest to pin TS and MP adds unnecessary
+> complexity.
 
-I'm writing this last in my review.  I guess I should have read this
-first.  You'll see later in my review how this confused me.  This
-behavior needs to be documented elsewhere.  Code comments would be best.
+That would have been a great design point to include in the changelog.
+ Could you make sure it shows up in future versions.
 
-Let's say kexec is config'd off.  This feature is enabled by default and
-crashes the kernel in early boot.  I have no way to disable this fancy
-new feature.  Is that what we want?
+> Also because KVM always intercepts these bits via the CR0/4_GUEST_HOST_MASK. If
+> we allow setting of any bits, then we have to add some infrastructure for
+> modifying the mask when pinned bits are updated. I have a patch for that if we
+> want to go that route, but it doesn't account for the added complexity
+> mentioned above.
 
-I also think that instead of having to *enable* this explicitly when
-kexec is present, maybe we should have a "disable_kexec" parameter.  If
-kexec is configured out or disabled on the command-line, then you can
-turn CR pinning on.
-
-If someone fails to kexec() because of this feature, there's no way in
-hell they'll ever track down "pv_cr_pin" on the command-line as the
-cause.  The might have a chance of finding disable_kexec, though.
-
-Wouldn't it also be nice to add a single printk() the first time a kexec
-fails because of this feature being present?
-
->  	quiet		[KNL] Disable most log messages
->  
->  	r128=		[HW,DRM]
-> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-> index 67f6a40b5e93..bc0b27483001 100644
-> --- a/arch/x86/Kconfig
-> +++ b/arch/x86/Kconfig
-> @@ -800,6 +800,7 @@ config KVM_GUEST
->  	bool "KVM Guest support (including kvmclock)"
->  	depends on PARAVIRT
->  	select PARAVIRT_CLOCK
-> +	select PARAVIRT_CR_PIN
->  	select ARCH_CPUIDLE_HALTPOLL
->  	default y
->  	---help---
-> @@ -835,6 +836,15 @@ config PARAVIRT_TIME_ACCOUNTING
->  config PARAVIRT_CLOCK
->  	bool
->  
-> +config PARAVIRT_CR_PIN
-> +       bool "Paravirtual bit pinning for CR0 and CR4"
-> +       depends on KVM_GUEST
-> +       help
-> +         Select this option to have the virtualised guest request that the
-> +         hypervisor disallow it from disabling protections set in control
-> +         registers. The hypervisor will prevent exploits from disabling
-> +         features such as SMEP, SMAP, UMIP, and WP.
-
-I'm confused.  Does this add support for ""Paravirtual bit pinning", or
-actually tell the guest to request pinning by default?
-
-It says "Select this option to have the virtualised guest request...",
-which makes it sound like it affects the default rather than the
-availability of the option.
-
-
-> +#ifdef CONFIG_PARAVIRT_CR_PIN
-> +void __init kvm_paravirt_cr_pinning_init(void);
-> +void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
-> +				   unsigned long cr4_pinned_bits);
-> +#else
-> +static inline void kvm_paravirt_cr_pinning_init(void)
-> +{
-> +	return;
-> +}
-> +
-> +static inline void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
-> +						 unsigned long cr4_pinned_bits)
-> +{
-> +	return;
-> +}
-> +#endif /* CONFIG_PARAVIRT_CR_PIN */
-
-For stuff like this that isn't the least bit performance sensitive, I
-usually don't bother with header stubs.  Just do the function
-declaration and then check the config option in the .c code.  It saves
-#ifdef noise in the header.
-
->  #endif /* _ASM_X86_KVM_PARA_H */
-> diff --git a/arch/x86/kernel/cpu/common.c b/arch/x86/kernel/cpu/common.c
-> index 921e67086a00..ee17223b1fa8 100644
-> --- a/arch/x86/kernel/cpu/common.c
-> +++ b/arch/x86/kernel/cpu/common.c
-> @@ -21,6 +21,7 @@
->  #include <linux/smp.h>
->  #include <linux/io.h>
->  #include <linux/syscore_ops.h>
-> +#include <linux/kvm_para.h>
->  
->  #include <asm/stackprotector.h>
->  #include <asm/perf_event.h>
-> @@ -416,6 +417,8 @@ static void __init setup_cr_pinning(void)
->  	mask = (X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP);
->  	cr4_pinned_bits = this_cpu_read(cpu_tlbstate.cr4) & mask;
->  	static_key_enable(&cr_pinning.key);
-> +
-> +	kvm_setup_paravirt_cr_pinning(X86_CR0_WP, cr4_pinned_bits);
->  }
->  
->  /*
-> @@ -1551,6 +1554,8 @@ void identify_secondary_cpu(struct cpuinfo_x86 *c)
->  	mtrr_ap_init();
->  	validate_apic_and_package_id(c);
->  	x86_spec_ctrl_setup_ap();
-> +
-> +	kvm_setup_paravirt_cr_pinning(X86_CR0_WP, cr4_pinned_bits);
->  }
-
-WP looks like it get special handling here.  But, why it is special goes
-unmentioned in the changelog or comments.
-
-Why is it special?
-
-> +#ifdef CONFIG_PARAVIRT_CR_PIN
-> +static int kvm_paravirt_cr_pinning_enabled __ro_after_init;
-> +
-> +void __init kvm_paravirt_cr_pinning_init(void)
-> +{
-> +#ifdef CONFIG_KEXEC_CORE
-> +	if (!cmdline_find_option_bool(boot_command_line, "pv_cr_pin"))
-> +		return;
-> +
-> +	/* Paravirtualized CR pinning is currently incompatible with kexec */
-> +	kexec_load_disabled = 1;
-> +#endif
-> +
-> +	kvm_paravirt_cr_pinning_enabled = 1;
-> +}
-
-This is why we don't like #ifdefs in .c files.  The CONFIG_KEXEC_CORE
-one really makes this unreadable.
-
-This is really confusing because it says, if "CONFIG_KEXEC_CORE" is off,
-don't bother with looking for "pv_cr_pin" on the command-line before
-setting kvm_paravirt_cr_pinning_enabled=1.  That doesn't make any sense
-to me.
-
-> +void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
-> +				   unsigned long cr4_pinned_bits)
-> +{
-> +	u64 mask;
-> +
-> +	if (!kvm_paravirt_cr_pinning_enabled)
-> +		return;
-> +
-> +	if (!kvm_para_has_feature(KVM_FEATURE_CR_PIN))
-> +		return;
-
-So, if we compiled this whole mess in and got the new command-line
-parameter and we got all the way here and the host doesn't support it,
-we silently return?
-
-Seems like it would at least deserve a pr_info().
-
-> +	rdmsrl(MSR_KVM_CR0_PIN_ALLOWED, mask);
-> +	wrmsrl(MSR_KVM_CR0_PINNED_HIGH, cr0_pinned_bits & mask);
-> +
-> +	rdmsrl(MSR_KVM_CR4_PIN_ALLOWED, mask);
-> +	wrmsrl(MSR_KVM_CR4_PINNED_HIGH, cr4_pinned_bits & mask);
-> +}
-> +#endif
-> +
->  #ifdef CONFIG_ARCH_CPUIDLE_HALTPOLL
->  
->  static void kvm_disable_host_haltpoll(void *i)
-> diff --git a/arch/x86/kernel/setup.c b/arch/x86/kernel/setup.c
-> index d9c678b37a9b..ed3bcc85d40d 100644
-> --- a/arch/x86/kernel/setup.c
-> +++ b/arch/x86/kernel/setup.c
-> @@ -27,6 +27,9 @@
->  #include <asm/apic.h>
->  #include <asm/bios_ebda.h>
->  #include <asm/bugs.h>
-> +#include <asm/kasan.h>
-> +#include <asm/cmdline.h>
-> +
->  #include <asm/cpu.h>
->  #include <asm/efi.h>
->  #include <asm/gart.h>
-> @@ -502,6 +505,11 @@ static void __init reserve_crashkernel(void)
->  		return;
->  	}
->  
-> +	if (cmdline_find_option_bool(boot_command_line, "pv_cr_pin")) {
-> +		pr_info("Ignoring crashkernel since pv_cr_pin present in cmdline\n");
-> +		return;
-> +	}
-
-Isn't it a bit mean to ignore crashkernel if the kernel has
-CONFIG_PARAVIRT_CR_PIN=n?
-
-
+Well, we have a current, known issue (FSGSBASE) which shows how dealing
+with guest-unknown bits is required.  To me, that overrules complexity
+arguments to a large degree.
