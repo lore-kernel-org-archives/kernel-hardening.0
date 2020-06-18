@@ -1,21 +1,23 @@
-Return-Path: <SRS0=nI/F=76=lists.openwall.com=kernel-hardening-return-19011-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=WxGx=77=lists.openwall.com=kernel-hardening-return-19012-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0BE0EC433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 23:23:39 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1A896C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Jun 2020 03:19:03 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 145BB20885
-	for <kernel-hardening@archiver.kernel.org>; Wed, 17 Jun 2020 23:23:37 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 145BB20885
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19011-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16035 invoked by uid 550); 17 Jun 2020 23:23:31 -0000
+	by mail.kernel.org (Postfix) with SMTP id 678C821BE5
+	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Jun 2020 03:19:02 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="dxmE6qRj"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 678C821BE5
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19012-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30706 invoked by uid 550); 18 Jun 2020 03:18:55 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,634 +25,87 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16011 invoked from network); 17 Jun 2020 23:23:30 -0000
-IronPort-SDR: WzE8/B3qlN0GfgjcdzfznxSTsnBOvVZTV5bHJ/DlmYhoFMk6KwjcKjIMPoAxpYea5V+0D8wOKk
- m8GKKR0kDzqQ==
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-IronPort-SDR: grxigde+lG8I2L+/nQ2JIHKCoNSU37hds0MKG5ZxMKlJxmdfi0FJFYdjcy5YULrFPQEohqT6FC
- zelq7jfvNpzw==
-X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="5.73,523,1583222400"; 
-   d="scan'208";a="299466743"
-From: John Andersen <john.s.andersen@intel.com>
-To: corbet@lwn.net,
-	pbonzini@redhat.com,
-	tglx@linutronix.de,
-	mingo@redhat.com,
-	bp@alien8.de,
-	hpa@zytor.com,
-	shuah@kernel.org,
-	sean.j.christopherson@intel.com,
-	rick.p.edgecombe@intel.com,
-	kvm@vger.kernel.org
-Cc: john.s.andersen@intel.com,
-	kernel-hardening@lists.openwall.com
-Subject: [kvm-unit-tests RESEND PATCH] x86: Add control register pinning tests
-Date: Wed, 17 Jun 2020 16:26:01 -0700
-Message-Id: <20200617232600.2119-1-john.s.andersen@intel.com>
-X-Mailer: git-send-email 2.21.0
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Received: (qmail 30683 invoked from network); 18 Jun 2020 03:18:54 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:subject:from:in-reply-to:date:cc
+         :content-transfer-encoding:message-id:references:to;
+        bh=1Nb0OKkrYI7UdUwYs4M/9iCS139uCuO87Yk1yKcZKtM=;
+        b=dxmE6qRji4kPvuNtROXvm9eYHXzOZJvRUOt6F65MtnCl8R5EgI/5TTzvzskNvyD2Jk
+         UiMqiRR3227QZLfSNc34aZ7iyWb15yQ2f2YBCsdfKArbvnT2NpayWJKLyebSubR+CV1j
+         0VCXJ6TOrnnurUOxVUf1jmIuvm0DHZY/bKwWUnmahlVgAof3lGfwzsWvT1C3+7bPK8c8
+         e7huquqCC9u46IpRv8llWpRa0mTWAfzekFrsXpyC8j8txHHc+O70VgI6S7ihhuQVdFLD
+         Nrm9gE7YUImWS4wGL3w7XAuYjF2AHm9KwfoANJfx/Fur0KX+nNzj9PIytgDgkIivTKKE
+         ndyQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:subject:from:in-reply-to:date:cc
+         :content-transfer-encoding:message-id:references:to;
+        bh=1Nb0OKkrYI7UdUwYs4M/9iCS139uCuO87Yk1yKcZKtM=;
+        b=Yh8hSxp7iZT7o8c2dwN8gioO71gNer9ccXe71l6ZSGslOav2Sakx3CzuC7dIwdgfEc
+         rGr8xlF4bkE0aSsj/kgypFRQVN8iCsNyxqxG1sIGqlQp6q/LPyptavg7qoW6+RRHdy3Z
+         ldjFw3J71i7DEwSZJ+YwBmZ7EjUEk/+nqjruQGM7Iza1Ma/3L/WwyOTYpGMVJubaaEPB
+         +oz0vLCIEWza54GHjL8+R4IuDW9lH4SPZ8HJhojaK49b4GomjnjcPvaymtw6QsUrqrEo
+         LJAfcUhTw7u80WxD0fDZs1c4/p9ppk8XNFmTcsdxHesYS78iNM+b+0gCDYiGZ5F/OrIz
+         TYeg==
+X-Gm-Message-State: AOAM532sCn3fbKyVjEz3fXu2SP4Y2QFYKhRaTG9tCQuFdCV28D9UVcBT
+	WYfEeFaDxR/fx7n6UR0+n2E=
+X-Google-Smtp-Source: ABdhPJz4iVX0Bfn2/xKEDVp/mXf3F0o1/6hYnthCSZOlZbSvlfZvDuA9Kd5G7XPIPXPyeqiXXIqzyA==
+X-Received: by 2002:a17:902:ab98:: with SMTP id f24mr2090076plr.154.1592450322312;
+        Wed, 17 Jun 2020 20:18:42 -0700 (PDT)
+Content-Type: text/plain;
+	charset=us-ascii
+Mime-Version: 1.0 (Mac OS X Mail 13.4 \(3608.80.23.2.2\))
+Subject: Re: [kvm-unit-tests PATCH] x86: Add control register pinning tests
+From: Nadav Amit <nadav.amit@gmail.com>
+In-Reply-To: <ACCCF382-0077-4B08-8CF1-73C561F930CD@gmail.com>
+Date: Wed, 17 Jun 2020 20:18:39 -0700
+Cc: corbet@lwn.net,
+ Paolo Bonzini <pbonzini@redhat.com>,
+ Thomas Gleixner <tglx@linutronix.de>,
+ mingo <mingo@redhat.com>,
+ bp <bp@alien8.de>,
+ hpa@zytor.com,
+ shuah@kernel.org,
+ sean.j.christopherson@intel.com,
+ rick.p.edgecombe@intel.com,
+ kvm@vger.kernel.org,
+ kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <5D576A1A-AD52-4BB1-A514-1E6641982465@gmail.com>
+References: <20200617224606.27954-1-john.s.andersen@intel.com>
+ <ACCCF382-0077-4B08-8CF1-73C561F930CD@gmail.com>
+To: John Andersen <john.s.andersen@intel.com>
+X-Mailer: Apple Mail (2.3608.80.23.2.2)
 
-Paravirutalized control register pinning adds MSRs guests can use to
-discover which bits in CR0/4 they may pin, and MSRs for activating
-pinning for any of those bits.
+> On Jun 17, 2020, at 3:52 PM, Nadav Amit <nadav.amit@gmail.com> wrote:
+>=20
+>> On Jun 17, 2020, at 3:46 PM, John Andersen =
+<john.s.andersen@intel.com> wrote:
+>>=20
+>> Paravirutalized control register pinning adds MSRs guests can use to
+>> discover which bits in CR0/4 they may pin, and MSRs for activating
+>> pinning for any of those bits.
+>=20
+> [ sni[
+>=20
+>> +static void vmx_cr_pin_test_guest(void)
+>> +{
+>> +	unsigned long i, cr0, cr4;
+>> +
+>> +	/* Step 1. Skip feature detection to skip handling VMX_CPUID */
+>> +	/* nop */
+>=20
+> I do not quite get this comment. Why do you skip checking whether the
+> feature is enabled? What happens if KVM/bare-metal/other-hypervisor =
+that
+> runs this test does not support this feature?
 
-We check that the bits allowed to be pinned for CR4 are UMIP, SMEP, and
-SMAP. Only WP should be allowed to be pinned in CR0.
+My bad, I was confused between the nested checks and the non-nested =
+ones.
 
-We turn on all of the allowed bits, pin them, then attempt to disable
-them. We verify that the attempt to disable was unsuccessful, and that
-it generated a general protection fault.
-
-For nested, we check that for when pinning enabled in L1, changing
-HOST_CR0/4 will not result in the un-setting of pinned bits. The VMX CR
-pinning tests is it's own test so that the pinning doesn't potentially
-affect other tests within the same .flat testing VM.
-
-Signed-off-by: John Andersen <john.s.andersen@intel.com>
----
- x86/Makefile.common |   3 +-
- lib/x86/desc.h      |   1 +
- lib/x86/msr.h       |   8 ++
- lib/x86/processor.h |   1 +
- lib/x86/desc.c      |   8 ++
- x86/cr_pin_high.c   | 208 ++++++++++++++++++++++++++++++++++++++++++++
- x86/cr_pin_low.c    |  60 +++++++++++++
- x86/pcid.c          |   8 --
- x86/vmx_tests.c     | 139 +++++++++++++++++++++++++++++
- x86/unittests.cfg   |  16 +++-
- 10 files changed, 442 insertions(+), 10 deletions(-)
- create mode 100644 x86/cr_pin_high.c
- create mode 100644 x86/cr_pin_low.c
-
-diff --git a/x86/Makefile.common b/x86/Makefile.common
-index ab67ca0..bab7fe2 100644
---- a/x86/Makefile.common
-+++ b/x86/Makefile.common
-@@ -58,7 +58,8 @@ tests-common = $(TEST_DIR)/vmexit.flat $(TEST_DIR)/tsc.flat \
-                $(TEST_DIR)/init.flat $(TEST_DIR)/smap.flat \
-                $(TEST_DIR)/hyperv_synic.flat $(TEST_DIR)/hyperv_stimer.flat \
-                $(TEST_DIR)/hyperv_connections.flat \
--               $(TEST_DIR)/umip.flat $(TEST_DIR)/tsx-ctrl.flat
-+               $(TEST_DIR)/umip.flat $(TEST_DIR)/tsx-ctrl.flat \
-+               $(TEST_DIR)/cr_pin_low.flat $(TEST_DIR)/cr_pin_high.flat
- 
- test_cases: $(tests-common) $(tests)
- 
-diff --git a/lib/x86/desc.h b/lib/x86/desc.h
-index 0fe5cbf..9fb921c 100644
---- a/lib/x86/desc.h
-+++ b/lib/x86/desc.h
-@@ -211,6 +211,7 @@ extern tss64_t tss;
- #endif
- 
- unsigned exception_vector(void);
-+int write_cr0_checking(unsigned long val);
- int write_cr4_checking(unsigned long val);
- unsigned exception_error_code(void);
- bool exception_rflags_rf(void);
-diff --git a/lib/x86/msr.h b/lib/x86/msr.h
-index 6ef5502..13152a3 100644
---- a/lib/x86/msr.h
-+++ b/lib/x86/msr.h
-@@ -431,4 +431,12 @@
- #define MSR_VM_IGNNE                    0xc0010115
- #define MSR_VM_HSAVE_PA                 0xc0010117
- 
-+/* KVM MSRs */
-+#define MSR_KVM_CR0_PIN_ALLOWED		0x4b564d08
-+#define MSR_KVM_CR4_PIN_ALLOWED		0x4b564d09
-+#define MSR_KVM_CR0_PINNED_LOW		0x4b564d0a
-+#define MSR_KVM_CR0_PINNED_HIGH		0x4b564d0b
-+#define MSR_KVM_CR4_PINNED_LOW		0x4b564d0c
-+#define MSR_KVM_CR4_PINNED_HIGH		0x4b564d0d
-+
- #endif /* _ASM_X86_MSR_INDEX_H */
-diff --git a/lib/x86/processor.h b/lib/x86/processor.h
-index 6e0811e..6769ca6 100644
---- a/lib/x86/processor.h
-+++ b/lib/x86/processor.h
-@@ -146,6 +146,7 @@ static inline u8 cpuid_maxphyaddr(void)
- #define	X86_FEATURE_SMEP	        (CPUID(0x7, 0, EBX, 7))
- #define	X86_FEATURE_INVPCID		(CPUID(0x7, 0, EBX, 10))
- #define	X86_FEATURE_RTM			(CPUID(0x7, 0, EBX, 11))
-+#define	X86_FEATURE_SMEP		(CPUID(0x7, 0, EBX, 7))
- #define	X86_FEATURE_SMAP		(CPUID(0x7, 0, EBX, 20))
- #define	X86_FEATURE_PCOMMIT		(CPUID(0x7, 0, EBX, 22))
- #define	X86_FEATURE_CLFLUSHOPT		(CPUID(0x7, 0, EBX, 23))
-diff --git a/lib/x86/desc.c b/lib/x86/desc.c
-index 451f504..6cf4fac 100644
---- a/lib/x86/desc.c
-+++ b/lib/x86/desc.c
-@@ -251,6 +251,14 @@ unsigned exception_vector(void)
-     return vector;
- }
- 
-+int write_cr0_checking(unsigned long val)
-+{
-+    asm volatile(ASM_TRY("1f")
-+		 "mov %0, %%cr0\n\t"
-+		 "1:" : : "r" (val));
-+    return exception_vector();
-+}
-+
- int write_cr4_checking(unsigned long val)
- {
-     asm volatile(ASM_TRY("1f")
-diff --git a/x86/cr_pin_high.c b/x86/cr_pin_high.c
-new file mode 100644
-index 0000000..815bdb8
---- /dev/null
-+++ b/x86/cr_pin_high.c
-@@ -0,0 +1,208 @@
-+/* CR pinning tests. Not including pinning CR0 WP low, that lives in
-+ * cr_pin_low.c. This file tests that CR pinning prevents the guest VM from
-+ * flipping bit pinned via MSRs in control registers. For CR4 we pin UMIP and
-+ * SMEP bits high and SMAP low, and verify we can't toggle them after pinning
-+ */
-+
-+#include "libcflat.h"
-+#include "x86/desc.h"
-+#include "x86/processor.h"
-+#include "x86/vm.h"
-+#include "x86/msr.h"
-+
-+#define USER_BASE	(1 << 24)
-+
-+#define CR0_PINNED X86_CR0_WP
-+#define CR4_SOME_PINNED (X86_CR4_UMIP | X86_CR4_SMEP)
-+#define CR4_ALL_PINNED (CR4_SOME_PINNED | X86_CR4_SMAP)
-+
-+static void test_cr0_pinning(void)
-+{
-+	unsigned long long r = 0;
-+	ulong cr0 = read_cr0();
-+	int vector = 0;
-+
-+	r = rdmsr(MSR_KVM_CR0_PIN_ALLOWED);
-+	report(r == CR0_PINNED, "[CR0] MSR_KVM_CR0_PIN_ALLOWED: %llx", r);
-+
-+	cr0 |= CR0_PINNED;
-+
-+	vector = write_cr0_checking(cr0);
-+	report(vector == 0, "[CR0] enable pinned bits. vector: %d", vector);
-+
-+	cr0 = read_cr0();
-+	report((cr0 & CR0_PINNED) == CR0_PINNED,
-+	       "[CR0] after enabling pinned bits: %lx", cr0);
-+
-+	wrmsr(MSR_KVM_CR0_PINNED_HIGH, CR0_PINNED);
-+	r = rdmsr(MSR_KVM_CR0_PINNED_HIGH);
-+	report(r == CR0_PINNED,
-+	       "[CR0] enable pinning. MSR_KVM_CR0_PINNED_HIGH: %llx", r);
-+
-+	vector = write_cr0_checking(cr0);
-+	report(vector == 0, "[CR0] write same value");
-+
-+	vector = write_cr0_checking(cr0 & ~CR0_PINNED);
-+	report(vector == GP_VECTOR,
-+	       "[CR0] disable pinned bits. vector: %d", vector);
-+
-+	cr0 = read_cr0();
-+	report((cr0 & CR0_PINNED) == CR0_PINNED,
-+	       "[CR0] pinned bits: %lx", cr0 & CR0_PINNED);
-+}
-+
-+static void test_cr4_pin_allowed(void)
-+{
-+	unsigned long long r = 0;
-+
-+	r = rdmsr(MSR_KVM_CR4_PIN_ALLOWED);
-+	report(r == CR4_ALL_PINNED, "[CR4] MSR_KVM_CR4_PIN_ALLOWED: %llx", r);
-+}
-+
-+static void test_cr4_pinning_some_umip_smep_pinned(void)
-+{
-+	unsigned long long r = 0;
-+	ulong cr4 = read_cr4();
-+	int vector = 0;
-+
-+	cr4 |= CR4_SOME_PINNED;
-+
-+	vector = write_cr4_checking(cr4);
-+	report(vector == 0,
-+	       "[CR4 SOME] enable pinned bits. vector: %d", vector);
-+
-+	wrmsr(MSR_KVM_CR4_PINNED_HIGH, CR4_SOME_PINNED);
-+	r = rdmsr(MSR_KVM_CR4_PINNED_HIGH);
-+	report(r == CR4_SOME_PINNED,
-+	       "[CR4 SOME] enable pinning. MSR_KVM_CR4_PINNED_HIGH: %llx", r);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_SOME_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 SOME] after enabling pinned bits: %lx", cr4);
-+	report(1, "[CR4 SOME] cr4: 0x%08lx", cr4);
-+
-+	vector = write_cr4_checking(cr4);
-+	report(vector == 0, "[CR4 SOME] write same value");
-+
-+	vector = write_cr4_checking(cr4 & ~CR4_SOME_PINNED);
-+	report(vector == GP_VECTOR,
-+	       "[CR4 SOME] disable pinned bits. vector: %d", vector);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_SOME_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 SOME] pinned bits: %lx", cr4 & CR4_SOME_PINNED);
-+
-+	vector = write_cr4_checking(cr4 & ~X86_CR4_SMEP);
-+	report(vector == GP_VECTOR,
-+	       "[CR4 SOME] disable single pinned bit. vector: %d", vector);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_SOME_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 SOME] pinned bits: %lx", cr4 & CR4_SOME_PINNED);
-+}
-+
-+static void test_cr4_pinning_all_umip_smep_high_smap_low_pinned(void)
-+{
-+	unsigned long long r = 0;
-+	ulong cr4 = read_cr4();
-+	int vector = 0;
-+
-+	cr4 |= CR4_SOME_PINNED;
-+	cr4 &= ~X86_CR4_SMAP;
-+
-+	report((cr4 & CR4_ALL_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 ALL] CHECK: %lx", cr4);
-+
-+	vector = write_cr4_checking(cr4);
-+	report(vector == 0, "[CR4 ALL] write bits to cr4. vector: %d", vector);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_ALL_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 ALL] after enabling pinned bits: %lx", cr4);
-+
-+	wrmsr(MSR_KVM_CR4_PINNED_LOW, X86_CR4_SMAP);
-+	r = rdmsr(MSR_KVM_CR4_PINNED_LOW);
-+	report(r == X86_CR4_SMAP,
-+	       "[CR4 ALL] enable pinning. MSR_KVM_CR4_PINNED_LOW: %llx", r);
-+
-+	vector = write_cr4_checking(cr4);
-+	report(vector == 0, "[CR4 ALL] write same value");
-+
-+	cr4 &= ~CR4_SOME_PINNED;
-+	cr4 |= X86_CR4_SMAP;
-+
-+	vector = write_cr4_checking(cr4);
-+	report(vector == GP_VECTOR,
-+	       "[CR4 ALL] disable pinned bits. vector: %d", vector);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_ALL_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 ALL] pinned bits: %lx", cr4 & CR4_ALL_PINNED);
-+
-+	vector = write_cr4_checking(cr4 | X86_CR4_SMAP);
-+	report(vector == GP_VECTOR,
-+	       "[CR4 ALL] enable pinned low bit. vector: %d", vector);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_ALL_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 ALL] pinned bits: %lx", cr4 & CR4_ALL_PINNED);
-+
-+	vector = write_cr4_checking(cr4 & ~X86_CR4_SMEP);
-+	report(vector == GP_VECTOR,
-+	       "[CR4 ALL] disable pinned high bit. vector: %d", vector);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_ALL_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 ALL] pinned bits: %lx", cr4 & CR4_ALL_PINNED);
-+
-+	vector = write_cr4_checking((cr4 & ~X86_CR4_SMEP) | X86_CR4_SMAP);
-+	report(vector == GP_VECTOR,
-+	       "[CR4 ALL] disable pinned high bit enable pinned low. vector: %d",
-+	       vector);
-+
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_ALL_PINNED) == CR4_SOME_PINNED,
-+	       "[CR4 ALL] pinned bits: %lx", cr4 & CR4_ALL_PINNED);
-+}
-+
-+static void test_cr4_pinning(void)
-+{
-+	test_cr4_pin_allowed();
-+
-+	if (!this_cpu_has(X86_FEATURE_UMIP)) {
-+		printf("UMIP not available\n");
-+		return;
-+	}
-+
-+	if (!this_cpu_has(X86_FEATURE_SMEP)) {
-+		printf("SMEP not available\n");
-+		return;
-+	}
-+
-+	test_cr4_pinning_some_umip_smep_pinned();
-+
-+	if (!this_cpu_has(X86_FEATURE_SMAP)) {
-+		printf("SMAP not enabled\n");
-+		return;
-+	}
-+
-+	test_cr4_pinning_all_umip_smep_high_smap_low_pinned();
-+}
-+
-+int main(int ac, char **av)
-+{
-+	unsigned long i;
-+
-+	setup_idt();
-+	setup_vm();
-+
-+	// Map first 16MB as supervisor pages
-+	for (i = 0; i < USER_BASE; i += PAGE_SIZE)
-+		*get_pte(phys_to_virt(read_cr3()), phys_to_virt(i)) &= ~PT_USER_MASK;
-+
-+	test_cr0_pinning();
-+	test_cr4_pinning();
-+
-+	return report_summary();
-+}
-+
-diff --git a/x86/cr_pin_low.c b/x86/cr_pin_low.c
-new file mode 100644
-index 0000000..6751241
---- /dev/null
-+++ b/x86/cr_pin_low.c
-@@ -0,0 +1,60 @@
-+/* CR pinning tests to check that WP bit in CR0 be pinned low correctly. This
-+ * has to be in a separate file than the CR0 high pinning because once pinned we
-+ * can't unpin from the guest. So we can't switch from high pinning to low
-+ * pinning to test within the same file / VM
-+ */
-+
-+#include "libcflat.h"
-+#include "x86/desc.h"
-+#include "x86/processor.h"
-+#include "x86/vm.h"
-+#include "x86/msr.h"
-+
-+#define USER_BASE	(1 << 24)
-+
-+#define CR0_PINNED X86_CR0_WP
-+
-+static void test_cr0_pinning_low(void)
-+{
-+	unsigned long long r = 0;
-+	ulong cr0 = read_cr0();
-+	int vector = 0;
-+
-+	r = rdmsr(MSR_KVM_CR0_PIN_ALLOWED);
-+	report(r == CR0_PINNED, "[CR0] MSR_KVM_CR0_PIN_ALLOWED: %llx", r);
-+
-+	cr0 &= ~CR0_PINNED;
-+
-+	vector = write_cr0_checking(cr0);
-+	report(vector == 0, "[CR0] enable pinned bits. vector: %d", vector);
-+
-+	cr0 = read_cr0();
-+	report((cr0 & CR0_PINNED) != CR0_PINNED,
-+	       "[CR0] after enabling pinned bits: %lx", cr0);
-+
-+	wrmsr(MSR_KVM_CR0_PINNED_LOW, CR0_PINNED);
-+	r = rdmsr(MSR_KVM_CR0_PINNED_LOW);
-+	report(r == CR0_PINNED,
-+	       "[CR0] enable pinning. MSR_KVM_CR0_PINNED_LOW: %llx", r);
-+
-+	vector = write_cr0_checking(cr0);
-+	report(vector == 0, "[CR0] write same value");
-+
-+	vector = write_cr0_checking(cr0 | CR0_PINNED);
-+	report(vector == GP_VECTOR,
-+	       "[CR0] disable pinned bits. vector: %d", vector);
-+
-+	cr0 = read_cr0();
-+	report((cr0 & CR0_PINNED) != CR0_PINNED,
-+	       "[CR0] pinned bits: %lx", cr0 & CR0_PINNED);
-+}
-+
-+int main(int ac, char **av)
-+{
-+	setup_idt();
-+
-+	test_cr0_pinning_low();
-+
-+	return report_summary();
-+}
-+
-diff --git a/x86/pcid.c b/x86/pcid.c
-index a8dc8cb..5688699 100644
---- a/x86/pcid.c
-+++ b/x86/pcid.c
-@@ -10,14 +10,6 @@ struct invpcid_desc {
-     unsigned long addr : 64;
- };
- 
--static int write_cr0_checking(unsigned long val)
--{
--    asm volatile(ASM_TRY("1f")
--                 "mov %0, %%cr0\n\t"
--                 "1:": : "r" (val));
--    return exception_vector();
--}
--
- static int invpcid_checking(unsigned long type, void *desc)
- {
-     asm volatile (ASM_TRY("1f")
-diff --git a/x86/vmx_tests.c b/x86/vmx_tests.c
-index 68f93d3..ed3b5be 100644
---- a/x86/vmx_tests.c
-+++ b/x86/vmx_tests.c
-@@ -7929,6 +7929,143 @@ static void vmentry_movss_shadow_test(void)
- 	vmcs_write(GUEST_RFLAGS, X86_EFLAGS_FIXED);
- }
- 
-+#define USER_BASE	(1 << 24)
-+
-+#define CR0_PINNED X86_CR0_WP
-+#define CR4_SOME_PINNED (X86_CR4_UMIP | X86_CR4_SMEP)
-+#define CR4_ALL_PINNED (CR4_SOME_PINNED | X86_CR4_SMAP)
-+
-+static void vmx_cr_pin_test_guest(void)
-+{
-+	unsigned long i, cr0, cr4;
-+
-+	/* Step 1. Skip feature detection to skip handling VMX_CPUID */
-+	/* nop */
-+
-+	/* Step 2. Setup supervisor pages so that we can enable SMAP */
-+	setup_vm();
-+	for (i = 0; i < USER_BASE; i += PAGE_SIZE) {
-+		*get_pte(phys_to_virt(read_cr3()), phys_to_virt(i)) &= ~PT_USER_MASK;
-+	}
-+
-+	/* Step 3. Enable CR0/4 bits */
-+	cr0 = read_cr0() | X86_CR0_WP;
-+	TEST_ASSERT(!write_cr0_checking(cr0));
-+	cr0 = read_cr0();
-+	report(cr0 & X86_CR0_WP, "L2 cr0 has WP bit: cr0(%lx)", cr0);
-+
-+	cr4 = read_cr4() | CR4_ALL_PINNED;
-+	TEST_ASSERT(!write_cr4_checking(cr4));
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_ALL_PINNED) == CR4_ALL_PINNED,
-+		"L2 cr4 has correct bits: cr4(%lx)", cr4);
-+
-+	/* Step 3. Call to host */
-+	vmx_set_test_stage(1);
-+	vmcall();
-+
-+	/* Step 4. Disable bits that the host has pinned to make sure host
-+	 * pinning doesn't effect us.
-+	 */
-+	cr0 = read_cr0() & ~X86_CR0_WP;
-+	TEST_ASSERT(!write_cr0_checking(cr0));
-+	cr0 = read_cr0();
-+	report(!(cr0 & X86_CR0_WP),
-+		"L2 cr0 should not have host pinned WP bit: cr0(%lx)", cr0);
-+
-+	cr4 = read_cr4() & ~CR4_ALL_PINNED;
-+	TEST_ASSERT(!write_cr4_checking(cr4));
-+	cr4 = read_cr4();
-+	report(!(cr4 & CR4_ALL_PINNED),
-+		"L2 cr4 should not have host pinned bits: cr4(%lx)", cr4);
-+
-+	/* Step 5. Call to host */
-+	vmx_set_test_stage(2);
-+	vmcall();
-+
-+	/* Step 6. Ensure CR registers still do not contain L1 pinned values */
-+	report(!(cr0 & X86_CR0_WP),
-+		"L2 cr0 should still not have host pinned WP bit: cr0(%lx)", cr0);
-+	report(!(cr4 & CR4_ALL_PINNED),
-+		"L2 cr4 should still not have host pinned bits: cr4(%lx)", cr4);
-+
-+	vmx_set_test_stage(3);
-+}
-+
-+static void vmx_cr_pin_test(void)
-+{
-+	unsigned long long r = 0;
-+	unsigned long i, cr0, cr4;
-+
-+	/* Step 1. Ensure we have required CR4 bits */
-+	if (!this_cpu_has(X86_FEATURE_UMIP)) {
-+		report_skip("UMIP not detected");
-+		return;
-+	}
-+	if (!this_cpu_has(X86_FEATURE_SMEP)) {
-+		report_skip("SMEP not detected");
-+		return;
-+	}
-+	if (!this_cpu_has(X86_FEATURE_SMAP)) {
-+		report_skip("SMAP not detected");
-+		return;
-+	}
-+	/* Step 2. Setup supervisor pages so that we can enable SMAP */
-+	setup_vm();
-+	for (i = 0; i < USER_BASE; i += PAGE_SIZE) {
-+		*get_pte(phys_to_virt(read_cr3()), phys_to_virt(i)) &= ~PT_USER_MASK;
-+	}
-+
-+	/* Step 3. Enable CR0/4 bits */
-+	cr0 = read_cr0() | X86_CR0_WP;
-+	TEST_ASSERT(!write_cr0_checking(cr0));
-+	cr0 = read_cr0();
-+	report(cr0 & X86_CR0_WP, "L1 cr0 has WP bit: cr0(%lx)", cr0);
-+
-+	cr4 = read_cr4() | CR4_ALL_PINNED;
-+	TEST_ASSERT(!write_cr4_checking(cr4));
-+	cr4 = read_cr4();
-+	report((cr4 & CR4_ALL_PINNED) == CR4_ALL_PINNED,
-+		"L1 cr4 has correct bits: cr4(%lx)", cr4);
-+
-+	/* Step 3. Pin CR0/4 bits */
-+	wrmsr(MSR_KVM_CR0_PINNED_HIGH, CR0_PINNED);
-+	r = rdmsr(MSR_KVM_CR0_PINNED_HIGH);
-+	report(r == X86_CR0_WP, "MSR_KVM_CR0_PINNED_HIGH: %llx", r);
-+
-+	wrmsr(MSR_KVM_CR4_PINNED_HIGH, CR4_ALL_PINNED);
-+	r = rdmsr(MSR_KVM_CR4_PINNED_HIGH);
-+	report(r == CR4_ALL_PINNED, "MSR_KVM_CR4_PINNED_HIGH: %llx", r);
-+
-+	/* Step 4. Enter guest for first time */
-+	test_set_guest(vmx_cr_pin_test_guest);
-+	enter_guest();
-+	skip_exit_vmcall();
-+	TEST_ASSERT_EQ(vmx_get_test_stage(), 1);
-+
-+	/* Step 5. Modify VMCS so that Host-state contains unpinned cr values */
-+	vmcs_write(HOST_CR0, read_cr0() & ~X86_CR0_WP);
-+	vmcs_write(HOST_CR4, read_cr4() & ~CR4_ALL_PINNED);
-+
-+	/* Step 6. Enter guest second time */
-+	enter_guest();
-+	skip_exit_vmcall();
-+	TEST_ASSERT_EQ(vmx_get_test_stage(), 2);
-+
-+	/* Step 7. Ensure CR registers still contain pinned values */
-+	cr0 = read_cr0();
-+	cr4 = read_cr4();
-+	report(cr0 & X86_CR0_WP,
-+		"L1 cr0 WP bit still pinned: cr0(%lx)", cr0);
-+	report((cr4 & CR4_ALL_PINNED) == CR4_ALL_PINNED,
-+		"L1 cr4 bits still pinned: cr4(%lx)", cr4);
-+
-+	/* Step 8. Run L2 to completion */
-+	enter_guest();
-+	skip_exit_vmcall();
-+	TEST_ASSERT_EQ(vmx_get_test_stage(), 3);
-+}
-+
- static void vmx_cr_load_test(void)
- {
- 	unsigned long cr3, cr4, orig_cr3, orig_cr4;
-@@ -10050,6 +10187,8 @@ struct vmx_test vmx_tests[] = {
- 	TEST(vmx_init_signal_test),
- 	/* VMCS Shadowing tests */
- 	TEST(vmx_vmcs_shadow_test),
-+	/* CR pinning tests */
-+	TEST(vmx_cr_pin_test),
- 	/* Regression tests */
- 	TEST(vmx_cr_load_test),
- 	TEST(vmx_nm_test),
-diff --git a/x86/unittests.cfg b/x86/unittests.cfg
-index 504e04e..708bca4 100644
---- a/x86/unittests.cfg
-+++ b/x86/unittests.cfg
-@@ -245,9 +245,17 @@ arch = x86_64
- file = umip.flat
- extra_params = -cpu qemu64,+umip
- 
-+[cr_pin_low]
-+file = cr_pin_low.flat
-+extra_params = -cpu qemu64,+umip,+smap,+smep
-+
-+[cr_pin_high]
-+file = cr_pin_high.flat
-+extra_params = -cpu qemu64,+umip,+smap,+smep
-+
- [vmx]
- file = vmx.flat
--extra_params = -cpu host,+vmx -append "-exit_monitor_from_l2_test -ept_access* -vmx_smp* -vmx_vmcs_shadow_test -atomic_switch_overflow_msrs_test -vmx_init_signal_test -vmx_apic_passthrough_tpr_threshold_test"
-+extra_params = -cpu host,+vmx -append "-exit_monitor_from_l2_test -ept_access* -vmx_smp* -vmx_vmcs_shadow_test -atomic_switch_overflow_msrs_test -vmx_init_signal_test -vmx_apic_passthrough_tpr_threshold_test -vmx_cr_pin_test"
- arch = x86_64
- groups = vmx
- 
-@@ -306,6 +314,12 @@ extra_params = -cpu host,+vmx -append vmx_vmcs_shadow_test
- arch = x86_64
- groups = vmx
- 
-+[vmx_cr_pin_test]
-+file = vmx.flat
-+extra_params = -cpu host,+vmx -append vmx_cr_pin_test
-+arch = x86_64
-+groups = vmx
-+
- [debug]
- file = debug.flat
- arch = x86_64
--- 
-2.21.0
+Nevertheless, can we avoid situations in which
+rdmsr(MSR_KVM_CR0_PIN_ALLOWED) causes #GP when the feature is not
+implemented? Is there some protocol for detection that this feature is
+supported by the hypervisor, or do we need something like rdmsr_safe()?
 
