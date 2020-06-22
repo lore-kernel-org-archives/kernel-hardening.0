@@ -1,23 +1,23 @@
-Return-Path: <SRS0=KQIV=AD=lists.openwall.com=kernel-hardening-return-19040-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yChs=AD=lists.openwall.com=kernel-hardening-return-19041-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
+X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 21CCEC433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Jun 2020 20:08:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9D8ABC433E0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Jun 2020 21:10:00 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7609D20776
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Jun 2020 20:08:22 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id EA8FB20732
+	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Jun 2020 21:09:59 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="jxiFrV3w"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7609D20776
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19040-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 4036 invoked by uid 550); 22 Jun 2020 20:08:16 -0000
+	dkim=pass (2048-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="kuoU3JKx"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EA8FB20732
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zx2c4.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19041-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16280 invoked by uid 550); 22 Jun 2020 21:09:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,113 +25,77 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3996 invoked from network); 22 Jun 2020 20:08:15 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=O1iewzZxKxZsHCFE1IpIKZAcHdEXX0k0VhJhMjCxJRk=;
-        b=jxiFrV3w0j5aLn+vYERXrsFANe18BmkW8WhpfbwrqvZCR3QlASLHN+s0dvUKCC7S0Z
-         HHlQLoUjWeB77nDpLPWTX2cD+NqKKStkAUVgrU+ZbFo1WfJUCp3PbvnavLvRJJfywm9B
-         PS8KIdxPs6dMefugAy/F3KfgHucAWcr7w9gXuUdcHllmvBB4qZe8A4Bp1EsirM9H8PWJ
-         v3uvp+OkmO1pC5tsQ4XX81pf9YCj8Gokg9OWfBfubRYEyWUdvxonrCWsPW+wes77jqgR
-         h6ape1nNvKoIrkpKbq7TDwpAj4bHv9zDGppyQfT3YxAm8q0kqdPmVMD48RqJ0ih/c0dw
-         +hLw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=O1iewzZxKxZsHCFE1IpIKZAcHdEXX0k0VhJhMjCxJRk=;
-        b=h2ioPrChHWdWTHfT6gXy41HcFSEHewYiKnNhcWGlEJoi/0NRMeUsB/DdOTqsQMiwpC
-         klSBc0BVDB3qOVFmSKjTznHsATyfm4yqJsMyqUT7laY8D+tok26QfYcvFnV6rz9pPiT7
-         1giGWkJG9Ywn+YcYFrWmGC904guyierIYo15jsrNG0YHXpOGNCgqVSZrBIb0M57Yw4Ub
-         9Al5VkNAxwcGgVvNstdD5Zw40XooeE41bJJ3t7H+NNjxm2LD1vlgHo2mANk7s0TlN5q3
-         7j00wt3UZ+eTNmZlWzxo9camNTsGtBuCVqKypztTJ8M5h5nTWJFUNfz/bnBv2nAedUwV
-         Yphw==
-X-Gm-Message-State: AOAM532AQtsthniXT4AtC0zoRomjSl92bPh7B5+IshZS29SiapsbYOTU
-	V0T76XYbVZQWJh0E2Vh/I8V722fdbQzb1lVQWhIa/w==
-X-Google-Smtp-Source: ABdhPJy5dWzQBSNi9Zt/usqkY9agJUTDidKHpdWxCl7nmtqE+I17wPTUgLZYCHA4VjDO1Von9AZ6ddnuU6GBJyOUNKU=
-X-Received: by 2002:a2e:9a44:: with SMTP id k4mr9089871ljj.139.1592856483831;
- Mon, 22 Jun 2020 13:08:03 -0700 (PDT)
+Received: (qmail 16245 invoked from network); 22 Jun 2020 21:09:52 -0000
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=zx2c4.com; h=mime-version
+	:references:in-reply-to:from:date:message-id:subject:to:cc
+	:content-type; s=mail; bh=WB+AA0+qznfgGp7h2dMI5DSl7Dw=; b=kuoU3J
+	KxH+OfrjrRvGxIek0+fOsv+QSU9gdtszXNibIuukgHE29GJxu87CKEIfXUH/X8R0
+	ttUAdr5KtnzScR2wjk/qZH4/R/9JoXRhyhpkLDYJyhen2iv5avmSDMm83iHjXwnZ
+	c2bjNIffxtz4gYEiz/D/ejJtmBIK9fKSfxf7DVUq234GVifw3b5+Eg2u4qGh/zzk
+	kKIXm3pO0W29rTp1dVVSqhTslEmGl+obUFu2etP22bvrcfMXMw2q+ZaRVzyISZhP
+	mLD6VVWZ4MmIp6dRtk8irlS78hI/KPJqLrpJ0+7nbJRVDMNMcW/EQHDRDWVPbkGK
+	CDRJNWmGs8YeFpSw==
+X-Gm-Message-State: AOAM533jsB1QkOnJTeGVXbPwS+DY1/RW8aI7UkijHMG2xlxZuN6sQEtA
+	qH7oCixhyvS2gsqLdUcTeS6NwivNePdg6t7lPlg=
+X-Google-Smtp-Source: ABdhPJzWnao8S3eeG+rKEh98PlH/ZTKC81HRz2YXJrgE8GehXe0vIj6M/DRWvrlBlF61wQNWmKcKGm2gFEfOGwZYGJY=
+X-Received: by 2002:a05:6638:1405:: with SMTP id k5mr19410981jad.108.1592860178846;
+ Mon, 22 Jun 2020 14:09:38 -0700 (PDT)
 MIME-Version: 1.0
-References: <20200622193146.2985288-1-keescook@chromium.org> <20200622193146.2985288-4-keescook@chromium.org>
-In-Reply-To: <20200622193146.2985288-4-keescook@chromium.org>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 22 Jun 2020 22:07:37 +0200
-Message-ID: <CAG48ez0pRtMZs3Hc3R2+XGHRwt9nZAGZu6vDpPBMbE+Askr_+Q@mail.gmail.com>
-Subject: Re: [PATCH v4 3/5] stack: Optionally randomize kernel stack offset
- each syscall
-To: Kees Cook <keescook@chromium.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Elena Reshetova <elena.reshetova@intel.com>, 
-	"the arch/x86 maintainers" <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, 
-	Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will@kernel.org>, 
-	Mark Rutland <mark.rutland@arm.com>, Alexander Potapenko <glider@google.com>, 
-	Alexander Popov <alex.popov@linux.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	Linux ARM <linux-arm-kernel@lists.infradead.org>, Linux-MM <linux-mm@kvack.org>, 
-	kernel list <linux-kernel@vger.kernel.org>
+References: <20200622092719.1380968-1-ardb@kernel.org>
+In-Reply-To: <20200622092719.1380968-1-ardb@kernel.org>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Mon, 22 Jun 2020 15:09:28 -0600
+X-Gmail-Original-Message-ID: <CAHmME9oNwDra2Vi+jsy4YZ81HVygyyRXTJeni58CaJqOmfmepA@mail.gmail.com>
+Message-ID: <CAHmME9oNwDra2Vi+jsy4YZ81HVygyyRXTJeni58CaJqOmfmepA@mail.gmail.com>
+Subject: Re: [RFC PATCH] arm64/acpi: disallow AML memory opregions to access
+ kernel memory
+To: Ard Biesheuvel <ardb@kernel.org>
+Cc: linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
+	ACPI Devel Maling List <linux-acpi@vger.kernel.org>, Will Deacon <will@kernel.org>, 
+	Catalin Marinas <catalin.marinas@arm.com>, lorenzo.pieralisi@arm.com, sudeep.holla@arm.com, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
 Content-Type: text/plain; charset="UTF-8"
 
-On Mon, Jun 22, 2020 at 9:31 PM Kees Cook <keescook@chromium.org> wrote:
-> This provides the ability for architectures to enable kernel stack base
-> address offset randomization. This feature is controlled by the boot
-> param "randomize_kstack_offset=on/off", with its default value set by
-> CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT.
-[...]
-> +#define add_random_kstack_offset() do {                                        \
-> +       if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT, \
-> +                               &randomize_kstack_offset)) {            \
-> +               u32 offset = this_cpu_read(kstack_offset);              \
-> +               u8 *ptr = __builtin_alloca(offset & 0x3FF);             \
-> +               asm volatile("" : "=m"(*ptr));                          \
-> +       }                                                               \
-> +} while (0)
+On Mon, Jun 22, 2020 at 3:27 AM Ard Biesheuvel <ardb@kernel.org> wrote:
+>
+> ACPI provides support for SystemMemory opregions, to allow AML methods
+> to access MMIO registers of, e.g., GPIO controllers, or access reserved
+> regions of memory that are owned by the firmware.
+>
+> Currently, we also permit AML methods to access memory that is owned by
+> the kernel and mapped via the linear region, which does not seem to be
+> supported by a valid use case, and exposes the kernel's internal state
+> to AML methods that may be buggy and exploitable.
+>
+> So close the door on this, and simply reject AML remapping requests for
+> any memory that has a valid mapping in the linear region.
+>
+> Reported-by: Jason A. Donenfeld <Jason@zx2c4.com>
+> Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
+> ---
+>  arch/arm64/include/asm/acpi.h | 4 ++--
+>  1 file changed, 2 insertions(+), 2 deletions(-)
+>
+> diff --git a/arch/arm64/include/asm/acpi.h b/arch/arm64/include/asm/acpi.h
+> index a45366c3909b..18dcef4e6764 100644
+> --- a/arch/arm64/include/asm/acpi.h
+> +++ b/arch/arm64/include/asm/acpi.h
+> @@ -50,9 +50,9 @@ pgprot_t __acpi_get_mem_attribute(phys_addr_t addr);
+>  static inline void __iomem *acpi_os_ioremap(acpi_physical_address phys,
+>                                             acpi_size size)
+>  {
+> -       /* For normal memory we already have a cacheable mapping. */
+> +       /* Don't allow access to kernel memory from AML code */
+>         if (memblock_is_map_memory(phys))
+> -               return (void __iomem *)__phys_to_virt(phys);
+> +               return NULL;
 
-clang generates better code here if the mask is stack-aligned -
-otherwise it needs to round the stack pointer / the offset:
+I'm happy to see that implementation-wise it's so easy. Take my
+Acked-by, but I'd really prefer somebody with some ACPI experience and
+has looked at tons of DSDTs over the years to say whether or not this
+will break hardware.
 
-$ cat alloca_align.c
-#include <alloca.h>
-void callee(void);
-
-void alloca_blah(unsigned long rand) {
-  asm volatile(""::"r"(alloca(rand & MASK)));
-  callee();
-}
-$ clang -O3 -c -o alloca_align.o alloca_align.c -DMASK=0x3ff
-$ objdump -d alloca_align.o
-[...]
-   0: 55                    push   %rbp
-   1: 48 89 e5              mov    %rsp,%rbp
-   4: 81 e7 ff 03 00 00    and    $0x3ff,%edi
-   a: 83 c7 0f              add    $0xf,%edi
-   d: 83 e7 f0              and    $0xfffffff0,%edi
-  10: 48 89 e0              mov    %rsp,%rax
-  13: 48 29 f8              sub    %rdi,%rax
-  16: 48 89 c4              mov    %rax,%rsp
-  19: e8 00 00 00 00        callq  1e <alloca_blah+0x1e>
-  1e: 48 89 ec              mov    %rbp,%rsp
-  21: 5d                    pop    %rbp
-  22: c3                    retq
-$ clang -O3 -c -o alloca_align.o alloca_align.c -DMASK=0x3f0
-$ objdump -d alloca_align.o
-[...]
-   0: 55                    push   %rbp
-   1: 48 89 e5              mov    %rsp,%rbp
-   4: 48 89 e0              mov    %rsp,%rax
-   7: 81 e7 f0 03 00 00    and    $0x3f0,%edi
-   d: 48 29 f8              sub    %rdi,%rax
-  10: 48 89 c4              mov    %rax,%rsp
-  13: e8 00 00 00 00        callq  18 <alloca_blah+0x18>
-  18: 48 89 ec              mov    %rbp,%rsp
-  1b: 5d                    pop    %rbp
-  1c: c3                    retq
-$
-
-(From a glance at the assembly, gcc seems to always assume that the
-length may be misaligned.)
-
-Maybe this should be something along the lines of
-__builtin_alloca(offset & (0x3ff & ARCH_STACK_ALIGN_MASK)) (with
-appropriate definitions of the stack alignment mask depending on the
-architecture's choice of stack alignment for kernel code).
+[As an aside, the current implementation is actually "wrong", since
+that will trap when an ASL tries to write to regions mapped as
+read-only, which shouldn't happen when selecting physical addresses. I
+learned this the ~hard way when writing those exploits last week. :-P]
