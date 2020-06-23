@@ -1,23 +1,22 @@
-Return-Path: <SRS0=0pY/=AD=lists.openwall.com=kernel-hardening-return-19048-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=JPd+=AE=lists.openwall.com=kernel-hardening-return-19049-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-1.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6F418C433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Jun 2020 23:07:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9CDE2C433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 00:05:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C20D7206E2
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Jun 2020 23:07:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 006FF2076E
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 00:05:31 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="XG1VeH52"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C20D7206E2
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19048-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22221 invoked by uid 550); 22 Jun 2020 23:07:25 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="bZnR5cxj"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 006FF2076E
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=alum.mit.edu
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19049-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28530 invoked by uid 550); 23 Jun 2020 00:05:24 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,35 +24,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22185 invoked from network); 22 Jun 2020 23:07:25 -0000
+Received: (qmail 28495 invoked from network); 23 Jun 2020 00:05:24 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
+        d=gmail.com; s=20161025;
+        h=sender:from:date:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=z20zxmu7BXaJTc0tzUXoDHwEuwGLB9cwURxhD+oh4+g=;
-        b=XG1VeH52GZUyvhcE9tbM4IoixaqvBmVHBTbaAPa1sHlwz6UTK5qC09lefX0IGKu1sw
-         vcczs5K9f5eGPiFG77ESmvfY4NW193Q4M2tAwPqTwmKe/Aw8vn4j561cnqYHf7qIoFQz
-         RUWRINhgB754vJIqeOOwfgYGnA7h4+Ot4qxfo=
+        bh=ci1H/D9yRBKgCOs8CwvIjI+cliPNnLJY+ZZdvthmHrE=;
+        b=bZnR5cxj0yVhupPYbVTZrUAGY9nNkIrFLLNIPmuoAvUQ4OHK1sHDJWoL2/SJRkwpMI
+         m7Prz2r4QOf6lv5YTO11dfUPOF7IdsLIzGE0bbPrwh0Jqu3SwX4PVrjDyEqr2hhiOwnd
+         8ZhWv03Dhkn/QmOUGiO+wbhlnkTVoyz0ypeJQhxVs+38DxTgnv8VKRIqiXcRvjAjFL2B
+         PY3M7tpF+3Cje3f8ltlW1ZoL/ABW7ca3n/B+EM/ouagHylGpp4Fnj9zLrVUfXu2HmB2c
+         rMGukrOiBhktkdYYOtt74ENxCSvvGBtzzC/JD9jGDjulPVNC8e2L3Rw63kb/ditJ9R4B
+         48CQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=z20zxmu7BXaJTc0tzUXoDHwEuwGLB9cwURxhD+oh4+g=;
-        b=HUmv8ZysgHyA7O0q0/95Cdp+n5J9jkWaLkrMkl5zGkUjw03gakxEkIuibfKOuIRhaE
-         ZJxHlPtwOqkYyX+0GDuEMk6ZXCuJBciZaL2+nAx9F1AZJZ9bR/vpS8l8IKfNHQCBHj//
-         JN/QZ2eAdxo5/pRWTqV8jfOAzo1T+xkZcJ2OJ2M6B5L05hjBmyMAZ83P/Ti0SHXgFklc
-         QN1daL00B4FOJ78OfK9K9zyzHwpSGR5FCoVgDt/GBFsPaWpQiFn8AE1IvTe6hHgEHC9m
-         4XnQ4dCPbhWPdKfVs1vPa9h6DAJgnitEhm+U2SKECab9bHz2IF1QMhCubx6UChlH9ssI
-         MN3w==
-X-Gm-Message-State: AOAM530aI2glb9yF1iWg46+1UzNXD5KUwsJNSqDChE2C24QNyecuK/4y
-	tBSKrPWjoG743unhvW94QXcCoA==
-X-Google-Smtp-Source: ABdhPJx/PfvGuvPHST8NkvXqx8YdMlxhEJDw3qi2G3DLjazOqp+Vo/e1zvIb/b99UCM7dwt0/xj29g==
-X-Received: by 2002:a17:902:7611:: with SMTP id k17mr21505128pll.255.1592867232960;
-        Mon, 22 Jun 2020 16:07:12 -0700 (PDT)
-Date: Mon, 22 Jun 2020 16:07:11 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Arvind Sankar <nivedita@alum.mit.edu>
-Cc: Thomas Gleixner <tglx@linutronix.de>,
+        h=x-gm-message-state:sender:from:date:to:cc:subject:message-id
+         :references:mime-version:content-disposition:in-reply-to;
+        bh=ci1H/D9yRBKgCOs8CwvIjI+cliPNnLJY+ZZdvthmHrE=;
+        b=Kheh7zP/PQlLVywynlVf7ixKgsWO2+X0VNo2tmBtfDPx5GjAfjJDc0UCO844icPjqP
+         VGUByxewUIqir0o2wG6dM13rM706zzWiRg1TwKrj9x1MuFLtFbGlJqnBUMKhAK0CA6fO
+         juePzJibv8u/j9V1F+OQ6T2SdxqA3f93r5KbcevKZ6xrkEkeyT2FuJgPdFNgl5gnmkzR
+         4YcI/peEKnQLRkWrmOmTCEDUUcpUVvAgWYajspLeoKx02M81CSqIgdYvCwl/PBD8txZs
+         BahC1J0AikM4/WN7XN9781ZZCVHpv2Zme/D2F/7XhgGwhWoM9HxUgU5hDAcN72OsDwZv
+         z/Ag==
+X-Gm-Message-State: AOAM53074amJbr1wxVpvdmFVxbM5PTS5dlLPnJbxNpfptHfnFtOLPgT0
+	c2N5o12kFdDIluD8eftlVWw=
+X-Google-Smtp-Source: ABdhPJxYjTLo2qfOd0wWwuZ+o+bwZ1DSHNPGSAzwRuX6m2CVu0k46bPOAgySdkGRIdv61Zccfg9lPw==
+X-Received: by 2002:ac8:6602:: with SMTP id c2mr11641275qtp.243.1592870712468;
+        Mon, 22 Jun 2020 17:05:12 -0700 (PDT)
+Sender: Arvind Sankar <niveditas98@gmail.com>
+From: Arvind Sankar <nivedita@alum.mit.edu>
+X-Google-Original-From: Arvind Sankar <arvind@rani.riverdale.lan>
+Date: Mon, 22 Jun 2020 20:05:10 -0400
+To: Kees Cook <keescook@chromium.org>
+Cc: Arvind Sankar <nivedita@alum.mit.edu>,
+	Thomas Gleixner <tglx@linutronix.de>,
 	Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org,
 	Andy Lutomirski <luto@kernel.org>,
 	Peter Zijlstra <peterz@infradead.org>,
@@ -67,47 +72,61 @@ Cc: Thomas Gleixner <tglx@linutronix.de>,
 	linux-kernel@vger.kernel.org
 Subject: Re: [PATCH v4 3/5] stack: Optionally randomize kernel stack offset
  each syscall
-Message-ID: <202006221604.871B13DE3@keescook>
+Message-ID: <20200623000510.GA3542245@rani.riverdale.lan>
 References: <20200622193146.2985288-1-keescook@chromium.org>
  <20200622193146.2985288-4-keescook@chromium.org>
  <20200622225615.GA3511702@rani.riverdale.lan>
+ <202006221604.871B13DE3@keescook>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <20200622225615.GA3511702@rani.riverdale.lan>
+In-Reply-To: <202006221604.871B13DE3@keescook>
 
-On Mon, Jun 22, 2020 at 06:56:15PM -0400, Arvind Sankar wrote:
-> On Mon, Jun 22, 2020 at 12:31:44PM -0700, Kees Cook wrote:
-> > +
-> > +#define add_random_kstack_offset() do {					\
-> > +	if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,	\
-> > +				&randomize_kstack_offset)) {		\
-> > +		u32 offset = this_cpu_read(kstack_offset);		\
-> > +		u8 *ptr = __builtin_alloca(offset & 0x3FF);		\
-> > +		asm volatile("" : "=m"(*ptr));				\
-> > +	}								\
-> > +} while (0)
+On Mon, Jun 22, 2020 at 04:07:11PM -0700, Kees Cook wrote:
+> On Mon, Jun 22, 2020 at 06:56:15PM -0400, Arvind Sankar wrote:
+> > On Mon, Jun 22, 2020 at 12:31:44PM -0700, Kees Cook wrote:
+> > > +
+> > > +#define add_random_kstack_offset() do {					\
+> > > +	if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,	\
+> > > +				&randomize_kstack_offset)) {		\
+> > > +		u32 offset = this_cpu_read(kstack_offset);		\
+> > > +		u8 *ptr = __builtin_alloca(offset & 0x3FF);		\
+> > > +		asm volatile("" : "=m"(*ptr));				\
+> > > +	}								\
+> > > +} while (0)
+> > 
+> > This feels a little fragile. ptr doesn't escape the block, so the
+> > compiler is free to restore the stack immediately after this block. In
+> > fact, given that all you've said is that the asm modifies *ptr, but
+> > nothing uses that output, the compiler could eliminate the whole thing,
+> > no?
+> > 
+> > https://godbolt.org/z/HT43F5
+> > 
+> > gcc restores the stack immediately, if no function calls come after it.
+> > 
+> > clang completely eliminates the code if no function calls come after.
 > 
-> This feels a little fragile. ptr doesn't escape the block, so the
-> compiler is free to restore the stack immediately after this block. In
-> fact, given that all you've said is that the asm modifies *ptr, but
-> nothing uses that output, the compiler could eliminate the whole thing,
-> no?
-> 
-> https://godbolt.org/z/HT43F5
-> 
-> gcc restores the stack immediately, if no function calls come after it.
-> 
-> clang completely eliminates the code if no function calls come after.
+> nothing uses the stack in your example. And adding a barrier (which is
+> what the "=m" is, doesn't change it.
 
-nothing uses the stack in your example. And adding a barrier (which is
-what the "=m" is, doesn't change it.
+Yeah, I realized that that was what's going on. And clang isn't actually
+DCE'ing it, it's taking advantage of the red zone since my alloca was
+small enough.
 
-> I'm not sure why function calls should affect it, though, given that
-> those functions can't possibly access ptr or the memory it points to.
+But I still don't see anything _stopping_ the compiler from optimizing
+this better in the future. The "=m" is not a barrier: it just informs
+the compiler that the asm produces an output value in *ptr (and no other
+outputs). If nothing can consume that output, it doesn't stop the
+compiler from freeing the allocation immediately after the asm instead
+of at the end of the function.
 
-It seems to work correctly:
-https://godbolt.org/z/c3W5BW
+I'm talking about something like
+	asm volatile("" : : "r" (ptr) : "memory");
+which tells the compiler that the asm may change memory arbitrarily.
 
--- 
-Kees Cook
+Here, we don't use it really as a barrier, but to tell the compiler that
+the asm may have stashed the value of ptr somewhere in memory, so it's
+not free to reuse the space that it pointed to until the function
+returns (unless it can prove that nothing accesses memory, not just that
+nothing accesses ptr).
