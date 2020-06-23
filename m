@@ -1,4 +1,4 @@
-Return-Path: <SRS0=hopk=AE=lists.openwall.com=kernel-hardening-return-19064-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=+92d=AE=lists.openwall.com=kernel-hardening-return-19065-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-2.5 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9459AC433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 10:17:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7027CC433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 12:39:01 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C2C11206FA
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 10:17:01 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C2C11206FA
+	by mail.kernel.org (Postfix) with SMTP id 9EA3D2072E
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 12:39:00 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9EA3D2072E
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19064-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5211 invoked by uid 550); 23 Jun 2020 10:16:54 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19065-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18410 invoked by uid 550); 23 Jun 2020 12:38:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,50 +22,37 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5182 invoked from network); 23 Jun 2020 10:16:54 -0000
+Received: (qmail 18378 invoked from network); 23 Jun 2020 12:38:52 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=dLf+6RaUJ+WjVSSc8pU+EQ+Il6WUvTAaxqQFEx3lJPM=;
-        b=nF0QmPvytUoeaq6ViMY6QnnsMvdzI/+fjsOmOGKZbHojfAvK2aEWNPAWtBdiRBMVa+
-         h8FK0F6izxIpB2JM83h6zviPC2QwLXYdvedxzNhSTzHAh8s0xJ3VqZArUKAeM30meaQ4
-         0yzPYHDDOLmhkqw6u7T/V8EC2dAHMgxh+GSkWp4Ac4t6MTckrnkbmJ+jX+PiLCXoU2uN
-         Yl6p2ZVMXfXvqAq29FVhxaksdaaC+yLtdRMmF2BIrPxp/5HLPAl1gYOJ7pbEH83JZ6TP
-         CIWmSeCf7Ogm4s8scfjwv0n5yoVaOA0eRpmD965l+u3Z6u9GpZjYBMyoSrQvnb2iMwvS
-         2zcA==
-X-Gm-Message-State: AOAM531JPLMVW+RU2Fzgy3Ew8LvmPQseHLhXqi8ytFAHoyA5Tx7YfcHi
-	idHGhB5Cq+xmM2pboS0JwPI=
-X-Google-Smtp-Source: ABdhPJxuRvc/VmmMVbPwa/dEsC4+zayVarCHx1giPyRlMP8M9Fyr7C/LTDJnDKULMy+9WBhaJEbfQw==
-X-Received: by 2002:aed:33c5:: with SMTP id v63mr20848512qtd.104.1592907402292;
-        Tue, 23 Jun 2020 03:16:42 -0700 (PDT)
-Subject: Re: [PATCH 5/5] gcc-plugins/stackleak: Don't instrument
- vgettimeofday.c in arm64 VDSO
-To: Will Deacon <will@kernel.org>, Kees Cook <keescook@chromium.org>
-Cc: Emese Revfy <re.emese@gmail.com>,
- Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>,
- Masahiro Yamada <masahiroy@kernel.org>,
- Michal Marek <michal.lkml@markovi.net>,
- Andrew Morton <akpm@linux-foundation.org>,
- Masahiro Yamada <yamada.masahiro@socionext.com>,
- Thiago Jung Bauermann <bauerman@linux.ibm.com>,
- Luis Chamberlain <mcgrof@kernel.org>, Jessica Yu <jeyu@kernel.org>,
- Sven Schnelle <svens@stackframe.org>, Iurii Zaikin <yzaikin@google.com>,
- Catalin Marinas <catalin.marinas@arm.com>,
- Vincenzo Frascino <vincenzo.frascino@arm.com>,
- Thomas Gleixner <tglx@linutronix.de>, Peter Collingbourne <pcc@google.com>,
- Naohiro Aota <naohiro.aota@wdc.com>, Alexander Monakov <amonakov@ispras.ru>,
- Mathias Krause <minipli@googlemail.com>, PaX Team <pageexec@freemail.hu>,
- Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>,
- Florian Weimer <fweimer@redhat.com>, kernel-hardening@lists.openwall.com,
- linux-kbuild@vger.kernel.org, x86@kernel.org,
- linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org,
- gcc@gcc.gnu.org, notify@kernel.org
-References: <20200604134957.505389-1-alex.popov@linux.com>
- <20200604134957.505389-6-alex.popov@linux.com>
- <20200604135806.GA3170@willie-the-truck> <202006091149.6C78419@keescook>
- <20200610073046.GA15939@willie-the-truck>
+        bh=sTHxvMyi6xXHEDj5tKcB1PxfIVdWXw+JPrgVRYwiDBQ=;
+        b=o32t8ta+up8mWYB3OCLCOEn9/vSkU42upvNSfbHf2pLSK+e4hHckBdPj8VeW2XU55Q
+         gOEF/jX0TXGvSJkjjFyqjMYOjFCkyOf+8fAECVUoskTLfK8CiFjGV1KKGaUyWmfOnvWR
+         9FOf2coJ9jbZBqFGhBmkj6WqChxrpZdMXyuWUH9mj6IwbqfqIp8SfvDA8ncdoYAOKM9A
+         znZfPAbyz3MH6gFyEjGnl0qT4D63Y74I5nAwoSQnvp9S/hsmKshq8w3fo47HQJ/D6d48
+         lwsbzthRfQUmRRPd6mPpow0t2k+nG5+nKVnKbFEosG8OXQ1KDrZUrrl4/WLwhcGftc4r
+         vtYg==
+X-Gm-Message-State: AOAM530H7lrRFZEnoqT3TxqqRfFSttohJ3swLym7E3mx8Kq4B+D0nrQV
+	JtoPHEU9Xc8/7NN70vfDKFo=
+X-Google-Smtp-Source: ABdhPJyf4YApQi2W+KxMgNcaGYzpYsr/thux7I1WZZKaOtTMFb1sLHKlEZRcH55X3Y4zM+cNdtQWfw==
+X-Received: by 2002:a05:620a:57a:: with SMTP id p26mr19288448qkp.386.1592915920944;
+        Tue, 23 Jun 2020 05:38:40 -0700 (PDT)
+Subject: Re: [PATCH v4 3/5] stack: Optionally randomize kernel stack offset
+ each syscall
+To: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>
+Cc: Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org,
+ Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>,
+ Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will@kernel.org>,
+ Mark Rutland <mark.rutland@arm.com>, Alexander Potapenko
+ <glider@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+ Jann Horn <jannh@google.com>, kernel-hardening@lists.openwall.com,
+ linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org,
+ linux-kernel@vger.kernel.org
+References: <20200622193146.2985288-1-keescook@chromium.org>
+ <20200622193146.2985288-4-keescook@chromium.org>
 From: Alexander Popov <alex.popov@linux.com>
 Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  mQINBFX15q4BEADZartsIW3sQ9R+9TOuCFRIW+RDCoBWNHhqDLu+Tzf2mZevVSF0D5AMJW4f
@@ -111,31 +98,47 @@ Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  gzBW8J8RW+nUJcTpudX4TC2SGeAOyxnM5O4XJ8yZyDUY334seDRJWtS4wRHxpfYcHKTewR96
  IsP1USE+9ndu6lrMXQ3aFsd1n1m1pfa/y8hiqsSYHy7JQ9Iuo9DxysOj22UNOmOE+OYPK48D
  j3lCqPk=
-Message-ID: <02f576e5-6512-99ca-0de0-a4239c6063ca@linux.com>
-Date: Tue, 23 Jun 2020 13:16:28 +0300
+Message-ID: <f67f3471-699e-06ce-226d-77a2b6ec7ce4@linux.com>
+Date: Tue, 23 Jun 2020 15:38:32 +0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.8.0
 MIME-Version: 1.0
-In-Reply-To: <20200610073046.GA15939@willie-the-truck>
+In-Reply-To: <20200622193146.2985288-4-keescook@chromium.org>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-On 10.06.2020 10:30, Will Deacon wrote:
-> On Tue, Jun 09, 2020 at 12:09:27PM -0700, Kees Cook wrote:
->> arm_ssp_per_task_plugin.c
->> 	32-bit ARM only (but likely needs disabling for 32-bit ARM vDSO?)
+On 22.06.2020 22:31, Kees Cook wrote:
+> As Linux kernel stack protections have been constantly improving
+> (vmap-based stack allocation with guard pages, removal of thread_info,
+> STACKLEAK), attackers have had to find new ways for their exploits
+> to work. They have done so, continuing to rely on the kernel's stack
+> determinism, in situations where VMAP_STACK and THREAD_INFO_IN_TASK_STRUCT
+> were not relevant. For example, the following recent attacks would have
+> been hampered if the stack offset was non-deterministic between syscalls:
+> 
+> https://repositorio-aberto.up.pt/bitstream/10216/125357/2/374717.pdf
+> (page 70: targeting the pt_regs copy with linear stack overflow)
+> 
+> https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
+> (leaked stack address from one syscall as a target during next syscall)
+> 
+> The main idea is that since the stack offset is randomized on each system
+> call, it is harder for an attack to reliably land in any particular place
+> on the thread stack, even with address exposures, as the stack base will
+> change on the next syscall. Also, since randomization is performed after
+> placing pt_regs, the ptrace-based approach[1] to discover the randomized
+> offset during a long-running syscall should not be possible.
 
-I tested: on 32-bit arm vDSO is built with plugin flags. I will filter them out
-in a separate patch in v2 of the series.
+Hello Kees!
 
-> On arm64, the 32-bit toolchain is picked up via CC_COMPAT -- does that still
-> get the plugins?
-I tested it with this command:
-  make  ARCH=arm64 CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
-CROSS_COMPILE=aarch64-linux-gnu- V=1
+I would recommend to disable CONFIG_STACKLEAK_METRICS if kernel stack offset
+randomization is enabled. It is a debugging feature that provides information
+about kernel stack usage. That info can be useful for calculating the random offset.
 
-I see that COMPAT_VDSO is built without plugin flags. So it's ok.
+I would also recommend to check: there might be other kernel features for
+debugging or getting statistics that can be used to disclose the random stack
+offset.
 
 Best regards,
 Alexander
