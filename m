@@ -1,22 +1,23 @@
-Return-Path: <SRS0=LbuN=AE=lists.openwall.com=kernel-hardening-return-19050-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=EKu2=AE=lists.openwall.com=kernel-hardening-return-19051-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1DDBEC433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 00:56:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5915CC433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 06:26:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6EAEB2070E
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 00:56:43 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A88E220723
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 06:26:51 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="nAdHPfYX"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6EAEB2070E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19050-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25606 invoked by uid 550); 23 Jun 2020 00:56:36 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ldl0tBRP"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A88E220723
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19051-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11327 invoked by uid 550); 23 Jun 2020 06:26:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,80 +25,76 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24504 invoked from network); 23 Jun 2020 00:56:35 -0000
+Received: (qmail 11291 invoked from network); 23 Jun 2020 06:26:43 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=ddZISy/nnQaDTw5hRGQzjmZlz/IMEisCTFQ7iFu0Th0=;
-        b=nAdHPfYXVzWTBCeDEMmkeKJ+hHfd7oErRWwLQb9dB7/Ol4YD/npR6fC0vwGRXy/c29
-         GGQ0oMgXVfEfwUNLWB5Mq3C346cIetMwNMMUd76j9Ztr+rPIR33dCIUpM2i+4VJOQ8xU
-         A1KmHa9YIl4kewOB9Lmi3GBsCMQ5u7F38OPjo=
+        d=google.com; s=20161025;
+        h=mime-version:from:date:message-id:subject:to:cc;
+        bh=AsNRALeJxIUkEC8oYa+n4aueY7MnLHPOpm0Ghly9IZo=;
+        b=ldl0tBRPkMJe4OOLQtpIosTh/6Ob4Jn9s/EVh6LSzff0fP5H31D4yjrRj2ee+sBunO
+         0DRBiEW/kyirdT1/pOjcoZ/5qzTm6L0v22Y5yK9cZlfL+GEGIk5t+RBGizPLEwsXPkUB
+         VtysDDaCBwi5ORwk70ZWS9YMK8lzCipN4OzMWwkoHCvnL2hwgrPPNFybTMFpEmxMW/JD
+         cmDVBapZXHne88gc5JKR3KtAW1OVD7sM1ouCMBaB+gXZ0Z9XQRJAUlg+77fBFKJCBA/Q
+         Y0VsC4eVVaf93bb20t6wwRPtFJvkiAP4+GJ6s9xTCYMpsMqgvIrd4FdYeIK6hZau6HMS
+         cJZg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=ddZISy/nnQaDTw5hRGQzjmZlz/IMEisCTFQ7iFu0Th0=;
-        b=C+zVqay/0LZ6oOPyYXtcLDneWo2GHjB2i4Ds/T3U+Vgs8EgGLDNUm7h4ctHMegDxRD
-         sBobYgtCV8maC/JuMMM6IxPWCuLkgcVHndP+HhkpMS+Ws/NFKG/z4JwV5cWTQ9AU7NIQ
-         5C8bFx6eF/slh6GftMFYCmnFtyzjkmgrNzOeKJLKPZgjSRneSrqWt2FJECDAOaNeyzxn
-         tldinr8xFfzzBbl5q6/U/kgEfFoqI4xXV7ZQIa3Aj2AHEUfXnEScKXpNHoaSHQlBcZaf
-         XoQ/NLw/FZS4FV1IRC1ovi1qJnDoDTtTuFKP18+STKi5/sBEg7S+BKhbWoftwey9zUAP
-         8ZLQ==
-X-Gm-Message-State: AOAM532oWhR1QXzOMFfLXJtTceNqBHxCuHtFP7pCKvNX0MkwGyxC/NAa
-	8PhBZ7lcRWJVmLadBtXxYIoNlg==
-X-Google-Smtp-Source: ABdhPJzcouPDWEUYGfs6mnKQxNW21WTL2h/cvt4aWHu1LneMG7v+1KMi+E4KPxR8Q7oPaJp1wkS5WA==
-X-Received: by 2002:a63:35cc:: with SMTP id c195mr14777269pga.180.1592873783576;
-        Mon, 22 Jun 2020 17:56:23 -0700 (PDT)
-Date: Mon, 22 Jun 2020 17:56:21 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Arvind Sankar <nivedita@alum.mit.edu>
-Cc: Thomas Gleixner <tglx@linutronix.de>,
-	Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org,
-	Andy Lutomirski <luto@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Will Deacon <will@kernel.org>, Mark Rutland <mark.rutland@arm.com>,
-	Alexander Potapenko <glider@google.com>,
-	Alexander Popov <alex.popov@linux.com>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Jann Horn <jannh@google.com>, kernel-hardening@lists.openwall.com,
-	linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org,
-	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v4 3/5] stack: Optionally randomize kernel stack offset
- each syscall
-Message-ID: <202006221748.DA27A7FFC@keescook>
-References: <20200622193146.2985288-1-keescook@chromium.org>
- <20200622193146.2985288-4-keescook@chromium.org>
- <20200622225615.GA3511702@rani.riverdale.lan>
- <202006221604.871B13DE3@keescook>
- <20200623000510.GA3542245@rani.riverdale.lan>
+        h=x-gm-message-state:mime-version:from:date:message-id:subject:to:cc;
+        bh=AsNRALeJxIUkEC8oYa+n4aueY7MnLHPOpm0Ghly9IZo=;
+        b=mP1uJWNNSoyPetgR2xt4kzh8LfxbBOj65YxQOF4h+doLpZy0n+Oigbf+COb60kNY89
+         T5trmuLXpgOn5PxdDbi/J/8dSeJ962rsYFAhnINcfwYisfA0RhjPHhVh0sK4lydnkV5X
+         7tfJNzqWXzR1IcYGqlhKnPH1GKWnv9W9P5G8m+EA9i9hotpZQSk5UDLuHwm/3GIA5xca
+         imqGL3LDJL6vf2Z8TlbOVzIm1OyU92lLVgK20lPhMgTFuktKzIhXA1n/sGRQxPYWwtbz
+         8qIdk1MtVe0r4VIoMPOK+M1apB/bpRnO1/l/sOjujCzshC+89DQ51pz9CNfLxJ+q/6ac
+         RmNg==
+X-Gm-Message-State: AOAM532QTMd8Y/4ohL5mUPc7LpSm22EAYsoNZny3zq+XBvtEMoVWY0/e
+	oQKMQwj8V/nlIeBwZZeupGpW7FoYHK1B+s4DFDZy/3fCwXI=
+X-Google-Smtp-Source: ABdhPJy24Cl5WiPlliv15Ov+noFUgDy0dvkG5wjtud+Rwrb/FXC8SIewoVl7LLbNYVHEz0ZlTcIHOLflZvN99iQx26g=
+X-Received: by 2002:a19:be4b:: with SMTP id o72mr11645822lff.141.1592893591731;
+ Mon, 22 Jun 2020 23:26:31 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200623000510.GA3542245@rani.riverdale.lan>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 23 Jun 2020 08:26:05 +0200
+Message-ID: <CAG48ez2OrzBW9Cy13fJ2YHpYvAcn+2SbEmv_0MdrCufot65XUw@mail.gmail.com>
+Subject: Kernel hardening project suggestion: Normalizing ->ctor slabs and
+ TYPESAFE_BY_RCU slabs
+To: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, 
+	David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, 
+	Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, 
+	Andrey Konovalov <andreyknvl@google.com>, Dmitry Vyukov <dvyukov@google.com>, 
+	Will Deacon <will@kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On Mon, Jun 22, 2020 at 08:05:10PM -0400, Arvind Sankar wrote:
-> But I still don't see anything _stopping_ the compiler from optimizing
-> this better in the future. The "=m" is not a barrier: it just informs
-> the compiler that the asm produces an output value in *ptr (and no other
-> outputs). If nothing can consume that output, it doesn't stop the
-> compiler from freeing the allocation immediately after the asm instead
-> of at the end of the function.
+Hi!
 
-Ah, yeah, I get what you mean.
+Here's a project idea for the kernel-hardening folks:
 
-> I'm talking about something like
-> 	asm volatile("" : : "r" (ptr) : "memory");
-> which tells the compiler that the asm may change memory arbitrarily.
+The slab allocator interface has two features that are problematic for
+security testing and/or hardening:
 
-Yeah, I will adjust it.
+ - constructor slabs: These things come with an object constructor
+that doesn't run when an object is allocated, but instead when the
+slab allocator grabs a new page from the page allocator. This is
+problematic for use-after-free detection mechanisms such as HWASAN and
+Memory Tagging, which can only do their job properly if the address of
+an object is allowed to change every time the object is
+freed/reallocated. (You can't change the address of an object without
+reinitializing the entire object because e.g. an empty list_head
+points to itself.)
 
-> Here, we don't use it really as a barrier, but to tell the compiler that
-> the asm may have stashed the value of ptr somewhere in memory, so it's
-> not free to reuse the space that it pointed to until the function
-> returns (unless it can prove that nothing accesses memory, not just that
-> nothing accesses ptr).
+ - RCU slabs: These things basically permit use-after-frees by design,
+and stuff like ASAN/HWASAN/Memory Tagging essentially doesn't work on
+them.
 
--- 
-Kees Cook
+
+It would be nice to have a config flag or so that changes the SLUB
+allocator's behavior such that these slabs can be instrumented
+properly. Something like:
+
+ - Let calculate_sizes() reserve space for an rcu_head on each object
+in TYPESAFE_BY_RCU slabs, make kmem_cache_free() redirect to
+call_rcu() for these slabs, and remove most of the other
+special-casing, so that KASAN can instrument these slabs.
+ - For all constructor slabs, let slab_post_alloc_hook() call the
+->ctor() function on each allocated object, so that Memory Tagging and
+HWASAN will work on them.
