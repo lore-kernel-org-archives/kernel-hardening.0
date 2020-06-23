@@ -1,21 +1,20 @@
-Return-Path: <SRS0=3SaP=AE=lists.openwall.com=kernel-hardening-return-19079-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yPTl=AE=lists.openwall.com=kernel-hardening-return-19080-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.5 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7C99AC433DF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 17:26:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DD459C433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 20:07:54 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AAFA7206EB
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 17:26:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AAFA7206EB
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19079-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 10076 invoked by uid 550); 23 Jun 2020 17:25:07 -0000
+	by mail.kernel.org (Postfix) with SMTP id 42D7E2078A
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 20:07:54 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 42D7E2078A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19080-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11665 invoked by uid 550); 23 Jun 2020 20:07:46 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,232 +22,120 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9982 invoked from network); 23 Jun 2020 17:25:06 -0000
-IronPort-SDR: D2plBXaWKTuq634TTGI7tktnz3oytoKVe4xHJbdkXsUlLhy6c7+xBACuVLlKruVynZhTGQx+vd
- YeMd/jp0SMqg==
-X-IronPort-AV: E=McAfee;i="6000,8403,9661"; a="162232141"
+Received: (qmail 11642 invoked from network); 23 Jun 2020 20:07:45 -0000
+IronPort-SDR: Xz/CUfjnEf8yHiL/MpVWKEQzH5VlS9Zyf1GAYu/7dBXzfdiIwcYy/aT6o/DNbAwyyZVYb3B3RC
+ 35R3BIBuq8Tg==
+X-IronPort-AV: E=McAfee;i="6000,8403,9661"; a="143312457"
 X-IronPort-AV: E=Sophos;i="5.75,272,1589266800"; 
-   d="scan'208";a="162232141"
+   d="scan'208";a="143312457"
 X-Amp-Result: SKIPPED(no attachment in message)
 X-Amp-File-Uploaded: False
-IronPort-SDR: 6FKo5AYJO89uy2TXBhYaEwaeeIctRMkHeZWGpt5FsEfjVkRWN8B3u+8RM+if4UejheJbDZWIyo
- a/5Q+bRKp53Q==
+IronPort-SDR: BUquHP6/egIubskUC+wd1qMKZIo8Ikj9vc9R1L2KgEVN7Re1Fh7E6yhj8tO0FBTJxozd8Oe4ES
+ HDhJEnS/VEsA==
 X-ExtLoop1: 1
 X-IronPort-AV: E=Sophos;i="5.75,272,1589266800"; 
-   d="scan'208";a="423080181"
-From: Kristen Carlson Accardi <kristen@linux.intel.com>
-To: keescook@chromium.org,
-	tglx@linutronix.de,
-	mingo@redhat.com,
-	bp@alien8.de,
-	x86@kernel.org,
-	"H. Peter Anvin" <hpa@zytor.com>,
-	Jessica Yu <jeyu@kernel.org>
-Cc: arjan@linux.intel.com,
-	linux-kernel@vger.kernel.org,
-	kernel-hardening@lists.openwall.com,
-	rick.p.edgecombe@intel.com,
+   d="scan'208";a="301379329"
+Date: Tue, 23 Jun 2020 20:03:35 +0000
+From: "Andersen, John" <john.s.andersen@intel.com>
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Jonathan Corbet <corbet@lwn.net>, Paolo Bonzini <pbonzini@redhat.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
+	X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>,
+	Shuah Khan <shuah@kernel.org>,
+	"Christopherson, Sean J" <sean.j.christopherson@intel.com>,
+	Liran Alon <liran.alon@oracle.com>,
+	Andrew Jones <drjones@redhat.com>,
+	Rick Edgecombe <rick.p.edgecombe@intel.com>,
 	Kristen Carlson Accardi <kristen@linux.intel.com>,
-	Ard Biesheuvel <ardb@kernel.org>,
-	Tony Luck <tony.luck@intel.com>
-Subject: [PATCH v3 10/10] module: Reorder functions
-Date: Tue, 23 Jun 2020 10:23:27 -0700
-Message-Id: <20200623172327.5701-11-kristen@linux.intel.com>
-X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200623172327.5701-1-kristen@linux.intel.com>
-References: <20200623172327.5701-1-kristen@linux.intel.com>
+	Vitaly Kuznetsov <vkuznets@redhat.com>,
+	Wanpeng Li <wanpengli@tencent.com>,
+	Jim Mattson <jmattson@google.com>, Joerg Roedel <joro@8bytes.org>,
+	mchehab+huawei@kernel.org, Greg KH <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	pawan.kumar.gupta@linux.intel.com, Juergen Gross <jgross@suse.com>,
+	Mike Kravetz <mike.kravetz@oracle.com>,
+	Oliver Neukum <oneukum@suse.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Fenghua Yu <fenghua.yu@intel.com>, reinette.chatre@intel.com,
+	vineela.tummalapalli@intel.com,
+	Dave Hansen <dave.hansen@linux.intel.com>,
+	Arjan van de Ven <arjan@linux.intel.com>, caoj.fnst@cn.fujitsu.com,
+	Baoquan He <bhe@redhat.com>, Arvind Sankar <nivedita@alum.mit.edu>,
+	Kees Cook <keescook@chromium.org>,
+	Dan Williams <dan.j.williams@intel.com>, eric.auger@redhat.com,
+	aaronlewis@google.com, Peter Xu <peterx@redhat.com>,
+	makarandsonare@google.com,
+	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+	LKML <linux-kernel@vger.kernel.org>, kvm list <kvm@vger.kernel.org>,
+	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: Re: [PATCH 4/4] X86: Use KVM CR pin MSRs
+Message-ID: <20200623200334.GA23@6540770db1d7>
+References: <20200617190757.27081-1-john.s.andersen@intel.com>
+ <20200617190757.27081-5-john.s.andersen@intel.com>
+ <CALCETrXwzQDDd1rfBW+ptmijEjc2cMqfWGvJu-qqrqia5Ls=Uw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CALCETrXwzQDDd1rfBW+ptmijEjc2cMqfWGvJu-qqrqia5Ls=Uw@mail.gmail.com>
+User-Agent: Mutt/1.5.24 (2015-08-30)
 
-Introduce a new config option to allow modules to be re-ordered
-by function. This option can be enabled independently of the
-kernel text KASLR or FG_KASLR settings so that it can be used
-by architectures that do not support either of these features.
-This option will be selected by default if CONFIG_FG_KASLR is
-selected.
+On Fri, Jun 19, 2020 at 10:13:25PM -0700, Andy Lutomirski wrote:
+> On Wed, Jun 17, 2020 at 12:05 PM John Andersen
+> <john.s.andersen@intel.com> wrote:
+> > Guests using the kexec system call currently do not support
+> > paravirtualized control register pinning. This is due to early boot
+> > code writing known good values to control registers, these values do
+> > not contain the protected bits. This is due to CPU feature
+> > identification being done at a later time, when the kernel properly
+> > checks if it can enable protections. As such, the pv_cr_pin command line
+> > option has been added which instructs the kernel to disable kexec in
+> > favor of enabling paravirtualized control register pinning. crashkernel
+> > is also disabled when the pv_cr_pin parameter is specified due to its
+> > reliance on kexec.
+> 
+> Is there a plan for fixing this for real?  I'm wondering if there is a
+> sane weakening of this feature that still allows things like kexec.
+> 
 
-If a module has functions split out into separate text sections
-(i.e. compiled with the -ffunction-sections flag), reorder the
-functions to provide some code diversification to modules.
+I'm pretty sure kexec can be fixed. I had it working at one point, I'm
+currently in the process of revalidating this. The issue was though that
+kexec only worked within the guest, not on the physical host, which I suspect
+is related to the need for supervisor pages to be mapped, which seems to be
+required before enabling SMAP (based on what I'd seen with the selftests and
+unittests). I was also just blindly turning on the bits without checking for
+support when I'd tried this, so that could have been the issue too.
 
-Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Acked-by: Ard Biesheuvel <ardb@kernel.org>
-Tested-by: Ard Biesheuvel <ardb@kernel.org>
-Reviewed-by: Tony Luck <tony.luck@intel.com>
-Tested-by: Tony Luck <tony.luck@intel.com>
----
- arch/x86/Makefile |  5 +++
- init/Kconfig      | 12 +++++++
- kernel/kallsyms.c |  2 +-
- kernel/module.c   | 81 +++++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 99 insertions(+), 1 deletion(-)
+I think most of the changes for just blindly enabling the bits were in
+relocate_kernel, secondary_startup_64, and startup_32.
 
-diff --git a/arch/x86/Makefile b/arch/x86/Makefile
-index 00e378de8bc0..0f2dbc46eb5c 100644
---- a/arch/x86/Makefile
-+++ b/arch/x86/Makefile
-@@ -51,6 +51,11 @@ ifdef CONFIG_X86_NEED_RELOCS
-         LDFLAGS_vmlinux := --emit-relocs --discard-none
- endif
- 
-+ifndef CONFIG_FG_KASLR
-+	ifdef CONFIG_MODULE_FG_KASLR
-+		KBUILD_CFLAGS_MODULE += -ffunction-sections
-+	endif
-+endif
- #
- # Prevent GCC from generating any FP code by mistake.
- #
-diff --git a/init/Kconfig b/init/Kconfig
-index e29c032e4d66..87706a08a2ca 100644
---- a/init/Kconfig
-+++ b/init/Kconfig
-@@ -1994,6 +1994,7 @@ config FG_KASLR
- 	bool "Function Granular Kernel Address Space Layout Randomization"
- 	depends on $(cc-option, -ffunction-sections)
- 	depends on ARCH_HAS_FG_KASLR
-+	select MODULE_FG_KASLR
- 	default n
- 	help
- 	  This option improves the randomness of the kernel text
-@@ -2278,6 +2279,17 @@ config UNUSED_KSYMS_WHITELIST
- 	  one per line. The path can be absolute, or relative to the kernel
- 	  source tree.
- 
-+config MODULE_FG_KASLR
-+	depends on $(cc-option, -ffunction-sections)
-+	bool "Module Function Granular Layout Randomization"
-+	help
-+	  This option randomizes the module text section by reordering the text
-+	  section by function at module load time. In order to use this
-+	  feature, the module must have been compiled with the
-+	  -ffunction-sections compiler flag.
-+
-+	  If unsure, say N.
-+
- endif # MODULES
- 
- config MODULES_TREE_LOOKUP
-diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
-index df2b20e1b7f2..da65593bffc7 100644
---- a/kernel/kallsyms.c
-+++ b/kernel/kallsyms.c
-@@ -761,7 +761,7 @@ int get_all_symbol_name(void *data, const char *name, struct module *mod,
- 	return 0;
- }
- 
--#if defined(CONFIG_FG_KASLR)
-+#if defined(CONFIG_FG_KASLR) || defined(CONFIG_MODULE_FG_KASLR)
- /*
-  * When fine grained kaslr is enabled, we need to
-  * print out the symbols sorted by name rather than by
-diff --git a/kernel/module.c b/kernel/module.c
-index e8a198588f26..ff1e82b54127 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -56,6 +56,7 @@
- #include <linux/bsearch.h>
- #include <linux/dynamic_debug.h>
- #include <linux/audit.h>
-+#include <linux/random.h>
- #include <uapi/linux/module.h>
- #include "module-internal.h"
- 
-@@ -2388,6 +2389,83 @@ static long get_offset(struct module *mod, unsigned int *size,
- 	return ret;
- }
- 
-+/*
-+ * shuffle_text_list()
-+ * Use a Fisher Yates algorithm to shuffle a list of text sections.
-+ */
-+static void shuffle_text_list(Elf_Shdr **list, int size)
-+{
-+	int i;
-+	unsigned int j;
-+	Elf_Shdr *temp;
-+
-+	for (i = size - 1; i > 0; i--) {
-+		/*
-+		 * pick a random index from 0 to i
-+		 */
-+		get_random_bytes(&j, sizeof(j));
-+		j = j % (i + 1);
-+
-+		temp = list[i];
-+		list[i] = list[j];
-+		list[j] = temp;
-+	}
-+}
-+
-+/*
-+ * randomize_text()
-+ * Look through the core section looking for executable code sections.
-+ * Store sections in an array and then shuffle the sections
-+ * to reorder the functions.
-+ */
-+static void randomize_text(struct module *mod, struct load_info *info)
-+{
-+	int i;
-+	int num_text_sections = 0;
-+	Elf_Shdr **text_list;
-+	int size = 0;
-+	int max_sections = info->hdr->e_shnum;
-+	unsigned int sec = find_sec(info, ".text");
-+
-+	if (sec == 0)
-+		return;
-+
-+	text_list = kmalloc_array(max_sections, sizeof(*text_list), GFP_KERNEL);
-+	if (!text_list)
-+		return;
-+
-+	for (i = 0; i < max_sections; i++) {
-+		Elf_Shdr *shdr = &info->sechdrs[i];
-+		const char *sname = info->secstrings + shdr->sh_name;
-+
-+		if (!(shdr->sh_flags & SHF_ALLOC) ||
-+		    !(shdr->sh_flags & SHF_EXECINSTR) ||
-+		    strstarts(sname, ".init"))
-+			continue;
-+
-+		text_list[num_text_sections] = shdr;
-+		num_text_sections++;
-+	}
-+
-+	shuffle_text_list(text_list, num_text_sections);
-+
-+	for (i = 0; i < num_text_sections; i++) {
-+		Elf_Shdr *shdr = text_list[i];
-+
-+		/*
-+		 * get_offset has a section index for it's last
-+		 * argument, that is only used by arch_mod_section_prepend(),
-+		 * which is only defined by parisc. Since this this type
-+		 * of randomization isn't supported on parisc, we can
-+		 * safely pass in zero as the last argument, as it is
-+		 * ignored.
-+		 */
-+		shdr->sh_entsize = get_offset(mod, &size, shdr, 0);
-+	}
-+
-+	kfree(text_list);
-+}
-+
- /* Lay out the SHF_ALLOC sections in a way not dissimilar to how ld
-    might -- code, read-only data, read-write data, small data.  Tally
-    sizes, and place the offsets into sh_entsize fields: high bit means it
-@@ -2478,6 +2556,9 @@ static void layout_sections(struct module *mod, struct load_info *info)
- 			break;
- 		}
- 	}
-+
-+	if (IS_ENABLED(CONFIG_MODULE_FG_KASLR))
-+		randomize_text(mod, info);
- }
- 
- static void set_license(struct module *mod, const char *license)
--- 
-2.20.1
+> What happens if a guest tries to reset?  For that matter, what happens
+> when a guest vCPU sends SIPI to another guest vCPU?  The target CPU
+> starts up in real mode, right?
+>
 
+In this case we hit kvm_vcpu_reset, where we clear pinning. Yes I believe it
+starts up in real mode.
+
+> There's no SMEP or SMAP in real mode, and real mode has basically no security
+> mitigations at all.
+> 
+
+We'd thought about the switch to real mode being a case where we'd want to drop
+pinning. However, we weren't sure how much weaker, if at all, it makes this
+protection.
+
+Unless someone knows, I'll probably need to do some digging into what an
+exploit might look like that tries switching to real mode and switching back as
+a way around this protection.
+
+If we can use the switch to real mode as a drop pinning trigger then I think
+that might just solve the kexec problem.
+
+> PCID is an odd case.  I see no good reason to pin it, and pinning PCID
+> on prevents use of 32-bit mode.
+
+Maybe it makes sense to default to the values we have, but allow host userspace
+to overwrite the allowed values, in case some other guest OS wants to do
+something that Linux doesn't with PCID or other bits.
