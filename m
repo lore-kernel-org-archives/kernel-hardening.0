@@ -1,21 +1,21 @@
-Return-Path: <SRS0=GlGU=AF=lists.openwall.com=kernel-hardening-return-19091-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/m0O=AF=lists.openwall.com=kernel-hardening-return-19092-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0
-	tests=HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	UNWANTED_LANGUAGE_BODY,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C797CC433E1
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 12:34:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5BF6BC433DF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 12:34:48 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 30FA520E65
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 12:34:35 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 30FA520E65
+	by mail.kernel.org (Postfix) with SMTP id B69DC20E65
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 12:34:47 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B69DC20E65
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19091-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 6133 invoked by uid 550); 24 Jun 2020 12:34:27 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19092-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7880 invoked by uid 550); 24 Jun 2020 12:34:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,23 +23,23 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 6110 invoked from network); 24 Jun 2020 12:34:27 -0000
+Received: (qmail 7848 invoked from network); 24 Jun 2020 12:34:38 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=NYlBDYPOP+i+Z8CCPoWHLzBw8cVCy1kOHLCJDYgloi0=;
-        b=Mxe3FX/8MJJFJrHLCJQEj3eHhwc6SWNIlNVrGrAdYWg0DE9RiPeb8G7DGXM8DFEQiI
-         JmSTkxySI8vS6P1KjMQkNRXRSsy0ZG1yY6RHOlVs+f+vneN9T10fFnfSGflFROmr6QPw
-         fuIXn3MvCoFcNQM4YTzgedsZf73BgT6/AtOSPPrLUVkd+5+Vw+/jpWXLd1PFPyOybg5j
-         VryA2S6+4Ad9S3ch5abFf9Rsw7rqzeyG7WON2caS5Bj5K7HwADvmW99sysDcgsEwonGn
-         g/2O2NqJ5F4QX/duhs0fuClARQMXEYfVGK+n+wgG/Ep+/CEJsJIRmf+CdnTguf3hzxVu
-         sOMg==
-X-Gm-Message-State: AOAM533GjULQ2aRDfOSLw5i+H/3Cc8jVYZOnukgyAoBrIw/0T5C8dEs9
-	7hZXhlEqPZgmnNntGXaaDbE=
-X-Google-Smtp-Source: ABdhPJxG56K9PcyzErynBCq8WXO4GdEN7iVHSozkebRt9XKZi/zlbyDg2T5l/cdnA0We9Seu6jAYtg==
-X-Received: by 2002:a37:a785:: with SMTP id q127mr10507259qke.452.1593002055490;
-        Wed, 24 Jun 2020 05:34:15 -0700 (PDT)
+        bh=dd/x9rNY52s67dtxhdU+GLjXuLmi+ISuyjz/CGrFIjM=;
+        b=Tl1VRqbtt+F8eZuzCLpN3k4P4bjBbiByE50q0EMR4Jgh293zmGbBG0lk4optu26wvb
+         Hd4b2a5bQZIXMgDsOkRq+YXftsKHghgLKkvfk9c/IIoisaMw7bTX0ICpOZecsUr5lvsf
+         ipc8mim1ro6cvZi0uEypwko0MSigah/0kSPmU6eGn46XF4zTCVIvIMQDzHPKkb+qw6WI
+         gjbr1cgRb9uDciKAsqtRhP4Uoiayj+ITkBxY6FjeXcTbr0hQzR0x5T1zGEkTFm6GQ8Sk
+         LZm4scV3e62bGQkHSg/RHiC4/FHfjU8wdsp+UK1tehdmaRYMdGhbV8V2+vmgRuV+hpEW
+         wS6A==
+X-Gm-Message-State: AOAM530Aw4vGRYU/BNL0eohXRP/RbfomS/wR/IvAEb4R2yfMSMkJb2QW
+	mlhBQCJqyiWRqnZ6i7bcoe8=
+X-Google-Smtp-Source: ABdhPJyKNg/sgqLpXlRp5nWSXUg5BbFE6D7yhTpokmqzn6cNtEQ6n5ShWMctUFdRI9VD2lwP79MMMA==
+X-Received: by 2002:ac8:5486:: with SMTP id h6mr6019451qtq.255.1593002066620;
+        Wed, 24 Jun 2020 05:34:26 -0700 (PDT)
 From: Alexander Popov <alex.popov@linux.com>
 To: Kees Cook <keescook@chromium.org>,
 	Jann Horn <jannh@google.com>,
@@ -74,36 +74,36 @@ To: Kees Cook <keescook@chromium.org>,
 	linux-kernel@vger.kernel.org,
 	gcc@gcc.gnu.org
 Cc: notify@kernel.org
-Subject: [PATCH v2 2/5] ARM: vdso: Don't use gcc plugins for building vgettimeofday.c
-Date: Wed, 24 Jun 2020 15:33:27 +0300
-Message-Id: <20200624123330.83226-3-alex.popov@linux.com>
+Subject: [PATCH v2 3/5] arm64: vdso: Don't use gcc plugins for building vgettimeofday.c
+Date: Wed, 24 Jun 2020 15:33:28 +0300
+Message-Id: <20200624123330.83226-4-alex.popov@linux.com>
 X-Mailer: git-send-email 2.25.4
 In-Reply-To: <20200624123330.83226-1-alex.popov@linux.com>
 References: <20200624123330.83226-1-alex.popov@linux.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Don't use gcc plugins for building arch/arm/vdso/vgettimeofday.c to
-avoid unneeded instrumentation.
+Don't use gcc plugins for building arch/arm64/kernel/vdso/vgettimeofday.c
+to avoid unneeded instrumentation.
 
 Signed-off-by: Alexander Popov <alex.popov@linux.com>
 ---
- arch/arm/vdso/Makefile | 2 +-
+ arch/arm64/kernel/vdso/Makefile | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/arch/arm/vdso/Makefile b/arch/arm/vdso/Makefile
-index d3c9f03e7e79..a54f70731d9f 100644
---- a/arch/arm/vdso/Makefile
-+++ b/arch/arm/vdso/Makefile
-@@ -29,7 +29,7 @@ CPPFLAGS_vdso.lds += -P -C -U$(ARCH)
- CFLAGS_REMOVE_vdso.o = -pg
+diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
+index 556d424c6f52..0f1ad63b3326 100644
+--- a/arch/arm64/kernel/vdso/Makefile
++++ b/arch/arm64/kernel/vdso/Makefile
+@@ -29,7 +29,7 @@ ldflags-y := -shared -nostdlib -soname=linux-vdso.so.1 --hash-style=sysv \
+ ccflags-y := -fno-common -fno-builtin -fno-stack-protector -ffixed-x18
+ ccflags-y += -DDISABLE_BRANCH_PROFILING
  
- # Force -O2 to avoid libgcc dependencies
--CFLAGS_REMOVE_vgettimeofday.o = -pg -Os
-+CFLAGS_REMOVE_vgettimeofday.o = -pg -Os $(GCC_PLUGINS_CFLAGS)
- ifeq ($(c-gettimeofday-y),)
- CFLAGS_vgettimeofday.o = -O2
- else
+-CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS)
++CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS) $(GCC_PLUGINS_CFLAGS)
+ KBUILD_CFLAGS			+= $(DISABLE_LTO)
+ KASAN_SANITIZE			:= n
+ UBSAN_SANITIZE			:= n
 -- 
 2.25.4
 
