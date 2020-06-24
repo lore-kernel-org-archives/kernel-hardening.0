@@ -1,20 +1,23 @@
-Return-Path: <SRS0=yPTl=AE=lists.openwall.com=kernel-hardening-return-19080-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yJt5=AF=lists.openwall.com=kernel-hardening-return-19081-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.5 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DD459C433DF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 20:07:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7DA75C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 03:08:46 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 42D7E2078A
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Jun 2020 20:07:54 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 42D7E2078A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19080-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11665 invoked by uid 550); 23 Jun 2020 20:07:46 -0000
+	by mail.kernel.org (Postfix) with SMTP id CC30820CC7
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 03:08:45 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="PU7bqkTK"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CC30820CC7
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19081-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30298 invoked by uid 550); 24 Jun 2020 03:08:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,120 +25,46 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11642 invoked from network); 23 Jun 2020 20:07:45 -0000
-IronPort-SDR: Xz/CUfjnEf8yHiL/MpVWKEQzH5VlS9Zyf1GAYu/7dBXzfdiIwcYy/aT6o/DNbAwyyZVYb3B3RC
- 35R3BIBuq8Tg==
-X-IronPort-AV: E=McAfee;i="6000,8403,9661"; a="143312457"
-X-IronPort-AV: E=Sophos;i="5.75,272,1589266800"; 
-   d="scan'208";a="143312457"
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-IronPort-SDR: BUquHP6/egIubskUC+wd1qMKZIo8Ikj9vc9R1L2KgEVN7Re1Fh7E6yhj8tO0FBTJxozd8Oe4ES
- HDhJEnS/VEsA==
-X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="5.75,272,1589266800"; 
-   d="scan'208";a="301379329"
-Date: Tue, 23 Jun 2020 20:03:35 +0000
-From: "Andersen, John" <john.s.andersen@intel.com>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Jonathan Corbet <corbet@lwn.net>, Paolo Bonzini <pbonzini@redhat.com>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
-	X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>,
-	Shuah Khan <shuah@kernel.org>,
-	"Christopherson, Sean J" <sean.j.christopherson@intel.com>,
-	Liran Alon <liran.alon@oracle.com>,
-	Andrew Jones <drjones@redhat.com>,
-	Rick Edgecombe <rick.p.edgecombe@intel.com>,
-	Kristen Carlson Accardi <kristen@linux.intel.com>,
-	Vitaly Kuznetsov <vkuznets@redhat.com>,
-	Wanpeng Li <wanpengli@tencent.com>,
-	Jim Mattson <jmattson@google.com>, Joerg Roedel <joro@8bytes.org>,
-	mchehab+huawei@kernel.org, Greg KH <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	pawan.kumar.gupta@linux.intel.com, Juergen Gross <jgross@suse.com>,
-	Mike Kravetz <mike.kravetz@oracle.com>,
-	Oliver Neukum <oneukum@suse.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Fenghua Yu <fenghua.yu@intel.com>, reinette.chatre@intel.com,
-	vineela.tummalapalli@intel.com,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Arjan van de Ven <arjan@linux.intel.com>, caoj.fnst@cn.fujitsu.com,
-	Baoquan He <bhe@redhat.com>, Arvind Sankar <nivedita@alum.mit.edu>,
-	Kees Cook <keescook@chromium.org>,
-	Dan Williams <dan.j.williams@intel.com>, eric.auger@redhat.com,
-	aaronlewis@google.com, Peter Xu <peterx@redhat.com>,
-	makarandsonare@google.com,
-	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
-	LKML <linux-kernel@vger.kernel.org>, kvm list <kvm@vger.kernel.org>,
-	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Subject: Re: [PATCH 4/4] X86: Use KVM CR pin MSRs
-Message-ID: <20200623200334.GA23@6540770db1d7>
-References: <20200617190757.27081-1-john.s.andersen@intel.com>
- <20200617190757.27081-5-john.s.andersen@intel.com>
- <CALCETrXwzQDDd1rfBW+ptmijEjc2cMqfWGvJu-qqrqia5Ls=Uw@mail.gmail.com>
+Received: (qmail 30278 invoked from network); 24 Jun 2020 03:08:37 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1592968106;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=ZsWu8ZUl1jE3k6DJkKHds2eB9NM/YRkkX3/ygvqR5AE=;
+	b=PU7bqkTKTBeVnGVSy2I0PYfBIrSN/3OSFoQtrJbX/B0GijcP0sHeaqYoEVm9DlNDOlJnJ5
+	BG0XITGxFK/hJWxvA9kUgaJsMwKTc3KDqc6St7kklIskAZCq6/sJyZNIMZeFbVGHUitIZh
+	yFlBnNBJZSGO8xpPw3mYSeq+OGMDEWg=
+X-MC-Unique: gIuNpAsLNoSQXCKeSxl5rQ-1
+Date: Tue, 23 Jun 2020 22:08:18 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+To: Kristen Carlson Accardi <kristen@linux.intel.com>
+Cc: keescook@chromium.org, tglx@linutronix.de, mingo@redhat.com,
+	bp@alien8.de, Peter Zijlstra <peterz@infradead.org>,
+	arjan@linux.intel.com, x86@kernel.org, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com
+Subject: Re: [PATCH v3 01/10] objtool: Do not assume order of parent/child
+ functions
+Message-ID: <20200624030818.bvv3kld63sguqxxm@treble>
+References: <20200623172327.5701-1-kristen@linux.intel.com>
+ <20200623172327.5701-2-kristen@linux.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <CALCETrXwzQDDd1rfBW+ptmijEjc2cMqfWGvJu-qqrqia5Ls=Uw@mail.gmail.com>
-User-Agent: Mutt/1.5.24 (2015-08-30)
+In-Reply-To: <20200623172327.5701-2-kristen@linux.intel.com>
+X-Scanned-By: MIMEDefang 2.84 on 10.5.11.23
 
-On Fri, Jun 19, 2020 at 10:13:25PM -0700, Andy Lutomirski wrote:
-> On Wed, Jun 17, 2020 at 12:05 PM John Andersen
-> <john.s.andersen@intel.com> wrote:
-> > Guests using the kexec system call currently do not support
-> > paravirtualized control register pinning. This is due to early boot
-> > code writing known good values to control registers, these values do
-> > not contain the protected bits. This is due to CPU feature
-> > identification being done at a later time, when the kernel properly
-> > checks if it can enable protections. As such, the pv_cr_pin command line
-> > option has been added which instructs the kernel to disable kexec in
-> > favor of enabling paravirtualized control register pinning. crashkernel
-> > is also disabled when the pv_cr_pin parameter is specified due to its
-> > reliance on kexec.
+On Tue, Jun 23, 2020 at 10:23:18AM -0700, Kristen Carlson Accardi wrote:
+> If a .cold function is examined prior to it's parent, the link
+> to the parent/child function can be overwritten when the parent
+> is examined. Only update pfunc and cfunc if they were previously
+> nil to prevent this from happening.
 > 
-> Is there a plan for fixing this for real?  I'm wondering if there is a
-> sane weakening of this feature that still allows things like kexec.
-> 
+> Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+> Acked-by: Josh Poimboeuf <jpoimboe@redhat.com>
 
-I'm pretty sure kexec can be fixed. I had it working at one point, I'm
-currently in the process of revalidating this. The issue was though that
-kexec only worked within the guest, not on the physical host, which I suspect
-is related to the need for supervisor pages to be mapped, which seems to be
-required before enabling SMAP (based on what I'd seen with the selftests and
-unittests). I was also just blindly turning on the bits without checking for
-support when I'd tried this, so that could have been the issue too.
+FYI, this patch is now in the tip tree.
 
-I think most of the changes for just blindly enabling the bits were in
-relocate_kernel, secondary_startup_64, and startup_32.
+-- 
+Josh
 
-> What happens if a guest tries to reset?  For that matter, what happens
-> when a guest vCPU sends SIPI to another guest vCPU?  The target CPU
-> starts up in real mode, right?
->
-
-In this case we hit kvm_vcpu_reset, where we clear pinning. Yes I believe it
-starts up in real mode.
-
-> There's no SMEP or SMAP in real mode, and real mode has basically no security
-> mitigations at all.
-> 
-
-We'd thought about the switch to real mode being a case where we'd want to drop
-pinning. However, we weren't sure how much weaker, if at all, it makes this
-protection.
-
-Unless someone knows, I'll probably need to do some digging into what an
-exploit might look like that tries switching to real mode and switching back as
-a way around this protection.
-
-If we can use the switch to real mode as a drop pinning trigger then I think
-that might just solve the kexec problem.
-
-> PCID is an odd case.  I see no good reason to pin it, and pinning PCID
-> on prevents use of 32-bit mode.
-
-Maybe it makes sense to default to the values we have, but allow host userspace
-to overwrite the allowed values, in case some other guest OS wants to do
-something that Linux doesn't with PCID or other bits.
