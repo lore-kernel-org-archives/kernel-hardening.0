@@ -1,23 +1,22 @@
-Return-Path: <SRS0=YlgV=AF=lists.openwall.com=kernel-hardening-return-19136-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=wEq/=AF=lists.openwall.com=kernel-hardening-return-19137-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7598AC433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 21:14:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E63F2C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 21:16:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C1F4C20768
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 21:14:16 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 496A520768
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 21:16:06 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ogyMpgi9"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C1F4C20768
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19136-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17854 invoked by uid 550); 24 Jun 2020 21:14:11 -0000
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="lvI0AvNC"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 496A520768
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19137-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19902 invoked by uid 550); 24 Jun 2020 21:15:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,94 +24,53 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17819 invoked from network); 24 Jun 2020 21:14:10 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=omCkUcZNHVXP0sWRywzjOwxTXZ4YyisMAxm749WU5GU=;
-        b=ogyMpgi9tPFXqD3+b4TskFtzlAE3qRSfSFlhxLkMzfZQl068z8vqJlL5I/k1hQA4j2
-         8+KaTuQNKpStTyBjn2ssQsUKa/GWq7f607kaEaeXU2o8/Ft2sUgUsqmcJHltC+KgIKVl
-         o3jZ4P3X6AywcFpecW/k8P5ZOrqPI9Z99iVivwkxvFoyUq4G2KcudRcYQ4mOacJiN+sQ
-         WfzuwRbr7it+GIQZRqsNndeZ4kbhXyBxzlSPEB5SEo0dkcZcdM6751ifbYi1L0YxNGzl
-         zLZYU7QD65uDvjwEcqlKMDaY6jKyUjhUxCFnXE3C+lzv6bRpSkWGLHXOkAgDh/7Se2CC
-         j7Pg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=omCkUcZNHVXP0sWRywzjOwxTXZ4YyisMAxm749WU5GU=;
-        b=pXGfC2TgrzURoPQMSgHCrFSwtwAl3arIRro5ajOjcMCR+WBoVieEzj4Kg0HWMhLFFV
-         TC7cHjz428TvKPapBLO/9FSUpqqNIANHOFqqtJIYbBCguO+XqbzNCDt27vtGJD9vXiXE
-         G2sSek2jhQqfiS7Ida3fu0zWCkzlKH1Ku/qvaY9tRM952MmCgcOIHdqvOcuARnhWMLZX
-         ufO4guCVJbaRh5ntJrJZc350sUNY4SCdM6Hdb6b67gqZb8QxA15De413Gi7MucPKdbJx
-         qYDp44pEODDbSDkiWy/MpUYNtrUHihtQAqMTkmnU1ZDBkydVM41Zj06QWQBlQz0Ck2+5
-         MGIA==
-X-Gm-Message-State: AOAM532IU23bySX2kHzcs2nST6NeqgmqceHx/ZyOIzo1gt0JPnFnYL1L
-	bM7y9dnX0PGjTLqoRuJz+kOtQ7+FckYQMofOWMzh+Q==
-X-Google-Smtp-Source: ABdhPJyvmG5uGb8Lyk5i53Q9bt53kqBtuDjO8DoRXX4pnhndW+Y4vnp4+GK0S4oFxok0KRSkaflUBQ+yOxnxS3G2Ct0=
-X-Received: by 2002:a17:902:b698:: with SMTP id c24mr29536869pls.223.1593033238474;
- Wed, 24 Jun 2020 14:13:58 -0700 (PDT)
-MIME-Version: 1.0
-References: <20200624203200.78870-1-samitolvanen@google.com> <20200624203200.78870-9-samitolvanen@google.com>
-In-Reply-To: <20200624203200.78870-9-samitolvanen@google.com>
-From: Nick Desaulniers <ndesaulniers@google.com>
-Date: Wed, 24 Jun 2020 14:13:46 -0700
-Message-ID: <CAKwvOdmcDxa+h9i6_XQc8ZDQjD9cTrD7s9eNU0fSxZbXciKhDQ@mail.gmail.com>
-Subject: Re: [PATCH 08/22] kbuild: lto: remove duplicate dependencies from
- .mod files
+Received: (qmail 19865 invoked from network); 24 Jun 2020 21:15:59 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=casper.20170209; h=In-Reply-To:Content-Type:MIME-Version:
+	References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description;
+	bh=CYAOBdXXwk5atGG1OkexemEOJEg2uOXvmf8MxtMHkzA=; b=lvI0AvNCOyQRFPEBPSO732MCmS
+	priyMdaeyT9DlHRLc/z9qWhkeCY/G37ozS6HciR55B+xdk3sRO+bn4RdzWVJS4FDFf++roys12UFi
+	2Xn0aJcu82shXhcuPUJaxr0NiofjiM9cS72P+0UyExr/CWjZItZDE4OZMDMLf4RBiQ+3eGs0RrR20
+	QerCqnR4yK+D/eqXSR/BaYzSzLfSMZBayOvuxe0uMIgumCmxbS4aKn+HlmJxHDAjxC7KlQlu9/mMK
+	D//TxmU24AKwnTz6mvW3vYpxg3iJ7ar26Kv6tNzbCv4aRAJOYWk+gjYHLWLDLC4v2if3/bM+oS2fR
+	WOLeUYeg==;
+Date: Wed, 24 Jun 2020 23:15:40 +0200
+From: Peter Zijlstra <peterz@infradead.org>
 To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
-	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
-	linux-pci@vger.kernel.org, 
-	"maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Kees Cook <keescook@chromium.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
+	x86@kernel.org
+Subject: Re: [PATCH 00/22] add support for Clang LTO
+Message-ID: <20200624211540.GS4817@hirez.programming.kicks-ass.net>
+References: <20200624203200.78870-1-samitolvanen@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200624203200.78870-1-samitolvanen@google.com>
 
-On Wed, Jun 24, 2020 at 1:33 PM Sami Tolvanen <samitolvanen@google.com> wrote:
->
-> With LTO, llvm-nm prints out symbols for each archive member
-> separately, which results in a lot of duplicate dependencies in the
-> .mod file when CONFIG_TRIM_UNUSED_SYMS is enabled. When a module
-> consists of several compilation units, the output can exceed the
-> default xargs command size limit and split the dependency list to
-> multiple lines, which results in used symbols getting trimmed.
->
-> This change removes duplicate dependencies, which will reduce the
-> probability of this happening and makes .mod files smaller and
-> easier to read.
->
-> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+On Wed, Jun 24, 2020 at 01:31:38PM -0700, Sami Tolvanen wrote:
+> This patch series adds support for building x86_64 and arm64 kernels
+> with Clang's Link Time Optimization (LTO).
+> 
+> In addition to performance, the primary motivation for LTO is to allow
+> Clang's Control-Flow Integrity (CFI) to be used in the kernel. Google's
+> Pixel devices have shipped with LTO+CFI kernels since 2018.
+> 
+> Most of the patches are build system changes for handling LLVM bitcode,
+> which Clang produces with LTO instead of ELF object files, postponing
+> ELF processing until a later stage, and ensuring initcall ordering.
+> 
+> Note that first objtool patch in the series is already in linux-next,
+> but as it's needed with LTO, I'm including it also here to make testing
+> easier.
 
-Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
-
-> ---
->  scripts/Makefile.build | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
->
-> diff --git a/scripts/Makefile.build b/scripts/Makefile.build
-> index 82977350f5a6..82b465ce3ca0 100644
-> --- a/scripts/Makefile.build
-> +++ b/scripts/Makefile.build
-> @@ -291,7 +291,7 @@ endef
->
->  # List module undefined symbols (or empty line if not enabled)
->  ifdef CONFIG_TRIM_UNUSED_KSYMS
-> -cmd_undef_syms = $(NM) $< | sed -n 's/^  *U //p' | xargs echo
-> +cmd_undef_syms = $(NM) $< | sed -n 's/^  *U //p' | sort -u | xargs echo
->  else
->  cmd_undef_syms = echo
->  endif
-> --
-> 2.27.0.212.ge8ba1cc988-goog
->
-
-
--- 
-Thanks,
-~Nick Desaulniers
+I'm very sad that yet again, memory ordering isn't addressed. LTO vastly
+increases the range of the optimizer to wreck things.
