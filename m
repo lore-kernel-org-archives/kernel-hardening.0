@@ -1,4 +1,4 @@
-Return-Path: <SRS0=yJt5=AF=lists.openwall.com=kernel-hardening-return-19081-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=AFwn=AF=lists.openwall.com=kernel-hardening-return-19082-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7DA75C433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 03:08:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 80BA1C433DF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 04:52:31 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CC30820CC7
-	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 03:08:45 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id D27632078A
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Jun 2020 04:52:30 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="PU7bqkTK"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CC30820CC7
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19081-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30298 invoked by uid 550); 24 Jun 2020 03:08:38 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="SOQtldw9"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D27632078A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19082-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5340 invoked by uid 550); 24 Jun 2020 04:52:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,46 +25,61 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30278 invoked from network); 24 Jun 2020 03:08:37 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1592968106;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=ZsWu8ZUl1jE3k6DJkKHds2eB9NM/YRkkX3/ygvqR5AE=;
-	b=PU7bqkTKTBeVnGVSy2I0PYfBIrSN/3OSFoQtrJbX/B0GijcP0sHeaqYoEVm9DlNDOlJnJ5
-	BG0XITGxFK/hJWxvA9kUgaJsMwKTc3KDqc6St7kklIskAZCq6/sJyZNIMZeFbVGHUitIZh
-	yFlBnNBJZSGO8xpPw3mYSeq+OGMDEWg=
-X-MC-Unique: gIuNpAsLNoSQXCKeSxl5rQ-1
-Date: Tue, 23 Jun 2020 22:08:18 -0500
-From: Josh Poimboeuf <jpoimboe@redhat.com>
+Received: (qmail 5320 invoked from network); 24 Jun 2020 04:52:23 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=6f53wfu9QNcdQT3ZJDSOeI3w2U50C/xG0fFlCdqBwh8=;
+        b=SOQtldw9KnegRbDuujQK6mSW72Ar+eCo9OL6sqQyLe4507FK6z15J0tVonL3ROJGKX
+         jmUWzV1kGTM8ch5wLol9h8AUoGlp2vmbh9AfB5HB82Nf6nd9MDgTkfuVbQTqVcoi6m9O
+         rflkv7LK/GEf+O4d4akCkHJ7Zge7ftnPwuhiE=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=6f53wfu9QNcdQT3ZJDSOeI3w2U50C/xG0fFlCdqBwh8=;
+        b=RPf1DiqqrxdWb9CpPW4TyZqwRaut2VH4n8YGDvZvY89USA1sww6it60fXBZjxgZ50g
+         CPmq2xlsUS+Tqzdl4dhTsxJ3XaHGdUScmUyUMlnrWLTwUQJZArZr4/MEpClsecfEBN/7
+         WbuJEYefzvBIPNbLTB07g20WCE2ztvoXZFuZ3+M3RPVdLcTPkkunQrc9yjidPewtNDvS
+         9OOO4dwmtVZ9ifWdGIIJt6YtnF+BxLewKZpyN9GuTXYSfJZF9TSEorLFHndJSTgzaMz/
+         uLg0kypWgiWFZNJQF9+oJnIg2W1YvPVPzN5FMKg+E7q3tuAKpV41VZUL3hDxDaf4j2TU
+         AWBQ==
+X-Gm-Message-State: AOAM53070GVeOkm0oulw0Tu/7rntaBQ73UY2+ciqtd+GeG0mwp9WdvYs
+	2B5d5rRHKACaiyepe4o4KSmh+A==
+X-Google-Smtp-Source: ABdhPJwX4es65nYyfcxHOhK/hXQNs9Mgx96rrroztpO1dJ1CT4SWu7NO7yDI/cU1cNN8RdLutBMqkA==
+X-Received: by 2002:a65:6710:: with SMTP id u16mr14011070pgf.45.1592974330709;
+        Tue, 23 Jun 2020 21:52:10 -0700 (PDT)
+Date: Tue, 23 Jun 2020 21:52:08 -0700
+From: Kees Cook <keescook@chromium.org>
 To: Kristen Carlson Accardi <kristen@linux.intel.com>
-Cc: keescook@chromium.org, tglx@linutronix.de, mingo@redhat.com,
-	bp@alien8.de, Peter Zijlstra <peterz@infradead.org>,
-	arjan@linux.intel.com, x86@kernel.org, linux-kernel@vger.kernel.org,
-	kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com
-Subject: Re: [PATCH v3 01/10] objtool: Do not assume order of parent/child
- functions
-Message-ID: <20200624030818.bvv3kld63sguqxxm@treble>
+Cc: tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, x86@kernel.org,
+	"H. Peter Anvin" <hpa@zytor.com>, Arnd Bergmann <arnd@arndb.de>,
+	arjan@linux.intel.com, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com,
+	Tony Luck <tony.luck@intel.com>, linux-arch@vger.kernel.org
+Subject: Re: [PATCH v3 05/10] x86: Make sure _etext includes function sections
+Message-ID: <202006232152.733212868D@keescook>
 References: <20200623172327.5701-1-kristen@linux.intel.com>
- <20200623172327.5701-2-kristen@linux.intel.com>
+ <20200623172327.5701-6-kristen@linux.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200623172327.5701-2-kristen@linux.intel.com>
-X-Scanned-By: MIMEDefang 2.84 on 10.5.11.23
+In-Reply-To: <20200623172327.5701-6-kristen@linux.intel.com>
 
-On Tue, Jun 23, 2020 at 10:23:18AM -0700, Kristen Carlson Accardi wrote:
-> If a .cold function is examined prior to it's parent, the link
-> to the parent/child function can be overwritten when the parent
-> is examined. Only update pfunc and cfunc if they were previously
-> nil to prevent this from happening.
+On Tue, Jun 23, 2020 at 10:23:22AM -0700, Kristen Carlson Accardi wrote:
+> When using -ffunction-sections to place each function in
+> it's own text section so it can be randomized at load time, the
+> linker considers these .text.* sections "orphaned sections", and
+> will place them after the first similar section (.text). In order
+> to accurately represent the end of the text section and the
+> orphaned sections, _etext must be moved so that it is after both
+> .text and .text.* The text size must also be calculated to
+> include .text AND .text.*
 > 
 > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
-> Acked-by: Josh Poimboeuf <jpoimboe@redhat.com>
 
-FYI, this patch is now in the tip tree.
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
 -- 
-Josh
-
+Kees Cook
