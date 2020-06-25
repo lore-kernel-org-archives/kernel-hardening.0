@@ -1,22 +1,23 @@
-Return-Path: <SRS0=w/ac=AG=lists.openwall.com=kernel-hardening-return-19159-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Amzz=AG=lists.openwall.com=kernel-hardening-return-19160-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E9CE4C433E0
-	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 07:46:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A5C07C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 07:47:46 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 47DC620675
-	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 07:46:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 0615120789
+	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 07:47:45 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="MVs61XR8"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 47DC620675
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="UIuIqigV"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0615120789
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19159-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30024 invoked by uid 550); 25 Jun 2020 07:46:23 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19160-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32062 invoked by uid 550); 25 Jun 2020 07:47:37 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,23 +25,21 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29986 invoked from network); 25 Jun 2020 07:46:22 -0000
+Received: (qmail 32030 invoked from network); 25 Jun 2020 07:47:37 -0000
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-	d=infradead.org; s=casper.20170209; h=In-Reply-To:Content-Type:MIME-Version:
+	d=infradead.org; s=merlin.20170209; h=In-Reply-To:Content-Type:MIME-Version:
 	References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
 	Content-Transfer-Encoding:Content-ID:Content-Description;
-	bh=2aQ/V3CRB+JTPOL3qC/HxsWm+wJhkXGBtq9FiN50dxw=; b=MVs61XR8PHT2An2kAHFoVGpNaN
-	L4hxfCHN0na+bXYcmoGM6fWmmaLm7d3p6PumUpigGZx4NET8Y22MadCNhuDD2tjz4bsAx+YeRr8US
-	rO5Ph/sbzdu4v7rVC1aVaiLtBk178mbNOCE6uWemg8h/W8LV+TH9FVvH8ZqN2vdqTAt5dRcG3NIfV
-	szFdqm0VJ59PkYZYpIY6zdlwCdeWCvhK56AovRtjFjyPn0yqF3yhfbzwmorhqV4KQ1ma6vlIdDuje
-	xB9TwF6459hMixZkCdI6jdbxggiKReKLnIA3sI0gv2cMZe/rxoUPK9GVPLyTKxrBYihPvtqUYvTp7
-	UeOTNh3A==;
-Date: Thu, 25 Jun 2020 09:45:30 +0200
+	bh=jlp9yRmob93dOT2KqKFc9+KfQV0pPJXXFdCgHBP2kM0=; b=UIuIqigVl3WX7R1skgg/Iif4x9
+	hy/pTl2n1RYBArKVSpmY8DjS2unkPxAVMZxi3vZw7HkiMQ+Q+KOu3kiQG6sz78NeMA4DjcPNCGbbC
+	ieWTzZr/0PFbRVojQSNhSqU5Ygr0XL2gN/oeuqxuiR3yrMqgmnRta6jruo86RnRYVv3F8szsLT28j
+	IJP5z91KUq5xvrgosAkmgdhmv1RD+jV8oL87ketaFGyEAK09VPwLfB5LapFSpaYn4XQkDKv3Z97sc
+	mhFdebUs1E6/vlLnkbP5Ta5PkZAqSKNE5SxdS4jK+SauMNXF8v8mFghUbAWe7Ae9OCr1g2cf+23N+
+	DBACpvNw==;
+Date: Thu, 25 Jun 2020 09:47:16 +0200
 From: Peter Zijlstra <peterz@infradead.org>
 To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Steven Rostedt <rostedt@goodmis.org>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Will Deacon <will@kernel.org>,
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	"Paul E. McKenney" <paulmck@kernel.org>,
 	Kees Cook <keescook@chromium.org>,
@@ -50,54 +49,63 @@ Cc: Steven Rostedt <rostedt@goodmis.org>,
 	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
 	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
 	x86@kernel.org
-Subject: Re: [PATCH 04/22] kbuild: lto: fix recordmcount
-Message-ID: <20200625074530.GW4817@hirez.programming.kicks-ass.net>
+Subject: Re: [PATCH 05/22] kbuild: lto: postpone objtool
+Message-ID: <20200625074716.GX4817@hirez.programming.kicks-ass.net>
 References: <20200624203200.78870-1-samitolvanen@google.com>
- <20200624203200.78870-5-samitolvanen@google.com>
- <20200624212737.GV4817@hirez.programming.kicks-ass.net>
- <20200624214530.GA120457@google.com>
+ <20200624203200.78870-6-samitolvanen@google.com>
+ <20200624211908.GT4817@hirez.programming.kicks-ass.net>
+ <20200624214925.GB120457@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200624214530.GA120457@google.com>
+In-Reply-To: <20200624214925.GB120457@google.com>
 
-On Wed, Jun 24, 2020 at 02:45:30PM -0700, Sami Tolvanen wrote:
-> On Wed, Jun 24, 2020 at 11:27:37PM +0200, Peter Zijlstra wrote:
-> > On Wed, Jun 24, 2020 at 01:31:42PM -0700, Sami Tolvanen wrote:
-> > > With LTO, LLVM bitcode won't be compiled into native code until
-> > > modpost_link. This change postpones calls to recordmcount until after
-> > > this step.
-> > > 
-> > > In order to exclude specific functions from inspection, we add a new
-> > > code section .text..nomcount, which we tell recordmcount to ignore, and
-> > > a __nomcount attribute for moving functions to this section.
+On Wed, Jun 24, 2020 at 02:49:25PM -0700, Sami Tolvanen wrote:
+> On Wed, Jun 24, 2020 at 11:19:08PM +0200, Peter Zijlstra wrote:
+> > On Wed, Jun 24, 2020 at 01:31:43PM -0700, Sami Tolvanen wrote:
+> > > diff --git a/include/linux/compiler.h b/include/linux/compiler.h
+> > > index 30827f82ad62..12b115152532 100644
+> > > --- a/include/linux/compiler.h
+> > > +++ b/include/linux/compiler.h
+> > > @@ -120,7 +120,7 @@ void ftrace_likely_update(struct ftrace_likely_data *f, int val,
+> > >  /* Annotate a C jump table to allow objtool to follow the code flow */
+> > >  #define __annotate_jump_table __section(.rodata..c_jump_table)
+> > >  
+> > > -#ifdef CONFIG_DEBUG_ENTRY
+> > > +#if defined(CONFIG_DEBUG_ENTRY) || defined(CONFIG_LTO_CLANG)
+> > >  /* Begin/end of an instrumentation safe region */
+> > >  #define instrumentation_begin() ({					\
+> > >  	asm volatile("%c0:\n\t"						\
 > > 
-> > I'm confused, you only add this to functions in ftrace itself, which is
-> > compiled with:
-> > 
-> >  KBUILD_CFLAGS = $(subst $(CC_FLAGS_FTRACE),,$(ORIG_CFLAGS))
-> > 
-> > and so should not have mcount/fentry sites anyway. So what's the point
-> > of ignoring them further?
-> > 
-> > This Changelog does not explain.
+> > Why would you be doing noinstr validation for lto builds? That doesn't
+> > make sense.
 > 
-> Normally, recordmcount ignores each ftrace.o file, but since we are
-> running it on vmlinux.o, we need another way to stop it from looking
-> at references to mcount/fentry that are not calls. Here's a comment
-> from recordmcount.c:
-> 
->   /*
->    * The file kernel/trace/ftrace.o references the mcount
->    * function but does not call it. Since ftrace.o should
->    * not be traced anyway, we just skip it.
->    */
-> 
-> But I agree, the commit message could use more defails. Also +Steven
-> for thoughts about this approach.
+> This is just to avoid a ton of noinstr warnings when we run objtool on
+> vmlinux.o, but I'm also fine with skipping noinstr validation with LTO.
 
-Ah, is thi because recordmcount isn't smart enough to know the
-difference between "CALL $mcount" and any other RELA that has mcount?
+Right, then we need to make --no-vmlinux work properly when
+!DEBUG_ENTRY, which I think might be buggered due to us overriding the
+argument when the objname ends with "vmlinux.o".
 
-At least for x86_64 I can do a really quick take for a recordmcount pass
-in objtool, but I suppose you also need this for ARM64 ?
+> > > +ifdef CONFIG_STACK_VALIDATION
+> > > +ifneq ($(SKIP_STACK_VALIDATION),1)
+> > > +cmd_ld_ko_o +=								\
+> > > +	$(objtree)/tools/objtool/objtool				\
+> > > +		$(if $(CONFIG_UNWINDER_ORC),orc generate,check)		\
+> > > +		--module						\
+> > > +		$(if $(CONFIG_FRAME_POINTER),,--no-fp)			\
+> > > +		$(if $(CONFIG_GCOV_KERNEL),--no-unreachable,)		\
+> > > +		$(if $(CONFIG_RETPOLINE),--retpoline,)			\
+> > > +		$(if $(CONFIG_X86_SMAP),--uaccess,)			\
+> > > +		$(@:.ko=$(prelink-ext).o);
+> > > +
+> > > +endif # SKIP_STACK_VALIDATION
+> > > +endif # CONFIG_STACK_VALIDATION
+> > 
+> > What about the objtool invocation from link-vmlinux.sh ?
+> 
+> What about it? The existing objtool_link invocation in link-vmlinux.sh
+> works fine for our purposes as well.
+
+Well, I was wondering why you're adding yet another objtool invocation
+while we already have one.
