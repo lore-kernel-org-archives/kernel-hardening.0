@@ -1,24 +1,22 @@
-Return-Path: <SRS0=j74A=AG=lists.openwall.com=kernel-hardening-return-19158-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=w/ac=AG=lists.openwall.com=kernel-hardening-return-19159-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6062EC433E0
-	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 05:36:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E9CE4C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 07:46:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 86C2120720
-	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 05:36:22 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 47DC620675
+	for <kernel-hardening@archiver.kernel.org>; Thu, 25 Jun 2020 07:46:32 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="AZcqU08v"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 86C2120720
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19158-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 27681 invoked by uid 550); 25 Jun 2020 05:36:15 -0000
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="MVs61XR8"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 47DC620675
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19159-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30024 invoked by uid 550); 25 Jun 2020 07:46:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,38 +24,23 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27652 invoked from network); 25 Jun 2020 02:27:01 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=ZQNZYHZs3Rf5u37OLrL6y0pvgTgU4h8M5jVmsv5Nrec=;
-        b=AZcqU08vwZw9lrCsZsKBlLyXkNyZa4Z91/EmPbGeOoW2ao/UQMOSfq81bN29+UrCso
-         7XPCJ68zo766UgdGF3xas4X6/4NGojSucMUgoIYWA6qPtQ80X69hWEj5o2B37QuhSRyy
-         p3T5MPqVetLqV6OVPTWY3BhiYkewqHCVhjDURFb/o2OBxrl4wtZ70UcwJ6PC2x35PBHU
-         a+5QytEgeiUH6+TzQCmECEq9Gjrx76ilvOkvVCK2qPGIbt8zlhiBAAvrmfbAx2O7mbJe
-         QlK6xMcNBCWbtNdDmUQ+DHQHM9dT2zR7aGR7uZ05zx+3QEHSIhDQ9TVdZSL7xdC/foKW
-         khWA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=ZQNZYHZs3Rf5u37OLrL6y0pvgTgU4h8M5jVmsv5Nrec=;
-        b=k9eqHtNHDhUaQ+WSxCfOpL+QPSKFBfIlAHogSBjPExsADk4TBCSo5n6AKb2v9oO8V9
-         xFYVvEXh6eA59IqZb+21DtMhFzkqYd5VecFnYmRvFvvJSLQLcS2pukEXdsVdELFBUOFE
-         d+7tU0zevv18LHseRQ1Rpo/D3Xju+D53/38kYdcXiYbtKmLoVSCJM+xGM0n1O5HzxmNu
-         afj4aCfAIEMtqYynbAQgSJkx6tcPRSl6KQpv1TYy4EB/4UL9Ex0UQ/7AityZZLWiDMrD
-         ih/IQ5EyXyni5DBSa4ogt1TTiFbpUtMKMq7nxZUTRtS7AyMH2QI03RkjKvnUl6WbRAnL
-         gNug==
-X-Gm-Message-State: AOAM530W+vOmw9nh3pD2DzHMQbkAkep1VcnnSFEqKqkugilO39G5fR1K
-	EkCwNuoxiW443tycll0H0jI=
-X-Google-Smtp-Source: ABdhPJw1AzgRgryeo1cu/6FpvQVFO+54yG3gpbWyWO2n0QHC6FG7I1bntUQA1AKQNkHP8ISfYtWv5g==
-X-Received: by 2002:a9d:32a1:: with SMTP id u30mr5549372otb.264.1593052009657;
-        Wed, 24 Jun 2020 19:26:49 -0700 (PDT)
-Date: Wed, 24 Jun 2020 19:26:47 -0700
-From: Nathan Chancellor <natechancellor@gmail.com>
+Received: (qmail 29986 invoked from network); 25 Jun 2020 07:46:22 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=casper.20170209; h=In-Reply-To:Content-Type:MIME-Version:
+	References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description;
+	bh=2aQ/V3CRB+JTPOL3qC/HxsWm+wJhkXGBtq9FiN50dxw=; b=MVs61XR8PHT2An2kAHFoVGpNaN
+	L4hxfCHN0na+bXYcmoGM6fWmmaLm7d3p6PumUpigGZx4NET8Y22MadCNhuDD2tjz4bsAx+YeRr8US
+	rO5Ph/sbzdu4v7rVC1aVaiLtBk178mbNOCE6uWemg8h/W8LV+TH9FVvH8ZqN2vdqTAt5dRcG3NIfV
+	szFdqm0VJ59PkYZYpIY6zdlwCdeWCvhK56AovRtjFjyPn0yqF3yhfbzwmorhqV4KQ1ma6vlIdDuje
+	xB9TwF6459hMixZkCdI6jdbxggiKReKLnIA3sI0gv2cMZe/rxoUPK9GVPLyTKxrBYihPvtqUYvTp7
+	UeOTNh3A==;
+Date: Thu, 25 Jun 2020 09:45:30 +0200
+From: Peter Zijlstra <peterz@infradead.org>
 To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
+Cc: Steven Rostedt <rostedt@goodmis.org>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Will Deacon <will@kernel.org>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	"Paul E. McKenney" <paulmck@kernel.org>,
 	Kees Cook <keescook@chromium.org>,
@@ -67,155 +50,54 @@ Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
 	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
 	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
 	x86@kernel.org
-Subject: Re: [PATCH 02/22] kbuild: add support for Clang LTO
-Message-ID: <20200625022647.GB2871607@ubuntu-n2-xlarge-x86>
+Subject: Re: [PATCH 04/22] kbuild: lto: fix recordmcount
+Message-ID: <20200625074530.GW4817@hirez.programming.kicks-ass.net>
 References: <20200624203200.78870-1-samitolvanen@google.com>
- <20200624203200.78870-3-samitolvanen@google.com>
+ <20200624203200.78870-5-samitolvanen@google.com>
+ <20200624212737.GV4817@hirez.programming.kicks-ass.net>
+ <20200624214530.GA120457@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200624203200.78870-3-samitolvanen@google.com>
+In-Reply-To: <20200624214530.GA120457@google.com>
 
-Hi Sami,
+On Wed, Jun 24, 2020 at 02:45:30PM -0700, Sami Tolvanen wrote:
+> On Wed, Jun 24, 2020 at 11:27:37PM +0200, Peter Zijlstra wrote:
+> > On Wed, Jun 24, 2020 at 01:31:42PM -0700, Sami Tolvanen wrote:
+> > > With LTO, LLVM bitcode won't be compiled into native code until
+> > > modpost_link. This change postpones calls to recordmcount until after
+> > > this step.
+> > > 
+> > > In order to exclude specific functions from inspection, we add a new
+> > > code section .text..nomcount, which we tell recordmcount to ignore, and
+> > > a __nomcount attribute for moving functions to this section.
+> > 
+> > I'm confused, you only add this to functions in ftrace itself, which is
+> > compiled with:
+> > 
+> >  KBUILD_CFLAGS = $(subst $(CC_FLAGS_FTRACE),,$(ORIG_CFLAGS))
+> > 
+> > and so should not have mcount/fentry sites anyway. So what's the point
+> > of ignoring them further?
+> > 
+> > This Changelog does not explain.
+> 
+> Normally, recordmcount ignores each ftrace.o file, but since we are
+> running it on vmlinux.o, we need another way to stop it from looking
+> at references to mcount/fentry that are not calls. Here's a comment
+> from recordmcount.c:
+> 
+>   /*
+>    * The file kernel/trace/ftrace.o references the mcount
+>    * function but does not call it. Since ftrace.o should
+>    * not be traced anyway, we just skip it.
+>    */
+> 
+> But I agree, the commit message could use more defails. Also +Steven
+> for thoughts about this approach.
 
-On Wed, Jun 24, 2020 at 01:31:40PM -0700, 'Sami Tolvanen' via Clang Built Linux wrote:
-> This change adds build system support for Clang's Link Time
-> Optimization (LTO). With -flto, instead of ELF object files, Clang
-> produces LLVM bitcode, which is compiled into native code at link
-> time, allowing the final binary to be optimized globally. For more
-> details, see:
-> 
->   https://llvm.org/docs/LinkTimeOptimization.html
-> 
-> The Kconfig option CONFIG_LTO_CLANG is implemented as a choice,
-> which defaults to LTO being disabled. To use LTO, the architecture
-> must select ARCH_SUPPORTS_LTO_CLANG and support:
-> 
->   - compiling with Clang,
->   - compiling inline assembly with Clang's integrated assembler,
->   - and linking with LLD.
-> 
-> While using full LTO results in the best runtime performance, the
-> compilation is not scalable in time or memory. CONFIG_THINLTO
-> enables ThinLTO, which allows parallel optimization and faster
-> incremental builds. ThinLTO is used by default if the architecture
-> also selects ARCH_SUPPORTS_THINLTO:
-> 
->   https://clang.llvm.org/docs/ThinLTO.html
-> 
-> To enable LTO, LLVM tools must be used to handle bitcode files. The
-> easiest way is to pass the LLVM=1 option to make:
-> 
->   $ make LLVM=1 defconfig
->   $ scripts/config -e LTO_CLANG
->   $ make LLVM=1
-> 
-> Alternatively, at least the following LLVM tools must be used:
-> 
->   CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm
-> 
-> To prepare for LTO support with other compilers, common parts are
-> gated behind the CONFIG_LTO option, and LTO can be disabled for
-> specific files by filtering out CC_FLAGS_LTO.
-> 
-> Note that support for DYNAMIC_FTRACE and MODVERSIONS are added in
-> follow-up patches.
-> 
-> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-> ---
->  Makefile                          | 16 ++++++++
->  arch/Kconfig                      | 66 +++++++++++++++++++++++++++++++
->  include/asm-generic/vmlinux.lds.h | 11 ++++--
->  scripts/Makefile.build            |  9 ++++-
->  scripts/Makefile.modfinal         |  9 ++++-
->  scripts/Makefile.modpost          | 24 ++++++++++-
->  scripts/link-vmlinux.sh           | 32 +++++++++++----
->  7 files changed, 151 insertions(+), 16 deletions(-)
-> 
-> diff --git a/Makefile b/Makefile
-> index ac2c61c37a73..0c7fe6fb2143 100644
-> --- a/Makefile
-> +++ b/Makefile
-> @@ -886,6 +886,22 @@ KBUILD_CFLAGS	+= $(CC_FLAGS_SCS)
->  export CC_FLAGS_SCS
->  endif
->  
-> +ifdef CONFIG_LTO_CLANG
-> +ifdef CONFIG_THINLTO
-> +CC_FLAGS_LTO_CLANG := -flto=thin $(call cc-option, -fsplit-lto-unit)
-> +KBUILD_LDFLAGS	+= --thinlto-cache-dir=.thinlto-cache
-> +else
-> +CC_FLAGS_LTO_CLANG := -flto
-> +endif
-> +CC_FLAGS_LTO_CLANG += -fvisibility=default
-> +endif
-> +
-> +ifdef CONFIG_LTO
-> +CC_FLAGS_LTO	:= $(CC_FLAGS_LTO_CLANG)
-> +KBUILD_CFLAGS	+= $(CC_FLAGS_LTO)
-> +export CC_FLAGS_LTO
-> +endif
-> +
->  # arch Makefile may override CC so keep this after arch Makefile is included
->  NOSTDINC_FLAGS += -nostdinc -isystem $(shell $(CC) -print-file-name=include)
->  
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index 8cc35dc556c7..e00b122293f8 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -552,6 +552,72 @@ config SHADOW_CALL_STACK
->  	  reading and writing arbitrary memory may be able to locate them
->  	  and hijack control flow by modifying the stacks.
->  
-> +config LTO
-> +	bool
-> +
-> +config ARCH_SUPPORTS_LTO_CLANG
-> +	bool
-> +	help
-> +	  An architecture should select this option if it supports:
-> +	  - compiling with Clang,
-> +	  - compiling inline assembly with Clang's integrated assembler,
-> +	  - and linking with LLD.
-> +
-> +config ARCH_SUPPORTS_THINLTO
-> +	bool
-> +	help
-> +	  An architecture should select this option if it supports Clang's
-> +	  ThinLTO.
-> +
-> +config THINLTO
-> +	bool "Clang ThinLTO"
-> +	depends on LTO_CLANG && ARCH_SUPPORTS_THINLTO
-> +	default y
-> +	help
-> +	  This option enables Clang's ThinLTO, which allows for parallel
-> +	  optimization and faster incremental compiles. More information
-> +	  can be found from Clang's documentation:
-> +
-> +	    https://clang.llvm.org/docs/ThinLTO.html
-> +
-> +choice
-> +	prompt "Link Time Optimization (LTO)"
-> +	default LTO_NONE
-> +	help
-> +	  This option enables Link Time Optimization (LTO), which allows the
-> +	  compiler to optimize binaries globally.
-> +
-> +	  If unsure, select LTO_NONE.
-> +
-> +config LTO_NONE
-> +	bool "None"
-> +
-> +config LTO_CLANG
-> +	bool "Clang's Link Time Optimization (EXPERIMENTAL)"
-> +	depends on CC_IS_CLANG && CLANG_VERSION >= 110000 && LD_IS_LLD
+Ah, is thi because recordmcount isn't smart enough to know the
+difference between "CALL $mcount" and any other RELA that has mcount?
 
-I am curious, what is the reason for gating this at clang 11.0.0?
-
-Presumably this? https://github.com/ClangBuiltLinux/linux/issues/510
-
-It might be nice to notate this so that we do not have to wonder :)
-
-Cheers,
-Nathan
+At least for x86_64 I can do a really quick take for a recordmcount pass
+in objtool, but I suppose you also need this for ARM64 ?
