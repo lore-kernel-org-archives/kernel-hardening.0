@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Mpdn=AH=lists.openwall.com=kernel-hardening-return-19179-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ldLv=AH=lists.openwall.com=kernel-hardening-return-19180-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DD2DBC433DF
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jun 2020 15:59:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A2EC6C433DF
+	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jun 2020 15:59:18 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 388BF204EC
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jun 2020 15:59:09 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id F37C9204EC
+	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Jun 2020 15:59:17 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="KvkqltL7"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 388BF204EC
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="pMTRSoP0"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F37C9204EC
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19179-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 29741 invoked by uid 550); 26 Jun 2020 15:58:55 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19180-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29955 invoked by uid 550); 26 Jun 2020 15:58:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,14 +25,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28583 invoked from network); 26 Jun 2020 15:58:54 -0000
+Received: (qmail 29837 invoked from network); 26 Jun 2020 15:58:56 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1593187123;
-	bh=CLa/KzjkFuVB29ckXD65Yi/MPGSAfUM7uGj3uLRMd8c=;
+	s=default; t=1593187125;
+	bh=MI1bCIGMLcKccd2dmrayi3mwq6PLyLqFmsxPhzVVj+o=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=KvkqltL7W8QSPKTPhvffxK28GoCuvQLjCChN2Ds1Eul/Ijdz/A4oA+ajy5pKuK7Y8
-	 94WMZjajjI56YrQyBi5rSRaIHerNWXXrIqyvkRgXalg3TIe97DBCQy1h6HDSOvm81N
-	 VK9Lnps++4YE0cPVnQn+7mDc69oGPUt/SuJo6i/s=
+	b=pMTRSoP0LXtmeOSgiI76477HiCGpazaJWj4NOXf4jg37wdu7QJRO+hgH7/lbWlegp
+	 YbMVEvycZyfYFIw7lvXVRybyHe8zWKkHfI1tp0NnY6Ii7+0F1yeppV9UA9SqboJnmG
+	 d43IUvvLg9Bbk9CBd3EtE1y9ClPj/ONI/O8B3hsw=
 From: Ard Biesheuvel <ardb@kernel.org>
 To: linux-arm-kernel@lists.infradead.org
 Cc: linux-acpi@vger.kernel.org,
@@ -41,145 +41,49 @@ Cc: linux-acpi@vger.kernel.org,
 	lorenzo.pieralisi@arm.com,
 	sudeep.holla@arm.com,
 	kernel-hardening@lists.openwall.com,
-	Ard Biesheuvel <ardb@kernel.org>,
-	"Jason A . Donenfeld" <Jason@zx2c4.com>
-Subject: [PATCH v3 1/2] arm64/acpi: disallow AML memory opregions to access kernel memory
-Date: Fri, 26 Jun 2020 17:58:31 +0200
-Message-Id: <20200626155832.2323789-2-ardb@kernel.org>
+	Ard Biesheuvel <ardb@kernel.org>
+Subject: [PATCH v3 2/2] arm64/acpi: disallow writeable AML opregion mapping for EFI code regions
+Date: Fri, 26 Jun 2020 17:58:32 +0200
+Message-Id: <20200626155832.2323789-3-ardb@kernel.org>
 X-Mailer: git-send-email 2.27.0
 In-Reply-To: <20200626155832.2323789-1-ardb@kernel.org>
 References: <20200626155832.2323789-1-ardb@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-AML uses SystemMemory opregions to allow AML handlers to access MMIO
-registers of, e.g., GPIO controllers, or access reserved regions of
-memory that are owned by the firmware.
+Given that the contents of EFI runtime code and data regions are
+provided by the firmware, as well as the DSDT, it is not unimaginable
+that AML code exists today that accesses EFI runtime code regions using
+a SystemMemory OpRegion. There is nothing fundamentally wrong with that,
+but since we take great care to ensure that executable code is never
+mapped writeable and executable at the same time, we should not permit
+AML to create writable mapping.
 
-Currently, we also allow AML access to memory that is owned by the
-kernel and mapped via the linear region, which does not seem to be
-supported by a valid use case, and exposes the kernel's internal
-state to AML methods that may be buggy and exploitable.
-
-On arm64, ACPI support requires booting in EFI mode, and so we can cross
-reference the requested region against the EFI memory map, rather than
-just do a minimal check on the first page. So let's only permit regions
-to be remapped by the ACPI core if
-- they don't appear in the EFI memory map at all (which is the case for
-  most MMIO), or
-- they are covered by a single region in the EFI memory map, which is not
-  of a type that describes memory that is given to the kernel at boot.
-
-Reported-by: Jason A. Donenfeld <Jason@zx2c4.com>
 Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
 ---
- arch/arm64/include/asm/acpi.h | 15 +----
- arch/arm64/kernel/acpi.c      | 66 ++++++++++++++++++++
- 2 files changed, 67 insertions(+), 14 deletions(-)
+ arch/arm64/kernel/acpi.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
 
-diff --git a/arch/arm64/include/asm/acpi.h b/arch/arm64/include/asm/acpi.h
-index a45366c3909b..bd68e1b7f29f 100644
---- a/arch/arm64/include/asm/acpi.h
-+++ b/arch/arm64/include/asm/acpi.h
-@@ -47,20 +47,7 @@
- pgprot_t __acpi_get_mem_attribute(phys_addr_t addr);
- 
- /* ACPI table mapping after acpi_permanent_mmap is set */
--static inline void __iomem *acpi_os_ioremap(acpi_physical_address phys,
--					    acpi_size size)
--{
--	/* For normal memory we already have a cacheable mapping. */
--	if (memblock_is_map_memory(phys))
--		return (void __iomem *)__phys_to_virt(phys);
--
--	/*
--	 * We should still honor the memory's attribute here because
--	 * crash dump kernel possibly excludes some ACPI (reclaim)
--	 * regions from memblock list.
--	 */
--	return __ioremap(phys, size, __acpi_get_mem_attribute(phys));
--}
-+void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size);
- #define acpi_os_ioremap acpi_os_ioremap
- 
- typedef u64 phys_cpuid_t;
 diff --git a/arch/arm64/kernel/acpi.c b/arch/arm64/kernel/acpi.c
-index a7586a4db142..01b861e225b0 100644
+index 01b861e225b0..455966401102 100644
 --- a/arch/arm64/kernel/acpi.c
 +++ b/arch/arm64/kernel/acpi.c
-@@ -261,6 +261,72 @@ pgprot_t __acpi_get_mem_attribute(phys_addr_t addr)
- 	return __pgprot(PROT_DEVICE_nGnRnE);
- }
+@@ -301,6 +301,15 @@ void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size)
+ 			pr_warn(FW_BUG "requested region covers kernel memory @ %pa\n", &phys);
+ 			return NULL;
  
-+void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size)
-+{
-+	efi_memory_desc_t *md, *region = NULL;
-+	pgprot_t prot;
-+
-+	if (WARN_ON_ONCE(!efi_enabled(EFI_MEMMAP)))
-+		return NULL;
-+
-+	for_each_efi_memory_desc(md) {
-+		u64 end = md->phys_addr + (md->num_pages << EFI_PAGE_SHIFT);
-+
-+		if (phys < md->phys_addr || phys >= end)
-+			continue;
-+
-+		if (phys + size > end) {
-+			pr_warn(FW_BUG "requested region covers multiple EFI memory regions\n");
-+			return NULL;
-+		}
-+		region = md;
-+		break;
-+	}
-+
-+	/*
-+	 * It is fine for AML to remap regions that are not represented in the
-+	 * EFI memory map at all, as it only describes normal memory, and MMIO
-+	 * regions that require a virtual mapping to make them accessible to
-+	 * the EFI runtime services.
-+	 */
-+	prot = __pgprot(PROT_DEVICE_nGnRnE);
-+	if (region) {
-+		switch (region->type) {
-+		case EFI_LOADER_CODE:
-+		case EFI_LOADER_DATA:
-+		case EFI_BOOT_SERVICES_CODE:
-+		case EFI_BOOT_SERVICES_DATA:
-+		case EFI_CONVENTIONAL_MEMORY:
-+		case EFI_PERSISTENT_MEMORY:
-+			pr_warn(FW_BUG "requested region covers kernel memory @ %pa\n", &phys);
-+			return NULL;
-+
-+		case EFI_ACPI_RECLAIM_MEMORY:
++		case EFI_RUNTIME_SERVICES_CODE:
 +			/*
-+			 * ACPI reclaim memory is used to pass firmware tables
-+			 * and other data that is intended for consumption by
-+			 * the OS only, which may decide it wants to reclaim
-+			 * that memory and use it for something else. We never
-+			 * do that, but we usually add it to the linear map
-+			 * anyway, in which case we should use the existing
-+			 * mapping.
++			 * This would be unusual, but not problematic per se,
++			 * as long as we take care not to create a writable
++			 * mapping for executable code.
 +			 */
-+			if (memblock_is_map_memory(phys))
-+				return (void __iomem *)__phys_to_virt(phys);
-+			/* fall through */
++			prot = PAGE_KERNEL_RO;
++			break;
 +
-+		default:
-+			if (region->attribute & EFI_MEMORY_WB)
-+				prot = PAGE_KERNEL;
-+			else if (region->attribute & EFI_MEMORY_WT)
-+				prot = __pgprot(PROT_NORMAL_WT);
-+			else if (region->attribute & EFI_MEMORY_WC)
-+				prot = __pgprot(PROT_NORMAL_NC);
-+		}
-+	}
-+	return __ioremap(phys, size, prot);
-+}
-+
- /*
-  * Claim Synchronous External Aborts as a firmware first notification.
-  *
+ 		case EFI_ACPI_RECLAIM_MEMORY:
+ 			/*
+ 			 * ACPI reclaim memory is used to pass firmware tables
 -- 
 2.27.0
 
