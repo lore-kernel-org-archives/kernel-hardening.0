@@ -1,22 +1,22 @@
-Return-Path: <SRS0=w/hd=AJ=lists.openwall.com=kernel-hardening-return-19186-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yfjl=AJ=lists.openwall.com=kernel-hardening-return-19187-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-1.0 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7A1B3C433DF
-	for <kernel-hardening@archiver.kernel.org>; Sun, 28 Jun 2020 06:00:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 20786C433E0
+	for <kernel-hardening@archiver.kernel.org>; Sun, 28 Jun 2020 16:57:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D0A84207E8
-	for <kernel-hardening@archiver.kernel.org>; Sun, 28 Jun 2020 06:00:54 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 4189520672
+	for <kernel-hardening@archiver.kernel.org>; Sun, 28 Jun 2020 16:57:39 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="djQ8GNcZ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D0A84207E8
+	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="pQVYjDhz"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4189520672
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19186-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22215 invoked by uid 550); 28 Jun 2020 06:00:46 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19187-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9327 invoked by uid 550); 28 Jun 2020 16:57:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,107 +24,183 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22181 invoked from network); 28 Jun 2020 06:00:45 -0000
-DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-03.nifty.com 05S60Pt9004020
+Received: (qmail 9292 invoked from network); 28 Jun 2020 16:57:27 -0000
+DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-06.nifty.com 05SGuus9025290
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
-	s=dec2015msa; t=1593324027;
-	bh=0Adi9oEkoNL+VTKk8ereW4+c8tkNY7OySZ7YBSe/YKA=;
+	s=dec2015msa; t=1593363417;
+	bh=dzgWJCQRhelJ3hJ0whBHzpzDiUuuI9JauHMlySTBPIU=;
 	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=djQ8GNcZ6OaJRd6KZriIuFLm4oHwO98Z73bgyDkIIGwgMeV9ji3d+fUDWbfZpHd9L
-	 yS3k8arpc4oL8YK+PkqqoLv8VIHIfH52qjvHJTVcl80p6bmftr3aPtwDq6K/0hYCsw
-	 R16OHZajjQ/Q/h+txtb1JIFlNQo4Ir+Z0V8g7Wpfcu9xkEPqtEX3Hm/QwnggCfXxAI
-	 DAe70KRDRgEDP+41rG2Xnl2wIo1Mhd/wfKuMfcrX2UyiT/bY3CbVMmAsf4Kz2PhX3X
-	 cNiIoQBd4KhuLUw/7fAhc3XRXuXoRVx3ttTybTW+yPKC/+cRHgEcyEbNDQ4FYHtaNb
-	 j4aoLZBOrCWew==
-X-Nifty-SrcIP: [209.85.217.41]
-X-Gm-Message-State: AOAM530bwQ8THkAVbp2xZrLSumCv04b55Ei9So/oeB7ZKVipvy2wwja/
-	H8pe379LvxC0sKUmFGvvh/oiVLoUCapA7Sv4Xes=
-X-Google-Smtp-Source: ABdhPJxgrePNlmZbq4ODpdCqz51OGKwCFn/JnfhPPtPIn9WGJz+XI26wgi75kbSCrE2XC7QDCT/X8jAgUv6zb+cIVPk=
-X-Received: by 2002:a67:22c7:: with SMTP id i190mr7470079vsi.179.1593324024627;
- Sat, 27 Jun 2020 23:00:24 -0700 (PDT)
+	b=pQVYjDhzrsJA6M7XpxbJqHnruHm5X7g3n1Kzkw5zIgfgjDRo+j3deI8xW2don1xHR
+	 SO+SQYBUZEyFCUrGc50KFSaD6YGpHcgOKivDLJFzcFvMcZFDoPh826AnzwDJ/dTlcZ
+	 XEHXkbH3vze9eTTjPhA7py9Zff0qRrVUxiwkXyF0tIgZ4rdkeQox0ibMhHZYMY/erK
+	 zHU1NLw3Y18syCdL5Ik0bFu8+9v5P2RWmtIFa7ICyZ8tDEiHkIvajb/YAroj4VMm13
+	 gNClWmaKr+LUcfv6+gze80dpCl/cxi0AKBoUjJ4gBkf7NT1SlwUhJRo1YxZ8+yAd8X
+	 G4UFTF0GMf0Qw==
+X-Nifty-SrcIP: [209.85.222.45]
+X-Gm-Message-State: AOAM530DPMpmDXNrtyRflY3FmFiFpgdd0VgMl5wdzCafwY4KEFVcVNgr
+	NZ82qPRdivdf59H2IKHE4fQ9coLHejNcRrAt7Ac=
+X-Google-Smtp-Source: ABdhPJyMuCHcA0fUYMlHXkn2vrcpvctKNxRD41GXgGVOqeU3V4PpT9PTQAU55moKry8aIAY4mBAqmLgVOy+XRSWLbeg=
+X-Received: by 2002:ab0:156d:: with SMTP id p42mr8396563uae.121.1593363415963;
+ Sun, 28 Jun 2020 09:56:55 -0700 (PDT)
 MIME-Version: 1.0
-References: <20200213122410.1605-1-masahiroy@kernel.org> <202002251057.C4E397A@keescook>
-In-Reply-To: <202002251057.C4E397A@keescook>
+References: <20200624203200.78870-1-samitolvanen@google.com>
+In-Reply-To: <20200624203200.78870-1-samitolvanen@google.com>
 From: Masahiro Yamada <masahiroy@kernel.org>
-Date: Sun, 28 Jun 2020 14:59:47 +0900
-X-Gmail-Original-Message-ID: <CAK7LNASw0YT8_itaa0OeZi8toV1TUj6EKCMbg6rchdYub0cgww@mail.gmail.com>
-Message-ID: <CAK7LNASw0YT8_itaa0OeZi8toV1TUj6EKCMbg6rchdYub0cgww@mail.gmail.com>
-Subject: Re: [PATCH] gcc-plugins: fix gcc-plugins directory path in documentation
-To: Kees Cook <keescook@chromium.org>
-Cc: Jonathan Corbet <corbet@lwn.net>, Emese Revfy <re.emese@gmail.com>,
-        Michal Marek <michal.lkml@markovi.net>,
+Date: Mon, 29 Jun 2020 01:56:19 +0900
+X-Gmail-Original-Message-ID: <CAK7LNASvb0UDJ0U5wkYYRzTAdnEs64HjXpEUL7d=V0CXiAXcNw@mail.gmail.com>
+Message-ID: <CAK7LNASvb0UDJ0U5wkYYRzTAdnEs64HjXpEUL7d=V0CXiAXcNw@mail.gmail.com>
+Subject: Re: [PATCH 00/22] add support for Clang LTO
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Will Deacon <will@kernel.org>,
+        Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+        "Paul E. McKenney" <paulmck@kernel.org>,
+        Kees Cook <keescook@chromium.org>,
+        Nick Desaulniers <ndesaulniers@google.com>,
+        clang-built-linux <clang-built-linux@googlegroups.com>,
         Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+        linux-arch <linux-arch@vger.kernel.org>,
+        linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
         Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
-        Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+        Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+        linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Wed, Feb 26, 2020 at 3:58 AM Kees Cook <keescook@chromium.org> wrote:
+On Thu, Jun 25, 2020 at 5:32 AM 'Sami Tolvanen' via Clang Built Linux
+<clang-built-linux@googlegroups.com> wrote:
 >
-> On Thu, Feb 13, 2020 at 09:24:10PM +0900, Masahiro Yamada wrote:
-> > Fix typos "plgins" -> "plugins".
-> >
-> > Signed-off-by: Masahiro Yamada <masahiroy@kernel.org>
+> This patch series adds support for building x86_64 and arm64 kernels
+> with Clang's Link Time Optimization (LTO).
 >
-> Thanks!
+> In addition to performance, the primary motivation for LTO is to allow
+> Clang's Control-Flow Integrity (CFI) to be used in the kernel. Google's
+> Pixel devices have shipped with LTO+CFI kernels since 2018.
 >
-> Acked-by: Kees Cook <keescook@chromium.org>
+> Most of the patches are build system changes for handling LLVM bitcode,
+> which Clang produces with LTO instead of ELF object files, postponing
+> ELF processing until a later stage, and ensuring initcall ordering.
 >
-> Jon, can you take this?
-
-I noticed this patch had fallen into a crack.
-
-Applied to linux-kbuild now.
-Thanks.
+> Note that first objtool patch in the series is already in linux-next,
+> but as it's needed with LTO, I'm including it also here to make testing
+> easier.
 
 
+I put this series on a testing branch,
+and 0-day bot started reporting some issues.
+
+(but 0-day bot is quieter than I expected.
+Perhaps, 0-day bot does not turn on LLVM=1 ?)
 
 
 
-> -Kees
+I also got an error for
+ARCH=arm64 allyesconfig + CONFIG_LTO_CLANG=y
+
+
+
+$ make ARCH=arm64 LLVM=1 LLVM_IAS=1
+CROSS_COMPILE=~/tools/aarch64-linaro-7.5/bin/aarch64-linux-gnu-
+-j24
+
+  ...
+
+  GEN     .version
+  CHK     include/generated/compile.h
+  UPD     include/generated/compile.h
+  CC      init/version.o
+  AR      init/built-in.a
+  GEN     .tmp_initcalls.lds
+  GEN     .tmp_symversions.lds
+  LTO     vmlinux.o
+  MODPOST vmlinux.symvers
+  MODINFO modules.builtin.modinfo
+  GEN     modules.builtin
+  LD      .tmp_vmlinux.kallsyms1
+ld.lld: error: undefined symbol: __compiletime_assert_905
+>>> referenced by irqbypass.c
+>>>               vmlinux.o:(jeq_imm)
+make: *** [Makefile:1161: vmlinux] Error 1
+
+
+
+
+
+
+
+
+> Sami Tolvanen (22):
+>   objtool: use sh_info to find the base for .rela sections
+>   kbuild: add support for Clang LTO
+>   kbuild: lto: fix module versioning
+>   kbuild: lto: fix recordmcount
+>   kbuild: lto: postpone objtool
+>   kbuild: lto: limit inlining
+>   kbuild: lto: merge module sections
+>   kbuild: lto: remove duplicate dependencies from .mod files
+>   init: lto: ensure initcall ordering
+>   init: lto: fix PREL32 relocations
+>   pci: lto: fix PREL32 relocations
+>   modpost: lto: strip .lto from module names
+>   scripts/mod: disable LTO for empty.c
+>   efi/libstub: disable LTO
+>   drivers/misc/lkdtm: disable LTO for rodata.o
+>   arm64: export CC_USING_PATCHABLE_FUNCTION_ENTRY
+>   arm64: vdso: disable LTO
+>   arm64: allow LTO_CLANG and THINLTO to be selected
+>   x86, vdso: disable LTO only for vDSO
+>   x86, ftrace: disable recordmcount for ftrace_make_nop
+>   x86, relocs: Ignore L4_PAGE_OFFSET relocations
+>   x86, build: allow LTO_CLANG and THINLTO to be selected
 >
-> > ---
-> >
-> >  Documentation/kbuild/reproducible-builds.rst | 2 +-
-> >  scripts/gcc-plugins/Kconfig                  | 2 +-
-> >  2 files changed, 2 insertions(+), 2 deletions(-)
-> >
-> > diff --git a/Documentation/kbuild/reproducible-builds.rst b/Documentation/kbuild/reproducible-builds.rst
-> > index 503393854e2e..3b25655e441b 100644
-> > --- a/Documentation/kbuild/reproducible-builds.rst
-> > +++ b/Documentation/kbuild/reproducible-builds.rst
-> > @@ -101,7 +101,7 @@ Structure randomisation
-> >
-> >  If you enable ``CONFIG_GCC_PLUGIN_RANDSTRUCT``, you will need to
-> >  pre-generate the random seed in
-> > -``scripts/gcc-plgins/randomize_layout_seed.h`` so the same value
-> > +``scripts/gcc-plugins/randomize_layout_seed.h`` so the same value
-> >  is used in rebuilds.
-> >
-> >  Debug info conflicts
-> > diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-> > index e3569543bdac..7b63c819610c 100644
-> > --- a/scripts/gcc-plugins/Kconfig
-> > +++ b/scripts/gcc-plugins/Kconfig
-> > @@ -86,7 +86,7 @@ config GCC_PLUGIN_RANDSTRUCT
-> >         source tree isn't cleaned after kernel installation).
-> >
-> >         The seed used for compilation is located at
-> > -       scripts/gcc-plgins/randomize_layout_seed.h.  It remains after
-> > +       scripts/gcc-plugins/randomize_layout_seed.h.  It remains after
-> >         a make clean to allow for external modules to be compiled with
-> >         the existing seed and will be removed by a make mrproper or
-> >         make distclean.
-> > --
-> > 2.17.1
-> >
+>  .gitignore                            |   1 +
+>  Makefile                              |  27 ++-
+>  arch/Kconfig                          |  65 +++++++
+>  arch/arm64/Kconfig                    |   2 +
+>  arch/arm64/Makefile                   |   1 +
+>  arch/arm64/kernel/vdso/Makefile       |   4 +-
+>  arch/x86/Kconfig                      |   2 +
+>  arch/x86/Makefile                     |   5 +
+>  arch/x86/entry/vdso/Makefile          |   5 +-
+>  arch/x86/kernel/ftrace.c              |   1 +
+>  arch/x86/tools/relocs.c               |   1 +
+>  drivers/firmware/efi/libstub/Makefile |   2 +
+>  drivers/misc/lkdtm/Makefile           |   1 +
+>  include/asm-generic/vmlinux.lds.h     |  12 +-
+>  include/linux/compiler-clang.h        |   4 +
+>  include/linux/compiler.h              |   2 +-
+>  include/linux/compiler_types.h        |   4 +
+>  include/linux/init.h                  |  78 +++++++-
+>  include/linux/pci.h                   |  15 +-
+>  kernel/trace/ftrace.c                 |   1 +
+>  lib/Kconfig.debug                     |   2 +-
+>  scripts/Makefile.build                |  55 +++++-
+>  scripts/Makefile.lib                  |   6 +-
+>  scripts/Makefile.modfinal             |  40 +++-
+>  scripts/Makefile.modpost              |  26 ++-
+>  scripts/generate_initcall_order.pl    | 270 ++++++++++++++++++++++++++
+>  scripts/link-vmlinux.sh               | 100 +++++++++-
+>  scripts/mod/Makefile                  |   1 +
+>  scripts/mod/modpost.c                 |  16 +-
+>  scripts/mod/modpost.h                 |   9 +
+>  scripts/mod/sumversion.c              |   6 +-
+>  scripts/module-lto.lds                |  26 +++
+>  scripts/recordmcount.c                |   3 +-
+>  tools/objtool/elf.c                   |   2 +-
+>  34 files changed, 737 insertions(+), 58 deletions(-)
+>  create mode 100755 scripts/generate_initcall_order.pl
+>  create mode 100644 scripts/module-lto.lds
+>
+>
+> base-commit: 26e122e97a3d0390ebec389347f64f3730fdf48f
+> --
+> 2.27.0.212.ge8ba1cc988-goog
 >
 > --
-> Kees Cook
+> You received this message because you are subscribed to the Google Groups "Clang Built Linux" group.
+> To unsubscribe from this group and stop receiving emails from it, send an email to clang-built-linux+unsubscribe@googlegroups.com.
+> To view this discussion on the web visit https://groups.google.com/d/msgid/clang-built-linux/20200624203200.78870-1-samitolvanen%40google.com.
 
 
 
 --
 Best Regards
-
 Masahiro Yamada
