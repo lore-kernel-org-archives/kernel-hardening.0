@@ -1,23 +1,23 @@
-Return-Path: <SRS0=fgSu=AK=lists.openwall.com=kernel-hardening-return-19189-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ERh8=AL=lists.openwall.com=kernel-hardening-return-19190-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
-	version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 65570C433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 29 Jun 2020 23:21:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CF932C433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Jun 2020 19:19:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B60EE20780
-	for <kernel-hardening@archiver.kernel.org>; Mon, 29 Jun 2020 23:21:26 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 26227206A1
+	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Jun 2020 19:19:57 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="wE7nxuQQ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B60EE20780
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="p1ZTo7sq"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 26227206A1
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19189-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15779 invoked by uid 550); 29 Jun 2020 23:21:18 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19190-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1194 invoked by uid 550); 30 Jun 2020 19:19:50 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,124 +25,133 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15747 invoked from network); 29 Jun 2020 23:21:17 -0000
+Received: (qmail 1162 invoked from network); 30 Jun 2020 19:19:50 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=Y3eOZWqjsfvFABJlAWadxHNb9WOoW2QZW11FNR7qgIM=;
-        b=wE7nxuQQ8Ee1SyIlOGu96foC1kguVLhQnWfsM449qkfn/VoKBCtsVMOqOmKx7IZI4C
-         RVaEjdafrzkZKrdHnHpUfIuUaR+nDUOQdXro+nnJx5XibnwFB04m0UpfLU8lcAfNzunK
-         FH4vq/4AmRKx0OXYjTpIwOSmyWjemlGQQrsAim9D+osZfnHYYrMcyKBMOA6AcmZTCt7D
-         SC8HEZlX2KwR8OsKRbEGGGO82nQHiO6QrFnPdGaYVsrLOIGowYuaQm3rOF21PeyeGPnP
-         uhJe537nfOotmxkifcJzP2KlYRs06hCp+YYdixCMO/J34Bhc2jSz49ZJoQbscAlwSyYN
-         PnZQ==
+         :content-disposition:in-reply-to:user-agent;
+        bh=+SWuClaaDOYjnOgTPZaQNynsf/0FUgaUl6LbycKFTXY=;
+        b=p1ZTo7sqWt0hVOCPEQgh4KonD/ze3MFi/Yo01MsLgVJf5FMsIFlA6JW4xVwwRJLlvb
+         2LGkFLB4TzM0dvjc8XtPJfVJhY8j+voxfHGY5wyBtTX1C+ZACZgqKm0vEVfpHx7NWev/
+         lcBMgEAqWixQZY8F67ZRGbDhWdhv/yhtFew6T+y/MorkhkJgTBklhLRQcuC4gHDG6Oma
+         5i9nqG9qYH/2KTAQvzLCjszZz0sf7Mhc082rZwllvHEn17zE65LAchhrPt5sAy6Dzzit
+         PtTeeRPqNlzXbRW/+6N4LbmHjg3QifubG2x60lzfsOi+sgYvSO6qM++fCjJ07Ct2wEA1
+         NugQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=Y3eOZWqjsfvFABJlAWadxHNb9WOoW2QZW11FNR7qgIM=;
-        b=WpsBOyA9YGbL+rMX2pRZZa68XhaDjGZBylKTyZ0SCBtsxbIFJGKxmJGQaxZaMGbyjR
-         SCIhYImxXuUZEQumgWyHYksgFZXaDC2vDNvqIXASHXrh7ynraa133DkD3kkdvIFIOega
-         bx8V3C0HHrZoDfEaoaHNQeUhFkwLQsezW5iulUfybVXbbfWj9x8bW/4t4+2J4r/hlzrd
-         KW75nKeN9MnkIMGpWdEX4HMu2dZycU9WC2nTyaqWo1Y1BWloY+/OPHPbSRqC1NmeNFjL
-         E3uU+nqmi51jyClLFstc/66kc8G/lz+CfAUK75tTTseJkbwqLmqmX9Q6+X0kS2j22mJd
-         xnZw==
-X-Gm-Message-State: AOAM531MsP7JdD6+R89w6Tp4uYo5IRpNJjhdxaoIGtFTgm9J8Tkriuop
-	w4RoHwrteF1ZMphuLasn5TMhYQ==
-X-Google-Smtp-Source: ABdhPJyWjBAVW07I/bBTVGZOBkIjcBIoUitijR4kfg05/memnxRwz5hP6QJZ8z5KUGyU1tHG6QOWdA==
-X-Received: by 2002:a62:ce48:: with SMTP id y69mr15584876pfg.208.1593472865320;
-        Mon, 29 Jun 2020 16:21:05 -0700 (PDT)
-Date: Mon, 29 Jun 2020 16:20:59 -0700
-From: Sami Tolvanen <samitolvanen@google.com>
-To: Masahiro Yamada <masahiroy@kernel.org>
-Cc: Will Deacon <will@kernel.org>,
+         :mime-version:content-disposition:in-reply-to:user-agent;
+        bh=+SWuClaaDOYjnOgTPZaQNynsf/0FUgaUl6LbycKFTXY=;
+        b=p36wK4Z1fQEQ6Oq7hCxsTW8zUanBGddcX8illMk7khnZZ3LHGl+g3iQNLlrJp8pXpU
+         8au8Jm881lT/9M6IPjZmH1K94JCOhuJTRehsFdPfGoS0ajxPJ/O+Bej3fzXEP8Vufth1
+         +oYzrFZhxtphS5q//547PFJWQsRyEHV96wFRGGdDszDEYJTcJ9rZdE8nIUUNfpSbhUbT
+         hblFEiV2Kt3zEcDwUQDxQxIu2Op4COeyDqnGuLqj210y3pS5bSmheTzjNy1Ss5+tHIXu
+         X9MH4MTtFMFHyZCoQPHRGxhnVeSyI7UpVNk3itKHMENddt9/2jAqffWF/WwhvW5hLy2C
+         3/6Q==
+X-Gm-Message-State: AOAM5335oXivUf45eiSfU3ld5jaf4H4Ya6oAhBfdDs8T7zj6OWQn+BsW
+	2GEG7Bg+8+2yFTtkVcy7NPbxow==
+X-Google-Smtp-Source: ABdhPJy/PenvvC1HqQRiXc5HwQSjowSzX2eTbOpk9cYcS6/u9DHLBqXXZHK4LjdBVn6FouYmSayxcQ==
+X-Received: by 2002:a1c:3286:: with SMTP id y128mr21486460wmy.29.1593544778240;
+        Tue, 30 Jun 2020 12:19:38 -0700 (PDT)
+Date: Tue, 30 Jun 2020 21:19:31 +0200
+From: Marco Elver <elver@google.com>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Nick Desaulniers <ndesaulniers@google.com>,
+	Sami Tolvanen <samitolvanen@google.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Will Deacon <will@kernel.org>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
 	"Paul E. McKenney" <paulmck@kernel.org>,
 	Kees Cook <keescook@chromium.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
 	clang-built-linux <clang-built-linux@googlegroups.com>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	linux-arch <linux-arch@vger.kernel.org>,
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
+	Linux ARM <linux-arm-kernel@lists.infradead.org>,
 	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-	linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
+	LKML <linux-kernel@vger.kernel.org>, linux-pci@vger.kernel.org,
+	"maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
 Subject: Re: [PATCH 00/22] add support for Clang LTO
-Message-ID: <20200629232059.GA3787278@google.com>
+Message-ID: <20200630191931.GA884155@elver.google.com>
 References: <20200624203200.78870-1-samitolvanen@google.com>
- <CAK7LNASvb0UDJ0U5wkYYRzTAdnEs64HjXpEUL7d=V0CXiAXcNw@mail.gmail.com>
+ <20200624211540.GS4817@hirez.programming.kicks-ass.net>
+ <CAKwvOdmxz91c-M8egR9GdR1uOjeZv7-qoTP=pQ55nU8TCpkK6g@mail.gmail.com>
+ <20200625080313.GY4817@hirez.programming.kicks-ass.net>
+ <20200625082433.GC117543@hirez.programming.kicks-ass.net>
+ <20200625085745.GD117543@hirez.programming.kicks-ass.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAK7LNASvb0UDJ0U5wkYYRzTAdnEs64HjXpEUL7d=V0CXiAXcNw@mail.gmail.com>
+In-Reply-To: <20200625085745.GD117543@hirez.programming.kicks-ass.net>
+User-Agent: Mutt/1.13.2 (2019-12-18)
 
-Hi Masahiro,
+I was asked for input on this, and after a few days digging through some
+history, thought I'd comment. Hope you don't mind.
 
-On Mon, Jun 29, 2020 at 01:56:19AM +0900, Masahiro Yamada wrote:
-> On Thu, Jun 25, 2020 at 5:32 AM 'Sami Tolvanen' via Clang Built Linux
-> <clang-built-linux@googlegroups.com> wrote:
-> >
-> > This patch series adds support for building x86_64 and arm64 kernels
-> > with Clang's Link Time Optimization (LTO).
-> >
-> > In addition to performance, the primary motivation for LTO is to allow
-> > Clang's Control-Flow Integrity (CFI) to be used in the kernel. Google's
-> > Pixel devices have shipped with LTO+CFI kernels since 2018.
-> >
-> > Most of the patches are build system changes for handling LLVM bitcode,
-> > which Clang produces with LTO instead of ELF object files, postponing
-> > ELF processing until a later stage, and ensuring initcall ordering.
-> >
-> > Note that first objtool patch in the series is already in linux-next,
-> > but as it's needed with LTO, I'm including it also here to make testing
-> > easier.
-> 
-> 
-> I put this series on a testing branch,
-> and 0-day bot started reporting some issues.
+On Thu, Jun 25, 2020 at 10:57AM +0200, Peter Zijlstra wrote:
+> On Thu, Jun 25, 2020 at 10:24:33AM +0200, Peter Zijlstra wrote:
+> > On Thu, Jun 25, 2020 at 10:03:13AM +0200, Peter Zijlstra wrote:
+> > > I'm sure Will will respond, but the basic issue is the trainwreck C11
+> > > made of dependent loads.
+> > > 
+> > > Anyway, here's a link to the last time this came up:
+> > > 
+> > >   https://lore.kernel.org/linux-arm-kernel/20171116174830.GX3624@linux.vnet.ibm.com/
+> > 
+> > Another good read:
+> > 
+> >   https://lore.kernel.org/lkml/20150520005510.GA23559@linux.vnet.ibm.com/
+[...]
+> Because now the machine can speculate and load now before seq, breaking
+> the ordering.
 
-Yes, I'll fix those issues in v2.
+First of all, I agree with the concerns, but not because of LTO.
 
-> (but 0-day bot is quieter than I expected.
-> Perhaps, 0-day bot does not turn on LLVM=1 ?)
+To set the stage better, and summarize the fundamental problem again:
+we're in the unfortunate situation that no compiler today has a way to
+_efficiently_ deal with C11's memory_order_consume
+[https://lwn.net/Articles/588300/]. If we did, we could just use that
+and be done with it. But, sadly, that doesn't seem possible right now --
+compilers just say consume==acquire. Will suggests doing the same in the
+kernel: https://lkml.kernel.org/r/20200630173734.14057-19-will@kernel.org
 
-In order for it to test an LTO build, it would need to enable LTO_CLANG
-explicitly though, in addition to LLVM=1.
+What we're most worried about right now is the existence of compiler
+transformations that could break data dependencies by e.g. turning them
+into control dependencies.
 
-> I also got an error for
-> ARCH=arm64 allyesconfig + CONFIG_LTO_CLANG=y
-> 
-> 
-> 
-> $ make ARCH=arm64 LLVM=1 LLVM_IAS=1
-> CROSS_COMPILE=~/tools/aarch64-linaro-7.5/bin/aarch64-linux-gnu-
-> -j24
-> 
->   ...
-> 
->   GEN     .version
->   CHK     include/generated/compile.h
->   UPD     include/generated/compile.h
->   CC      init/version.o
->   AR      init/built-in.a
->   GEN     .tmp_initcalls.lds
->   GEN     .tmp_symversions.lds
->   LTO     vmlinux.o
->   MODPOST vmlinux.symvers
->   MODINFO modules.builtin.modinfo
->   GEN     modules.builtin
->   LD      .tmp_vmlinux.kallsyms1
-> ld.lld: error: undefined symbol: __compiletime_assert_905
-> >>> referenced by irqbypass.c
-> >>>               vmlinux.o:(jeq_imm)
-> make: *** [Makefile:1161: vmlinux] Error 1
+If this is a real worry, I don't think LTO is the magical feature that
+will uncover those optimizations. If these compiler transformations are
+real, they also exist in a normal build! And if we are worried about
+them, we need to stop relying on dependent load ordering across the
+board; or switch to -O0 for everything. Clearly, we don't want either.
 
-I can reproduce this with ToT LLVM and it's BUILD_BUG_ON_MSG(..., "value
-too large for the field") in drivers/net/ethernet/netronome/nfp/bpf/jit.c.
-Specifically, the FIELD_FIT / __BF_FIELD_CHECK macro in ur_load_imm_any.
+Why do we think LTO is special?
 
-This compiles just fine with an earlier LLVM revision, so it could be a
-relatively recent regression. I'll take a look. Thanks for catching this!
+With LTO, Clang just emits LLVM bitcode instead of ELF objects, and
+during the linker stage intermodular optimizations across translation
+unit boundaries are done that might not be possible otherwise
+[https://llvm.org/docs/LinkTimeOptimization.html]. From the memory model
+side of things, if we could fully convey our intent to the compiler (the
+imaginary consume), there would be no problem, because all optimization
+stages from bitcode generation to the final machine code generation
+after LTO know about the intended semantics. (Also, keep in mind that
+LTO is _not_ doing post link optimization of machine code binaries!)
 
-Sami
+But as far as we can tell, there is no evidence of the dreaded "data
+dependency to control dependency" conversion with LTO that isn't there
+in non-LTO builds, if it's even there at all. Has the data to control
+dependency conversion been encountered in the wild? If not, is the
+resulting reaction an overreaction? If so, we need to be careful blaming
+LTO for something that it isn't even guilty of.
+
+So, we are probably better off untangling LTO from the story:
+
+1. LTO or no LTO does not matter. The LTO series should not get tangled
+   up with memory model issues.
+
+2. The memory model question and problems need to be answered and
+   addressed separately.
+
+Thoughts?
+
+Thanks,
+-- Marco
