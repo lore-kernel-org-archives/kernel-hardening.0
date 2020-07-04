@@ -1,24 +1,23 @@
-Return-Path: <SRS0=D1rt=AP=lists.openwall.com=kernel-hardening-return-19214-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=wpV2=AP=lists.openwall.com=kernel-hardening-return-19215-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-8.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 72B06C433DF
-	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:14:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8F1ADC433DF
+	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:25:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C1FDE20885
-	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:14:14 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3B35A208FE
+	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:25:39 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="JUkMJUai"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C1FDE20885
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="CeMC7fyM"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3B35A208FE
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19214-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9502 invoked by uid 550); 4 Jul 2020 12:14:07 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19215-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23813 invoked by uid 550); 4 Jul 2020 12:25:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,110 +25,104 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9478 invoked from network); 4 Jul 2020 12:14:06 -0000
+Received: (qmail 23778 invoked from network); 4 Jul 2020 12:25:32 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1593864784;
-	bh=ntqtRXriEvlTQZX7E9tgu9xYlAp6y6JNcyiMi9Omzoc=;
+	s=badeba3b8450; t=1593865520;
+	bh=hRnxg8DtT6k4/mZVelI77V7qFw+c66iSsZf/aODHFjk=;
 	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=JUkMJUai3QzWrXqWeQMRITAMx7R/NnfqOVFG3I/eAblyTfZcqnZfDhhN5uxnrYnj6
-	 PD1dk/Zthh5vvRXSTl3SFcGggwHsyXTIVwbtuZGpZ0e9YE94oqnk3xTsAXEznlDJ4l
-	 H7U4NCPMEs+io6untnzXIA+3BRGJFaqLDlvUpC7s=
+	b=CeMC7fyMBwu8ohSx+EQmLy69uXWkm8rVEDp0Pkf6yDpCRfGEmNJHEIHnwIvkeOF6W
+	 63vwfg5YmgMqG/lrvhl1lgvEtQ676a/UeMNtNtpbI5HcgJYAemH5eK57G31zqZvT3i
+	 FZlgqRc42e+u8x9hss9tY0nf6dFQoOWHilxSfgbo=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Sat, 4 Jul 2020 14:12:36 +0200
+Date: Sat, 4 Jul 2020 14:25:17 +0200
 From: Oscar Carter <oscar.carter@gmx.com>
-To: Helge Deller <deller@gmx.de>
-Cc: Oscar Carter <oscar.carter@gmx.com>, Kees Cook <keescook@chromium.org>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Ingo Molnar <mingo@redhat.com>,
-	"James E . J . Bottomley" <James.Bottomley@HansenPartnership.com>,
-	kernel-hardening@lists.openwall.com, linux-parisc@vger.kernel.org,
+To: Kees Cook <keescook@chromium.org>
+Cc: Oscar Carter <oscar.carter@gmx.com>,
+	Heiko Carstens <heiko.carstens@de.ibm.com>,
+	Vasily Gorbik <gor@linux.ibm.com>,
+	Christian Borntraeger <borntraeger@de.ibm.com>,
+	kernel-hardening@lists.openwall.com, linux-s390@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH] parisc/kernel/ftrace: Remove function callback casts
-Message-ID: <20200704121236.GA3143@ubuntu>
-References: <20200627134348.30601-1-oscar.carter@gmx.com>
- <97375269-f6f1-6157-c8a8-3b925232f00c@gmx.de>
+Subject: Re: [PATCH] drivers/s390/char/tty3270: Remove function callback casts
+Message-ID: <20200704122517.GB3143@ubuntu>
+References: <20200627125417.18887-1-oscar.carter@gmx.com>
+ <202006270853.C40CA89806@keescook>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <97375269-f6f1-6157-c8a8-3b925232f00c@gmx.de>
+In-Reply-To: <202006270853.C40CA89806@keescook>
 User-Agent: Mutt/1.10.1 (2018-07-13)
-X-Provags-ID: V03:K1:/qNr8bYfFud/XeUItqhmgkKVnnfxe46IOngSaoy6F0Qcr6uUaIc
- Tgljscv4oMiCP4kLp3uYe06SW9rXv5lRQMjr9C0q6HbdQanooc+Z07KPmfppUHLRZNG99n2
- GPyUSy5I5OAZttmQrI1+V3i34fhg6yOS704KXOiebV+gtwcorRToTiEyVpGRBPqu7ytjhFw
- q+zGA+Z+KRwc26UH0t85A==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:co0hVsy69TI=:ANUkg5pptO4ssqtSkfsBjf
- SSolZ8XyQPs+cBQnZcJZ/p5PnlE8RJivOzLU/FrI/AUQa4xlX70G3zFEYK985+2TxWNcbUYHU
- PZSGx9pSTm7spZqJRJ5IbVVSTqg47tp11PMpSOOtvYSnIJhkrj+0fFlcoqLYa49SFdD5iVIQR
- 97RCnqhjwnIGzXEmNFSrtIlpIbfdwp+EI9V2mTihRRXgIuKMvsZO4Z2Go/HnB+efD4J0dV2BK
- oaIdzjrB5oOjpXb83PCH7BFtASQNXuraqLazHEJiwdQ7SXW0pcPSGtPcDHfY480Vf2dZvBIvc
- uqicLGn5vdGJGAXsK30mLLsBmOdmLB0U4CJevkk/NolXL7n72VNF3Y+HzOoMDktfERGeaA9hx
- Gajsduj26xTYXN8ItPqAvMfgs0PB1jvpedoLcmKHQ1Wt9SwqMT5jdeUZ2VsfiyNfAd3cRVvh6
- EYbiZwYsApSemwB803jsmAgHcVePGyTEBxi6g6c2RZhYaZgu/hkFMGrPrkSfR2CmcqeFHrqdh
- fA178SJ1iHqqvrBtEqHTVVs93T+825EJ8NPx5OHQxo8FddAlj93oG4cBOaekbWFpK31QxSrEN
- uTSV1cEg+SO/NODCR5Hbi1Pdso4DnsqkkyxesbM2+DqYGKfCqNOJzvajt8O++B9tT89W/kSpu
- AcMC/0IJH/tdjXvPzVw6XgYKzZqjnqROr76YUoHDEP2u+gPz6c9/vF96Q7K7DpHkPGNcsq3p1
- e9vNO5SBNs5Xzd8GP4hP0dhuh7SfUhTC7KdnmgUNypFF3RcOCVO2w5NFFe6fEFMDbP+rM1Ft3
- +AXoogsSqr1YAaIpoICgpy6my+28a6YhbQn/tW8ghLGoKSRJdsYcVCQTRIUQdL8hUC/Hi41mK
- VPbfdtDl9B/hmMBzAXv5LIkW0DFDeB76KxD7YRyx34T3r+5EeHADmSS9YCnZIolMR2YrYaF5W
- Nt8jFni+/NfOUA/5fGY7IOoOzHHlFFpskZgIPY7bVTFYIj8Eu+rgrrqHfPSpBZ6j6BtXsz1BK
- uIhDEDCOFo2eIlq6fKMRXGWhplcUg2jqY4+xQ/fHiZz793u+wgNV6Ora7fm3H2Lcgojewl6c5
- NBhlkf2baB1n0u7OEoYSjnM3mhRzNta5QepPsHI0WA3VpHWB1H5ENzJ2rhAdrnF2yChHMPx2j
- 1eYDzUuvUOQVC9ubFi5Oxkmlcf1sn4uykGFiaKSXAj4SguoxDh0bC9hmsGTerT0ItUNDNzN0F
- Ba77Texv2mtuEph8g
+X-Provags-ID: V03:K1:yzZW78M2++DLSaE2wWY6qe0FnrDwLez6iHP7SSkTJBuSPNdWcNw
+ 2ASjko6NlqJ0ro0glT5/q08xba8c3/wk35ZI51qCBSm4IMuGGLzBGf/wYfejiafd04/bTwh
+ X9P9ZTS5xf0ROWjtrIcQnnUyTt3srdkjZJQQY0DFzA0AAymjIROGGxjtY+B9CsalqQ7+L52
+ NUXFNArqBNmh1L+13UAug==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:3hC62I/9p64=:UVoEGLBhNPIpOvgrjAdyjB
+ 3FgdbPiuCC3XvI7gXXjiBB1ql47XBRLqBpmTOrGoUD5gg7lzir18EJkaLRrWHvETyidwLKmyl
+ I6lhhXnHI2/TEwziK/7rZ3gAzyVYjbNWfTGPUXzUoyqxASfJ1beYaSlovGrjm2dvwJOyQ6Z3R
+ mvOZfrPFZXATPY+946oCF50nGxmLCIggHJhd8oW1dj9dsq57Y4q2cx/CXILd6FagwWHiQyqzh
+ cffWWmtj6bI76gTOVfWGtGhZBvG9cLsLPw0IId5C2Tkhohy4CuAhVjimP80gwnepN/8bF4Mig
+ rRRofCTaYPTaYOMjeKtkN+nbFYJkVfXZ5HT+aCwzLjbF1bkMk+DcqVVhBdoQaiXUm21jDPRWV
+ i+mOwBKFiLpldSKrNJVeFia6PgGSGn4toE4+Zs3kvpKDERjzCmrwYfT5s2yHCn2N7e9Hnn/cj
+ 8shptfg+joterbJeTuCUXaOGeYTUupSM//SVjl9DvqqlcieNw08Hl4oiqr51Q2or0Lc4MqAXf
+ od+Kckpy2Ombvjdq5uWTbciIJhaAqT8fMFifx5MFsKXVVdYR22pAFZXwXOUD2w5g6sgj4g1mX
+ Hu3fLrlSK0jaQ7xnQoQe8fNaMWRNtzOl4KnqQTiSFPaWnkP6KC5GNeENK/eAqJGNNMtAnaChS
+ GF/yuCafObo2L9+If/FxI0G1OEESlQX559BsHdFwhs5wVSAPJZEkMMhkqyTVZ7XGQn4j6Q8tY
+ pIrn45Yps0e8dubBoLVroxyMb0OD/uG76TPCciwjWdKqdi/pClhRX7cUr35PTMNPtUs+k4c+j
+ UMzh4jTVBy/qtTcD9GYSJcgJXCvG237Bu0X/mD5VjJNM7HF+z18yXW+DFEIwg35pCFeFaVwVX
+ bQnUOAcgRgFaBbRFhmiqOskLRoMRKrwLP6T0GXvc5HIuQQi/5/wQO2Edw/MsHh+5LTOPdSAll
+ 1Go03clwMhDWoNY57I0Co1wthSz2ianZ5OzWZb2T4aJsH30Ewa6DCGRSDM/NwYCfpZ+Tk5NNh
+ md4ffVC8xDS8AcLbTPsajmKCWQsBnjuejA4DHdoSSDa35TbB1soQhnoBS8z+0JRrE1LYNURHT
+ zOl/jaHfAm+Ea0vvnBrw/gJIF0JFAakgUyHyvIx6wDPpLwm4dcNUSNuOUrF6+bnhrFJu1keqi
+ zDMzFz7FNfZ/enBHhlo02sUrO0rxKLxEa837SUdySfl6HDKodvs8X1sNgkbHil9+UAdWO0Ann
+ pCLGX/vTDjm6Ec2Xy
 Content-Transfer-Encoding: quoted-printable
 
-On Sat, Jun 27, 2020 at 10:09:40PM +0200, Helge Deller wrote:
-> On 27.06.20 15:43, Oscar Carter wrote:
+On Sat, Jun 27, 2020 at 09:10:56AM -0700, Kees Cook wrote:
+> On Sat, Jun 27, 2020 at 02:54:17PM +0200, Oscar Carter wrote:
 > > In an effort to enable -Wcast-function-type in the top-level Makefile =
 to
 > > support Control Flow Integrity builds, remove all the function callbac=
 k
 > > casts.
 > >
-> > To do this remove the cast to a function pointer type in the compariso=
-n
-> > statement and add to the right and left operand a cast to unsigned lon=
-g
-> > type. This can be done since the comparison is against function addres=
-s
-> > (these operands are not function calls).
->
-> On some architectures (namely ia64, ppc64 and parisc64) function pointer=
-s
-> actually refer to function descriptors, which in turn point to the real
-> function address. The compiler usually takes care of such comparism.
-> That said, casting to "unsigned long" might break this...
-
-Ok, thanks for the clarification. Today I have learned about function
-descriptors.
-
+> > To do this modify the function prototypes accordingly.
+> >
 > > Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
-> > ---
-> >  arch/parisc/kernel/ftrace.c | 2 +-
-> >  1 file changed, 1 insertion(+), 1 deletion(-)
-> >
-> > diff --git a/arch/parisc/kernel/ftrace.c b/arch/parisc/kernel/ftrace.c
-> > index 1df0f67ed667..86b49a5fc049 100644
-> > --- a/arch/parisc/kernel/ftrace.c
-> > +++ b/arch/parisc/kernel/ftrace.c
-> > @@ -64,7 +64,7 @@ void notrace __hot ftrace_function_trampoline(unsign=
-ed long parent,
-> >  				function_trace_op, regs);
-> >
-> >  #ifdef CONFIG_FUNCTION_GRAPH_TRACER
-> > -	if (ftrace_graph_return !=3D (trace_func_graph_ret_t) ftrace_stub ||
-> > +	if ((unsigned long)ftrace_graph_return !=3D (unsigned long)ftrace_st=
-ub ||
 >
-> Untested, but maybe better use:
-> 	dereference_function_descriptor(ftrace_graph_return) !=3D
-> 		dereference_function_descriptor(ftrace_stub)
+> Oh yes, the tasklets! I'd love to see this fixed correctly. (Which is to
+> say, modernize the API.) Romain hasn't had time to continue the work:
+> https://lore.kernel.org/kernel-hardening/20190929163028.9665-1-romain.pe=
+rier@gmail.com/
+>
+> Is this something you'd want to tackle?
 
-Thanks for point me to the right direction about this theme. I will do a
-new version and I will resend.
+Yes, of course. It will be a pleasure to work on this. But without forgett=
+ing
+the work to remove all the function cast mismatches.
 
-> ?
-> Helge
+> > ---
+> >  drivers/s390/char/tty3270.c | 12 ++++++------
+> >  1 file changed, 6 insertions(+), 6 deletions(-)
+> >
+> > diff --git a/drivers/s390/char/tty3270.c b/drivers/s390/char/tty3270.c
+> > index 98d7fc152e32..aec996de44d9 100644
+> > --- a/drivers/s390/char/tty3270.c
+> > +++ b/drivers/s390/char/tty3270.c
+> > @@ -556,8 +556,9 @@ tty3270_scroll_backward(struct kbd_data *kbd)
+> >   * Pass input line to tty.
+> >   */
+> >  static void
+> > -tty3270_read_tasklet(struct raw3270_request *rrq)
+> > +tty3270_read_tasklet(unsigned long data)
+> >  {
+> > +	struct raw3270_request *rrq =3D (struct raw3270_request *)data;
+>
+> Regardless, this is correct as far as fixing the prototype.
+>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+>
+> --
+> Kees Cook
 
 Regards,
 Oscar Carter
