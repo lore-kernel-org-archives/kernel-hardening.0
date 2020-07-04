@@ -1,23 +1,22 @@
-Return-Path: <SRS0=wpV2=AP=lists.openwall.com=kernel-hardening-return-19215-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=R7UB=AP=lists.openwall.com=kernel-hardening-return-19216-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8F1ADC433DF
-	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:25:45 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DC374C433E0
+	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 15:11:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3B35A208FE
-	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:25:39 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 36BB5214F1
+	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 15:11:45 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="CeMC7fyM"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3B35A208FE
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19215-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 23813 invoked by uid 550); 4 Jul 2020 12:25:33 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="SSCGTrxS"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 36BB5214F1
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=alum.mit.edu
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19216-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16078 invoked by uid 550); 4 Jul 2020 15:11:37 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,104 +24,118 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23778 invoked from network); 4 Jul 2020 12:25:32 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1593865520;
-	bh=hRnxg8DtT6k4/mZVelI77V7qFw+c66iSsZf/aODHFjk=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=CeMC7fyMBwu8ohSx+EQmLy69uXWkm8rVEDp0Pkf6yDpCRfGEmNJHEIHnwIvkeOF6W
-	 63vwfg5YmgMqG/lrvhl1lgvEtQ676a/UeMNtNtpbI5HcgJYAemH5eK57G31zqZvT3i
-	 FZlgqRc42e+u8x9hss9tY0nf6dFQoOWHilxSfgbo=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Sat, 4 Jul 2020 14:25:17 +0200
-From: Oscar Carter <oscar.carter@gmx.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: Oscar Carter <oscar.carter@gmx.com>,
-	Heiko Carstens <heiko.carstens@de.ibm.com>,
-	Vasily Gorbik <gor@linux.ibm.com>,
-	Christian Borntraeger <borntraeger@de.ibm.com>,
-	kernel-hardening@lists.openwall.com, linux-s390@vger.kernel.org,
-	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH] drivers/s390/char/tty3270: Remove function callback casts
-Message-ID: <20200704122517.GB3143@ubuntu>
-References: <20200627125417.18887-1-oscar.carter@gmx.com>
- <202006270853.C40CA89806@keescook>
+Received: (qmail 16052 invoked from network); 4 Jul 2020 15:11:36 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=sender:from:date:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=OOkooQcgZT8G2WjNcK+Cq5ASRRPbRLgNwU0mUCZTWZI=;
+        b=SSCGTrxShtNJIdkHMwubUtEAPLob65gZ9Nz5GIsi4JTIzZCXrLS/99iaMWNLeILZZh
+         dUCTc3VZFmhBFFLd6jSGUcZoz4xga8nOBy81G/6qLO+eDQFVHxsn45Hc+A2nfJbxQLQ3
+         F/yWQeimUTBDQsKwVTH3jhKYtwL7xOf7lN40MjPuRNoNjMdHcoy12/g+hDD3lKHj4+yW
+         4w2ihNFDM1x8cwKAZcSDup2S5B+BdcBesMzzm3szOfZD3uGB51X/o6qFL+ZwB749hzBe
+         DWEjqvR/fDIzJeaw5zs0M8WY8K+4iXiLIzARk5Sn76TMP5jOkhrKt6AE/QYT8GXmRlM/
+         0w3g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:from:date:to:cc:subject:message-id
+         :references:mime-version:content-disposition:in-reply-to;
+        bh=OOkooQcgZT8G2WjNcK+Cq5ASRRPbRLgNwU0mUCZTWZI=;
+        b=j9jcCwZzT2qnObC9tshvazRTyhLmSO4qrGcm70syE5WbO5Xk7gA3wi5FJUTtEtymZ3
+         itgNpnJsQZAFa34Di5TKVuM6T9ULBFjOxFe+3uudCNGE9Zskm8sum7vVC6L16FpkdjWx
+         Hcea3ya0Fc+30QCJsAWEOLjlOsOA55K2CcPNJN41G4lSFMMOYJTuNLH0qz17+nWk+kvT
+         i0sEnPQ1weU/gmU/luT3v2LTvNzfaMPagM00UcPvc+tTTgDP9knjFvw280BgFjho22sg
+         3BKOAmOQfHWQpbpojcTXJiCfqpscGGubHvB6fLMCMUJtM6ls+zH/MLOYVIeYlN6VQE96
+         YikA==
+X-Gm-Message-State: AOAM5302zjf4JfNS1WppGGN6kF8L81M/Ol/Rne5GiRyS2lVu7lSLeZn7
+	n37ImD3HPT31X6ENsT188Ns=
+X-Google-Smtp-Source: ABdhPJyYWEY9xvrLxysif9VMRbbPNXdpPaaf7cVFq/ebirldMeLAaEYpHqI6t21b12ayi2VmWj4t2Q==
+X-Received: by 2002:aed:2492:: with SMTP id t18mr42182035qtc.353.1593875484322;
+        Sat, 04 Jul 2020 08:11:24 -0700 (PDT)
+Sender: Arvind Sankar <niveditas98@gmail.com>
+From: Arvind Sankar <nivedita@alum.mit.edu>
+X-Google-Original-From: Arvind Sankar <arvind@rani.riverdale.lan>
+Date: Sat, 4 Jul 2020 11:11:21 -0400
+To: "Andersen, John" <john.s.andersen@intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Jonathan Corbet <corbet@lwn.net>,
+	Paolo Bonzini <pbonzini@redhat.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
+	X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>,
+	Shuah Khan <shuah@kernel.org>,
+	"Christopherson, Sean J" <sean.j.christopherson@intel.com>,
+	Liran Alon <liran.alon@oracle.com>,
+	Andrew Jones <drjones@redhat.com>,
+	Rick Edgecombe <rick.p.edgecombe@intel.com>,
+	Kristen Carlson Accardi <kristen@linux.intel.com>,
+	Vitaly Kuznetsov <vkuznets@redhat.com>,
+	Wanpeng Li <wanpengli@tencent.com>,
+	Jim Mattson <jmattson@google.com>, Joerg Roedel <joro@8bytes.org>,
+	mchehab+huawei@kernel.org, Greg KH <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	pawan.kumar.gupta@linux.intel.com, Juergen Gross <jgross@suse.com>,
+	Mike Kravetz <mike.kravetz@oracle.com>,
+	Oliver Neukum <oneukum@suse.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Fenghua Yu <fenghua.yu@intel.com>, reinette.chatre@intel.com,
+	vineela.tummalapalli@intel.com,
+	Dave Hansen <dave.hansen@linux.intel.com>,
+	Arjan van de Ven <arjan@linux.intel.com>, caoj.fnst@cn.fujitsu.com,
+	Baoquan He <bhe@redhat.com>, Arvind Sankar <nivedita@alum.mit.edu>,
+	Kees Cook <keescook@chromium.org>,
+	Geremy Condra <geremy.condra@intel.com>,
+	Dan Williams <dan.j.williams@intel.com>, eric.auger@redhat.com,
+	aaronlewis@google.com, Peter Xu <peterx@redhat.com>,
+	makarandsonare@google.com,
+	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+	LKML <linux-kernel@vger.kernel.org>, kvm list <kvm@vger.kernel.org>,
+	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: Re: [PATCH 4/4] X86: Use KVM CR pin MSRs
+Message-ID: <20200704151121.GA1611291@rani.riverdale.lan>
+References: <20200617190757.27081-1-john.s.andersen@intel.com>
+ <20200617190757.27081-5-john.s.andersen@intel.com>
+ <CALCETrXwzQDDd1rfBW+ptmijEjc2cMqfWGvJu-qqrqia5Ls=Uw@mail.gmail.com>
+ <20200623200334.GA23@6540770db1d7>
+ <20200703214814.GA25@0e1a9e0069b7>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <202006270853.C40CA89806@keescook>
-User-Agent: Mutt/1.10.1 (2018-07-13)
-X-Provags-ID: V03:K1:yzZW78M2++DLSaE2wWY6qe0FnrDwLez6iHP7SSkTJBuSPNdWcNw
- 2ASjko6NlqJ0ro0glT5/q08xba8c3/wk35ZI51qCBSm4IMuGGLzBGf/wYfejiafd04/bTwh
- X9P9ZTS5xf0ROWjtrIcQnnUyTt3srdkjZJQQY0DFzA0AAymjIROGGxjtY+B9CsalqQ7+L52
- NUXFNArqBNmh1L+13UAug==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:3hC62I/9p64=:UVoEGLBhNPIpOvgrjAdyjB
- 3FgdbPiuCC3XvI7gXXjiBB1ql47XBRLqBpmTOrGoUD5gg7lzir18EJkaLRrWHvETyidwLKmyl
- I6lhhXnHI2/TEwziK/7rZ3gAzyVYjbNWfTGPUXzUoyqxASfJ1beYaSlovGrjm2dvwJOyQ6Z3R
- mvOZfrPFZXATPY+946oCF50nGxmLCIggHJhd8oW1dj9dsq57Y4q2cx/CXILd6FagwWHiQyqzh
- cffWWmtj6bI76gTOVfWGtGhZBvG9cLsLPw0IId5C2Tkhohy4CuAhVjimP80gwnepN/8bF4Mig
- rRRofCTaYPTaYOMjeKtkN+nbFYJkVfXZ5HT+aCwzLjbF1bkMk+DcqVVhBdoQaiXUm21jDPRWV
- i+mOwBKFiLpldSKrNJVeFia6PgGSGn4toE4+Zs3kvpKDERjzCmrwYfT5s2yHCn2N7e9Hnn/cj
- 8shptfg+joterbJeTuCUXaOGeYTUupSM//SVjl9DvqqlcieNw08Hl4oiqr51Q2or0Lc4MqAXf
- od+Kckpy2Ombvjdq5uWTbciIJhaAqT8fMFifx5MFsKXVVdYR22pAFZXwXOUD2w5g6sgj4g1mX
- Hu3fLrlSK0jaQ7xnQoQe8fNaMWRNtzOl4KnqQTiSFPaWnkP6KC5GNeENK/eAqJGNNMtAnaChS
- GF/yuCafObo2L9+If/FxI0G1OEESlQX559BsHdFwhs5wVSAPJZEkMMhkqyTVZ7XGQn4j6Q8tY
- pIrn45Yps0e8dubBoLVroxyMb0OD/uG76TPCciwjWdKqdi/pClhRX7cUr35PTMNPtUs+k4c+j
- UMzh4jTVBy/qtTcD9GYSJcgJXCvG237Bu0X/mD5VjJNM7HF+z18yXW+DFEIwg35pCFeFaVwVX
- bQnUOAcgRgFaBbRFhmiqOskLRoMRKrwLP6T0GXvc5HIuQQi/5/wQO2Edw/MsHh+5LTOPdSAll
- 1Go03clwMhDWoNY57I0Co1wthSz2ianZ5OzWZb2T4aJsH30Ewa6DCGRSDM/NwYCfpZ+Tk5NNh
- md4ffVC8xDS8AcLbTPsajmKCWQsBnjuejA4DHdoSSDa35TbB1soQhnoBS8z+0JRrE1LYNURHT
- zOl/jaHfAm+Ea0vvnBrw/gJIF0JFAakgUyHyvIx6wDPpLwm4dcNUSNuOUrF6+bnhrFJu1keqi
- zDMzFz7FNfZ/enBHhlo02sUrO0rxKLxEa837SUdySfl6HDKodvs8X1sNgkbHil9+UAdWO0Ann
- pCLGX/vTDjm6Ec2Xy
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20200703214814.GA25@0e1a9e0069b7>
 
-On Sat, Jun 27, 2020 at 09:10:56AM -0700, Kees Cook wrote:
-> On Sat, Jun 27, 2020 at 02:54:17PM +0200, Oscar Carter wrote:
-> > In an effort to enable -Wcast-function-type in the top-level Makefile =
-to
-> > support Control Flow Integrity builds, remove all the function callbac=
-k
-> > casts.
-> >
-> > To do this modify the function prototypes accordingly.
-> >
-> > Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
->
-> Oh yes, the tasklets! I'd love to see this fixed correctly. (Which is to
-> say, modernize the API.) Romain hasn't had time to continue the work:
-> https://lore.kernel.org/kernel-hardening/20190929163028.9665-1-romain.pe=
-rier@gmail.com/
->
-> Is this something you'd want to tackle?
+On Fri, Jul 03, 2020 at 09:48:14PM +0000, Andersen, John wrote:
+> > > Is there a plan for fixing this for real?  I'm wondering if there is a
+> > > sane weakening of this feature that still allows things like kexec.
+> > > 
+> > 
+> > I'm pretty sure kexec can be fixed. I had it working at one point, I'm
+> > currently in the process of revalidating this. The issue was though that
+> > kexec only worked within the guest, not on the physical host, which I suspect
+> > is related to the need for supervisor pages to be mapped, which seems to be
+> > required before enabling SMAP (based on what I'd seen with the selftests and
+> > unittests). I was also just blindly turning on the bits without checking for
+> > support when I'd tried this, so that could have been the issue too.
+> > 
+> > I think most of the changes for just blindly enabling the bits were in
+> > relocate_kernel, secondary_startup_64, and startup_32.
+> > 
+> 
+> So I have a naive fix for kexec which has only been tested to work under KVM.
+> When tested on a physical host, it did not boot when SMAP or UMIP were set.
+> Undoubtedly it's not the correct way to do this, as it skips CPU feature
+> identification, opting instead for blindly setting the bits. The physical host
+> I tested this on does not have UMIP so that's likely why it failed to boot when
+> UMIP gets set blindly. Within kvm-unit-tests, the test for SMAP maps memory as
+> supervisor pages before enabling SMAP. I suspect this is why setting SMAP
+> blindly causes the physical host not to boot.
+> 
+> Within trampoline_32bit_src() if I add more instructions I get an error
+> about "attempt to move .org backwards", which as I understand it means
+> there are only so many instructions allowed in each of those functions.
+> 
+> My suspicion is that someone with more knowledge of this area has a good
+> idea on how best to handle this. Feedback would be much appreciated.
 
-Yes, of course. It will be a pleasure to work on this. But without forgett=
-ing
-the work to remove all the function cast mismatches.
-
-> > ---
-> >  drivers/s390/char/tty3270.c | 12 ++++++------
-> >  1 file changed, 6 insertions(+), 6 deletions(-)
-> >
-> > diff --git a/drivers/s390/char/tty3270.c b/drivers/s390/char/tty3270.c
-> > index 98d7fc152e32..aec996de44d9 100644
-> > --- a/drivers/s390/char/tty3270.c
-> > +++ b/drivers/s390/char/tty3270.c
-> > @@ -556,8 +556,9 @@ tty3270_scroll_backward(struct kbd_data *kbd)
-> >   * Pass input line to tty.
-> >   */
-> >  static void
-> > -tty3270_read_tasklet(struct raw3270_request *rrq)
-> > +tty3270_read_tasklet(unsigned long data)
-> >  {
-> > +	struct raw3270_request *rrq =3D (struct raw3270_request *)data;
->
-> Regardless, this is correct as far as fixing the prototype.
->
-> Reviewed-by: Kees Cook <keescook@chromium.org>
->
-> --
-> Kees Cook
-
-Regards,
-Oscar Carter
+You can simply increase the value of TRAMPOLINE_32BIT_CODE_SIZE in
+pgtable.h, assuming you don't need a very large increase. There's one
+page available for code + stack at present.
