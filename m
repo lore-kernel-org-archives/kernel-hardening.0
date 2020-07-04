@@ -1,20 +1,24 @@
-Return-Path: <SRS0=LGFX=AO=lists.openwall.com=kernel-hardening-return-19213-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=D1rt=AP=lists.openwall.com=kernel-hardening-return-19214-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.5 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.2 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8ED56C433DF
-	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Jul 2020 21:52:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 72B06C433DF
+	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:14:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id ED0FF2145D
-	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Jul 2020 21:52:08 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org ED0FF2145D
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19213-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32068 invoked by uid 550); 3 Jul 2020 21:52:01 -0000
+	by mail.kernel.org (Postfix) with SMTP id C1FDE20885
+	for <kernel-hardening@archiver.kernel.org>; Sat,  4 Jul 2020 12:14:14 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="JUkMJUai"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C1FDE20885
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19214-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9502 invoked by uid 550); 4 Jul 2020 12:14:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,133 +26,110 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32046 invoked from network); 3 Jul 2020 21:52:00 -0000
-IronPort-SDR: /mDfp86hH6jz5WwpJU+tnFcL/UXxHyslrxQjnznFuRD2mRtfuQ5KB868yllcqaR3tYsG6Rzpkn
- zZHUuKyHOG6g==
-X-IronPort-AV: E=McAfee;i="6000,8403,9671"; a="208719130"
-X-IronPort-AV: E=Sophos;i="5.75,309,1589266800"; 
-   d="scan'208";a="208719130"
-X-Amp-Result: SKIPPED(no attachment in message)
-X-Amp-File-Uploaded: False
-IronPort-SDR: gaU4VT34QuPfGir0q6IPf5xgGynQHvqGIU4X2zuJsg907nbT3IOqyOq2GXWmUNG7y4mTdaNYuf
- JMcfPOCcT6QQ==
-X-IronPort-AV: E=Sophos;i="5.75,309,1589266800"; 
-   d="scan'208";a="456007914"
-Date: Fri, 3 Jul 2020 21:48:14 +0000
-From: "Andersen, John" <john.s.andersen@intel.com>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Jonathan Corbet <corbet@lwn.net>, Paolo Bonzini <pbonzini@redhat.com>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
-	X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>,
-	Shuah Khan <shuah@kernel.org>,
-	"Christopherson, Sean J" <sean.j.christopherson@intel.com>,
-	Liran Alon <liran.alon@oracle.com>,
-	Andrew Jones <drjones@redhat.com>,
-	Rick Edgecombe <rick.p.edgecombe@intel.com>,
-	Kristen Carlson Accardi <kristen@linux.intel.com>,
-	Vitaly Kuznetsov <vkuznets@redhat.com>,
-	Wanpeng Li <wanpengli@tencent.com>,
-	Jim Mattson <jmattson@google.com>, Joerg Roedel <joro@8bytes.org>,
-	mchehab+huawei@kernel.org, Greg KH <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	pawan.kumar.gupta@linux.intel.com, Juergen Gross <jgross@suse.com>,
-	Mike Kravetz <mike.kravetz@oracle.com>,
-	Oliver Neukum <oneukum@suse.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Fenghua Yu <fenghua.yu@intel.com>, reinette.chatre@intel.com,
-	vineela.tummalapalli@intel.com,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Arjan van de Ven <arjan@linux.intel.com>, caoj.fnst@cn.fujitsu.com,
-	Baoquan He <bhe@redhat.com>, Arvind Sankar <nivedita@alum.mit.edu>,
-	Kees Cook <keescook@chromium.org>,
-	Geremy Condra <geremy.condra@intel.com>,
-	Dan Williams <dan.j.williams@intel.com>, eric.auger@redhat.com,
-	aaronlewis@google.com, Peter Xu <peterx@redhat.com>,
-	makarandsonare@google.com,
-	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
-	LKML <linux-kernel@vger.kernel.org>, kvm list <kvm@vger.kernel.org>,
-	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Subject: Re: [PATCH 4/4] X86: Use KVM CR pin MSRs
-Message-ID: <20200703214814.GA25@0e1a9e0069b7>
-References: <20200617190757.27081-1-john.s.andersen@intel.com>
- <20200617190757.27081-5-john.s.andersen@intel.com>
- <CALCETrXwzQDDd1rfBW+ptmijEjc2cMqfWGvJu-qqrqia5Ls=Uw@mail.gmail.com>
- <20200623200334.GA23@6540770db1d7>
+Received: (qmail 9478 invoked from network); 4 Jul 2020 12:14:06 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1593864784;
+	bh=ntqtRXriEvlTQZX7E9tgu9xYlAp6y6JNcyiMi9Omzoc=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=JUkMJUai3QzWrXqWeQMRITAMx7R/NnfqOVFG3I/eAblyTfZcqnZfDhhN5uxnrYnj6
+	 PD1dk/Zthh5vvRXSTl3SFcGggwHsyXTIVwbtuZGpZ0e9YE94oqnk3xTsAXEznlDJ4l
+	 H7U4NCPMEs+io6untnzXIA+3BRGJFaqLDlvUpC7s=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Sat, 4 Jul 2020 14:12:36 +0200
+From: Oscar Carter <oscar.carter@gmx.com>
+To: Helge Deller <deller@gmx.de>
+Cc: Oscar Carter <oscar.carter@gmx.com>, Kees Cook <keescook@chromium.org>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>,
+	"James E . J . Bottomley" <James.Bottomley@HansenPartnership.com>,
+	kernel-hardening@lists.openwall.com, linux-parisc@vger.kernel.org,
+	linux-kernel@vger.kernel.org
+Subject: Re: [PATCH] parisc/kernel/ftrace: Remove function callback casts
+Message-ID: <20200704121236.GA3143@ubuntu>
+References: <20200627134348.30601-1-oscar.carter@gmx.com>
+ <97375269-f6f1-6157-c8a8-3b925232f00c@gmx.de>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200623200334.GA23@6540770db1d7>
-User-Agent: Mutt/1.5.24 (2015-08-30)
+In-Reply-To: <97375269-f6f1-6157-c8a8-3b925232f00c@gmx.de>
+User-Agent: Mutt/1.10.1 (2018-07-13)
+X-Provags-ID: V03:K1:/qNr8bYfFud/XeUItqhmgkKVnnfxe46IOngSaoy6F0Qcr6uUaIc
+ Tgljscv4oMiCP4kLp3uYe06SW9rXv5lRQMjr9C0q6HbdQanooc+Z07KPmfppUHLRZNG99n2
+ GPyUSy5I5OAZttmQrI1+V3i34fhg6yOS704KXOiebV+gtwcorRToTiEyVpGRBPqu7ytjhFw
+ q+zGA+Z+KRwc26UH0t85A==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:co0hVsy69TI=:ANUkg5pptO4ssqtSkfsBjf
+ SSolZ8XyQPs+cBQnZcJZ/p5PnlE8RJivOzLU/FrI/AUQa4xlX70G3zFEYK985+2TxWNcbUYHU
+ PZSGx9pSTm7spZqJRJ5IbVVSTqg47tp11PMpSOOtvYSnIJhkrj+0fFlcoqLYa49SFdD5iVIQR
+ 97RCnqhjwnIGzXEmNFSrtIlpIbfdwp+EI9V2mTihRRXgIuKMvsZO4Z2Go/HnB+efD4J0dV2BK
+ oaIdzjrB5oOjpXb83PCH7BFtASQNXuraqLazHEJiwdQ7SXW0pcPSGtPcDHfY480Vf2dZvBIvc
+ uqicLGn5vdGJGAXsK30mLLsBmOdmLB0U4CJevkk/NolXL7n72VNF3Y+HzOoMDktfERGeaA9hx
+ Gajsduj26xTYXN8ItPqAvMfgs0PB1jvpedoLcmKHQ1Wt9SwqMT5jdeUZ2VsfiyNfAd3cRVvh6
+ EYbiZwYsApSemwB803jsmAgHcVePGyTEBxi6g6c2RZhYaZgu/hkFMGrPrkSfR2CmcqeFHrqdh
+ fA178SJ1iHqqvrBtEqHTVVs93T+825EJ8NPx5OHQxo8FddAlj93oG4cBOaekbWFpK31QxSrEN
+ uTSV1cEg+SO/NODCR5Hbi1Pdso4DnsqkkyxesbM2+DqYGKfCqNOJzvajt8O++B9tT89W/kSpu
+ AcMC/0IJH/tdjXvPzVw6XgYKzZqjnqROr76YUoHDEP2u+gPz6c9/vF96Q7K7DpHkPGNcsq3p1
+ e9vNO5SBNs5Xzd8GP4hP0dhuh7SfUhTC7KdnmgUNypFF3RcOCVO2w5NFFe6fEFMDbP+rM1Ft3
+ +AXoogsSqr1YAaIpoICgpy6my+28a6YhbQn/tW8ghLGoKSRJdsYcVCQTRIUQdL8hUC/Hi41mK
+ VPbfdtDl9B/hmMBzAXv5LIkW0DFDeB76KxD7YRyx34T3r+5EeHADmSS9YCnZIolMR2YrYaF5W
+ Nt8jFni+/NfOUA/5fGY7IOoOzHHlFFpskZgIPY7bVTFYIj8Eu+rgrrqHfPSpBZ6j6BtXsz1BK
+ uIhDEDCOFo2eIlq6fKMRXGWhplcUg2jqY4+xQ/fHiZz793u+wgNV6Ora7fm3H2Lcgojewl6c5
+ NBhlkf2baB1n0u7OEoYSjnM3mhRzNta5QepPsHI0WA3VpHWB1H5ENzJ2rhAdrnF2yChHMPx2j
+ 1eYDzUuvUOQVC9ubFi5Oxkmlcf1sn4uykGFiaKSXAj4SguoxDh0bC9hmsGTerT0ItUNDNzN0F
+ Ba77Texv2mtuEph8g
+Content-Transfer-Encoding: quoted-printable
 
-> > Is there a plan for fixing this for real?  I'm wondering if there is a
-> > sane weakening of this feature that still allows things like kexec.
-> > 
-> 
-> I'm pretty sure kexec can be fixed. I had it working at one point, I'm
-> currently in the process of revalidating this. The issue was though that
-> kexec only worked within the guest, not on the physical host, which I suspect
-> is related to the need for supervisor pages to be mapped, which seems to be
-> required before enabling SMAP (based on what I'd seen with the selftests and
-> unittests). I was also just blindly turning on the bits without checking for
-> support when I'd tried this, so that could have been the issue too.
-> 
-> I think most of the changes for just blindly enabling the bits were in
-> relocate_kernel, secondary_startup_64, and startup_32.
-> 
+On Sat, Jun 27, 2020 at 10:09:40PM +0200, Helge Deller wrote:
+> On 27.06.20 15:43, Oscar Carter wrote:
+> > In an effort to enable -Wcast-function-type in the top-level Makefile =
+to
+> > support Control Flow Integrity builds, remove all the function callbac=
+k
+> > casts.
+> >
+> > To do this remove the cast to a function pointer type in the compariso=
+n
+> > statement and add to the right and left operand a cast to unsigned lon=
+g
+> > type. This can be done since the comparison is against function addres=
+s
+> > (these operands are not function calls).
+>
+> On some architectures (namely ia64, ppc64 and parisc64) function pointer=
+s
+> actually refer to function descriptors, which in turn point to the real
+> function address. The compiler usually takes care of such comparism.
+> That said, casting to "unsigned long" might break this...
 
-So I have a naive fix for kexec which has only been tested to work under KVM.
-When tested on a physical host, it did not boot when SMAP or UMIP were set.
-Undoubtedly it's not the correct way to do this, as it skips CPU feature
-identification, opting instead for blindly setting the bits. The physical host
-I tested this on does not have UMIP so that's likely why it failed to boot when
-UMIP gets set blindly. Within kvm-unit-tests, the test for SMAP maps memory as
-supervisor pages before enabling SMAP. I suspect this is why setting SMAP
-blindly causes the physical host not to boot.
+Ok, thanks for the clarification. Today I have learned about function
+descriptors.
 
-Within trampoline_32bit_src() if I add more instructions I get an error
-about "attempt to move .org backwards", which as I understand it means
-there are only so many instructions allowed in each of those functions.
+> > Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
+> > ---
+> >  arch/parisc/kernel/ftrace.c | 2 +-
+> >  1 file changed, 1 insertion(+), 1 deletion(-)
+> >
+> > diff --git a/arch/parisc/kernel/ftrace.c b/arch/parisc/kernel/ftrace.c
+> > index 1df0f67ed667..86b49a5fc049 100644
+> > --- a/arch/parisc/kernel/ftrace.c
+> > +++ b/arch/parisc/kernel/ftrace.c
+> > @@ -64,7 +64,7 @@ void notrace __hot ftrace_function_trampoline(unsign=
+ed long parent,
+> >  				function_trace_op, regs);
+> >
+> >  #ifdef CONFIG_FUNCTION_GRAPH_TRACER
+> > -	if (ftrace_graph_return !=3D (trace_func_graph_ret_t) ftrace_stub ||
+> > +	if ((unsigned long)ftrace_graph_return !=3D (unsigned long)ftrace_st=
+ub ||
+>
+> Untested, but maybe better use:
+> 	dereference_function_descriptor(ftrace_graph_return) !=3D
+> 		dereference_function_descriptor(ftrace_stub)
 
-My suspicion is that someone with more knowledge of this area has a good
-idea on how best to handle this. Feedback would be much appreciated.
+Thanks for point me to the right direction about this theme. I will do a
+new version and I will resend.
 
-> > There's no SMEP or SMAP in real mode, and real mode has basically no security
-> > mitigations at all.
-> > 
-> 
-> We'd thought about the switch to real mode being a case where we'd want to drop
-> pinning. However, we weren't sure how much weaker, if at all, it makes this
-> protection.
-> 
-> Unless someone knows, I'll probably need to do some digging into what an
-> exploit might look like that tries switching to real mode and switching back as
-> a way around this protection.
-> 
+> ?
+> Helge
 
-TL;DR We probably shouldn't use the switch to real mode as a trigger to drop
-pinning.
-
-This protection assumes that the attacker is at the point where they have the
-ability to write a payload for a ROP/JOP attack and gain control of execution.
-
-For this case where we are going to switch to real mode we need to add an
-assumption that the attacker has a write primitive that allows them to write
-part of their payload to memory that will be addressable within 16 bit mode.
-
-If the attacker has this write primitive, the attack becomes write payloads,
-within the first stage, switch to real mode, use stage two within real mode via
-JOP or just machine code (since there's we don't have to worry NX) to setup
-protected mode and jump back into the kernel with protections disabled.
-
-> > PCID is an odd case.  I see no good reason to pin it, and pinning PCID
-> > on prevents use of 32-bit mode.
-> 
-> Maybe it makes sense to default to the values we have, but allow host userspace
-> to overwrite the allowed values, in case some other guest OS wants to do
-> something that Linux doesn't with PCID or other bits.
-
-In the next version of this patchset I've made it so that the default allowed
-values are WP, SMEP, SMAP, and UMIP. However, a write to the allowed MSR from
-the host VMM (QEMU) can change which bits are allowed.
+Regards,
+Oscar Carter
