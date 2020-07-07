@@ -1,22 +1,23 @@
-Return-Path: <SRS0=5cMR=AR=lists.openwall.com=kernel-hardening-return-19223-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=HiQ4=AS=lists.openwall.com=kernel-hardening-return-19224-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0265BC433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon,  6 Jul 2020 23:41:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DA62AC433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Jul 2020 15:51:36 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 56438206E9
-	for <kernel-hardening@archiver.kernel.org>; Mon,  6 Jul 2020 23:41:57 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 36F052080D
+	for <kernel-hardening@archiver.kernel.org>; Tue,  7 Jul 2020 15:51:36 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=fail reason="signature verification failed" (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="kH6JpuxO"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 56438206E9
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19223-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21650 invoked by uid 550); 6 Jul 2020 23:41:50 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="qbZF9hTu"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 36F052080D
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19224-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30713 invoked by uid 550); 7 Jul 2020 15:51:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,101 +25,135 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21618 invoked from network); 6 Jul 2020 23:41:49 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1594078897;
-	bh=yuEVLSFWzFuIU16JSRCjoy4DCC3vZQD9mtnpRVx+k3Q=;
-	h=Date:From:To:Cc:Subject:Reply-To:References:In-Reply-To:From;
-	b=kH6JpuxO4VcDqDcyojdQfYGTHKg4PNOiHrbQiENKeoPSy0ZVSRSUp36IctVlrxCfg
-	 Py5tnQ3aqNWzAsUWq7cSTJZ9xs4GrC7bOF7ScnS6uyF1RxsPRZrbPsF6yIEB4yWmBX
-	 Q00WDW1a9kdhgxJoHkm8GLzgTCfs57TBHtdBC46w=
-Date: Mon, 6 Jul 2020 16:41:36 -0700
-From: "Paul E. McKenney" <paulmck@kernel.org>
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Marco Elver <elver@google.com>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	Sami Tolvanen <samitolvanen@google.com>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Will Deacon <will@kernel.org>,
+Received: (qmail 30675 invoked from network); 7 Jul 2020 15:51:27 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=6nbLKEvdqqtu0DOxk+RX2NCeuVjz/d5/WDsGYxOKe+A=;
+        b=qbZF9hTub3E6dJOMlijRiMiRkHYkFQubSYFp6P+VnStOU35ksLbT5c2olfLiJpXsF3
+         p3AHOCADz7BlPRcb5xlVfsDuFkpaWzroZytIxmWQMa1Tq9gUpWVZPukI1yqE2KFTHiA3
+         9YlWvV6iIbDdJ+BZAyuKLx1RPuPn/LEcUmBvsAMcz6jJ5yyWtgLEw10Q8wnhLwp1ZVgF
+         o4GGnZfpFXNrCeoFTPW5BteobP+ETyf4GPs6Ui4f/hVYa1npYd2Jb7cBEU2OssXqWPH4
+         auU0losOJLOMYxa1RdqPXWKkY62FkFHARI3LfbFiT0CpoTlE2LZsZ8/SQVRU7EUqTPAC
+         0DtA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=6nbLKEvdqqtu0DOxk+RX2NCeuVjz/d5/WDsGYxOKe+A=;
+        b=EPhe1rb9/R6PmaiEBzIr5o/TTyRZaVF5nVv3QU+kx29ElbKGRPY/wBIWMrsLdzqhAv
+         k9qbqUVryGL9pJJMumZP3eop9j+Sf39y4GXviJl4XCG3dDv828y0kM6EhNxlBHpl9pFQ
+         xu62wyuaPJBjFFO2Sq2MyNLWGcH2hhoPI9x7ltbDKmUWVqcowmko95KWDN/MP+uLdTuO
+         9z7RbiFWTKAU6Nf+BvjO+1fGNE2I9WEhfmQzba+8jOP4Ugzme7zshzaBNq2WPgIaJxhl
+         YE3fzNDK1oL2I3TVpPuwN+R+GbXqE2DSeJpZzd66HowaaGCT6NI2sMTsHJ0vAMNPSx5K
+         ToUw==
+X-Gm-Message-State: AOAM532uo8KArBviUjUgB3F3EM4xs7RSc6XA7bj5O4tq7rMPB4vLX1Ht
+	SinOFjouB7qYCAzcgpOiXEY/5Q==
+X-Google-Smtp-Source: ABdhPJzoBjROrVaJtp6nujXRaXTatw7gwLtR2zb8jqFckSgpuUCpME8ySKJl8GGYK6iDFTRo3tsWzA==
+X-Received: by 2002:a17:90a:a106:: with SMTP id s6mr5003560pjp.53.1594137075030;
+        Tue, 07 Jul 2020 08:51:15 -0700 (PDT)
+Date: Tue, 7 Jul 2020 08:51:07 -0700
+From: Sami Tolvanen <samitolvanen@google.com>
+To: Masahiro Yamada <masahiroy@kernel.org>,
+	Jiong Wang <jiong.wang@netronome.com>,
+	Jakub Kicinski <kuba@kernel.org>
+Cc: Will Deacon <will@kernel.org>,
 	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
 	Kees Cook <keescook@chromium.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
 	clang-built-linux <clang-built-linux@googlegroups.com>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>,
 	linux-arch <linux-arch@vger.kernel.org>,
-	Linux ARM <linux-arm-kernel@lists.infradead.org>,
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
 	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
-	LKML <linux-kernel@vger.kernel.org>, linux-pci@vger.kernel.org,
-	"maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
+	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+	linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
 Subject: Re: [PATCH 00/22] add support for Clang LTO
-Message-ID: <20200706234136.GS9247@paulmck-ThinkPad-P72>
-References: <20200701150512.GH4817@hirez.programming.kicks-ass.net>
- <20200701160338.GN9247@paulmck-ThinkPad-P72>
- <20200702082040.GB4781@hirez.programming.kicks-ass.net>
- <20200702175948.GV9247@paulmck-ThinkPad-P72>
- <20200703131330.GX4800@hirez.programming.kicks-ass.net>
- <20200703144228.GF9247@paulmck-ThinkPad-P72>
- <20200706162633.GA13288@paulmck-ThinkPad-P72>
- <20200706182926.GH4800@hirez.programming.kicks-ass.net>
- <20200706183933.GE9247@paulmck-ThinkPad-P72>
- <20200706194012.GA5523@worktop.programming.kicks-ass.net>
+Message-ID: <20200707155107.GA3357035@google.com>
+References: <20200624203200.78870-1-samitolvanen@google.com>
+ <CAK7LNASvb0UDJ0U5wkYYRzTAdnEs64HjXpEUL7d=V0CXiAXcNw@mail.gmail.com>
+ <20200629232059.GA3787278@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200706194012.GA5523@worktop.programming.kicks-ass.net>
-User-Agent: Mutt/1.9.4 (2018-02-28)
+In-Reply-To: <20200629232059.GA3787278@google.com>
 
-On Mon, Jul 06, 2020 at 09:40:12PM +0200, Peter Zijlstra wrote:
-> On Mon, Jul 06, 2020 at 11:39:33AM -0700, Paul E. McKenney wrote:
-> > On Mon, Jul 06, 2020 at 08:29:26PM +0200, Peter Zijlstra wrote:
-> > > On Mon, Jul 06, 2020 at 09:26:33AM -0700, Paul E. McKenney wrote:
+On Mon, Jun 29, 2020 at 04:20:59PM -0700, Sami Tolvanen wrote:
+> Hi Masahiro,
 > 
-> > > If they do not consider their Linux OS running correctly :-)
+> On Mon, Jun 29, 2020 at 01:56:19AM +0900, Masahiro Yamada wrote:
+> > I also got an error for
+> > ARCH=arm64 allyesconfig + CONFIG_LTO_CLANG=y
 > > 
-> > Many of them really do not care at all.  In fact, some would consider
-> > Linux failing to run as an added bonus.
-> 
-> This I think is why we have compiler people in the thread that care a
-> lot more.
-
-Here is hoping! ;-)
-
-> > > > Nevertheless, yes, control dependencies also need attention.
-> > > 
-> > > Today I added one more \o/
 > > 
-> > Just make sure you continually check to make sure that compilers
-> > don't break it, along with the others you have added.  ;-)
+> > 
+> > $ make ARCH=arm64 LLVM=1 LLVM_IAS=1
+> > CROSS_COMPILE=~/tools/aarch64-linaro-7.5/bin/aarch64-linux-gnu-
+> > -j24
+> > 
+> >   ...
+> > 
+> >   GEN     .version
+> >   CHK     include/generated/compile.h
+> >   UPD     include/generated/compile.h
+> >   CC      init/version.o
+> >   AR      init/built-in.a
+> >   GEN     .tmp_initcalls.lds
+> >   GEN     .tmp_symversions.lds
+> >   LTO     vmlinux.o
+> >   MODPOST vmlinux.symvers
+> >   MODINFO modules.builtin.modinfo
+> >   GEN     modules.builtin
+> >   LD      .tmp_vmlinux.kallsyms1
+> > ld.lld: error: undefined symbol: __compiletime_assert_905
+> > >>> referenced by irqbypass.c
+> > >>>               vmlinux.o:(jeq_imm)
+> > make: *** [Makefile:1161: vmlinux] Error 1
 > 
-> There's:
+> I can reproduce this with ToT LLVM and it's BUILD_BUG_ON_MSG(..., "value
+> too large for the field") in drivers/net/ethernet/netronome/nfp/bpf/jit.c.
+> Specifically, the FIELD_FIT / __BF_FIELD_CHECK macro in ur_load_imm_any.
 > 
-> kernel/locking/mcs_spinlock.h:  smp_cond_load_acquire(l, VAL);                          \
-> kernel/sched/core.c:                    smp_cond_load_acquire(&p->on_cpu, !VAL);
-> kernel/smp.c:   smp_cond_load_acquire(&csd->node.u_flags, !(VAL & CSD_FLAG_LOCK));
-> 
-> arch/x86/kernel/alternative.c:          atomic_cond_read_acquire(&desc.refs, !VAL);
-> kernel/locking/qrwlock.c:               atomic_cond_read_acquire(&lock->cnts, !(VAL & _QW_LOCKED));
-> kernel/locking/qrwlock.c:       atomic_cond_read_acquire(&lock->cnts, !(VAL & _QW_LOCKED));
-> kernel/locking/qrwlock.c:               atomic_cond_read_acquire(&lock->cnts, VAL == _QW_WAITING);
-> kernel/locking/qspinlock.c:             atomic_cond_read_acquire(&lock->val, !(VAL & _Q_LOCKED_MASK));
-> kernel/locking/qspinlock.c:     val = atomic_cond_read_acquire(&lock->val, !(VAL & _Q_LOCKED_PENDING_MASK));
-> 
-> include/linux/refcount.h:               smp_acquire__after_ctrl_dep();
-> ipc/mqueue.c:                   smp_acquire__after_ctrl_dep();
-> ipc/msg.c:                      smp_acquire__after_ctrl_dep();
-> ipc/sem.c:                      smp_acquire__after_ctrl_dep();
-> kernel/locking/rwsem.c:                 smp_acquire__after_ctrl_dep();
-> kernel/sched/core.c:    smp_acquire__after_ctrl_dep();
-> 
-> kernel/events/ring_buffer.c:__perf_output_begin()
-> 
-> And I'm fairly sure I'm forgetting some... One could argue there's too
-> many of them to check already.
-> 
-> Both GCC and CLANG had better think about it.
+> This compiles just fine with an earlier LLVM revision, so it could be a
+> relatively recent regression. I'll take a look. Thanks for catching this!
 
-That would be good!
+After spending some time debugging this with Nick, it looks like the
+error is caused by a recent optimization change in LLVM, which together
+with the inlining of ur_load_imm_any into jeq_imm, changes a runtime
+check in FIELD_FIT that would always fail, to a compile-time check that
+breaks the build. In jeq_imm, we have:
 
-I won't list the number of address/data dependencies given that there
-are well over a thousand of them.
+    /* struct bpf_insn: _s32 imm */
+    u64 imm = insn->imm; /* sign extend */
+    ...
+    if (imm >> 32) { /* non-zero only if insn->imm is negative */
+    	/* inlined from ur_load_imm_any */
+	u32 __imm = imm >> 32; /* therefore, always 0xffffffff */
 
-							Thanx, Paul
+        /*
+	 * __imm has a value known at compile-time, which means
+	 * __builtin_constant_p(__imm) is true and we end up with
+	 * essentially this in __BF_FIELD_CHECK:
+	 */
+	if (__builtin_constant_p(__imm) && __imm <= 255)
+	      __compiletime_assert_N();
+
+The compile-time check comes from the following BUILD_BUG_ON_MSG:
+
+    #define __BF_FIELD_CHECK(_mask, _reg, _val, _pfx)		\
+    ...
+	BUILD_BUG_ON_MSG(__builtin_constant_p(_val) ?		\
+			 ~((_mask) >> __bf_shf(_mask)) & (_val) : 0, \
+			 _pfx "value too large for the field"); \
+
+While we could stop the compiler from performing this optimization by
+telling it to never inline ur_load_imm_any, we feel like a better fix
+might be to replace FIELD_FIT(UR_REG_IMM_MAX, imm) with a simple imm
+<= UR_REG_IMM_MAX check that won't trip a compile-time assertion even
+when the condition is known to fail.
+
+Jiong, Jakub, do you see any issues here?
+
+Sami
