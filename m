@@ -1,22 +1,20 @@
-Return-Path: <SRS0=VX1M=AT=lists.openwall.com=kernel-hardening-return-19258-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=crE7=AT=lists.openwall.com=kernel-hardening-return-19259-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+X-Spam-Status: No, score=-3.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0498EC433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed,  8 Jul 2020 16:17:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DFCB4C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed,  8 Jul 2020 16:48:20 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 529A020786
-	for <kernel-hardening@archiver.kernel.org>; Wed,  8 Jul 2020 16:17:40 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="vMOgdCQ4"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 529A020786
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19258-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 23830 invoked by uid 550); 8 Jul 2020 16:17:32 -0000
+	by mail.kernel.org (Postfix) with SMTP id 46AB220786
+	for <kernel-hardening@archiver.kernel.org>; Wed,  8 Jul 2020 16:48:20 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 46AB220786
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19259-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16095 invoked by uid 550); 8 Jul 2020 16:48:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,61 +22,60 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23798 invoked from network); 8 Jul 2020 16:17:32 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1594225039;
-	bh=f1paydPvqX5mmoQC/Q4NS+87DmSKuFrcvAhN61O4cqE=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=vMOgdCQ4ZaXVWEYGO4yvTefmoEl44l3Ytbq9A268zygfOy5G/d3AA0EIcfkYFoo5M
-	 1pTVrRlZgBLWvsu4vlj2XsX0D28htMzHJ2ska1mrH4E7MQWt2a3nYBOMx994JYp7UW
-	 Udmt0wwCC5uU4MdBlMiqSWkxtLImoe/foWljS6Qc=
-X-Gm-Message-State: AOAM533uVsah//e2Q50Wk/tiH0YIUVXgUm4G7Zyvi0kMIMPVDMY2dKVn
-	McQkGm0EqSiEQAI/EVPgKfiDfDnGmmFTyWrbkQY=
-X-Google-Smtp-Source: ABdhPJxecRpEvEPRMVMbo2s6nVaZxwYg5eNwh2bAx1ZEx7RL90ErAcNU5zXlYC7f6VanZkv7skq+sjlNi5EDHM1TgJs=
-X-Received: by 2002:aca:d643:: with SMTP id n64mr7803399oig.33.1594225039226;
- Wed, 08 Jul 2020 09:17:19 -0700 (PDT)
-MIME-Version: 1.0
-References: <20200626155832.2323789-1-ardb@kernel.org>
-In-Reply-To: <20200626155832.2323789-1-ardb@kernel.org>
-From: Ard Biesheuvel <ardb@kernel.org>
-Date: Wed, 8 Jul 2020 19:17:08 +0300
-X-Gmail-Original-Message-ID: <CAMj1kXGMhmsJmwog6iC+r5Nhyx9QwQkbNdUPSD+UbgZyNvtyzQ@mail.gmail.com>
-Message-ID: <CAMj1kXGMhmsJmwog6iC+r5Nhyx9QwQkbNdUPSD+UbgZyNvtyzQ@mail.gmail.com>
-Subject: Re: [PATCH v3 0/2] arm64/acpi: restrict AML opregion memory access
-To: Linux ARM <linux-arm-kernel@lists.infradead.org>, James Morse <james.morse@arm.com>
-Cc: ACPI Devel Maling List <linux-acpi@vger.kernel.org>, Will Deacon <will@kernel.org>, 
-	Catalin Marinas <catalin.marinas@arm.com>, Lorenzo Pieralisi <lorenzo.pieralisi@arm.com>, 
-	Sudeep Holla <sudeep.holla@arm.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Received: (qmail 16072 invoked from network); 8 Jul 2020 16:48:12 -0000
+IronPort-SDR: CS/kNqdRPLP+kQ7PaZi4TlZXXtGlLnVFKRsqObPvakSiuRwphc1ekpqAXSgZgT/71v3S7QzYT0
+ inPVOrU6II+Q==
+X-IronPort-AV: E=McAfee;i="6000,8403,9676"; a="136095910"
+X-IronPort-AV: E=Sophos;i="5.75,328,1589266800"; 
+   d="scan'208";a="136095910"
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+IronPort-SDR: 6MMsL8LobZj0NHElNGCZR9i1cX0Q5HUgnhNzrWmrFw9BeX368h7tv6pHkD8THPX8VxVTuCLjrj
+ HtBYQMlWkiJw==
+X-IronPort-AV: E=Sophos;i="5.75,328,1589266800"; 
+   d="scan'208";a="280009112"
+Message-ID: <6cba1bdea35eb19492c5d2674f2a58aae8635155.camel@linux.intel.com>
+Subject: Re: [PATCH v3 09/10] kallsyms: Hide layout
+From: Kristen Carlson Accardi <kristen@linux.intel.com>
+To: "Luck, Tony" <tony.luck@intel.com>, Kees Cook <keescook@chromium.org>, 
+	Jann Horn <jannh@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, 
+ Borislav Petkov <bp@alien8.de>, Arjan van de Ven <arjan@linux.intel.com>,
+ the arch/x86 maintainers <x86@kernel.org>, kernel list
+ <linux-kernel@vger.kernel.org>, Kernel Hardening
+ <kernel-hardening@lists.openwall.com>, "Edgecombe, Rick P"
+ <rick.p.edgecombe@intel.com>
+Date: Wed, 08 Jul 2020 09:47:55 -0700
+In-Reply-To: <3908561D78D1C84285E8C5FCA982C28F7F68AC3B@ORSMSX115.amr.corp.intel.com>
+References: <20200623172327.5701-1-kristen@linux.intel.com>
+	 <20200623172327.5701-10-kristen@linux.intel.com>
+	 <CAG48ez3YHoPOTZvabsNUcr=GP-rX+OXhNT54KcZT9eSQ28Fb8Q@mail.gmail.com>
+	 <202006240815.45AAD55@keescook>
+	 <f34eb868e609a1a8a7f19b77fe5d00bf3555bb00.camel@linux.intel.com>
+	 <3908561D78D1C84285E8C5FCA982C28F7F68AC3B@ORSMSX115.amr.corp.intel.com>
 Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
 
-(+ James)
+On Tue, 2020-07-07 at 23:16 +0000, Luck, Tony wrote:
+> > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+> > Reviewed-by: Tony Luck <tony.luck@intel.com>
+> > Tested-by: Tony Luck <tony.luck@intel.com>
+> 
+> I'll happily review and test again ... but since you've made
+> substantive
+> changes, you should drop these tags until I do.
 
-On Fri, 26 Jun 2020 at 18:58, Ard Biesheuvel <ardb@kernel.org> wrote:
->
-> v2:
-> - do a more elaborate check on the region, against the EFI memory map
->
-> v3:
-> - split into two patches
-> - fallback to __ioremap() for ACPI reclaim memory, in case it is not covered
->   by the linear mapping (e.g., when booting a kdump kernel)
->
-> Ard Biesheuvel (2):
->   arm64/acpi: disallow AML memory opregions to access kernel memory
->   arm64/acpi: disallow writeable AML opregion mapping for EFI code
->     regions
->
+Will do - thanks! If nobody thinks this is a horrible direction, I'll
+clean up this patch and submit it with the rest as part of v4.
 
-With some adult supervision from James (thanks!), I have given this a
-spin myself with kexec under QEMU/kvm, to boot a crashkernel, and
-everything works as expected.
+> 
+> FWIW I think random order is a good idea.  Do you shuffle once?
+> Or every time somebody opens /proc/kallsyms?
+
+I am shuffling every single time that somebody opens /proc/kallsyms -
+this is because it's possible that somebody has loaded modules or bpf
+stuff and there may be new/different symbols to display.
 
 
->  arch/arm64/include/asm/acpi.h | 15 +---
->  arch/arm64/kernel/acpi.c      | 75 ++++++++++++++++++++
->  2 files changed, 76 insertions(+), 14 deletions(-)
->
-> --
-> 2.27.0
->
