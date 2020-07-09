@@ -1,4 +1,4 @@
-Return-Path: <SRS0=8W6m=AU=lists.openwall.com=kernel-hardening-return-19263-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yXkE=AU=lists.openwall.com=kernel-hardening-return-19264-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-9.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
 	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 95C6CC433E0
-	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Jul 2020 04:01:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D4FF5C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Jul 2020 04:01:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EB9C4206E2
-	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Jul 2020 04:01:49 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EB9C4206E2
+	by mail.kernel.org (Postfix) with SMTP id 11ACB206E2
+	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Jul 2020 04:01:58 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 11ACB206E2
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19263-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25831 invoked by uid 550); 9 Jul 2020 04:01:23 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19264-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25872 invoked by uid 550); 9 Jul 2020 04:01:24 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,13 +22,13 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25740 invoked from network); 9 Jul 2020 04:01:22 -0000
+Received: (qmail 25772 invoked from network); 9 Jul 2020 04:01:22 -0000
 From: "Christopher M. Riedl" <cmr@informatik.wtf>
 To: linuxppc-dev@lists.ozlabs.org
 Cc: kernel-hardening@lists.openwall.com
-Subject: [PATCH v2 2/5] powerpc/lib: Initialize a temporary mm for code patching
-Date: Wed,  8 Jul 2020 23:03:13 -0500
-Message-Id: <20200709040316.12789-3-cmr@informatik.wtf>
+Subject: [PATCH v2 3/5] powerpc/lib: Use a temporary mm for code patching
+Date: Wed,  8 Jul 2020 23:03:14 -0500
+Message-Id: <20200709040316.12789-4-cmr@informatik.wtf>
 X-Mailer: git-send-email 2.27.0
 In-Reply-To: <20200709040316.12789-1-cmr@informatik.wtf>
 References: <20200709040316.12789-1-cmr@informatik.wtf>
@@ -36,81 +36,233 @@ MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 X-Virus-Scanned: ClamAV using ClamSMTP
 
-When code patching a STRICT_KERNEL_RWX kernel the page containing the
-address to be patched is temporarily mapped with permissive memory
-protections. Currently, a per-cpu vmalloc patch area is used for this
-purpose. While the patch area is per-cpu, the temporary page mapping is
-inserted into the kernel page tables for the duration of the patching.
-The mapping is exposed to CPUs other than the patching CPU - this is
-undesirable from a hardening perspective.
+Currently, code patching a STRICT_KERNEL_RWX exposes the temporary
+mappings to other CPUs. These mappings should be kept local to the CPU
+doing the patching. Use the pre-initialized temporary mm and patching
+address for this purpose. Also add a check after patching to ensure the
+patch succeeded.
 
-Use the `poking_init` init hook to prepare a temporary mm and patching
-address. Initialize the temporary mm by copying the init mm. Choose a
-randomized patching address inside the temporary mm userspace address
-portion. The next patch uses the temporary mm and patching address for
-code patching.
+Use the KUAP functions on non-BOOKS3_64 platforms since the temporary
+mapping for patching uses a userspace address (to keep the mapping
+local). On BOOKS3_64 platforms hash does not implement KUAP and on radix
+the use of PAGE_KERNEL sets EAA[0] for the PTE which means the AMR
+(KUAP) protection is ignored (see PowerISA v3.0b, Fig, 35).
 
 Based on x86 implementation:
 
-commit 4fc19708b165
-("x86/alternatives: Initialize temporary mm for patching")
+commit b3fd8e83ada0
+("x86/alternatives: Use temporary mm for text poking")
 
 Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
 ---
- arch/powerpc/lib/code-patching.c | 33 ++++++++++++++++++++++++++++++++
- 1 file changed, 33 insertions(+)
+ arch/powerpc/lib/code-patching.c | 152 +++++++++++--------------------
+ 1 file changed, 54 insertions(+), 98 deletions(-)
 
 diff --git a/arch/powerpc/lib/code-patching.c b/arch/powerpc/lib/code-patching.c
-index 0a051dfeb177..8ae1a9e5fe6e 100644
+index 8ae1a9e5fe6e..80fe3864f377 100644
 --- a/arch/powerpc/lib/code-patching.c
 +++ b/arch/powerpc/lib/code-patching.c
-@@ -11,6 +11,8 @@
- #include <linux/cpuhotplug.h>
- #include <linux/slab.h>
- #include <linux/uaccess.h>
-+#include <linux/sched/task.h>
-+#include <linux/random.h>
+@@ -19,6 +19,7 @@
+ #include <asm/code-patching.h>
+ #include <asm/setup.h>
+ #include <asm/inst.h>
++#include <asm/mmu_context.h>
  
- #include <asm/tlbflush.h>
- #include <asm/page.h>
-@@ -44,6 +46,37 @@ int raw_patch_instruction(struct ppc_inst *addr, struct ppc_inst instr)
+ static int __patch_instruction(struct ppc_inst *exec_addr, struct ppc_inst instr,
+ 			       struct ppc_inst *patch_addr)
+@@ -77,106 +78,57 @@ void __init poking_init(void)
+ 	pte_unmap_unlock(ptep, ptl);
  }
  
- #ifdef CONFIG_STRICT_KERNEL_RWX
-+
-+static struct mm_struct *patching_mm __ro_after_init;
-+static unsigned long patching_addr __ro_after_init;
-+
-+void __init poking_init(void)
-+{
+-static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
+-
+-static int text_area_cpu_up(unsigned int cpu)
+-{
+-	struct vm_struct *area;
+-
+-	area = get_vm_area(PAGE_SIZE, VM_ALLOC);
+-	if (!area) {
+-		WARN_ONCE(1, "Failed to create text area for cpu %d\n",
+-			cpu);
+-		return -1;
+-	}
+-	this_cpu_write(text_poke_area, area);
+-
+-	return 0;
+-}
+-
+-static int text_area_cpu_down(unsigned int cpu)
+-{
+-	free_vm_area(this_cpu_read(text_poke_area));
+-	return 0;
+-}
+-
+-/*
+- * Run as a late init call. This allows all the boot time patching to be done
+- * simply by patching the code, and then we're called here prior to
+- * mark_rodata_ro(), which happens after all init calls are run. Although
+- * BUG_ON() is rude, in this case it should only happen if ENOMEM, and we judge
+- * it as being preferable to a kernel that will crash later when someone tries
+- * to use patch_instruction().
+- */
+-static int __init setup_text_poke_area(void)
+-{
+-	BUG_ON(!cpuhp_setup_state(CPUHP_AP_ONLINE_DYN,
+-		"powerpc/text_poke:online", text_area_cpu_up,
+-		text_area_cpu_down));
+-
+-	return 0;
+-}
+-late_initcall(setup_text_poke_area);
++struct patch_mapping {
 +	spinlock_t *ptl; /* for protecting pte table */
 +	pte_t *ptep;
-+
-+	/*
-+	 * Some parts of the kernel (static keys for example) depend on
-+	 * successful code patching. Code patching under STRICT_KERNEL_RWX
-+	 * requires this setup - otherwise we cannot patch at all. We use
-+	 * BUG_ON() here and later since an early failure is preferred to
-+	 * buggy behavior and/or strange crashes later.
-+	 */
-+	patching_mm = copy_init_mm();
-+	BUG_ON(!patching_mm);
-+
-+	/*
-+	 * In hash we cannot go above DEFAULT_MAP_WINDOW easily.
-+	 * XXX: Do we want additional bits of entropy for radix?
-+	 */
-+	patching_addr = (get_random_long() & PAGE_MASK) %
-+		(DEFAULT_MAP_WINDOW - PAGE_SIZE);
-+
-+	ptep = get_locked_pte(patching_mm, patching_addr, &ptl);
-+	BUG_ON(!ptep);
-+	pte_unmap_unlock(ptep, ptl);
-+}
-+
- static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
++	struct temp_mm temp_mm;
++};
  
- static int text_area_cpu_up(unsigned int cpu)
+ /*
+  * This can be called for kernel text or a module.
+  */
+-static int map_patch_area(void *addr, unsigned long text_poke_addr)
++static int map_patch(const void *addr, struct patch_mapping *patch_mapping)
+ {
+-	unsigned long pfn;
+-	int err;
++	struct page *page;
++	pte_t pte;
++	pgprot_t pgprot;
+ 
+ 	if (is_vmalloc_addr(addr))
+-		pfn = vmalloc_to_pfn(addr);
++		page = vmalloc_to_page(addr);
+ 	else
+-		pfn = __pa_symbol(addr) >> PAGE_SHIFT;
++		page = virt_to_page(addr);
+ 
+-	err = map_kernel_page(text_poke_addr, (pfn << PAGE_SHIFT), PAGE_KERNEL);
++	if (radix_enabled())
++		pgprot = PAGE_KERNEL;
++	else
++		pgprot = PAGE_SHARED;
+ 
+-	pr_devel("Mapped addr %lx with pfn %lx:%d\n", text_poke_addr, pfn, err);
+-	if (err)
++	patch_mapping->ptep = get_locked_pte(patching_mm, patching_addr,
++					     &patch_mapping->ptl);
++	if (unlikely(!patch_mapping->ptep)) {
++		pr_warn("map patch: failed to allocate pte for patching\n");
+ 		return -1;
++	}
++
++	pte = mk_pte(page, pgprot);
++	pte = pte_mkdirty(pte);
++	set_pte_at(patching_mm, patching_addr, patch_mapping->ptep, pte);
++
++	init_temp_mm(&patch_mapping->temp_mm, patching_mm);
++	use_temporary_mm(&patch_mapping->temp_mm);
+ 
+ 	return 0;
+ }
+ 
+-static inline int unmap_patch_area(unsigned long addr)
++static void unmap_patch(struct patch_mapping *patch_mapping)
+ {
+-	pte_t *ptep;
+-	pmd_t *pmdp;
+-	pud_t *pudp;
+-	p4d_t *p4dp;
+-	pgd_t *pgdp;
+-
+-	pgdp = pgd_offset_k(addr);
+-	if (unlikely(!pgdp))
+-		return -EINVAL;
+-
+-	p4dp = p4d_offset(pgdp, addr);
+-	if (unlikely(!p4dp))
+-		return -EINVAL;
+-
+-	pudp = pud_offset(p4dp, addr);
+-	if (unlikely(!pudp))
+-		return -EINVAL;
+-
+-	pmdp = pmd_offset(pudp, addr);
+-	if (unlikely(!pmdp))
+-		return -EINVAL;
+-
+-	ptep = pte_offset_kernel(pmdp, addr);
+-	if (unlikely(!ptep))
+-		return -EINVAL;
++	/* In hash, pte_clear flushes the tlb */
++	pte_clear(patching_mm, patching_addr, patch_mapping->ptep);
++	unuse_temporary_mm(&patch_mapping->temp_mm);
+ 
+-	pr_devel("clearing mm %p, pte %p, addr %lx\n", &init_mm, ptep, addr);
+-
+-	/*
+-	 * In hash, pte_clear flushes the tlb, in radix, we have to
+-	 */
+-	pte_clear(&init_mm, addr, ptep);
+-	flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
+-
+-	return 0;
++	/* In radix, we have to explicitly flush the tlb (no-op in hash) */
++	local_flush_tlb_mm(patching_mm);
++	pte_unmap_unlock(patch_mapping->ptep, patch_mapping->ptl);
+ }
+ 
+ static int do_patch_instruction(struct ppc_inst *addr, struct ppc_inst instr)
+@@ -184,32 +136,36 @@ static int do_patch_instruction(struct ppc_inst *addr, struct ppc_inst instr)
+ 	int err;
+ 	struct ppc_inst *patch_addr = NULL;
+ 	unsigned long flags;
+-	unsigned long text_poke_addr;
+-	unsigned long kaddr = (unsigned long)addr;
++	struct patch_mapping patch_mapping;
+ 
+ 	/*
+-	 * During early early boot patch_instruction is called
+-	 * when text_poke_area is not ready, but we still need
+-	 * to allow patching. We just do the plain old patching
++	 * The patching_mm is initialized before calling mark_rodata_ro. Prior
++	 * to this, patch_instruction is called when we don't have (and don't
++	 * need) the patching_mm so just do plain old patching.
+ 	 */
+-	if (!this_cpu_read(text_poke_area))
++	if (!patching_mm)
+ 		return raw_patch_instruction(addr, instr);
+ 
+ 	local_irq_save(flags);
+ 
+-	text_poke_addr = (unsigned long)__this_cpu_read(text_poke_area)->addr;
+-	if (map_patch_area(addr, text_poke_addr)) {
+-		err = -1;
++	err = map_patch(addr, &patch_mapping);
++	if (err)
+ 		goto out;
+-	}
+ 
+-	patch_addr = (struct ppc_inst *)(text_poke_addr + (kaddr & ~PAGE_MASK));
++	patch_addr = (struct ppc_inst *)(patching_addr | offset_in_page(addr));
+ 
+-	__patch_instruction(addr, instr, patch_addr);
++	if (!radix_enabled())
++		allow_write_to_user(patch_addr, ppc_inst_len(instr));
++	err = __patch_instruction(addr, instr, patch_addr);
++	if (!radix_enabled())
++		prevent_write_to_user(patch_addr, ppc_inst_len(instr));
+ 
+-	err = unmap_patch_area(text_poke_addr);
+-	if (err)
+-		pr_warn("failed to unmap %lx\n", text_poke_addr);
++	unmap_patch(&patch_mapping);
++	/*
++	 * Something is wrong if what we just wrote doesn't match what we
++	 * think we just wrote.
++	 */
++	WARN_ON(!ppc_inst_equal(ppc_inst_read(addr), instr));
+ 
+ out:
+ 	local_irq_restore(flags);
 -- 
 2.27.0
 
