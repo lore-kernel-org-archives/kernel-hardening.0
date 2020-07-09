@@ -1,20 +1,20 @@
-Return-Path: <SRS0=u0tB=AT=lists.openwall.com=kernel-hardening-return-19260-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=c8Ru=AU=lists.openwall.com=kernel-hardening-return-19261-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-8.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 56C89C433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed,  8 Jul 2020 17:50:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A73B5C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Jul 2020 04:01:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8BA0F206E9
-	for <kernel-hardening@archiver.kernel.org>; Wed,  8 Jul 2020 17:50:30 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8BA0F206E9
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19260-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5798 invoked by uid 550); 8 Jul 2020 17:50:22 -0000
+	by mail.kernel.org (Postfix) with SMTP id 1088D206E2
+	for <kernel-hardening@archiver.kernel.org>; Thu,  9 Jul 2020 04:01:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1088D206E2
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19261-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25739 invoked by uid 550); 9 Jul 2020 04:01:22 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,192 +22,152 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5763 invoked from network); 8 Jul 2020 17:50:22 -0000
-Subject: Re: [PATCH v19 08/12] landlock: Add syscall implementation
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
- Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
- Anton Ivanov <anton.ivanov@cambridgegreys.com>,
- Casey Schaufler <casey@schaufler-ca.com>, James Morris <jmorris@namei.org>,
- Jann Horn <jannh@google.com>, Jeff Dike <jdike@addtoit.com>,
- Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
- Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>,
- Shuah Khan <shuah@kernel.org>,
- Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- linux-arch <linux-arch@vger.kernel.org>,
- "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
- Linux FS-devel Mailing List <linux-fsdevel@vger.kernel.org>,
- "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
- LSM List <linux-security-module@vger.kernel.org>,
- the arch/x86 maintainers <x86@kernel.org>
-References: <20200707180955.53024-1-mic@digikod.net>
- <20200707180955.53024-9-mic@digikod.net>
- <CAK8P3a0FkoxFtcQJ2jSqyLbDCOp3R8-1JoY8CWAgbSZ9hH9wdQ@mail.gmail.com>
- <7f407b67-d470-25fd-1287-f4f55f18e74a@digikod.net>
- <CAK8P3a1ehWZErD2a0iBqn37s-LTAtW0AbV_gt32iX3cQkXbpOQ@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <ec79f6ad-1c11-d69f-724b-622baa28f19f@digikod.net>
-Date: Wed, 8 Jul 2020 19:50:03 +0200
-User-Agent:
+Received: (qmail 25706 invoked from network); 9 Jul 2020 04:01:21 -0000
+From: "Christopher M. Riedl" <cmr@informatik.wtf>
+To: linuxppc-dev@lists.ozlabs.org
+Cc: kernel-hardening@lists.openwall.com
+Subject: [PATCH 0/5] Use per-CPU temporary mappings for patching
+Date: Wed,  8 Jul 2020 23:03:11 -0500
+Message-Id: <20200709040316.12789-1-cmr@informatik.wtf>
+X-Mailer: git-send-email 2.27.0
 MIME-Version: 1.0
-In-Reply-To: <CAK8P3a1ehWZErD2a0iBqn37s-LTAtW0AbV_gt32iX3cQkXbpOQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
 Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
+X-Virus-Scanned: ClamAV using ClamSMTP
+
+When compiled with CONFIG_STRICT_KERNEL_RWX, the kernel must create
+temporary mappings when patching itself. These mappings temporarily
+override the strict RWX text protections to permit a write. Currently,
+powerpc allocates a per-CPU VM area for patching. Patching occurs as
+follows:
+
+	1. Map page of text to be patched to per-CPU VM area w/
+	   PAGE_KERNEL protection
+	2. Patch text
+	3. Remove the temporary mapping
+
+While the VM area is per-CPU, the mapping is actually inserted into the
+kernel page tables. Presumably, this could allow another CPU to access
+the normally write-protected text - either malicously or accidentally -
+via this same mapping if the address of the VM area is known. Ideally,
+the mapping should be kept local to the CPU doing the patching (or any
+other sensitive operations requiring temporarily overriding memory
+protections) [0].
+
+x86 introduced "temporary mm" structs which allow the creation of
+mappings local to a particular CPU [1]. This series intends to bring the
+notion of a temporary mm to powerpc and harden powerpc by using such a
+mapping for patching a kernel with strict RWX permissions.
+
+The first patch introduces the temporary mm struct and API for powerpc
+along with a new function to retrieve a current hw breakpoint.
+
+The second patch uses the `poking_init` init hook added by the x86
+patches to initialize a temporary mm and patching address. The patching
+address is randomized between 0 and DEFAULT_MAP_WINDOW-PAGE_SIZE. The
+upper limit is necessary due to how the hash MMU operates - by default
+the space above DEFAULT_MAP_WINDOW is not available. For now, both hash
+and radix randomize inside this range. The number of possible random
+addresses is dependent on PAGE_SIZE and limited by DEFAULT_MAP_WINDOW.
+
+Bits of entropy with 64K page size on BOOK3S_64:
+
+	bits of entropy = log2(DEFAULT_MAP_WINDOW_USER64 / PAGE_SIZE)
+
+	PAGE_SIZE=64K, DEFAULT_MAP_WINDOW_USER64=128TB
+	bits of entropy = log2(128TB / 64K)
+	bits of entropy = 31
+
+Randomization occurs only once during initialization at boot.
+
+The third patch replaces the VM area with the temporary mm in the
+patching code. The page for patching has to be mapped PAGE_SHARED with
+the hash MMU since hash prevents the kernel from accessing userspace
+pages with PAGE_PRIVILEGED bit set. On the radix MMU the page is mapped with
+PAGE_KERNEL which has the added benefit that we can skip KUAP. 
+
+The fourth and fifth patches implement an LKDTM test "proof-of-concept" which
+exploits the previous vulnerability (ie. the mapping during patching is exposed
+in kernel page tables and accessible by other CPUS). The LKDTM test is somewhat
+"rough" in that it uses a brute-force approach - I am open to any suggestions
+and/or ideas to improve this. Currently, the LKDTM test passes with this series
+on POWER8 (hash) and POWER9 (radix, hash) and fails without this series (ie.
+the temporary mapping for patching is exposed to CPUs other than the patching
+CPU).
+
+The test can be applied to a tree without this new series by applying
+the last two patches of this series, and then fixing up in
+/arch/powerpc/lib/code-patching.c:
+
+ #ifdef CONFIG_STRICT_KERNEL_RWX
+ static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
+
++#ifdef CONFIG_LKDTM
++unsigned long read_cpu_patching_addr(unsigned int cpu)
++{
++       return (unsigned long)(per_cpu(text_poke_area, cpu))->addr;
++}
++#endif
++
+ static int text_area_cpu_up(unsigned int cpu)
+ {
+        struct vm_struct *area;
+
+I also have a tree with just linuxppc/next and the LKDTM test here:
+https://github.com/cmr-informatik/linux/commits/percpu-lkdtm-only
+
+Tested on Blackbird (8-core POWER9) w/ Hash (`disable_radix`) and Radix
+MMUs.
+
+v2:	* Rebase on linuxppc/next:
+	  commit 105fb38124a4 ("powerpc/8xx: Modify ptep_get()")
+	* Always dirty pte when mapping patch
+	* Use `ppc_inst_len` instead of `sizeof` on instructions
+	* Declare LKDTM patching addr accessor in header where it
+	  belongs	
+
+v1:	* Rebase on linuxppc/next (4336b9337824)
+	* Save and restore second hw watchpoint
+	* Use new ppc_inst_* functions for patching check and in LKDTM
+	  test
+
+rfc-v2:	* Many fixes and improvements mostly based on extensive feedback and
+          testing by Christophe Leroy (thanks!).
+	* Make patching_mm and patching_addr static and mode '__ro_after_init'
+	  to after the variable name (more common in other parts of the kernel)
+	* Use 'asm/debug.h' header instead of 'asm/hw_breakpoint.h' to fix
+	  PPC64e compile
+	* Add comment explaining why we use BUG_ON() during the init call to
+	  setup for patching later
+	* Move ptep into patch_mapping to avoid walking page tables a second
+	  time when unmapping the temporary mapping
+	* Use KUAP under non-radix, also manually dirty the PTE for patch
+	  mapping on non-BOOK3S_64 platforms
+	* Properly return any error from __patch_instruction
+	* Do not use 'memcmp' where a simple comparison is appropriate
+	* Simplify expression for patch address by removing pointer maths
+	* Add LKDTM test
 
 
-On 08/07/2020 15:49, Arnd Bergmann wrote:
-> On Wed, Jul 8, 2020 at 3:04 PM Mickaël Salaün <mic@digikod.net> wrote:
->> On 08/07/2020 10:57, Arnd Bergmann wrote:
->>> On Tue, Jul 7, 2020 at 8:10 PM Mickaël Salaün <mic@digikod.net> wrote:
->>>
->>> It looks like all you need here today is a single argument bit, plus
->>> possibly some room for extensibility. I would suggest removing all
->>> the extra bits and using a syscall like
->>>
->>> SYSCALL_DEFINE1(landlock_create_ruleset, u32, flags);
->>>
->>> I don't really see how this needs any variable-length arguments,
->>> it really doesn't do much.
->>
->> We need the attr_ptr/attr_size pattern because the number of ruleset
->> properties will increase (e.g. network access mask).
-> 
-> But how many bits do you think you will *actually* need in total that
-> this needs to be a two-dimensional set of flags? At the moment you
-> only have a single bit that you interpret.
+[0]: https://github.com/linuxppc/issues/issues/224
+[1]: https://lore.kernel.org/kernel-hardening/20190426232303.28381-1-nadav.amit@gmail.com/
 
-I think there is a misunderstanding. For this syscall I wasn't talking
-about the "options" field but about the "handled_access_fs" field which
-has 14 bits dedicated to control access to the file system:
-https://landlock.io/linux-doc/landlock-v19/security/landlock/user.html#filesystem-flags
-The idea is to add other handled_access_* fields for other kernel object
-types (e.g. network, process, etc.).
+Christopher M. Riedl (5):
+  powerpc/mm: Introduce temporary mm
+  powerpc/lib: Initialize a temporary mm for code patching
+  powerpc/lib: Use a temporary mm for code patching
+  powerpc/lib: Add LKDTM accessor for patching addr
+  powerpc: Add LKDTM test to hijack a patch mapping
 
-The "options" field is fine as a raw __u32 syscall argument.
+ arch/powerpc/include/asm/code-patching.h |   4 +
+ arch/powerpc/include/asm/debug.h         |   1 +
+ arch/powerpc/include/asm/mmu_context.h   |  64 +++++++++
+ arch/powerpc/kernel/process.c            |   5 +
+ arch/powerpc/lib/code-patching.c         | 176 +++++++++++------------
+ drivers/misc/lkdtm/core.c                |   1 +
+ drivers/misc/lkdtm/lkdtm.h               |   1 +
+ drivers/misc/lkdtm/perms.c               |  99 +++++++++++++
+ 8 files changed, 261 insertions(+), 90 deletions(-)
 
-> 
->>> To be on the safe side, you might split up the flags into either the
->>> upper/lower 16 bits or two u32 arguments, to allow both compatible
->>> (ignored by older kernels if flag is set) and incompatible (return error
->>> when an unknown flag is set) bits.
->>
->> This may be a good idea in general, but in the case of Landlock, because
->> this kind of (discretionary) sandboxing should be a best-effort security
->> feature, we should avoid incompatible behavior. In practice, every
->> unknown bit returns an error because userland can probe for available
->> bits thanks to the get_features command. This kind of (in)compatibility
->> can then be handled by userland.
-> 
-> If there are not going to be incompatible extensions, then just ignore
-> all unknown bits and never return an error but get rid of the user
-> space probing that just complicates the interface.
+-- 
+2.27.0
 
-There was multiple discussions about ABI compatibility, especially
-inspired by open(2) vs. openat2(2), and ignoring flags seems to be a bad
-idea. In the "sandboxer" example, we first probe the supported features
-and then mask unknown bits (i.e. access rights) at run time in userland.
-This strategy is quite straightforward, backward compatible and
-future-proof.
-
-What does the linux-api folks think about this?
-
-> 
-> In general, it's hard to rely on user space to first ask the kernel
-> what it can do, the way this normally works is that user space
-> asks the kernel for something and it either does it or not, but gives
-> an indication of whether it worked.
-
-Right, but this is a special case (i.e. best-effort security, not a
-required feature to run an application properly). As previously
-discussed, this kind of security feature should be used as much as
-possible by userland, but it may run on a system without Landlock. To
-encourage a wide use of this kind of security sandboxing by userland
-developers we should avoid the case when all the sandboxing is disabled
-because not all sandboxing features are supported by the running kernel.
-
-> 
->> I suggest this syscall signature:
->> SYSCALL_DEFINE3(landlock_create_ruleset, __u32, options, const struct
->> landlock_attr_ruleset __user *, ruleset_ptr, size_t, ruleset_size);
-> 
-> The other problem here is that indirect variable-size structured arguments
-> are a pain to instrument with things like strace or seccomp, so you
-> should first try to use a fixed argument list, and fall back to a fixed
-> structure if that fails.
-
-I agree that it is not perfect with the current tools but this kind of
-extensible structs are becoming common and well defined (e.g. openat2).
-Moreover there is some work going on for seccomp to support "extensible
-argument" syscalls: https://lwn.net/Articles/822256/
-
-> 
->>>> +static int syscall_add_rule_path_beneath(const void __user *const attr_ptr,
->>>> +               const size_t attr_size)
->>>> +{
->>>> +       struct landlock_attr_path_beneath attr_path_beneath;
->>>> +       struct path path;
->>>> +       struct landlock_ruleset *ruleset;
->>>> +       int err;
->>>
->>> Similarly, it looks like this wants to be
->>>
->>> SYSCALL_DEFINE3(landlock_add_rule_path_beneath, int, ruleset, int,
->>> path, __u32, flags)
->>>
->>> I don't see any need to extend this in a way that wouldn't already
->>> be served better by adding another system call. You might argue
->>> that 'flags' and 'allowed_access' could be separate, with the latter
->>> being an indirect in/out argument here, like
->>>
->>> SYSCALL_DEFINE4(landlock_add_rule_path_beneath, int, ruleset, int, path,
->>>                            __u64 *, allowed_acces, __u32, flags)
->>
->> To avoid adding a new syscall for each new rule type (e.g. path_beneath,
->> path_range, net_ipv4_range, etc.), I think it would be better to keep
->> the attr_ptr/attr_size pattern and to explicitely set a dedicated option
->> flag to specify the attr type.
->>
->> This would look like this:
->> SYSCALL_DEFINE4(landlock_add_rule, __u32, options, int, ruleset, const
->> void __user *, rule_ptr, size_t, rule_size);
->>
->> The rule_ptr could then point to multiple types like struct
->> landlock_attr_path_beneath (without the current ruleset_fd field).
-> 
-> This again introduces variable-sized structured data. How many different
-> kinds of rule types do you think there will be (most likely, and maybe an
-> upper bound)?
-
-I don't know how many rule types will come, but right now I think it may
-be less than 10.
-
-> 
-> Could (some of) these be generalized to use the same data structure?
-
-I don't think so, file path and network addresses are an example of very
-different types.
-
-> 
->>>> +static int syscall_enforce_ruleset(const void __user *const attr_ptr,
->>>> +               const size_t attr_size)
->>>
->>> Here it seems like you just need to pass the file descriptor, or maybe
->>>
->>> SYSCALL_DEFINE2(landlock_enforce, int, ruleset, __u32 flags);
->>>
->>> if you need flags for extensibility.
->>
->> Right, but for consistency I prefer to change the arguments like this:
->> SYSCALL_DEFINE2(landlock_enforce, __u32 options, int, ruleset);
-> 
-> Most system calls pass the object they work on as the first argument,
-> in this case this would be the ruleset file descriptor.
-
-OK, makes sense, I'll try to follow this as much as possible then.
