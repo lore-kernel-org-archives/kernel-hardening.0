@@ -1,23 +1,23 @@
-Return-Path: <SRS0=Jsc5=AX=lists.openwall.com=kernel-hardening-return-19290-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=KBCI=AY=lists.openwall.com=kernel-hardening-return-19291-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.6 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5D15FC433E3
-	for <kernel-hardening@archiver.kernel.org>; Sun, 12 Jul 2020 23:35:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9D602C433E1
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Jul 2020 08:07:55 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id ACC6920674
-	for <kernel-hardening@archiver.kernel.org>; Sun, 12 Jul 2020 23:35:10 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E274B2073A
+	for <kernel-hardening@archiver.kernel.org>; Mon, 13 Jul 2020 08:07:54 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="pBpXJX53"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org ACC6920674
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19290-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1152 invoked by uid 550); 12 Jul 2020 23:35:03 -0000
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="WfTETJ9m"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E274B2073A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19291-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7524 invoked by uid 550); 13 Jul 2020 08:07:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,76 +25,138 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1119 invoked from network); 12 Jul 2020 23:35:02 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=LVOtLwv/Cvl11tUYp50SksGWhQhY11SC0NIkGuc8zKg=;
-        b=pBpXJX539broCTWH17WgpJDxoLP0paWSlvb8A7h3fxHZadJbhqRCNtCFP25mX7XEJ4
-         /kwaDuWKopj4I8eO8SAvDGZq6F9j25nSGRAO0y6X2NGnu7izoh9SZwvHn6KFIILHenua
-         VZeZFZ0bZYIFUV+EEZeOEkkM7qjxY5RJIoRAIP4Ic1GB+xDjTjYg3z0lEPuNawED7EbA
-         MonmBQTmlvtQCqFgEnrnwFndAHCUOPLKAGIG3XWpeW0/Qr4qA0bZxFzdTlAkI2KH7b0F
-         rBajQRa/6JbzOq5B4AwXzh5PM1ZTZhssUaqSkDgJ7Yz0lPtz7xwa3hLHTGAXQMnzERV6
-         /O1Q==
+Received: (qmail 7504 invoked from network); 13 Jul 2020 08:07:47 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1594627655;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=thokzV2lTPzLARMZ2GmJNDEymlOB144wptcD2yJ3eYo=;
+	b=WfTETJ9mmiGoPzp5fY6EjMT6v4m4ofuuhepGWck5HL8qAR18CI4jTqgOr1BwZW6A933ZfR
+	sIge1ch2xVtKffy1M3QPQVrZk9UCJwdBS/oQ4Jyy/KtgDoB+OkN+LyV2m/RzHf7YFZgxsT
+	HHv3enir/net/0A5qCnA2tZGolC2b0Y=
+X-MC-Unique: Mcc1dfL3NTmqz_KA46VQNg-1
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=LVOtLwv/Cvl11tUYp50SksGWhQhY11SC0NIkGuc8zKg=;
-        b=SnRI3z93dLQ0IRmGL12H0UrEM+Ez9p+d0BADS/6LMNf1aDU11+uBXYAtepf7qv4SKn
-         gmT04gIeXahfnAawmmQfnRbqBNpKtGVH1sY79B/kQoGmWd1J2+tHRai8nNBMxb4YQFYS
-         gkRxt4sBACI3U3Bk3qx92udvFg0npXS27gsu1BeZT1uv5EcVwv4UPyO9MmOC+2vYVqjv
-         5GEUHkrShLpsvsLtPJmgP8eWcUGTN5Vlok7omCwnFXDHYBqhoQ5eIcHIKxEfLXDwi/XG
-         KnIQeLmzSE31INdjmwvzmiylzmEiHhPTOnkZ8iUEnR4DxzQ9G1/elO28vhgk1hLzTVKA
-         5xWA==
-X-Gm-Message-State: AOAM5301C2yJKNRuAyPGkWrsk+XRqcsmOT5Wa2cnPASQkAxnRAglgIwb
-	F1FU7XPFOcpAzYguDiMCvSbM7ybghqwr6vU2C0XU4A==
-X-Google-Smtp-Source: ABdhPJytFy6lsxbxptEBJHanuAZiQiJRjagWMLPmEYrRnXLJYMLE9doc2W4BiVdJO1Ek3tqEEHDclPE0n0pEuhpOHu8=
-X-Received: by 2002:a17:906:94c4:: with SMTP id d4mr69283452ejy.232.1594596890894;
- Sun, 12 Jul 2020 16:34:50 -0700 (PDT)
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=thokzV2lTPzLARMZ2GmJNDEymlOB144wptcD2yJ3eYo=;
+        b=ZsVLpvzh2q3OWMwQ37bsrk2ZzjU9aFFLUB3npDpEokxnJNz0mrJekrovbjazDaAWpN
+         lQMzk1IhCasTSOi6dXTo+rbJ4S0MM8NTFLfx5K4Evnl/xKO2AELiRIo9mmLmwokCWJIC
+         QGZMb8yvIqcHb6rkq7dhnDyx2B4QmY5o2PVX5v0il9x0Mv/uzgdDRQLjO8wuS92lnn57
+         D0mV3IqXBSUny9AyZV9t/avjD7HyoNTr32bnh3F4ziapkE3PmTjClWfr5zrDvvQ/KZnf
+         wjffFUktmeK8UiITsUSKy7mQ7hNJkcNcfR7OUyj4lBvnLQHN2pwpOqYaggTs9oPqY7Gn
+         90hQ==
+X-Gm-Message-State: AOAM531NSV6Dxg8Fx1D4nQk8zcjgQDTdz3mZ316mdJ0sbNd88rcH1+f+
+	jIH6HbtOwRIM8Ty+KPle1rzXulcu8LUoGfj+I1+fnPiLN4yVsOdFOQshF1uKMC2SoeKYu45p3lk
+	PBvTfq7tZasIup9kzhMvq4DpqdB5QNKai6g==
+X-Received: by 2002:adf:9051:: with SMTP id h75mr84159392wrh.152.1594627652976;
+        Mon, 13 Jul 2020 01:07:32 -0700 (PDT)
+X-Google-Smtp-Source: ABdhPJw6ugR4SJYyS+JyXgFpzVLUdQEd9gIqid8od/rTaiAEg/puVly9toFCtHHU1aU3hfbT+UQRmQ==
+X-Received: by 2002:adf:9051:: with SMTP id h75mr84159371wrh.152.1594627652750;
+        Mon, 13 Jul 2020 01:07:32 -0700 (PDT)
+Date: Mon, 13 Jul 2020 10:07:29 +0200
+From: Stefano Garzarella <sgarzare@redhat.com>
+To: Jens Axboe <axboe@kernel.dk>
+Cc: Sargun Dhillon <sargun@sargun.me>, Kees Cook <keescook@chromium.org>,
+	linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Jann Horn <jannh@google.com>, Aleksa Sarai <asarai@suse.de>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	Stefan Hajnoczi <stefanha@redhat.com>, io-uring@vger.kernel.org,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Jeff Moyer <jmoyer@redhat.com>
+Subject: Re: [PATCH RFC 2/3] io_uring: add IOURING_REGISTER_RESTRICTIONS
+ opcode
+Message-ID: <20200713080729.gttt3ymk7aqumle4@steredhat>
+References: <20200710141945.129329-1-sgarzare@redhat.com>
+ <20200710141945.129329-3-sgarzare@redhat.com>
+ <f39fe84d-1353-1066-c7fc-770054f7129e@kernel.dk>
 MIME-Version: 1.0
-References: <20200624203200.78870-1-samitolvanen@google.com> <671d8923-ed43-4600-2628-33ae7cb82ccb@molgen.mpg.de>
-In-Reply-To: <671d8923-ed43-4600-2628-33ae7cb82ccb@molgen.mpg.de>
-From: Sami Tolvanen <samitolvanen@google.com>
-Date: Sun, 12 Jul 2020 16:34:39 -0700
-Message-ID: <CABCJKuedpxAqndgL=jHT22KtjnLkb1dsYaM6hQYyhqrWjkEe6A@mail.gmail.com>
-Subject: Re: [PATCH 00/22] add support for Clang LTO
-To: Paul Menzel <pmenzel@molgen.mpg.de>
-Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
-	linux-kbuild <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
-	linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <f39fe84d-1353-1066-c7fc-770054f7129e@kernel.dk>
+X-Mimecast-Spam-Score: 0
+X-Mimecast-Originator: redhat.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 
-On Sat, Jul 11, 2020 at 9:32 AM Paul Menzel <pmenzel@molgen.mpg.de> wrote:
-> Thank you very much for sending these changes.
->
-> Do you have a branch, where your current work can be pulled from? Your
-> branch on GitHub [1] seems 15 months old.
+On Fri, Jul 10, 2020 at 11:52:48AM -0600, Jens Axboe wrote:
+> On 7/10/20 8:19 AM, Stefano Garzarella wrote:
+> > The new io_uring_register(2) IOURING_REGISTER_RESTRICTIONS opcode
+> > permanently installs a feature whitelist on an io_ring_ctx.
+> > The io_ring_ctx can then be passed to untrusted code with the
+> > knowledge that only operations present in the whitelist can be
+> > executed.
+> > 
+> > The whitelist approach ensures that new features added to io_uring
+> > do not accidentally become available when an existing application
+> > is launched on a newer kernel version.
+> 
+> Keeping with the trend of the times, you should probably use 'allowlist'
+> here instead of 'whitelist'.
 
-The clang-lto branch is rebased regularly on top of Linus' tree.
-GitHub just looks at the commit date of the last commit in the tree,
-which isn't all that informative.
+Sure, it is better!
 
-> Out of curiosity, I applied the changes, allowed the selection for i386
-> (x86), and with Clang 1:11~++20200701093119+ffee8040534-1~exp1 from
-> Debian experimental, it failed with `Invalid absolute R_386_32
-> relocation: KERNEL_PAGES`:
+> > 
+> > Currently is it possible to restrict sqe opcodes and register
+> > opcodes. It is also possible to allow only fixed files.
+> > 
+> > IOURING_REGISTER_RESTRICTIONS can only be made once. Afterwards
+> > it is not possible to change restrictions anymore.
+> > This prevents untrusted code from removing restrictions.
+> 
+> A few comments below.
+> 
+> > @@ -337,6 +344,7 @@ struct io_ring_ctx {
+> >  	struct llist_head		file_put_llist;
+> >  
+> >  	struct work_struct		exit_work;
+> > +	struct io_restriction		restrictions;
+> >  };
+> >  
+> >  /*
+> 
+> Since very few will use this feature, was going to suggest that we make
+> it dynamically allocated. But it's just 32 bytes, currently, so probably
+> not worth the effort...
+> 
 
-I haven't looked at getting this to work on i386, which is why we only
-select ARCH_SUPPORTS_LTO for x86_64. I would expect there to be a few
-issues to address.
+Yeah, I'm not sure it will grow in the future, so I'm tempted to leave it
+as it is, but I can easily change it if you prefer.
 
-> >   arch/x86/tools/relocs vmlinux > arch/x86/boot/compressed/vmlinux.relocs;arch/x86/tools/relocs --abs-relocs vmlinux
-> > Invalid absolute R_386_32 relocation: KERNEL_PAGES
+> > @@ -5491,6 +5499,11 @@ static int io_req_set_file(struct io_submit_state *state, struct io_kiocb *req,
+> >  	if (unlikely(!fixed && io_async_submit(req->ctx)))
+> >  		return -EBADF;
+> >  
+> > +	if (unlikely(!fixed && req->ctx->restrictions.enabled &&
+> > +		     test_bit(IORING_RESTRICTION_FIXED_FILES_ONLY,
+> > +			      req->ctx->restrictions.restriction_op)))
+> > +		return -EACCES;
+> > +
+> >  	return io_file_get(state, req, fd, &req->file, fixed);
+> >  }
+> 
+> This one hurts, though. I don't want any extra overhead from the
+> feature, and you're digging deep in ctx here to figure out of we need to
+> check.
+> 
+> Generally, all the checking needs to be out-of-line, and it needs to
+> base the decision on whether to check something or not on a cache hot
+> piece of data. So I'd suggest to turn all of these into some flag.
+> ctx->flags generally mirrors setup flags, so probably just add a:
+> 
+> 	unsigned int restrictions : 1;
+> 
+> after eventfd_async : 1 in io_ring_ctx. That's free, plenty of room
+> there and that cacheline is already pulled in for reading.
+> 
 
-KERNEL_PAGES looks like a constant, so it's probably safe to ignore
-the absolute relocation in tools/relocs.c.
+Thanks for the clear explanation!
 
-Sami
+I left a TODO comment near the 'enabled' field to look for something better,
+and what you're suggesting is what I was looking for :-)
+
+I'll change it!
+
+Thanks,
+Stefano
+
