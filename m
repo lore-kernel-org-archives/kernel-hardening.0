@@ -1,4 +1,4 @@
-Return-Path: <SRS0=mmj0=AZ=lists.openwall.com=kernel-hardening-return-19312-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=rdCs=AZ=lists.openwall.com=kernel-hardening-return-19313-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-13.0 required=3.0 tests=BAYES_00,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 67772C433E1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 18:17:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 23F48C43465
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 18:17:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9967E2242E
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 18:17:25 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9967E2242E
+	by mail.kernel.org (Postfix) with SMTP id 86CDF22955
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 18:17:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 86CDF22955
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19312-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3203 invoked by uid 550); 14 Jul 2020 18:17:03 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19313-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3354 invoked by uid 550); 14 Jul 2020 18:17:05 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3122 invoked from network); 14 Jul 2020 18:17:02 -0000
+Received: (qmail 3253 invoked from network); 14 Jul 2020 18:17:04 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -65,9 +65,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-integrity@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
 	linux-fsdevel@vger.kernel.org
-Subject: [PATCH v6 2/7] exec: Move S_ISREG() check earlier
-Date: Tue, 14 Jul 2020 20:16:33 +0200
-Message-Id: <20200714181638.45751-3-mic@digikod.net>
+Subject: [PATCH v6 3/7] exec: Move path_noexec() check earlier
+Date: Tue, 14 Jul 2020 20:16:34 +0200
+Message-Id: <20200714181638.45751-4-mic@digikod.net>
 X-Mailer: git-send-email 2.27.0
 In-Reply-To: <20200714181638.45751-1-mic@digikod.net>
 References: <20200714181638.45751-1-mic@digikod.net>
@@ -79,21 +79,10 @@ X-Antivirus-Code: 0x100000
 
 From: Kees Cook <keescook@chromium.org>
 
-The execve(2)/uselib(2) syscalls have always rejected non-regular
-files. Recently, it was noticed that a deadlock was introduced when trying
-to execute pipes, as the S_ISREG() test was happening too late. This was
-fixed in commit 73601ea5b7b1 ("fs/open.c: allow opening only regular files
-during execve()"), but it was added after inode_permission() had already
-run, which meant LSMs could see bogus attempts to execute non-regular
-files.
-
-Move the test into the other inode type checks (which already look
-for other pathological conditions[1]). Since there is no need to use
-FMODE_EXEC while we still have access to "acc_mode", also switch the
-test to MAY_EXEC.
-
-Also include a comment with the redundant S_ISREG() checks at the end of
-execve(2)/uselib(2) to note that they are present to avoid any mistakes.
+The path_noexec() check, like the regular file check, was happening too
+late, letting LSMs see impossible execve()s. Check it earlier as well
+in may_open() and collect the redundant fs/exec.c path_noexec() test
+under the same robustness comment as the S_ISREG() check.
 
 My notes on the call path, and related arguments, checks, etc:
 
@@ -107,102 +96,68 @@ do_open_execat()
             file = alloc_empty_file(open_flags, current_cred());
             do_open(nameidata, file, open_flags)
                 may_open(path, acc_mode, open_flag)
-		    /* new location of MAY_EXEC vs S_ISREG() test */
+                    /* new location of MAY_EXEC vs path_noexec() test */
                     inode_permission(inode, MAY_OPEN | acc_mode)
                         security_inode_permission(inode, acc_mode)
                 vfs_open(path, file)
                     do_dentry_open(file, path->dentry->d_inode, open)
-                        /* old location of FMODE_EXEC vs S_ISREG() test */
                         security_file_open(f)
                         open()
-
-[1] https://lore.kernel.org/lkml/202006041910.9EF0C602@keescook/
+    /* old location of path_noexec() test */
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 Acked-by: Mickaël Salaün <mic@digikod.net>
-Link: https://lore.kernel.org/r/20200605160013.3954297-3-keescook@chromium.org
+Link: https://lore.kernel.org/r/20200605160013.3954297-4-keescook@chromium.org
 ---
- fs/exec.c  | 14 ++++++++++++--
- fs/namei.c |  6 ++++--
- fs/open.c  |  6 ------
- 3 files changed, 16 insertions(+), 10 deletions(-)
+ fs/exec.c  | 12 ++++--------
+ fs/namei.c |  4 ++++
+ 2 files changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/fs/exec.c b/fs/exec.c
-index d7c937044d10..bdc6a6eb5dce 100644
+index bdc6a6eb5dce..4eea20c27b01 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
-@@ -141,8 +141,13 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
- 	if (IS_ERR(file))
- 		goto out;
- 
-+	/*
-+	 * may_open() has already checked for this, so it should be
-+	 * impossible to trip now. But we need to be extra cautious
-+	 * and check again at the very end too.
-+	 */
+@@ -147,10 +147,8 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
+ 	 * and check again at the very end too.
+ 	 */
  	error = -EACCES;
--	if (!S_ISREG(file_inode(file)->i_mode))
-+	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode)))
+-	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode)))
+-		goto exit;
+-
+-	if (path_noexec(&file->f_path))
++	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode) ||
++			 path_noexec(&file->f_path)))
  		goto exit;
  
- 	if (path_noexec(&file->f_path))
-@@ -886,8 +891,13 @@ static struct file *do_open_execat(int fd, struct filename *name, int flags)
- 	if (IS_ERR(file))
- 		goto out;
- 
-+	/*
-+	 * may_open() has already checked for this, so it should be
-+	 * impossible to trip now. But we need to be extra cautious
-+	 * and check again at the very end too.
-+	 */
+ 	fsnotify_open(file);
+@@ -897,10 +895,8 @@ static struct file *do_open_execat(int fd, struct filename *name, int flags)
+ 	 * and check again at the very end too.
+ 	 */
  	err = -EACCES;
--	if (!S_ISREG(file_inode(file)->i_mode))
-+	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode)))
+-	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode)))
+-		goto exit;
+-
+-	if (path_noexec(&file->f_path))
++	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode) ||
++			 path_noexec(&file->f_path)))
  		goto exit;
  
- 	if (path_noexec(&file->f_path))
+ 	err = deny_write_access(file);
 diff --git a/fs/namei.c b/fs/namei.c
-index 72d4219c93ac..a559ad943970 100644
+index a559ad943970..ddc9b25540fe 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
-@@ -2849,16 +2849,18 @@ static int may_open(const struct path *path, int acc_mode, int flag)
- 	case S_IFLNK:
- 		return -ELOOP;
- 	case S_IFDIR:
--		if (acc_mode & MAY_WRITE)
-+		if (acc_mode & (MAY_WRITE | MAY_EXEC))
- 			return -EISDIR;
- 		break;
- 	case S_IFBLK:
- 	case S_IFCHR:
- 		if (!may_open_dev(path))
+@@ -2863,6 +2863,10 @@ static int may_open(const struct path *path, int acc_mode, int flag)
  			return -EACCES;
--		/*FALLTHRU*/
-+		fallthrough;
- 	case S_IFIFO:
- 	case S_IFSOCK:
-+		if (acc_mode & MAY_EXEC)
-+			return -EACCES;
  		flag &= ~O_TRUNC;
  		break;
- 	}
-diff --git a/fs/open.c b/fs/open.c
-index 6cd48a61cda3..623b7506a6db 100644
---- a/fs/open.c
-+++ b/fs/open.c
-@@ -784,12 +784,6 @@ static int do_dentry_open(struct file *f,
- 		return 0;
++	case S_IFREG:
++		if ((acc_mode & MAY_EXEC) && path_noexec(path))
++			return -EACCES;
++		break;
  	}
  
--	/* Any file opened for execve()/uselib() has to be a regular file. */
--	if (unlikely(f->f_flags & FMODE_EXEC && !S_ISREG(inode->i_mode))) {
--		error = -EACCES;
--		goto cleanup_file;
--	}
--
- 	if (f->f_mode & FMODE_WRITE && !special_file(inode->i_mode)) {
- 		error = get_write_access(inode);
- 		if (unlikely(error))
+ 	error = inode_permission(inode, MAY_OPEN | acc_mode);
 -- 
 2.27.0
 
