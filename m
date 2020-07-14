@@ -1,20 +1,20 @@
-Return-Path: <SRS0=rUK4=AZ=lists.openwall.com=kernel-hardening-return-19302-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ZETi=AZ=lists.openwall.com=kernel-hardening-return-19303-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-5.5 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F2537C433E1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:40:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E71E7C433E1
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:43:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5D0AE221E7
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:40:33 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5D0AE221E7
+	by mail.kernel.org (Postfix) with SMTP id 49658221E7
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:43:27 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 49658221E7
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19302-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19946 invoked by uid 550); 14 Jul 2020 05:40:26 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19303-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22166 invoked by uid 550); 14 Jul 2020 05:43:21 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,21 +22,22 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19924 invoked from network); 14 Jul 2020 05:40:26 -0000
-IronPort-SDR: z9v0bJYwHpBKQJO2pGxrZC0scosCKQjhlk27+rg/euU7DsIsfZI5RaAt5cmWjj4YkEVn6lRaRK
- 4F0k6VcpqpFA==
-X-IronPort-AV: E=McAfee;i="6000,8403,9681"; a="210343230"
+Received: (qmail 22141 invoked from network); 14 Jul 2020 05:43:20 -0000
+IronPort-SDR: uzQMHsXJHQwctrGhSNZUp2ajaNkw/Ho4JHWP+76wzhAqxi4ezE6AcceuotTeL4Qm1HDG6adMQP
+ vmmMOiTnkWbA==
+X-IronPort-AV: E=McAfee;i="6000,8403,9681"; a="148809685"
 X-IronPort-AV: E=Sophos;i="5.75,350,1589266800"; 
-   d="scan'208";a="210343230"
+   d="scan'208";a="148809685"
 X-Amp-Result: SKIPPED(no attachment in message)
 X-Amp-File-Uploaded: False
-IronPort-SDR: 8O3V/it4p0N6j+N7QEPzWNuCQ5U/VyDf2kVsZZjpwRZculpB/yqsVZ6ChpHCkWM+k6CU/n5I6/
- JVf3sEmYaXEw==
+IronPort-SDR: MizPN2CBTzimOsR+xSUT+e+4WVuCCDUceoaUG09wR/Om3zkkAzUomzdwbif514QuCYev3LbEyA
+ G70hNQxP+5QQ==
 X-IronPort-AV: E=Sophos;i="5.75,350,1589266800"; 
-   d="scan'208";a="269919030"
-Date: Tue, 14 Jul 2020 05:36:33 +0000
-From: "Andersen, John" <john.s.andersen@intel.com>, Arvind Sankar <nivedita@alum.mit.edu>
-To: Andy Lutomirski <luto@kernel.org>
+   d="scan'208";a="316281009"
+Date: Tue, 14 Jul 2020 05:39:30 +0000
+From: "Andersen, John" <john.s.andersen@intel.com>
+To: Andy Lutomirski <luto@kernel.org>,
+	Arvind Sankar <nivedita@alum.mit.edu>
 Cc: Dave Hansen <dave.hansen@intel.com>,
 	Paolo Bonzini <pbonzini@redhat.com>,
 	Sean Christopherson <sean.j.christopherson@intel.com>,
@@ -72,7 +73,7 @@ Cc: Dave Hansen <dave.hansen@intel.com>,
 	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>
 Subject: Re: [PATCH 2/4] KVM: x86: Introduce paravirt feature CR0/CR4 pinning
-Message-ID: <20200714053633.GB25@760745902f30>
+Message-ID: <20200714053930.GC25@760745902f30>
 References: <20200618144314.GB23@258ff54ff3c0>
  <124a59a3-a603-701b-e3bb-61e83d70b20d@intel.com>
  <20200707211244.GN20096@linux.intel.com>
@@ -140,3 +141,7 @@ next version.
 With regards to FSGSBASE, are we open to validating and adding that to the
 DEFAULT set as a part of a separate patchset? This patchset is focused on
 replicating the functionality we already have natively.
+
+
+(If anyone got this email twice, sorry I messed up the From: field the first
+time around)
