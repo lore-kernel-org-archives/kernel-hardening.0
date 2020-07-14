@@ -1,23 +1,23 @@
-Return-Path: <SRS0=GXQ8=AZ=lists.openwall.com=kernel-hardening-return-19299-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=TUHF=AZ=lists.openwall.com=kernel-hardening-return-19300-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2CBADC433E1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 00:02:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CB239C433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:09:54 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7E02121883
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 00:02:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1FB3F217D9
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:09:53 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="VyWImzAa"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7E02121883
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19299-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32131 invoked by uid 550); 14 Jul 2020 00:02:24 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="IW4ENinm"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1FB3F217D9
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19300-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5403 invoked by uid 550); 14 Jul 2020 05:09:46 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,59 +25,83 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32094 invoked from network); 14 Jul 2020 00:02:23 -0000
+Received: (qmail 5369 invoked from network); 14 Jul 2020 05:09:46 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=mbFAIuqzTHeVd9pAzA2rWMcBebKkbwn3z6c3vYPviE0=;
-        b=VyWImzAaZGosylSb2Z1IrTzcEwFeV4vgfnex1Q3khH6rHsbhUvYG1fK5lDyj32+tT2
-         NGQw15Ae21R5RSd8Adfq8crx9w/TkrMoOHp3XZ+4ruQi/KLB+LKystPxj8+vNh9DWFk4
-         2jdGHQ14GMJ2nQVKbZoiuhBDgMpCslN3732Iw=
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=tW3rcyFEuvP1y8EIRX6D7Qxty6AXhBVTfG91+hsBtfM=;
+        b=IW4ENinmxNSZOuNmqmcdy+Wv/p0i+NStRxFEX2dAxw8Ql9hlROpGyUdW6ha59Zfzcf
+         voGEk4XmqSinwsPeCTIuKY7U5Q1BautvGMAELiWvww8f5f2l33dwEkc0OEUUbLpoqVaW
+         Kvrk8f3mpFK1F6QMsajcQyfx6kWsDCg2K/M+n6+k3AR0/ymsDJfCSIihWjJQLGkAucR/
+         FLezGx/TceErDlK9/iVcXjaCRnqgu0cIEyR4tmYkVBtICPigDQRhcjDhcOWsYFmjOUQl
+         07N2JESJ6I6qQxCL2DKkm2pD/Ym1RCqUVHM/aW6lrASWevohNpGGa4qIVm3VjcUvuvzS
+         2XrA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=mbFAIuqzTHeVd9pAzA2rWMcBebKkbwn3z6c3vYPviE0=;
-        b=KiAEL3E4PqPidQeifTG8uxhLKdMEw7Y2bHn+GDMZVn/tWfvgOc0IWlbkhTITKog6c0
-         +ZDLWaMiNDkcQ2nU8dNG6wW+zflkz0xmLFGoxwvwH9KpiUvLS2jTOh/BQhVLPw+Zq7U1
-         cgfWiP170rfSrxDdtZj3DtgtqaTxR76g3VLGAJkyV6zRjIRWPAFyf0S8lELmM1Pv+ftR
-         ol5CabnF3PUqCZL9pky1HZg6Wa+mk4kKh9BQ4ABxq0XVwcQOx1FA3OsaX31nHiXAP+W9
-         AoUTYD9XqJw1Sor0jTyfWXDglg65NJhmprSOSY50P/cPLUTvNNLo77WRENNP3y2qHdwf
-         0AZg==
-X-Gm-Message-State: AOAM531hMPu2rMstXagXv6P1pecpJ2fmrr6iNHUn/spG8GT6TQxVSco/
-	GnJpZx7mgXBzSW1IyMr9e/crOw==
-X-Google-Smtp-Source: ABdhPJxeI05OWQ1yRSNYrIt2cdh3+CNJ7LdifuLYdehpSGU+Hih3Y6loj9dFg/dHk7T9oGRAK/lvAA==
-X-Received: by 2002:a63:f814:: with SMTP id n20mr1267596pgh.92.1594684931594;
-        Mon, 13 Jul 2020 17:02:11 -0700 (PDT)
-Date: Mon, 13 Jul 2020 17:02:09 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Allen <allen.lkml@gmail.com>
-Cc: Oscar Carter <oscar.carter@gmx.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Subject: Re: Clarification about the series to modernize the tasklet api
-Message-ID: <202007131658.69C96B7D3@keescook>
-References: <20200711174239.GA3199@ubuntu>
- <CAOMdWSLFSci1DCMsQLBoX-ADP0cHbhudfvRKokdM+pEQEfpnAQ@mail.gmail.com>
- <CAOMdWSJSXj4uC_=WRkqDoare-s1rcOtp=xJ7idCDAxhnTHacVw@mail.gmail.com>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=tW3rcyFEuvP1y8EIRX6D7Qxty6AXhBVTfG91+hsBtfM=;
+        b=myC944nTEUCI2x7cRt15joSKeTh2fuJsrGKx3YPwEtwBvveazOM3V9FV0+IpQXcp53
+         vT167p/B18lbZ1RrjsXUyCSAmsHCSxatxR6D6LCTDHUAR5Zq33+nawFJtnFBK9upZqwz
+         IL7lFaAv/EhQ6Z8cB8qbtUBZDPpPE4MiwqJbBWgJZIFvRXcDG0GIfVsR3YTPQc0+f1f4
+         WtL/urXoZTlrJx2yvsux5Uj/NAiWQRdffFuA+grpU7kEqxlaDMAIm5EXRO2i+7ds0bdf
+         TbmcXVvpkPhqzqKKquY2YLjXUNa+22qKnANySsA2uwzZCHBOyA+pCKfwH2JQ8f0HZMsz
+         OF0w==
+X-Gm-Message-State: AOAM53151KkLgfrdgKRaP3nk4HMByPz2QE0RIk170IjTtgtnaiczxkGL
+	MOT2RYBvhHq3eF9ci7ajne6B9Bzsht5zkJVO520=
+X-Google-Smtp-Source: ABdhPJyPk649iruq5Opdbrvbe+59X3p9QBHlcaT0frltYNbxHhR3dLTnimRtbmxk/Fu5DKfPBy0v4EgAtpH+bdgwdk4=
+X-Received: by 2002:a9d:65c2:: with SMTP id z2mr2635042oth.264.1594703374445;
+ Mon, 13 Jul 2020 22:09:34 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAOMdWSJSXj4uC_=WRkqDoare-s1rcOtp=xJ7idCDAxhnTHacVw@mail.gmail.com>
+References: <20200711174239.GA3199@ubuntu> <CAOMdWSLFSci1DCMsQLBoX-ADP0cHbhudfvRKokdM+pEQEfpnAQ@mail.gmail.com>
+ <CAOMdWSJSXj4uC_=WRkqDoare-s1rcOtp=xJ7idCDAxhnTHacVw@mail.gmail.com> <202007130916.CD26577@keescook>
+In-Reply-To: <202007130916.CD26577@keescook>
+From: Allen <allen.lkml@gmail.com>
+Date: Tue, 14 Jul 2020 10:39:23 +0530
+Message-ID: <CAOMdWSLMfeoUV4+LyTG2=EZvru5STb2ruNB=yF+ZOjYrvWnC0g@mail.gmail.com>
+Subject: Re: Clarification about the series to modernize the tasklet api
+To: Kees Cook <keescook@chromium.org>
+Cc: Oscar Carter <oscar.carter@gmx.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On Mon, Jul 13, 2020 at 03:54:44PM +0530, Allen wrote:
-> https://github.com/allenpais/tasklets/commits/ref_tasklets
+>
+> Thanks for the update! I wonder if there is a way to collaborate better
+> on this, so we're not all waiting on each other? (i.e. Romain got busy,
+> Allen picked up the work, then Allen got busy, then Oscar picked up the
+> work, then Allen returned, etc...)
+>
+> Perhaps split up testing? I'll like you and Oscar work it out. :)
 
-Okay, I took a look at this series. I'd like to introduce the new API
-differently than was done for timer_struct because I think it'll be
-easier and more CFI-friendly. Here's what I've got:
+ Yes, this has been a bit of a problem. But this time, I will ensure to get
+this all upstreamed.
 
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/tasklets/new-api/v1
+> > What I have done so far is to keep patches close to the original
+> > series, but with changes
+> > from the feedback received to those patches.
+> >
+> > Patches 1-10 have been retained as is, except for DECLARE_TASKLET which has been
+> > moved to patch 1 from patch 12 in the series.
+>
+> I think the "prepare" patches should be collapsed into the "convert"
+> patches (i.e. let's just touch a given driver once with a single patch).
 
-All the rest can apply on top of that (though it looks like many patches
-need work, I got a lot of errors from "make allmodconfig && make".
+ Yes, that is WIP.
 
-How does that look?
+>
+> Yup -- it's that first patch that needs to land in a release so the rest can start
+> landing too. (Timing here is the awkward part: the infrastructure change
+> needs to be in -rc1 or -rc2 so the next development cycle can use it
+> (i.e. subsystem maintainers effectively fork after the merge window is
+> over). We can play other tricks (common merged branch) but I don't think
+> that's needed here.
+>
+
+My Plan is to get it all ready by the end of 5.8 so that we are ready
+for 5.9 merge.
+
+Thoughts?
 
 -- 
-Kees Cook
+       - Allen
