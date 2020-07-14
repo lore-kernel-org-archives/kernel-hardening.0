@@ -1,23 +1,20 @@
-Return-Path: <SRS0=3RCC=AZ=lists.openwall.com=kernel-hardening-return-19301-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=rUK4=AZ=lists.openwall.com=kernel-hardening-return-19302-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.5 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E42C0C433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:13:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F2537C433E1
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:40:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3C80A21D93
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:13:11 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="j3OS70vt"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3C80A21D93
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19301-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7789 invoked by uid 550); 14 Jul 2020 05:13:05 -0000
+	by mail.kernel.org (Postfix) with SMTP id 5D0AE221E7
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Jul 2020 05:40:33 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5D0AE221E7
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19302-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19946 invoked by uid 550); 14 Jul 2020 05:40:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,66 +22,121 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7756 invoked from network); 14 Jul 2020 05:13:04 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=OsLiatvC2XNGiH1EXnGosEusbhbYVSBtpe8IA6yLYWA=;
-        b=j3OS70vtgQXtjPQw39zx73txIIDUSxIKng5o2GaO+dmEN3zX0XufhySyPugHdpybsW
-         7nybnSC1m0C3Pn7opAAQXHy9SutJ0fPXIs+FabrLDdWFLYzvhpDjYim6GuHWD1f6+2DB
-         ZAyt+BRPCo3J6nACpvSRRQsYo7kd8+ZIooI4ef1FRUGb76Xybigt81ldfSHg1xlfCCxd
-         dwW0VP6Zsrp3K0pOjH2NMIW23vtykVJpLQhSMLbcLE5yC3kHW+oV7LzgPy+fTjJTDccg
-         zyZXvtqYazYgws8mBMX+LZTNmIs1FrtEwbKPZgbWVofOh/6wbfsd8p2N1HX98Hesfhk2
-         K48A==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=OsLiatvC2XNGiH1EXnGosEusbhbYVSBtpe8IA6yLYWA=;
-        b=dhCEhGAosY3D1eoYiNe2wkuCXzx682Ul941dzJNIPwExcunJcRAYylIFA6za50MpDQ
-         zZ1X1vAcgCI0O4B7iyipK4MwgKqzx/w50nPaKgBcAsaDBbrlH8K1nGYh9SrRVMQqKTnq
-         8nbGsK4nWv5KyIp3phHzgN38o4syou840zEfl1B43mFW2uu6jKCvQWDW/t5PCPQqj1+6
-         t+wb6GED14jOEclAmy6tWnrGW1EvYbSwH6wQ5hE25PIU5jHhO8XDVqDRdaZqAslQy8Up
-         iIeycPgZeDD8VK28pFAWaCN/TCrw1KrXsRDoxyULI8DCar8A4z1DQNLc82N8swgmdstV
-         fmZA==
-X-Gm-Message-State: AOAM531jyYfJN5L+2VJpFRq1vhs8bDy4B13iO1lEgFbtAf1aJQxWdzho
-	fCI70vS24nfMe7BdciS/N92EeiHuDV4EIaaIbNc=
-X-Google-Smtp-Source: ABdhPJzwoy85Z2s7spLwb6SUyHN1GGcqMRPzO38dIIXYT3z23FDFRdj1J1WjtQhPrD4Cn9uO4DpCc8txs4PHcNCARLQ=
-X-Received: by 2002:a54:408e:: with SMTP id i14mr2357565oii.175.1594703572694;
- Mon, 13 Jul 2020 22:12:52 -0700 (PDT)
-MIME-Version: 1.0
-References: <20200711174239.GA3199@ubuntu> <CAOMdWSLFSci1DCMsQLBoX-ADP0cHbhudfvRKokdM+pEQEfpnAQ@mail.gmail.com>
- <CAOMdWSJSXj4uC_=WRkqDoare-s1rcOtp=xJ7idCDAxhnTHacVw@mail.gmail.com> <202007131658.69C96B7D3@keescook>
-In-Reply-To: <202007131658.69C96B7D3@keescook>
-From: Allen <allen.lkml@gmail.com>
-Date: Tue, 14 Jul 2020 10:42:41 +0530
-Message-ID: <CAOMdWSJW4xuqMz59zp3Jq2deqBD+8qGTVUJh4SUMVUPs8f1C3w@mail.gmail.com>
-Subject: Re: Clarification about the series to modernize the tasklet api
-To: Kees Cook <keescook@chromium.org>
-Cc: Oscar Carter <oscar.carter@gmx.com>, 
+Received: (qmail 19924 invoked from network); 14 Jul 2020 05:40:26 -0000
+IronPort-SDR: z9v0bJYwHpBKQJO2pGxrZC0scosCKQjhlk27+rg/euU7DsIsfZI5RaAt5cmWjj4YkEVn6lRaRK
+ 4F0k6VcpqpFA==
+X-IronPort-AV: E=McAfee;i="6000,8403,9681"; a="210343230"
+X-IronPort-AV: E=Sophos;i="5.75,350,1589266800"; 
+   d="scan'208";a="210343230"
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+IronPort-SDR: 8O3V/it4p0N6j+N7QEPzWNuCQ5U/VyDf2kVsZZjpwRZculpB/yqsVZ6ChpHCkWM+k6CU/n5I6/
+ JVf3sEmYaXEw==
+X-IronPort-AV: E=Sophos;i="5.75,350,1589266800"; 
+   d="scan'208";a="269919030"
+Date: Tue, 14 Jul 2020 05:36:33 +0000
+From: "Andersen, John" <john.s.andersen@intel.com>, Arvind Sankar <nivedita@alum.mit.edu>
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Dave Hansen <dave.hansen@intel.com>,
+	Paolo Bonzini <pbonzini@redhat.com>,
+	Sean Christopherson <sean.j.christopherson@intel.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
+	X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>,
+	Shuah Khan <shuah@kernel.org>, Liran Alon <liran.alon@oracle.com>,
+	Andrew Jones <drjones@redhat.com>,
+	Rick Edgecombe <rick.p.edgecombe@intel.com>,
+	Kristen Carlson Accardi <kristen@linux.intel.com>,
+	Vitaly Kuznetsov <vkuznets@redhat.com>,
+	Wanpeng Li <wanpengli@tencent.com>,
+	Jim Mattson <jmattson@google.com>, Joerg Roedel <joro@8bytes.org>,
+	Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
+	Greg KH <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Pawan Gupta <pawan.kumar.gupta@linux.intel.com>,
+	Juergen Gross <jgross@suse.com>,
+	Mike Kravetz <mike.kravetz@oracle.com>,
+	Oliver Neukum <oneukum@suse.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Fenghua Yu <fenghua.yu@intel.com>, reinette.chatre@intel.com,
+	vineela.tummalapalli@intel.com,
+	Dave Hansen <dave.hansen@linux.intel.com>,
+	Arjan van de Ven <arjan@linux.intel.com>, caoj.fnst@cn.fujitsu.com,
+	Baoquan He <bhe@redhat.com>, Kees Cook <keescook@chromium.org>,
+	Dan Williams <dan.j.williams@intel.com>, eric.auger@redhat.com,
+	aaronlewis@google.com, Peter Xu <peterx@redhat.com>,
+	makarandsonare@google.com,
+	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+	LKML <linux-kernel@vger.kernel.org>, kvm list <kvm@vger.kernel.org>,
+	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
 	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [PATCH 2/4] KVM: x86: Introduce paravirt feature CR0/CR4 pinning
+Message-ID: <20200714053633.GB25@760745902f30>
+References: <20200618144314.GB23@258ff54ff3c0>
+ <124a59a3-a603-701b-e3bb-61e83d70b20d@intel.com>
+ <20200707211244.GN20096@linux.intel.com>
+ <19b97891-bbb0-1061-5971-549a386f7cfb@intel.com>
+ <31eb5b00-9e2a-aa10-0f20-4abc3cd35112@redhat.com>
+ <20200709154412.GA25@64c96d3be97b>
+ <af6ac772-318d-aab0-ce5f-55cf92f6e96d@intel.com>
+ <CALCETrWxt0CHUoonWX1fgbM46ydJPQZhj8Q=G+45EG4wW3wZqQ@mail.gmail.com>
+ <6040c3b3-cac9-cc0e-f0de-baaa274920a2@intel.com>
+ <CALCETrUHcpqjDfAM9SbrZUM7xcS2wkVm=r1Nb1JmxV7A-KAeUQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CALCETrUHcpqjDfAM9SbrZUM7xcS2wkVm=r1Nb1JmxV7A-KAeUQ@mail.gmail.com>
+User-Agent: Mutt/1.5.24 (2015-08-30)
 
->
-> Okay, I took a look at this series. I'd like to introduce the new API
-> differently than was done for timer_struct because I think it'll be
-> easier and more CFI-friendly. Here's what I've got:
->
-> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/tasklets/new-api/v1
+On Thu, Jul 09, 2020 at 09:27:43AM -0700, Andy Lutomirski wrote:
+> On Thu, Jul 9, 2020 at 9:22 AM Dave Hansen <dave.hansen@intel.com> wrote:
+> >
+> > On 7/9/20 9:07 AM, Andy Lutomirski wrote:
+> > > On Thu, Jul 9, 2020 at 8:56 AM Dave Hansen <dave.hansen@intel.com> wrote:
+> > >> On 7/9/20 8:44 AM, Andersen, John wrote:
+> > >>>         Bits which are allowed to be pinned default to WP for CR0 and SMEP,
+> > >>>         SMAP, and UMIP for CR4.
+> > >> I think it also makes sense to have FSGSBASE in this set.
+> > >>
+> > >> I know it hasn't been tested, but I think we should do the legwork to
+> > >> test it.  If not in this set, can we agree that it's a logical next step?
+> > > I have no objection to pinning FSGSBASE, but is there a clear
+> > > description of the threat model that this whole series is meant to
+> > > address?  The idea is to provide a degree of protection against an
+> > > attacker who is able to convince a guest kernel to write something
+> > > inappropriate to CR4, right?  How realistic is this?
+> >
+> > If a quick search can find this:
+> >
+> > > https://googleprojectzero.blogspot.com/2017/05/exploiting-linux-kernel-via-packet.html
+> >
+> > I'd pretty confident that the guys doing actual bad things have it in
+> > their toolbox too.
+> >
+> 
+> True, but we have the existing software CR4 pinning.  I suppose the
+> virtualization version is stronger.
+> 
 
- Okay, I took a quick look and I like it. I shall get this in and work
-on the rest of
-the patches and hopefully get it all ready by the end of this week.
+Yes, as Kees said this will be stronger because it stops ROP and other gadget
+based techniques which avoid the use of native_write_cr0/4().
 
->
-> All the rest can apply on top of that (though it looks like many patches
-> need work, I got a lot of errors from "make allmodconfig && make".
+With regards to what should be done in this patchset and what in other
+patchsets. I have a fix for kexec thanks to Arvind's note about
+TRAMPOLINE_32BIT_CODE_SIZE. The physical host boots fine now and the virtual
+one can kexec fine.
 
-My bad, I should have told you that github was just a placeholder for
-WIP patches. I have been testing a set of patches regularly, no issues.
-I shall push the updated branch.
+What remains to be done on that front is to add some identifying information to
+the kernel image to declare that it supports paravirtualized control register
+pinning or not.
 
-Thank you.
--- 
-       - Allen
+Liran suggested adding a section to the built image acting as a flag to signify
+support for being kexec'd by a kernel with pinning enabled. If anyone has any
+opinions on how they'd like to see this implemented please let me know.
+Otherwise I'll just take a stab at it and you'll all see it hopefully in the
+next version.
+
+With regards to FSGSBASE, are we open to validating and adding that to the
+DEFAULT set as a part of a separate patchset? This patchset is focused on
+replicating the functionality we already have natively.
