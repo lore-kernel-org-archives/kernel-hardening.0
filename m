@@ -1,24 +1,23 @@
-Return-Path: <SRS0=Gq+h=A3=lists.openwall.com=kernel-hardening-return-19364-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=bATb=A3=lists.openwall.com=kernel-hardening-return-19365-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,NICE_REPLY_A,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	NICE_REPLY_A,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 00BD1C433E4
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:26:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CC271C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:42:29 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 213C1207E8
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:26:26 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 224A3207FB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:42:28 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="gPyJXh21"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 213C1207E8
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19364-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1803 invoked by uid 550); 16 Jul 2020 20:26:19 -0000
+	dkim=pass (2048-bit key) header.d=kernel-dk.20150623.gappssmtp.com header.i=@kernel-dk.20150623.gappssmtp.com header.b="RrmG/J3j"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 224A3207FB
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=kernel.dk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19365-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 8001 invoked by uid 550); 16 Jul 2020 20:42:22 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,38 +25,39 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 31974 invoked from network); 16 Jul 2020 20:18:42 -0000
+Received: (qmail 7980 invoked from network); 16 Jul 2020 20:42:22 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=subject:to:cc:references:from:autocrypt:message-id:date:user-agent
+        d=kernel-dk.20150623.gappssmtp.com; s=20150623;
+        h=subject:to:cc:references:from:message-id:date:user-agent
          :mime-version:in-reply-to:content-language:content-transfer-encoding;
-        bh=hT1ysO8UtcshQI1jXyBj8JCzEF++nOcaQlKMyGdyebI=;
-        b=gPyJXh21xqwg6wi5lQgsCnsHNHIw9zktYFEeZM4/dwWJwAfEuNc0aXHghzkPptrEiu
-         cAh9PlzMYLW0zPNTVC+VV8PCDQUjKDgyhyjllp/rVI5iLFzOi7t7aWFaFO8xCxODZEkU
-         u8/Y+QJ5lc/6Ty/GTE/GXgFOZ/loWYpedar5hfUCbuagq5kvlrFQxbjpLbLzd4Zeyhw4
-         R81cod5MZcfun9atECCis6ywDNt9vo6LS0fiJx8oiusJNMeNe7us4GOjM5yrg9NPkNpl
-         k/KDljEdwh3CfUFlMWz+dMFc4sdS7diIT8HcyIyDelxqrIAODpPXuPuzOI7w8a1Q9Xdz
-         YJPA==
+        bh=fUE86W1UJN2bRiah1oXJUMER4mh/QPwIXSnuZ1uSW0s=;
+        b=RrmG/J3jpWBsDDFF3A7QzDzaGOTgfYaEMM3x8YgAQpVrskHu3wjzPimoTM0kdHrFb0
+         iNFr+wjScrrmoD7I50J4Zi3yLECilItoTsCVV0Em3VomnC/WFjs7rEp5q9JxO5JQvKTE
+         U4MhySnQ32ELsNDjgkQAWozxYFACiG7bEbJ1pqOCuNj9ufEjtPEl0+isdbLbQxWE4jVc
+         c9gWIhAoDv0MRdpB4OcjECdfW71Z27say8hMQmEYKwvEUFh+cdVeOsNTF8Mh+S5gQ+OK
+         1H4uj01Y0OlKGFrRWvVGpeCud+BF9xejRZdB3AotngwZTVY4Wycr3unxNHxYMZ7e/Ggf
+         Y2qg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:subject:to:cc:references:from:autocrypt
-         :message-id:date:user-agent:mime-version:in-reply-to
-         :content-language:content-transfer-encoding;
-        bh=hT1ysO8UtcshQI1jXyBj8JCzEF++nOcaQlKMyGdyebI=;
-        b=s9bDkCJ4kIzKS5hXK+ugo0WvHHDHD8mEEWLLD5ahlrI+/xx12pjIIwjsKvAbJEYBK4
-         NkkHvIEQioOnlWihwyu8FVz/Bt62ojKzov0Zv7KAJ5uAszOK0uivqsCVtvu8uNULlKAL
-         ctr18tBY6BNg58qL296178cFYQmZyyaMqYb3sc8AzBCPQyQCs1S3TDzT6Se4CAYarYCw
-         6lMZ3gc+hMPva+yf442IhtKr7/w0y2mPX7+hTLylXgja3L5YMJyy1gzq/A9/6fqtBpVR
-         8LO+P6VLXhaa8r5ZXkqSKFg+XX2Clt3QCzIYxsKEV0H6onPwIAdsZUUjBDKJDi/+NttK
-         izlQ==
-X-Gm-Message-State: AOAM5324T50IgcsOBk7jrmHNmXR9TsFiqpP/II9jCXtpluRGAa4yNjJm
-	9lA4LEcUTvLHqPBOfSEAKIw=
-X-Google-Smtp-Source: ABdhPJw8nV+8IAqaXqIGkoX8kBdfOHm2J50mIVqOpgcP41uZ6JJSTEB1svlXncB9MoytaJ+z1MBJWw==
-X-Received: by 2002:a7b:cc92:: with SMTP id p18mr6057089wma.4.1594930710261;
-        Thu, 16 Jul 2020 13:18:30 -0700 (PDT)
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
+         :content-transfer-encoding;
+        bh=fUE86W1UJN2bRiah1oXJUMER4mh/QPwIXSnuZ1uSW0s=;
+        b=LUfME3Jwzym9sf1sILoRU8VXR9Z6D/+TIFL5ap0OBpmVUUJg3S6VNh625nmrashMH/
+         eKoEgQ48fqYnxWgWemhBLWcHdXk+61t5a0+rHvaRFLN1LwBzCz4eTAt39Kpj9r2ivPpU
+         dmo3D9J0UHRhQBrBQRz7DlbWXVk75AmKcHMfpL1MZLamLms6EWtDirO+YNcDi+2uUl0K
+         QuLy0M+yMuWUPFSpLoCTb9iFdHLV85ajrP3hFFs/Ac36Qs2SNLWjjgbMFXlTtgh6HwY9
+         OQ/Vn+122k1/ASCTPJtoU5kWxZbgRjDRU712WOLFoevzRCImwmG2W7xDdxaLNWb6cbFI
+         1x2g==
+X-Gm-Message-State: AOAM533/FrrbPuhgbaPBLIAdAcRxgrjQo2zd89PJeVk10d2mCkCxqbPi
+	rMtaRarvPQLfZrSkzT8u3q2tXw==
+X-Google-Smtp-Source: ABdhPJxe5TOhSxedrrbH1LVWGedg+qBDzWZbftnSxmv/RaY3P0vwR96U4ppS3jdcGEaLKRSKLaqsMQ==
+X-Received: by 2002:a92:9108:: with SMTP id t8mr6735616ild.170.1594932130242;
+        Thu, 16 Jul 2020 13:42:10 -0700 (PDT)
 Subject: Re: [PATCH RFC v2 1/3] io_uring: use an enumeration for
  io_uring_register(2) opcodes
-To: Stefano Garzarella <sgarzare@redhat.com>, Jens Axboe <axboe@kernel.dk>
+To: Pavel Begunkov <asml.silence@gmail.com>,
+ Stefano Garzarella <sgarzare@redhat.com>
 Cc: Alexander Viro <viro@zeniv.linux.org.uk>,
  Kernel Hardening <kernel-hardening@lists.openwall.com>,
  Kees Cook <keescook@chromium.org>, Aleksa Sarai <asarai@suse.de>,
@@ -68,115 +68,82 @@ Cc: Alexander Viro <viro@zeniv.linux.org.uk>,
  Jeff Moyer <jmoyer@redhat.com>, linux-kernel@vger.kernel.org
 References: <20200716124833.93667-1-sgarzare@redhat.com>
  <20200716124833.93667-2-sgarzare@redhat.com>
-From: Pavel Begunkov <asml.silence@gmail.com>
-Autocrypt: addr=asml.silence@gmail.com; prefer-encrypt=mutual; keydata=
- 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 bA==
-Message-ID: <ca242a15-576d-4099-a5f8-85c08985e3ff@gmail.com>
-Date: Thu, 16 Jul 2020 23:16:41 +0300
+ <ca242a15-576d-4099-a5f8-85c08985e3ff@gmail.com>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <a2f109b2-adbf-147d-9423-7a1a4bf99967@kernel.dk>
+Date: Thu, 16 Jul 2020 14:42:08 -0600
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.3.0
+ Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <20200716124833.93667-2-sgarzare@redhat.com>
+In-Reply-To: <ca242a15-576d-4099-a5f8-85c08985e3ff@gmail.com>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-On 16/07/2020 15:48, Stefano Garzarella wrote:
-> The enumeration allows us to keep track of the last
-> io_uring_register(2) opcode available.
+On 7/16/20 2:16 PM, Pavel Begunkov wrote:
+> On 16/07/2020 15:48, Stefano Garzarella wrote:
+>> The enumeration allows us to keep track of the last
+>> io_uring_register(2) opcode available.
+>>
+>> Behaviour and opcodes names don't change.
+>>
+>> Signed-off-by: Stefano Garzarella <sgarzare@redhat.com>
+>> ---
+>>  include/uapi/linux/io_uring.h | 27 ++++++++++++++++-----------
+>>  1 file changed, 16 insertions(+), 11 deletions(-)
+>>
+>> diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
+>> index 7843742b8b74..efc50bd0af34 100644
+>> --- a/include/uapi/linux/io_uring.h
+>> +++ b/include/uapi/linux/io_uring.h
+>> @@ -253,17 +253,22 @@ struct io_uring_params {
+>>  /*
+>>   * io_uring_register(2) opcodes and arguments
+>>   */
+>> -#define IORING_REGISTER_BUFFERS		0
+>> -#define IORING_UNREGISTER_BUFFERS	1
+>> -#define IORING_REGISTER_FILES		2
+>> -#define IORING_UNREGISTER_FILES		3
+>> -#define IORING_REGISTER_EVENTFD		4
+>> -#define IORING_UNREGISTER_EVENTFD	5
+>> -#define IORING_REGISTER_FILES_UPDATE	6
+>> -#define IORING_REGISTER_EVENTFD_ASYNC	7
+>> -#define IORING_REGISTER_PROBE		8
+>> -#define IORING_REGISTER_PERSONALITY	9
+>> -#define IORING_UNREGISTER_PERSONALITY	10
+>> +enum {
+>> +	IORING_REGISTER_BUFFERS,
+>> +	IORING_UNREGISTER_BUFFERS,
+>> +	IORING_REGISTER_FILES,
+>> +	IORING_UNREGISTER_FILES,
+>> +	IORING_REGISTER_EVENTFD,
+>> +	IORING_UNREGISTER_EVENTFD,
+>> +	IORING_REGISTER_FILES_UPDATE,
+>> +	IORING_REGISTER_EVENTFD_ASYNC,
+>> +	IORING_REGISTER_PROBE,
+>> +	IORING_REGISTER_PERSONALITY,
+>> +	IORING_UNREGISTER_PERSONALITY,
+>> +
+>> +	/* this goes last */
+>> +	IORING_REGISTER_LAST
+>> +};
 > 
-> Behaviour and opcodes names don't change.
+> It breaks userspace API. E.g.
 > 
-> Signed-off-by: Stefano Garzarella <sgarzare@redhat.com>
-> ---
->  include/uapi/linux/io_uring.h | 27 ++++++++++++++++-----------
->  1 file changed, 16 insertions(+), 11 deletions(-)
-> 
-> diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
-> index 7843742b8b74..efc50bd0af34 100644
-> --- a/include/uapi/linux/io_uring.h
-> +++ b/include/uapi/linux/io_uring.h
-> @@ -253,17 +253,22 @@ struct io_uring_params {
->  /*
->   * io_uring_register(2) opcodes and arguments
->   */
-> -#define IORING_REGISTER_BUFFERS		0
-> -#define IORING_UNREGISTER_BUFFERS	1
-> -#define IORING_REGISTER_FILES		2
-> -#define IORING_UNREGISTER_FILES		3
-> -#define IORING_REGISTER_EVENTFD		4
-> -#define IORING_UNREGISTER_EVENTFD	5
-> -#define IORING_REGISTER_FILES_UPDATE	6
-> -#define IORING_REGISTER_EVENTFD_ASYNC	7
-> -#define IORING_REGISTER_PROBE		8
-> -#define IORING_REGISTER_PERSONALITY	9
-> -#define IORING_UNREGISTER_PERSONALITY	10
-> +enum {
-> +	IORING_REGISTER_BUFFERS,
-> +	IORING_UNREGISTER_BUFFERS,
-> +	IORING_REGISTER_FILES,
-> +	IORING_UNREGISTER_FILES,
-> +	IORING_REGISTER_EVENTFD,
-> +	IORING_UNREGISTER_EVENTFD,
-> +	IORING_REGISTER_FILES_UPDATE,
-> +	IORING_REGISTER_EVENTFD_ASYNC,
-> +	IORING_REGISTER_PROBE,
-> +	IORING_REGISTER_PERSONALITY,
-> +	IORING_UNREGISTER_PERSONALITY,
-> +
-> +	/* this goes last */
-> +	IORING_REGISTER_LAST
-> +};
+> #ifdef IORING_REGISTER_BUFFERS
 
-It breaks userspace API. E.g.
+It can, yes, but we have done that in the past. In this one, for
+example:
 
-#ifdef IORING_REGISTER_BUFFERS
+commit 9e3aa61ae3e01ce1ce6361a41ef725e1f4d1d2bf (tag: io_uring-5.5-20191212)
+Author: Jens Axboe <axboe@kernel.dk>
+Date:   Wed Dec 11 15:55:43 2019 -0700
 
->  
->  struct io_uring_files_update {
->  	__u32 offset;
-> 
+    io_uring: ensure we return -EINVAL on unknown opcod
+
+But it would be safer/saner to do this like we have the done the IOSQE_
+flags.
 
 -- 
-Pavel Begunkov
+Jens Axboe
+
