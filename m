@@ -1,23 +1,21 @@
-Return-Path: <SRS0=u/fd=A3=lists.openwall.com=kernel-hardening-return-19346-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=XFdc=A3=lists.openwall.com=kernel-hardening-return-19349-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+X-Spam-Status: No, score=-15.0 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C37CCC433F1
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 12:49:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D3ADCC433E6
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 14:19:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1FD1320739
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 12:49:26 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="P2Tk3NYx"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1FD1320739
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19346-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26298 invoked by uid 550); 16 Jul 2020 12:49:12 -0000
+	by mail.kernel.org (Postfix) with SMTP id 0E500207BC
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 14:19:14 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0E500207BC
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19349-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 12206 invoked by uid 550); 16 Jul 2020 14:19:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,89 +23,191 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26166 invoked from network); 16 Jul 2020 12:49:11 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1594903739;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Odxlq9Ln5GrmGx+aMPEKeiGZ+J1+ZE/sVWWvuPsLyGs=;
-	b=P2Tk3NYxzbjMVMQ6rgH3yWBV+MhzDAUpN275PjR8xSsf3tNtAwky33tXK5D+4jbeU7Uj46
-	nLRAcmJUp4g5LVitFzenGrX4DpGO4fhSiQc3ug6ytPns/PSJJzLjdYjOEXJf1NQpdkEzsx
-	aivW6UPDljkTrdF2OGmBDFh2GafB/L8=
-X-MC-Unique: opOtX4U3M22wtJYFkI7UFQ-1
-From: Stefano Garzarella <sgarzare@redhat.com>
-To: Jens Axboe <axboe@kernel.dk>
-Cc: Alexander Viro <viro@zeniv.linux.org.uk>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Kees Cook <keescook@chromium.org>,
-	Aleksa Sarai <asarai@suse.de>,
-	Stefan Hajnoczi <stefanha@redhat.com>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Sargun Dhillon <sargun@sargun.me>,
-	Jann Horn <jannh@google.com>,
-	io-uring@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	Jeff Moyer <jmoyer@redhat.com>,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH RFC v2 1/3] io_uring: use an enumeration for io_uring_register(2) opcodes
-Date: Thu, 16 Jul 2020 14:48:31 +0200
-Message-Id: <20200716124833.93667-2-sgarzare@redhat.com>
-In-Reply-To: <20200716124833.93667-1-sgarzare@redhat.com>
-References: <20200716124833.93667-1-sgarzare@redhat.com>
+Received: (qmail 12186 invoked from network); 16 Jul 2020 14:19:06 -0000
+Subject: Re: [PATCH v6 4/7] fs: Introduce O_MAYEXEC flag for openat2(2)
+To: Kees Cook <keescook@chromium.org>, Jan Kara <jack@suse.cz>,
+ Matthew Bobrowski <mbobrowski@mbobrowski.org>, linux-nfs@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
+ Alexei Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>,
+ Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski
+ <luto@kernel.org>, Christian Brauner <christian.brauner@ubuntu.com>,
+ Christian Heimes <christian@python.org>,
+ Daniel Borkmann <daniel@iogearbox.net>,
+ Deven Bowers <deven.desai@linux.microsoft.com>,
+ Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
+ Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
+ James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>,
+ Jonathan Corbet <corbet@lwn.net>,
+ Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+ Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>,
+ =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>,
+ Mimi Zohar <zohar@linux.ibm.com>,
+ =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+ Scott Shell <scottsh@microsoft.com>,
+ Sean Christopherson <sean.j.christopherson@intel.com>,
+ Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+ Steve Grubb <sgrubb@redhat.com>,
+ Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
+ Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+ Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+ kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+ linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
+ linux-fsdevel@vger.kernel.org
+References: <20200714181638.45751-1-mic@digikod.net>
+ <20200714181638.45751-5-mic@digikod.net> <202007151304.9F48071@keescook>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <b209ea10-5b7f-c40e-5b6a-3da9028403d5@digikod.net>
+Date: Thu, 16 Jul 2020 16:18:27 +0200
+User-Agent:
 MIME-Version: 1.0
+In-Reply-To: <202007151304.9F48071@keescook>
+Content-Type: text/plain; charset=iso-8859-15
+Content-Language: en-US
 Content-Transfer-Encoding: 8bit
-X-Scanned-By: MIMEDefang 2.79 on 10.5.11.14
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-The enumeration allows us to keep track of the last
-io_uring_register(2) opcode available.
 
-Behaviour and opcodes names don't change.
+On 15/07/2020 22:06, Kees Cook wrote:
+> On Tue, Jul 14, 2020 at 08:16:35PM +0200, Mickaël Salaün wrote:
+>> When the O_MAYEXEC flag is passed, openat2(2) may be subject to
+>> additional restrictions depending on a security policy managed by the
+>> kernel through a sysctl or implemented by an LSM thanks to the
+>> inode_permission hook.  This new flag is ignored by open(2) and
+>> openat(2) because of their unspecified flags handling.
+>>
+>> The underlying idea is to be able to restrict scripts interpretation
+>> according to a policy defined by the system administrator.  For this to
+>> be possible, script interpreters must use the O_MAYEXEC flag
+>> appropriately.  To be fully effective, these interpreters also need to
+>> handle the other ways to execute code: command line parameters (e.g.,
+>> option -e for Perl), module loading (e.g., option -m for Python), stdin,
+>> file sourcing, environment variables, configuration files, etc.
+>> According to the threat model, it may be acceptable to allow some script
+>> interpreters (e.g. Bash) to interpret commands from stdin, may it be a
+>> TTY or a pipe, because it may not be enough to (directly) perform
+>> syscalls.  Further documentation can be found in a following patch.
+>>
+>> Even without enforced security policy, userland interpreters can set it
+>> to enforce the system policy at their level, knowing that it will not
+>> break anything on running systems which do not care about this feature.
+>> However, on systems which want this feature enforced, there will be
+>> knowledgeable people (i.e. sysadmins who enforced O_MAYEXEC
+>> deliberately) to manage it.  A simple security policy implementation,
+>> configured through a dedicated sysctl, is available in a following
+>> patch.
+>>
+>> O_MAYEXEC should not be confused with the O_EXEC flag which is intended
+>> for execute-only, which obviously doesn't work for scripts.  However, a
+>> similar behavior could be implemented in userland with O_PATH:
+>> https://lore.kernel.org/lkml/1e2f6913-42f2-3578-28ed-567f6a4bdda1@digikod.net/
+>>
+>> The implementation of O_MAYEXEC almost duplicates what execve(2) and
+>> uselib(2) are already doing: setting MAY_OPENEXEC in acc_mode (which can
+>> then be checked as MAY_EXEC, if enforced), and propagating FMODE_EXEC to
+>> _fmode via __FMODE_EXEC flag (which can then trigger a
+>> fanotify/FAN_OPEN_EXEC event).
+>>
+>> This is an updated subset of the patch initially written by Vincent
+>> Strubel for CLIP OS 4:
+>> https://github.com/clipos-archive/src_platform_clip-patches/blob/f5cb330d6b684752e403b4e41b39f7004d88e561/1901_open_mayexec.patch
+>> This patch has been used for more than 12 years with customized script
+>> interpreters.  Some examples (with the original name O_MAYEXEC) can be
+>> found here:
+>> https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC
+>>
+>> Co-developed-by: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
+>> Signed-off-by: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
+>> Co-developed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+>> Signed-off-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+>> Signed-off-by: Mickaël Salaün <mic@digikod.net>
+>> Reviewed-by: Deven Bowers <deven.desai@linux.microsoft.com>
+>> Reviewed-by: Kees Cook <keescook@chromium.org>
+>> Cc: Aleksa Sarai <cyphar@cyphar.com>
+>> Cc: Al Viro <viro@zeniv.linux.org.uk>
+>> ---
+>>
+>> Changes since v5:
+>> * Update commit message.
+>>
+>> Changes since v3:
+>> * Switch back to O_MAYEXEC, but only handle it with openat2(2) which
+>>   checks unknown flags (suggested by Aleksa Sarai). Cf.
+>>   https://lore.kernel.org/lkml/20200430015429.wuob7m5ofdewubui@yavin.dot.cyphar.com/
+>>
+>> Changes since v2:
+>> * Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).  This change
+>>   enables to not break existing application using bogus O_* flags that
+>>   may be ignored by current kernels by using a new dedicated flag, only
+>>   usable through openat2(2) (suggested by Jeff Layton).  Using this flag
+>>   will results in an error if the running kernel does not support it.
+>>   User space needs to manage this case, as with other RESOLVE_* flags.
+>>   The best effort approach to security (for most common distros) will
+>>   simply consists of ignoring such an error and retry without
+>>   RESOLVE_MAYEXEC.  However, a fully controlled system may which to
+>>   error out if such an inconsistency is detected.
+>>
+>> Changes since v1:
+>> * Set __FMODE_EXEC when using O_MAYEXEC to make this information
+>>   available through the new fanotify/FAN_OPEN_EXEC event (suggested by
+>>   Jan Kara and Matthew Bobrowski):
+>>   https://lore.kernel.org/lkml/20181213094658.GA996@lithium.mbobrowski.org/
+>> ---
+>>  fs/fcntl.c                       | 2 +-
+>>  fs/open.c                        | 8 ++++++++
+>>  include/linux/fcntl.h            | 2 +-
+>>  include/linux/fs.h               | 2 ++
+>>  include/uapi/asm-generic/fcntl.h | 7 +++++++
+>>  5 files changed, 19 insertions(+), 2 deletions(-)
+>>
+>> diff --git a/fs/fcntl.c b/fs/fcntl.c
+>> index 2e4c0fa2074b..0357ad667563 100644
+>> --- a/fs/fcntl.c
+>> +++ b/fs/fcntl.c
+>> @@ -1033,7 +1033,7 @@ static int __init fcntl_init(void)
+>>  	 * Exceptions: O_NONBLOCK is a two bit define on parisc; O_NDELAY
+>>  	 * is defined as O_NONBLOCK on some platforms and not on others.
+>>  	 */
+>> -	BUILD_BUG_ON(21 - 1 /* for O_RDONLY being 0 */ !=
+>> +	BUILD_BUG_ON(22 - 1 /* for O_RDONLY being 0 */ !=
+>>  		HWEIGHT32(
+>>  			(VALID_OPEN_FLAGS & ~(O_NONBLOCK | O_NDELAY)) |
+>>  			__FMODE_EXEC | __FMODE_NONOTIFY));
+>> diff --git a/fs/open.c b/fs/open.c
+>> index 623b7506a6db..38e434bdbbb6 100644
+>> --- a/fs/open.c
+>> +++ b/fs/open.c
+>> @@ -987,6 +987,8 @@ inline struct open_how build_open_how(int flags, umode_t mode)
+>>  		.mode = mode & S_IALLUGO,
+>>  	};
+>>  
+>> +	/* O_MAYEXEC is ignored by syscalls relying on build_open_how(). */
+>> +	how.flags &= ~O_MAYEXEC;
+>>  	/* O_PATH beats everything else. */
+>>  	if (how.flags & O_PATH)
+>>  		how.flags &= O_PATH_FLAGS;
+>> @@ -1054,6 +1056,12 @@ inline int build_open_flags(const struct open_how *how, struct open_flags *op)
+>>  	if (flags & __O_SYNC)
+>>  		flags |= O_DSYNC;
+>>  
+>> +	/* Checks execution permissions on open. */
+>> +	if (flags & O_MAYEXEC) {
+>> +		acc_mode |= MAY_OPENEXEC;
+>> +		flags |= __FMODE_EXEC;
+>> +	}
+> 
+> Adding __FMODE_EXEC here will immediately change the behaviors of NFS
+> and fsnotify. If that's going to happen, I think it needs to be under
+> the control of the later patches doing the behavioral controls.
+> (specifically, NFS looks like it completely changes its access control
+> test when this is set and ignores the read/write checks entirely, which
+> is not what's wanted).
 
-Signed-off-by: Stefano Garzarella <sgarzare@redhat.com>
----
- include/uapi/linux/io_uring.h | 27 ++++++++++++++++-----------
- 1 file changed, 16 insertions(+), 11 deletions(-)
+__FMODE_EXEC was suggested by Jan Kara and Matthew Bobrowski because of
+fsnotify. However, the NFS handling of SUID binaries [1] indeed leads to
+an unintended behavior. This also means that uselib(2) shouldn't work
+properly with NFS. I can remove the __FMODE_EXEC flag for now.
 
-diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
-index 7843742b8b74..efc50bd0af34 100644
---- a/include/uapi/linux/io_uring.h
-+++ b/include/uapi/linux/io_uring.h
-@@ -253,17 +253,22 @@ struct io_uring_params {
- /*
-  * io_uring_register(2) opcodes and arguments
-  */
--#define IORING_REGISTER_BUFFERS		0
--#define IORING_UNREGISTER_BUFFERS	1
--#define IORING_REGISTER_FILES		2
--#define IORING_UNREGISTER_FILES		3
--#define IORING_REGISTER_EVENTFD		4
--#define IORING_UNREGISTER_EVENTFD	5
--#define IORING_REGISTER_FILES_UPDATE	6
--#define IORING_REGISTER_EVENTFD_ASYNC	7
--#define IORING_REGISTER_PROBE		8
--#define IORING_REGISTER_PERSONALITY	9
--#define IORING_UNREGISTER_PERSONALITY	10
-+enum {
-+	IORING_REGISTER_BUFFERS,
-+	IORING_UNREGISTER_BUFFERS,
-+	IORING_REGISTER_FILES,
-+	IORING_UNREGISTER_FILES,
-+	IORING_REGISTER_EVENTFD,
-+	IORING_UNREGISTER_EVENTFD,
-+	IORING_REGISTER_FILES_UPDATE,
-+	IORING_REGISTER_EVENTFD_ASYNC,
-+	IORING_REGISTER_PROBE,
-+	IORING_REGISTER_PERSONALITY,
-+	IORING_UNREGISTER_PERSONALITY,
-+
-+	/* this goes last */
-+	IORING_REGISTER_LAST
-+};
- 
- struct io_uring_files_update {
- 	__u32 offset;
--- 
-2.26.2
-
+[1]
+https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?id=f8d9a897d4384b77f13781ea813156568f68b83e
