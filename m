@@ -1,23 +1,23 @@
-Return-Path: <SRS0=MxP8=A3=lists.openwall.com=kernel-hardening-return-19367-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ZUIX=A3=lists.openwall.com=kernel-hardening-return-19366-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	NICE_REPLY_A,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 84F84C433E2
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:51:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7F0A0C433E4
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:51:48 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9CA9A20809
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:51:55 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id CDB3E20656
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 20:51:47 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="CLn8nEZ9"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9CA9A20809
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19367-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16306 invoked by uid 550); 16 Jul 2020 20:51:48 -0000
+	dkim=pass (2048-bit key) header.d=kernel-dk.20150623.gappssmtp.com header.i=@kernel-dk.20150623.gappssmtp.com header.b="SlhjXobo"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CDB3E20656
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=kernel.dk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19366-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15602 invoked by uid 550); 16 Jul 2020 20:51:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,117 +25,147 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13436 invoked from network); 16 Jul 2020 20:48:44 -0000
+Received: (qmail 15549 invoked from network); 16 Jul 2020 20:51:40 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=E+1tVGknt5yYZ8eT3cfGaVP/Gx6TNLloqdwWVn2c4ZM=;
-        b=CLn8nEZ9Umx3u1uxQ6iB8vnvAwGkRUs5ZG9EfQL8CJiHvyLP8M7b6NUIAKo+LBuY4f
-         8/9k4vjIky1k6ccVtwc1XCLpJ9OIXcaSnSgOd0xYtfqQA5VkwUEJhpc/XojQNud255Fp
-         CS65GQl3KtSyU2zn3gjZRqpQReiLPt5Jdwt/SCKKel4uYCiyIFetSEXJKpr/nhCoi0IP
-         Fh7/R7sRei2OUkuvv/y1qWAnzOrzRAxFmPwXU3sJhnRHuwo9BC1LeRHApdtIROKUBM0Y
-         PuMZgqnjotBdORPgdDy9QbhiTqpBvHJsERxZbAO44L6pd99V8/cw6eA29lB/55EAquIA
-         5X2Q==
+        d=kernel-dk.20150623.gappssmtp.com; s=20150623;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-language:content-transfer-encoding;
+        bh=/OMgh93Kb2HkE6P0kAr28R6z12ut/xwA3vG3iFDckbI=;
+        b=SlhjXoboBAxGh2VTbr9NcInkijK7jQpCCQnuS6p+0nfgmyeVsheY4bc3BdXFSkBPTD
+         j3PQMvPR5EZ0k3Bz8aBB5FiDK5eypyjPNP42owrGwPGZalFhiDbNSwOk1bM4s3eSCZkC
+         t1nHWdMiS5XFpAFhIGk1PPbIC5sxZ+0K5oQFobuIKINk+5fhlhrQu/zBAXEjKjL+37fc
+         B6KHhfMuEiwftkGVc+I9WskJLKiqmTxyD0TGV3XaLT5nKUXr0t/bhvar61NQsvEBNFm8
+         bk9eKcwh96dfrbzu5YVUq0wY8MOR9LXEocoukxOjqRuQYvzHQ7lq/lJ6VWFgpiEeWzYQ
+         hvYA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=E+1tVGknt5yYZ8eT3cfGaVP/Gx6TNLloqdwWVn2c4ZM=;
-        b=lo2n0RM2xt2zX5HQvkHs9VlDkxecobH11c5iCE/I1kgTBaClw5uxnAAKRRkLtiCYaR
-         ej15VU1TAyt/Ky4QfXSnnuM93MB8NECtBGJ5uJyv31lSPzZVKUtZlC1ZT1O2k/15mU8d
-         /xCF37E3MmR0A8EbXS274Tka+Si5LnHB73bWqQyAWOYj6bhxIUALNtp2gyGWfI2yNdT/
-         K3Xv+PCqdM4s1iq9TXd0d/bT2lUtYh4YDEZVwAEEmzyf9zktIMUC65YbhB10pweqK63J
-         O/CxO57hqJZDO54E3azVX3OdvG4Jej4GzsLpWes9nB03hTGSg64zdFXWRr3D6wn35wR9
-         LCVA==
-X-Gm-Message-State: AOAM5326RD8NXu5yMoJUE7SVG/uhsFG6+kEVxL23bkMHUwMSaqzM1mWq
-	r4Sz/m30oCC/X9ZiXBCiYK+mYmly8FkjQqmmR/8=
-X-Google-Smtp-Source: ABdhPJzpsbm7TwGhHG6RzXDqgC6/209E5TMuTQBViDF3W3srNDclU8jiNSeIW3HzQAj2kQTZKYQslP0k+o4Ij2ZF6uA=
-X-Received: by 2002:a5d:9c0e:: with SMTP id 14mr6302830ioe.109.1594932511887;
- Thu, 16 Jul 2020 13:48:31 -0700 (PDT)
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
+         :content-transfer-encoding;
+        bh=/OMgh93Kb2HkE6P0kAr28R6z12ut/xwA3vG3iFDckbI=;
+        b=I009DKNXckCcaUx236S9jw/+smMzlt0cJAwELmmLVhjdZRcjlN9cg9pF0GrH9AUFuK
+         9F/mRHG4r6/mJa6Za0dwT+L8fgnVSndkhUU/rJK6IxKlxa3rS7pj1EsW3ZtOlm6dXs/j
+         uUOcrltTG86coGs8NURG9bQI62Yb7mkgqKyQLIaDID9U+8160ev8Cd5Iclxt2bnlkg7M
+         TyigYC9VmcwxA1yZRpQjI7HgOrPnraVVx08TzmL/pu9yq7cMrnmj1LCse3vxNUiYq3Zk
+         sRchV/QKJ2gMJkkODzBiI4nYOzIKBOugkJoAh/kzh7+EMnUrhAxdVva2T58/cnibVW66
+         H2eQ==
+X-Gm-Message-State: AOAM531Kxd8j5tZBEAT5hvpF5xYbmhRG8THUpOmotojiPYG1lw+ZH2ZT
+	GZxEu++9VlfeDlPhjYZmhQ/reA==
+X-Google-Smtp-Source: ABdhPJy2wUZWh2Y4jruQ6d5kCL/LKMYVm6LNd8/aYi1fc8AM2ykPWqla4cvX5vltX/y94v5ZxMTqlA==
+X-Received: by 2002:a5e:a60d:: with SMTP id q13mr6237726ioi.199.1594932689231;
+        Thu, 16 Jul 2020 13:51:29 -0700 (PDT)
+Subject: Re: [PATCH RFC v2 1/3] io_uring: use an enumeration for
+ io_uring_register(2) opcodes
+To: Pavel Begunkov <asml.silence@gmail.com>,
+ Stefano Garzarella <sgarzare@redhat.com>
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Kees Cook <keescook@chromium.org>, Aleksa Sarai <asarai@suse.de>,
+ Stefan Hajnoczi <stefanha@redhat.com>,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ Sargun Dhillon <sargun@sargun.me>, Jann Horn <jannh@google.com>,
+ io-uring@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+ Jeff Moyer <jmoyer@redhat.com>, linux-kernel@vger.kernel.org
+References: <20200716124833.93667-1-sgarzare@redhat.com>
+ <20200716124833.93667-2-sgarzare@redhat.com>
+ <ca242a15-576d-4099-a5f8-85c08985e3ff@gmail.com>
+ <a2f109b2-adbf-147d-9423-7a1a4bf99967@kernel.dk>
+ <20326d79-fb5a-2480-e52a-e154e056171f@gmail.com>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <76879432-745d-a5ca-b171-b1391b926ea2@kernel.dk>
+Date: Thu, 16 Jul 2020 14:51:26 -0600
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.10.0
 MIME-Version: 1.0
-References: <20200716030847.1564131-1-keescook@chromium.org>
- <20200716075718.GM10769@hirez.programming.kicks-ass.net> <202007161214.102F6E6@keescook>
-In-Reply-To: <202007161214.102F6E6@keescook>
-From: Dmitry Torokhov <dmitry.torokhov@gmail.com>
-Date: Thu, 16 Jul 2020 13:48:20 -0700
-Message-ID: <CAKdAkRQHRobiG-RpifyrAmV9ENgENn_woPBVXpRrhKwRBf9Esw@mail.gmail.com>
-Subject: Re: [PATCH 0/3] Modernize tasklet callback API
-To: Kees Cook <keescook@chromium.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	Thomas Gleixner <tglx@linutronix.de>, Allen Pais <allen.lkml@gmail.com>, 
-	Oscar Carter <oscar.carter@gmx.com>, Romain Perier <romain.perier@gmail.com>, 
-	Kevin Curtis <kevin.curtis@farsite.co.uk>, "David S. Miller" <davem@davemloft.net>, 
-	Jakub Kicinski <kuba@kernel.org>, Harald Freudenberger <freude@linux.ibm.com>, 
-	Heiko Carstens <hca@linux.ibm.com>, Vasily Gorbik <gor@linux.ibm.com>, 
-	Christian Borntraeger <borntraeger@de.ibm.com>, Jiri Slaby <jslaby@suse.com>, 
-	Felipe Balbi <balbi@kernel.org>, Jason Wessel <jason.wessel@windriver.com>, 
-	Daniel Thompson <daniel.thompson@linaro.org>, Douglas Anderson <dianders@chromium.org>, 
-	Mitchell Blank Jr <mitch@sfgoth.com>, Julian Wiedmann <jwi@linux.ibm.com>, 
-	Karsten Graul <kgraul@linux.ibm.com>, Ursula Braun <ubraun@linux.ibm.com>, 
-	Jaroslav Kysela <perex@perex.cz>, Takashi Iwai <tiwai@suse.com>, 
-	Christian Gromm <christian.gromm@microchip.com>, Nishka Dasgupta <nishkadg.linux@gmail.com>, 
-	Masahiro Yamada <masahiroy@kernel.org>, Stephen Boyd <swboyd@chromium.org>, 
-	"Matthew Wilcox (Oracle)" <willy@infradead.org>, Wambui Karuga <wambui.karugax@gmail.com>, 
-	Guenter Roeck <linux@roeck-us.net>, Chris Packham <chris.packham@alliedtelesis.co.nz>, 
-	Kyungtae Kim <kt0755@gmail.com>, 
-	Kuppuswamy Sathyanarayanan <sathyanarayanan.kuppuswamy@linux.intel.com>, 
-	Sebastian Andrzej Siewior <bigeasy@linutronix.de>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, 
-	Jonathan Corbet <corbet@lwn.net>, Will Deacon <will@kernel.org>, 
-	"linux-input@vger.kernel.org" <linux-input@vger.kernel.org>, lkml <linux-kernel@vger.kernel.org>, 
-	netdev <netdev@vger.kernel.org>, linux-s390@vger.kernel.org, 
-	devel@driverdev.osuosl.org, USB list <linux-usb@vger.kernel.org>, 
-	kgdb-bugreport@lists.sourceforge.net, 
-	"alsa-devel@alsa-project.org" <alsa-devel@alsa-project.org>, kernel-hardening@lists.openwall.com
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <20326d79-fb5a-2480-e52a-e154e056171f@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-On Thu, Jul 16, 2020 at 12:14 PM Kees Cook <keescook@chromium.org> wrote:
->
-> On Thu, Jul 16, 2020 at 09:57:18AM +0200, Peter Zijlstra wrote:
-> > On Wed, Jul 15, 2020 at 08:08:44PM -0700, Kees Cook wrote:
-> > > Hi,
-> > >
-> > > This is the infrastructure changes to prepare the tasklet API for
-> > > conversion to passing the tasklet struct as the callback argument instead
-> > > of an arbitrary unsigned long. The first patch details why this is useful
-> > > (it's the same rationale as the timer_struct changes from a bit ago:
-> > > less abuse during memory corruption attacks, more in line with existing
-> > > ways of doing things in the kernel, save a little space in struct,
-> > > etc). Notably, the existing tasklet API use is much less messy, so there
-> > > is less to clean up.
-> >
-> > I would _MUCH_ rather see tasklets go the way of the dodo, esp. given
-> > that:
-> >
-> > >  drivers/input/keyboard/omap-keypad.c   |  2 +-
-> > >  drivers/input/serio/hil_mlc.c          |  2 +-
-> > >  drivers/net/wan/farsync.c              |  4 +--
-> > >  drivers/s390/crypto/ap_bus.c           |  2 +-
-> > >  drivers/staging/most/dim2/dim2.c       |  2 +-
-> > >  drivers/staging/octeon/ethernet-tx.c   |  2 +-
-> > >  drivers/tty/vt/keyboard.c              |  2 +-
-> > >  drivers/usb/gadget/udc/snps_udc_core.c |  6 ++---
-> > >  drivers/usb/host/fhci-sched.c          |  2 +-
-> > >  include/linux/interrupt.h              | 37 ++++++++++++++++++++++----
-> > >  kernel/backtracetest.c                 |  2 +-
-> > >  kernel/debug/debug_core.c              |  2 +-
-> > >  kernel/irq/resend.c                    |  2 +-
-> > >  kernel/softirq.c                       | 18 ++++++++++++-
-> > >  net/atm/pppoatm.c                      |  2 +-
-> > >  net/iucv/iucv.c                        |  2 +-
-> > >  sound/drivers/pcsp/pcsp_lib.c          |  2 +-
-> > >  17 files changed, 66 insertions(+), 25 deletions(-)
-> >
-> > there appear to be hardly any users left.. Can't we stage an extinction
-> > event here instead?
->
-> Oh, I wish, but no. That's just the ones using DECLARE_TASKLET. There
-> are hundred(s?) more (see the referenced tree).
+On 7/16/20 2:47 PM, Pavel Begunkov wrote:
+> On 16/07/2020 23:42, Jens Axboe wrote:
+>> On 7/16/20 2:16 PM, Pavel Begunkov wrote:
+>>> On 16/07/2020 15:48, Stefano Garzarella wrote:
+>>>> The enumeration allows us to keep track of the last
+>>>> io_uring_register(2) opcode available.
+>>>>
+>>>> Behaviour and opcodes names don't change.
+>>>>
+>>>> Signed-off-by: Stefano Garzarella <sgarzare@redhat.com>
+>>>> ---
+>>>>  include/uapi/linux/io_uring.h | 27 ++++++++++++++++-----------
+>>>>  1 file changed, 16 insertions(+), 11 deletions(-)
+>>>>
+>>>> diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
+>>>> index 7843742b8b74..efc50bd0af34 100644
+>>>> --- a/include/uapi/linux/io_uring.h
+>>>> +++ b/include/uapi/linux/io_uring.h
+>>>> @@ -253,17 +253,22 @@ struct io_uring_params {
+>>>>  /*
+>>>>   * io_uring_register(2) opcodes and arguments
+>>>>   */
+>>>> -#define IORING_REGISTER_BUFFERS		0
+>>>> -#define IORING_UNREGISTER_BUFFERS	1
+>>>> -#define IORING_REGISTER_FILES		2
+>>>> -#define IORING_UNREGISTER_FILES		3
+>>>> -#define IORING_REGISTER_EVENTFD		4
+>>>> -#define IORING_UNREGISTER_EVENTFD	5
+>>>> -#define IORING_REGISTER_FILES_UPDATE	6
+>>>> -#define IORING_REGISTER_EVENTFD_ASYNC	7
+>>>> -#define IORING_REGISTER_PROBE		8
+>>>> -#define IORING_REGISTER_PERSONALITY	9
+>>>> -#define IORING_UNREGISTER_PERSONALITY	10
+>>>> +enum {
+>>>> +	IORING_REGISTER_BUFFERS,
+>>>> +	IORING_UNREGISTER_BUFFERS,
+>>>> +	IORING_REGISTER_FILES,
+>>>> +	IORING_UNREGISTER_FILES,
+>>>> +	IORING_REGISTER_EVENTFD,
+>>>> +	IORING_UNREGISTER_EVENTFD,
+>>>> +	IORING_REGISTER_FILES_UPDATE,
+>>>> +	IORING_REGISTER_EVENTFD_ASYNC,
+>>>> +	IORING_REGISTER_PROBE,
+>>>> +	IORING_REGISTER_PERSONALITY,
+>>>> +	IORING_UNREGISTER_PERSONALITY,
+>>>> +
+>>>> +	/* this goes last */
+>>>> +	IORING_REGISTER_LAST
+>>>> +};
+>>>
+>>> It breaks userspace API. E.g.
+>>>
+>>> #ifdef IORING_REGISTER_BUFFERS
+>>
+>> It can, yes, but we have done that in the past. In this one, for
+> 
+> Ok, if nobody on the userspace side cares, then better to do that
+> sooner than later.
+> 
+> 
+>> example:
+>>
+>> commit 9e3aa61ae3e01ce1ce6361a41ef725e1f4d1d2bf (tag: io_uring-5.5-20191212)
+>> Author: Jens Axboe <axboe@kernel.dk>
+>> Date:   Wed Dec 11 15:55:43 2019 -0700
+>>
+>>     io_uring: ensure we return -EINVAL on unknown opcod
+>>
+>> But it would be safer/saner to do this like we have the done the IOSQE_
+>> flags.
+> 
+> IOSQE_ are a bitmask, but this would look peculiar
+> 
+> enum {
+> 	__IORING_REGISTER_BUFFERS,
+> 	...
+> };
+> define IORING_REGISTER_BUFFERS __IORING_REGISTER_BUFFERS
 
-Still, do we really need tasklets? Can we substitute timers executing
-immediately in their place?
+Yeah true of course, that won't really work for this case at all.
 
-Thanks.
+That said, I don't think it's a huge deal to turn it into an enum.
+
 
 -- 
-Dmitry
+Jens Axboe
+
