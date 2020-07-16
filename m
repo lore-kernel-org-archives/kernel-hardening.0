@@ -1,23 +1,23 @@
-Return-Path: <SRS0=FZ2B=A3=lists.openwall.com=kernel-hardening-return-19358-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=oFci=A3=lists.openwall.com=kernel-hardening-return-19359-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=no autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6A55DC433E4
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 19:13:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C2813C433E3
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 19:15:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B56F72065F
-	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 19:13:50 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 0C42C2065F
+	for <kernel-hardening@archiver.kernel.org>; Thu, 16 Jul 2020 19:15:06 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="eUF5kUcP"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B56F72065F
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="GFAY7/qF"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0C42C2065F
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19358-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1129 invoked by uid 550); 16 Jul 2020 19:13:44 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19359-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3097 invoked by uid 550); 16 Jul 2020 19:15:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,118 +25,123 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1107 invoked from network); 16 Jul 2020 19:13:43 -0000
+Received: (qmail 2041 invoked from network); 16 Jul 2020 19:15:00 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=P2Y3x3UF7aakg+eDh/JCMQ/ujg3OM7agEmMMQHUiWYw=;
-        b=eUF5kUcP1I8IOHUVxI3FxJ/qxspiNpwWZ1kyR1myyi5d/rlntny124yFpRoBP0S+TU
-         IULeT+p9QcpLBQJdqAMtaWb0tPOnG564tv2NICoimzwkKBF7b7R+TO++MSXHI9kPTYW4
-         dLCo8Qo5IB3QU1NMvjyOcqhje5qnF9Vt8u7nM=
+         :content-disposition:in-reply-to;
+        bh=DmwAjlYrRkrceLF5k8BiY0q5EpRy1ms1f0jDcB2PX04=;
+        b=GFAY7/qFyIYdH5WwlOR6lmpQdUB8pidv4p+YEiNNV+24D6QE2wlS74FWkZdBInZexv
+         UOIim5XchmtCaZ3l4TQzzuOzonn1fB1BUMbSjBEdmwtfVzMcmZFxfBS2TADWV5S1ZbJV
+         +LUOh6KntXrSBKz4ZwAcXC+80++YNoPqG5L4s=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=P2Y3x3UF7aakg+eDh/JCMQ/ujg3OM7agEmMMQHUiWYw=;
-        b=KV+o6gKR4W2gp//cRjY0sCIT2h0Cxzu3nK+TD6p/8JYE9CSVU8gPs3EKlrHB73AAYV
-         ZK1uBZuzCn5/qFq7pYrsvQg4wwveVNhfRKgwvmkeX1Aq5+FCV1vrEoi2kUpm/1T5qYgu
-         19LQCEqCe3at9rE18cQG8JUCO6cXuU6CwByvhN95H8EQ26NHRIDOTBe34y4xQsKXBmM/
-         ZhuHI1aLDT+VPwaTnpPeov2zabE5TsYSc9IiILTOdW/JgKNChjHuPHf61EBCSZYqsSrX
-         9mstGnbWUuqpYiVSY2HmXcizRcOFOQDE08fd+aBb5rEniOS4OZrs+1n/sfUnsv8GD3uh
-         At6A==
-X-Gm-Message-State: AOAM53192JWeZcrBnM79ou7civyLQnIbkqak9OCyFWvh3Fw3GyghVzJQ
-	yAJBlhf8udfGaJMAGkSLRNOTiQ==
-X-Google-Smtp-Source: ABdhPJy1fQTquN4l33pCs4D4d2Xd1YwY/TqBCMAGvi2rtEVPLt90LIg/bGHmjLscqWmRjzI4Zwih4g==
-X-Received: by 2002:a63:c150:: with SMTP id p16mr5583761pgi.141.1594926811598;
-        Thu, 16 Jul 2020 12:13:31 -0700 (PDT)
-Date: Thu, 16 Jul 2020 12:13:29 -0700
+         :mime-version:content-disposition:in-reply-to;
+        bh=DmwAjlYrRkrceLF5k8BiY0q5EpRy1ms1f0jDcB2PX04=;
+        b=Q7tyr0R395JMa1Ciy5AWI6HlkTfjTWsLCdFU67IE3XYydV8uZGP304LkaJ9qh3RiQ2
+         Lpwcbj9ebDKXgAbcNrltSmIM/Mt7JTSpe7oZrHSvMbi+tdWOOU1aM88UN78Wem46qAFp
+         d/qqmlggUZafx9d0/920dJtixGLsgsX4nxPzfMMFcnW0uLcZI8i2w5tseZRyV6R6J7QO
+         9wGu8XtUWl19xYozZ2De67xjETFQU0z6IqyJXUjfrkdgDcYo0Sr7HXvhtQPNL6naxWnB
+         5xqSBwwDTxkggLTReyfLJYNWCiVTXC/7MX5TTSKv8NXJN6lETHl5WZp2OVjsGhzRRTRy
+         G6yw==
+X-Gm-Message-State: AOAM5300LtBsrZ4R5Izl0D5aspn2uKDDqII8WYtY3uLTU6ODjijYDUmI
+	x5SO5HAlzi0JZhVLZFzf31VbFQ==
+X-Google-Smtp-Source: ABdhPJzXMzbyTY5VJHPd4Edm3bSGjXJUJOwIzo3RSPKyMSZOc846WSYGarDg6OCvj6pUTCBmbdFM0Q==
+X-Received: by 2002:a17:90a:318c:: with SMTP id j12mr6129543pjb.25.1594926888230;
+        Thu, 16 Jul 2020 12:14:48 -0700 (PDT)
+Date: Thu, 16 Jul 2020 12:14:46 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Randy Dunlap <rdunlap@infradead.org>
-Cc: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>,
-	linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
-	Alexei Starovoitov <ast@kernel.org>,
-	Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christian Heimes <christian@python.org>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	Eric Chiang <ericchiang@google.com>,
-	Florian Weimer <fweimer@redhat.com>,
-	James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
-	Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,
-	Matthew Wilcox <willy@infradead.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mickael.salaun@ssi.gouv.fr>,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	Philippe =?iso-8859-1?Q?Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Sean Christopherson <sean.j.christopherson@intel.com>,
-	Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
-	Steve Grubb <sgrubb@redhat.com>,
-	Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-	linux-integrity@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org
-Subject: Re: [PATCH v6 7/7] ima: add policy support for the new file open
- MAY_OPENEXEC flag
-Message-ID: <202007161213.E8D240D98@keescook>
-References: <20200714181638.45751-1-mic@digikod.net>
- <20200714181638.45751-8-mic@digikod.net>
- <202007151339.283D7CD@keescook>
- <8df69733-0088-3e3c-9c3d-2610414cea2b@digikod.net>
- <61c05cb0-a956-3cc7-5dab-e11ebf0e95bf@infradead.org>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Allen Pais <allen.lkml@gmail.com>,
+	Oscar Carter <oscar.carter@gmx.com>,
+	Romain Perier <romain.perier@gmail.com>,
+	Dmitry Torokhov <dmitry.torokhov@gmail.com>,
+	Kevin Curtis <kevin.curtis@farsite.co.uk>,
+	"David S. Miller" <davem@davemloft.net>,
+	Jakub Kicinski <kuba@kernel.org>,
+	Harald Freudenberger <freude@linux.ibm.com>,
+	Heiko Carstens <hca@linux.ibm.com>,
+	Vasily Gorbik <gor@linux.ibm.com>,
+	Christian Borntraeger <borntraeger@de.ibm.com>,
+	Jiri Slaby <jslaby@suse.com>, Felipe Balbi <balbi@kernel.org>,
+	Jason Wessel <jason.wessel@windriver.com>,
+	Daniel Thompson <daniel.thompson@linaro.org>,
+	Douglas Anderson <dianders@chromium.org>,
+	Mitchell Blank Jr <mitch@sfgoth.com>,
+	Julian Wiedmann <jwi@linux.ibm.com>,
+	Karsten Graul <kgraul@linux.ibm.com>,
+	Ursula Braun <ubraun@linux.ibm.com>,
+	Jaroslav Kysela <perex@perex.cz>, Takashi Iwai <tiwai@suse.com>,
+	Christian Gromm <christian.gromm@microchip.com>,
+	Nishka Dasgupta <nishkadg.linux@gmail.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Stephen Boyd <swboyd@chromium.org>,
+	"Matthew Wilcox (Oracle)" <willy@infradead.org>,
+	Wambui Karuga <wambui.karugax@gmail.com>,
+	Guenter Roeck <linux@roeck-us.net>,
+	Chris Packham <chris.packham@alliedtelesis.co.nz>,
+	Kyungtae Kim <kt0755@gmail.com>,
+	Kuppuswamy Sathyanarayanan <sathyanarayanan.kuppuswamy@linux.intel.com>,
+	Sebastian Andrzej Siewior <bigeasy@linutronix.de>,
+	"Rafael J. Wysocki" <rafael.j.wysocki@intel.com>,
+	Jonathan Corbet <corbet@lwn.net>, Will Deacon <will@kernel.org>,
+	linux-input@vger.kernel.org, linux-kernel@vger.kernel.org,
+	netdev@vger.kernel.org, linux-s390@vger.kernel.org,
+	devel@driverdev.osuosl.org, linux-usb@vger.kernel.org,
+	kgdb-bugreport@lists.sourceforge.net, alsa-devel@alsa-project.org,
+	kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH 0/3] Modernize tasklet callback API
+Message-ID: <202007161214.102F6E6@keescook>
+References: <20200716030847.1564131-1-keescook@chromium.org>
+ <20200716075718.GM10769@hirez.programming.kicks-ass.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <61c05cb0-a956-3cc7-5dab-e11ebf0e95bf@infradead.org>
+In-Reply-To: <20200716075718.GM10769@hirez.programming.kicks-ass.net>
 
-On Thu, Jul 16, 2020 at 07:59:20AM -0700, Randy Dunlap wrote:
-> On 7/16/20 7:40 AM, Mickaël Salaün wrote:
+On Thu, Jul 16, 2020 at 09:57:18AM +0200, Peter Zijlstra wrote:
+> On Wed, Jul 15, 2020 at 08:08:44PM -0700, Kees Cook wrote:
+> > Hi,
 > > 
-> > On 15/07/2020 22:40, Kees Cook wrote:
-> >> On Tue, Jul 14, 2020 at 08:16:38PM +0200, Mickaël Salaün wrote:
-> >>> From: Mimi Zohar <zohar@linux.ibm.com>
-> >>>
-> >>> The kernel has no way of differentiating between a file containing data
-> >>> or code being opened by an interpreter.  The proposed O_MAYEXEC
-> >>> openat2(2) flag bridges this gap by defining and enabling the
-> >>> MAY_OPENEXEC flag.
-> >>>
-> >>> This patch adds IMA policy support for the new MAY_OPENEXEC flag.
-> >>>
-> >>> Example:
-> >>> measure func=FILE_CHECK mask=^MAY_OPENEXEC
-> >>> appraise func=FILE_CHECK appraise_type=imasig mask=^MAY_OPENEXEC
-> >>>
-> >>> Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
-> >>> Reviewed-by: Lakshmi Ramasubramanian <nramas@linux.microsoft.com>
-> >>> Acked-by: Mickaël Salaün <mic@digikod.net>
-> >>
-> >> (Process nit: if you're sending this on behalf of another author, then
-> >> this should be Signed-off-by rather than Acked-by.)
-> > 
-> > I'm not a co-author of this patch.
-> > 
+> > This is the infrastructure changes to prepare the tasklet API for
+> > conversion to passing the tasklet struct as the callback argument instead
+> > of an arbitrary unsigned long. The first patch details why this is useful
+> > (it's the same rationale as the timer_struct changes from a bit ago:
+> > less abuse during memory corruption attacks, more in line with existing
+> > ways of doing things in the kernel, save a little space in struct,
+> > etc). Notably, the existing tasklet API use is much less messy, so there
+> > is less to clean up.
 > 
-> from Documentation/process/submitting-patches.rst:
+> I would _MUCH_ rather see tasklets go the way of the dodo, esp. given
+> that:
 > 
-> The Signed-off-by: tag indicates that the signer was involved in the
-> development of the patch, or that he/she was in the patch's delivery path.
->                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> >  drivers/input/keyboard/omap-keypad.c   |  2 +-
+> >  drivers/input/serio/hil_mlc.c          |  2 +-
+> >  drivers/net/wan/farsync.c              |  4 +--
+> >  drivers/s390/crypto/ap_bus.c           |  2 +-
+> >  drivers/staging/most/dim2/dim2.c       |  2 +-
+> >  drivers/staging/octeon/ethernet-tx.c   |  2 +-
+> >  drivers/tty/vt/keyboard.c              |  2 +-
+> >  drivers/usb/gadget/udc/snps_udc_core.c |  6 ++---
+> >  drivers/usb/host/fhci-sched.c          |  2 +-
+> >  include/linux/interrupt.h              | 37 ++++++++++++++++++++++----
+> >  kernel/backtracetest.c                 |  2 +-
+> >  kernel/debug/debug_core.c              |  2 +-
+> >  kernel/irq/resend.c                    |  2 +-
+> >  kernel/softirq.c                       | 18 ++++++++++++-
+> >  net/atm/pppoatm.c                      |  2 +-
+> >  net/iucv/iucv.c                        |  2 +-
+> >  sound/drivers/pcsp/pcsp_lib.c          |  2 +-
+> >  17 files changed, 66 insertions(+), 25 deletions(-)
+> 
+> there appear to be hardly any users left.. Can't we stage an extinction
+> event here instead?
 
-Randy beat me to it. :)
+Oh, I wish, but no. That's just the ones using DECLARE_TASKLET. There
+are hundred(s?) more (see the referenced tree).
 
 -- 
 Kees Cook
