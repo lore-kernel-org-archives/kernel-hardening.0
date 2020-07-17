@@ -1,4 +1,4 @@
-Return-Path: <SRS0=K4Gr=A4=lists.openwall.com=kernel-hardening-return-19380-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=7WVf=A4=lists.openwall.com=kernel-hardening-return-19382-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-13.0 required=3.0 tests=BAYES_00,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8B0CBC433E6
-	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:01:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 403F4C433E2
+	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:02:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B616720704
-	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:01:41 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B616720704
+	by mail.kernel.org (Postfix) with SMTP id 9A09720704
+	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:02:14 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9A09720704
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19380-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9820 invoked by uid 550); 17 Jul 2020 17:01:07 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19382-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11438 invoked by uid 550); 17 Jul 2020 17:01:14 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,19 +23,19 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9725 invoked from network); 17 Jul 2020 17:01:05 -0000
-IronPort-SDR: M18F+T7J7/isnirAqdXffSa+L38X8TGwUSVDwnFmAfQn3ttvxcya038uX/r383L64P2D8DoT/W
- rnPIorsZbPHg==
-X-IronPort-AV: E=McAfee;i="6000,8403,9685"; a="137748230"
+Received: (qmail 11356 invoked from network); 17 Jul 2020 17:01:13 -0000
+IronPort-SDR: P35dT/61aT4Qd9fD4GtsDxUaOGeFX/FcDYyYE1PHUDM+IRv6fGll9gLxCK0pyWkAntGO3HwtET
+ LiJGXfyG4kMg==
+X-IronPort-AV: E=McAfee;i="6000,8403,9685"; a="234486423"
 X-IronPort-AV: E=Sophos;i="5.75,362,1589266800"; 
-   d="scan'208";a="137748230"
+   d="scan'208";a="234486423"
 X-Amp-Result: SKIPPED(no attachment in message)
 X-Amp-File-Uploaded: False
-IronPort-SDR: NWj7oLgSmlwHYacGEeXpVk//kBB+ogD+RefXmM+m9lS+AvKxLZXdjbQVYXvBKDxa2dGtBMrDoq
- JQ3NHH5ZmRiA==
+IronPort-SDR: YlJ98+kE/rZOgfAyKy2KRuoB3VOum1TV+Wc6cob0H1N42bJ+0/52jZSaxvvWVP9aWfpeFZ30J8
+ 0UjwzN8oXoSw==
 X-ExtLoop1: 1
 X-IronPort-AV: E=Sophos;i="5.75,362,1589266800"; 
-   d="scan'208";a="270862125"
+   d="scan'208";a="270862167"
 From: Kristen Carlson Accardi <kristen@linux.intel.com>
 To: keescook@chromium.org,
 	tglx@linutronix.de,
@@ -47,207 +47,151 @@ Cc: arjan@linux.intel.com,
 	linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com,
 	rick.p.edgecombe@intel.com,
-	Kristen Carlson Accardi <kristen@linux.intel.com>,
-	Tony Luck <tony.luck@intel.com>
-Subject: [PATCH v4 06/10] x86/tools: Add relative relocs for randomized functions
-Date: Fri, 17 Jul 2020 10:00:03 -0700
-Message-Id: <20200717170008.5949-7-kristen@linux.intel.com>
+	Kristen Carlson Accardi <kristen@linux.intel.com>
+Subject: [PATCH v4 07/10] x86/boot/compressed: Avoid duplicate malloc() implementations
+Date: Fri, 17 Jul 2020 10:00:04 -0700
+Message-Id: <20200717170008.5949-8-kristen@linux.intel.com>
 X-Mailer: git-send-email 2.20.1
 In-Reply-To: <20200717170008.5949-1-kristen@linux.intel.com>
 References: <20200717170008.5949-1-kristen@linux.intel.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-When reordering functions, the relative offsets for relocs that
-are either in the randomized sections, or refer to the randomized
-sections will need to be adjusted. Add code to detect whether a
-reloc satisfies these cases, and if so, add them to the appropriate
-reloc list.
+From: Kees Cook <keescook@chromium.org>
 
+The preboot malloc() (and free()) implementation in
+include/linux/decompress/mm.h (which is also included by the
+static decompressors) is static. This is fine when the only thing
+interested in using malloc() is the decompression code, but the
+x86 preboot environment uses malloc() in a couple places, leading to a
+potential collision when the static copies of the available memory
+region ("malloc_ptr") gets reset to the global "free_mem_ptr" value.
+As it happens, the existing usage pattern happened to be safe because each
+user did 1 malloc() and 1 free() before returning and were not nested:
+
+extract_kernel() (misc.c)
+	choose_random_location() (kaslr.c)
+		mem_avoid_init()
+			handle_mem_options()
+				malloc()
+				...
+				free()
+	...
+	parse_elf() (misc.c)
+		malloc()
+		...
+		free()
+
+Adding FGKASLR, however, will insert additional malloc() calls local to
+fgkaslr.c in the middle of parse_elf()'s malloc()/free() pair:
+
+	parse_elf() (misc.c)
+		malloc()
+		if (...) {
+			layout_randomized_image(output, &ehdr, phdrs);
+				malloc() <- boom
+				...
+		else
+			layout_image(output, &ehdr, phdrs);
+		free()
+
+To avoid collisions, there must be a single implementation of malloc().
+Adjust include/linux/decompress/mm.h so that visibility can be
+controlled, provide prototypes in misc.h, and implement the functions in
+misc.c. This also results in a small size savings:
+
+$ size vmlinux.before vmlinux.after
+   text    data     bss     dec     hex filename
+8842314     468  178320 9021102  89a6ae vmlinux.before
+8842240     468  178320 9021028  89a664 vmlinux.after
+
+Signed-off-by: Kees Cook <keescook@chromium.org>
 Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
-Reviewed-by: Tony Luck <tony.luck@intel.com>
-Tested-by: Tony Luck <tony.luck@intel.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/compressed/Makefile |  7 +++++-
- arch/x86/tools/relocs.c           | 41 ++++++++++++++++++++++++++++---
- arch/x86/tools/relocs.h           |  4 +--
- arch/x86/tools/relocs_common.c    | 15 +++++++----
- 4 files changed, 55 insertions(+), 12 deletions(-)
+ arch/x86/boot/compressed/kaslr.c |  4 ----
+ arch/x86/boot/compressed/misc.c  |  3 +++
+ arch/x86/boot/compressed/misc.h  |  2 ++
+ include/linux/decompress/mm.h    | 12 ++++++++++--
+ 4 files changed, 15 insertions(+), 6 deletions(-)
 
-diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-index 7619742f91c9..c17b1c8ec82c 100644
---- a/arch/x86/boot/compressed/Makefile
-+++ b/arch/x86/boot/compressed/Makefile
-@@ -119,6 +119,11 @@ $(obj)/vmlinux: $(vmlinux-objs-y) FORCE
- 	$(call if_changed,check-and-link-vmlinux)
+diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
+index d7408af55738..6f596bd5b6e5 100644
+--- a/arch/x86/boot/compressed/kaslr.c
++++ b/arch/x86/boot/compressed/kaslr.c
+@@ -39,10 +39,6 @@
+ #include <generated/utsrelease.h>
+ #include <asm/efi.h>
  
- OBJCOPYFLAGS_vmlinux.bin :=  -R .comment -S
-+
-+ifdef CONFIG_FG_KASLR
-+	RELOCS_ARGS += --fg-kaslr
-+endif
-+
- $(obj)/vmlinux.bin: vmlinux FORCE
- 	$(call if_changed,objcopy)
+-/* Macros used by the included decompressor code below. */
+-#define STATIC
+-#include <linux/decompress/mm.h>
+-
+ #ifdef CONFIG_X86_5LEVEL
+ unsigned int __pgtable_l5_enabled;
+ unsigned int pgdir_shift __ro_after_init = 39;
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index 9652d5c2afda..90a4b64b3037 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -28,6 +28,9 @@
  
-@@ -126,7 +131,7 @@ targets += $(patsubst $(obj)/%,%,$(vmlinux-objs-y)) vmlinux.bin.all vmlinux.relo
+ /* Macros used by the included decompressor code below. */
+ #define STATIC		static
++/* Define an externally visible malloc()/free(). */
++#define MALLOC_VISIBLE
++#include <linux/decompress/mm.h>
  
- CMD_RELOCS = arch/x86/tools/relocs
- quiet_cmd_relocs = RELOCS  $@
--      cmd_relocs = $(CMD_RELOCS) $< > $@;$(CMD_RELOCS) --abs-relocs $<
-+      cmd_relocs = $(CMD_RELOCS) $(RELOCS_ARGS) $< > $@;$(CMD_RELOCS) $(RELOCS_ARGS) --abs-relocs $<
- $(obj)/vmlinux.relocs: vmlinux FORCE
- 	$(call if_changed,relocs)
- 
-diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
-index 31b2d151aa63..e0665038742e 100644
---- a/arch/x86/tools/relocs.c
-+++ b/arch/x86/tools/relocs.c
-@@ -42,6 +42,8 @@ struct section {
- };
- static struct section *secs;
- 
-+static int fgkaslr_mode;
-+
- static const char * const sym_regex_kernel[S_NSYMTYPES] = {
  /*
-  * Following symbols have been audited. There values are constant and do
-@@ -818,6 +820,32 @@ static int is_percpu_sym(ElfW(Sym) *sym, const char *symname)
- 		strncmp(symname, "init_per_cpu_", 13);
+  * Use normal definitions of mem*() from string.c. There are already
+diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
+index 726e264410ff..81fbc8d686fa 100644
+--- a/arch/x86/boot/compressed/misc.h
++++ b/arch/x86/boot/compressed/misc.h
+@@ -39,6 +39,8 @@
+ /* misc.c */
+ extern memptr free_mem_ptr;
+ extern memptr free_mem_end_ptr;
++extern void *malloc(int size);
++extern void free(void *where);
+ extern struct boot_params *boot_params;
+ void __putstr(const char *s);
+ void __puthex(unsigned long value);
+diff --git a/include/linux/decompress/mm.h b/include/linux/decompress/mm.h
+index 868e9eacd69e..9192986b1a73 100644
+--- a/include/linux/decompress/mm.h
++++ b/include/linux/decompress/mm.h
+@@ -25,13 +25,21 @@
+ #define STATIC_RW_DATA static
+ #endif
+ 
++/*
++ * When an architecture needs to share the malloc()/free() implementation
++ * between compilation units, it needs to have non-local visibility.
++ */
++#ifndef MALLOC_VISIBLE
++#define MALLOC_VISIBLE static
++#endif
++
+ /* A trivial malloc implementation, adapted from
+  *  malloc by Hannu Savolainen 1993 and Matthias Urlichs 1994
+  */
+ STATIC_RW_DATA unsigned long malloc_ptr;
+ STATIC_RW_DATA int malloc_count;
+ 
+-static void *malloc(int size)
++MALLOC_VISIBLE void *malloc(int size)
+ {
+ 	void *p;
+ 
+@@ -52,7 +60,7 @@ static void *malloc(int size)
+ 	return p;
  }
  
-+static int is_function_section(struct section *sec)
-+{
-+	const char *name;
-+
-+	if (!fgkaslr_mode)
-+		return 0;
-+
-+	name = sec_name(sec->shdr.sh_info);
-+
-+	return(!strncmp(name, ".text.", 6));
-+}
-+
-+static int is_randomized_sym(ElfW(Sym) *sym)
-+{
-+	const char *name;
-+
-+	if (!fgkaslr_mode)
-+		return 0;
-+
-+	if (sym->st_shndx > shnum)
-+		return 0;
-+
-+	name = sec_name(sym_index(sym));
-+	return(!strncmp(name, ".text.", 6));
-+}
-+
- static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 		      const char *symname)
+-static void free(void *where)
++MALLOC_VISIBLE void free(void *where)
  {
-@@ -842,13 +870,17 @@ static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 	case R_X86_64_PC32:
- 	case R_X86_64_PLT32:
- 		/*
--		 * PC relative relocations don't need to be adjusted unless
--		 * referencing a percpu symbol.
-+		 * we need to keep pc relative relocations for sections which
-+		 * might be randomized, and for the percpu section.
-+		 * We also need to keep relocations for any offset which might
-+		 * reference an address in a section which has been randomized.
- 		 *
- 		 * NB: R_X86_64_PLT32 can be treated as R_X86_64_PC32.
- 		 */
--		if (is_percpu_sym(sym, symname))
-+		if (is_function_section(sec) || is_randomized_sym(sym) ||
-+		    is_percpu_sym(sym, symname))
- 			add_reloc(&relocs32neg, offset);
-+
- 		break;
- 
- 	case R_X86_64_PC64:
-@@ -1158,8 +1190,9 @@ static void print_reloc_info(void)
- 
- void process(FILE *fp, int use_real_mode, int as_text,
- 	     int show_absolute_syms, int show_absolute_relocs,
--	     int show_reloc_info)
-+	     int show_reloc_info, int fgkaslr)
- {
-+	fgkaslr_mode = fgkaslr;
- 	regex_init(use_real_mode);
- 	read_ehdr(fp);
- 	read_shdrs(fp);
-diff --git a/arch/x86/tools/relocs.h b/arch/x86/tools/relocs.h
-index 43c83c0fd22c..f582895c04dd 100644
---- a/arch/x86/tools/relocs.h
-+++ b/arch/x86/tools/relocs.h
-@@ -31,8 +31,8 @@ enum symtype {
- 
- void process_32(FILE *fp, int use_real_mode, int as_text,
- 		int show_absolute_syms, int show_absolute_relocs,
--		int show_reloc_info);
-+		int show_reloc_info, int fgkaslr);
- void process_64(FILE *fp, int use_real_mode, int as_text,
- 		int show_absolute_syms, int show_absolute_relocs,
--		int show_reloc_info);
-+		int show_reloc_info, int fgkaslr);
- #endif /* RELOCS_H */
-diff --git a/arch/x86/tools/relocs_common.c b/arch/x86/tools/relocs_common.c
-index 6634352a20bc..a80efa2f53ff 100644
---- a/arch/x86/tools/relocs_common.c
-+++ b/arch/x86/tools/relocs_common.c
-@@ -12,14 +12,14 @@ void die(char *fmt, ...)
- 
- static void usage(void)
- {
--	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode]" \
--	    " vmlinux\n");
-+	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode|" \
-+	    "--fg-kaslr] vmlinux\n");
- }
- 
- int main(int argc, char **argv)
- {
- 	int show_absolute_syms, show_absolute_relocs, show_reloc_info;
--	int as_text, use_real_mode;
-+	int as_text, use_real_mode, fgkaslr_opt;
- 	const char *fname;
- 	FILE *fp;
- 	int i;
-@@ -30,6 +30,7 @@ int main(int argc, char **argv)
- 	show_reloc_info = 0;
- 	as_text = 0;
- 	use_real_mode = 0;
-+	fgkaslr_opt = 0;
- 	fname = NULL;
- 	for (i = 1; i < argc; i++) {
- 		char *arg = argv[i];
-@@ -54,6 +55,10 @@ int main(int argc, char **argv)
- 				use_real_mode = 1;
- 				continue;
- 			}
-+			if (strcmp(arg, "--fg-kaslr") == 0) {
-+				fgkaslr_opt = 1;
-+				continue;
-+			}
- 		}
- 		else if (!fname) {
- 			fname = arg;
-@@ -75,11 +80,11 @@ int main(int argc, char **argv)
- 	if (e_ident[EI_CLASS] == ELFCLASS64)
- 		process_64(fp, use_real_mode, as_text,
- 			   show_absolute_syms, show_absolute_relocs,
--			   show_reloc_info);
-+			   show_reloc_info, fgkaslr_opt);
- 	else
- 		process_32(fp, use_real_mode, as_text,
- 			   show_absolute_syms, show_absolute_relocs,
--			   show_reloc_info);
-+			   show_reloc_info, fgkaslr_opt);
- 	fclose(fp);
- 	return 0;
- }
+ 	malloc_count--;
+ 	if (!malloc_count)
 -- 
 2.20.1
 
