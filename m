@@ -1,4 +1,4 @@
-Return-Path: <SRS0=NyrN=A4=lists.openwall.com=kernel-hardening-return-19384-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Dmk2=A4=lists.openwall.com=kernel-hardening-return-19385-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-13.0 required=3.0 tests=BAYES_00,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A28D2C433E1
-	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:02:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2D880C433E2
+	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:02:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D5A0F20704
-	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:02:42 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D5A0F20704
+	by mail.kernel.org (Postfix) with SMTP id 5C24720704
+	for <kernel-hardening@archiver.kernel.org>; Fri, 17 Jul 2020 17:02:57 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5C24720704
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19384-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11624 invoked by uid 550); 17 Jul 2020 17:01:16 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19385-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15481 invoked by uid 550); 17 Jul 2020 17:01:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,239 +23,232 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11440 invoked from network); 17 Jul 2020 17:01:14 -0000
-IronPort-SDR: cOXCi4bBw8QeDP+JbzLZvIM0YDKbFV/wYlOijBmoPmBzn9D0Qv82p47rOs+3848Lfp/ox0e1jV
- Xy6hYxEUWUfA==
-X-IronPort-AV: E=McAfee;i="6000,8403,9685"; a="137748384"
+Received: (qmail 15431 invoked from network); 17 Jul 2020 17:01:44 -0000
+IronPort-SDR: GFsYQPCd45DaQ2kMjdaSZImzsjW2xqpmm85m9l2SH7VxLpdrjrzfBGaNw5mG26PCFTRWBC+jsx
+ ZLBRw8A9tzAA==
+X-IronPort-AV: E=McAfee;i="6000,8403,9685"; a="148798604"
 X-IronPort-AV: E=Sophos;i="5.75,362,1589266800"; 
-   d="scan'208";a="137748384"
+   d="scan'208";a="148798604"
 X-Amp-Result: SKIPPED(no attachment in message)
 X-Amp-File-Uploaded: False
-IronPort-SDR: d3DDxs2KwSQhMwX1wAx9jnDX4JOWDz/pHxQmfbYvuTu0b8a/PV6r1X0hw0d2NTy2Cxh4aheTWe
- yE3Z7UCCZONw==
+IronPort-SDR: WAMcOAZNNxeoO/jWRTcKwIDAi/oBntr2VyGSCK7qxDVIsr7SEY63AmtN7v/zgFYsycubaRV5+S
+ LAd4J/8jxJsA==
 X-ExtLoop1: 1
 X-IronPort-AV: E=Sophos;i="5.75,362,1589266800"; 
-   d="scan'208";a="270862208"
+   d="scan'208";a="270862244"
 From: Kristen Carlson Accardi <kristen@linux.intel.com>
 To: keescook@chromium.org,
 	tglx@linutronix.de,
 	mingo@redhat.com,
-	bp@alien8.de
-Cc: arjan@linux.intel.com,
+	bp@alien8.de,
 	x86@kernel.org,
+	"H. Peter Anvin" <hpa@zytor.com>,
+	Jessica Yu <jeyu@kernel.org>
+Cc: arjan@linux.intel.com,
 	linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com,
 	rick.p.edgecombe@intel.com,
 	Kristen Carlson Accardi <kristen@linux.intel.com>,
+	Ard Biesheuvel <ardb@kernel.org>,
 	Tony Luck <tony.luck@intel.com>
-Subject: [PATCH v4 09/10] kallsyms: Hide layout
-Date: Fri, 17 Jul 2020 10:00:06 -0700
-Message-Id: <20200717170008.5949-10-kristen@linux.intel.com>
+Subject: [PATCH v4 10/10] module: Reorder functions
+Date: Fri, 17 Jul 2020 10:00:07 -0700
+Message-Id: <20200717170008.5949-11-kristen@linux.intel.com>
 X-Mailer: git-send-email 2.20.1
 In-Reply-To: <20200717170008.5949-1-kristen@linux.intel.com>
 References: <20200717170008.5949-1-kristen@linux.intel.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-This patch makes /proc/kallsyms display in a random order, rather
-than sorted by address in order to hide the newly randomized address
-layout.
+Introduce a new config option to allow modules to be re-ordered
+by function. This option can be enabled independently of the
+kernel text KASLR or FG_KASLR settings so that it can be used
+by architectures that do not support either of these features.
+This option will be selected by default if CONFIG_FG_KASLR is
+selected.
+
+If a module has functions split out into separate text sections
+(i.e. compiled with the -ffunction-sections flag), reorder the
+functions to provide some code diversification to modules.
 
 Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Acked-by: Ard Biesheuvel <ardb@kernel.org>
+Tested-by: Ard Biesheuvel <ardb@kernel.org>
 Reviewed-by: Tony Luck <tony.luck@intel.com>
 Tested-by: Tony Luck <tony.luck@intel.com>
 ---
- kernel/kallsyms.c | 163 +++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 162 insertions(+), 1 deletion(-)
+ arch/x86/Makefile |  5 +++
+ init/Kconfig      | 12 +++++++
+ kernel/kallsyms.c |  2 +-
+ kernel/module.c   | 81 +++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 99 insertions(+), 1 deletion(-)
 
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 00e378de8bc0..0f2dbc46eb5c 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -51,6 +51,11 @@ ifdef CONFIG_X86_NEED_RELOCS
+         LDFLAGS_vmlinux := --emit-relocs --discard-none
+ endif
+ 
++ifndef CONFIG_FG_KASLR
++	ifdef CONFIG_MODULE_FG_KASLR
++		KBUILD_CFLAGS_MODULE += -ffunction-sections
++	endif
++endif
+ #
+ # Prevent GCC from generating any FP code by mistake.
+ #
+diff --git a/init/Kconfig b/init/Kconfig
+index 82f042a1062f..b4741838da40 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1994,6 +1994,7 @@ config FG_KASLR
+ 	bool "Function Granular Kernel Address Space Layout Randomization"
+ 	depends on $(cc-option, -ffunction-sections)
+ 	depends on ARCH_HAS_FG_KASLR
++	select MODULE_FG_KASLR
+ 	default n
+ 	help
+ 	  This option improves the randomness of the kernel text
+@@ -2278,6 +2279,17 @@ config UNUSED_KSYMS_WHITELIST
+ 	  one per line. The path can be absolute, or relative to the kernel
+ 	  source tree.
+ 
++config MODULE_FG_KASLR
++	depends on $(cc-option, -ffunction-sections)
++	bool "Module Function Granular Layout Randomization"
++	help
++	  This option randomizes the module text section by reordering the text
++	  section by function at module load time. In order to use this
++	  feature, the module must have been compiled with the
++	  -ffunction-sections compiler flag.
++
++	  If unsure, say N.
++
+ endif # MODULES
+ 
+ config MODULES_TREE_LOOKUP
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
-index bb14e64f62a4..45d147f7f10e 100644
+index 45d147f7f10e..e3f7d0fd3270 100644
 --- a/kernel/kallsyms.c
 +++ b/kernel/kallsyms.c
-@@ -446,6 +446,12 @@ struct kallsym_iter {
- 	int show_value;
- };
- 
-+struct kallsyms_shuffled_iter {
-+	struct kallsym_iter iter;
-+	loff_t total_syms;
-+	loff_t shuffled_index[];
-+};
-+
- int __weak arch_get_kallsym(unsigned int symnum, unsigned long *value,
- 			    char *type, char *name)
+@@ -692,7 +692,7 @@ static int __kallsyms_open(struct inode *inode, struct file *file)
+  * When function granular kaslr is enabled, we need to print out the symbols
+  * at random so we don't reveal the new layout.
+  */
+-#if defined(CONFIG_FG_KASLR)
++#if defined(CONFIG_FG_KASLR) || defined(CONFIG_MODULE_FG_KASLR)
+ static int update_random_pos(struct kallsyms_shuffled_iter *s_iter,
+ 			     loff_t pos, loff_t *new_pos)
  {
-@@ -661,7 +667,7 @@ bool kallsyms_show_value(const struct cred *cred)
- 	}
- }
+diff --git a/kernel/module.c b/kernel/module.c
+index aa183c9ac0a2..0f4f4e567a42 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -56,6 +56,7 @@
+ #include <linux/bsearch.h>
+ #include <linux/dynamic_debug.h>
+ #include <linux/audit.h>
++#include <linux/random.h>
+ #include <uapi/linux/module.h>
+ #include "module-internal.h"
  
--static int kallsyms_open(struct inode *inode, struct file *file)
-+static int __kallsyms_open(struct inode *inode, struct file *file)
- {
- 	/*
- 	 * We keep iterator in m->private, since normal case is to
-@@ -682,6 +688,161 @@ static int kallsyms_open(struct inode *inode, struct file *file)
- 	return 0;
+@@ -2391,6 +2392,83 @@ static long get_offset(struct module *mod, unsigned int *size,
+ 	return ret;
  }
  
 +/*
-+ * When function granular kaslr is enabled, we need to print out the symbols
-+ * at random so we don't reveal the new layout.
-+ */
-+#if defined(CONFIG_FG_KASLR)
-+static int update_random_pos(struct kallsyms_shuffled_iter *s_iter,
-+			     loff_t pos, loff_t *new_pos)
-+{
-+	loff_t new;
-+
-+	if (pos >= s_iter->total_syms)
-+		return 0;
-+
-+	new = s_iter->shuffled_index[pos];
-+
-+	/*
-+	 * normally this would be done as part of update_iter, however,
-+	 * we want to avoid triggering this in the event that new is
-+	 * zero since we don't want to blow away our pos end indicators.
-+	 */
-+	if (new == 0) {
-+		s_iter->iter.name[0] = '\0';
-+		s_iter->iter.nameoff = get_symbol_offset(new);
-+		s_iter->iter.pos = new;
-+	}
-+
-+	*new_pos = new;
-+	return 1;
-+}
-+
-+static void *shuffled_start(struct seq_file *m, loff_t *pos)
-+{
-+	struct kallsyms_shuffled_iter *s_iter = m->private;
-+	loff_t new_pos;
-+
-+	if (!update_random_pos(s_iter, *pos, &new_pos))
-+		return NULL;
-+
-+	return s_start(m, &new_pos);
-+}
-+
-+static void *shuffled_next(struct seq_file *m, void *p, loff_t *pos)
-+{
-+	struct kallsyms_shuffled_iter *s_iter = m->private;
-+	loff_t new_pos;
-+
-+	(*pos)++;
-+
-+	if (!update_random_pos(s_iter, *pos, &new_pos))
-+		return NULL;
-+
-+	if (!update_iter(m->private, new_pos))
-+		return NULL;
-+
-+	return p;
-+}
-+
-+/*
-+ * shuffle_index_list()
++ * shuffle_text_list()
 + * Use a Fisher Yates algorithm to shuffle a list of text sections.
 + */
-+static void shuffle_index_list(loff_t *indexes, loff_t size)
++static void shuffle_text_list(Elf_Shdr **list, int size)
 +{
 +	int i;
 +	unsigned int j;
-+	loff_t temp;
++	Elf_Shdr *temp;
 +
 +	for (i = size - 1; i > 0; i--) {
-+		/* pick a random index from 0 to i */
++		/*
++		 * pick a random index from 0 to i
++		 */
 +		get_random_bytes(&j, sizeof(j));
 +		j = j % (i + 1);
 +
-+		temp = indexes[i];
-+		indexes[i] = indexes[j];
-+		indexes[j] = temp;
++		temp = list[i];
++		list[i] = list[j];
++		list[j] = temp;
 +	}
 +}
 +
-+static const struct seq_operations kallsyms_shuffled_op = {
-+	.start = shuffled_start,
-+	.next = shuffled_next,
-+	.stop = s_stop,
-+	.show = s_show
-+};
-+
-+static int kallsyms_random_open(struct inode *inode, struct file *file)
++/*
++ * randomize_text()
++ * Look through the core section looking for executable code sections.
++ * Store sections in an array and then shuffle the sections
++ * to reorder the functions.
++ */
++static void randomize_text(struct module *mod, struct load_info *info)
 +{
-+	loff_t pos;
-+	struct kallsyms_shuffled_iter *shuffled_iter;
-+	struct kallsym_iter iter;
-+	bool show_value;
++	int i;
++	int num_text_sections = 0;
++	Elf_Shdr **text_list;
++	int size = 0;
++	int max_sections = info->hdr->e_shnum;
++	unsigned int sec = find_sec(info, ".text");
 +
-+	/*
-+	 * If privileged, go ahead and use the normal algorithm for
-+	 * displaying symbols
-+	 */
-+	show_value = kallsyms_show_value(file->f_cred);
-+	if (show_value)
-+		return __kallsyms_open(inode, file);
++	if (sec == 0)
++		return;
 +
-+	/*
-+	 * we need to figure out how many extra symbols there are
-+	 * to print out past kallsyms_num_syms
-+	 */
-+	pos = kallsyms_num_syms;
-+	reset_iter(&iter, 0);
-+	do {
-+		if (!update_iter(&iter, pos))
-+			break;
-+		pos++;
-+	} while (1);
++	text_list = kmalloc_array(max_sections, sizeof(*text_list), GFP_KERNEL);
++	if (!text_list)
++		return;
 +
-+	/*
-+	 * add storage space for an array of loff_t equal to the size
-+	 * of the total number of symbols we need to print
-+	 */
-+	shuffled_iter = __seq_open_private(file, &kallsyms_shuffled_op,
-+					   sizeof(*shuffled_iter) +
-+					   (sizeof(pos) * pos));
-+	if (!shuffled_iter)
-+		return -ENOMEM;
++	for (i = 0; i < max_sections; i++) {
++		Elf_Shdr *shdr = &info->sechdrs[i];
++		const char *sname = info->secstrings + shdr->sh_name;
 +
-+	reset_iter(&shuffled_iter->iter, 0);
-+	shuffled_iter->iter.show_value = show_value;
-+	shuffled_iter->total_syms = pos;
++		if (!(shdr->sh_flags & SHF_ALLOC) ||
++		    !(shdr->sh_flags & SHF_EXECINSTR) ||
++		    strstarts(sname, ".init"))
++			continue;
 +
-+	/*
-+	 * the existing update_iter algorithm requires that we
-+	 * are either moving along increasing pos sequentially,
-+	 * or that these values are correct. Since these values
-+	 * were discovered above, initialize our new iter so we
-+	 * can use update_iter non-sequentially.
-+	 */
-+	shuffled_iter->iter.pos_arch_end = iter.pos_arch_end;
-+	shuffled_iter->iter.pos_mod_end = iter.pos_mod_end;
-+	shuffled_iter->iter.pos_ftrace_mod_end = iter.pos_ftrace_mod_end;
++		text_list[num_text_sections] = shdr;
++		num_text_sections++;
++	}
 +
-+	/*
-+	 * initialize the array with all possible pos values, then
-+	 * shuffle the array so that the values will display in a random
-+	 * order.
-+	 */
-+	for (pos = 0; pos < shuffled_iter->total_syms; pos++)
-+		shuffled_iter->shuffled_index[pos] = pos;
++	shuffle_text_list(text_list, num_text_sections);
 +
-+	shuffle_index_list(shuffled_iter->shuffled_index, shuffled_iter->total_syms);
++	for (i = 0; i < num_text_sections; i++) {
++		Elf_Shdr *shdr = text_list[i];
 +
-+	return 0;
++		/*
++		 * get_offset has a section index for it's last
++		 * argument, that is only used by arch_mod_section_prepend(),
++		 * which is only defined by parisc. Since this this type
++		 * of randomization isn't supported on parisc, we can
++		 * safely pass in zero as the last argument, as it is
++		 * ignored.
++		 */
++		shdr->sh_entsize = get_offset(mod, &size, shdr, 0);
++	}
++
++	kfree(text_list);
 +}
 +
-+#define kallsyms_open kallsyms_random_open
-+#else
-+#define kallsyms_open __kallsyms_open
-+#endif /* CONFIG_FG_KASLR */
+ /* Lay out the SHF_ALLOC sections in a way not dissimilar to how ld
+    might -- code, read-only data, read-write data, small data.  Tally
+    sizes, and place the offsets into sh_entsize fields: high bit means it
+@@ -2481,6 +2559,9 @@ static void layout_sections(struct module *mod, struct load_info *info)
+ 			break;
+ 		}
+ 	}
 +
- #ifdef	CONFIG_KGDB_KDB
- const char *kdb_walk_kallsyms(loff_t *pos)
- {
++	if (IS_ENABLED(CONFIG_MODULE_FG_KASLR))
++		randomize_text(mod, info);
+ }
+ 
+ static void set_license(struct module *mod, const char *license)
 -- 
 2.20.1
 
