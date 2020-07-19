@@ -1,23 +1,24 @@
-Return-Path: <SRS0=JMsX=A6=lists.openwall.com=kernel-hardening-return-19393-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=xI7U=A6=lists.openwall.com=kernel-hardening-return-19394-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+X-Spam-Status: No, score=-13.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 02230C433E2
-	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Jul 2020 15:52:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5AB1CC433E4
+	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Jul 2020 15:52:14 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 58C98207EA
-	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Jul 2020 15:52:04 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id AACD9207EA
+	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Jul 2020 15:52:13 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="ZTNJnNSn"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 58C98207EA
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="SuTsQ1Ru"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AACD9207EA
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19393-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 8069 invoked by uid 550); 19 Jul 2020 15:51:55 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19394-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9801 invoked by uid 550); 19 Jul 2020 15:52:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,14 +26,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8049 invoked from network); 19 Jul 2020 15:51:54 -0000
+Received: (qmail 9776 invoked from network); 19 Jul 2020 15:52:03 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1595173872;
-	bh=II5cHQCwfPee86KSUefTyAwEuMywfdmgqOhgIYjQV6w=;
-	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
-	b=ZTNJnNSnR5692hlzt+RMrAgyMmLHXoZ9XZQsejfJ96mvL/siseUnYtDixg61nUAeM
-	 tcpJA3JJpyaXtsyvhMpn1aqWr8U1lK4mkCNi+FQf83sIVRL03bRj3dU9eiYYV5Wy10
-	 r+1r6zMJkQCMnGS7x4K0yjugbJm/lgKRxnZPpt5I=
+	s=badeba3b8450; t=1595173881;
+	bh=UxIl6mQen7XHyeByrGPPzVo5oIulQzy1cfNBw4mJwKk=;
+	h=X-UI-Sender-Class:From:To:Cc:Subject:Date:In-Reply-To:References;
+	b=SuTsQ1RuKd1Yyt7mauDt3BNF40vASogagV5nvvha5YSYs1cLI1Cf0lsUXEg5yW1GI
+	 Xp36OFwLS7PIaAV7aGhcOAP7yPCCzVAmt9WBdJ7wzNeZ4OiXgPspLWJpQuEfcPWkcx
+	 tEGDeKbS56bIAIBtXzlRiHz0xOLcv9DX0ipXICYw=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
 From: Oscar Carter <oscar.carter@gmx.com>
 To: Steven Rostedt <rostedt@goodmis.org>,
@@ -42,35 +43,37 @@ Cc: Oscar Carter <oscar.carter@gmx.com>,
 	linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com,
 	Jann Horn <jannh@google.com>
-Subject: [PATCH v2 0/2] kernel/trace: Remove function callback casts
-Date: Sun, 19 Jul 2020 17:50:31 +0200
-Message-Id: <20200719155033.24201-1-oscar.carter@gmx.com>
+Subject: [PATCH v2 1/2] kernel/trace: Prepare to remove function callback casts
+Date: Sun, 19 Jul 2020 17:50:32 +0200
+Message-Id: <20200719155033.24201-2-oscar.carter@gmx.com>
 X-Mailer: git-send-email 2.20.1
+In-Reply-To: <20200719155033.24201-1-oscar.carter@gmx.com>
+References: <20200719155033.24201-1-oscar.carter@gmx.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:PAJKW7m3+NEkL7h7V0Z7LnFNinjyjbDH70fHBDbofLsjc/8YDFI
- Cz04NdXc/Iqx/cLnMwjSPwakkQbi+pCzA1WJc6Q2GB3Npjsee+o5sDqqQAQ1yGlvLT1G3Lz
- K7VTaGX+x1S0wu2DwaZecE4C5YKtLfdyC+fLhu9YSMmZiehWgB8k6dLLgMKx7NBXWtNkiVY
- BhiNRZjR1nXnKVRMQ/CDg==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:luPXm42dGBo=:aV0F9ngfFkJGJ1UG2XfZyq
- EDW/iq0MJ8kOVclatXcmLBexnYxouiaayARfVGKKxKCRiaCOktSq7YwToHqzcXO/2XyK0DpoH
- mZ8a2/OkkTItskUxqKLpdvSMk2UBuvrixEd6AjJAIaqt6Ny2+N4bxg34UjY83fC0d1yyKmguS
- P/NUcthyjXxqW7FX1BAHkP88CObHVzwsVb8CgpNxGvH5Mhfhg6eyyaZ7KyWqx2bL53+2r+MPR
- 4Ff3bmiia8f5IxO1szfp6YdTKeaqPrE8vPsr3G1F+zTyFG7lRpaA9Wkh3znhzlBXNhBCAObVh
- 0p1XU5ikproy9d6SCeBzZccRkhntODBZ8B0MTgVjx/sS5gs4LQQG9YlbqAkaKXGSnE80E328g
- DyRIkuXob/HCkDaoUEEvqJvMMTErwyp6+N6uXhoN3IHR2kp/b9TcwJY0Hc7wVpVNdy4VR0lVk
- pSBMWRc+TKQism4Mz5+zGOAlN3LwG1fYpV/1BUIVMmgNVnsNmAiopRi1Gy3rMdxRUSa/7Ma3q
- hVIz4S1pNyVWe5OyaX0yRxb1Uzt0uTcK8YYLgAbXL/BfIT3D8eUVPAvxKHHlPJXTYjcjs4a5h
- WG20PvRtD+q7nNI8cA62kBHIFIKFZXiWZyg692SvIO/GSJGMMSK9pyc0dcFylifwYJSWeMt8K
- 0U1OqzSNmhynNd2q54Jy7SwcxLqQFqFD/RM5VFWgI6u4LblypqcJKLQ5NNzjv9Dxd5BErNCe4
- OfW8lP3t6Tid9g8P3Tq8iNxC4mcUe71pR/RCr9uBNov+efbr0Mz5j6L3U8X5D82P3VTnqR4S/
- BfJCuWcqm1gPM1EagjhCQM+QGE9X2p47apC6NkeiO7zHM5Y3oikZsMZIYMz9o13RBvJje5Kyu
- 7IORDI0qs0gMd+V0klV44sV6QKc70eF3c8SZor6cxnnVjunoJe//qYRtlB2EYdx8xTshALVqD
- cOhHRzyePwEZvdCYJJj/XXQh0aPHWXBwNpWpczyCj85+2XFa328VrnWaBC1I3V3ILYzVL17EY
- vchEZl1jloJzBMQ4UEHYigHMyn3h+SnfliyV1aEfgp+AXEX9My+8dwlOJpZ0NK3U5zsn+D7fE
- z+TjdG9fbQ0r46eXARu8tvaZVHQVSrvLqhMLUJJ0GuoLxUnc6BodSA1qrP9IwiAJJ/wNqTfnG
- lOUCxtpm6+hP20OlzvGFpq1T9yqZ6kpCs0u9/khgq4lT66A/rROKnQHGTYq95XQ0HBe1Z7kkF
- Rl+jrCPVp2rFr6kfe7Hz5lz29S+2ox+sZFDmVWg==
+X-Provags-ID: V03:K1:2z12NmO4u8UaSayx3JZjEGOcyrHYJ4xFELYM88klsQhmJlBUw5R
+ ZNiIhd83afniCVMUF1UDUfbNAVXAxTD+6MtwUWxSSMssNq3DZtnzZpfuOLzGZPWH5LOHvyj
+ 92nr89bVIbT9WYJk3uvwdohIL10+ECLUNMQ98SG3NdC87Gp1UGtAs7O3geVLHSPkJhi8Yb3
+ 4DAG/29QWv/o6Z2sngFNA==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:uMgpbrCNjLY=:QEGMcSDeJXgrI0HoHw1xAh
+ LCEzKfBq8KCcJvdSmqkwUJENEdUY1slU+Il1VaseHlMpmP/rBKAyPVQt7kUCl21f42Zec7eRr
+ ylFn9uMnJ/KL+/Ldgtlqe9cXofKoqVKMWiWSrAXUlX2SUT5he0U5+c0h78TWGZOJ06uSrOFjO
+ GjIB/VSM0rk5KpFbljpiinl7v8f+fuQ9N6z1D9XMkrqjP2hjK6npdF91oy6K5xBo8COM9olBd
+ ah8/SpIDNNKoxyHf+kpTAmYcoYGu77eJLvX71WPFqvcV+qNplnepzmYpnYPmeR1lag0qiOK8n
+ 9Kw9LX1WGB3bXkak6VdLKbXoQgUTMlol1Nw99R8rDLm7ZzM5pgzXGFU72984ILTmKYb58NJfx
+ mON0Y9t+L61bsglxxbYBSMRF96PtdTXqqdSE6f9LENIbY7UkqmwEDSP9PeYz3Aeu2Ldhr1xN1
+ jxIsxyNeqpNksV5v9KrsPmWtWDlhNdHD1lkFU9lzwmJvDRMx/ENaEp53Ak+tnTv4zBYmQY4js
+ X3pkhNYjdaQQW3hMhOssrRy3Vm9GV/JblJx9elyrumAR/qZkAGskOHU5PvemkFYTon8C/5ahz
+ QcyE1AQU0JmU+HQ+wSZoQxWf6L0M4mDVpAI4n5aeCZwHcze3oJb3lroQ9WIJ8OmNtxpiwFGWM
+ 9t/Xf0DPdILb7ceMaZqSKkn2PzXyjozAAoafLGkDNM8Hlky9gu3zFXrIiYyVZY09zU0wbqJCK
+ FlnG1gaMhEtThyCB4pfku/f/GotOFwL/ggbOq4UceAVqHI8fGdc9BE1q8owG2gVPowaE0SwNu
+ BzAsjA/04wc5RU2ERuIBeBfC1Km3CcOqvebyDrFAumFs3JqNaVXC9VFB6L08/H5lKVqKBO2lF
+ 86R/aHFMBmqg4H9nAzpRg6krVuFE5vaSj7FzlRbKhefQZ3NSMOJVpv9NcylANRC1D/u6dRhzA
+ b5b4vMvAXFeHuZoNlaz+5gWmG+noxr8L+XAZS44yQaf1kvrzHx2bJYkmKSu4OJhXlTybMV3/i
+ 9vIPPsaJg3ZpClrk7urOvbn6DZ7m1iHmSOydFZwn62R+wTEWYkCpsJpU2IVffOc0BCtYSIeEv
+ 7/RRAbOwRt3ETEaRTlUoAxbUdDeNSmKQnvJCU4jfDPPuRIvybQ6J5lsDLNM3oeKCjX8m3Y62o
+ 50hVn9noWAl+GrZIEfcn3grUXWMU/x1950r7pmiF/BmXzjBfibb57+Ubo7f9caFA1IawrI0OK
+ AUyMIH+ecdfhkQRNdIKOCy++7Op3OBGrDDpLxbA==
 
 In an effort to enable -Wcast-function-type in the top-level Makefile to
 support Control Flow Integrity builds, there are the need to remove all
@@ -83,44 +86,76 @@ assembly). And to make sure there's no C side-effects, those archs call
 ftrace_ops_no_ops() which only has two parameters, as the function
 ftrace_ops_list_func() has four parameters.
 
-This patch series is a new proposal for the work start by me [1] and
-followed by the Steven Rostedt patch [2] and Jann Horn comments [3].
+This patch prepares all the infrastructure to remove the casts.
 
-This new proposal removes all the function callback casts without the
-use of linker magic and so is more CFI friendly.
+Define a new function pointer to use when the archs don't support ftrace
+ops. Also define a union to combine this new function pointer (two
+parameters) with the ftrace_func_t function pointer (four parameters).
+This way, using this union it's possible to use two different function
+prototypes with the same variable.
 
-The first patch prepares the needed infrastructure to remove all the
-function callback casts. This infrastructure is based in a new union
-type to manage two different function pointers (2 parameters and 4
-parameters) using the same variable. Also create two static inline
-helpers to set and compare against the fields of the new union type.
-The helpers are duplicated for the archs that support ftrace ops and
-for the archs that don't support ftrace ops as both cases use different
-function prototypes.
+Also create two static inline helpers to set and compare against the
+fields of the new union type. These helpers are duplicated for the archs
+that support ftrace ops and for the archs that don't support ftrace ops
+as both cases use different function prototypes.
 
-The second patch removes all the function callback casts using the
-infrastructure defined previously in the first patch.
+Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
+=2D--
+ kernel/trace/ftrace.c | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
 
-[1] https://lore.kernel.org/kernel-hardening/20200614070154.6039-1-oscar.c=
-arter@gmx.com/
-[2] https://lore.kernel.org/kernel-hardening/20200617165616.52241bde@oasis=
-.local.home/
-[3] https://lore.kernel.org/kernel-hardening/CAG48ez04Fj=3D1p61KAxAQWZ3f_z=
-073fVUr8LsQgtKA9c-kcHmDQ@mail.gmail.com/
+diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
+index 1903b80db6eb..fd8fbb422860 100644
+=2D-- a/kernel/trace/ftrace.c
++++ b/kernel/trace/ftrace.c
+@@ -119,13 +119,45 @@ struct ftrace_ops __rcu *ftrace_ops_list __read_most=
+ly =3D &ftrace_list_end;
+ ftrace_func_t ftrace_trace_function __read_mostly =3D ftrace_stub;
+ struct ftrace_ops global_ops;
 
-Changelog v1->v2
--Discard the idea behind the v1 patch.
--Use a new union type to manage two different function pointers.
--Create the infrastructure to remove the casts.
--Remove the casts using the new infrastructure.
++typedef void (*ftrace_func_no_ops_t)(unsigned long ip,
++				     unsigned long parent_ip);
++
++union ftrace_func {
++	ftrace_func_t ops;
++	ftrace_func_no_ops_t no_ops;
++};
++
+ #if ARCH_SUPPORTS_FTRACE_OPS
+ static void ftrace_ops_list_func(unsigned long ip, unsigned long parent_i=
+p,
+ 				 struct ftrace_ops *op, struct pt_regs *regs);
++
++static inline void ftrace_set_ufunc(union ftrace_func *ufunc,
++				    ftrace_func_t func)
++{
++	ufunc->ops =3D func;
++}
++
++static inline bool ftrace_same_address_ufunc(union ftrace_func *ufunc,
++					     ftrace_func_t func)
++{
++	return (ufunc->ops =3D=3D func);
++}
+ #else
+ /* See comment below, where ftrace_ops_list_func is defined */
+ static void ftrace_ops_no_ops(unsigned long ip, unsigned long parent_ip);
+ #define ftrace_ops_list_func ((ftrace_func_t)ftrace_ops_no_ops)
++
++static inline void ftrace_set_ufunc(union ftrace_func *ufunc,
++				    ftrace_func_no_ops_t func)
++{
++	ufunc->no_ops =3D func;
++}
++
++static inline bool ftrace_same_address_ufunc(union ftrace_func *ufunc,
++					     ftrace_func_no_ops_t func)
++{
++	return (ufunc->no_ops =3D=3D func);
++}
+ #endif
 
-Oscar Carter (2):
-  kernel/trace: Prepare to remove function callback casts
-  kernel/trace: Remove function callback casts
-
- kernel/trace/ftrace.c | 80 +++++++++++++++++++++++++++++++++----------
- 1 file changed, 61 insertions(+), 19 deletions(-)
-
+ static inline void ftrace_ops_init(struct ftrace_ops *ops)
 =2D-
 2.20.1
 
