@@ -1,24 +1,23 @@
-Return-Path: <SRS0=yXTP=A6=lists.openwall.com=kernel-hardening-return-19395-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=fVgU=A7=lists.openwall.com=kernel-hardening-return-19396-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0CFF6C433E6
-	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Jul 2020 15:52:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 467BCC433E2
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Jul 2020 01:25:55 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3536E207EA
-	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Jul 2020 15:52:23 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 71B952177B
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Jul 2020 01:25:54 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="dl9Qv6LY"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3536E207EA
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19395-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11371 invoked by uid 550); 19 Jul 2020 15:52:10 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="bFkV4pDN"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 71B952177B
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19396-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 12030 invoked by uid 550); 20 Jul 2020 01:25:46 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,230 +25,213 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11295 invoked from network); 19 Jul 2020 15:52:10 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1595173888;
-	bh=N+UeP24eqVRjJpemOD2oTkwdHQmg8hfH9M861ui7lqc=;
-	h=X-UI-Sender-Class:From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=dl9Qv6LYCoziMGrFyKXiJ98zjZduLijQGDv8AUlVyG2XYMNKbyCIzB3ZU9MIN8TWC
-	 wX0hb0X9KeR3RnLe4C2UMu7Z37kTBb0I5h5ABte1hdHrlKT98KrbAHE4JhmdsI+zju
-	 uRYM4Oa01/jk3J1cNjAxf1bVCkAvBUd+Nk51pbRo=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-From: Oscar Carter <oscar.carter@gmx.com>
-To: Steven Rostedt <rostedt@goodmis.org>,
-	Ingo Molnar <mingo@redhat.com>,
-	Kees Cook <keescook@chromium.org>
-Cc: Oscar Carter <oscar.carter@gmx.com>,
-	linux-kernel@vger.kernel.org,
-	kernel-hardening@lists.openwall.com,
-	Jann Horn <jannh@google.com>
-Subject: [PATCH v2 2/2] kernel/trace: Remove function callback casts
-Date: Sun, 19 Jul 2020 17:50:33 +0200
-Message-Id: <20200719155033.24201-3-oscar.carter@gmx.com>
-X-Mailer: git-send-email 2.20.1
-In-Reply-To: <20200719155033.24201-1-oscar.carter@gmx.com>
-References: <20200719155033.24201-1-oscar.carter@gmx.com>
+Received: (qmail 11999 invoked from network); 20 Jul 2020 01:25:45 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=omIvPcttgu5j5wSkx+ZzUh0WkKQ80FhNwSZ+LIcgfdY=;
+        b=bFkV4pDNWUAjKk14sFZtOi41d9jfYk6ONr1UWvb1qKHVwcKGZapxut84X4PS7DttVk
+         YukMDyq6uwIr53VzLfImMKiGYi4X+b6YuvUzP82E0Xk6FDaGLk4KOmZpbzbOQOQt29ES
+         TEbjQdkE8iHsXTA3pL3oTnXzcpXqCiQnP1ekg=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=omIvPcttgu5j5wSkx+ZzUh0WkKQ80FhNwSZ+LIcgfdY=;
+        b=pesq3m7cDvY+dxcgXyuLkjLeYAfnSONmzEDL0ntnIl+1+oxEvMTrCeVSUl5CcWBUS4
+         mPSRWcJ++qz1oXxaHXw90dpbiJtek9TcvxLU9B2gJUBOgOKATqIdxXRnV2V4i79M1LLb
+         TrZAfMD0r/gc+M8J2HnJz4gI8HcVMQIS4FmNLE6Nj3BLCe2QZpHuA5fHn6zc/ZpbSYzY
+         p2YTfvW9bcT+PeTA1KOBEd/Ds2mlPcOQvT5zmMiwrJkh8usNN5bvZb9nAQoqkDlgrfp+
+         JmXU1cj8PLuW+S/ImpGStmz4xUgeCBjHc4iY200/GG7uoziWxOysfvXM24pzMGCVUt8S
+         prNw==
+X-Gm-Message-State: AOAM532AJhEBY8QZof6sRJE/S6gNu5rqfOjaecAcT/jyjf5+0hLIkL5D
+	C7ygdJSbpQHlcc2x3ydXLrNz1w==
+X-Google-Smtp-Source: ABdhPJweJHQ1lV0dJDJGJ11FcH/6Ri+AqIj0q0iZH4W+xWDvCVqXb16WCXGEE9cFpj6PGcb87hwwhA==
+X-Received: by 2002:a17:902:900b:: with SMTP id a11mr2290929plp.315.1595208333314;
+        Sun, 19 Jul 2020 18:25:33 -0700 (PDT)
+Date: Sun, 19 Jul 2020 18:25:31 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Kristen Carlson Accardi <kristen@linux.intel.com>
+Cc: tglx@linutronix.de, mingo@redhat.com, bp@alien8.de,
+	arjan@linux.intel.com, x86@kernel.org, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com,
+	Tony Luck <tony.luck@intel.com>
+Subject: Re: [PATCH v4 09/10] kallsyms: Hide layout
+Message-ID: <202007191815.D39859C@keescook>
+References: <20200717170008.5949-1-kristen@linux.intel.com>
+ <20200717170008.5949-10-kristen@linux.intel.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:yMLosVOVnTKjix38LbWzPsQaGdmB29CtaF2TTr1A9omeTBF3BUz
- ydqpg8sqfwZOnZwTkLl5iCEmMpusAAzkxpTlDAUTdo5iDEw5sH4XLsaGqm0lZ9pU/sMfEUG
- +2yMMw9pxfZYU5VoiKlxUf8sN5+WWgypIKJTPBr7Poz8TwnnwaNh/oX7m2TxnUdhj990rLQ
- CeyAxe4nR4uGMJqZbuI6A==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:LdEQnRocgaA=:nSFO6IKDyDnCxNWHZorvAR
- BKP7FQFRcf4ATCdiommHAote0u+awdGJh6DzY4ep15XlBSULgWzdoZNyM/hcfAgaFszEw0c44
- BMHLdOEHyZau9Zr6k8jgBsWrIQlQdjUoWj1f0iG8jKesizrNKsij3PvexG52Ejcd+UW31qkBk
- ZGdGL1ZjlhYtypfkWOeNIKUJ9l1i3rvze4wp0xbevyj+YUtlsvwSUtow8YIruOs5E5i3rbu/3
- GYIrSvuaRPQ3D8ckL5UG9yQcm/ZElaaRiBNWo2JZTdxpa5dIWA068yG/9Plo9S8I7KA8Jvov0
- G71gwJFxx+24M8Qk17M32esMG4kCQXDMj3ow8ycng7SxenRYgXW8O+kOloj4EQk1cHZvt8zfP
- 1Ok0sRMnHonR2k+GIJkAc8kyfGk2Ro+JKSIsyJeHPZYAL/20GdrRhcCncq8jvfXhPGGcjOipZ
- bONO+En/2r7ioS1FaRz9D+jKjHeECKt4LZsydYvoHWxCXzmrzHe61+DhvFz+Q7C9c0ESakdys
- li/eVxQ/DHwYdnX0X/81fPUoCjxxfkOfvIgkQKQfUVU0KyGWTBOCtAWxEAX15AIuEu/XZb0du
- vCOfQ3YaaEQfG73DyFmrxVccS9jbGXEdiNGDz7yxzUgJ2c3LICkGwQ2gB6i0tCglAWn+a2udB
- ABTl9aAGV6TEMuz6hFb0KajWvtRAeYWlfDT08UOyBiaxKsP9U5O0i2eN75Me4OMdHUri7Q5rw
- C8Uv3yW+hF7kwVayXDHMyIJaUjD5cx6G4pMw4zOWjvIeM2J20BI6+AhBNOmCDEmaujED5ZXEw
- uIM7emRkwo64K3vbflZbbtujLBVawdDxTTyTMBWftKuosZ283DwNrXao8R78qIWXxgBt6ff47
- 6C4lGHJZE54lDIGQOqgPidP7qVcczejAcXc0fAH+JpJG+GFIQFbQvrRSi4AnZi2hXvcPGifPI
- IQb0rpy1OcW4uWVmCc0Lmeq7UDzFnAm8vHfANtAftHJyjmUu2VmkhZftWxKxEIn5umuk9YOC/
- oCpBl2l0l9o2i/g8ejI9NtklLxuLkg1ElIcmqBjXRNS0LjdFmNqc/UJqeFVIhg1S88Sz1XmFw
- SUUWkEHmN0DpRu9/tus74AhNcaT7AXC64hss2XG8VEATk76t7CsOaaeEChxlR5Ve946MFh0tr
- oFznsBP73HcIwX664soZySaVU54FE9hfxz7z9BcKB1rGSpTVN5COcUreQjoV9bzdrQpfIgHZ6
- p6CpBJuXPEzPZ1z168MKlFnfqg/sr+n3UM4Zr6Q==
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200717170008.5949-10-kristen@linux.intel.com>
 
-In an effort to enable -Wcast-function-type in the top-level Makefile to
-support Control Flow Integrity builds, there are the need to remove all
-the function callback casts.
+On Fri, Jul 17, 2020 at 10:00:06AM -0700, Kristen Carlson Accardi wrote:
+> This patch makes /proc/kallsyms display in a random order, rather
+> than sorted by address in order to hide the newly randomized address
+> layout.
 
-ftrace_ops_list_func() can no longer be defined as ftrace_ops_no_ops().
-The reason for ftrace_ops_no_ops() is to use that when an architecture
-calls ftrace_ops_list_func() with only two parameters (called from
-assembly). And to make sure there's no C side-effects, those archs call
-ftrace_ops_no_ops() which only has two parameters, as the function
-ftrace_ops_list_func() has four parameters.
+Ah! Much nicer. Is there any reason not to just do this unconditionally,
+regardless of FGKASLR? It's a smallish dynamic allocation, and
+displaying kallsyms is hardly fast-path...
 
-This patch removes the no longer needed function ftrace_ops_no_ops() and
-all the function callback casts using the previous defined ftrace_func
-union and the two function helpers called ftrace_set_ufunc() and
-ftrace_same_address_ufunc().
+> 
+> Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+> Reviewed-by: Tony Luck <tony.luck@intel.com>
+> Tested-by: Tony Luck <tony.luck@intel.com>
+> ---
+>  kernel/kallsyms.c | 163 +++++++++++++++++++++++++++++++++++++++++++++-
+>  1 file changed, 162 insertions(+), 1 deletion(-)
+> 
+> diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
+> index bb14e64f62a4..45d147f7f10e 100644
+> --- a/kernel/kallsyms.c
+> +++ b/kernel/kallsyms.c
+> @@ -446,6 +446,12 @@ struct kallsym_iter {
+>  	int show_value;
+>  };
+>  
+> +struct kallsyms_shuffled_iter {
+> +	struct kallsym_iter iter;
+> +	loff_t total_syms;
+> +	loff_t shuffled_index[];
+> +};
+> +
+>  int __weak arch_get_kallsym(unsigned int symnum, unsigned long *value,
+>  			    char *type, char *name)
+>  {
+> @@ -661,7 +667,7 @@ bool kallsyms_show_value(const struct cred *cred)
+>  	}
+>  }
+>  
+> -static int kallsyms_open(struct inode *inode, struct file *file)
+> +static int __kallsyms_open(struct inode *inode, struct file *file)
+>  {
+>  	/*
+>  	 * We keep iterator in m->private, since normal case is to
+> @@ -682,6 +688,161 @@ static int kallsyms_open(struct inode *inode, struct file *file)
+>  	return 0;
+>  }
+>  
+> +/*
+> + * When function granular kaslr is enabled, we need to print out the symbols
+> + * at random so we don't reveal the new layout.
+> + */
+> +#if defined(CONFIG_FG_KASLR)
+> +static int update_random_pos(struct kallsyms_shuffled_iter *s_iter,
+> +			     loff_t pos, loff_t *new_pos)
+> +{
+> +	loff_t new;
+> +
+> +	if (pos >= s_iter->total_syms)
+> +		return 0;
+> +
+> +	new = s_iter->shuffled_index[pos];
+> +
+> +	/*
+> +	 * normally this would be done as part of update_iter, however,
+> +	 * we want to avoid triggering this in the event that new is
+> +	 * zero since we don't want to blow away our pos end indicators.
+> +	 */
+> +	if (new == 0) {
+> +		s_iter->iter.name[0] = '\0';
+> +		s_iter->iter.nameoff = get_symbol_offset(new);
+> +		s_iter->iter.pos = new;
+> +	}
+> +
+> +	*new_pos = new;
+> +	return 1;
+> +}
+> +
+> +static void *shuffled_start(struct seq_file *m, loff_t *pos)
+> +{
+> +	struct kallsyms_shuffled_iter *s_iter = m->private;
+> +	loff_t new_pos;
+> +
+> +	if (!update_random_pos(s_iter, *pos, &new_pos))
+> +		return NULL;
+> +
+> +	return s_start(m, &new_pos);
+> +}
+> +
+> +static void *shuffled_next(struct seq_file *m, void *p, loff_t *pos)
+> +{
+> +	struct kallsyms_shuffled_iter *s_iter = m->private;
+> +	loff_t new_pos;
+> +
+> +	(*pos)++;
+> +
+> +	if (!update_random_pos(s_iter, *pos, &new_pos))
+> +		return NULL;
+> +
+> +	if (!update_iter(m->private, new_pos))
+> +		return NULL;
+> +
+> +	return p;
+> +}
+> +
+> +/*
+> + * shuffle_index_list()
+> + * Use a Fisher Yates algorithm to shuffle a list of text sections.
+> + */
+> +static void shuffle_index_list(loff_t *indexes, loff_t size)
+> +{
+> +	int i;
+> +	unsigned int j;
+> +	loff_t temp;
+> +
+> +	for (i = size - 1; i > 0; i--) {
+> +		/* pick a random index from 0 to i */
+> +		get_random_bytes(&j, sizeof(j));
+> +		j = j % (i + 1);
+> +
+> +		temp = indexes[i];
+> +		indexes[i] = indexes[j];
+> +		indexes[j] = temp;
+> +	}
+> +}
+> +
+> +static const struct seq_operations kallsyms_shuffled_op = {
+> +	.start = shuffled_start,
+> +	.next = shuffled_next,
+> +	.stop = s_stop,
+> +	.show = s_show
+> +};
+> +
+> +static int kallsyms_random_open(struct inode *inode, struct file *file)
+> +{
+> +	loff_t pos;
+> +	struct kallsyms_shuffled_iter *shuffled_iter;
+> +	struct kallsym_iter iter;
+> +	bool show_value;
+> +
+> +	/*
+> +	 * If privileged, go ahead and use the normal algorithm for
+> +	 * displaying symbols
+> +	 */
+> +	show_value = kallsyms_show_value(file->f_cred);
+> +	if (show_value)
+> +		return __kallsyms_open(inode, file);
+> +
+> +	/*
+> +	 * we need to figure out how many extra symbols there are
+> +	 * to print out past kallsyms_num_syms
+> +	 */
+> +	pos = kallsyms_num_syms;
+> +	reset_iter(&iter, 0);
+> +	do {
+> +		if (!update_iter(&iter, pos))
+> +			break;
+> +		pos++;
+> +	} while (1);
 
-Signed-off-by: Oscar Carter <oscar.carter@gmx.com>
-=2D--
- kernel/trace/ftrace.c | 48 ++++++++++++++++++++++++++-----------------
- 1 file changed, 29 insertions(+), 19 deletions(-)
+Can this be tracked separately instead of needing to search for it every
+time? (Looks like it's modules and ftrace? Could they each have a
+*_num_sysms?)
 
-diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
-index fd8fbb422860..124ccf914657 100644
-=2D-- a/kernel/trace/ftrace.c
-+++ b/kernel/trace/ftrace.c
-@@ -143,9 +143,7 @@ static inline bool ftrace_same_address_ufunc(union ftr=
-ace_func *ufunc,
- 	return (ufunc->ops =3D=3D func);
- }
- #else
--/* See comment below, where ftrace_ops_list_func is defined */
--static void ftrace_ops_no_ops(unsigned long ip, unsigned long parent_ip);
--#define ftrace_ops_list_func ((ftrace_func_t)ftrace_ops_no_ops)
-+static void ftrace_ops_list_func(unsigned long ip, unsigned long parent_i=
-p);
+(I need to go read how kallsyms doesn't miscount in general when the
+symbol table changes out from under it...)
 
- static inline void ftrace_set_ufunc(union ftrace_func *ufunc,
- 				    ftrace_func_no_ops_t func)
-@@ -198,22 +196,29 @@ static void ftrace_sync_ipi(void *data)
- 	smp_rmb();
- }
 
--static ftrace_func_t ftrace_ops_get_list_func(struct ftrace_ops *ops)
-+static union ftrace_func ftrace_ops_get_list_func(struct ftrace_ops *ops)
- {
-+	union ftrace_func list_func;
-+
- 	/*
- 	 * If this is a dynamic, RCU, or per CPU ops, or we force list func,
- 	 * then it needs to call the list anyway.
- 	 */
- 	if (ops->flags & (FTRACE_OPS_FL_DYNAMIC | FTRACE_OPS_FL_RCU) ||
- 	    FTRACE_FORCE_LIST_FUNC)
--		return ftrace_ops_list_func;
-+		ftrace_set_ufunc(&list_func, ftrace_ops_list_func);
-+	else
-+		list_func.ops =3D ftrace_ops_get_func(ops);
-
--	return ftrace_ops_get_func(ops);
-+	return list_func;
- }
-
- static void update_ftrace_function(void)
- {
--	ftrace_func_t func;
-+	union ftrace_func func;
-+#ifndef CONFIG_DYNAMIC_FTRACE
-+	union ftrace_func tmp;
-+#endif
-
- 	/*
- 	 * Prepare the ftrace_ops that the arch callback will use.
-@@ -225,7 +230,7 @@ static void update_ftrace_function(void)
-
- 	/* If there's no ftrace_ops registered, just call the stub function */
- 	if (set_function_trace_op =3D=3D &ftrace_list_end) {
--		func =3D ftrace_stub;
-+		func.ops =3D ftrace_stub;
-
- 	/*
- 	 * If we are at the end of the list and this ops is
-@@ -239,21 +244,21 @@ static void update_ftrace_function(void)
- 	} else {
- 		/* Just use the default ftrace_ops */
- 		set_function_trace_op =3D &ftrace_list_end;
--		func =3D ftrace_ops_list_func;
-+		ftrace_set_ufunc(&func, ftrace_ops_list_func);
- 	}
-
- 	update_function_graph_func();
-
- 	/* If there's no change, then do nothing more here */
--	if (ftrace_trace_function =3D=3D func)
-+	if (ftrace_trace_function =3D=3D func.ops)
- 		return;
-
- 	/*
- 	 * If we are using the list function, it doesn't care
- 	 * about the function_trace_ops.
- 	 */
--	if (func =3D=3D ftrace_ops_list_func) {
--		ftrace_trace_function =3D func;
-+	if (ftrace_same_address_ufunc(&func, ftrace_ops_list_func)) {
-+		ftrace_trace_function =3D func.ops;
- 		/*
- 		 * Don't even bother setting function_trace_ops,
- 		 * it would be racy to do so anyway.
-@@ -272,7 +277,9 @@ static void update_ftrace_function(void)
- 	 * function we want, albeit indirectly, but it handles the
- 	 * ftrace_ops and doesn't depend on function_trace_op.
- 	 */
--	ftrace_trace_function =3D ftrace_ops_list_func;
-+	ftrace_set_ufunc(&tmp, ftrace_ops_list_func);
-+	ftrace_trace_function =3D tmp.ops;
-+
- 	/*
- 	 * Make sure all CPUs see this. Yes this is slow, but static
- 	 * tracing is slow and nasty to have enabled.
-@@ -287,7 +294,7 @@ static void update_ftrace_function(void)
- 	/* OK, we are all set to update the ftrace_trace_function now! */
- #endif /* !CONFIG_DYNAMIC_FTRACE */
-
--	ftrace_trace_function =3D func;
-+	ftrace_trace_function =3D func.ops;
- }
-
- static void add_ftrace_ops(struct ftrace_ops __rcu **list,
-@@ -2680,6 +2687,7 @@ void ftrace_modify_all_code(int command)
- 	int update =3D command & FTRACE_UPDATE_TRACE_FUNC;
- 	int mod_flags =3D 0;
- 	int err =3D 0;
-+	union ftrace_func func;
-
- 	if (command & FTRACE_MAY_SLEEP)
- 		mod_flags =3D FTRACE_MODIFY_MAY_SLEEP_FL;
-@@ -2695,7 +2703,8 @@ void ftrace_modify_all_code(int command)
- 	 * traced.
- 	 */
- 	if (update) {
--		err =3D ftrace_update_ftrace_func(ftrace_ops_list_func);
-+		ftrace_set_ufunc(&func, ftrace_ops_list_func);
-+		err =3D ftrace_update_ftrace_func(func.ops);
- 		if (FTRACE_WARN_ON(err))
- 			return;
- 	}
-@@ -2705,7 +2714,9 @@ void ftrace_modify_all_code(int command)
- 	else if (command & FTRACE_DISABLE_CALLS)
- 		ftrace_replace_code(mod_flags);
-
--	if (update && ftrace_trace_function !=3D ftrace_ops_list_func) {
-+	ftrace_set_ufunc(&func, ftrace_ops_list_func);
-+
-+	if (update && ftrace_trace_function !=3D func.ops) {
- 		function_trace_op =3D set_function_trace_op;
- 		smp_wmb();
- 		/* If irqs are disabled, we are in stop machine */
-@@ -6890,14 +6901,13 @@ static void ftrace_ops_list_func(unsigned long ip,=
- unsigned long parent_ip,
- {
- 	__ftrace_ops_list_func(ip, parent_ip, NULL, regs);
- }
--NOKPROBE_SYMBOL(ftrace_ops_list_func);
- #else
--static void ftrace_ops_no_ops(unsigned long ip, unsigned long parent_ip)
-+static void ftrace_ops_list_func(unsigned long ip, unsigned long parent_i=
-p)
- {
- 	__ftrace_ops_list_func(ip, parent_ip, NULL, NULL);
- }
--NOKPROBE_SYMBOL(ftrace_ops_no_ops);
- #endif
-+NOKPROBE_SYMBOL(ftrace_ops_list_func);
-
- /*
-  * If there's only one function registered but it does not support
-=2D-
-2.20.1
-
+-- 
+Kees Cook
