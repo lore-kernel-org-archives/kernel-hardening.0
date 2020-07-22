@@ -1,20 +1,21 @@
-Return-Path: <SRS0=DLH3=BB=lists.openwall.com=kernel-hardening-return-19410-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=nDTQ=BB=lists.openwall.com=kernel-hardening-return-19411-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.5 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_2 autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 97AF7C433E6
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 16:20:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CD69BC433E1
+	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 17:56:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F11EB2065F
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 16:20:18 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F11EB2065F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=clip-os.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19410-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28518 invoked by uid 550); 22 Jul 2020 16:20:12 -0000
+	by mail.kernel.org (Postfix) with SMTP id 2F6EF20B1F
+	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 17:56:06 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2F6EF20B1F
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=goodmis.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19411-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27832 invoked by uid 550); 22 Jul 2020 17:55:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,101 +23,108 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27955 invoked from network); 22 Jul 2020 16:17:01 -0000
-X-Originating-IP: 90.63.246.187
-Date: Wed, 22 Jul 2020 18:16:39 +0200
-From: Thibaut Sautereau <thibaut.sautereau@clip-os.org>
-To: Kees Cook <keescook@chromium.org>,
-	=?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
-	Alexei Starovoitov <ast@kernel.org>,
-	Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christian Heimes <christian@python.org>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	Eric Chiang <ericchiang@google.com>,
-	Florian Weimer <fweimer@redhat.com>,
-	James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
-	Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,
-	Matthew Wilcox <willy@infradead.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	=?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	Philippe =?utf-8?Q?Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Sean Christopherson <sean.j.christopherson@intel.com>,
-	Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
-	Steve Grubb <sgrubb@redhat.com>,
-	Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-	linux-integrity@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org
-Subject: Re: [PATCH v6 5/7] fs,doc: Enable to enforce noexec mounts or file
- exec through O_MAYEXEC
-Message-ID: <20200722161639.GA24129@gandi.net>
-References: <20200714181638.45751-1-mic@digikod.net>
- <20200714181638.45751-6-mic@digikod.net>
- <202007151312.C28D112013@keescook>
- <35ea0914-7360-43ab-e381-9614d18cceba@digikod.net>
+Received: (qmail 27812 invoked from network); 22 Jul 2020 17:55:57 -0000
+Date: Wed, 22 Jul 2020 13:55:42 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Sami Tolvanen <samitolvanen@google.com>, Masahiro Yamada
+ <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, Greg Kroah-Hartman
+ <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, Kees
+ Cook <keescook@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>,
+ clang-built-linux@googlegroups.com, kernel-hardening@lists.openwall.com,
+ linux-arch@vger.kernel.org, linux-arm-kernel@lists.infradead.org,
+ linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org,
+ linux-pci@vger.kernel.org, x86@kernel.org, Josh Poimboeuf
+ <jpoimboe@redhat.com>, mhelsley@vmware.com
+Subject: Re: [RFC][PATCH] objtool,x86_64: Replace recordmcount with objtool
+Message-ID: <20200722135542.41127cc4@oasis.local.home>
+In-Reply-To: <20200626112931.GF4817@hirez.programming.kicks-ass.net>
+References: <20200624203200.78870-1-samitolvanen@google.com>
+	<20200624203200.78870-5-samitolvanen@google.com>
+	<20200624212737.GV4817@hirez.programming.kicks-ass.net>
+	<20200624214530.GA120457@google.com>
+	<20200625074530.GW4817@hirez.programming.kicks-ass.net>
+	<20200625161503.GB173089@google.com>
+	<20200625200235.GQ4781@hirez.programming.kicks-ass.net>
+	<20200625224042.GA169781@google.com>
+	<20200626112931.GF4817@hirez.programming.kicks-ass.net>
+X-Mailer: Claws Mail 3.17.3 (GTK+ 2.24.32; x86_64-pc-linux-gnu)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <35ea0914-7360-43ab-e381-9614d18cceba@digikod.net>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 
-On Thu, Jul 16, 2020 at 04:39:14PM +0200, Mickaël Salaün wrote:
+On Fri, 26 Jun 2020 13:29:31 +0200
+Peter Zijlstra <peterz@infradead.org> wrote:
+
+> On Thu, Jun 25, 2020 at 03:40:42PM -0700, Sami Tolvanen wrote:
 > 
-> On 15/07/2020 22:37, Kees Cook wrote:
-> > On Tue, Jul 14, 2020 at 08:16:36PM +0200, Mickaël Salaün wrote:
-> >> @@ -2849,7 +2855,7 @@ static int may_open(const struct path *path, int acc_mode, int flag)
-> >>  	case S_IFLNK:
-> >>  		return -ELOOP;
-> >>  	case S_IFDIR:
-> >> -		if (acc_mode & (MAY_WRITE | MAY_EXEC))
-> >> +		if (acc_mode & (MAY_WRITE | MAY_EXEC | MAY_OPENEXEC))
-> >>  			return -EISDIR;
-> >>  		break;
-> > 
-> > (I need to figure out where "open for reading" rejects S_IFDIR, since
-> > it's clearly not here...)
-
-Doesn't it come from generic_read_dir() in fs/libfs.c?
-
-> > 
-> >>  	case S_IFBLK:
-> >> @@ -2859,13 +2865,26 @@ static int may_open(const struct path *path, int acc_mode, int flag)
-> >>  		fallthrough;
-> >>  	case S_IFIFO:
-> >>  	case S_IFSOCK:
-> >> -		if (acc_mode & MAY_EXEC)
-> >> +		if (acc_mode & (MAY_EXEC | MAY_OPENEXEC))
-> >>  			return -EACCES;
-> >>  		flag &= ~O_TRUNC;
-> >>  		break;
-> > 
-> > This will immediately break a system that runs code with MAY_OPENEXEC
-> > set but reads from a block, char, fifo, or socket, even in the case of
-> > a sysadmin leaving the "file" sysctl disabled.
+> > > Not boot tested, but it generates the required sections and they look
+> > > more or less as expected, ymmv.  
 > 
-> As documented, O_MAYEXEC is for regular files. The only legitimate use
-> case seems to be with pipes, which should probably be allowed when
-> enforcement is disabled.
+> > > diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> > > index a291823f3f26..189575c12434 100644
+> > > --- a/arch/x86/Kconfig
+> > > +++ b/arch/x86/Kconfig
+> > > @@ -174,7 +174,6 @@ config X86
+> > >  	select HAVE_EXIT_THREAD
+> > >  	select HAVE_FAST_GUP
+> > >  	select HAVE_FENTRY			if X86_64 || DYNAMIC_FTRACE
+> > > -	select HAVE_FTRACE_MCOUNT_RECORD
+> > >  	select HAVE_FUNCTION_GRAPH_TRACER
+> > >  	select HAVE_FUNCTION_TRACER
+> > >  	select HAVE_GCC_PLUGINS  
+> > 
+> > This breaks DYNAMIC_FTRACE according to kernel/trace/ftrace.c:
+> > 
+> >   #ifndef CONFIG_FTRACE_MCOUNT_RECORD
+> >   # error Dynamic ftrace depends on MCOUNT_RECORD
+> >   #endif
+> > 
+> > And the build errors after that seem to confirm this. It looks like we might
+> > need another flag to skip recordmcount.  
+> 
+> Hurm, Steve, how you want to do that?
 
-By the way Kees, while we fix that for the next series, do you think it
-would be relevant, at least for the sake of clarity, to add a
-WARN_ON_ONCE(acc_mode & MAY_OPENEXEC) for the S_IFSOCK case, since a
-socket cannot be open anyway?
+That was added when we removed that dangerous daemon that did the
+updates, and was added to make sure it didn't come back.
 
--- 
-Thibaut Sautereau
-CLIP OS developer
+We can probably just get rid of it.
+
+
+> 
+> > Anyway, since objtool is run before recordmcount, I just left this unchanged
+> > for testing and ignored the recordmcount warnings about __mcount_loc already
+> > existing. Something is a bit off still though, I see this at boot:
+> > 
+> >   ------------[ ftrace bug ]------------
+> >   ftrace failed to modify
+> >   [<ffffffff81000660>] __tracepoint_iter_initcall_level+0x0/0x40
+> >    actual:   0f:1f:44:00:00
+> >   Initializing ftrace call sites
+> >   ftrace record flags: 0
+> >    (0)
+> >    expected tramp: ffffffff81056500
+> >   ------------[ cut here ]------------
+> > 
+> > Otherwise, this looks pretty good.  
+> 
+> Ha! it is trying to convert the "CALL __fentry__" into a NOP and not
+> finding the CALL -- because objtool already made it a NOP...
+> 
+> Weird, I thought recordmcount would also write NOPs, it certainly has
+> code for that. I suppose we can use CC_USING_NOP_MCOUNT to avoid those,
+> but I'd rather Steve explain this before I wreck things further.
+
+The reason for not having recordmcount insert all the nops, is because
+x86 has more than one optimal nop which is determined by the machine it
+runs on, and not at compile time. So we figured just updated it then.
+
+We can change it to be a nop on boot, and just modify it if it's not
+the optimal nop already. 
+
+That said, Andi Kleen added an option to gcc called -mnop-mcount which
+will have gcc do both create the mcount section and convert the calls
+into nops. When doing so, it defines CC_USING_NOP_MCOUNT which will
+tell ftrace to expect the calls to already be converted.
+
+-- Steve
