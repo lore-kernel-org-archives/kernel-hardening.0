@@ -1,20 +1,23 @@
-Return-Path: <SRS0=KQHT=BB=lists.openwall.com=kernel-hardening-return-19402-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Suyw=BB=lists.openwall.com=kernel-hardening-return-19403-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.5 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EE990C433E0
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 09:27:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7835DC433E3
+	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 11:26:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 28E15206D7
-	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 09:27:50 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 28E15206D7
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19402-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5748 invoked by uid 550); 22 Jul 2020 09:27:42 -0000
+	by mail.kernel.org (Postfix) with SMTP id C7ABB206E3
+	for <kernel-hardening@archiver.kernel.org>; Wed, 22 Jul 2020 11:26:48 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=daurnimator.com header.i=@daurnimator.com header.b="ONvSKHxX"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C7ABB206E3
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=daurnimator.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19403-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15806 invoked by uid 550); 22 Jul 2020 11:24:46 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,156 +25,147 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5724 invoked from network); 22 Jul 2020 09:27:42 -0000
-X-Virus-Scanned: by amavisd-new at test-mx.suse.de
-Date: Wed, 22 Jul 2020 11:27:30 +0200 (CEST)
-From: Miroslav Benes <mbenes@suse.cz>
-To: Kristen Carlson Accardi <kristen@linux.intel.com>
-cc: keescook@chromium.org, tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, 
-    arjan@linux.intel.com, x86@kernel.org, linux-kernel@vger.kernel.org, 
-    kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com, 
-    live-patching@vger.kernel.org
-Subject: Re: [PATCH v4 00/10] Function Granular KASLR
-In-Reply-To: <20200717170008.5949-1-kristen@linux.intel.com>
-Message-ID: <alpine.LSU.2.21.2007221122110.10163@pobox.suse.cz>
-References: <20200717170008.5949-1-kristen@linux.intel.com>
-User-Agent: Alpine 2.21 (LSU 202 2017-01-01)
+Received: (qmail 6124 invoked from network); 22 Jul 2020 02:35:38 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=daurnimator.com; s=daurnimator;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=vabpDlkoU/kJ8BojIIe5Ve9vPK2Kt2NAQYVhz9bpinI=;
+        b=ONvSKHxX28zKqql0VPKDWT4e/fQMIxT0JhHw7TGTv+Dch5cbmqxgZIusSPqt8IUSM5
+         HCjI8bhyaFg08oWFUF1KDZszvb9vmYFqNWGpJGXxfHgRSMfgCtIGmS11Y73TYMbdmU8+
+         uiiBopEfnz+Wuf1tHPDMIwFZekfNOWPhhQrOU=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=vabpDlkoU/kJ8BojIIe5Ve9vPK2Kt2NAQYVhz9bpinI=;
+        b=PZ9GV2tHsgWZULH2QBVWsfM39PYYDxYI80VZ/scEEoifn3Ty618z3qfQ8MRKwzQELT
+         VhBtFc7GeKUXU4mfFvhwzIsDadJsfYp0DdoQJ7AHwzAeMNFDFu22a/bme72xPa7v6Lmm
+         aJJfBGZQYrpQXVHxT//vlL1TapJA970mo986cWOlCZgDnlG8Fk6mUHbyD2MS2lYhIfa3
+         zhF664QxCDiTl541R0IptSS26lp93HL55j0I39oBIhom1DXTEeQvRMs5oqXJsIcz0IBy
+         /s5Gguze2lpJkrYxntqEUUQ76ubQyDEEqNSqLJr3EMS0RW7FYUs5lwBy3EWw+1h11k7X
+         5XJA==
+X-Gm-Message-State: AOAM531EwxIXhpkYg5l8fOTuk4srUcxEu8OQ3D4SUO4h4qwzu+Ur5Ecn
+	fP0C/lF3fPWN6wVtVJNdsO1UxoGJK1rJBKP5KTkajQ==
+X-Google-Smtp-Source: ABdhPJwfCgvHceNJHN8LjCWPt6NW6WkoqvznlurWy5Aso0Evjbq7qPAlCxHm3n3vJUkWvMP/G2V48hN4+lgytDWXXCY=
+X-Received: by 2002:adf:f485:: with SMTP id l5mr7095489wro.147.1595385326963;
+ Tue, 21 Jul 2020 19:35:26 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+References: <20200716124833.93667-1-sgarzare@redhat.com> <20200716124833.93667-3-sgarzare@redhat.com>
+ <0fbb0393-c14f-3576-26b1-8bb22d2e0615@kernel.dk> <20200721104009.lg626hmls5y6ihdr@steredhat>
+ <15f7fcf5-c5bb-7752-fa9a-376c4c7fc147@kernel.dk>
+In-Reply-To: <15f7fcf5-c5bb-7752-fa9a-376c4c7fc147@kernel.dk>
+From: Daurnimator <quae@daurnimator.com>
+Date: Wed, 22 Jul 2020 12:35:15 +1000
+Message-ID: <CAEnbY+fCP-HS_rWfOF2rnUPos-eZRF1dL+m2Q8CZidi_W=a7xw@mail.gmail.com>
+Subject: Re: [PATCH RFC v2 2/3] io_uring: add IOURING_REGISTER_RESTRICTIONS opcode
+To: Jens Axboe <axboe@kernel.dk>
+Cc: Stefano Garzarella <sgarzare@redhat.com>, Alexander Viro <viro@zeniv.linux.org.uk>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, 
+	Aleksa Sarai <asarai@suse.de>, Stefan Hajnoczi <stefanha@redhat.com>, 
+	Christian Brauner <christian.brauner@ubuntu.com>, Sargun Dhillon <sargun@sargun.me>, 
+	Jann Horn <jannh@google.com>, io-uring <io-uring@vger.kernel.org>, 
+	linux-fsdevel@vger.kernel.org, Jeff Moyer <jmoyer@redhat.com>, 
+	linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
 
-Let me CC live-patching ML, because from a quick glance this is something 
-which could impact live patching code. At least it invalidates assumptions 
-which "sympos" is based on.
+On Wed, 22 Jul 2020 at 03:11, Jens Axboe <axboe@kernel.dk> wrote:
+>
+> On 7/21/20 4:40 AM, Stefano Garzarella wrote:
+> > On Thu, Jul 16, 2020 at 03:26:51PM -0600, Jens Axboe wrote:
+> >> On 7/16/20 6:48 AM, Stefano Garzarella wrote:
+> >>> diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
+> >>> index efc50bd0af34..0774d5382c65 100644
+> >>> --- a/include/uapi/linux/io_uring.h
+> >>> +++ b/include/uapi/linux/io_uring.h
+> >>> @@ -265,6 +265,7 @@ enum {
+> >>>     IORING_REGISTER_PROBE,
+> >>>     IORING_REGISTER_PERSONALITY,
+> >>>     IORING_UNREGISTER_PERSONALITY,
+> >>> +   IORING_REGISTER_RESTRICTIONS,
+> >>>
+> >>>     /* this goes last */
+> >>>     IORING_REGISTER_LAST
+> >>> @@ -293,4 +294,30 @@ struct io_uring_probe {
+> >>>     struct io_uring_probe_op ops[0];
+> >>>  };
+> >>>
+> >>> +struct io_uring_restriction {
+> >>> +   __u16 opcode;
+> >>> +   union {
+> >>> +           __u8 register_op; /* IORING_RESTRICTION_REGISTER_OP */
+> >>> +           __u8 sqe_op;      /* IORING_RESTRICTION_SQE_OP */
+> >>> +   };
+> >>> +   __u8 resv;
+> >>> +   __u32 resv2[3];
+> >>> +};
+> >>> +
+> >>> +/*
+> >>> + * io_uring_restriction->opcode values
+> >>> + */
+> >>> +enum {
+> >>> +   /* Allow an io_uring_register(2) opcode */
+> >>> +   IORING_RESTRICTION_REGISTER_OP,
+> >>> +
+> >>> +   /* Allow an sqe opcode */
+> >>> +   IORING_RESTRICTION_SQE_OP,
+> >>> +
+> >>> +   /* Only allow fixed files */
+> >>> +   IORING_RESTRICTION_FIXED_FILES_ONLY,
+> >>> +
+> >>> +   IORING_RESTRICTION_LAST
+> >>> +};
+> >>> +
+> >>
+> >> Not sure I totally love this API. Maybe it'd be cleaner to have separate
+> >> ops for this, instead of muxing it like this. One for registering op
+> >> code restrictions, and one for disallowing other parts (like fixed
+> >> files, etc).
+> >>
+> >> I think that would look a lot cleaner than the above.
+> >>
+> >
+> > Talking with Stefan, an alternative, maybe more near to your suggestion,
+> > would be to remove the 'struct io_uring_restriction' and add the
+> > following register ops:
+> >
+> >     /* Allow an sqe opcode */
+> >     IORING_REGISTER_RESTRICTION_SQE_OP
+> >
+> >     /* Allow an io_uring_register(2) opcode */
+> >     IORING_REGISTER_RESTRICTION_REG_OP
+> >
+> >     /* Register IORING_RESTRICTION_*  */
+> >     IORING_REGISTER_RESTRICTION_OP
+> >
+> >
+> >     enum {
+> >         /* Only allow fixed files */
+> >         IORING_RESTRICTION_FIXED_FILES_ONLY,
+> >
+> >         IORING_RESTRICTION_LAST
+> >     }
+> >
+> >
+> > We can also enable restriction only when the rings started, to avoid to
+> > register IORING_REGISTER_ENABLE_RINGS opcode. Once rings are started,
+> > the restrictions cannot be changed or disabled.
+>
+> My concerns are largely:
+>
+> 1) An API that's straight forward to use
+> 2) Something that'll work with future changes
+>
+> The "allow these opcodes" is straightforward, and ditto for the register
+> opcodes. The fixed file I guess is the odd one out. So if we need to
+> disallow things in the future, we'll need to add a new restriction
+> sub-op. Should this perhaps be "these flags must be set", and that could
+> easily be augmented with "these flags must not be set"?
+>
+> --
+> Jens Axboe
+>
 
-Miroslav
-
-On Fri, 17 Jul 2020, Kristen Carlson Accardi wrote:
-
-> Function Granular Kernel Address Space Layout Randomization (fgkaslr)
-> ---------------------------------------------------------------------
-> 
-> This patch set is an implementation of finer grained kernel address space
-> randomization. It rearranges your kernel code at load time 
-> on a per-function level granularity, with only around a second added to
-> boot time.
-
-[...]
-
-> Background
-> ----------
-> KASLR was merged into the kernel with the objective of increasing the
-> difficulty of code reuse attacks. Code reuse attacks reused existing code
-> snippets to get around existing memory protections. They exploit software bugs
-> which expose addresses of useful code snippets to control the flow of
-> execution for their own nefarious purposes. KASLR moves the entire kernel
-> code text as a unit at boot time in order to make addresses less predictable.
-> The order of the code within the segment is unchanged - only the base address
-> is shifted. There are a few shortcomings to this algorithm.
-> 
-> 1. Low Entropy - there are only so many locations the kernel can fit in. This
->    means an attacker could guess without too much trouble.
-> 2. Knowledge of a single address can reveal the offset of the base address,
->    exposing all other locations for a published/known kernel image.
-> 3. Info leaks abound.
-> 
-> Finer grained ASLR has been proposed as a way to make ASLR more resistant
-> to info leaks. It is not a new concept at all, and there are many variations
-> possible. Function reordering is an implementation of finer grained ASLR
-> which randomizes the layout of an address space on a function level
-> granularity. We use the term "fgkaslr" in this document to refer to the
-> technique of function reordering when used with KASLR, as well as finer grained
-> KASLR in general.
-> 
-> Proposed Improvement
-> --------------------
-> This patch set proposes adding function reordering on top of the existing
-> KASLR base address randomization. The over-arching objective is incremental
-> improvement over what we already have. It is designed to work in combination
-> with the existing solution. The implementation is really pretty simple, and
-> there are 2 main area where changes occur:
-> 
-> * Build time
-> 
-> GCC has had an option to place functions into individual .text sections for
-> many years now. This option can be used to implement function reordering at
-> load time. The final compiled vmlinux retains all the section headers, which
-> can be used to help find the address ranges of each function. Using this
-> information and an expanded table of relocation addresses, individual text
-> sections can be suffled immediately after decompression. Some data tables
-> inside the kernel that have assumptions about order require re-sorting
-> after being updated when applying relocations. In order to modify these tables,
-> a few key symbols are excluded from the objcopy symbol stripping process for
-> use after shuffling the text segments.
-> 
-> Some highlights from the build time changes to look for:
-> 
-> The top level kernel Makefile was modified to add the gcc flag if it
-> is supported. Currently, I am applying this flag to everything it is
-> possible to randomize. Anything that is written in C and not present in a
-> special input section is randomized. The final binary segment 0 retains a
-> consolidated .text section, as well as all the individual .text.* sections.
-> Future work could turn off this flags for selected files or even entire
-> subsystems, although obviously at the cost of security.
-> 
-> The relocs tool is updated to add relative relocations. This information
-> previously wasn't included because it wasn't necessary when moving the
-> entire .text segment as a unit. 
-> 
-> A new file was created to contain a list of symbols that objcopy should
-> keep. We use those symbols at load time as described below.
-> 
-> * Load time
-> 
-> The boot kernel was modified to parse the vmlinux elf file after
-> decompression to check for our interesting symbols that we kept, and to
-> look for any .text.* sections to randomize. The consolidated .text section
-> is skipped and not moved. The sections are shuffled randomly, and copied
-> into memory following the .text section in a new random order. The existing
-> code which updated relocation addresses was modified to account for
-> not just a fixed delta from the load address, but the offset that the function
-> section was moved to. This requires inspection of each address to see if
-> it was impacted by a randomization. We use a bsearch to make this less
-> horrible on performance. Any tables that need to be modified with new
-> addresses or resorted are updated using the symbol addresses parsed from the
-> elf symbol table.
-> 
-> In order to hide our new layout, symbols reported through /proc/kallsyms
-> will be displayed in a random order.
-> 
-> Security Considerations
-> -----------------------
-> The objective of this patch set is to improve a technology that is already
-> merged into the kernel (KASLR). This code will not prevent all attacks,
-> but should instead be considered as one of several tools that can be used.
-> In particular, this code is meant to make KASLR more effective in the presence
-> of info leaks.
-> 
-> How much entropy we are adding to the existing entropy of standard KASLR will
-> depend on a few variables. Firstly and most obviously, the number of functions
-> that are randomized matters. This implementation keeps the existing .text
-> section for code that cannot be randomized - for example, because it was
-> assembly code. The less sections to randomize, the less entropy. In addition,
-> due to alignment (16 bytes for x86_64), the number of bits in a address that
-> the attacker needs to guess is reduced, as the lower bits are identical.
-
-[...]
-
-> Modules
-> -------
-> Modules are randomized similarly to the rest of the kernel by shuffling
-> the sections at load time prior to moving them into memory. The module must
-> also have been build with the -ffunction-sections compiler option.
-> 
-> Although fgkaslr for the kernel is only supported for the X86_64 architecture,
-> it is possible to use fgkaslr with modules on other architectures. To enable
-> this feature, select
-> 
-> CONFIG_MODULE_FG_KASLR=y
-> 
-> This option is selected automatically for X86_64 when CONFIG_FG_KASLR is set.
-> 
-> Disabling
-> ---------
-> Disabling normal KASLR using the nokaslr command line option also disables
-> fgkaslr. It is also possible to disable fgkaslr separately by booting with
-> fgkaslr=off on the commandline.
+This is starting to sound a lot like seccomp filtering.
+Perhaps we should go straight to adding a BPF hook that fires when
+reading off the submission queue?
