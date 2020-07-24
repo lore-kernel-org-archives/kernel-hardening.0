@@ -1,4 +1,4 @@
-Return-Path: <SRS0=MH2f=BD=lists.openwall.com=kernel-hardening-return-19446-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Z7vA=BD=lists.openwall.com=kernel-hardening-return-19447-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 02C92C433E4
-	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:04:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 20659C433DF
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:04:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5645E206F6
-	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:04:12 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 73F5F206D8
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:04:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="U21XHuTN"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5645E206F6
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="YJdzU2vs"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 73F5F206D8
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19446-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7946 invoked by uid 550); 24 Jul 2020 19:04:05 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19447-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9719 invoked by uid 550); 24 Jul 2020 19:04:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,33 +25,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7923 invoked from network); 24 Jul 2020 19:04:04 -0000
+Received: (qmail 9698 invoked from network); 24 Jul 2020 19:04:51 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=sdXgEvqGYHlymvqSceJ6jkKcKZE63vnTThrEFoJfoJI=;
-        b=U21XHuTNZcd9Xi31/xCf87Rkodq7UIatsvvV/UwKN/JzlFCu0PB6GXerCOvF6wBSK+
-         SC2WOUDhPlu1q875fotSfx1rUNIyJCPwLsBy0JiUGot5W6Q50r/BPrfciAdVtp7Uwlle
-         rtPo4Tole4s/1hOtfMBeGT54AFN8aogMq5g4g=
+        bh=LrMXrDf7YIZaoWeBKOjSOSMpqfT8SAqX0JXj+wrASIM=;
+        b=YJdzU2vsfQm7AZSEbQDHOGAXkb0FDmlYvGdDHcCBV0Mb+I/0YGXEnNHZP0ITEGdZnq
+         rMUzebIoCugRClDH5RJXQ2VNELpwlavB8ApMKzNJeTwVnKrJanhG9XCaDVo5IwEReNVE
+         3/qzt3XofNbnyZe3522KpHnb11vBLC4noGHZA=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:content-transfer-encoding
          :in-reply-to;
-        bh=sdXgEvqGYHlymvqSceJ6jkKcKZE63vnTThrEFoJfoJI=;
-        b=uU80vXAuLEr/8WHhiKTsIl9DnD7v/kB4ayhyZKz6Famf6G2E9xvi9Z2ZQr9hSk9u6c
-         zVxrP6urTRvjn/zwCCqFDlt5pwM43BTJK+pDQsZtwmqDKdXvThXwutu0+bYDI8tm24ng
-         CrOeTsTzL6bQdjcE8kwlYthLMotA3EOxI2PzhXKuB43NQ7hW2YTFG3KT1M48AJEhRAmF
-         J6XuwGuFCSpPsrAg9FkHTBHCElXJF7ZlyFabhZ9m24EgAbozV2biFiDlIu2J7S3U0SH4
-         LQtkl0LMNJ5uSqaXDqR7NS6c5gh/BtKakdNvV2ozJuH+6RSKlqyoOaUkdQX1YY5TauFK
-         jBzg==
-X-Gm-Message-State: AOAM531b0VfmzjsH4O+qlsFLrViIgjFWpTLhOwFUDzgBA0EcO6AAlHJ4
-	GVU2xJWZunGTmOmaGr3W2tkqkg==
-X-Google-Smtp-Source: ABdhPJxz4vuqoUWyBigx8RahhArmNJ84Nut7BOOCsUQANkvjswnwvqIw0Juf0zWwzmKl2+qs8JH6nQ==
-X-Received: by 2002:a63:140f:: with SMTP id u15mr9259752pgl.94.1595617432993;
-        Fri, 24 Jul 2020 12:03:52 -0700 (PDT)
-Date: Fri, 24 Jul 2020 12:03:51 -0700
+        bh=LrMXrDf7YIZaoWeBKOjSOSMpqfT8SAqX0JXj+wrASIM=;
+        b=CetKLjtX6BYywED1JttJhr05FhGFMFBJrb3O1IrzEqDXGwK3TtpRZZanHwPhH78aUi
+         cxgUZoUm3izeGlntWo52TwGru5P+qrg67UsVFzlOhdL17upQVgtvd5LKsgNvjsr20rNv
+         TKnZ0ZtSjLRCuEYPYJoI59IszJwsXLHm3eDz3Ox9pxQS+r1krPbpTWuSVj0gdAMz2xDJ
+         Nqenk+g2br8B1sNUz/bASOOBwWlWjV+rV2WX2CKt7Wk2+forpDEiUnG4duNJu5DbtJki
+         8fCJRcrICuYBxHBMBn4btO24x48cZAAbzGgQKMki1MkJMpsFI2trI3/cvvt6qF8q85FS
+         R13w==
+X-Gm-Message-State: AOAM5325JWjlcHui6VAoKMzUCoSTdp0WByWNAxX3KTvNxCUm6OjbZwfb
+	pn1pNzPSVQl0opv70ozZjCT+0Q==
+X-Google-Smtp-Source: ABdhPJwByOH/4ROCOy3QCc3kWU3xI1XY75NRzmOAdHNrzalnVxff+4jx3AjnVMN92eX9iE8obAmE4g==
+X-Received: by 2002:a62:5297:: with SMTP id g145mr10327624pfb.28.1595617479754;
+        Fri, 24 Jul 2020 12:04:39 -0700 (PDT)
+Date: Fri, 24 Jul 2020 12:04:38 -0700
 From: Kees Cook <keescook@chromium.org>
 To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
 Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
@@ -85,25 +85,39 @@ Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
 	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
 	linux-integrity@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Subject: Re: [PATCH v7 6/7] selftest/openat2: Add tests for O_MAYEXEC
- enforcing
-Message-ID: <202007241203.E4A515733@keescook>
+	linux-fsdevel@vger.kernel.org
+Subject: Re: [PATCH v7 7/7] ima: add policy support for the new file open
+ MAY_OPENEXEC flag
+Message-ID: <202007241204.3DD9B905E@keescook>
 References: <20200723171227.446711-1-mic@digikod.net>
- <20200723171227.446711-7-mic@digikod.net>
+ <20200723171227.446711-8-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <20200723171227.446711-7-mic@digikod.net>
+In-Reply-To: <20200723171227.446711-8-mic@digikod.net>
 
-On Thu, Jul 23, 2020 at 07:12:26PM +0200, Mickaël Salaün wrote:
-> Test propagation of noexec mount points or file executability through
-> files open with or without O_MAYEXEC, thanks to the
-> fs.open_mayexec_enforce sysctl.
+On Thu, Jul 23, 2020 at 07:12:27PM +0200, Mickaël Salaün wrote:
+> From: Mimi Zohar <zohar@linux.ibm.com>
+> 
+> The kernel has no way of differentiating between a file containing data
+> or code being opened by an interpreter.  The proposed O_MAYEXEC
+> openat2(2) flag bridges this gap by defining and enabling the
+> MAY_OPENEXEC flag.
+> 
+> This patch adds IMA policy support for the new MAY_OPENEXEC flag.
+> 
+> Example:
+> measure func=FILE_CHECK mask=^MAY_OPENEXEC
+> appraise func=FILE_CHECK appraise_type=imasig mask=^MAY_OPENEXEC
 > 
 > Signed-off-by: Mickaël Salaün <mic@digikod.net>
+
+^^^ this S-o-b should the last in the fields.
+
+> Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
+> Reviewed-by: Lakshmi Ramasubramanian <nramas@linux.microsoft.com>
+> Link: https://lore.kernel.org/r/1588167523-7866-3-git-send-email-zohar@linux.ibm.com
 
 Reviewed-by: Kees Cook <keescook@chromium.org>
 
