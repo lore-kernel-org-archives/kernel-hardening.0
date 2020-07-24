@@ -1,4 +1,4 @@
-Return-Path: <SRS0=J/N2=BD=lists.openwall.com=kernel-hardening-return-19445-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=MH2f=BD=lists.openwall.com=kernel-hardening-return-19446-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E5AD5C433E1
-	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:03:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 02C92C433E4
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:04:13 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 469A9206D8
-	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:03:50 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5645E206F6
+	for <kernel-hardening@archiver.kernel.org>; Fri, 24 Jul 2020 19:04:12 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="HWLOLY2m"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 469A9206D8
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="U21XHuTN"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5645E206F6
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19445-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7214 invoked by uid 550); 24 Jul 2020 19:03:43 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19446-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7946 invoked by uid 550); 24 Jul 2020 19:04:05 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,33 +25,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7182 invoked from network); 24 Jul 2020 19:03:35 -0000
+Received: (qmail 7923 invoked from network); 24 Jul 2020 19:04:04 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=f0lKwdFa2tE754eWyXOOIFz3gWD2EzuwPTrCttQ++tE=;
-        b=HWLOLY2m7CMUOQYAp0GqUyHeBr+slwYCrPxK4fmOYzQKeY1Sqn9NsstNWgyO0gYfZz
-         TUCLaYuoK1a5vP1C228zV0xEZgcjSBAnqzIr+6yAndPlXzf8D3bRRlqtGTaJ8eamUTu0
-         m/nF3ewNlRWYDQ/wxxQHLPQatyOp/cmIjNB+w=
+        bh=sdXgEvqGYHlymvqSceJ6jkKcKZE63vnTThrEFoJfoJI=;
+        b=U21XHuTNZcd9Xi31/xCf87Rkodq7UIatsvvV/UwKN/JzlFCu0PB6GXerCOvF6wBSK+
+         SC2WOUDhPlu1q875fotSfx1rUNIyJCPwLsBy0JiUGot5W6Q50r/BPrfciAdVtp7Uwlle
+         rtPo4Tole4s/1hOtfMBeGT54AFN8aogMq5g4g=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:content-transfer-encoding
          :in-reply-to;
-        bh=f0lKwdFa2tE754eWyXOOIFz3gWD2EzuwPTrCttQ++tE=;
-        b=XnnahQ+e2/hjdscu7sdNj606wLwtRrdSEQ11hiYOc9u0U30JlWMha3sjytY2ENQItJ
-         4/zDa/Y23L241svZPsI5yIX5Xs4ApC7+48765hFS8z3hsDKTQsI2meM3mkWt3Bg2aG3t
-         tlsVMw8v+Wis2FGmyr2iTSjGzOKA5wFcv4jIplMGNHjmF5gesqSIrwcFC/rvtEvD+5mf
-         qbS210hl1uKdqLchxKrK2U1eYlb1Jq7AqIZn6NxP+c3Xf3sw0Va6Bqf+OI8t15oMty25
-         lP0MOqtdwTRA8HYAMB3Jpgfc/fI+brvBre2WjwYiqUwoC0+OeUEidkeD2399Qo6J5rkv
-         hALQ==
-X-Gm-Message-State: AOAM532FKJ2pG6YFt8t2oNgEMXfZLZo1M9bAELJnZ/vET1gXywSjhaBC
-	/qKsSXIQVy8LzmIvAdtmApEomg==
-X-Google-Smtp-Source: ABdhPJyQSqTNd3BVzP4VWxiWnp6p6oQzAmDBIOJnaoSdP+OBPVoNfaPuvwcTsPgk9o7oKdilefLQ/Q==
-X-Received: by 2002:a17:902:c252:: with SMTP id 18mr9772518plg.39.1595617402829;
-        Fri, 24 Jul 2020 12:03:22 -0700 (PDT)
-Date: Fri, 24 Jul 2020 12:03:21 -0700
+        bh=sdXgEvqGYHlymvqSceJ6jkKcKZE63vnTThrEFoJfoJI=;
+        b=uU80vXAuLEr/8WHhiKTsIl9DnD7v/kB4ayhyZKz6Famf6G2E9xvi9Z2ZQr9hSk9u6c
+         zVxrP6urTRvjn/zwCCqFDlt5pwM43BTJK+pDQsZtwmqDKdXvThXwutu0+bYDI8tm24ng
+         CrOeTsTzL6bQdjcE8kwlYthLMotA3EOxI2PzhXKuB43NQ7hW2YTFG3KT1M48AJEhRAmF
+         J6XuwGuFCSpPsrAg9FkHTBHCElXJF7ZlyFabhZ9m24EgAbozV2biFiDlIu2J7S3U0SH4
+         LQtkl0LMNJ5uSqaXDqR7NS6c5gh/BtKakdNvV2ozJuH+6RSKlqyoOaUkdQX1YY5TauFK
+         jBzg==
+X-Gm-Message-State: AOAM531b0VfmzjsH4O+qlsFLrViIgjFWpTLhOwFUDzgBA0EcO6AAlHJ4
+	GVU2xJWZunGTmOmaGr3W2tkqkg==
+X-Google-Smtp-Source: ABdhPJxz4vuqoUWyBigx8RahhArmNJ84Nut7BOOCsUQANkvjswnwvqIw0Juf0zWwzmKl2+qs8JH6nQ==
+X-Received: by 2002:a63:140f:: with SMTP id u15mr9259752pgl.94.1595617432993;
+        Fri, 24 Jul 2020 12:03:52 -0700 (PDT)
+Date: Fri, 24 Jul 2020 12:03:51 -0700
 From: Kees Cook <keescook@chromium.org>
 To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
 Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
@@ -86,56 +86,26 @@ Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
 	linux-integrity@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
 	linux-fsdevel@vger.kernel.org,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	Randy Dunlap <rdunlap@infradead.org>
-Subject: Re: [PATCH v7 5/7] fs,doc: Enable to enforce noexec mounts or file
- exec through O_MAYEXEC
-Message-ID: <202007241203.0C596BB36@keescook>
+	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+Subject: Re: [PATCH v7 6/7] selftest/openat2: Add tests for O_MAYEXEC
+ enforcing
+Message-ID: <202007241203.E4A515733@keescook>
 References: <20200723171227.446711-1-mic@digikod.net>
- <20200723171227.446711-6-mic@digikod.net>
+ <20200723171227.446711-7-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <20200723171227.446711-6-mic@digikod.net>
+In-Reply-To: <20200723171227.446711-7-mic@digikod.net>
 
-On Thu, Jul 23, 2020 at 07:12:25PM +0200, Mickaël Salaün wrote:
-> Allow for the enforcement of the O_MAYEXEC openat2(2) flag.  Thanks to
-> the noexec option from the underlying VFS mount, or to the file execute
-> permission, userspace can enforce these execution policies.  This may
-> allow script interpreters to check execution permission before reading
-> commands from a file, or dynamic linkers to allow shared object loading.
-> 
-> Add a new sysctl fs.open_mayexec_enforce to enable system administrators
-> to enforce two complementary security policies according to the
-> installed system: enforce the noexec mount option, and enforce
-> executable file permission.  Indeed, because of compatibility with
-> installed systems, only system administrators are able to check that
-> this new enforcement is in line with the system mount points and file
-> permissions.  A following patch adds documentation.
-> 
-> Being able to restrict execution also enables to protect the kernel by
-> restricting arbitrary syscalls that an attacker could perform with a
-> crafted binary or certain script languages.  It also improves multilevel
-> isolation by reducing the ability of an attacker to use side channels
-> with specific code.  These restrictions can natively be enforced for ELF
-> binaries (with the noexec mount option) but require this kernel
-> extension to properly handle scripts (e.g., Python, Perl).  To get a
-> consistent execution policy, additional memory restrictions should also
-> be enforced (e.g. thanks to SELinux).
-> 
-> Because the O_MAYEXEC flag is a meant to enforce a system-wide security
-> policy (but not application-centric policies), it does not make sense
-> for userland to check the sysctl value.  Indeed, this new flag only
-> enables to extend the system ability to enforce a policy thanks to (some
-> trusted) userland collaboration.  Moreover, additional security policies
-> could be managed by LSMs.  This is a best-effort approach from the
-> application developer point of view:
-> https://lore.kernel.org/lkml/1477d3d7-4b36-afad-7077-a38f42322238@digikod.net/
+On Thu, Jul 23, 2020 at 07:12:26PM +0200, Mickaël Salaün wrote:
+> Test propagation of noexec mount points or file executability through
+> files open with or without O_MAYEXEC, thanks to the
+> fs.open_mayexec_enforce sysctl.
 > 
 > Signed-off-by: Mickaël Salaün <mic@digikod.net>
 
-Acked-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
 -- 
 Kees Cook
