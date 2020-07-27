@@ -1,21 +1,23 @@
-Return-Path: <SRS0=VUbT=BG=lists.openwall.com=kernel-hardening-return-19455-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pJSH=BG=lists.openwall.com=kernel-hardening-return-19456-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.5 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_2 autolearn=unavailable autolearn_force=no
+X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B9A1CC433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 13:53:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 77EE0C433F4
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 16:17:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1510D2070A
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 13:53:29 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1510D2070A
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=goodmis.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19455-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11993 invoked by uid 550); 27 Jul 2020 13:53:22 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9DC5D2073E
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 16:17:07 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="T8Sn3a8Q"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9DC5D2073E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zx2c4.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19456-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19466 invoked by uid 550); 27 Jul 2020 16:16:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,127 +25,145 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11970 invoked from network); 27 Jul 2020 13:53:21 -0000
-Date: Mon, 27 Jul 2020 09:53:06 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-To: Oscar Carter <oscar.carter@gmx.com>
-Cc: Ingo Molnar <mingo@redhat.com>, Kees Cook <keescook@chromium.org>,
- linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Jann
- Horn <jannh@google.com>
-Subject: Re: [PATCH v2 2/2] kernel/trace: Remove function callback casts
-Message-ID: <20200727095306.7f369949@oasis.local.home>
-In-Reply-To: <20200726155148.GA9341@ubuntu>
-References: <20200719155033.24201-3-oscar.carter@gmx.com>
-	<20200721140545.445f0258@oasis.local.home>
-	<20200724161921.GA3123@ubuntu>
-	<20200724123528.36ea9c9e@oasis.local.home>
-	<20200724171418.GB3123@ubuntu>
-	<20200724133656.76c75629@oasis.local.home>
-	<20200724134020.3160dc7c@oasis.local.home>
-	<20200724175500.GD3123@ubuntu>
-	<20200724143457.27755412@oasis.local.home>
-	<20200725150914.GA3362@ubuntu>
-	<20200726155148.GA9341@ubuntu>
-X-Mailer: Claws Mail 3.17.3 (GTK+ 2.24.32; x86_64-pc-linux-gnu)
+Received: (qmail 18410 invoked from network); 27 Jul 2020 16:16:58 -0000
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=zx2c4.com; h=mime-version
+	:references:in-reply-to:from:date:message-id:subject:to:cc
+	:content-type; s=mail; bh=yZ9s7iESSXllw2jFppVGJgSQSDc=; b=T8Sn3a
+	8QgZwT7OBLiEk39YllHL8AHxegeWoSsgukQldc9TiwR4eHH+81jI/awj0HrXtBrg
+	Y5UPc9Cc5BZJ8GrAprgs5NcK5vubz31d4jsM4x0gMeFEgDrVjUrRX41udJBHMNld
+	d/Bx9892A78N/q/07Gl0nQui+mlF/IAoZIyvrYwHlA6vlD8ytQ/RkS4Lp/JjiVOo
+	r0KIpueIg+d9HaYHBQI6Nj9saKViVpoxMt0rA2Xtk8fEZ2Ajc735rEzlQ3Gn8yTu
+	4eFoXmxypskbeYUzua5Dmfrj+eDOvtFDSR0ScqE+ZC5nUsdiFsBW9DfS1UvXfi+f
+	sWCgYlvemIgM0Wvg==
+X-Gm-Message-State: AOAM533T0H9UFiaXjNfo7Ggb5HJ/4eSEvERmuYkQ3z8rq92D/AUTx+v3
+	zPc5Dp/clEilowNjCzhdN+dbz9ErounM20UKqg4=
+X-Google-Smtp-Source: ABdhPJxpUhiuwtuwnEaez1P/c+ZU0pwKxKQezmeTGc12hGP8McAl6Imm8qRtlhHrSqvTuhro7sF5xCj0r6Sl8qXVeP8=
+X-Received: by 2002:a92:c804:: with SMTP id v4mr15897355iln.207.1595866604002;
+ Mon, 27 Jul 2020 09:16:44 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+References: <20200723060908.50081-1-hch@lst.de> <20200723060908.50081-13-hch@lst.de>
+ <20200727150310.GA1632472@zx2c4.com> <20200727150601.GA3447@lst.de>
+In-Reply-To: <20200727150601.GA3447@lst.de>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Mon, 27 Jul 2020 18:16:32 +0200
+X-Gmail-Original-Message-ID: <CAHmME9ric=chLJayn7Erve7WBa+qCKn-+Gjri=zqydoY6623aA@mail.gmail.com>
+Message-ID: <CAHmME9ric=chLJayn7Erve7WBa+qCKn-+Gjri=zqydoY6623aA@mail.gmail.com>
+Subject: Re: [PATCH 12/26] netfilter: switch nf_setsockopt to sockptr_t
+To: Christoph Hellwig <hch@lst.de>
+Cc: "David S. Miller" <davem@davemloft.net>, Jakub Kicinski <kuba@kernel.org>, 
+	Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, 
+	Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, 
+	Eric Dumazet <edumazet@google.com>, 
+	Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
+	Netdev <netdev@vger.kernel.org>, bpf@vger.kernel.org, 
+	netfilter-devel@vger.kernel.org, coreteam@netfilter.org, 
+	linux-sctp@vger.kernel.org, linux-hams@vger.kernel.org, 
+	linux-bluetooth@vger.kernel.org, bridge@lists.linux-foundation.org, 
+	linux-can@vger.kernel.org, dccp@vger.kernel.org, 
+	linux-decnet-user@lists.sourceforge.net, linux-wpan@vger.kernel.org, 
+	linux-s390@vger.kernel.org, mptcp@lists.01.org, lvs-devel@vger.kernel.org, 
+	rds-devel@oss.oracle.com, linux-afs@lists.infradead.org, 
+	tipc-discussion@lists.sourceforge.net, linux-x25@vger.kernel.org, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On Sun, 26 Jul 2020 17:52:42 +0200
-Oscar Carter <oscar.carter@gmx.com> wrote:
+On Mon, Jul 27, 2020 at 5:06 PM Christoph Hellwig <hch@lst.de> wrote:
+>
+> On Mon, Jul 27, 2020 at 05:03:10PM +0200, Jason A. Donenfeld wrote:
+> > Hi Christoph,
+> >
+> > On Thu, Jul 23, 2020 at 08:08:54AM +0200, Christoph Hellwig wrote:
+> > > diff --git a/net/ipv4/ip_sockglue.c b/net/ipv4/ip_sockglue.c
+> > > index da933f99b5d517..42befbf12846c0 100644
+> > > --- a/net/ipv4/ip_sockglue.c
+> > > +++ b/net/ipv4/ip_sockglue.c
+> > > @@ -1422,7 +1422,8 @@ int ip_setsockopt(struct sock *sk, int level,
+> > >                     optname != IP_IPSEC_POLICY &&
+> > >                     optname != IP_XFRM_POLICY &&
+> > >                     !ip_mroute_opt(optname))
+> > > -           err = nf_setsockopt(sk, PF_INET, optname, optval, optlen);
+> > > +           err = nf_setsockopt(sk, PF_INET, optname, USER_SOCKPTR(optval),
+> > > +                               optlen);
+> > >  #endif
+> > >     return err;
+> > >  }
+> > > diff --git a/net/ipv4/netfilter/ip_tables.c b/net/ipv4/netfilter/ip_tables.c
+> > > index 4697d09c98dc3e..f2a9680303d8c0 100644
+> > > --- a/net/ipv4/netfilter/ip_tables.c
+> > > +++ b/net/ipv4/netfilter/ip_tables.c
+> > > @@ -1102,7 +1102,7 @@ __do_replace(struct net *net, const char *name, unsigned int valid_hooks,
+> > >  }
+> > >
+> > >  static int
+> > > -do_replace(struct net *net, const void __user *user, unsigned int len)
+> > > +do_replace(struct net *net, sockptr_t arg, unsigned int len)
+> > >  {
+> > >     int ret;
+> > >     struct ipt_replace tmp;
+> > > @@ -1110,7 +1110,7 @@ do_replace(struct net *net, const void __user *user, unsigned int len)
+> > >     void *loc_cpu_entry;
+> > >     struct ipt_entry *iter;
+> > >
+> > > -   if (copy_from_user(&tmp, user, sizeof(tmp)) != 0)
+> > > +   if (copy_from_sockptr(&tmp, arg, sizeof(tmp)) != 0)
+> > >             return -EFAULT;
+> > >
+> > >     /* overflow check */
+> > > @@ -1126,8 +1126,8 @@ do_replace(struct net *net, const void __user *user, unsigned int len)
+> > >             return -ENOMEM;
+> > >
+> > >     loc_cpu_entry = newinfo->entries;
+> > > -   if (copy_from_user(loc_cpu_entry, user + sizeof(tmp),
+> > > -                      tmp.size) != 0) {
+> > > +   sockptr_advance(arg, sizeof(tmp));
+> > > +   if (copy_from_sockptr(loc_cpu_entry, arg, tmp.size) != 0) {
+> > >             ret = -EFAULT;
+> > >             goto free_newinfo;
+> > >     }
+> >
+> > Something along this path seems to have broken with this patch. An
+> > invocation of `iptables -A INPUT -m length --length 1360 -j DROP` now
+> > fails, with
+> >
+> > nf_setsockopt->do_replace->translate_table->check_entry_size_and_hooks:
+> >   (unsigned char *)e + e->next_offset > limit  ==>  TRUE
+> >
+> > resulting in the whole call chain returning -EINVAL. It bisects back to
+> > this commit. This is on net-next.
+>
+> This is another use o sockptr_advance that Ido already found a problem
+> in.  I'm looking into this at the moment..
 
-> > If I try to do this I will need some help. Some info that point me to the
-> > right direction would be greatly appreciated. Some advice about what
-> > functions I will need to implement would be really helpfull. Or point me
-> > to the right piece of code that I can pick as base point.  
-> 
-> I've been searching and reading the code as much as possible. I've found
-> two patches that I think can be useful to guide me. One [1] adds support
-> for ftrace_ops to the riscv architecture. The other one [2] adds support
-> for ftrace_ops to the parisc architecture.
-> 
-> [1] commit 71e736a7d655 ("riscv/ftrace: Add ARCH_SUPPORTS_FTRACE_OPS support")
-> [2] commit d562aca37a54 ("parisc/ftrace: Add ARCH_SUPPORTS_FTRACE_OPS support")
-> 
-> Due to powerpc arch calls the needed functions from assembly, I based my
-> idea on the patch for the RISCV arch.
-> 
-> Can something like the following work?
-> 
-> diff --git a/arch/powerpc/include/asm/ftrace.h b/arch/powerpc/include/asm/ftrace.h
-> index bc76970b6ee5..1c51ff5afae1 100644
-> --- a/arch/powerpc/include/asm/ftrace.h
-> +++ b/arch/powerpc/include/asm/ftrace.h
-> @@ -61,9 +61,8 @@ struct dyn_arch_ftrace {
->  };
->  #endif /* __ASSEMBLY__ */
-> 
-> -#ifdef CONFIG_DYNAMIC_FTRACE_WITH_REGS
->  #define ARCH_SUPPORTS_FTRACE_OPS 1
-> -#endif
-> +
->  #endif /* CONFIG_FUNCTION_TRACER */
-> 
->  #ifndef __ASSEMBLY__
-> diff --git a/arch/powerpc/kernel/trace/ftrace_32.S b/arch/powerpc/kernel/trace/ftrace_32.S
-> index e023ae59c429..e69a4e945986 100644
-> --- a/arch/powerpc/kernel/trace/ftrace_32.S
-> +++ b/arch/powerpc/kernel/trace/ftrace_32.S
-> @@ -29,6 +29,10 @@ _GLOBAL(ftrace_caller)
->         MCOUNT_SAVE_FRAME
->         /* r3 ends up with link register */
->         subi    r3, r3, MCOUNT_INSN_SIZE
-> +
-> +       /* Set ftrace_ops (r5) to the global variable function_trace_op */
-> +       /* Set pt_regs (r6) to NULL */
-> +
->  .globl ftrace_call
->  ftrace_call:
->         bl      ftrace_stub
-> diff --git a/arch/powerpc/kernel/trace/ftrace_64_pg.S b/arch/powerpc/kernel/trace/ftrace_64_pg.S
-> index 6708e24db0ab..a741448b1df9 100644
-> --- a/arch/powerpc/kernel/trace/ftrace_64_pg.S
-> +++ b/arch/powerpc/kernel/trace/ftrace_64_pg.S
-> @@ -22,6 +22,10 @@ _GLOBAL_TOC(ftrace_caller)
->         std     r3, 128(r1)
->         ld      r4, 16(r11)
->         subi    r3, r3, MCOUNT_INSN_SIZE
-> +
-> +       /* Set ftrace_ops (r5) to the global variable function_trace_op */
-> +       /* Set pt_regs (r6) to NULL */
+I haven't seen Ido's patch, but it seems clear the issue is that you
+want to call `sockptr_advance(&arg, sizeof(tmp))`, and adjust
+sockptr_advance to take a pointer.
 
-I'm guessing you are going to do the above here. If so, this looks correct.
+Slight concern about the whole concept:
 
-> +
->  .globl ftrace_call
->  ftrace_call:
->         bl      ftrace_stub
-> 
-> To add support for ftrace_ops to the powerpc architecture is only necessary
-> to fill the r5 and r6 registers before the call to ftrace_stub in all the
-> cases. The register r5 is a pointer to ftrace_ops struct and the register
-> r6 is a pointer to pt_regs struct. These registers are the third and fourth
-> parameters of a function with the following prototype. The first and second
-> ones are yet set.
+Things are defined as
 
-I guess you mean that the first and second ones are already set. But,
-yeah, you are on the correct path here!
+typedef union {
+        void            *kernel;
+        void __user     *user;
+} sockptr_t;
+static inline bool sockptr_is_kernel(sockptr_t sockptr)
+{
+        return (unsigned long)sockptr.kernel >= TASK_SIZE;
+}
 
-> 
-> void func(unsigned long ip, unsigned long parent_ip,
-> 	  struct ftrace_ops *ops, struct pt_regs *regs);
-> 
-> Am I in the right direction? or am I totally wrong?
+So what happens if we have some code like:
 
-No, you don't look wrong. But the true test is to try it out :-)
+sockptr_t sp;
+init_user_sockptr(&sp, user_controlled_struct.extra_user_ptr);
+sockptr_advance(&sp, user_controlled_struct.some_big_offset);
+copy_to_sockptr(&sp, user_controlled_struct.a_few_bytes,
+sizeof(user_controlled_struct.a_few_bytes));
 
-Don't forget to update ftrace_32.S as well.
+With the user controlling some_big_offset, he can convert the user
+sockptr into a kernel sockptr, causing the subsequent copy_to_sockptr
+to be a vanilla memcpy, after which a security disaster ensues.
 
-
-> 
-> Thanks for your time and patience.
-
-My pleasure. Thanks for doing this. The more people that understand all
-this, the better!
-
--- Steve
+Maybe sockptr_advance should have some safety checks and sometimes
+return -EFAULT? Or you should always use the implementation where
+being a kernel address is an explicit bit of sockptr_t, rather than
+being implicit?
