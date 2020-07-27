@@ -1,23 +1,21 @@
-Return-Path: <SRS0=a61O=BG=lists.openwall.com=kernel-hardening-return-19454-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=VUbT=BG=lists.openwall.com=kernel-hardening-return-19455-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+X-Spam-Status: No, score=-8.5 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_2 autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 41820C433E5
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 05:27:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B9A1CC433DF
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 13:53:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8F39820759
-	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 05:27:36 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="J1N5xDIR"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8F39820759
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19454-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17989 invoked by uid 550); 27 Jul 2020 05:27:29 -0000
+	by mail.kernel.org (Postfix) with SMTP id 1510D2070A
+	for <kernel-hardening@archiver.kernel.org>; Mon, 27 Jul 2020 13:53:29 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1510D2070A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=goodmis.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19455-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11993 invoked by uid 550); 27 Jul 2020 13:53:22 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,88 +23,127 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17966 invoked from network); 27 Jul 2020 05:27:29 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1595827637;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=AKE5Hc2PxuPIW6hu7a7doCEJmqwBxswHHKiFGDtBWQs=;
-	b=J1N5xDIRwcd9N36auM423VfEZG39rQiW4cG9RVJbrNbzm9vwJz1yfQHiCgGvEb/Iho9wG/
-	7qcxYwRMs2n4ovJmdNI1bFlQJjv3oNu5mOhozEkvrt3v+jeIjSjUsX1EjCOx784jcIR5VF
-	51jxaMjsj83uvNnKG4jPJRhQ3s9P7XA=
-X-MC-Unique: WX2tJBGCNPCBLW1UaUOyYg-1
-From: Florian Weimer <fweimer@redhat.com>
-To: Al Viro <viro@zeniv.linux.org.uk>
-Cc: =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>,
-  linux-kernel@vger.kernel.org,  Aleksa
- Sarai <cyphar@cyphar.com>,  Alexei Starovoitov <ast@kernel.org>,  Andrew
- Morton <akpm@linux-foundation.org>,  Andy Lutomirski <luto@kernel.org>,
-  Christian Brauner <christian.brauner@ubuntu.com>,  Christian Heimes
- <christian@python.org>,  Daniel Borkmann <daniel@iogearbox.net>,  Deven
- Bowers <deven.desai@linux.microsoft.com>,  Dmitry Vyukov
- <dvyukov@google.com>,  Eric Biggers <ebiggers@kernel.org>,  Eric Chiang
- <ericchiang@google.com>,  James Morris <jmorris@namei.org>,  Jan Kara
- <jack@suse.cz>,  Jann Horn <jannh@google.com>,  Jonathan Corbet
- <corbet@lwn.net>,  Kees Cook <keescook@chromium.org>,  Lakshmi
- Ramasubramanian <nramas@linux.microsoft.com>,  Matthew Garrett
- <mjg59@google.com>,  Matthew Wilcox <willy@infradead.org>,  Michael
- Kerrisk <mtk.manpages@gmail.com>,  Mimi Zohar <zohar@linux.ibm.com>,
-  Philippe =?utf-8?Q?Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-  Scott Shell
- <scottsh@microsoft.com>,  Sean Christopherson
- <sean.j.christopherson@intel.com>,  Shuah Khan <shuah@kernel.org>,  Steve
- Dower <steve.dower@python.org>,  Steve Grubb <sgrubb@redhat.com>,  Tetsuo
- Handa <penguin-kernel@i-love.sakura.ne.jp>,  Thibaut Sautereau
- <thibaut.sautereau@clip-os.org>,  Vincent Strubel
- <vincent.strubel@ssi.gouv.fr>,  kernel-hardening@lists.openwall.com,
-  linux-api@vger.kernel.org,  linux-integrity@vger.kernel.org,
-  linux-security-module@vger.kernel.org,  linux-fsdevel@vger.kernel.org,
-  Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Subject: Re: [PATCH v7 4/7] fs: Introduce O_MAYEXEC flag for openat2(2)
-References: <20200723171227.446711-1-mic@digikod.net>
-	<20200723171227.446711-5-mic@digikod.net>
-	<20200727042106.GB794331@ZenIV.linux.org.uk>
-Date: Mon, 27 Jul 2020 07:27:00 +0200
-In-Reply-To: <20200727042106.GB794331@ZenIV.linux.org.uk> (Al Viro's message
-	of "Mon, 27 Jul 2020 05:21:06 +0100")
-Message-ID: <87y2n55xzv.fsf@oldenburg2.str.redhat.com>
-User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.3 (gnu/linux)
+Received: (qmail 11970 invoked from network); 27 Jul 2020 13:53:21 -0000
+Date: Mon, 27 Jul 2020 09:53:06 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+To: Oscar Carter <oscar.carter@gmx.com>
+Cc: Ingo Molnar <mingo@redhat.com>, Kees Cook <keescook@chromium.org>,
+ linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Jann
+ Horn <jannh@google.com>
+Subject: Re: [PATCH v2 2/2] kernel/trace: Remove function callback casts
+Message-ID: <20200727095306.7f369949@oasis.local.home>
+In-Reply-To: <20200726155148.GA9341@ubuntu>
+References: <20200719155033.24201-3-oscar.carter@gmx.com>
+	<20200721140545.445f0258@oasis.local.home>
+	<20200724161921.GA3123@ubuntu>
+	<20200724123528.36ea9c9e@oasis.local.home>
+	<20200724171418.GB3123@ubuntu>
+	<20200724133656.76c75629@oasis.local.home>
+	<20200724134020.3160dc7c@oasis.local.home>
+	<20200724175500.GD3123@ubuntu>
+	<20200724143457.27755412@oasis.local.home>
+	<20200725150914.GA3362@ubuntu>
+	<20200726155148.GA9341@ubuntu>
+X-Mailer: Claws Mail 3.17.3 (GTK+ 2.24.32; x86_64-pc-linux-gnu)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-X-Scanned-By: MIMEDefang 2.84 on 10.5.11.22
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 
-* Al Viro:
+On Sun, 26 Jul 2020 17:52:42 +0200
+Oscar Carter <oscar.carter@gmx.com> wrote:
 
-> On Thu, Jul 23, 2020 at 07:12:24PM +0200, Micka=C3=83=C2=ABl Sala=C3=83=
-=C2=BCn wrote:
->> When the O_MAYEXEC flag is passed, openat2(2) may be subject to
->> additional restrictions depending on a security policy managed by the
->> kernel through a sysctl or implemented by an LSM thanks to the
->> inode_permission hook.  This new flag is ignored by open(2) and
->> openat(2) because of their unspecified flags handling.  When used with
->> openat2(2), the default behavior is only to forbid to open a directory.
->
-> Correct me if I'm wrong, but it looks like you are introducing a magical
-> flag that would mean "let the Linux S&M take an extra special whip
-> for this open()".
->
-> Why is it done during open?  If the caller is passing it deliberately,
-> why not have an explicit request to apply given torture device to an
-> already opened file?  Why not sys_masochism(int fd, char *hurt_flavour),
-> for that matter?
+> > If I try to do this I will need some help. Some info that point me to the
+> > right direction would be greatly appreciated. Some advice about what
+> > functions I will need to implement would be really helpfull. Or point me
+> > to the right piece of code that I can pick as base point.  
+> 
+> I've been searching and reading the code as much as possible. I've found
+> two patches that I think can be useful to guide me. One [1] adds support
+> for ftrace_ops to the riscv architecture. The other one [2] adds support
+> for ftrace_ops to the parisc architecture.
+> 
+> [1] commit 71e736a7d655 ("riscv/ftrace: Add ARCH_SUPPORTS_FTRACE_OPS support")
+> [2] commit d562aca37a54 ("parisc/ftrace: Add ARCH_SUPPORTS_FTRACE_OPS support")
+> 
+> Due to powerpc arch calls the needed functions from assembly, I based my
+> idea on the patch for the RISCV arch.
+> 
+> Can something like the following work?
+> 
+> diff --git a/arch/powerpc/include/asm/ftrace.h b/arch/powerpc/include/asm/ftrace.h
+> index bc76970b6ee5..1c51ff5afae1 100644
+> --- a/arch/powerpc/include/asm/ftrace.h
+> +++ b/arch/powerpc/include/asm/ftrace.h
+> @@ -61,9 +61,8 @@ struct dyn_arch_ftrace {
+>  };
+>  #endif /* __ASSEMBLY__ */
+> 
+> -#ifdef CONFIG_DYNAMIC_FTRACE_WITH_REGS
+>  #define ARCH_SUPPORTS_FTRACE_OPS 1
+> -#endif
+> +
+>  #endif /* CONFIG_FUNCTION_TRACER */
+> 
+>  #ifndef __ASSEMBLY__
+> diff --git a/arch/powerpc/kernel/trace/ftrace_32.S b/arch/powerpc/kernel/trace/ftrace_32.S
+> index e023ae59c429..e69a4e945986 100644
+> --- a/arch/powerpc/kernel/trace/ftrace_32.S
+> +++ b/arch/powerpc/kernel/trace/ftrace_32.S
+> @@ -29,6 +29,10 @@ _GLOBAL(ftrace_caller)
+>         MCOUNT_SAVE_FRAME
+>         /* r3 ends up with link register */
+>         subi    r3, r3, MCOUNT_INSN_SIZE
+> +
+> +       /* Set ftrace_ops (r5) to the global variable function_trace_op */
+> +       /* Set pt_regs (r6) to NULL */
+> +
+>  .globl ftrace_call
+>  ftrace_call:
+>         bl      ftrace_stub
+> diff --git a/arch/powerpc/kernel/trace/ftrace_64_pg.S b/arch/powerpc/kernel/trace/ftrace_64_pg.S
+> index 6708e24db0ab..a741448b1df9 100644
+> --- a/arch/powerpc/kernel/trace/ftrace_64_pg.S
+> +++ b/arch/powerpc/kernel/trace/ftrace_64_pg.S
+> @@ -22,6 +22,10 @@ _GLOBAL_TOC(ftrace_caller)
+>         std     r3, 128(r1)
+>         ld      r4, 16(r11)
+>         subi    r3, r3, MCOUNT_INSN_SIZE
+> +
+> +       /* Set ftrace_ops (r5) to the global variable function_trace_op */
+> +       /* Set pt_regs (r6) to NULL */
 
-While I do not think this is appropriate language for a workplace, Al
-has a point: If the auditing event can be generated on an already-open
-descriptor, it would also cover scenarios like this one:
+I'm guessing you are going to do the above here. If so, this looks correct.
 
-  perl < /path/to/script
+> +
+>  .globl ftrace_call
+>  ftrace_call:
+>         bl      ftrace_stub
+> 
+> To add support for ftrace_ops to the powerpc architecture is only necessary
+> to fill the r5 and r6 registers before the call to ftrace_stub in all the
+> cases. The register r5 is a pointer to ftrace_ops struct and the register
+> r6 is a pointer to pt_regs struct. These registers are the third and fourth
+> parameters of a function with the following prototype. The first and second
+> ones are yet set.
 
-Where the process that opens the file does not (and cannot) know that it
-will be used for execution purposes.
+I guess you mean that the first and second ones are already set. But,
+yeah, you are on the correct path here!
 
-Thanks,
-Florian
+> 
+> void func(unsigned long ip, unsigned long parent_ip,
+> 	  struct ftrace_ops *ops, struct pt_regs *regs);
+> 
+> Am I in the right direction? or am I totally wrong?
 
+No, you don't look wrong. But the true test is to try it out :-)
+
+Don't forget to update ftrace_32.S as well.
+
+
+> 
+> Thanks for your time and patience.
+
+My pleasure. Thanks for doing this. The more people that understand all
+this, the better!
+
+-- Steve
