@@ -1,23 +1,23 @@
-Return-Path: <SRS0=bBLk=BH=lists.openwall.com=kernel-hardening-return-19460-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=+vuw=BH=lists.openwall.com=kernel-hardening-return-19461-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+X-Spam-Status: No, score=-14.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
-	version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 182ABC433E1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 08:18:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7D931C433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 13:11:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 65E242177B
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 08:18:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 79148206D8
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 13:11:26 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="nEjdWpcU"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 65E242177B
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zx2c4.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19460-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 29795 invoked by uid 550); 28 Jul 2020 08:17:55 -0000
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="M2qxzdaA"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 79148206D8
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19461-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25991 invoked by uid 550); 28 Jul 2020 13:11:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,92 +25,309 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29760 invoked from network); 28 Jul 2020 08:17:54 -0000
-DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=zx2c4.com; h=mime-version
-	:references:in-reply-to:from:date:message-id:subject:to:cc
-	:content-type; s=mail; bh=K4YAt33ilBR3hd1+7JojCPxtvSA=; b=nEjdWp
-	cUQVj0KWRd87puFx0fk1HADPVt/5ckkL0vcSiVAoyePGSTncp+KafcroE0itJJAR
-	hvCKOHIgNqwby+4I13HG5z9ibnxBmqHfVx+jKtrPfvHTnJrmPNg1WsagEKVyYT8s
-	0wLLBcv/NIyWIJ2xwHqa/F7Ekuot/H5qUld6hDSAXP06OIRI6q+V7cdk8Ye2E95N
-	oE2iYHJELOZGqN2H10I58K4qjsUNSGzPFklfgHdPIOfnKUBe2eF7SiuhT2DW4gmx
-	Zlh/4Lwi80eH4MYYZz1R0kvQtczs/XnszWGNGZW6geww/y9D6tsJ0FqJg7QkrUqh
-	r9lHeJJo9aIu1+DA==
-X-Gm-Message-State: AOAM5330KUtZBBxWC5LeueETM8gQhT2Pgmp/JWvAugdmh0JO6JG0duJs
-	lxNun4/HOKWm4paa9qI5dvSSyBjejRUy48oTNB8=
-X-Google-Smtp-Source: ABdhPJwruWEMSl6lI3SS18Iq/8cGmq7nVWSaRamLRaM9jzUJiajMF+UBN6XkUtAb0UlYhZIkk+zlhZ92oa7Pvf4Iz8s=
-X-Received: by 2002:a05:6638:250f:: with SMTP id v15mr8210865jat.75.1595924260418;
- Tue, 28 Jul 2020 01:17:40 -0700 (PDT)
-MIME-Version: 1.0
-References: <20200723060908.50081-1-hch@lst.de> <20200723060908.50081-13-hch@lst.de>
- <20200727150310.GA1632472@zx2c4.com> <20200727150601.GA3447@lst.de>
- <CAHmME9ric=chLJayn7Erve7WBa+qCKn-+Gjri=zqydoY6623aA@mail.gmail.com>
- <20200727162357.GA8022@lst.de> <908ed73081cc42d58a5b01e0c97dbe47@AcuMS.aculab.com>
-In-Reply-To: <908ed73081cc42d58a5b01e0c97dbe47@AcuMS.aculab.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue, 28 Jul 2020 10:17:28 +0200
-X-Gmail-Original-Message-ID: <CAHmME9pUbRmJq1Qcj10eENt15cuQHkiXJNKrUDmmC18n2mLKDA@mail.gmail.com>
-Message-ID: <CAHmME9pUbRmJq1Qcj10eENt15cuQHkiXJNKrUDmmC18n2mLKDA@mail.gmail.com>
-Subject: Re: [PATCH 12/26] netfilter: switch nf_setsockopt to sockptr_t
-To: David Laight <David.Laight@aculab.com>
-Cc: Christoph Hellwig <hch@lst.de>, "David S. Miller" <davem@davemloft.net>, Jakub Kicinski <kuba@kernel.org>, 
-	Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, 
-	Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, 
-	Eric Dumazet <edumazet@google.com>, 
-	Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
-	Netdev <netdev@vger.kernel.org>, "bpf@vger.kernel.org" <bpf@vger.kernel.org>, 
-	"netfilter-devel@vger.kernel.org" <netfilter-devel@vger.kernel.org>, 
-	"coreteam@netfilter.org" <coreteam@netfilter.org>, 
-	"linux-sctp@vger.kernel.org" <linux-sctp@vger.kernel.org>, 
-	"linux-hams@vger.kernel.org" <linux-hams@vger.kernel.org>, 
-	"linux-bluetooth@vger.kernel.org" <linux-bluetooth@vger.kernel.org>, 
-	"bridge@lists.linux-foundation.org" <bridge@lists.linux-foundation.org>, 
-	"linux-can@vger.kernel.org" <linux-can@vger.kernel.org>, "dccp@vger.kernel.org" <dccp@vger.kernel.org>, 
-	"linux-decnet-user@lists.sourceforge.net" <linux-decnet-user@lists.sourceforge.net>, 
-	"linux-wpan@vger.kernel.org" <linux-wpan@vger.kernel.org>, 
-	"linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "mptcp@lists.01.org" <mptcp@lists.01.org>, 
-	"lvs-devel@vger.kernel.org" <lvs-devel@vger.kernel.org>, 
-	"rds-devel@oss.oracle.com" <rds-devel@oss.oracle.com>, 
-	"linux-afs@lists.infradead.org" <linux-afs@lists.infradead.org>, 
-	"tipc-discussion@lists.sourceforge.net" <tipc-discussion@lists.sourceforge.net>, 
-	"linux-x25@vger.kernel.org" <linux-x25@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Content-Type: text/plain; charset="UTF-8"
+Received: (qmail 25964 invoked from network); 28 Jul 2020 13:11:12 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com A29B720B4908
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
+	s=default; t=1595941860;
+	bh=TEbBd3dwynuJqoEQDPf6eZrKN4dXXk6jfZRblZdyl7M=;
+	h=From:To:Subject:Date:In-Reply-To:References:From;
+	b=M2qxzdaAALQKdV/om2/Ss9mGCaO4W0ppuDXrBtLb6Y8mbGvVbtWAy1s5VGkD53ThO
+	 d1eyxgoQJxXGNbJ5ZxCXSiP558gHVj/zhREamaaI8TJ9YXL0ZoE5pFHy6MyLPf3y8M
+	 l3N+n7G2BmuR/nGU0VVfrwEd9s8xbzsBZKHFhaMw=
+From: madvenka@linux.microsoft.com
+To: kernel-hardening@lists.openwall.com,
+	linux-api@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-integrity@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	oleg@redhat.com,
+	x86@kernel.org,
+	madvenka@linux.microsoft.com
+Subject: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
+Date: Tue, 28 Jul 2020 08:10:46 -0500
+Message-Id: <20200728131050.24443-1-madvenka@linux.microsoft.com>
+X-Mailer: git-send-email 2.17.1
+In-Reply-To: <aefc85852ea518982e74b233e11e16d2e707bc32>
+References: <aefc85852ea518982e74b233e11e16d2e707bc32>
 
-On Tue, Jul 28, 2020 at 10:07 AM David Laight <David.Laight@aculab.com> wrote:
->
-> From: Christoph Hellwig
-> > Sent: 27 July 2020 17:24
-> >
-> > On Mon, Jul 27, 2020 at 06:16:32PM +0200, Jason A. Donenfeld wrote:
-> > > Maybe sockptr_advance should have some safety checks and sometimes
-> > > return -EFAULT? Or you should always use the implementation where
-> > > being a kernel address is an explicit bit of sockptr_t, rather than
-> > > being implicit?
-> >
-> > I already have a patch to use access_ok to check the whole range in
-> > init_user_sockptr.
->
-> That doesn't make (much) difference to the code paths that ignore
-> the user-supplied length.
-> OTOH doing the user/kernel check on the base address (not an
-> incremented one) means that the correct copy function is always
-> selected.
+From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
 
-Right, I had the same reaction in reading this, but actually, his code
-gets rid of the sockptr_advance stuff entirely and never mutates, so
-even though my point about attacking those pointers was missed, the
-code does the better thing now -- checking the base address and never
-mutating the pointer. So I think we're good.
+Introduction
+------------
 
->
-> Perhaps the functions should all be passed a 'const sockptr_t'.
-> The typedef could be made 'const' - requiring non-const items
-> explicitly use the union/struct itself.
+Trampolines are used in many different user applications. Trampoline
+code is often generated at runtime. Trampoline code can also just be a
+pre-defined sequence of machine instructions in a data buffer.
 
-I was thinking the same, but just by making the pointers inside the
-struct const. However, making the whole struct const via the typedef
-is a much better idea. That'd probably require changing the signature
-of init_user_sockptr a bit, which would be fine, but indeed I think
-this would be a very positive change.
+Trampoline code is placed either in a data page or in a stack page. In
+order to execute a trampoline, the page it resides in needs to be mapped
+with execute permissions. Writable pages with execute permissions provide
+an attack surface for hackers. Attackers can use this to inject malicious
+code, modify existing code or do other harm.
 
-Jason
+To mitigate this, LSMs such as SELinux may not allow pages to have both
+write and execute permissions. This prevents trampolines from executing
+and blocks applications that use trampolines. To allow genuine applications
+to run, exceptions have to be made for them (by setting execmem, etc).
+In this case, the attack surface is just the pages of such applications.
+
+An application that is not allowed to have writable executable pages
+may try to load trampoline code into a file and map the file with execute
+permissions. In this case, the attack surface is just the buffer that
+contains trampoline code. However, a successful exploit may provide the
+hacker with means to load his own code in a file, map it and execute it.
+
+LSMs (such as the IPE proposal [1]) may allow only properly signed object
+files to be mapped with execute permissions. This will prevent trampoline
+files from being mapped. Again, exceptions have to be made for genuine
+applications.
+
+We need a way to execute trampolines without making security exceptions
+where possible and to reduce the attack surface even further.
+
+Examples of trampolines
+-----------------------
+
+libffi (A Portable Foreign Function Interface Library):
+
+libffi allows a user to define functions with an arbitrary list of
+arguments and return value through a feature called "Closures".
+Closures use trampolines to jump to ABI handlers that handle calling
+conventions and call a target function. libffi is used by a lot
+of different applications. To name a few:
+
+	- Python
+	- Java
+	- Javascript
+	- Ruby FFI
+	- Lisp
+	- Objective C
+
+GCC nested functions:
+
+GCC has traditionally used trampolines for implementing nested
+functions. The trampoline is placed on the user stack. So, the stack
+needs to be executable.
+
+Currently available solution
+----------------------------
+
+One solution that has been proposed to allow trampolines to be executed
+without making security exceptions is Trampoline Emulation. See:
+
+https://pax.grsecurity.net/docs/emutramp.txt
+
+In this solution, the kernel recognizes certain sequences of instructions
+as "well-known" trampolines. When such a trampoline is executed, a page
+fault happens because the trampoline page does not have execute permission.
+The kernel recognizes the trampoline and emulates it. Basically, the
+kernel does the work of the trampoline on behalf of the application.
+
+Here, the attack surface is the buffer that contains the trampoline.
+The attack surface is narrower than before. A hacker may still be able to
+modify what gets loaded in the registers or modify the target PC to point
+to arbitrary locations.
+
+Currently, the emulated trampolines are the ones used in libffi and GCC
+nested functions. To my knowledge, only X86 is supported at this time.
+
+As noted in emutramp.txt, this is not a generic solution. For every new
+trampoline that needs to be supported, new instruction sequences need to
+be recognized by the kernel and emulated. And this has to be done for
+every architecture that needs to be supported.
+
+emutramp.txt notes the following:
+
+"... the real solution is not in emulation but by designing a kernel API
+for runtime code generation and modifying userland to make use of it."
+
+Trampoline File Descriptor (trampfd)
+--------------------------
+
+I am proposing a kernel API using anonymous file descriptors that
+can be used to create and execute trampolines with the help of the
+kernel. In this solution also, the kernel does the work of the trampoline.
+The API is described in patch 1/4 of this patchset. I provide a
+summary here:
+
+Trampolines commonly execute the following sequence:
+
+	- Load some values in some registers and/or
+	- Push some values on the stack
+	- Jump to a target PC
+
+libffi and GCC nested function trampolines fit into this model.
+
+Using the kernel API, applications and libraries can:
+
+	- Create a trampoline object
+	- Associate a register context with the trampoline (including
+	  a target PC)
+	- Associate a stack context with the trampoline
+	- Map the trampoline into a process address space
+	- Execute the trampoline by executing at the trampoline address
+
+The kernel creates the trampoline mapping without any permissions. When
+the trampoline is executed by user code, a page fault happens and the
+kernel gets control. The kernel recognizes that this is a trampoline
+invocation. It sets up the user registers based on the specified
+register context, and/or pushes values on the user stack based on the
+specified stack context, and sets the user PC to the requested target
+PC. When the kernel returns, execution continues at the target PC.
+So, the kernel does the work of the trampoline on behalf of the
+application.
+
+In this case, the attack surface is the context buffer. A hacker may
+attack an application with a vulnerability and may be able to modify the
+context buffer. So, when the register or stack context is set for
+a trampoline, the values may have been tampered with. From an attack
+surface perspective, this is similar to Trampoline Emulation. But
+with trampfd, user code can retrieve a trampoline's context from the
+kernel and add defensive checks to see if the context has been
+tampered with.
+
+As for the target PC, trampfd implements a measure called the
+"Allowed PCs" context (see Advantages) to prevent a hacker from making
+the target PC point to arbitrary locations. So, the attack surface is
+narrower than Trampoline Emulation.
+
+Advantages of the Trampoline File Descriptor approach
+-----------------------------------------------------
+
+- trampfd is customizable. The user can specify any combination of
+  allowed register name-value pairs in the register context and the kernel
+  will set it up accordingly. This allows different user trampolines to be
+  converted to use trampfd.
+
+- trampfd allows a stack context to be set up so that trampolines that
+  need to push values on the user stack can do that.
+
+- The initial work is targeted for X86 and ARM. But the implementation
+  leverages small portions of existing signal delivery code. Specifically,
+  it uses pt_regs for setting up user registers and copy_to_user()
+  to push values on the stack. So, this can be very easily ported to other
+  architectures.
+
+- trampfd provides a basic framework. In the future, new trampoline types
+  can be implemented, new contexts can be defined, and additional rules
+  can be implemented for security purposes.
+
+- For instance, trampfd defines an "Allowed PCs" context in this initial
+  work. As an example, libffi can create a read-only array of all ABI
+  handlers for an architecture at build time. This array can be used to
+  set the list of allowed PCs for a trampoline. This will mean that a hacker
+  cannot hack the PC part of the register context and make it point to
+  arbitrary locations.
+
+- An SELinux setting called "exectramp" can be implemented along the
+  lines of "execmem", "execstack" and "execheap" to selectively allow the
+  use of trampolines on a per application basis.
+
+- User code can add defensive checks in the code before invoking a
+  trampoline to make sure that a hacker has not modified the context data.
+  It can do this by getting the trampoline context from the kernel and
+  double checking it.
+
+- In the future, if the kernel can be enhanced to use a safe code
+  generation component, that code can be placed in the trampoline mapping
+  pages. Then, the trampoline invocation does not have to incur a trip
+  into the kernel.
+
+- Also, if the kernel can be enhanced to use a safe code generation
+  component, other forms of dynamic code such as JIT code can be
+  addressed by the trampfd framework.
+
+- Trampolines can be shared across processes which can give rise to
+  interesting uses in the future.
+
+- Trampfd can be used for other purposes to extend the kernel's
+  functionality.
+
+libffi
+------
+
+I have implemented my solution for libffi and provided the changes for
+X86 and ARM, 32-bit and 64-bit. Here is the reference patch:
+
+http://linux.microsoft.com/~madvenka/libffi/libffi.txt
+
+If the trampfd patchset gets accepted, I will send the libffi changes
+to the maintainers for a review. BTW, I have also successfully executed
+the libffi self tests.
+
+Work that is pending
+--------------------
+
+- I am working on implementing an SELinux setting called "exectramp"
+  similar to "execmem" to allow the use of trampfd on a per application
+  basis.
+
+- I have a comprehensive test program to test the kernel API. I am
+  working on adding it to selftests.
+
+References
+----------
+
+[1] https://microsoft.github.io/ipe/
+---
+Madhavan T. Venkataraman (4):
+  fs/trampfd: Implement the trampoline file descriptor API
+  x86/trampfd: Support for the trampoline file descriptor
+  arm64/trampfd: Support for the trampoline file descriptor
+  arm/trampfd: Support for the trampoline file descriptor
+
+ arch/arm/include/uapi/asm/ptrace.h     |  20 ++
+ arch/arm/kernel/Makefile               |   1 +
+ arch/arm/kernel/trampfd.c              | 214 +++++++++++++++++
+ arch/arm/mm/fault.c                    |  12 +-
+ arch/arm/tools/syscall.tbl             |   1 +
+ arch/arm64/include/asm/ptrace.h        |   9 +
+ arch/arm64/include/asm/unistd.h        |   2 +-
+ arch/arm64/include/asm/unistd32.h      |   2 +
+ arch/arm64/include/uapi/asm/ptrace.h   |  57 +++++
+ arch/arm64/kernel/Makefile             |   2 +
+ arch/arm64/kernel/trampfd.c            | 278 ++++++++++++++++++++++
+ arch/arm64/mm/fault.c                  |  15 +-
+ arch/x86/entry/syscalls/syscall_32.tbl |   1 +
+ arch/x86/entry/syscalls/syscall_64.tbl |   1 +
+ arch/x86/include/uapi/asm/ptrace.h     |  38 +++
+ arch/x86/kernel/Makefile               |   2 +
+ arch/x86/kernel/trampfd.c              | 313 +++++++++++++++++++++++++
+ arch/x86/mm/fault.c                    |  11 +
+ fs/Makefile                            |   1 +
+ fs/trampfd/Makefile                    |   6 +
+ fs/trampfd/trampfd_data.c              |  43 ++++
+ fs/trampfd/trampfd_fops.c              | 131 +++++++++++
+ fs/trampfd/trampfd_map.c               |  78 ++++++
+ fs/trampfd/trampfd_pcs.c               |  95 ++++++++
+ fs/trampfd/trampfd_regs.c              | 137 +++++++++++
+ fs/trampfd/trampfd_stack.c             | 131 +++++++++++
+ fs/trampfd/trampfd_stubs.c             |  41 ++++
+ fs/trampfd/trampfd_syscall.c           |  92 ++++++++
+ include/linux/syscalls.h               |   3 +
+ include/linux/trampfd.h                |  82 +++++++
+ include/uapi/asm-generic/unistd.h      |   4 +-
+ include/uapi/linux/trampfd.h           | 171 ++++++++++++++
+ init/Kconfig                           |   8 +
+ kernel/sys_ni.c                        |   3 +
+ 34 files changed, 1998 insertions(+), 7 deletions(-)
+ create mode 100644 arch/arm/kernel/trampfd.c
+ create mode 100644 arch/arm64/kernel/trampfd.c
+ create mode 100644 arch/x86/kernel/trampfd.c
+ create mode 100644 fs/trampfd/Makefile
+ create mode 100644 fs/trampfd/trampfd_data.c
+ create mode 100644 fs/trampfd/trampfd_fops.c
+ create mode 100644 fs/trampfd/trampfd_map.c
+ create mode 100644 fs/trampfd/trampfd_pcs.c
+ create mode 100644 fs/trampfd/trampfd_regs.c
+ create mode 100644 fs/trampfd/trampfd_stack.c
+ create mode 100644 fs/trampfd/trampfd_stubs.c
+ create mode 100644 fs/trampfd/trampfd_syscall.c
+ create mode 100644 include/linux/trampfd.h
+ create mode 100644 include/uapi/linux/trampfd.h
+
+-- 
+2.17.1
+
