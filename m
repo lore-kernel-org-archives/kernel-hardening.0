@@ -1,22 +1,23 @@
-Return-Path: <SRS0=1Z+p=BH=lists.openwall.com=kernel-hardening-return-19481-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=qxDK=BH=lists.openwall.com=kernel-hardening-return-19482-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,
+	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,
+	USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CAB7FC433F7
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 17:32:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C5B7AC433E3
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 17:40:20 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2A092207F5
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 17:32:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id EB57420672
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 17:40:19 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="00hywb4Z"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2A092207F5
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19481-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17705 invoked by uid 550); 28 Jul 2020 17:32:25 -0000
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="BD8peru3"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EB57420672
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19482-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24411 invoked by uid 550); 28 Jul 2020 17:40:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,142 +25,245 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17677 invoked from network); 28 Jul 2020 17:32:24 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1595957533;
-	bh=9/DO98f4NNb2r87lGlZR0IYODVEjduHFQ1okay382Kw=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=00hywb4ZCFn7lczpn0BiOMeOm9xDGiOqlvQj8/th2fDX/IzE1putRyI2doIv2tI36
-	 gO4lphP9SFo10v3da6m5h1BH07cHRR/okVnVy90sS8zQtt5pSIghUkUXx0ikOM7Nd0
-	 h6O5+kD6MR7Vr5ux5UT9pRxsLHVuGsY6clVQqbF0=
-X-Gm-Message-State: AOAM533yRrtwUlFcdbDX7MPuhxSL2gLXx5IU/+VYemMckmyLU1E2F+i9
-	l9neqsWS5ae0XSrrk9V3UORiFjffctopHPPR6ZGo0g==
-X-Google-Smtp-Source: ABdhPJxq1bq+hNP4spnLcyA3rbDMq8utpwpjTxFxTkTrdf+BFedxKdyd+N85+0IDFv89rVq0CIoCx1Y8N9iYBQx1zm4=
-X-Received: by 2002:a5d:5273:: with SMTP id l19mr25476365wrc.257.1595957531409;
- Tue, 28 Jul 2020 10:32:11 -0700 (PDT)
-MIME-Version: 1.0
-References: <20200728131050.24443-1-madvenka@linux.microsoft.com>
-In-Reply-To: <20200728131050.24443-1-madvenka@linux.microsoft.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Tue, 28 Jul 2020 10:31:59 -0700
-X-Gmail-Original-Message-ID: <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
-Message-ID: <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
+Received: (qmail 24385 invoked from network); 28 Jul 2020 17:40:12 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com EFB9B20B4908
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
+	s=default; t=1595958000;
+	bh=OWWDkY3sg+0Hy6NDKMgflfpDtA2CgO3csqL7Uid/wVU=;
+	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
+	b=BD8peru37WXTYWBqj5OMIGNR9eoysAlugyqLDVTBV7w4kOP+8hTAhlmNbuHLu2zxq
+	 BAe3qmozLc1x5RhrrRLkdkoFmsJNoPrTf/LsfjmUXd6yl0jYTkjwlmSijRnjte7hxb
+	 h/uMH3jra/wLEJewhLEScRvmJf8hFnDjqSPBMM4c=
 Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: madvenka@linux.microsoft.com
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	Linux API <linux-api@vger.kernel.org>, 
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>, 
-	linux-integrity <linux-integrity@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
-	LSM List <linux-security-module@vger.kernel.org>, Oleg Nesterov <oleg@redhat.com>, 
-	X86 ML <x86@kernel.org>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+To: Andy Lutomirski <luto@kernel.org>
+Cc: David Laight <David.Laight@aculab.com>,
+ "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
+ "linux-api@vger.kernel.org" <linux-api@vger.kernel.org>,
+ "linux-arm-kernel@lists.infradead.org"
+ <linux-arm-kernel@lists.infradead.org>,
+ "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>,
+ "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>,
+ "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
+ "linux-security-module@vger.kernel.org"
+ <linux-security-module@vger.kernel.org>, "oleg@redhat.com"
+ <oleg@redhat.com>, "x86@kernel.org" <x86@kernel.org>
+References: <20200728131050.24443-1-madvenka@linux.microsoft.com>
+ <c23de6ec47614f489943e1a89a21dfa3@AcuMS.aculab.com>
+ <f5cfd11b-04fe-9db7-9d67-7ee898636edb@linux.microsoft.com>
+ <CALCETrUta5-0TLJ9-jfdehpTAp2Efmukk2npYadFzz9ozOrG2w@mail.gmail.com>
+From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
+Message-ID: <81d744c0-923e-35ad-6063-8b186f6a153c@linux.microsoft.com>
+Date: Tue, 28 Jul 2020 12:39:59 -0500
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.10.0
+MIME-Version: 1.0
+In-Reply-To: <CALCETrUta5-0TLJ9-jfdehpTAp2Efmukk2npYadFzz9ozOrG2w@mail.gmail.com>
+Content-Type: multipart/alternative;
+ boundary="------------AD9A0AC3BF44AC5296C62689"
+Content-Language: en-US
 
-> On Jul 28, 2020, at 6:11 AM, madvenka@linux.microsoft.com wrote:
->
-> =EF=BB=BFFrom: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
->
-
-> The kernel creates the trampoline mapping without any permissions. When
-> the trampoline is executed by user code, a page fault happens and the
-> kernel gets control. The kernel recognizes that this is a trampoline
-> invocation. It sets up the user registers based on the specified
-> register context, and/or pushes values on the user stack based on the
-> specified stack context, and sets the user PC to the requested target
-> PC. When the kernel returns, execution continues at the target PC.
-> So, the kernel does the work of the trampoline on behalf of the
-> application.
-
-This is quite clever, but now I=E2=80=99m wondering just how much kernel he=
-lp
-is really needed. In your series, the trampoline is an non-executable
-page.  I can think of at least two alternative approaches, and I'd
-like to know the pros and cons.
-
-1. Entirely userspace: a return trampoline would be something like:
-
-1:
-pushq %rax
-pushq %rbc
-pushq %rcx
-...
-pushq %r15
-movq %rsp, %rdi # pointer to saved regs
-leaq 1b(%rip), %rsi # pointer to the trampoline itself
-callq trampoline_handler # see below
-
-You would fill a page with a bunch of these, possibly compacted to get
-more per page, and then you would remap as many copies as needed.  The
-'callq trampoline_handler' part would need to be a bit clever to make
-it continue to work despite this remapping.  This will be *much*
-faster than trampfd. How much of your use case would it cover?  For
-the inverse, it's not too hard to write a bit of asm to set all
-registers and jump somewhere.
-
-2. Use existing kernel functionality.  Raise a signal, modify the
-state, and return from the signal.  This is very flexible and may not
-be all that much slower than trampfd.
-
-3. Use a syscall.  Instead of having the kernel handle page faults,
-have the trampoline code push the syscall nr register, load a special
-new syscall nr into the syscall nr register, and do a syscall. On
-x86_64, this would be:
-
-pushq %rax
-movq __NR_magic_trampoline, %rax
-syscall
-
-with some adjustment if the stack slot you're clobbering is important.
+This is a multi-part message in MIME format.
+--------------AD9A0AC3BF44AC5296C62689
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
 
 
-Also, will using trampfd cause issues with various unwinders?  I can
-easily imagine unwinders expecting code to be readable, although this
-is slowly going away for other reasons.
 
-All this being said, I think that the kernel should absolutely add a
-sensible interface for JITs to use to materialize their code.  This
-would integrate sanely with LSMs and wouldn't require hacks like using
-files, etc.  A cleverly designed JIT interface could function without
-seriailization IPIs, and even lame architectures like x86 could
-potentially avoid shootdown IPIs if the interface copied code instead
-of playing virtual memory games.  At its very simplest, this could be:
+On 7/28/20 12:16 PM, Andy Lutomirski wrote:
+> On Tue, Jul 28, 2020 at 9:32 AM Madhavan T. Venkataraman
+> <madvenka@linux.microsoft.com> wrote:
+>> Thanks. See inline..
+>>
+>> On 7/28/20 10:13 AM, David Laight wrote:
+>>> From:  madvenka@linux.microsoft.com
+>>>> Sent: 28 July 2020 14:11
+>>> ...
+>>>> The kernel creates the trampoline mapping without any permissions. When
+>>>> the trampoline is executed by user code, a page fault happens and the
+>>>> kernel gets control. The kernel recognizes that this is a trampoline
+>>>> invocation. It sets up the user registers based on the specified
+>>>> register context, and/or pushes values on the user stack based on the
+>>>> specified stack context, and sets the user PC to the requested target
+>>>> PC. When the kernel returns, execution continues at the target PC.
+>>>> So, the kernel does the work of the trampoline on behalf of the
+>>>> application.
+>>> Isn't the performance of this going to be horrid?
+>> It takes about the same amount of time as getpid(). So, it is
+>> one quick trip into the kernel. I expect that applications will
+>> typically not care about this extra overhead as long as
+>> they are able to run.
+> What did you test this on?  A page fault on any modern x86_64 system
+> is much, much, much, much slower than a syscall.
 
-void *jit_create_code(const void *source, size_t len);
+I tested it in on a KVM guest running Ubuntu. So, when you say
+that a page fault is much slower, do you mean a regular page
+fault that is handled through the VM layer? Here is the relevant code
+in do_user_addr_fault():
 
-and the result would be a new anonymous mapping that contains exactly
-the code requested.  There could also be:
+            if (unlikely(access_error(hw_error_code, vma))) {
+                    /*
+                     * If it is a user execute fault, it could be a trampoline
+                     * invocation.
+                     */
+                    if ((hw_error_code & tflags) == tflags &&
+                        trampfd_fault(vma, regs)) {
+                            up_read(&mm->mmap_sem);
+                            return;
+                    }
+                    bad_area_access_error(regs, hw_error_code, address, vma);
+                    return;
+            }
 
-int jittfd_create(...);
+            /*
+             * If for any reason at all we couldn't handle the fault,
+             * make sure we exit gracefully rather than endlessly redo
+             * the fault.  Since we never set FAULT_FLAG_RETRY_NOWAIT, if
+             * we get VM_FAULT_RETRY back, the mmap_sem has been unlocked.
+             *
+             * Note that handle_userfault() may also release and reacquire mmap_sem
+             * (and not return with VM_FAULT_RETRY), when returning to userland to
+             * repeat the page fault later with a VM_FAULT_NOPAGE retval
+             * (potentially after handling any pending signal during the return to
+             * userland). The return to userland is identified whenever
+             * FAULT_FLAG_USER|FAULT_FLAG_KILLABLE are both set in flags.
+             */
+            fault = handle_mm_fault(vma, address, flags);
 
-that does something similar but creates a memfd.  A nicer
-implementation for short JIT sequences would allow appending more code
-to an existing JIT region.  On x86, an appendable JIT region would
-start filled with 0xCC, and I bet there's a way to materialize new
-code into a previously 0xcc-filled virtual page wthout any
-synchronization.  One approach would be to start with:
+trampfd faults are instruction faults that go through a different code
+path than the one that calls handle_mm_fault().
 
-<some code>
-0xcc
-0xcc
-...
-0xcc
+Could you clarify?
 
-and to create a whole new page like:
+Thanks.
 
-<some code>
-<some more code>
-0xcc
-...
-0xcc
+Madhavan
 
-so that the only difference is that some code changed to some more
-code.  Then replace the PTE to swap from the old page to the new page,
-and arrange to avoid freeing the old page until we're sure it's gone
-from all TLBs.  This may not work if <some more code> spans a page
-boundary.  The #BP fixup would zap the TLB and retry.  Even just
-directly copying code over some 0xcc bytes almost works, but there's a
-nasty corner case involving instructions that fetch I$ fetch
-boundaries.  I'm not sure to what extent I$ snooping helps.
 
---Andy
+--------------AD9A0AC3BF44AC5296C62689
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  </head>
+  <body>
+    <br>
+    <br>
+    <div class="moz-cite-prefix">On 7/28/20 12:16 PM, Andy Lutomirski
+      wrote:<br>
+    </div>
+    <blockquote type="cite"
+cite="mid:CALCETrUta5-0TLJ9-jfdehpTAp2Efmukk2npYadFzz9ozOrG2w@mail.gmail.com">
+      <pre class="moz-quote-pre" wrap="">On Tue, Jul 28, 2020 at 9:32 AM Madhavan T. Venkataraman
+<a class="moz-txt-link-rfc2396E" href="mailto:madvenka@linux.microsoft.com">&lt;madvenka@linux.microsoft.com&gt;</a> wrote:
+</pre>
+      <blockquote type="cite">
+        <pre class="moz-quote-pre" wrap="">
+Thanks. See inline..
+
+On 7/28/20 10:13 AM, David Laight wrote:
+</pre>
+        <blockquote type="cite">
+          <pre class="moz-quote-pre" wrap="">From:  <a class="moz-txt-link-abbreviated" href="mailto:madvenka@linux.microsoft.com">madvenka@linux.microsoft.com</a>
+</pre>
+          <blockquote type="cite">
+            <pre class="moz-quote-pre" wrap="">Sent: 28 July 2020 14:11
+</pre>
+          </blockquote>
+          <pre class="moz-quote-pre" wrap="">...
+</pre>
+          <blockquote type="cite">
+            <pre class="moz-quote-pre" wrap="">The kernel creates the trampoline mapping without any permissions. When
+the trampoline is executed by user code, a page fault happens and the
+kernel gets control. The kernel recognizes that this is a trampoline
+invocation. It sets up the user registers based on the specified
+register context, and/or pushes values on the user stack based on the
+specified stack context, and sets the user PC to the requested target
+PC. When the kernel returns, execution continues at the target PC.
+So, the kernel does the work of the trampoline on behalf of the
+application.
+</pre>
+          </blockquote>
+          <pre class="moz-quote-pre" wrap="">Isn't the performance of this going to be horrid?
+</pre>
+        </blockquote>
+        <pre class="moz-quote-pre" wrap="">
+It takes about the same amount of time as getpid(). So, it is
+one quick trip into the kernel. I expect that applications will
+typically not care about this extra overhead as long as
+they are able to run.
+</pre>
+      </blockquote>
+      <pre class="moz-quote-pre" wrap="">
+What did you test this on?  A page fault on any modern x86_64 system
+is much, much, much, much slower than a syscall.</pre>
+    </blockquote>
+    <br>
+    I tested it in on a KVM guest running Ubuntu. So, when you say<br>
+    that a page fault is much slower, do you mean a regular page<br>
+    fault that is handled through the VM layer? Here is the relevant
+    code<br>
+    in do_user_addr_fault():<br>
+    <br>
+    <blockquote> <font size="-1">       if
+        (unlikely(access_error(hw_error_code, vma))) {</font><br>
+      <font size="-1">                /*</font><br>
+      <font size="-1">                 * If it is a user execute fault,
+        it could be a trampoline</font><br>
+      <font size="-1">                 * invocation.</font><br>
+      <font size="-1">                 */</font><br>
+      <font size="-1">                if ((hw_error_code &amp; tflags)
+        == tflags &amp;&amp;</font><br>
+      <font size="-1">                    trampfd_fault(vma, regs)) {</font><br>
+      <font size="-1">                       
+        up_read(&amp;mm-&gt;mmap_sem);</font><br>
+      <font size="-1">                        return;</font><br>
+      <font size="-1">                }</font><br>
+      <font size="-1">                bad_area_access_error(regs,
+        hw_error_code, address, vma);</font><br>
+      <font size="-1">                return;</font><br>
+      <font size="-1">        }</font><br>
+      <br>
+      <font size="-1">        /*</font><br>
+      <font size="-1">         * If for any reason at all we couldn't
+        handle the fault,</font><br>
+      <font size="-1">         * make sure we exit gracefully rather
+        than endlessly redo</font><br>
+      <font size="-1">         * the fault.  Since we never set
+        FAULT_FLAG_RETRY_NOWAIT, if</font><br>
+      <font size="-1">         * we get VM_FAULT_RETRY back, the
+        mmap_sem has been unlocked.</font><br>
+      <font size="-1">         *</font><br>
+      <font size="-1">         * Note that handle_userfault() may also
+        release and reacquire mmap_sem</font><br>
+      <font size="-1">         * (and not return with VM_FAULT_RETRY),
+        when returning to userland to</font><br>
+      <font size="-1">         * repeat the page fault later with a
+        VM_FAULT_NOPAGE retval</font><br>
+      <font size="-1">         * (potentially after handling any pending
+        signal during the return to</font><br>
+      <font size="-1">         * userland). The return to userland is
+        identified whenever</font><br>
+      <font size="-1">         * FAULT_FLAG_USER|FAULT_FLAG_KILLABLE are
+        both set in flags.</font><br>
+      <font size="-1">         */</font><br>
+      <font size="-1">        fault = handle_mm_fault(vma, address,
+        flags);</font><br>
+    </blockquote>
+    trampfd faults are instruction faults that go through a different
+    code<br>
+    path than the one that calls handle_mm_fault().<br>
+    <br>
+    Could you clarify?<br>
+    <br>
+    Thanks.<br>
+    <br>
+    Madhavan
+    <blockquote type="cite"
+cite="mid:CALCETrUta5-0TLJ9-jfdehpTAp2Efmukk2npYadFzz9ozOrG2w@mail.gmail.com"></blockquote>
+    <br>
+  </body>
+</html>
+
+--------------AD9A0AC3BF44AC5296C62689--
