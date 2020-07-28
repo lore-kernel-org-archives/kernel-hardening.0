@@ -1,4 +1,4 @@
-Return-Path: <SRS0=au3T=BH=lists.openwall.com=kernel-hardening-return-19475-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=T1kz=BH=lists.openwall.com=kernel-hardening-return-19476-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-13.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 182A0C433DF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 16:58:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 981B1C433E1
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 16:58:08 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6712F2053B
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 16:57:59 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E61CB2053B
+	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 16:58:07 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="NGYC9tEd"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6712F2053B
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="WcBQe+fl"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E61CB2053B
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19475-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16204 invoked by uid 550); 28 Jul 2020 16:57:53 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19476-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17716 invoked by uid 550); 28 Jul 2020 16:57:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,122 +25,75 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25867 invoked from network); 28 Jul 2020 16:32:45 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 46AA720B4908
+Received: (qmail 7460 invoked from network); 28 Jul 2020 16:49:23 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 00A5820B4908
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-	s=default; t=1595953953;
-	bh=Rb0cIoD+PBZ6iPo4SV0GEZ6L0o4DvfLkYqFF52aPh2A=;
+	s=default; t=1595954951;
+	bh=Wp9lMVW/v/maF95Uhld2YeppHP7BkSsiQSbIpc2iGG8=;
 	h=Subject:To:References:From:Date:In-Reply-To:From;
-	b=NGYC9tEdPV6xnCVOdwIeqZvN2dKm0x9MAjUMmotn+8mMWAF3jwAU9jFcfsdT1zLtI
-	 b7kaqYuzPMht/pDkpeohuuGK2OeqJMq4r2wVIMvJUufeWS2YydUzzEWfndiFPJ2qGr
-	 mIHtInG/DXexeidbSrB3P9fJodqZv03UsuUKNwbM=
+	b=WcBQe+flSDX55q/ewMf9Af18CEdGVpPWvr4lx2WIFz5MF35ysP3AWSLhovuuIPJcA
+	 R3zbmGw3qgHmAG6CF4LvqSk2K2IKdZOIS5Qx4ZwAsGDJLulERBJPTE+dh47a06ZwIC
+	 G6ZCs/L/b81Zc5VW94CZcASUxH6PlX38Z+nqyTKc=
 Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: David Laight <David.Laight@ACULAB.COM>,
- "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
- "linux-api@vger.kernel.org" <linux-api@vger.kernel.org>,
- "linux-arm-kernel@lists.infradead.org"
- <linux-arm-kernel@lists.infradead.org>,
- "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>,
- "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>,
- "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
- "linux-security-module@vger.kernel.org"
- <linux-security-module@vger.kernel.org>, "oleg@redhat.com"
- <oleg@redhat.com>, "x86@kernel.org" <x86@kernel.org>
+To: Casey Schaufler <casey@schaufler-ca.com>,
+ kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+ linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+ linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
+ linux-security-module@vger.kernel.org, oleg@redhat.com, x86@kernel.org
 References: <aefc85852ea518982e74b233e11e16d2e707bc32>
  <20200728131050.24443-1-madvenka@linux.microsoft.com>
- <c23de6ec47614f489943e1a89a21dfa3@AcuMS.aculab.com>
+ <3fd22f92-7f45-1b0f-e4fe-857f3bceedd0@schaufler-ca.com>
 From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Message-ID: <f5cfd11b-04fe-9db7-9d67-7ee898636edb@linux.microsoft.com>
-Date: Tue, 28 Jul 2020 11:32:32 -0500
+Message-ID: <80dd0421-062b-bfaa-395a-e52b169acea4@linux.microsoft.com>
+Date: Tue, 28 Jul 2020 11:49:10 -0500
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <c23de6ec47614f489943e1a89a21dfa3@AcuMS.aculab.com>
+In-Reply-To: <3fd22f92-7f45-1b0f-e4fe-857f3bceedd0@schaufler-ca.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
 Content-Language: en-US
 
-Thanks. See inline..
+Thanks.
 
-On 7/28/20 10:13 AM, David Laight wrote:
-> From:  madvenka@linux.microsoft.com
->> Sent: 28 July 2020 14:11
-> ...
->> The kernel creates the trampoline mapping without any permissions. When
->> the trampoline is executed by user code, a page fault happens and the
->> kernel gets control. The kernel recognizes that this is a trampoline
->> invocation. It sets up the user registers based on the specified
->> register context, and/or pushes values on the user stack based on the
->> specified stack context, and sets the user PC to the requested target
->> PC. When the kernel returns, execution continues at the target PC.
->> So, the kernel does the work of the trampoline on behalf of the
->> application.
-> Isn't the performance of this going to be horrid?
+On 7/28/20 11:05 AM, Casey Schaufler wrote:
+>> In this solution, the kernel recognizes certain sequences of instructions
+>> as "well-known" trampolines. When such a trampoline is executed, a page
+>> fault happens because the trampoline page does not have execute permission.
+>> The kernel recognizes the trampoline and emulates it. Basically, the
+>> kernel does the work of the trampoline on behalf of the application.
+> What prevents a malicious process from using the "well-known" trampoline
+> to its own purposes? I expect it is obvious, but I'm not seeing it. Old
+> eyes, I suppose.
 
-It takes about the same amount of time as getpid(). So, it is
-one quick trip into the kernel. I expect that applications will
-typically not care about this extra overhead as long as
-they are able to run.
+You are quite right. As I note below, the attack surface is the
+buffer that contains the trampoline code. Since the kernel does
+check the instruction sequence, the sequence cannot be
+changed by a hacker. But the hacker can presumably change
+the register values and redirect the PC to his desired location.
 
-But I agree that if there is an application that cannot tolerate
-this extra overhead, then it is an issue. See below for further
-discussion.
-
-In the libffi changes I have included in the cover letter, I have
-done it in such a way that trampfd is chosen when current
-security settings don't allow other methods such as
-loading trampoline code into a file and mapping it. In this
-case, the application can at least run with trampfd.
-
+The assumption with trampoline emulation is that the
+system will have security settings that will prevent pages from
+having both write and execute permissions. So, a hacker
+cannot load his own code in a page and redirect the PC to
+it and execute his own code. But he can probably set the
+PC to point to arbitrary locations. For instance, jump to
+the middle of a C library function.
 >
-> If you don't care that much about performance the fixup can
-> all be done in userspace within the fault signal handler.
+>> Here, the attack surface is the buffer that contains the trampoline.
+>> The attack surface is narrower than before. A hacker may still be able to
+>> modify what gets loaded in the registers or modify the target PC to point
+>> to arbitrary locations.
+...
+>> Work that is pending
+>> --------------------
+>>
+>> - I am working on implementing an SELinux setting called "exectramp"
+>>   similar to "execmem" to allow the use of trampfd on a per application
+>>   basis.
+> You could make a separate LSM to do these checks instead of limiting
+> it to SELinux. Your use case, your call, of course.
 
-I do care about performance.
-
-This is a framework to address trampolines. In this initial
-work, I want to establish one basic way for things to work.
-In the future, trampfd can be enhanced for performance.
-For instance, it is easy for an architecture to generate
-the exact instructions required to load specified registers,
-push specified values on the stack and jump to a target
-PC. The kernel can map a page with the generated code
-with execute permissions. In this case, the performance
-issue goes away.
-> Since whatever you do needs the application changed why
-> not change the implementation of nested functions to not
-> need on-stack executable trampolines.
-
-I kinda agree with your suggestion.
-
-But it is up to the GCC folks to change its implementation.
-I am trying to provide a way for their existing implementation
-to work in a more secure way.
-> I can think of other alternatives that don't need much more
-> than an array of 'push constant; jump trampoline' instructions
-> be created (all jump to the same place).
->
-> You might want something to create an executable page of such
-> instructions.
-
-Agreed. And that can be done within this framework as
-I have mentioned above.
-
-But it is not just this trampoline type that I have implemented
-in this patchset. In the future, other types can be implemented
-and other contexts can be defined. Basically, the approach is
-for the user to supply a recipe to the kernel and leave it up to
-the kernel to do it in the best way possible. I am hoping that
-other forms of dynamic code can be addressed in the future
-using the same framework.
-
-*Purely as a hypothetical example*, a user can supply
-instructions in a language such as BPF that the kernel
-understands and have the kernel arrange for that to
-be executed in user context.
+OK. I will research this.
 
 Madhavan
-
-> Registered Address Lakeside, Bramley Road, Mount Farm, Milton Keynes, MK1 1PT, UK
-> Registration No: 1397386 (Wales)
-
