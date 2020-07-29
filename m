@@ -1,23 +1,22 @@
-Return-Path: <SRS0=H/3S=BH=lists.openwall.com=kernel-hardening-return-19484-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=F40b=BI=lists.openwall.com=kernel-hardening-return-19485-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8174EC433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 19:01:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 54F06C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jul 2020 03:16:44 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D088021775
-	for <kernel-hardening@archiver.kernel.org>; Tue, 28 Jul 2020 19:01:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 7AE022070B
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jul 2020 03:16:43 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="eyOucZIc"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D088021775
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19484-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24386 invoked by uid 550); 28 Jul 2020 19:01:26 -0000
+	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="f8pOiQdR"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7AE022070B
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19485-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9534 invoked by uid 550); 29 Jul 2020 03:16:35 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,147 +24,224 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24358 invoked from network); 28 Jul 2020 19:01:25 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 4BC4420B4908
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-	s=default; t=1595962873;
-	bh=zjLEFTK4Orgld2wOZdcW94az96+FP6KvaYi2k5aZSPI=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=eyOucZIcQn3R6OEntESHtyelkaFVjV2UK/nFkDNLCPLGXdph7ZdzSj8TIdGEPaGtU
-	 HNfLQEbH03jQTrCFJfGmYdF0TdR5xD3V/YFVr3NEjScCz38PMbJbBy0OdJ42NGgnrr
-	 Ehzo1Gfr/DDSOvCbbINwW1aQjqHKXsQAPhe9ttIA=
-Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
- Linux FS Devel <linux-fsdevel@vger.kernel.org>,
- linux-integrity <linux-integrity@vger.kernel.org>,
- LKML <linux-kernel@vger.kernel.org>,
- LSM List <linux-security-module@vger.kernel.org>,
- Oleg Nesterov <oleg@redhat.com>, X86 ML <x86@kernel.org>
-References: <20200728131050.24443-1-madvenka@linux.microsoft.com>
- <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
-From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Message-ID: <8b28f4a5-2d9e-0686-40e5-2ea9e37c5933@linux.microsoft.com>
-Date: Tue, 28 Jul 2020 14:01:12 -0500
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.10.0
+Received: (qmail 9497 invoked from network); 29 Jul 2020 03:16:33 -0000
+DKIM-Filter: OpenDKIM Filter v2.10.3 conuserg-11.nifty.com 06T3Fi04000857
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
+	s=dec2015msa; t=1595992544;
+	bh=Ez4pjpjvvIf+iOFLJFngv++ZRsHADJifki9W/RGZoc4=;
+	h=From:To:Cc:Subject:Date:From;
+	b=f8pOiQdRUX+cSusv4eK2PG62/n0Xu+xTyUHSrNAnrnXNo2v/GNZtz+J3k8kpIKpgX
+	 nhrhcN2p41k92GNLtnpCFdYvAZNIksDandTnSM3Ltxjp3wKhUb5H1LXZCD0+j6MoXl
+	 98D2T8L6j8HSj6Un1yZpsIPJgn1h0W76a+GhdH+ZQhU1ENQuMfQ0IdxH7/vinlxpxC
+	 n/hqLFEeWnXysyYLxyUc/R+MxQ3qAmXyj0aX4peZ+nlbX/RZGtWS+CJ1A6jk2ofMS0
+	 kDgRHmKmT9QYbJwIOD5N5JUi8gzRvdlhzA+HwCkfeqRehhPaLIKUnDFgmrQH3f5ddW
+	 zMB8Prlyi+LBQ==
+X-Nifty-SrcIP: [126.25.67.101]
+From: Masahiro Yamada <masahiroy@kernel.org>
+To: linux-kbuild@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Masahiro Yamada <masahiroy@kernel.org>,
+        Emese Revfy <re.emese@gmail.com>,
+        Michal Marek <michal.lkml@markovi.net>,
+        kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Subject: [PATCH 1/2] kbuild: move shared library build rules to scripts/gcc-plugins/Makefile
+Date: Wed, 29 Jul 2020 12:15:36 +0900
+Message-Id: <20200729031537.37926-1-masahiroy@kernel.org>
+X-Mailer: git-send-email 2.25.1
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 8bit
-Content-Language: en-US
 
-I am working on a response to this. I will send it soon.
+The shared library build rules are currently implemented in
+scripts/Makefile.host, but actually GCC-plugin is the only user of
+them. Hence, they do not need to be treewide available.
 
-Thanks.
+Move all the relevant build rules to scripts/gcc-plugins/Makefile.
 
-Madhavan
+I also optimized the build steps so *.so is directly built from .c
+because every upstream plugin is compiled from a single source file.
 
-On 7/28/20 12:31 PM, Andy Lutomirski wrote:
->> On Jul 28, 2020, at 6:11 AM, madvenka@linux.microsoft.com wrote:
->>
->> ﻿From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
->>
->> The kernel creates the trampoline mapping without any permissions. When
->> the trampoline is executed by user code, a page fault happens and the
->> kernel gets control. The kernel recognizes that this is a trampoline
->> invocation. It sets up the user registers based on the specified
->> register context, and/or pushes values on the user stack based on the
->> specified stack context, and sets the user PC to the requested target
->> PC. When the kernel returns, execution continues at the target PC.
->> So, the kernel does the work of the trampoline on behalf of the
->> application.
-> This is quite clever, but now I’m wondering just how much kernel help
-> is really needed. In your series, the trampoline is an non-executable
-> page.  I can think of at least two alternative approaches, and I'd
-> like to know the pros and cons.
->
-> 1. Entirely userspace: a return trampoline would be something like:
->
-> 1:
-> pushq %rax
-> pushq %rbc
-> pushq %rcx
-> ...
-> pushq %r15
-> movq %rsp, %rdi # pointer to saved regs
-> leaq 1b(%rip), %rsi # pointer to the trampoline itself
-> callq trampoline_handler # see below
->
-> You would fill a page with a bunch of these, possibly compacted to get
-> more per page, and then you would remap as many copies as needed.  The
-> 'callq trampoline_handler' part would need to be a bit clever to make
-> it continue to work despite this remapping.  This will be *much*
-> faster than trampfd. How much of your use case would it cover?  For
-> the inverse, it's not too hard to write a bit of asm to set all
-> registers and jump somewhere.
->
-> 2. Use existing kernel functionality.  Raise a signal, modify the
-> state, and return from the signal.  This is very flexible and may not
-> be all that much slower than trampfd.
->
-> 3. Use a syscall.  Instead of having the kernel handle page faults,
-> have the trampoline code push the syscall nr register, load a special
-> new syscall nr into the syscall nr register, and do a syscall. On
-> x86_64, this would be:
->
-> pushq %rax
-> movq __NR_magic_trampoline, %rax
-> syscall
->
-> with some adjustment if the stack slot you're clobbering is important.
->
->
-> Also, will using trampfd cause issues with various unwinders?  I can
-> easily imagine unwinders expecting code to be readable, although this
-> is slowly going away for other reasons.
->
-> All this being said, I think that the kernel should absolutely add a
-> sensible interface for JITs to use to materialize their code.  This
-> would integrate sanely with LSMs and wouldn't require hacks like using
-> files, etc.  A cleverly designed JIT interface could function without
-> seriailization IPIs, and even lame architectures like x86 could
-> potentially avoid shootdown IPIs if the interface copied code instead
-> of playing virtual memory games.  At its very simplest, this could be:
->
-> void *jit_create_code(const void *source, size_t len);
->
-> and the result would be a new anonymous mapping that contains exactly
-> the code requested.  There could also be:
->
-> int jittfd_create(...);
->
-> that does something similar but creates a memfd.  A nicer
-> implementation for short JIT sequences would allow appending more code
-> to an existing JIT region.  On x86, an appendable JIT region would
-> start filled with 0xCC, and I bet there's a way to materialize new
-> code into a previously 0xcc-filled virtual page wthout any
-> synchronization.  One approach would be to start with:
->
-> <some code>
-> 0xcc
-> 0xcc
-> ...
-> 0xcc
->
-> and to create a whole new page like:
->
-> <some code>
-> <some more code>
-> 0xcc
-> ...
-> 0xcc
->
-> so that the only difference is that some code changed to some more
-> code.  Then replace the PTE to swap from the old page to the new page,
-> and arrange to avoid freeing the old page until we're sure it's gone
-> from all TLBs.  This may not work if <some more code> spans a page
-> boundary.  The #BP fixup would zap the TLB and retry.  Even just
-> directly copying code over some 0xcc bytes almost works, but there's a
-> nasty corner case involving instructions that fetch I$ fetch
-> boundaries.  I'm not sure to what extent I$ snooping helps.
->
-> --Andy
+I am still keeping the infrastructure to build a plugin from multiple
+files because Kees suggested to do so in my previous attempt.
+(https://lkml.org/lkml/2019/1/11/1107)
+
+If the plugin, foo.so, is compiled from two files foo.c and foo2.c,
+then you can do like follows:
+
+  foo-objs := foo.o foo2.o
+
+Single-file plugins do not need the *-objs notation.
+
+Signed-off-by: Masahiro Yamada <masahiroy@kernel.org>
+---
+
+ scripts/Makefile.build       |  4 +--
+ scripts/Makefile.clean       |  3 +-
+ scripts/Makefile.host        | 30 ++----------------
+ scripts/gcc-plugins/Makefile | 61 +++++++++++++++++++++++++++++-------
+ 4 files changed, 55 insertions(+), 43 deletions(-)
+
+diff --git a/scripts/Makefile.build b/scripts/Makefile.build
+index 2e8810b7e5ed..d41c1cd453b9 100644
+--- a/scripts/Makefile.build
++++ b/scripts/Makefile.build
+@@ -45,8 +45,8 @@ include $(kbuild-file)
+ 
+ include scripts/Makefile.lib
+ 
+-# Do not include host rules unless needed
+-ifneq ($(hostprogs)$(hostcxxlibs-y)$(hostcxxlibs-m),)
++# Do not include hostprogs rules unless needed
++ifneq ($(hostprogs),)
+ include scripts/Makefile.host
+ endif
+ 
+diff --git a/scripts/Makefile.clean b/scripts/Makefile.clean
+index e2c76122319d..3cdf31218198 100644
+--- a/scripts/Makefile.clean
++++ b/scripts/Makefile.clean
+@@ -29,8 +29,7 @@ subdir-ymn	:= $(addprefix $(obj)/,$(subdir-ymn))
+ 
+ __clean-files	:= $(extra-y) $(extra-m) $(extra-)       \
+ 		   $(always) $(always-y) $(always-m) $(always-) $(targets) $(clean-files)   \
+-		   $(hostprogs) $(hostprogs-y) $(hostprogs-m) $(hostprogs-) $(userprogs) \
+-		   $(hostcxxlibs-y) $(hostcxxlibs-m)
++		   $(hostprogs) $(hostprogs-y) $(hostprogs-m) $(hostprogs-) $(userprogs)
+ 
+ __clean-files   := $(filter-out $(no-clean-files), $(__clean-files))
+ 
+diff --git a/scripts/Makefile.host b/scripts/Makefile.host
+index c8a4a033dc3e..687ca3f309e9 100644
+--- a/scripts/Makefile.host
++++ b/scripts/Makefile.host
+@@ -39,7 +39,6 @@ $(obj)/%.tab.c $(obj)/%.tab.h: $(src)/%.y FORCE
+ # They are linked as C++ code to the executable qconf
+ 
+ __hostprogs := $(sort $(hostprogs))
+-host-cxxshlib := $(sort $(hostcxxlibs-y) $(hostcxxlibs-m))
+ 
+ # C code
+ # Executables compiled from a single .c file
+@@ -61,16 +60,11 @@ host-cxxmulti	:= $(foreach m,$(__hostprogs),$(if $($(m)-cxxobjs),$(m)))
+ # C++ Object (.o) files compiled from .cc files
+ host-cxxobjs	:= $(sort $(foreach m,$(host-cxxmulti),$($(m)-cxxobjs)))
+ 
+-# Object (.o) files used by the shared libaries
+-host-cxxshobjs	:= $(sort $(foreach m,$(host-cxxshlib),$($(m:.so=-objs))))
+-
+ host-csingle	:= $(addprefix $(obj)/,$(host-csingle))
+ host-cmulti	:= $(addprefix $(obj)/,$(host-cmulti))
+ host-cobjs	:= $(addprefix $(obj)/,$(host-cobjs))
+ host-cxxmulti	:= $(addprefix $(obj)/,$(host-cxxmulti))
+ host-cxxobjs	:= $(addprefix $(obj)/,$(host-cxxobjs))
+-host-cxxshlib	:= $(addprefix $(obj)/,$(host-cxxshlib))
+-host-cxxshobjs	:= $(addprefix $(obj)/,$(host-cxxshobjs))
+ 
+ #####
+ # Handle options to gcc. Support building with separate output directory
+@@ -136,25 +130,5 @@ quiet_cmd_host-cxxobjs	= HOSTCXX $@
+ $(host-cxxobjs): $(obj)/%.o: $(src)/%.cc FORCE
+ 	$(call if_changed_dep,host-cxxobjs)
+ 
+-# Compile .c file, create position independent .o file
+-# Note that plugin capable gcc versions can be either C or C++ based
+-# therefore plugin source files have to be compilable in both C and C++ mode.
+-# This is why a C++ compiler is invoked on a .c file.
+-# host-cxxshobjs -> .o
+-quiet_cmd_host-cxxshobjs	= HOSTCXX -fPIC $@
+-      cmd_host-cxxshobjs	= $(HOSTCXX) $(hostcxx_flags) -fPIC -c -o $@ $<
+-$(host-cxxshobjs): $(obj)/%.o: $(src)/%.c FORCE
+-	$(call if_changed_dep,host-cxxshobjs)
+-
+-# Link a shared library, based on position independent .o files
+-# *.o -> .so shared library (host-cxxshlib)
+-quiet_cmd_host-cxxshlib	= HOSTLLD -shared $@
+-      cmd_host-cxxshlib	= $(HOSTCXX) $(KBUILD_HOSTLDFLAGS) -shared -o $@ \
+-			  $(addprefix $(obj)/, $($(target-stem)-objs)) \
+-			  $(KBUILD_HOSTLDLIBS) $(HOSTLDLIBS_$(target-stem).so)
+-$(host-cxxshlib): FORCE
+-	$(call if_changed,host-cxxshlib)
+-$(call multi_depend, $(host-cxxshlib), .so, -objs)
+-
+-targets += $(host-csingle)  $(host-cmulti) $(host-cobjs)\
+-	   $(host-cxxmulti) $(host-cxxobjs) $(host-cxxshlib) $(host-cxxshobjs)
++targets += $(host-csingle) $(host-cmulti) $(host-cobjs) \
++	   $(host-cxxmulti) $(host-cxxobjs)
+diff --git a/scripts/gcc-plugins/Makefile b/scripts/gcc-plugins/Makefile
+index 4014ba7e2fbd..d66949bfeba4 100644
+--- a/scripts/gcc-plugins/Makefile
++++ b/scripts/gcc-plugins/Makefile
+@@ -1,22 +1,61 @@
+ # SPDX-License-Identifier: GPL-2.0
+-GCC_PLUGINS_DIR := $(shell $(CC) -print-file-name=plugin)
+ 
+-HOST_EXTRACXXFLAGS += -I$(GCC_PLUGINS_DIR)/include -I$(src) -std=gnu++98 -fno-rtti
+-HOST_EXTRACXXFLAGS += -fno-exceptions -fasynchronous-unwind-tables -ggdb
+-HOST_EXTRACXXFLAGS += -Wno-narrowing -Wno-unused-variable -Wno-c++11-compat
+-HOST_EXTRACXXFLAGS += -Wno-format-diag
+-
+-$(obj)/randomize_layout_plugin.o: $(objtree)/$(obj)/randomize_layout_seed.h
++$(obj)/randomize_layout_plugin.so: $(objtree)/$(obj)/randomize_layout_seed.h
+ quiet_cmd_create_randomize_layout_seed = GENSEED $@
+ cmd_create_randomize_layout_seed = \
+   $(CONFIG_SHELL) $(srctree)/$(src)/gen-random-seed.sh $@ $(objtree)/include/generated/randomize_layout_hash.h
+ $(objtree)/$(obj)/randomize_layout_seed.h: FORCE
+ 	$(call if_changed,create_randomize_layout_seed)
+-targets = randomize_layout_seed.h randomize_layout_hash.h
++targets += randomize_layout_seed.h randomize_layout_hash.h
++
++# Build rules for plugins
++#
++# No extra code is needed for single-file plugins.
++# For multi-file plugins, use *-objs syntax to list the objects.
++#
++# If the plugin foo.so is compiled from foo.c and foo2.c, you can do:
++#
++# foo-objs := foo.o foo2.o
++
++always-y += $(GCC_PLUGIN)
+ 
+-hostcxxlibs-y := $(GCC_PLUGIN)
+-always-y := $(hostcxxlibs-y)
++GCC_PLUGINS_DIR = $(shell $(CC) -print-file-name=plugin)
+ 
+-$(foreach p,$(hostcxxlibs-y:%.so=%),$(eval $(p)-objs := $(p).o))
++plugin_cxxflags	= -Wp,-MMD,$(depfile) $(KBUILD_HOSTCXXFLAGS) -fPIC \
++		   -I $(GCC_PLUGINS_DIR)/include -I $(obj) -std=gnu++98 \
++		   -fno-rtti -fno-exceptions -fasynchronous-unwind-tables \
++		   -ggdb -Wno-narrowing -Wno-unused-variable -Wno-c++11-compat \
++		   -Wno-format-diag
+ 
++plugin_ldflags	= -shared
++
++plugin-single	:= $(foreach m, $(GCC_PLUGIN), $(if $($(m:%.so=%-objs)),,$(m)))
++plugin-multi	:= $(filter-out $(plugin-single), $(GCC_PLUGIN))
++plugin-objs	:= $(sort $(foreach m, $(plugin-multi), $($(m:%.so=%-objs))))
++
++targets += $(plugin-single) $(plugin-multi) $(plugin-objs)
+ clean-files += *.so
++
++plugin-single	:= $(addprefix $(obj)/, $(plugin-single))
++plugin-multi	:= $(addprefix $(obj)/, $(plugin-multi))
++plugin-objs	:= $(addprefix $(obj)/, $(plugin-objs))
++
++quiet_cmd_plugin_cxx_so_c = HOSTCXX $@
++      cmd_plugin_cxx_so_c = $(HOSTCXX) $(plugin_cxxflags) $(plugin_ldflags) -o $@ $<
++
++$(plugin-single): $(obj)/%.so: $(src)/%.c FORCE
++	$(call if_changed_dep,plugin_cxx_so_c)
++
++quiet_cmd_plugin_ld_so_o = HOSTLD  $@
++      cmd_plugin_ld_so_o = $(HOSTCXX) $(plugin_ldflags) -o $@ \
++			   $(addprefix $(obj)/, $($(target-stem)-objs))
++
++$(plugin-multi): FORCE
++	$(call if_changed,plugin_ld_so_o)
++$(foreach m, $(notdir $(plugin-multi)), $(eval $(obj)/$m: $(addprefix $(obj)/, $($(m:%.so=%-objs)))))
++
++quiet_cmd_plugin_cxx_o_c = HOSTCXX $@
++      cmd_plugin_cxx_o_c = $(HOSTCXX) $(plugin_cxxflags) -c -o $@ $<
++
++$(plugin-objs): $(obj)/%.o: $(src)/%.c FORCE
++	$(call if_changed_dep,plugin_cxx_o_c)
+-- 
+2.25.1
 
