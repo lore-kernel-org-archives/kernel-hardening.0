@@ -1,23 +1,23 @@
-Return-Path: <SRS0=nwqJ=BJ=lists.openwall.com=kernel-hardening-return-19496-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Va6M=BJ=lists.openwall.com=kernel-hardening-return-19497-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E0173C433DF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Jul 2020 14:42:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3F572C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Jul 2020 16:02:22 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1271E20829
-	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Jul 2020 14:42:42 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 91ACD206F5
+	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Jul 2020 16:02:21 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="fr+aQ6wg"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1271E20829
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19496-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11682 invoked by uid 550); 30 Jul 2020 14:42:36 -0000
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="go0s7dqN"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 91ACD206F5
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19497-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17752 invoked by uid 550); 30 Jul 2020 16:02:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,218 +25,101 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11656 invoked from network); 30 Jul 2020 14:42:35 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 447E220B4908
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-	s=default; t=1596120143;
-	bh=JKjym+PetFsYNW9wkVDAjo/yZX3EUJAVDZIUKswMGaQ=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=fr+aQ6wg1KgTGw6nIBKQ+VD8DP0JAdoWoTqnBCw0HXWZsTUfyvrUFPowTbotbg6+R
-	 PVwyphPu3guW5xqko6YXK0fQawCA7Fnc48ucO0Im672RcBmUhK33lx+YLAS4Ec/fWH
-	 sWTg9Z+ywbm24khHImc0gMC6bx02ZKnhzr1M/S3I=
-Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
- Linux FS Devel <linux-fsdevel@vger.kernel.org>,
- linux-integrity <linux-integrity@vger.kernel.org>,
- LKML <linux-kernel@vger.kernel.org>,
- LSM List <linux-security-module@vger.kernel.org>,
- Oleg Nesterov <oleg@redhat.com>, X86 ML <x86@kernel.org>
-References: <20200728131050.24443-1-madvenka@linux.microsoft.com>
- <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
-From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Message-ID: <2352c2b5-053d-fd33-80b0-4f2175dbb607@linux.microsoft.com>
-Date: Thu, 30 Jul 2020 09:42:22 -0500
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.10.0
+Received: (qmail 17732 invoked from network); 30 Jul 2020 16:02:13 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1596124921;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
+	bh=/t9guy78vRPTT6BL7IT2WeMD9e6hnDcbjU3OamD57wI=;
+	b=go0s7dqN6dfQI6SK8IgM7j69z9njFAfRgLbh3LJKWOcTm306UEPquqb4DQuw0z5S7qonjl
+	e+6GKlrzrF1ZXfD5DtDZw4VRGlD9jFMaLXfu1l9olOQ+5/TMHssaIXb2UQCc9FVXxOs1fF
+	t0y5JT/0bdBARxotRG9ih7nULK9KoXY=
+X-MC-Unique: cFYi_ne7Mv2A9VPzGtO_8g-1
+From: Florian Weimer <fweimer@redhat.com>
+To: oss-security@lists.openwall.com, x86-64-abi@googlegroups.com, kernel-hardening@lists.openwall.com
+Cc: Szabolcs Nagy <szabolcs.nagy@arm.com>
+Subject: Alternative CET ABI
+Date: Thu, 30 Jul 2020 18:01:55 +0200
+Message-ID: <87k0ylgff0.fsf@oldenburg2.str.redhat.com>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.3 (gnu/linux)
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Content-Language: en-US
+X-Scanned-By: MIMEDefang 2.79 on 10.5.11.13
+X-Mimecast-Spam-Score: 0
+X-Mimecast-Originator: redhat.com
+Content-Type: text/plain
 
-For some reason my email program is not delivering to all the
-recipients because of some formatting issues. I am resending.
-I apologize. I will try to get this fixed.
+CET (and Arm BTI) restrict targets for indirect jumps and calls to
+landing pads which start with specially-formatted NOP instruction
+dedicated to this purpose (endrb64 in the x86-64 case).
 
-Sorry for the delay. I just needed to think about it a little.
-I will respond to your first suggestion in this email. I will
-respond to the others in separate emails if that is alright
-with you.
+The traditional way of implementing ELF on top of this is to have every
+global function start with that NOP, and also use these NOPs in PLT
+stubs in the main program (which may provide the canonical address of
+functions, i.e. there address may be taken).
 
-On 7/28/20 12:31 PM, Andy Lutomirski wrote:
->> On Jul 28, 2020, at 6:11 AM, madvenka@linux.microsoft.com wrote:
->>
->> ﻿From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
->>
->> The kernel creates the trampoline mapping without any permissions. When
->> the trampoline is executed by user code, a page fault happens and the
->> kernel gets control. The kernel recognizes that this is a trampoline
->> invocation. It sets up the user registers based on the specified
->> register context, and/or pushes values on the user stack based on the
->> specified stack context, and sets the user PC to the requested target
->> PC. When the kernel returns, execution continues at the target PC.
->> So, the kernel does the work of the trampoline on behalf of the
->> application.
-> This is quite clever, but now I’m wondering just how much kernel help
-> is really needed. In your series, the trampoline is an non-executable
-> page.  I can think of at least two alternative approaches, and I'd
-> like to know the pros and cons.
->
-> 1. Entirely userspace: a return trampoline would be something like:
->
-> 1:
-> pushq %rax
-> pushq %rbc
-> pushq %rcx
-> ...
-> pushq %r15
-> movq %rsp, %rdi # pointer to saved regs
-> leaq 1b(%rip), %rsi # pointer to the trampoline itself
-> callq trampoline_handler # see below
->
-> You would fill a page with a bunch of these, possibly compacted to get
-> more per page, and then you would remap as many copies as needed.  The
-> 'callq trampoline_handler' part would need to be a bit clever to make
-> it continue to work despite this remapping.  This will be *much*
-> faster than trampfd. How much of your use case would it cover?  For
-> the inverse, it's not too hard to write a bit of asm to set all
-> registers and jump somewhere.
+The downside of this approach is that all functions in the process
+become available for execution, whether they are used in the original
+program or not.  (In principle, control flow integrity provides
+reasonably efficient ways to counteract that, by keeping track of symbol
+resolution and verifying flags at the start of critical functions, but
+we do not have automated support for that today, and there are some open
+issues about complex call graphs.)
 
-Let me state my understanding of what you are suggesting. Correct me if
-I get anything wrong. If you don't mind, I will also take the liberty
-of generalizing and paraphrasing your suggestion.
+CET has a NOTRACK prefix for indirect jumps/and calls.  It asserts that
+the jump target address is trusted and disables the control flow
+integrity check.  It is expected to be used with jump tables and the
+like, in conjunction with RELRO (so that the address has been loaded
+from read-only memory).
 
-The goal is to create two page mappings that are adjacent to each other:
+I think this also provides support for a completely different ABI, where
+global functions are not automatically addressable.  It depends on
+BIND_NOW and RELRO, for a read-only GOT.
 
-- a code page that contains template code for a trampoline. Since the
-  template code would tend to be small in size, pack as many of them
-  as possible within a page to conserve memory. In other words, create
-  an array of the template code fragments. Each element in the array
-  would be used for one trampoline instance.
+First of all, it needs new relocation types that tell the static link
+editor which symbol references are address-significant.  Generally,
+function addresses which end up in RELRO data only are not
+address-significant if they are used immediately in call instructions
+(without indirection of any form through writable memory).  This means
+that direct calls do not have address significance.  For vtables, it
+depends on how they are used; their function addresses probably need to
+be treated conservatively as address-significant (because the vtable
+pointer is in writable memory; at least for C++ vtables, the address of
+a virtual member function is not significant).
 
-- a data page that contains an array of data elements. Corresponding
-  to each code element in the code page, there would be a data element
-  in the data page that would contain data that is specific to a
-  trampoline instance.
+Functions no longer start with the ENDBR64 prefix.  Instead, the link
+editor produces a PLT entry with an ENDBR64 prefix if it detects any
+address-significant relocation for it.  The PLT entry performs a NOTRACK
+jump to the target address.  This assumes that the target address is
+subject to RELRO, of course, so that redirection is not possible.
+Without address-significant relocations, the link editor produces a PLT
+entry without the ENDBR64 prefix (but still with the NOTRACK jump), or
+perhaps no PLT entry at all.
 
-- Code will access data using PC-relative addressing.
+The net effect is that only functions which have their address taken in
+the original program can be called through indirect function calls.  For
+example, this means that the system function in libc is usually dormant,
+and cannot be reached, even if an attacker can cause the process to call
+arbitrary functions with an arbitrary string argument.  The reason is
+that the system function lacks the ENDBR64 prefix, and all PLT entries
+calling it also lack it.
 
-The management of the code pages and allocation for each trampoline
-instance would all be done in user space.
+dlopen'ing a shared object which has a address-significant relocation
+against a function is not a problem under this model.  Either there
+already was an address-significant relocation before, then the function
+already has a canonical address, and that can be used.  Or there was
+not, then the just-loaded PLT entry (which as an ENDBR64 prefix)
+provides the canonical address function.
 
-Is this the general idea?
+To support dlsym, each global function definition would have a separate
+ENDBR64-enabled PLT/GOT slot for that, with the GOT slot only filled in
+at the time of the dlsym call (with mprotect calls around that, with
+some hand-waving required these can never fail).  This is probably the
+most awkward part about all this.  Alternatively, these stubs could also
+be generated at run time, from a pre-computed code page.
 
-Creating a code page
-----------------------------
+Obviously, it is too late for that now for x86-64, but maybe someone
+else gets a chance to try this.
 
-We can do this in one of the following ways:
-- Allocate a writable page at run time, write the template code into
-  the page and have execute permissions on the page.
+Thanks,
+Florian
 
-- Allocate a writable page at run time, write the template code into
-  the page and remap the page with just execute permissions.
-
-- Allocate a writable page at run time, write the template code into
-  the page, write the page into a temporary file and map the file with
-  execute permissions.
-
-- Include the template code in a code page at build time itself and
-  just remap the code page each time you need a code page.
-
-Pros and Cons
--------------------
-
-As long as the OS provides the functionality to do this and the security
-subsystem in the OS allows the actions, this is totally feasible. If not,
-we need something like trampfd.
-
-As Floren mentioned, libffi does implement something like this for MACH.
-
-In fact, in my libffi changes, I use trampfd only after all the other methods
-have failed because of security settings.
-
-But the above approach only solves the problem for this simple type of
-trampoline. It does not provide a framework for addressing more complex types
-or even other forms of dynamic code.
-
-Also, each application would need to implement this solution for itself
-as opposed to relying on one implementation provided by the kernel.
-
-Trampfd-based solution
--------------------------------
-
-I outlined an enhancement to trampfd in a response to David Laight. In this
-enhancement, the kernel is the one that would set up the code page.
-
-The kernel would call an arch-specific support function to generate the
-code required to load registers, push values on the stack and jump to a PC
-for a trampoline instance based on its current context. The trampoline
-instance data could be baked into the code.
-
-My initial idea was to only have one trampoline instance per page. But I
-think I can implement multiple instances per page. I just have to manage
-the trampfd file private data and VMA private data accordingly to map an
-element in a code page to its trampoline object.
-
-The two approaches are similar except for the detail about who sets up
-and manages the trampoline pages. In both approaches, the performance problem
-is addressed. But trampfd can be used even when security settings are
-restrictive.
-
-Is my solution acceptable?
-
-A couple of things
-------------------------
-
-- In the current trampfd implementation, no physical pages are actually
-  allocated. It is just a virtual mapping. From a memory footprint
-  perspective, this is good. May be, we can let the user specify if
-  he wants a fast trampoline that consumes memory or a slow one that doesn't?
-
-- In the future, we may define additional types that need the kernel to do
-  the job. Examples:
-
-    - The kernel may have a trampoline type for which it is not willing
-       or able to generate code
-
-    - The kernel could emulate dynamic code for the user
-
-     - The kernel could interpret dynamic code for the user
-
-     - The kernel could allow the user to access some kernel functionality
-        using the framework
-
-  In such cases, there isn't any physical code page that gets mapped into
-  the user address space. We need the kernel to handle the address fault
-  and provide the functionality.
-
-One question for the reviewers
-----------------------------------------
-
-Do you think that the file descriptor based approach is fine? Or, does this
-need a regular system call based implementation? There are some advantages
-with a regular system call:
-
-- We don't consume file descriptors. E.g., in libffi, we have to
-  keep the file descriptor open for a closure until the closure
-  is freed.
-
-- Trampoline operations can be performed based on the trampoline
-  address instead of an fd.
-
-- Sharing of objects across processes can be implemented through
-  a regular ID based method rather than sending the file descriptor
-  over a unix domain socket.
-
-- Shared objects can be persistent.
-
-- An fd based API does structure parsing in read()/write() calls
-  to obtain arguments. With a regular system call, that is not
-  necessary.
-
-Please let me know your thoughts.
-
-Madhavan
