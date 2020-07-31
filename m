@@ -1,22 +1,22 @@
-Return-Path: <SRS0=Lcwr=BK=lists.openwall.com=kernel-hardening-return-19504-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=kT4R=BK=lists.openwall.com=kernel-hardening-return-19505-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-7.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+	DKIM_VALID,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E7158C433E0
-	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jul 2020 04:17:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E4BBFC433E0
+	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jul 2020 12:50:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 40FA821744
-	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jul 2020 04:17:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3F6F92087C
+	for <kernel-hardening@archiver.kernel.org>; Fri, 31 Jul 2020 12:50:06 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="RG9cV5YU"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 40FA821744
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="kYONy1EG"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3F6F92087C
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19504-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 4074 invoked by uid 550); 31 Jul 2020 04:17:17 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19505-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29932 invoked by uid 550); 31 Jul 2020 12:49:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,129 +24,90 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 4038 invoked from network); 31 Jul 2020 04:17:15 -0000
-DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-01.nifty.com 06V4GsgB006073
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
-	s=dec2015msa; t=1596169015;
-	bh=R1IrfvP9cuBPNOuEO/yY0TGNkg04pM5nMVUeGi+yTK8=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=RG9cV5YUeDYircoip5N+K9h2SxEtE9Y8oHHWV/qPJECi1kRphgYBVi/n1pvuOe0oR
-	 oYoYQ3F7gj4MJRsKkg2AXyMyR1va8Y8MaP+DPmSl2IsVFr28ogcU9g9aiQ8YSCSt1a
-	 b9/nSn7IrH/U+ZPRVBxt9oc9ZBcst8EgyXLkEkDtMfPLG8v9JjfrBSHwT/Svv/aq3k
-	 dFQH+k3VVrHKnVLRQTZWoj0sljhsLSJ0KbbmJ9oB3VDPDe4YYeEsoKS3SmkfpUMqEu
-	 j1YODArqV5lUy0RJYf6/ZCaRIZ3yjGcLdV8sYWmyYOdPWjR5+eyCAIzZyZbqkOBK15
-	 zfhZSu8SjjDZQ==
-X-Nifty-SrcIP: [209.85.217.45]
-X-Gm-Message-State: AOAM531cY7KtffmkDHELj71kVzDUPp+deav3a7ORu+cjMyGNPdys/blZ
-	F3rRZu1vRS3STBHwAfJpkRnOkLSmqJAC2WGsntA=
-X-Google-Smtp-Source: ABdhPJz+g9DAv5sd7YqE3RvXYJ01euot2DXSjrp71DbvIbsn55drU8dWkBhosZUpWoJaGkCWqiazywDaYVxaITNEqEE=
-X-Received: by 2002:a67:de09:: with SMTP id q9mr1889244vsk.179.1596169014216;
- Thu, 30 Jul 2020 21:16:54 -0700 (PDT)
+Received: (qmail 3863 invoked from network); 31 Jul 2020 09:20:21 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=sender:from:to:cc:subject:in-reply-to:references:date:message-id
+         :mime-version;
+        bh=8mD+nqB33TkoOoj/gJgWM5VeBC7j95G7SbgFkstL1+Y=;
+        b=kYONy1EGZKl0txXMXdnNJT1Y23m2++O6HdGV8zLgsm4sCEMAk4SBmQNWhlxd1RyFjF
+         mH9uaD7kMfSnJQuXDiqulF7cksFMlMFyQu1uhXZJKRRkx/rfeldFPCsO2st4PnmT/kDq
+         GgQWPaMYzTpc2zdZcMeYUCGhg0EPuQUpoOWYoK/2aGEYM9vehvSOPrTkPc3veCvTt9+4
+         vBmykpfMFEq9dDLUBzRBMzYkCzqkG+OST7U2uHzggevt/iPDVH0iMUQZFOaFL7U7aUQA
+         EGMxdwknpaXiN9Z1bmHGl6cwvZpRnPncn/hh48VAwiif+7nAFYKUPceAD4e6TjEWS9uL
+         A6iw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:from:to:cc:subject:in-reply-to:references
+         :date:message-id:mime-version;
+        bh=8mD+nqB33TkoOoj/gJgWM5VeBC7j95G7SbgFkstL1+Y=;
+        b=cpyJ1UFyahRX1rWKErgvAQUcpubCBJ0PjmkD0TYD5F3J5MqwNrhYBhvqX4rTk2udt9
+         LiF60w8TqxAngI3XDtibxgON8GZY6LV8EGqrK4peAgDLRCKIBGtpKWgyKOXARX/tbt82
+         zgQtRc1jIhAUB96cDk36KqFTf5S8eR8djxkNDoPmjudYN+4fH3+C1imIOnRuxNj4+umf
+         ftM8G1uAp/dy91Ypoll8H4IiN7crahtXDJqU6neY9T6pfjGMhn+xgMIIlqTe5bAwUBnG
+         1HfZ/umQMgzKNHXVAPZp8U9fBwDzldyvZqinf9CUWDrGabn6Y2N9qKUpkAMuGINQERDC
+         cSjw==
+X-Gm-Message-State: AOAM53048sZS4U1MZEvZjGFlcNn81DW8rOM8eJsO19j0XUwxJQ04smXA
+	AOIjCI1Ty8avwsC+mtwjlr4WmVbgWrs=
+X-Google-Smtp-Source: ABdhPJzX+r8g5hxwtM4cWf4LYMeGpaFl7y04AtV1EWXCDj7oMyC8Q9bisj8CbBCupPDW3m2AB12hbw==
+X-Received: by 2002:a19:8607:: with SMTP id i7mr1555288lfd.208.1596187209458;
+        Fri, 31 Jul 2020 02:20:09 -0700 (PDT)
+Sender: Felipe Balbi <balbif@gmail.com>
+From: Felipe Balbi <balbi@kernel.org>
+To: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Allen Pais <allen.lkml@gmail.com>, Oscar Carter <oscar.carter@gmx.com>, Romain Perier <romain.perier@gmail.com>, Dmitry Torokhov <dmitry.torokhov@gmail.com>, Kevin Curtis <kevin.curtis@farsite.co.uk>, "David S. Miller" <davem@davemloft.net>, Jakub Kicinski <kuba@kernel.org>, Harald Freudenberger <freude@linux.ibm.com>, Heiko Carstens <hca@linux.ibm.com>, Vasily Gorbik <gor@linux.ibm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jiri Slaby <jslaby@suse.com>, Jason Wessel <jason.wessel@windriver.com>, Daniel
+ Thompson <daniel.thompson@linaro.org>, Douglas Anderson <dianders@chromium.org>, Mitchell Blank Jr <mitch@sfgoth.com>, Julian
+ Wiedmann <jwi@linux.ibm.com>, Karsten Graul <kgraul@linux.ibm.com>, Ursula
+ Braun <ubraun@linux.ibm.com>, Jaroslav Kysela <perex@perex.cz>, Takashi Iwai <tiwai@suse.com>, Christian Gromm <christian.gromm@microchip.com>, Nishka
+ Dasgupta <nishkadg.linux@gmail.com>, Masahiro Yamada <masahiroy@kernel.org>, Stephen Boyd <swboyd@chromium.org>, "Matthew Wilcox \(Oracle\)" <willy@infradead.org>, Wambui Karuga <wambui.karugax@gmail.com>, Guenter
+ Roeck <linux@roeck-us.net>, Chris Packham <chris.packham@alliedtelesis.co.nz>, Kyungtae Kim <kt0755@gmail.com>, Kuppuswamy Sathyanarayanan <sathyanarayanan.kuppuswamy@linux.intel.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Jonathan Corbet <corbet@lwn.net>, Peter
+ Zijlstra <peterz@infradead.org>, Will Deacon <will@kernel.org>, linux-input@vger.kernel.org, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, linux-s390@vger.kernel.org, devel@driverdev.osuosl.org, linux-usb@vger.kernel.org, kgdb-bugreport@lists.sourceforge.net, alsa-devel@alsa-project.org, kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH 1/3] usb: gadget: udc: Avoid tasklet passing a global
+In-Reply-To: <20200716030847.1564131-2-keescook@chromium.org>
+References: <20200716030847.1564131-1-keescook@chromium.org> <20200716030847.1564131-2-keescook@chromium.org>
+Date: Fri, 31 Jul 2020 12:20:02 +0300
+Message-ID: <87zh7gm471.fsf@kernel.org>
 MIME-Version: 1.0
-References: <20200729031537.37926-1-masahiroy@kernel.org> <202007291401.A50E25BB@keescook>
-In-Reply-To: <202007291401.A50E25BB@keescook>
-From: Masahiro Yamada <masahiroy@kernel.org>
-Date: Fri, 31 Jul 2020 13:16:17 +0900
-X-Gmail-Original-Message-ID: <CAK7LNASRoqNfO+JAj9kKRgi3ee5mcdV99spy4t6jKG1RGC4KXA@mail.gmail.com>
-Message-ID: <CAK7LNASRoqNfO+JAj9kKRgi3ee5mcdV99spy4t6jKG1RGC4KXA@mail.gmail.com>
-Subject: Re: [PATCH 1/2] kbuild: move shared library build rules to scripts/gcc-plugins/Makefile
-To: Kees Cook <keescook@chromium.org>
-Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
-        Emese Revfy <re.emese@gmail.com>,
-        Michal Marek <michal.lkml@markovi.net>,
-        Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: multipart/signed; boundary="=-=-=";
+	micalg=pgp-sha256; protocol="application/pgp-signature"
 
-On Thu, Jul 30, 2020 at 6:18 AM Kees Cook <keescook@chromium.org> wrote:
+--=-=-=
+Content-Type: text/plain
+Content-Transfer-Encoding: quoted-printable
+
+Hi,
+
+Kees Cook <keescook@chromium.org> writes:
+> There's no reason for the tasklet callback to set an argument since it
+> always uses a global. Instead, use the global directly, in preparation
+> for converting the tasklet subsystem to modern callback conventions.
 >
-> On Wed, Jul 29, 2020 at 12:15:36PM +0900, Masahiro Yamada wrote:
-> > The shared library build rules are currently implemented in
-> > scripts/Makefile.host, but actually GCC-plugin is the only user of
-> > them. Hence, they do not need to be treewide available.
->
-> Are none of the VDSOs intending to use these rules?
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
+looks okay to me.
 
-Right.
+Acked-by: Felipe Balbi <balbi@kernel.org>
 
-GCC plugin .so files are compiled for the _host_ architecture.
-vDSO .so files are compiled for the _target_ architecture.
+=2D-=20
+balbi
 
-They are built in completely different ways.
+--=-=-=
+Content-Type: application/pgp-signature; name="signature.asc"
 
+-----BEGIN PGP SIGNATURE-----
 
-
-> > Move all the relevant build rules to scripts/gcc-plugins/Makefile.
-> >
-> > I also optimized the build steps so *.so is directly built from .c
-> > because every upstream plugin is compiled from a single source file.
-> >
-> > I am still keeping the infrastructure to build a plugin from multiple
-> > files because Kees suggested to do so in my previous attempt.
-> > (https://lkml.org/lkml/2019/1/11/1107)
-> >
-> > If the plugin, foo.so, is compiled from two files foo.c and foo2.c,
-> > then you can do like follows:
-> >
-> >   foo-objs := foo.o foo2.o
-> >
-> > Single-file plugins do not need the *-objs notation.
-> >
-> > Signed-off-by: Masahiro Yamada <masahiroy@kernel.org>
->
-> But, yeah, sure!
->
-> Acked-by: Kees Cook <keescook@chromium.org>
->
-> Unrelated, but I do note that objtool maybe has the wrong indentation,
-> path name reporting, and tool names (HOSTLD vs CC)?
-
-
-Right.
-Many people know it.
-
-
-objtool opts out the Kbuild instructure.
-
-I wrote a patch to make objtool join the Kbuild:
-https://patchwork.kernel.org/patch/10839051/
-
-The objtool maintainers refused to do this.
-
-
-
-
-
-
-> ...
->   HOSTCC  scripts/asn1_compiler
->   HOSTCC  scripts/extract-cert
->   HOSTCC  scripts/genksyms/genksyms.o
->   YACC    scripts/genksyms/parse.tab.[ch]
->   LEX     scripts/genksyms/lex.lex.c
->   DESCEND  objtool
->   HOSTCXX scripts/gcc-plugins/cyc_complexity_plugin.so
->   HOSTCXX scripts/gcc-plugins/latent_entropy_plugin.so
->   HOSTCXX scripts/gcc-plugins/structleak_plugin.so
->   GENSEED scripts/gcc-plugins/randomize_layout_seed.h
->   HOSTCXX scripts/gcc-plugins/stackleak_plugin.so
->   HOSTCC  scripts/genksyms/parse.tab.o
->   HOSTCC  scripts/genksyms/lex.lex.o
->   HOSTCC   /home/kees/src/linux-build/plugins/tools/objtool/fixdep.o
->   HOSTLD  arch/x86/tools/relocs
->   HOSTLD   /home/kees/src/linux-build/plugins/tools/objtool/fixdep-in.o
->   LINK     /home/kees/src/linux-build/plugins/tools/objtool/fixdep
->   CC       /home/kees/src/linux-build/plugins/tools/objtool/exec-cmd.o
->   CC       /home/kees/src/linux-build/plugins/tools/objtool/help.o
->   CC       /home/kees/src/linux-build/plugins/tools/objtool/weak.o
-> ...
->
-> --
-> Kees Cook
-
-
-
---
-Best Regards
-Masahiro Yamada
+iQIzBAEBCAAdFiEElLzh7wn96CXwjh2IzL64meEamQYFAl8j4kIACgkQzL64meEa
+mQZ6zQ//ZXtGFv/fRsm1+M9OI2t7qOY4ZsyygLSKzdncJp2pYVhKXNiMOjtYNxRV
+Hv8GjhXRlsOn7pZZ+BqcYWDjvJM20owDzT0NS7oeLKFeIXB6QR5Y/viDETy3MkId
+eq1gPhxbK2szcyYVUqC6/qaOuDVpPV4PKlLDPfXev8REL78mYBAgKb5a8kVuZnjo
+Lcg64xhnc9YAc5gj+f2HnybldhmU606mRQt/RDQlK9uUymMsD7rZw0L6zfV5r7AY
+0oWUzryBMvVMMZ3l0ZpdiSWqoRVgOplih5AHcH4SFZq/5Rv14F7ILAV3JNsIoGZ3
+x7MwtAJuIBmBNr48PSDtLu5ntF8OpRLhwBvt6onOzbOyqpk6TnjfbmVHcorlWtfE
+tSy2qOo9W6Smc6NsFLcaoYlZUVAiPr2R0Ogap0ISvFF6nBe1b3CEp9Hco79blWCy
+1CiCwhq17U6q3tgrRRc34+zewtdAYw+Xze3TNBhQi3EOuCjNNXAoNl6v20/8LOsI
+lijSWagZFc7o3LM9xsxWhFVrAWI5bXY+1CmPdwd4dHbaCXg2rcQ33MGP0Uum/bHu
+DijJZ1LszhIf1RgXrOD/kmY/WmSh4Nh6nQkdssxXSabz0oN0wsuxMfgNqnkcnIj9
+56pCsJHf2phFZyTaMDgzL17tcfor5xQQs27yAoGI1ygKelTGAjY=
+=ua4k
+-----END PGP SIGNATURE-----
+--=-=-=--
