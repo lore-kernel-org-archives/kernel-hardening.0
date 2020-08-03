@@ -1,4 +1,4 @@
-Return-Path: <SRS0=iMWS=BN=lists.openwall.com=kernel-hardening-return-19534-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=7JBJ=BN=lists.openwall.com=kernel-hardening-return-19535-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-14.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1,
 	USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D19D8C433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 15:57:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 84AC6C433E0
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 15:59:23 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2FCBE2072A
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 15:57:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id D15102072A
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 15:59:22 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="GJf0dTtz"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2FCBE2072A
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="CmZKNOH/"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D15102072A
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19534-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19508 invoked by uid 550); 3 Aug 2020 15:57:26 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19535-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21663 invoked by uid 550); 3 Aug 2020 15:59:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,19 +25,18 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19488 invoked from network); 3 Aug 2020 15:57:25 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com CC1CC20B4908
+Received: (qmail 21640 invoked from network); 3 Aug 2020 15:59:17 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 0B58220B4908
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-	s=default; t=1596470233;
-	bh=B84BScSs7K0//hJ9cYUzqCUYQtbCiiAWgLTuQ5Ph+RQ=;
+	s=default; t=1596470345;
+	bh=61JblHzq4qhtQkPzj2G3tGZ75oReI0NIx105fosLKrI=;
 	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=GJf0dTtzCa8o8nzBmlcmO+m4jvGBEduNpvn6rNHY16DZPJb8hqSD/6aHy2OPigkFd
-	 evDzXsdzFZk3yChasnyS7SjYhR4fSIf5geRNzZvB4V4J1D4UB/gYfSQTzo2+RbNkDd
-	 w7n1jOQ1OCcqAgvwmAvXOwhZDHKSoOh+5vCEa2n0=
+	b=CmZKNOH/KALtRXbeh0M5SY5+FforFJaVBEotq9VkjW4009Y9gJ4Y8SiPFK60B63Ek
+	 PKT5VksgRHxxB2UeKRaW8GTHJZ0qNSXo3Bv3a1oHMYNew4GGXbm8WZ2IzEPQtDPc28
+	 jbSZxdwUc01p8o/CYVhWcBeeqUmlISxGx9Y/uaWA=
 Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: David Laight <David.Laight@ACULAB.COM>, 'Pavel Machek' <pavel@ucw.cz>
-Cc: 'Andy Lutomirski' <luto@kernel.org>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
+To: David Laight <David.Laight@ACULAB.COM>, Andy Lutomirski <luto@kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
  Linux API <linux-api@vger.kernel.org>,
  linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
  Linux FS Devel <linux-fsdevel@vger.kernel.org>,
@@ -47,65 +46,61 @@ Cc: 'Andy Lutomirski' <luto@kernel.org>,
  Oleg Nesterov <oleg@redhat.com>, X86 ML <x86@kernel.org>
 References: <20200728131050.24443-1-madvenka@linux.microsoft.com>
  <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
- <b9879beef3e740c0aeb1af73485069a8@AcuMS.aculab.com>
- <20200802115600.GB1162@bug>
- <c02fbae7a0754a58884b370657575845@AcuMS.aculab.com>
+ <3b916198-3a98-bd19-9a1c-f2d8d44febe8@linux.microsoft.com>
+ <a5fb2778a86f45b58ef5dd35228d950b@AcuMS.aculab.com>
 From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Message-ID: <06e4cfc7-f1d5-5311-2e1c-603cf408c9f7@linux.microsoft.com>
-Date: Mon, 3 Aug 2020 10:57:12 -0500
+Message-ID: <8f938da2-a10d-ca15-56f0-70315c678771@linux.microsoft.com>
+Date: Mon, 3 Aug 2020 10:59:04 -0500
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <c02fbae7a0754a58884b370657575845@AcuMS.aculab.com>
+In-Reply-To: <a5fb2778a86f45b58ef5dd35228d950b@AcuMS.aculab.com>
 Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 Content-Language: en-US
 
 
 
-On 8/3/20 3:08 AM, David Laight wrote:
-> From: Pavel Machek <pavel@ucw.cz>
->> Sent: 02 August 2020 12:56
->> Hi!
+On 8/3/20 3:23 AM, David Laight wrote:
+> From: Madhavan T. Venkataraman
+>> Sent: 02 August 2020 19:55
+>> To: Andy Lutomirski <luto@kernel.org>
+>> Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; Linux API <linux-api@vger.kernel.org>;
+>> linux-arm-kernel <linux-arm-kernel@lists.infradead.org>; Linux FS Devel <linux-
+>> fsdevel@vger.kernel.org>; linux-integrity <linux-integrity@vger.kernel.org>; LKML <linux-
+>> kernel@vger.kernel.org>; LSM List <linux-security-module@vger.kernel.org>; Oleg Nesterov
+>> <oleg@redhat.com>; X86 ML <x86@kernel.org>
+>> Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
 >>
->>>> This is quite clever, but now I???m wondering just how much kernel help
->>>> is really needed. In your series, the trampoline is an non-executable
->>>> page.  I can think of at least two alternative approaches, and I'd
->>>> like to know the pros and cons.
->>>>
->>>> 1. Entirely userspace: a return trampoline would be something like:
->>>>
->>>> 1:
->>>> pushq %rax
->>>> pushq %rbc
->>>> pushq %rcx
->>>> ...
->>>> pushq %r15
->>>> movq %rsp, %rdi # pointer to saved regs
->>>> leaq 1b(%rip), %rsi # pointer to the trampoline itself
->>>> callq trampoline_handler # see below
->>> For nested calls (where the trampoline needs to pass the
->>> original stack frame to the nested function) I think you
->>> just need a page full of:
->>> 	mov	$0, scratch_reg; jmp trampoline_handler
->> I believe you could do with mov %pc, scratch_reg; jmp ...
+>> More responses inline..
 >>
->> That has advantage of being able to share single physical
->> page across multiple virtual pages...
-> A lot of architecture don't let you copy %pc that way so you would
-> have to use 'call' - but that trashes the return address cache.
-> It also needs the trampoline handler to know the addresses
-> of the trampolines.
+>> On 7/28/20 12:31 PM, Andy Lutomirski wrote:
+>>>> On Jul 28, 2020, at 6:11 AM, madvenka@linux.microsoft.com wrote:
+>>>>
+>>>> ﻿From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
+>>>>
+>>> 2. Use existing kernel functionality.  Raise a signal, modify the
+>>> state, and return from the signal.  This is very flexible and may not
+>>> be all that much slower than trampfd.
+>> Let me understand this. You are saying that the trampoline code
+>> would raise a signal and, in the signal handler, set up the context
+>> so that when the signal handler returns, we end up in the target
+>> function with the context correctly set up. And, this trampoline code
+>> can be generated statically at build time so that there are no
+>> security issues using it.
+>>
+>> Have I understood your suggestion correctly?
+> I was thinking that you'd just let the 'not executable' page fault
+> signal happen (SIGSEGV?) when the code jumps to on-stack trampoline
+> is executed.
+>
+> The user signal handler can then decode the faulting instruction
+> and, if it matches the expected on-stack trampoline, modify the
+> saved registers before returning from the signal.
+>
+> No kernel changes and all you need to add to the program is
+> an architecture-dependant signal handler.
 
-Do you which ones don't allow you to copy %pc?
-
-Some of the architctures do not have PC-relative data references.
-If they do not allow you to copy the PC into a general purpose
-register, then there is no way to implement the statically defined
-trampoline that has been discussed so far. In these cases, the
-trampoline has to be generate at runtime.
-
-Thanks.
+Understood.
 
 Madhavan
-
