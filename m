@@ -1,23 +1,23 @@
-Return-Path: <SRS0=2EkI=BN=lists.openwall.com=kernel-hardening-return-19542-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=4qzO=BN=lists.openwall.com=kernel-hardening-return-19543-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 56F0CC433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 18:18:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D0F1AC433DF
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 18:29:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5336820792
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 18:18:14 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E5A19207DF
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 18:29:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="UCEO7FRl"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5336820792
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19542-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9221 invoked by uid 550); 3 Aug 2020 18:18:08 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="DjzvW0b8"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E5A19207DF
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19543-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15377 invoked by uid 550); 3 Aug 2020 18:29:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,73 +25,132 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8177 invoked from network); 3 Aug 2020 18:18:08 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1596478676;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=VMw7i1cpHh8qkyXWE10tJgStQ1flp9PULSkxAaczHSg=;
-	b=UCEO7FRl8sEH8QMcLU7xvv3t9fKlWYiJwYC/PE8ek3G4WbVsNVzNhDjTeITkU8hk4m/JJH
-	9i1pyu4zUzaG9WQK1mG7r4zqhn8y5M4lStmoKutTWSbetJUGcjrdXsdgJu5aMYf/wJPOUo
-	6yUNthUfZq9mBH0B2TbBcPYhfRs3W/A=
-X-MC-Unique: fFB4_STrOvKdjZdsookBXA-1
-Subject: Re: [PATCH v4 00/10] Function Granular KASLR
-To: Kees Cook <keescook@chromium.org>,
- Evgenii Shatokhin <eshatokhin@virtuozzo.com>
-Cc: Kristen Carlson Accardi <kristen@linux.intel.com>,
- Miroslav Benes <mbenes@suse.cz>, tglx@linutronix.de, mingo@redhat.com,
- bp@alien8.de, arjan@linux.intel.com, x86@kernel.org,
- linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
- rick.p.edgecombe@intel.com, live-patching@vger.kernel.org,
- Josh Poimboeuf <jpoimboe@redhat.com>, Jessica Yu <jeyu@kernel.org>,
- "Frank Ch. Eigler" <fche@redhat.com>
-References: <20200717170008.5949-1-kristen@linux.intel.com>
- <alpine.LSU.2.21.2007221122110.10163@pobox.suse.cz>
- <e9c4d88b-86db-47e9-4299-3fac45a7e3fd@virtuozzo.com>
- <202008031043.FE182E9@keescook>
-From: Joe Lawrence <joe.lawrence@redhat.com>
-Message-ID: <fc6d2289-af97-5cf8-a4bb-77c2b0b8375c@redhat.com>
-Date: Mon, 3 Aug 2020 14:17:41 -0400
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.5.0
+Received: (qmail 14333 invoked from network); 3 Aug 2020 18:29:52 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:mime-version:content-disposition;
+        bh=Jp+RUdqxn2bqBAJrnl3/EtyTRS168jjNSIe2CptEcmg=;
+        b=DjzvW0b8CiSYl0WsHAxDm6vYeLjke22BrUVzGogsnNj1LZjAWNzxHJFpLFhoulfDgl
+         Ni25KCT3eSrzC04fZ61g1Ay9PNx3FccY2qTnpZuQL5hc32pGb4N09mVekuDj9MnPA96w
+         dYFvfR/u1sUYaqOjbobYBDeStPIf+ee3utRyM=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:mime-version
+         :content-disposition;
+        bh=Jp+RUdqxn2bqBAJrnl3/EtyTRS168jjNSIe2CptEcmg=;
+        b=H76cEP5pQAuOzR4qPXHDhVzbeNsnMgPACthgASPbgWOocFFcds5qjk8sjAMhkqF1Le
+         hl9AszBJ4MikiJjeOjbhwCAgpeTwxkgNZ9irllf1tz7n60biy6n7GT6rv62jV8tDmVOe
+         di7e1UWgj7PTEdRBPm3DtO60Rxdim/3JgV77jxMwgcFiTkKUSvsyN9y0Vs6eFo9UJ7ZR
+         2ML+U6j+8Od/JuSUWKmhpuv3g32zN6vwW5fgtTUP6Educ+445yNU8BFaRKnsulFCIlZo
+         sFlz0Y+0QL6uQVaOhD0jXvO+Ys+4OXzAa5RNe0zS3fy8MiBFpHWEtItKJwZHnB45Bd/E
+         GDwQ==
+X-Gm-Message-State: AOAM533FUQAEn66sHkI+2o9z4O6z2+NanIf5cFVUcv0apCXPNQkf7py7
+	ZJmC2xz7GrLkBZXqxNUnU3eIpw==
+X-Google-Smtp-Source: ABdhPJw6+KwHqP+X6kkB/Nh+5MoJPmoZuMVKaA4zdRO65/hv0t1RhuJZhxmS17f5eIeBraxJKlocrQ==
+X-Received: by 2002:a17:902:a9c8:: with SMTP id b8mr16117240plr.2.1596479380570;
+        Mon, 03 Aug 2020 11:29:40 -0700 (PDT)
+Date: Mon, 3 Aug 2020 11:29:38 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: Jason Gunthorpe <jgg@ziepe.ca>, Leon Romanovsky <leon@kernel.org>,
+	"Gustavo A. R. Silva" <gustavoars@kernel.org>,
+	Matthew Wilcox <willy@infradead.org>, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: [RFC] saturate check_*_overflow() output?
+Message-ID: <202008031118.36756FAD04@keescook>
 MIME-Version: 1.0
-In-Reply-To: <202008031043.FE182E9@keescook>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-Scanned-By: MIMEDefang 2.79 on 10.5.11.13
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 
-On 8/3/20 1:45 PM, Kees Cook wrote:
-> On Mon, Aug 03, 2020 at 02:39:32PM +0300, Evgenii Shatokhin wrote:
->> There are at least 2 places where high-order memory allocations might happen
->> during module loading. Such allocations may fail if memory is fragmented,
->> while physically contiguous memory areas are not really needed there. I
->> suggest to switch to kvmalloc/kvfree there.
-> 
-> While this does seem to be the right solution for the extant problem, I
-> do want to take a moment and ask if the function sections need to be
-> exposed at all? What tools use this information, and do they just want
-> to see the bounds of the code region? (i.e. the start/end of all the
-> .text* sections) Perhaps .text.* could be excluded from the sysfs
-> section list?
-> 
+Hi,
 
-[[cc += FChE, see [0] for Evgenii's full mail ]]
+I wonder if we should explicitly saturate the output of the overflow
+helpers as a side-effect of overflow detection? (That way the output
+is never available with a "bad" value, if the caller fails to check the
+result or forgets that *d was written...) since right now, *d will hold
+the wrapped value.
 
-It looks like debugging tools like systemtap [1], gdb [2] and its 
-add-symbol-file cmd, etc. peek at the /sys/module/<MOD>/section/ info.
+Also, if we enable arithmetic overflow detection sanitizers, we're going
+to trip over the fallback implementation (since it'll wrap and then do
+the overflow test in the macro).
 
-But yeah, it would be preferable if we didn't export a long sysfs 
-representation if nobody actually needs it.
+e.g. I'm think of something like this (showing only "mul" here, and
+untested):
 
+diff --git a/include/linux/overflow.h b/include/linux/overflow.h
+index 93fcef105061..00baf3a75dc7 100644
+--- a/include/linux/overflow.h
++++ b/include/linux/overflow.h
+@@ -71,12 +71,16 @@
+ })
+ 
+ #define check_mul_overflow(a, b, d) ({		\
++	bool __result;				\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+-	__builtin_mul_overflow(__a, __b, __d);	\
++	__result = __builtin_mul_overflow(__a, __b, __d);\
++	if (unlikely(__result))			\
++		*__d = type_max(__a);		\
++	__result;				\
+ })
+ 
+ #else
+@@ -105,15 +109,20 @@
+  * If one of a or b is a compile-time constant, this avoids a division.
+  */
+ #define __unsigned_mul_overflow(a, b, d) ({		\
++	bool __result;					\
+ 	typeof(a) __a = (a);				\
+ 	typeof(b) __b = (b);				\
+ 	typeof(d) __d = (d);				\
+ 	(void) (&__a == &__b);				\
+ 	(void) (&__a == __d);				\
+-	*__d = __a * __b;				\
+-	__builtin_constant_p(__b) ?			\
++	__result = __builtin_constant_p(__b) ?		\
+ 	  __b > 0 && __a > type_max(typeof(__a)) / __b : \
+ 	  __a > 0 && __b > type_max(typeof(__b)) / __a;	 \
++	if (unlikely(__result))				\
++		*__d = type_max(typeof(__a));		\
++	else						\
++		*__d = __a * __b;			\
++	__result;
+ })
+ 
+ /*
+@@ -176,6 +185,7 @@
+  */
+ 
+ #define __signed_mul_overflow(a, b, d) ({				\
++	bool __result;							\
+ 	typeof(a) __a = (a);						\
+ 	typeof(b) __b = (b);						\
+ 	typeof(d) __d = (d);						\
+@@ -183,10 +193,14 @@
+ 	typeof(a) __tmin = type_min(typeof(a));				\
+ 	(void) (&__a == &__b);						\
+ 	(void) (&__a == __d);						\
+-	*__d = (u64)__a * (u64)__b;					\
+-	(__b > 0   && (__a > __tmax/__b || __a < __tmin/__b)) ||	\
+-	(__b < (typeof(__b))-1  && (__a > __tmin/__b || __a < __tmax/__b)) || \
+-	(__b == (typeof(__b))-1 && __a == __tmin);			\
++	__result = (__b > 0   && (__a > __tmax/__b || __a < __tmin/__b)) || \
++		   (__b < (typeof(__b))-1  && (__a > __tmin/__b || __a < __tmax/__b)) || \
++		   (__b == (typeof(__b))-1 && __a == __tmin);		\
++	if (unlikely(__result))						\
++		*__d = type_max(__a);					\
++	else								\
++		*__d = (u64)__a * (u64)__b;				\
++	__result;							\
+ })
+ 
+ 
 
-[0] 
-https://lore.kernel.org/lkml/e9c4d88b-86db-47e9-4299-3fac45a7e3fd@virtuozzo.com/
-[1] https://fossies.org/linux/systemtap/staprun/staprun.c
-[2] 
-https://www.oreilly.com/library/view/linux-device-drivers/0596005903/ch04.html#linuxdrive3-CHP-4-SECT-6.1
+Thoughts?
 
--- Joe
-
+-- 
+Kees Cook
