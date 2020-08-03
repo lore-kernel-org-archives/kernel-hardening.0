@@ -1,23 +1,23 @@
-Return-Path: <SRS0=ZtCi=BN=lists.openwall.com=kernel-hardening-return-19541-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=2EkI=BN=lists.openwall.com=kernel-hardening-return-19542-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B2277C433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 17:58:25 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 56F0CC433DF
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 18:18:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 10A7622B45
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 17:58:24 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5336820792
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 18:18:14 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="RXbxzv5f"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 10A7622B45
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19541-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17995 invoked by uid 550); 3 Aug 2020 17:58:18 -0000
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="UCEO7FRl"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5336820792
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19542-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9221 invoked by uid 550); 3 Aug 2020 18:18:08 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,200 +25,73 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17975 invoked from network); 3 Aug 2020 17:58:17 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 1BE0F20B4908
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-	s=default; t=1596477485;
-	bh=e9+Nlmg821uwNR6BTqHy8U85EfsNrcp1gJnhbkIF1W4=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=RXbxzv5ftfCeBZYTZ1xOaEuahvu0ZmS3TsY3B2lI4zQPGveiClYJbXunf6jcxWTaE
-	 zFhjrT2haLCCDZOPDnzXPZzvwPGn/e9dRmYKvybo3iVmcR5qsA6AV9454a8D66mhxE
-	 NSONMrvO7N+B4rraB/9eOHnMcDsal+bCE+M/J1n0=
-Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Andy Lutomirski <luto@kernel.org>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
- Linux FS Devel <linux-fsdevel@vger.kernel.org>,
- linux-integrity <linux-integrity@vger.kernel.org>,
- LKML <linux-kernel@vger.kernel.org>,
- LSM List <linux-security-module@vger.kernel.org>,
- Oleg Nesterov <oleg@redhat.com>, X86 ML <x86@kernel.org>
-References: <20200728131050.24443-1-madvenka@linux.microsoft.com>
- <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
- <6540b4b7-3f70-adbf-c922-43886599713a@linux.microsoft.com>
- <CALCETrWnNR5v3ZCLfBVQGYK8M0jAvQMaAc9uuO05kfZuh-4d6w@mail.gmail.com>
- <46a1adef-65f0-bd5e-0b17-54856fb7e7ee@linux.microsoft.com>
- <20200731183146.GD67415@C02TD0UTHF1T.local>
-From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Message-ID: <86625441-80f3-2909-2f56-e18e2b60957d@linux.microsoft.com>
-Date: Mon, 3 Aug 2020 12:58:04 -0500
+Received: (qmail 8177 invoked from network); 3 Aug 2020 18:18:08 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1596478676;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=VMw7i1cpHh8qkyXWE10tJgStQ1flp9PULSkxAaczHSg=;
+	b=UCEO7FRl8sEH8QMcLU7xvv3t9fKlWYiJwYC/PE8ek3G4WbVsNVzNhDjTeITkU8hk4m/JJH
+	9i1pyu4zUzaG9WQK1mG7r4zqhn8y5M4lStmoKutTWSbetJUGcjrdXsdgJu5aMYf/wJPOUo
+	6yUNthUfZq9mBH0B2TbBcPYhfRs3W/A=
+X-MC-Unique: fFB4_STrOvKdjZdsookBXA-1
+Subject: Re: [PATCH v4 00/10] Function Granular KASLR
+To: Kees Cook <keescook@chromium.org>,
+ Evgenii Shatokhin <eshatokhin@virtuozzo.com>
+Cc: Kristen Carlson Accardi <kristen@linux.intel.com>,
+ Miroslav Benes <mbenes@suse.cz>, tglx@linutronix.de, mingo@redhat.com,
+ bp@alien8.de, arjan@linux.intel.com, x86@kernel.org,
+ linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
+ rick.p.edgecombe@intel.com, live-patching@vger.kernel.org,
+ Josh Poimboeuf <jpoimboe@redhat.com>, Jessica Yu <jeyu@kernel.org>,
+ "Frank Ch. Eigler" <fche@redhat.com>
+References: <20200717170008.5949-1-kristen@linux.intel.com>
+ <alpine.LSU.2.21.2007221122110.10163@pobox.suse.cz>
+ <e9c4d88b-86db-47e9-4299-3fac45a7e3fd@virtuozzo.com>
+ <202008031043.FE182E9@keescook>
+From: Joe Lawrence <joe.lawrence@redhat.com>
+Message-ID: <fc6d2289-af97-5cf8-a4bb-77c2b0b8375c@redhat.com>
+Date: Mon, 3 Aug 2020 14:17:41 -0400
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.10.0
+ Thunderbird/68.5.0
 MIME-Version: 1.0
-In-Reply-To: <20200731183146.GD67415@C02TD0UTHF1T.local>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <202008031043.FE182E9@keescook>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-Scanned-By: MIMEDefang 2.79 on 10.5.11.13
+
+On 8/3/20 1:45 PM, Kees Cook wrote:
+> On Mon, Aug 03, 2020 at 02:39:32PM +0300, Evgenii Shatokhin wrote:
+>> There are at least 2 places where high-order memory allocations might happen
+>> during module loading. Such allocations may fail if memory is fragmented,
+>> while physically contiguous memory areas are not really needed there. I
+>> suggest to switch to kvmalloc/kvfree there.
+> 
+> While this does seem to be the right solution for the extant problem, I
+> do want to take a moment and ask if the function sections need to be
+> exposed at all? What tools use this information, and do they just want
+> to see the bounds of the code region? (i.e. the start/end of all the
+> .text* sections) Perhaps .text.* could be excluded from the sysfs
+> section list?
+> 
+
+[[cc += FChE, see [0] for Evgenii's full mail ]]
+
+It looks like debugging tools like systemtap [1], gdb [2] and its 
+add-symbol-file cmd, etc. peek at the /sys/module/<MOD>/section/ info.
+
+But yeah, it would be preferable if we didn't export a long sysfs 
+representation if nobody actually needs it.
 
 
+[0] 
+https://lore.kernel.org/lkml/e9c4d88b-86db-47e9-4299-3fac45a7e3fd@virtuozzo.com/
+[1] https://fossies.org/linux/systemtap/staprun/staprun.c
+[2] 
+https://www.oreilly.com/library/view/linux-device-drivers/0596005903/ch04.html#linuxdrive3-CHP-4-SECT-6.1
 
-On 7/31/20 1:31 PM, Mark Rutland wrote:
-> On Fri, Jul 31, 2020 at 12:13:49PM -0500, Madhavan T. Venkataraman wrote:
->> On 7/30/20 3:54 PM, Andy Lutomirski wrote:
->>> On Thu, Jul 30, 2020 at 7:24 AM Madhavan T. Venkataraman
->>> <madvenka@linux.microsoft.com> wrote:
->> Dealing with multiple architectures
->> -----------------------------------------------
->>
->> One good reason to use trampfd is multiple architecture support. The
->> trampoline table in a code page approach is neat. I don't deny that at
->> all. But my question is - can it be used in all cases?
->>
->> It requires PC-relative data references. I have not worked on all architectures.
->> So, I need to study this. But do all ISAs support PC-relative data references?
-> Not all do, but pretty much any recent ISA will as it's a practical
-> necessity for fast position-independent code.
+-- Joe
 
-So, two questions:
-
-1. IIUC, for position independent code, we need PC-relative control transfers. I know that
-    PC-relative control transfers are kinda fundamental. So, I expect most architectures
-    support it. But to implement the trampoline table suggestion, we need PC-relative
-    data references. Like:
-
-    movq    X(%rip), %rax
-
-2. Do you know which architectures do not support PC-relative data references? I am
-    going to study this. But if you have some information, I would appreciate it.
-
-In any case, I think we should support all of the architectures on which Linux currently
-runs even if they are legacy.
-
->
->> Even in an ISA that supports it, there would be a maximum supported offset
->> from the current PC that can be reached for a data reference. That maximum
->> needs to be at least the size of a base page in the architecture. This is because
->> the code page and the data page need to be separate for security reasons.
->> Do all ISAs support a sufficiently large offset?
-> ISAs with pc-relative addessing can usually generate PC-relative
-> addresses into a GPR, from which they can apply an arbitrarily large
-> offset.
-
-I will study this. I need to nail down the list of architectures that cannot do this.
-
->
->> When the kernel generates the code for a trampoline, it can hard code data values
->> in the generated code itself so it does not need PC-relative data referencing.
->>
->> And, for ISAs that do support the large offset, we do have to implement and
->> maintain the code page stuff for different ISAs for each application and library
->> if we did not use trampfd.
-> Trampoline code is architecture specific today, so I don't see that as a
-> major issue. Common structural bits can probably be shared even if the
-> specifid machine code cannot.
-
-True. But an implementor may prefer a standard mechanism provided by
-the kernel so all of his architectures can be supported easily with less
-effort.
-
-If you look at the libffi reference patch I have included, the architecture
-specific changes to use trampfd just involve a single C function call to
-a common code function.
-
-So, from the point of view of adoption, IMHO, the kernel provided method
-is preferable.
-
->
-> [...]
->
->> Security
->> -----------
->>
->> With the user level trampoline table approach, the data part of the trampoline table
->> can be hacked by an attacker if an application has a vulnerability. Specifically, the
->> target PC can be altered to some arbitrary location. Trampfd implements an
->> "Allowed PCS" context. In the libffi changes, I have created a read-only array of
->> all ABI handlers used in closures for each architecture. This read-only array
->> can be used to restrict the PC values for libffi trampolines to prevent hacking.
->>
->> To generalize, we can implement security rules/features if the trampoline
->> object is in the kernel.
-> I don't follow this argument. If it's possible to statically define that
-> in the kernel, it's also possible to do that in userspace without any
-> new kernel support.
-It is not statically defined in the kernel.
-
-Let us take the libffi example. In the 64-bit X86 arch code, there are 3
-ABI handlers:
-
-    ffi_closure_unix64_sse
-    ffi_closure_unix64
-    ffi_closure_win64
-
-I could create an "Allowed PCs" context like this:
-
-struct my_allowed_pcs {
-    struct trampfd_values    pcs;
-    __u64                             pc_values[3];
-};
-
-const struct my_allowed_pcs    my_allowed_pcs = {
-    { 3, 0 },
-    (uintptr_t) ffi_closure_unix64_sse,
-    (uintptr_t) ffi_closure_unix64,
-    (uintptr_t) ffi_closure_win64,
-};
-
-I have created a read-only array of allowed ABI handlers that closures use.
-
-When I set up the context for a closure trampoline, I could do this:
-
-    pwrite(trampfd, &my_allowed_pcs, sizeof(my_allowed_pcs), TRAMPFD_ALLOWED_PCS_OFFSET);
-   
-This copies the array into the trampoline object in the kernel.
-When the register context is set for the trampoline, the kernel checks
-the PC register value against allowed PCs.
-
-Because my_allowed_pcs is read-only, a hacker cannot modify it. So, the only
-permitted target PCs enforced by the kernel are the ABI handlers.
->
-> [...]
->
->> Trampfd is a framework that can be used to implement multiple things. May be,
->> a few of those things can also be implemented in user land itself. But I think having
->> just one mechanism to execute dynamic code objects is preferable to having
->> multiple mechanisms not standardized across all applications.
-> In abstract, having a common interface sounds nice, but in practice
-> elements of this are always architecture-specific (e.g. interactiosn
-> with HW CFI), and that common interface can result in more pain as it
-> doesn't fit naturally into the context that ISAs were designed for (e.g. 
-> where control-flow instructions are extended with new semantics).
-
-In the case of trampfd, the code generation is indeed architecture
-specific. But that is in the kernel. The application is not affected by it.
-
-Again, referring to the libffi reference patch, I have defined wrapper
-functions for trampfd in common code. The architecture specific code
-in libffi only calls the set_context function defined in common code.
-Even this is required only because register names are specific to each
-architecture and the target PC (to the ABI handler) is specific to
-each architecture-ABI combo.
-
-> It also meass that you can't share the rough approach across OSs which
-> do not implement an identical mechanism, so for code abstracting by ISA
-> first, then by platform/ABI, there isn't much saving.
-
-Why can you not share the same approach across OSes? In fact,
-I have tried to design it so that other OSes can use the same
-mechanism.
-
-The only thing is that I have defined the API to be based on a file
-descriptor since that is what is generally preferred by the Linux community
-for a new API. If I were to implement it as a regular system call, the same
-system call can be implemented in other OSes as well.
-
-Thanks.
-
-Madhavan
