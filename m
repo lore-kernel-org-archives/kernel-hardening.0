@@ -1,4 +1,4 @@
-Return-Path: <SRS0=2QBZ=BN=lists.openwall.com=kernel-hardening-return-19529-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=sp6V=BN=lists.openwall.com=kernel-hardening-return-19530-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
 	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1F4BBC433E1
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 08:08:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C34CCC433E0
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 08:23:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7DCD82065E
-	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 08:08:43 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7DCD82065E
+	by mail.kernel.org (Postfix) with SMTP id 2A575206E2
+	for <kernel-hardening@archiver.kernel.org>; Mon,  3 Aug 2020 08:23:23 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2A575206E2
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=ACULAB.COM
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19529-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11628 invoked by uid 550); 3 Aug 2020 08:08:36 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19530-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22125 invoked by uid 550); 3 Aug 2020 08:23:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,28 +22,27 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11601 invoked from network); 3 Aug 2020 08:08:36 -0000
-X-MC-Unique: PHrlPE41MKu5ed8gAMWPYg-1
+Received: (qmail 22093 invoked from network); 3 Aug 2020 08:23:17 -0000
+X-MC-Unique: jniEonvpM6WuyKoEFdxDSQ-2
 From: David Laight <David.Laight@ACULAB.COM>
-To: 'Pavel Machek' <pavel@ucw.cz>
-CC: 'Andy Lutomirski' <luto@kernel.org>, "madvenka@linux.microsoft.com"
-	<madvenka@linux.microsoft.com>, Kernel Hardening
-	<kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>,
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Linux FS Devel
+To: "'Madhavan T. Venkataraman'" <madvenka@linux.microsoft.com>, "Andy
+ Lutomirski" <luto@kernel.org>
+CC: Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API
+	<linux-api@vger.kernel.org>, linux-arm-kernel
+	<linux-arm-kernel@lists.infradead.org>, Linux FS Devel
 	<linux-fsdevel@vger.kernel.org>, linux-integrity
 	<linux-integrity@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "LSM
  List" <linux-security-module@vger.kernel.org>, Oleg Nesterov
 	<oleg@redhat.com>, X86 ML <x86@kernel.org>
 Subject: RE: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
 Thread-Topic: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-Thread-Index: AQHWZQT/T+e4gDrzGEmP/30MMvDTCqkgFteggASWI4CAAWJTUA==
-Date: Mon, 3 Aug 2020 08:08:21 +0000
-Message-ID: <c02fbae7a0754a58884b370657575845@AcuMS.aculab.com>
+Thread-Index: AQHWaP5tgOpJhgITEEScB0GhgJrbRKkmC0zQ
+Date: Mon, 3 Aug 2020 08:23:03 +0000
+Message-ID: <a5fb2778a86f45b58ef5dd35228d950b@AcuMS.aculab.com>
 References: <20200728131050.24443-1-madvenka@linux.microsoft.com>
  <CALCETrVy5OMuUx04-wWk9FJbSxkrT2vMfN_kANinudrDwC4Cig@mail.gmail.com>
- <b9879beef3e740c0aeb1af73485069a8@AcuMS.aculab.com>
- <20200802115600.GB1162@bug>
-In-Reply-To: <20200802115600.GB1162@bug>
+ <3b916198-3a98-bd19-9a1c-f2d8d44febe8@linux.microsoft.com>
+In-Reply-To: <3b916198-3a98-bd19-9a1c-f2d8d44febe8@linux.microsoft.com>
 Accept-Language: en-GB, en-US
 Content-Language: en-US
 X-MS-Has-Attach: 
@@ -56,49 +55,42 @@ Authentication-Results: relay.mimecast.com;
 X-Mimecast-Spam-Score: 0
 X-Mimecast-Originator: aculab.com
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+Content-Transfer-Encoding: base64
 
-From: Pavel Machek <pavel@ucw.cz>
-> Sent: 02 August 2020 12:56
-> Hi!
->=20
-> > > This is quite clever, but now I???m wondering just how much kernel he=
-lp
-> > > is really needed. In your series, the trampoline is an non-executable
-> > > page.  I can think of at least two alternative approaches, and I'd
-> > > like to know the pros and cons.
-> > >
-> > > 1. Entirely userspace: a return trampoline would be something like:
-> > >
-> > > 1:
-> > > pushq %rax
-> > > pushq %rbc
-> > > pushq %rcx
-> > > ...
-> > > pushq %r15
-> > > movq %rsp, %rdi # pointer to saved regs
-> > > leaq 1b(%rip), %rsi # pointer to the trampoline itself
-> > > callq trampoline_handler # see below
-> >
-> > For nested calls (where the trampoline needs to pass the
-> > original stack frame to the nested function) I think you
-> > just need a page full of:
-> > =09mov=09$0, scratch_reg; jmp trampoline_handler
->=20
-> I believe you could do with mov %pc, scratch_reg; jmp ...
->=20
-> That has advantage of being able to share single physical
-> page across multiple virtual pages...
-
-A lot of architecture don't let you copy %pc that way so you would
-have to use 'call' - but that trashes the return address cache.
-It also needs the trampoline handler to know the addresses
-of the trampolines.
-
-=09David
-
--
-Registered Address Lakeside, Bramley Road, Mount Farm, Milton Keynes, MK1 1=
-PT, UK
-Registration No: 1397386 (Wales)
+RnJvbTogTWFkaGF2YW4gVC4gVmVua2F0YXJhbWFuDQo+IFNlbnQ6IDAyIEF1Z3VzdCAyMDIwIDE5
+OjU1DQo+IFRvOiBBbmR5IEx1dG9taXJza2kgPGx1dG9Aa2VybmVsLm9yZz4NCj4gQ2M6IEtlcm5l
+bCBIYXJkZW5pbmcgPGtlcm5lbC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tPjsgTGludXgg
+QVBJIDxsaW51eC1hcGlAdmdlci5rZXJuZWwub3JnPjsNCj4gbGludXgtYXJtLWtlcm5lbCA8bGlu
+dXgtYXJtLWtlcm5lbEBsaXN0cy5pbmZyYWRlYWQub3JnPjsgTGludXggRlMgRGV2ZWwgPGxpbnV4
+LQ0KPiBmc2RldmVsQHZnZXIua2VybmVsLm9yZz47IGxpbnV4LWludGVncml0eSA8bGludXgtaW50
+ZWdyaXR5QHZnZXIua2VybmVsLm9yZz47IExLTUwgPGxpbnV4LQ0KPiBrZXJuZWxAdmdlci5rZXJu
+ZWwub3JnPjsgTFNNIExpc3QgPGxpbnV4LXNlY3VyaXR5LW1vZHVsZUB2Z2VyLmtlcm5lbC5vcmc+
+OyBPbGVnIE5lc3Rlcm92DQo+IDxvbGVnQHJlZGhhdC5jb20+OyBYODYgTUwgPHg4NkBrZXJuZWwu
+b3JnPg0KPiBTdWJqZWN0OiBSZTogW1BBVENIIHYxIDAvNF0gW1JGQ10gSW1wbGVtZW50IFRyYW1w
+b2xpbmUgRmlsZSBEZXNjcmlwdG9yDQo+IA0KPiBNb3JlIHJlc3BvbnNlcyBpbmxpbmUuLg0KPiAN
+Cj4gT24gNy8yOC8yMCAxMjozMSBQTSwgQW5keSBMdXRvbWlyc2tpIHdyb3RlOg0KPiA+PiBPbiBK
+dWwgMjgsIDIwMjAsIGF0IDY6MTEgQU0sIG1hZHZlbmthQGxpbnV4Lm1pY3Jvc29mdC5jb20gd3Jv
+dGU6DQo+ID4+DQo+ID4+IO+7v0Zyb206ICJNYWRoYXZhbiBULiBWZW5rYXRhcmFtYW4iIDxtYWR2
+ZW5rYUBsaW51eC5taWNyb3NvZnQuY29tPg0KPiA+Pg0KPiA+DQo+ID4gMi4gVXNlIGV4aXN0aW5n
+IGtlcm5lbCBmdW5jdGlvbmFsaXR5LiAgUmFpc2UgYSBzaWduYWwsIG1vZGlmeSB0aGUNCj4gPiBz
+dGF0ZSwgYW5kIHJldHVybiBmcm9tIHRoZSBzaWduYWwuICBUaGlzIGlzIHZlcnkgZmxleGlibGUg
+YW5kIG1heSBub3QNCj4gPiBiZSBhbGwgdGhhdCBtdWNoIHNsb3dlciB0aGFuIHRyYW1wZmQuDQo+
+IA0KPiBMZXQgbWUgdW5kZXJzdGFuZCB0aGlzLiBZb3UgYXJlIHNheWluZyB0aGF0IHRoZSB0cmFt
+cG9saW5lIGNvZGUNCj4gd291bGQgcmFpc2UgYSBzaWduYWwgYW5kLCBpbiB0aGUgc2lnbmFsIGhh
+bmRsZXIsIHNldCB1cCB0aGUgY29udGV4dA0KPiBzbyB0aGF0IHdoZW4gdGhlIHNpZ25hbCBoYW5k
+bGVyIHJldHVybnMsIHdlIGVuZCB1cCBpbiB0aGUgdGFyZ2V0DQo+IGZ1bmN0aW9uIHdpdGggdGhl
+IGNvbnRleHQgY29ycmVjdGx5IHNldCB1cC4gQW5kLCB0aGlzIHRyYW1wb2xpbmUgY29kZQ0KPiBj
+YW4gYmUgZ2VuZXJhdGVkIHN0YXRpY2FsbHkgYXQgYnVpbGQgdGltZSBzbyB0aGF0IHRoZXJlIGFy
+ZSBubw0KPiBzZWN1cml0eSBpc3N1ZXMgdXNpbmcgaXQuDQo+IA0KPiBIYXZlIEkgdW5kZXJzdG9v
+ZCB5b3VyIHN1Z2dlc3Rpb24gY29ycmVjdGx5Pw0KDQpJIHdhcyB0aGlua2luZyB0aGF0IHlvdSdk
+IGp1c3QgbGV0IHRoZSAnbm90IGV4ZWN1dGFibGUnIHBhZ2UgZmF1bHQNCnNpZ25hbCBoYXBwZW4g
+KFNJR1NFR1Y/KSB3aGVuIHRoZSBjb2RlIGp1bXBzIHRvIG9uLXN0YWNrIHRyYW1wb2xpbmUNCmlz
+IGV4ZWN1dGVkLg0KDQpUaGUgdXNlciBzaWduYWwgaGFuZGxlciBjYW4gdGhlbiBkZWNvZGUgdGhl
+IGZhdWx0aW5nIGluc3RydWN0aW9uDQphbmQsIGlmIGl0IG1hdGNoZXMgdGhlIGV4cGVjdGVkIG9u
+LXN0YWNrIHRyYW1wb2xpbmUsIG1vZGlmeSB0aGUNCnNhdmVkIHJlZ2lzdGVycyBiZWZvcmUgcmV0
+dXJuaW5nIGZyb20gdGhlIHNpZ25hbC4NCg0KTm8ga2VybmVsIGNoYW5nZXMgYW5kIGFsbCB5b3Ug
+bmVlZCB0byBhZGQgdG8gdGhlIHByb2dyYW0gaXMNCmFuIGFyY2hpdGVjdHVyZS1kZXBlbmRhbnQg
+c2lnbmFsIGhhbmRsZXIuDQoNCglEYXZpZA0KDQotDQpSZWdpc3RlcmVkIEFkZHJlc3MgTGFrZXNp
+ZGUsIEJyYW1sZXkgUm9hZCwgTW91bnQgRmFybSwgTWlsdG9uIEtleW5lcywgTUsxIDFQVCwgVUsN
+ClJlZ2lzdHJhdGlvbiBObzogMTM5NzM4NiAoV2FsZXMpDQo=
 
