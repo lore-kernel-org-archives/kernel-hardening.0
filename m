@@ -1,22 +1,23 @@
-Return-Path: <SRS0=I8Pb=BQ=lists.openwall.com=kernel-hardening-return-19567-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=t0VD=BQ=lists.openwall.com=kernel-hardening-return-19568-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-14.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DF27BC433DF
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Aug 2020 15:33:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E7A91C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Aug 2020 17:26:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 64FB723110
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Aug 2020 15:33:24 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9D29A206B5
+	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Aug 2020 17:26:24 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="J1kms1Jb"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 64FB723110
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19567-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 2033 invoked by uid 550); 6 Aug 2020 15:33:16 -0000
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="e52b+Hsf"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9D29A206B5
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19568-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 4093 invoked by uid 550); 6 Aug 2020 17:26:16 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,182 +25,240 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 2010 invoked from network); 6 Aug 2020 15:33:15 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=sender:date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=BJRVvbJ27WTMdqqsxMOJteTWJIZ1QhBp8oNNmFI81Ts=;
-        b=J1kms1Jb+DBdy5tnRvsQhyY5wCNWWMDZ5UhkCcv51jnBWIEP44sPwLQU49f/DZ+UqN
-         ATRIAgR5nrdJESlIXlZA9JZ6VKqbSeiFL/eDWjrZ17nG2Ziot8JbxvgwwSIkH01rc0cR
-         nOhlq03lA6XNLqBreq14AIiCB/cp+NF6DbLjLsfX5U5bLr7cNzGSD//gmVIJ5O6Q/Lqy
-         RoMZp0mSuIgDbjVFKx6NfBplUOIYCKTKQSn3FN7/iAu0Vztf8okVp2gwU+ed5xee6l8o
-         qi87urfH+G2reTX5kcSC/y7C4xYkqmssnH6WMScQbUXpQbs8N1doCrUy1DBsHjTXOgZb
-         7kag==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:date:from:to:cc:subject:message-id
-         :references:mime-version:content-disposition:in-reply-to;
-        bh=BJRVvbJ27WTMdqqsxMOJteTWJIZ1QhBp8oNNmFI81Ts=;
-        b=cFDFBAQ1vWNx9SS079rmnYxHN929Bp62Q1Z2o8ICZliU61AVhYM6jhYThn9DB9MHnZ
-         0jrKCVdqP1qaXos0QazRQcb3vpu76flqNOJuk8D8SCz9oTj3nDw9rtd7Nm3VZrUX27wi
-         G51SZCXDJrXpLP/bjIs0Et7e9BUeU1i6dpaI7JGpGTG5yn1tquVTAivZ8xkdWJZn37xl
-         yz1xjpTEtwvRfbkdRKuAW1DX26HHzVT0KiqAc9Ty44x6XZHXz4SC5gjTRSN3ENo6OYZY
-         /yr2WaoYzDkjYX6W56xpatvMFRc0hkLjG9iVf7mqIP6vtYQf0OQIxJ4c0YaRGo/ZdVLT
-         TDFQ==
-X-Gm-Message-State: AOAM530r/L1ci6j3QPGVA8EKXGQ+UTRnvfhSCzjhO/5qmL2cJMVCvrtV
-	dYQkMM0DnaeyHWOlMtIjyoM=
-X-Google-Smtp-Source: ABdhPJzKadYqu9DuxT6yEhY+yLfMI17678fAKsD2zLmixlazR3kmBiWq46Lgd5M0wGB4iVXxcsq0vA==
-X-Received: by 2002:a17:907:10d9:: with SMTP id rv25mr4656328ejb.264.1596727984179;
-        Thu, 06 Aug 2020 08:33:04 -0700 (PDT)
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Thu, 6 Aug 2020 17:32:58 +0200
-From: Ingo Molnar <mingo@kernel.org>
-To: Kristen Carlson Accardi <kristen@linux.intel.com>
-Cc: keescook@chromium.org, tglx@linutronix.de, mingo@redhat.com,
-	bp@alien8.de, arjan@linux.intel.com, x86@kernel.org,
-	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
-	rick.p.edgecombe@intel.com
-Subject: Re: [PATCH v4 00/10] Function Granular KASLR
-Message-ID: <20200806153258.GB2131635@gmail.com>
-References: <20200717170008.5949-1-kristen@linux.intel.com>
+Received: (qmail 4068 invoked from network); 6 Aug 2020 17:26:15 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 2A06620B4908
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
+	s=default; t=1596734763;
+	bh=SKMTpymjM2dm1WgVhMrKQuNr9tnwmD1sIq+q78ljXI4=;
+	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
+	b=e52b+HsfeIrZBK4wd2YokPWiDGtVrTgHsUcshaMv/Q+OZ4/ixW20KNmfWuWvqGZx5
+	 tyqKKklbNwZq0c9vHJI4FRFVgiMVS4haqJy4sZeFyMsivmCKtipv1WlRbXCzCUMjOy
+	 zCggK+Qp7AEqHKECbf1qqN6OApZ4JBNLNtAf0X/s=
+Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+ linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+ linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
+ linux-security-module@vger.kernel.org, oleg@redhat.com, x86@kernel.org
+References: <aefc85852ea518982e74b233e11e16d2e707bc32>
+ <20200728131050.24443-1-madvenka@linux.microsoft.com>
+ <20200731180955.GC67415@C02TD0UTHF1T.local>
+ <6236adf7-4bed-534e-0956-fddab4fd96b6@linux.microsoft.com>
+ <20200804143018.GB7440@C02TD0UTHF1T.local>
+From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
+Message-ID: <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
+Date: Thu, 6 Aug 2020 12:26:02 -0500
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.10.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200717170008.5949-1-kristen@linux.intel.com>
+In-Reply-To: <20200804143018.GB7440@C02TD0UTHF1T.local>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Content-Language: en-US
+
+Thanks for the lively discussion. I have tried to answer some of the
+comments below.
+
+On 8/4/20 9:30 AM, Mark Rutland wrote:
+>
+>> So, the context is - if security settings in a system disallow a page to have
+>> both write and execute permissions, how do you allow the execution of
+>> genuine trampolines that are runtime generated and placed in a data
+>> page or a stack page?
+> There are options today, e.g.
+>
+> a) If the restriction is only per-alias, you can have distinct aliases
+>    where one is writable and another is executable, and you can make it
+>    hard to find the relationship between the two.
+>
+> b) If the restriction is only temporal, you can write instructions into
+>    an RW- buffer, transition the buffer to R--, verify the buffer
+>    contents, then transition it to --X.
+>
+> c) You can have two processes A and B where A generates instrucitons into
+>    a buffer that (only) B can execute (where B may be restricted from
+>    making syscalls like write, mprotect, etc).
+
+The general principle of the mitigation is W^X. I would argue that
+the above options are violations of the W^X principle. If they are
+allowed today, they must be fixed. And they will be. So, we cannot
+rely on them.
+
+a) This requires a remap operation. Two mappings point to the same
+     physical page. One mapping has W and the other one has X. This
+     is a violation of W^X.
+
+b) This is again a violation. The kernel should refuse to give execute
+     permission to a page that was writeable in the past and refuse to
+     give write permission to a page that was executable in the past.
+
+c) This is just a variation of (a).
+
+In general, the problem with user-level methods to map and execute
+dynamic code is that the kernel cannot tell if a genuine application is
+using them or an attacker is using them or piggy-backing on them.
+If a security subsystem blocks all user-level methods for this reason,
+we need a kernel mechanism to deal with the problem.
+
+The kernel mechanism is not to be a backdoor. It is there to define
+ways in which safe dynamic code can be executed.
+
+I admit I have to provide more proof that my API and framework can
+cover different cases. So, that is what I am doing now. I am in the process
+of identifying other examples (per Andy's comment) and attempting to
+show that this API and framework can address them. It will take a little time.
 
 
-* Kristen Carlson Accardi <kristen@linux.intel.com> wrote:
+>>
+>> IIUC, you are suggesting that the user hands the kernel a code fragment
+>> and requests it to be placed in an r-x page, correct? However, the
+>> kernel cannot trust any code given to it by the user. Nor can it scan any
+>> piece of code and reliably decide if it is safe or not.
+> Per that same logic the kernel cannot trust trampfd creation calls to be
+> legitimate as the adversary could mess with the arguments. It doesn't
+> matter if the kernel's codegen is trustworthy if it's potentially driven
+> by an adversary.
 
-> Function Granular Kernel Address Space Layout Randomization (fgkaslr)
-> ---------------------------------------------------------------------
-> 
-> This patch set is an implementation of finer grained kernel address space
-> randomization. It rearranges your kernel code at load time 
-> on a per-function level granularity, with only around a second added to
-> boot time.
+That is not true. IMO, this is not a deficiency in trampfd. This is
+something that is there even for regular system calls. For instance,
+the write() system call will faithfully write out a buffer to a file
+even if the buffer contents have been hacked by an attacker.
+A system call can perform certain checks on incoming arguments.
+But it cannot tell if a hacker has modified them.
 
-This is a very nice feature IMO, and it should be far more effective 
-at randomizing the kernel, due to the sheer number of randomization 
-bits that kernel function granular randomization presents.
+So, there are two aspects in dynamic code that I am considering -
+data and code. I submit that the data part can be hacked if an
+application has a vulnerability such as buffer overflow. I don't see
+how we can ever help that.
 
-If this is a good approximation of fg-kaslr randomization depth:
+So, I am focused on the code generation part. Not all dynamic code
+is the same. They have different degrees of trust.
 
-  thule:~/tip> grep ' [tT] ' /proc/kallsyms  | wc -l
-  88488
+Off the top of my head, I have tried to identify some examples
+where we can have more trust on dynamic code and have the kernel
+permit its execution.
 
-... then that's 80K bits of randomization instead of the mere handful 
-of kaslr bits we have today. Very nice!
+1. If the kernel can do the job, then that is one safe way. Here, the kernel
+    is the code. There is no code generation involved. This is what I
+    have presented in the patch series as the first cut.
 
-> In order to hide our new layout, symbols reported through 
-> /proc/kallsyms will be displayed in a random order.
+2. If the kernel can generate the code, then that code has a measure
+    of trust. For trampolines, I agreed to do this for performance.
 
-Neat. :-)
+3. If the code resides in a signed file, then we know that it comes from
+    an known source and it was generated at build time. So, it is not
+    hacker generated. So, there is a measure of trust.
 
-> Performance Impact
-> ------------------
+    This is not just program text. This could also be a buffer that contains
+    trampoline code that resides in the read-only data section of a binary.
 
-> * Run time
-> The performance impact at run-time of function reordering varies by workload.
-> Using kcbench, a kernel compilation benchmark, the performance of a kernel
-> build with finer grained KASLR was about 1% slower than a kernel with standard
-> KASLR. Analysis with perf showed a slightly higher percentage of 
-> L1-icache-load-misses. Other workloads were examined as well, with varied
-> results. Some workloads performed significantly worse under FGKASLR, while
-> others stayed the same or were mysteriously better. In general, it will
-> depend on the code flow whether or not finer grained KASLR will impact
-> your workload, and how the underlying code was designed. Because the layout
-> changes per boot, each time a system is rebooted the performance of a workload
-> may change.
+4. If the code resides in a signed file and is emulated (e.g. by QEMU)
+    and we generate code for dynamic binary translation, we should
+    be able to do that provided the code generator itself is not suspect.
+    See the next point.   
 
-I'd guess that the biggest performance impact comes from tearing apart 
-'groups' of functions that particular workloads are using.
+5. The above are examples of actual machine code or equivalent.
+    We could also have source code from which we generate machine
+    code. E.g., JIT code from Java byte code. In this case, if the source
+   code is in a signed file, we have a measure of trust on the source.
+   If the kernel uses its own trusted code generator to generate the
+   object code from the source code, then that object code has a
+   measure of trust.
 
-In that sense it might be worthwile to add a '__kaslr_group' function 
-tag to key functions, which would keep certain performance critical 
-functions next to each other.
+Anyway, these are just examples. The principle is - if we can identify
+dynamic code that has a certain measure of trust, can the kernel
+permit their execution?
 
-This shouldn't really be a problem, as even with generous amount of 
-grouping the number of randomization bits is incredibly large.
+All other code that cannot really be trusted by the kernel cannot be
+executed safely (unless we find some safe and efficient way to
+sandbox such code and limit the effects of the code to within
+the sandbox). This is outside the scope of what I am doing.
 
-> Future work could identify hot areas that may not be randomized and either
-> leave them in the .text section or group them together into a single section
-> that may be randomized. If grouping things together helps, one other thing to
-> consider is that if we could identify text blobs that should be grouped together
-> to benefit a particular code flow, it could be interesting to explore
-> whether this security feature could be also be used as a performance
-> feature if you are interested in optimizing your kernel layout for a
-> particular workload at boot time. Optimizing function layout for a particular
-> workload has been researched and proven effective - for more information
-> read the Facebook paper "Optimizing Function Placement for Large-Scale
-> Data-Center Applications" (see references section below).
+>> So, the problem of executing dynamic code when security settings are
+>> restrictive cannot be solved in userland. The only option I can think of is
+>> to have the kernel provide support for dynamic code. It must have one
+>> or more safe, trusted code generation components and an API to use
+>> the components.
+>>
+>> My goal is to introduce an API and start off by supporting simple, regular
+>> trampolines that are widely used. Then, evolve the feature over a period
+>> of time to include other forms of dynamic code such as JIT code.
+> I think that you're making a leap to this approach without sufficient
+> justification that it actually solves the problem, and I believe that
+> there will be ABI issues with this approach which can be sidestepped by
+> other potential approaches.
+>
+> Taking a step back, I think it's necessary to better describe the
+> problem and constraints that you believe apply before attempting to
+> justify any potential solution.
 
-I'm pretty sure the 'grouping' solution would address any real 
-slowdowns.
+I totally agree that more justification is needed and I am working on it.
 
-I'd also suggest allowing the passing in of a boot-time pseudo-random 
-generator seed number, which would allow the creation of a 
-pseudo-randomized but repeatable layout across reboots.
+As I have mentioned above, I intend to have the kernel generate code
+only if the code generation is simple enough. For more complicated cases,
+I plan to use a user-level code generator that is for exclusive kernel use.
+I have yet to work out the details on how this would work. Need time.
 
-> Image Size
-> ----------
-> Adding additional section headers as a result of compiling with
-> -ffunction-sections will increase the size of the vmlinux ELF file.
-> With a standard distro config, the resulting vmlinux was increased by
-> about 3%. The compressed image is also increased due to the header files,
-> as well as the extra relocations that must be added. You can expect fgkaslr
-> to increase the size of the compressed image by about 15%.
+>
+> [...]
+>
+>>
+>> 1. Create a trampoline by calling trampfd_create()
+>> 2. Set the register and/or stack contexts for the trampoline.
+>> 3. mmap() the trampoline to get an address
+>> 4a. Retrieve the register and stack context for the trampoline from the
+>>       kernel and check if anything has been altered. If yes, abort.
+>> 4b. Invoke the trampoline using the address
+> As above, you can also do this when using mprotect today, transitioning
+> the buffer RWX -> R-- -> R-X. If you're worried about subsequent
+> modification via an alias, a sealed memfd would work assuming that can
+> be mapped R-X.
 
-What is the increase of the resulting raw kernel image? Additional 
-relocations might increase its size (unless I'm missing something) - 
-it would be nice to measure this effect. I'd expect this to be really 
-low.
+This is a violation of W^X and the security subsystem must be fixed
+if it permits it.
 
-vmlinux or compressed kernel size doesn't really matter on x86-64, 
-it's a boot time only expense well within typical system resource 
-limits.
+> This approach is applicable to trampfd, but it isn't a specific benefit
+> of trampfd.
+>
+> [...] 
+>
+>>>> - In the future, if the kernel can be enhanced to use a safe code
+>>>>   generation component, that code can be placed in the trampoline mapping
+>>>>   pages. Then, the trampoline invocation does not have to incur a trip
+>>>>   into the kernel.
+>>>>
+>>>> - Also, if the kernel can be enhanced to use a safe code generation
+>>>>   component, other forms of dynamic code such as JIT code can be
+>>>>   addressed by the trampfd framework.
+>>> I don't see why it's necessary for the kernel to generate code at all.
+>>> If the trampfd creation requests can be trusted, what prevents trusting
+>>> a sealed set of instructions generated in userspace?
+>> Let us consider a system in which:
+>>     - a process is not permitted to have pages with both write and execute
+>>     - a process is not permitted to map any file as executable unless it
+>>       is properly signed. In other words, cryptographically verified.
+>>
+>> Then, the process cannot execute any code that is runtime generated.
+>> That includes trampolines. Only trampoline code that is part of program
+>> text at build time would be permitted to execute.
+>>
+>> In this scenario, trampfd requests are coming from signed code. So, they
+>> are trusted by the kernel. But trampoline code could be dynamically generated.
+>> The kernel will not trust it.
+> I think this a very hand-wavy argument, as it suggests that generated
+> code is not trusted, but what is effectively a generated bytecode is.
+> If certain codegen can be trusted, then we can add mechanisms to permit
+> the results of this to be mapped r-x. If that is not possible, then the
+> same argument says that trampfd requests cannot be trusted.
 
-> Disabling
-> ---------
-> Disabling normal KASLR using the nokaslr command line option also disables
-> fgkaslr. It is also possible to disable fgkaslr separately by booting with
-> fgkaslr=off on the commandline.
+There is certainly an extra measure of trust in code that is in
+signature verified files as compared to code that is generated
+on the fly. At least, we know that the place from which we get
+that code is known and the file was generated at build time
+and not hacker generated. Such files could still contain a vulnerability.
+But because these files are maintained by a known source, chances
+are that there is nothing malicious in them.
 
-I'd suggest to also add a 'nofgkaslr' boot option if it doesn't yet 
-exist, to keep usage symmetric with kaslr.
+Thanks.
 
-Likewise, there should probably be a 'kaslr=off' option as well.
-
-The less random our user interfaces are, the better ...
-
->  arch/x86/boot/compressed/Makefile             |   9 +-
->  arch/x86/boot/compressed/fgkaslr.c            | 811 ++++++++++++++++++
->  arch/x86/boot/compressed/kaslr.c              |   4 -
->  arch/x86/boot/compressed/misc.c               | 157 +++-
->  arch/x86/boot/compressed/misc.h               |  30 +
->  arch/x86/boot/compressed/utils.c              |  11 +
->  arch/x86/boot/compressed/vmlinux.symbols      |  17 +
->  arch/x86/include/asm/boot.h                   |  15 +-
->  arch/x86/kernel/vmlinux.lds.S                 |  17 +-
->  arch/x86/lib/kaslr.c                          |  18 +-
->  arch/x86/tools/relocs.c                       | 143 ++-
->  arch/x86/tools/relocs.h                       |   4 +-
->  arch/x86/tools/relocs_common.c                |  15 +-
->  include/asm-generic/vmlinux.lds.h             |  18 +-
->  include/linux/decompress/mm.h                 |  12 +-
->  include/uapi/linux/elf.h                      |   1 +
->  init/Kconfig                                  |  26 +
->  kernel/kallsyms.c                             | 163 +++-
->  kernel/module.c                               |  81 ++
->  tools/objtool/elf.c                           |   8 +-
->  26 files changed, 1670 insertions(+), 85 deletions(-)
->  create mode 100644 Documentation/security/fgkaslr.rst
->  create mode 100644 arch/x86/boot/compressed/fgkaslr.c
->  create mode 100644 arch/x86/boot/compressed/utils.c
->  create mode 100644 arch/x86/boot/compressed/vmlinux.symbols
-
-This looks surprisingly lean overall.
-
-Thanks,
-
-	Ingo
+Madhavan
