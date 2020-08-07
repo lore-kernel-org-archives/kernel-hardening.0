@@ -1,23 +1,20 @@
-Return-Path: <SRS0=31Vs=BQ=lists.openwall.com=kernel-hardening-return-19571-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=gFS3=BR=lists.openwall.com=kernel-hardening-return-19572-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.6 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BA2D7C433E0
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Aug 2020 22:10:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C0D16C433E0
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Aug 2020 16:38:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BAB2C2086A
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 Aug 2020 22:10:10 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="koToQFz7"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BAB2C2086A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19571-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26529 invoked by uid 550); 6 Aug 2020 22:10:03 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9B07121744
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 Aug 2020 16:38:48 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B07121744
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19572-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11728 invoked by uid 550); 7 Aug 2020 16:38:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,396 +22,603 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26506 invoked from network); 6 Aug 2020 22:10:02 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=CRP3FgRyQ/k48NTUuHSvU7SLO+Q+hOFOxehsPE+mY3A=;
-        b=koToQFz7v/FNbYDUnN7uUjTfsar8RnUGuRSmognn2IXLMfP3k0TA0YVizuDKsldhCB
-         oKL0TTm/CPbY9FwI+p94fRf/RVUPLuni/gRgietd/s6uKg0l4CXy14b0eKcAGA/tSijk
-         ozo6ZDCuptECLJz1cGm1K6VT/QjQNmNKjn8iMW7XksBfJkrHors35OlSwnYlpjb9xu/7
-         4wd8dLHukDPpGQ8yzP4CRj9SqSju3fi4muJJH7TnO3QuLzqSDWRlLuZLq9MARynzV126
-         b4+/uVQUOgtUiyM6hv2/2+TNV74S3w+bziPPQTsgXqD491pP6XoES/LHTtzUtL2U1acd
-         DhMw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=CRP3FgRyQ/k48NTUuHSvU7SLO+Q+hOFOxehsPE+mY3A=;
-        b=DkYiSsUVsF3JIjn6Y8TVeQ76NOVtWmBrsa3c4cFe+i/bvZI6fNla5v7Gez/d/imms6
-         lcVoSMTmOf97PbrAYf6MS0rnEFpSgy8K8L18b8Bh+415NaNci7kxfirGWro8MYoRplt+
-         daequj4paNpjfLlQlBSjS1hc2Y2HTvCah+rYmMlN2GeYlSTYpMJxxlA35hSafyWZBiuq
-         iS0LI1tNQufPpMYXPlnB6dDXBbBMiREHAXcxzKimXwN9QFuEVtwVE1sIzjwgGJH4W4xI
-         lAyblv09+gHh4NePgXj8/+uRu+j643FGnpc1H2vxi73njHboqQHNUJAB5zx76ekcHEYy
-         c7uA==
-X-Gm-Message-State: AOAM530AmAthA2A5v0c6BwX6ngQCb3CJOvhbNGYCxVxkg+0np/lwQ82D
-	eS7leoCLPLoFnvZCZmW0hE8hMQ==
-X-Google-Smtp-Source: ABdhPJyIvDdOsrSRk0Aersg8zp7X6hgYDLE4DrekCgs3b7/u9ms0kPv6U1wN8B2b/xqJQTL8s6WaHg==
-X-Received: by 2002:a17:90a:2210:: with SMTP id c16mr10702188pje.65.1596751790067;
-        Thu, 06 Aug 2020 15:09:50 -0700 (PDT)
-Date: Thu, 6 Aug 2020 15:09:43 -0700
-From: Sami Tolvanen <samitolvanen@google.com>
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Peter Zijlstra <peterz@infradead.org>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Will Deacon <will@kernel.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	clang-built-linux@googlegroups.com,
-	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
-	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
-	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
-	x86@kernel.org, Josh Poimboeuf <jpoimboe@redhat.com>
-Subject: Re: [RFC][PATCH] objtool,x86_64: Replace recordmcount with objtool
-Message-ID: <20200806220943.GA1781224@google.com>
-References: <20200625074530.GW4817@hirez.programming.kicks-ass.net>
- <20200625161503.GB173089@google.com>
- <20200625200235.GQ4781@hirez.programming.kicks-ass.net>
- <20200625224042.GA169781@google.com>
- <20200626112931.GF4817@hirez.programming.kicks-ass.net>
- <20200722135542.41127cc4@oasis.local.home>
- <20200722184137.GP10769@hirez.programming.kicks-ass.net>
- <20200722150943.53046592@oasis.local.home>
- <20200722235620.GR10769@hirez.programming.kicks-ass.net>
- <20200722200608.40ca9994@oasis.local.home>
+Received: (qmail 11705 invoked from network); 7 Aug 2020 16:38:37 -0000
+IronPort-SDR: /d/KA52pmd+ScJeeiE2te18QR8G5gU7ezyy06USRpXjFGF3BgkmJ2WgkXF9YpZBXMja3gi3Rt2
+ BctGtC+iqCtA==
+X-IronPort-AV: E=McAfee;i="6000,8403,9706"; a="152355664"
+X-IronPort-AV: E=Sophos;i="5.75,446,1589266800"; 
+   d="scan'208";a="152355664"
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+IronPort-SDR: 1Q5X2Q7FZjtVAxi5iPqZdJS1AD4vZ64TYrP2m04iNjEe3LJHmL8S2KfYf9UsWkqsN+nDODLGUd
+ QQBDpZXz4bqQ==
+X-IronPort-AV: E=Sophos;i="5.75,446,1589266800"; 
+   d="scan'208";a="333591219"
+Message-ID: <f8963aab93243bc046791dba6af5d006e15c91ff.camel@linux.intel.com>
+Subject: Re: [PATCH v4 00/10] Function Granular KASLR
+From: Kristen Carlson Accardi <kristen@linux.intel.com>
+To: Joe Lawrence <joe.lawrence@redhat.com>
+Cc: keescook@chromium.org, tglx@linutronix.de, mingo@redhat.com,
+ bp@alien8.de,  arjan@linux.intel.com, x86@kernel.org,
+ linux-kernel@vger.kernel.org,  kernel-hardening@lists.openwall.com,
+ rick.p.edgecombe@intel.com,  live-patching@vger.kernel.org
+Date: Fri, 07 Aug 2020 09:38:11 -0700
+In-Reply-To: <20200804182359.GA23533@redhat.com>
+References: <20200717170008.5949-1-kristen@linux.intel.com>
+	 <20200804182359.GA23533@redhat.com>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200722200608.40ca9994@oasis.local.home>
+Content-Transfer-Encoding: 7bit
 
-On Wed, Jul 22, 2020 at 08:06:08PM -0400, Steven Rostedt wrote:
-> On Thu, 23 Jul 2020 01:56:20 +0200
-> Peter Zijlstra <peterz@infradead.org> wrote:
+On Tue, 2020-08-04 at 14:23 -0400, Joe Lawrence wrote:
+> On Fri, Jul 17, 2020 at 09:59:57AM -0700, Kristen Carlson Accardi
+> wrote:
+> > Function Granular Kernel Address Space Layout Randomization
+> > (fgkaslr)
+> > -----------------------------------------------------------------
+> > ----
+> > 
+> > This patch set is an implementation of finer grained kernel address
+> > space
+> > randomization. It rearranges your kernel code at load time 
+> > on a per-function level granularity, with only around a second
+> > added to
+> > boot time.
+> > 
+> > Changes in v4:
+> > -------------
+> > * dropped the patch to split out change to STATIC definition in
+> >   x86/boot/compressed/misc.c and replaced with a patch authored
+> >   by Kees Cook to avoid the duplicate malloc definitions
+> > * Added a section to Documentation/admin-guide/kernel-
+> > parameters.txt
+> >   to document the fgkaslr boot option.
+> > * redesigned the patch to hide the new layout when reading
+> >   /proc/kallsyms. The previous implementation utilized a
+> > dynamically
+> >   allocated linked list to display the kernel and module symbols
+> >   in alphabetical order. The new implementation uses a randomly
+> >   shuffled index array to display the kernel and module symbols
+> >   in a random order.
+> > 
+> > Changes in v3:
+> > -------------
+> > * Makefile changes to accommodate
+> > CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+> > * removal of extraneous ALIGN_PAGE from _etext changes
+> > * changed variable names in x86/tools/relocs to be less confusing
+> > * split out change to STATIC definition in
+> > x86/boot/compressed/misc.c
+> > * Updates to Documentation to make it more clear what is preserved
+> > in .text
+> > * much more detailed commit message for function granular KASLR
+> > patch
+> > * minor tweaks and changes that make for more readable code
+> > * this cover letter updated slightly to add additional details
+> > 
+> > Changes in v2:
+> > --------------
+> > * Fix to address i386 build failure
+> > * Allow module reordering patch to be configured separately so that
+> >   arm (or other non-x86_64 arches) can take advantage of module
+> > function
+> >   reordering. This support has not be tested by me, but smoke
+> > tested by
+> >   Ard Biesheuvel <ardb@kernel.org> on arm.
+> > * Fix build issue when building on arm as reported by
+> >   Ard Biesheuvel <ardb@kernel.org> 
+> > 
+> > Patches to objtool are included because they are dependencies for
+> > this
+> > patchset, however they have been submitted by their maintainer
+> > separately.
+> > 
+> > Background
+> > ----------
+> > KASLR was merged into the kernel with the objective of increasing
+> > the
+> > difficulty of code reuse attacks. Code reuse attacks reused
+> > existing code
+> > snippets to get around existing memory protections. They exploit
+> > software bugs
+> > which expose addresses of useful code snippets to control the flow
+> > of
+> > execution for their own nefarious purposes. KASLR moves the entire
+> > kernel
+> > code text as a unit at boot time in order to make addresses less
+> > predictable.
+> > The order of the code within the segment is unchanged - only the
+> > base address
+> > is shifted. There are a few shortcomings to this algorithm.
+> > 
+> > 1. Low Entropy - there are only so many locations the kernel can
+> > fit in. This
+> >    means an attacker could guess without too much trouble.
+> > 2. Knowledge of a single address can reveal the offset of the base
+> > address,
+> >    exposing all other locations for a published/known kernel image.
+> > 3. Info leaks abound.
+> > 
+> > Finer grained ASLR has been proposed as a way to make ASLR more
+> > resistant
+> > to info leaks. It is not a new concept at all, and there are many
+> > variations
+> > possible. Function reordering is an implementation of finer grained
+> > ASLR
+> > which randomizes the layout of an address space on a function level
+> > granularity. We use the term "fgkaslr" in this document to refer to
+> > the
+> > technique of function reordering when used with KASLR, as well as
+> > finer grained
+> > KASLR in general.
+> > 
+> > Proposed Improvement
+> > --------------------
+> > This patch set proposes adding function reordering on top of the
+> > existing
+> > KASLR base address randomization. The over-arching objective is
+> > incremental
+> > improvement over what we already have. It is designed to work in
+> > combination
+> > with the existing solution. The implementation is really pretty
+> > simple, and
+> > there are 2 main area where changes occur:
+> > 
+> > * Build time
+> > 
+> > GCC has had an option to place functions into individual .text
+> > sections for
+> > many years now. This option can be used to implement function
+> > reordering at
+> > load time. The final compiled vmlinux retains all the section
+> > headers, which
+> > can be used to help find the address ranges of each function. Using
+> > this
+> > information and an expanded table of relocation addresses,
+> > individual text
+> > sections can be suffled immediately after decompression. Some data
+> > tables
+> > inside the kernel that have assumptions about order require re-
+> > sorting
+> > after being updated when applying relocations. In order to modify
+> > these tables,
+> > a few key symbols are excluded from the objcopy symbol stripping
+> > process for
+> > use after shuffling the text segments.
+> > 
+> > Some highlights from the build time changes to look for:
+> > 
+> > The top level kernel Makefile was modified to add the gcc flag if
+> > it
+> > is supported. Currently, I am applying this flag to everything it
+> > is
+> > possible to randomize. Anything that is written in C and not
+> > present in a
+> > special input section is randomized. The final binary segment 0
+> > retains a
+> > consolidated .text section, as well as all the individual .text.*
+> > sections.
+> > Future work could turn off this flags for selected files or even
+> > entire
+> > subsystems, although obviously at the cost of security.
+> > 
+> > The relocs tool is updated to add relative relocations. This
+> > information
+> > previously wasn't included because it wasn't necessary when moving
+> > the
+> > entire .text segment as a unit. 
+> > 
+> > A new file was created to contain a list of symbols that objcopy
+> > should
+> > keep. We use those symbols at load time as described below.
+> > 
+> > * Load time
+> > 
+> > The boot kernel was modified to parse the vmlinux elf file after
+> > decompression to check for our interesting symbols that we kept,
+> > and to
+> > look for any .text.* sections to randomize. The consolidated .text
+> > section
+> > is skipped and not moved. The sections are shuffled randomly, and
+> > copied
+> > into memory following the .text section in a new random order. The
+> > existing
+> > code which updated relocation addresses was modified to account for
+> > not just a fixed delta from the load address, but the offset that
+> > the function
+> > section was moved to. This requires inspection of each address to
+> > see if
+> > it was impacted by a randomization. We use a bsearch to make this
+> > less
+> > horrible on performance. Any tables that need to be modified with
+> > new
+> > addresses or resorted are updated using the symbol addresses parsed
+> > from the
+> > elf symbol table.
+> > 
+> > In order to hide our new layout, symbols reported through
+> > /proc/kallsyms
+> > will be displayed in a random order.
+> > 
+> > Security Considerations
+> > -----------------------
+> > The objective of this patch set is to improve a technology that is
+> > already
+> > merged into the kernel (KASLR). This code will not prevent all
+> > attacks,
+> > but should instead be considered as one of several tools that can
+> > be used.
+> > In particular, this code is meant to make KASLR more effective in
+> > the presence
+> > of info leaks.
+> > 
+> > How much entropy we are adding to the existing entropy of standard
+> > KASLR will
+> > depend on a few variables. Firstly and most obviously, the number
+> > of functions
+> > that are randomized matters. This implementation keeps the existing
+> > .text
+> > section for code that cannot be randomized - for example, because
+> > it was
+> > assembly code. The less sections to randomize, the less entropy. In
+> > addition,
+> > due to alignment (16 bytes for x86_64), the number of bits in a
+> > address that
+> > the attacker needs to guess is reduced, as the lower bits are
+> > identical.
+> > 
+> > Performance Impact
+> > ------------------
+> > There are two areas where function reordering can impact
+> > performance: boot
+> > time latency, and run time performance.
+> > 
+> > * Boot time latency
+> > This implementation of finer grained KASLR impacts the boot time of
+> > the kernel
+> > in several places. It requires additional parsing of the kernel ELF
+> > file to
+> > obtain the section headers of the sections to be randomized. It
+> > calls the
+> > random number generator for each section to be randomized to
+> > determine that
+> > section's new memory location. It copies the decompressed kernel
+> > into a new
+> > area of memory to avoid corruption when laying out the newly
+> > randomized
+> > sections. It increases the number of relocations the kernel has to
+> > perform at
+> > boot time vs. standard KASLR, and it also requires a lookup on each
+> > address
+> > that needs to be relocated to see if it was in a randomized section
+> > and needs
+> > to be adjusted by a new offset. Finally, it re-sorts a few data
+> > tables that
+> > are required to be sorted by address.
+> > 
+> > Booting a test VM on a modern, well appointed system showed an
+> > increase in
+> > latency of approximately 1 second.
+> > 
+> > * Run time
+> > The performance impact at run-time of function reordering varies by
+> > workload.
+> > Using kcbench, a kernel compilation benchmark, the performance of a
+> > kernel
+> > build with finer grained KASLR was about 1% slower than a kernel
+> > with standard
+> > KASLR. Analysis with perf showed a slightly higher percentage of 
+> > L1-icache-load-misses. Other workloads were examined as well, with
+> > varied
+> > results. Some workloads performed significantly worse under
+> > FGKASLR, while
+> > others stayed the same or were mysteriously better. In general, it
+> > will
+> > depend on the code flow whether or not finer grained KASLR will
+> > impact
+> > your workload, and how the underlying code was designed. Because
+> > the layout
+> > changes per boot, each time a system is rebooted the performance of
+> > a workload
+> > may change.
+> > 
+> > Future work could identify hot areas that may not be randomized and
+> > either
+> > leave them in the .text section or group them together into a
+> > single section
+> > that may be randomized. If grouping things together helps, one
+> > other thing to
+> > consider is that if we could identify text blobs that should be
+> > grouped together
+> > to benefit a particular code flow, it could be interesting to
+> > explore
+> > whether this security feature could be also be used as a
+> > performance
+> > feature if you are interested in optimizing your kernel layout for
+> > a
+> > particular workload at boot time. Optimizing function layout for a
+> > particular
+> > workload has been researched and proven effective - for more
+> > information
+> > read the Facebook paper "Optimizing Function Placement for Large-
+> > Scale
+> > Data-Center Applications" (see references section below).
+> > 
+> > Image Size
+> > ----------
+> > Adding additional section headers as a result of compiling with
+> > -ffunction-sections will increase the size of the vmlinux ELF file.
+> > With a standard distro config, the resulting vmlinux was increased
+> > by
+> > about 3%. The compressed image is also increased due to the header
+> > files,
+> > as well as the extra relocations that must be added. You can expect
+> > fgkaslr
+> > to increase the size of the compressed image by about 15%.
+> > 
+> > Memory Usage
+> > ------------
+> > fgkaslr increases the amount of heap that is required at boot time,
+> > although this extra memory is released when the kernel has finished
+> > decompression. As a result, it may not be appropriate to use this
+> > feature on
+> > systems without much memory.
+> > 
+> > Building
+> > --------
+> > To enable fine grained KASLR, you need to have the following config
+> > options
+> > set (including all the ones you would use to build normal KASLR)
+> > 
+> > CONFIG_FG_KASLR=y
+> > 
+> > In addition, fgkaslr is only supported for the X86_64 architecture.
+> > 
+> > Modules
+> > -------
+> > Modules are randomized similarly to the rest of the kernel by
+> > shuffling
+> > the sections at load time prior to moving them into memory. The
+> > module must
+> > also have been build with the -ffunction-sections compiler option.
+> > 
+> > Although fgkaslr for the kernel is only supported for the X86_64
+> > architecture,
+> > it is possible to use fgkaslr with modules on other architectures.
+> > To enable
+> > this feature, select
+> > 
+> > CONFIG_MODULE_FG_KASLR=y
+> > 
+> > This option is selected automatically for X86_64 when
+> > CONFIG_FG_KASLR is set.
+> > 
+> > Disabling
+> > ---------
+> > Disabling normal KASLR using the nokaslr command line option also
+> > disables
+> > fgkaslr. It is also possible to disable fgkaslr separately by
+> > booting with
+> > fgkaslr=off on the commandline.
+> > 
+> > References
+> > ----------
+> > There are a lot of academic papers which explore finer grained
+> > ASLR.
+> > This paper in particular contributed the most to my implementation
+> > design
+> > as well as my overall understanding of the problem space:
+> > 
+> > Selfrando: Securing the Tor Browser against De-anonymization
+> > Exploits,
+> > M. Conti, S. Crane, T. Frassetto, et al.
+> > 
+> > For more information on how function layout impacts performance,
+> > see:
+> > 
+> > Optimizing Function Placement for Large-Scale Data-Center
+> > Applications,
+> > G. Ottoni, B. Maher
+> > 
+> > Kees Cook (2):
+> >   x86/boot: Allow a "silent" kaslr random byte fetch
+> >   x86/boot/compressed: Avoid duplicate malloc() implementations
+> > 
+> > Kristen Carlson Accardi (8):
+> >   objtool: Do not assume order of parent/child functions
+> >   x86: tools/relocs: Support >64K section headers
+> >   x86: Makefile: Add build and config option for CONFIG_FG_KASLR
+> >   x86: Make sure _etext includes function sections
+> >   x86/tools: Add relative relocs for randomized functions
+> >   x86: Add support for function granular KASLR
+> >   kallsyms: Hide layout
+> >   module: Reorder functions
+> > 
+> >  .../admin-guide/kernel-parameters.txt         |   7 +
+> >  Documentation/security/fgkaslr.rst            | 172 ++++
+> >  Documentation/security/index.rst              |   1 +
+> >  Makefile                                      |   6 +-
+> >  arch/x86/Kconfig                              |   4 +
+> >  arch/x86/Makefile                             |   5 +
+> >  arch/x86/boot/compressed/Makefile             |   9 +-
+> >  arch/x86/boot/compressed/fgkaslr.c            | 811
+> > ++++++++++++++++++
+> >  arch/x86/boot/compressed/kaslr.c              |   4 -
+> >  arch/x86/boot/compressed/misc.c               | 157 +++-
+> >  arch/x86/boot/compressed/misc.h               |  30 +
+> >  arch/x86/boot/compressed/utils.c              |  11 +
+> >  arch/x86/boot/compressed/vmlinux.symbols      |  17 +
+> >  arch/x86/include/asm/boot.h                   |  15 +-
+> >  arch/x86/kernel/vmlinux.lds.S                 |  17 +-
+> >  arch/x86/lib/kaslr.c                          |  18 +-
+> >  arch/x86/tools/relocs.c                       | 143 ++-
+> >  arch/x86/tools/relocs.h                       |   4 +-
+> >  arch/x86/tools/relocs_common.c                |  15 +-
+> >  include/asm-generic/vmlinux.lds.h             |  18 +-
+> >  include/linux/decompress/mm.h                 |  12 +-
+> >  include/uapi/linux/elf.h                      |   1 +
+> >  init/Kconfig                                  |  26 +
+> >  kernel/kallsyms.c                             | 163 +++-
+> >  kernel/module.c                               |  81 ++
+> >  tools/objtool/elf.c                           |   8 +-
+> >  26 files changed, 1670 insertions(+), 85 deletions(-)
+> >  create mode 100644 Documentation/security/fgkaslr.rst
+> >  create mode 100644 arch/x86/boot/compressed/fgkaslr.c
+> >  create mode 100644 arch/x86/boot/compressed/utils.c
+> >  create mode 100644 arch/x86/boot/compressed/vmlinux.symbols
+> > 
+> > 
+> > base-commit: 11ba468877bb23f28956a35e896356252d63c983
+> > -- 
+> > 2.20.1
+> > 
 > 
-> > Anyway, what do you prefer, I suppose I can make objtool whatever we
-> > need, that patch is trivial. Simply recording the sites and not
-> > rewriting them should be simple enough.
+> Apologies in advance if this has already been discussed elsewhere,
+> but I
+> did finally get around to testing the patchset against the
+> livepatching
+> kselftests.
 > 
-> Either way. If objtool turns it into nops, just make it where we can
-> enable -DCC_USING_NOP_MCOUNT set, and the kernel will be unaware.
+> The livepatching kselftests fail as all livepatches stall their
+> transitions.  It appears that reliable (ORC) stack unwinding is
+> broken
+> when fgkaslr is enabled.
 > 
-> Or if you just add the locations, then that would work too.
+> Relevant config options:
+> 
+>   CONFIG_ARCH_HAS_FG_KASLR=y
+>   CONFIG_ARCH_STACKWALK=y
+>   CONFIG_FG_KASLR=y
+>   CONFIG_HAVE_LIVEPATCH=y
+>   CONFIG_HAVE_RELIABLE_STACKTRACE=y
+>   CONFIG_LIVEPATCH=y
+>   CONFIG_MODULE_FG_KASLR=y
+>   CONFIG_TEST_LIVEPATCH=m
+>   CONFIG_UNWINDER_ORC=y
+> 
+> The livepatch transitions are stuck along this call path:
+> 
+>   klp_check_stack
+>     stack_trace_save_tsk_reliable
+>       arch_stack_walk_reliable
+>   
+>           /* Check for stack corruption */
+>           if (unwind_error(&state))
+>                   return -EINVAL;
+> 
+> where the unwinder error is set by unwind_next_frame():
+> 
+>   arch/x86/kernel/unwind_orc.c
+>   bool unwind_next_frame(struct unwind_state *state)
+>  
+> sometimes here:
+>  
+>   	/* End-of-stack check for kernel threads: */
+>   	if (orc->sp_reg == ORC_REG_UNDEFINED) {
+>   		if (!orc->end)
+>   			goto err;
+>   
+>   		goto the_end;
+>   	}
+> 
+> or here:
+> 
+>   	/* Prevent a recursive loop due to bad ORC data:
+> */                                                                   
+>              
+>   	if (state->stack_info.type == prev_type
+> &&                                                                   
+>                       
+>   	    on_stack(&state->stack_info, (void *)state->sp,
+> sizeof(long))
+> &&                                                               
+>   	    state->sp <= prev_sp)
+> {                                                                    
+>                                     
+>   		orc_warn_current("stack going in the wrong direction?
+> at %pB\n",                                                           
+>   				 (void
+> *)orig_ip);                                                          
+>                                
+>   		goto
+> err;                                                                 
+>                                                  
+>   	}
+> 
+> (and probably other places the ORC unwinder gets confused.)
+> 
+> 
+> It also manifests itself in other, more visible ways.  For example, a
+> kernel module that calls dump_stack() in its init function or even
+> /proc/<pid>/stack:
+> 
+> (fgkaslr on)
+> ------------
+> 
+> Call Trace:
+>  ? dump_stack+0x57/0x73
+>  ? 0xffffffffc0850000
+>  ? mymodule_init+0xa/0x1000 [dumpstack]
+>  ? do_one_initcall+0x46/0x1f0
+>  ? free_unref_page_commit+0x91/0x100
+>  ? _cond_resched+0x15/0x30
+>  ? kmem_cache_alloc_trace+0x14b/0x210
+>  ? do_init_module+0x5a/0x220
+>  ? load_module+0x1912/0x1b20
+>  ? __do_sys_finit_module+0xa8/0x110
+>  ? __do_sys_finit_module+0xa8/0x110
+>  ? do_syscall_64+0x47/0x80
+>  ? entry_SYSCALL_64_after_hwframe+0x44/0xa9
+> 
+> % sudo cat /proc/$$/stack
+> [<0>] do_wait+0x1c3/0x230
+> [<0>] kernel_wait4+0xa6/0x140
+> 
+> 
+> fgkaslr=off
+> -----------
+> 
+> Call Trace:
+>  dump_stack+0x57/0x73
+>  ? 0xffffffffc04f2000
+>  mymodule_init+0xa/0x1000 [readonly]
+>  do_one_initcall+0x46/0x1f0
+>  ? free_unref_page_commit+0x91/0x100
+>  ? _cond_resched+0x15/0x30
+>  ? kmem_cache_alloc_trace+0x14b/0x210
+>  do_init_module+0x5a/0x220
+>  load_module+0x1912/0x1b20
+>  ? __do_sys_finit_module+0xa8/0x110
+>  __do_sys_finit_module+0xa8/0x110
+>  do_syscall_64+0x47/0x80
+>  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+> 
+> % sudo cat /proc/$$/stack
+> [<0>] do_wait+0x1c3/0x230
+> [<0>] kernel_wait4+0xa6/0x140
+> [<0>] __do_sys_wait4+0x83/0x90
+> [<0>] do_syscall_64+0x47/0x80
+> [<0>] entry_SYSCALL_64_after_hwframe+0x44/0xa9
+> 
+> 
+> I would think fixing and verifying these latter cases would be easier
+> than
+> chasing livepatch transitions (but would still probably fix klp case,
+> too).
+> Perhaps Josh or someone has other ORC unwinder tests that could be
+> used?
+> 
+> -- Joe
+> 
 
-I took Peter's earlier patch, rebased it on top of the current mainline
-tree for easier testing, and tweaked the makefiles to only use objtool
---mcount when CONFIG_STACK_VALIDATION is enabled and the compiler
-supports -mfentry. This works for me with both gcc and clang. Thoughts?
+Hi Joe,
+Thanks for testing. Yes, Josh and I have been discussing the orc_unwind
+issues. I've root caused one issue already, in that objtool places an
+orc_unwind_ip address just outside the section, so my algorithm fails
+to relocate this address. There are other issues as well that I still
+haven't root caused. I'll be addressing this in v5 and plan to have
+something that passes livepatch testing with that version.
 
-Sami
-
-
----
- Makefile                      | 38 ++++++++++++----
- arch/x86/Kconfig              |  1 +
- kernel/trace/Kconfig          |  5 +++
- scripts/Makefile.build        |  9 ++--
- tools/objtool/builtin-check.c |  3 +-
- tools/objtool/builtin.h       |  2 +-
- tools/objtool/check.c         | 83 +++++++++++++++++++++++++++++++++++
- tools/objtool/check.h         |  1 +
- tools/objtool/objtool.h       |  1 +
- 9 files changed, 129 insertions(+), 14 deletions(-)
-
-diff --git a/Makefile b/Makefile
-index 5cfc3481207f..2d23b6b6c4c9 100644
---- a/Makefile
-+++ b/Makefile
-@@ -864,17 +864,34 @@ ifdef CONFIG_HAVE_FENTRY
-   ifeq ($(call cc-option-yn, -mfentry),y)
-     CC_FLAGS_FTRACE	+= -mfentry
-     CC_FLAGS_USING	+= -DCC_USING_FENTRY
-+    export CC_USING_FENTRY := 1
-   endif
- endif
- export CC_FLAGS_FTRACE
--KBUILD_CFLAGS	+= $(CC_FLAGS_FTRACE) $(CC_FLAGS_USING)
--KBUILD_AFLAGS	+= $(CC_FLAGS_USING)
- ifdef CONFIG_DYNAMIC_FTRACE
--	ifdef CONFIG_HAVE_C_RECORDMCOUNT
--		BUILD_C_RECORDMCOUNT := y
--		export BUILD_C_RECORDMCOUNT
--	endif
-+  ifndef CC_USING_RECORD_MCOUNT
-+  ifndef CC_USING_PATCHABLE_FUNCTION_ENTRY
-+    # use objtool or recordmcount to generate mcount tables
-+    ifdef CONFIG_HAVE_OBJTOOL_MCOUNT
-+      ifdef CC_USING_FENTRY
-+        USE_OBJTOOL_MCOUNT := y
-+        CC_FLAGS_USING += -DCC_USING_NOP_MCOUNT
-+        export USE_OBJTOOL_MCOUNT
-+      endif
-+    endif
-+    ifndef USE_OBJTOOL_MCOUNT
-+      USE_RECORDMCOUNT := y
-+      export USE_RECORDMCOUNT
-+      ifdef CONFIG_HAVE_C_RECORDMCOUNT
-+        BUILD_C_RECORDMCOUNT := y
-+        export BUILD_C_RECORDMCOUNT
-+      endif
-+    endif
-+  endif
-+  endif
- endif
-+KBUILD_CFLAGS	+= $(CC_FLAGS_FTRACE) $(CC_FLAGS_USING)
-+KBUILD_AFLAGS	+= $(CC_FLAGS_USING)
- endif
- 
- # We trigger additional mismatches with less inlining
-@@ -1211,11 +1228,16 @@ uapi-asm-generic:
- PHONY += prepare-objtool prepare-resolve_btfids
- prepare-objtool: $(objtool_target)
- ifeq ($(SKIP_STACK_VALIDATION),1)
-+objtool-lib-prompt := "please install libelf-dev, libelf-devel or elfutils-libelf-devel"
-+ifdef USE_OBJTOOL_MCOUNT
-+	@echo "error: Cannot generate __mcount_loc for CONFIG_DYNAMIC_FTRACE=y, $(objtool-lib-prompt)" >&2
-+	@false
-+endif
- ifdef CONFIG_UNWINDER_ORC
--	@echo "error: Cannot generate ORC metadata for CONFIG_UNWINDER_ORC=y, please install libelf-dev, libelf-devel or elfutils-libelf-devel" >&2
-+	@echo "error: Cannot generate ORC metadata for CONFIG_UNWINDER_ORC=y, $(objtool-lib-prompt)" >&2
- 	@false
- else
--	@echo "warning: Cannot use CONFIG_STACK_VALIDATION=y, please install libelf-dev, libelf-devel or elfutils-libelf-devel" >&2
-+	@echo "warning: Cannot use CONFIG_STACK_VALIDATION=y, $(objtool-lib-prompt)" >&2
- endif
- endif
- 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 9a2849527dd7..149c94a44cf0 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -163,6 +163,7 @@ config X86
- 	select HAVE_CMPXCHG_LOCAL
- 	select HAVE_CONTEXT_TRACKING		if X86_64
- 	select HAVE_C_RECORDMCOUNT
-+	select HAVE_OBJTOOL_MCOUNT		if STACK_VALIDATION
- 	select HAVE_DEBUG_KMEMLEAK
- 	select HAVE_DMA_CONTIGUOUS
- 	select HAVE_DYNAMIC_FTRACE
-diff --git a/kernel/trace/Kconfig b/kernel/trace/Kconfig
-index a4020c0b4508..b510af5b216c 100644
---- a/kernel/trace/Kconfig
-+++ b/kernel/trace/Kconfig
-@@ -56,6 +56,11 @@ config HAVE_C_RECORDMCOUNT
- 	help
- 	  C version of recordmcount available?
- 
-+config HAVE_OBJTOOL_MCOUNT
-+	bool
-+	help
-+	  Arch supports objtool --mcount
-+
- config TRACER_MAX_TRACE
- 	bool
- 
-diff --git a/scripts/Makefile.build b/scripts/Makefile.build
-index 2e8810b7e5ed..f66f8c0ef294 100644
---- a/scripts/Makefile.build
-+++ b/scripts/Makefile.build
-@@ -175,8 +175,7 @@ cmd_modversions_c =								\
- 	fi
- endif
- 
--ifdef CONFIG_FTRACE_MCOUNT_RECORD
--ifndef CC_USING_RECORD_MCOUNT
-+ifdef USE_RECORDMCOUNT
- # compiler will not generate __mcount_loc use recordmcount or recordmcount.pl
- ifdef BUILD_C_RECORDMCOUNT
- ifeq ("$(origin RECORDMCOUNT_WARN)", "command line")
-@@ -203,8 +202,7 @@ recordmcount_source := $(srctree)/scripts/recordmcount.pl
- endif # BUILD_C_RECORDMCOUNT
- cmd_record_mcount = $(if $(findstring $(strip $(CC_FLAGS_FTRACE)),$(_c_flags)),	\
- 	$(sub_cmd_record_mcount))
--endif # CC_USING_RECORD_MCOUNT
--endif # CONFIG_FTRACE_MCOUNT_RECORD
-+endif # USE_RECORDMCOUNT
- 
- ifdef CONFIG_STACK_VALIDATION
- ifneq ($(SKIP_STACK_VALIDATION),1)
-@@ -227,6 +225,9 @@ endif
- ifdef CONFIG_X86_SMAP
-   objtool_args += --uaccess
- endif
-+ifdef USE_OBJTOOL_MCOUNT
-+  objtool_args += --mcount
-+endif
- 
- # 'OBJECT_FILES_NON_STANDARD := y': skip objtool checking for a directory
- # 'OBJECT_FILES_NON_STANDARD_foo.o := 'y': skip objtool checking for a file
-diff --git a/tools/objtool/builtin-check.c b/tools/objtool/builtin-check.c
-index 7a44174967b5..71595cf4946d 100644
---- a/tools/objtool/builtin-check.c
-+++ b/tools/objtool/builtin-check.c
-@@ -18,7 +18,7 @@
- #include "builtin.h"
- #include "objtool.h"
- 
--bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux;
-+bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux, mcount;
- 
- static const char * const check_usage[] = {
- 	"objtool check [<options>] file.o",
-@@ -35,6 +35,7 @@ const struct option check_options[] = {
- 	OPT_BOOLEAN('s', "stats", &stats, "print statistics"),
- 	OPT_BOOLEAN('d', "duplicate", &validate_dup, "duplicate validation for vmlinux.o"),
- 	OPT_BOOLEAN('l', "vmlinux", &vmlinux, "vmlinux.o validation"),
-+	OPT_BOOLEAN('M', "mcount", &mcount, "generate __mcount_loc"),
- 	OPT_END(),
- };
- 
-diff --git a/tools/objtool/builtin.h b/tools/objtool/builtin.h
-index 85c979caa367..94565a72b701 100644
---- a/tools/objtool/builtin.h
-+++ b/tools/objtool/builtin.h
-@@ -8,7 +8,7 @@
- #include <subcmd/parse-options.h>
- 
- extern const struct option check_options[];
--extern bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux;
-+extern bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux, mcount;
- 
- extern int cmd_check(int argc, const char **argv);
- extern int cmd_orc(int argc, const char **argv);
-diff --git a/tools/objtool/check.c b/tools/objtool/check.c
-index e034a8f24f46..6e0b478dc065 100644
---- a/tools/objtool/check.c
-+++ b/tools/objtool/check.c
-@@ -433,6 +433,65 @@ static int add_dead_ends(struct objtool_file *file)
- 	return 0;
- }
- 
-+static int create_mcount_loc_sections(struct objtool_file *file)
-+{
-+	struct section *sec, *reloc_sec;
-+	struct reloc *reloc;
-+	unsigned long *loc;
-+	struct instruction *insn;
-+	int idx;
-+
-+	sec = find_section_by_name(file->elf, "__mcount_loc");
-+	if (sec) {
-+		INIT_LIST_HEAD(&file->mcount_loc_list);
-+		WARN("file already has __mcount_loc section, skipping");
-+		return 0;
-+	}
-+
-+	if (list_empty(&file->mcount_loc_list))
-+		return 0;
-+
-+	idx = 0;
-+	list_for_each_entry(insn, &file->mcount_loc_list, mcount_loc_node)
-+		idx++;
-+
-+	sec = elf_create_section(file->elf, "__mcount_loc", sizeof(unsigned long), idx);
-+	if (!sec)
-+		return -1;
-+
-+	reloc_sec = elf_create_reloc_section(file->elf, sec, SHT_RELA);
-+	if (!reloc_sec)
-+		return -1;
-+
-+	idx = 0;
-+	list_for_each_entry(insn, &file->mcount_loc_list, mcount_loc_node) {
-+
-+		loc = (unsigned long *)sec->data->d_buf + idx;
-+		memset(loc, 0, sizeof(unsigned long));
-+
-+		reloc = malloc(sizeof(*reloc));
-+		if (!reloc) {
-+			perror("malloc");
-+			return -1;
-+		}
-+		memset(reloc, 0, sizeof(*reloc));
-+
-+		reloc->sym = insn->sec->sym;
-+		reloc->addend = insn->offset;
-+		reloc->type = R_X86_64_64;
-+		reloc->offset = idx * sizeof(unsigned long);
-+		reloc->sec = reloc_sec;
-+		elf_add_reloc(file->elf, reloc);
-+
-+		idx++;
-+	}
-+
-+	if (elf_rebuild_reloc_section(file->elf, reloc_sec))
-+		return -1;
-+
-+	return 0;
-+}
-+
- /*
-  * Warnings shouldn't be reported for ignored functions.
-  */
-@@ -784,6 +843,22 @@ static int add_call_destinations(struct objtool_file *file)
- 			insn->type = INSN_NOP;
- 		}
- 
-+		if (mcount && !strcmp(insn->call_dest->name, "__fentry__")) {
-+			if (reloc) {
-+				reloc->type = R_NONE;
-+				elf_write_reloc(file->elf, reloc);
-+			}
-+
-+			elf_write_insn(file->elf, insn->sec,
-+				       insn->offset, insn->len,
-+				       arch_nop_insn(insn->len));
-+
-+			insn->type = INSN_NOP;
-+
-+			list_add_tail(&insn->mcount_loc_node,
-+				      &file->mcount_loc_list);
-+		}
-+
- 		/*
- 		 * Whatever stack impact regular CALLs have, should be undone
- 		 * by the RETURN of the called function.
-@@ -2791,6 +2866,7 @@ int check(const char *_objname, bool orc)
- 
- 	INIT_LIST_HEAD(&file.insn_list);
- 	hash_init(file.insn_hash);
-+	INIT_LIST_HEAD(&file.mcount_loc_list);
- 	file.c_file = !vmlinux && find_section_by_name(file.elf, ".comment");
- 	file.ignore_unreachables = no_unreachable;
- 	file.hints = false;
-@@ -2838,6 +2914,13 @@ int check(const char *_objname, bool orc)
- 		warnings += ret;
- 	}
- 
-+	if (mcount) {
-+		ret = create_mcount_loc_sections(&file);
-+		if (ret < 0)
-+			goto out;
-+		warnings += ret;
-+	}
-+
- 	if (orc) {
- 		ret = create_orc(&file);
- 		if (ret < 0)
-diff --git a/tools/objtool/check.h b/tools/objtool/check.h
-index 061aa96e15d3..b62afd3d970b 100644
---- a/tools/objtool/check.h
-+++ b/tools/objtool/check.h
-@@ -22,6 +22,7 @@ struct insn_state {
- struct instruction {
- 	struct list_head list;
- 	struct hlist_node hash;
-+	struct list_head mcount_loc_node;
- 	struct section *sec;
- 	unsigned long offset;
- 	unsigned int len;
-diff --git a/tools/objtool/objtool.h b/tools/objtool/objtool.h
-index 528028a66816..427806079540 100644
---- a/tools/objtool/objtool.h
-+++ b/tools/objtool/objtool.h
-@@ -16,6 +16,7 @@ struct objtool_file {
- 	struct elf *elf;
- 	struct list_head insn_list;
- 	DECLARE_HASHTABLE(insn_hash, 20);
-+	struct list_head mcount_loc_list;
- 	bool ignore_unreachables, c_file, hints, rodata;
- };
- 
+Kristen
 
