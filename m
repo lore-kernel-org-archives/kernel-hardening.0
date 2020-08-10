@@ -1,20 +1,20 @@
-Return-Path: <SRS0=II33=BS=lists.openwall.com=kernel-hardening-return-19574-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=E21y=BU=lists.openwall.com=kernel-hardening-return-19575-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.5 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AACBBC433E0
-	for <kernel-hardening@archiver.kernel.org>; Sat,  8 Aug 2020 22:18:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 97CEEC433E1
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Aug 2020 16:11:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0C055206B5
-	for <kernel-hardening@archiver.kernel.org>; Sat,  8 Aug 2020 22:18:10 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0C055206B5
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=ucw.cz
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19574-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1083 invoked by uid 550); 8 Aug 2020 22:18:02 -0000
+	by mail.kernel.org (Postfix) with SMTP id E93122073E
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Aug 2020 16:11:09 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E93122073E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19575-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13706 invoked by uid 550); 10 Aug 2020 16:11:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,70 +22,64 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1051 invoked from network); 8 Aug 2020 22:18:01 -0000
-Date: Sun, 9 Aug 2020 00:17:48 +0200
-From: Pavel Machek <pavel@ucw.cz>
-To: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Cc: Mark Rutland <mark.rutland@arm.com>,
-	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-	linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org,
-	linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org, oleg@redhat.com,
-	x86@kernel.org
-Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-Message-ID: <20200808221748.GA1020@bug>
-References: <aefc85852ea518982e74b233e11e16d2e707bc32>
- <20200728131050.24443-1-madvenka@linux.microsoft.com>
- <20200731180955.GC67415@C02TD0UTHF1T.local>
- <6236adf7-4bed-534e-0956-fddab4fd96b6@linux.microsoft.com>
- <20200804143018.GB7440@C02TD0UTHF1T.local>
- <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
+Received: (qmail 13683 invoked from network); 10 Aug 2020 16:11:01 -0000
+IronPort-SDR: ZC+455sg6W9cVf7vJihrYf/YnbU0MJahBfhEkygfnO3TnqxcYlESHUGOPlwy+QuvhSf0i04oDt
+ J3Fjxrjugvvw==
+X-IronPort-AV: E=McAfee;i="6000,8403,9709"; a="238393760"
+X-IronPort-AV: E=Sophos;i="5.75,458,1589266800"; 
+   d="scan'208";a="238393760"
+X-Amp-Result: SKIPPED(no attachment in message)
+X-Amp-File-Uploaded: False
+IronPort-SDR: L0fGK7Oc41XXt/uCpVijKONSkPdWYSy53uICatG+sIVZajt8GK0hK7Me29p68sdmSoSBzhgOHo
+ z8ekofBUjVhg==
+X-IronPort-AV: E=Sophos;i="5.75,458,1589266800"; 
+   d="scan'208";a="494847826"
+Message-ID: <6b96dcb30b9e1ab1638979c09462614aa2976721.camel@linux.intel.com>
+Subject: Re: [PATCH v4 00/10] Function Granular KASLR
+From: Kristen Carlson Accardi <kristen@linux.intel.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Joe Lawrence <joe.lawrence@redhat.com>, tglx@linutronix.de, 
+	mingo@redhat.com, bp@alien8.de, arjan@linux.intel.com, x86@kernel.org, 
+	linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, 
+	rick.p.edgecombe@intel.com, live-patching@vger.kernel.org
+Date: Mon, 10 Aug 2020 09:10:41 -0700
+In-Reply-To: <202008071019.BF206AE8BD@keescook>
+References: <20200717170008.5949-1-kristen@linux.intel.com>
+	 <20200804182359.GA23533@redhat.com>
+	 <f8963aab93243bc046791dba6af5d006e15c91ff.camel@linux.intel.com>
+	 <202008071019.BF206AE8BD@keescook>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.30.5 (3.30.5-1.fc29) 
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
-User-Agent: Mutt/1.5.23 (2014-03-12)
+Content-Transfer-Encoding: 7bit
 
-Hi!
-
-> Thanks for the lively discussion. I have tried to answer some of the
-> comments below.
-
-> > There are options today, e.g.
-> >
-> > a) If the restriction is only per-alias, you can have distinct aliases
-> >    where one is writable and another is executable, and you can make it
-> >    hard to find the relationship between the two.
-> >
-> > b) If the restriction is only temporal, you can write instructions into
-> >    an RW- buffer, transition the buffer to R--, verify the buffer
-> >    contents, then transition it to --X.
-> >
-> > c) You can have two processes A and B where A generates instrucitons into
-> >    a buffer that (only) B can execute (where B may be restricted from
-> >    making syscalls like write, mprotect, etc).
+On Fri, 2020-08-07 at 10:20 -0700, Kees Cook wrote:
+> On Fri, Aug 07, 2020 at 09:38:11AM -0700, Kristen Carlson Accardi
+> wrote:
+> > Thanks for testing. Yes, Josh and I have been discussing the
+> > orc_unwind
+> > issues. I've root caused one issue already, in that objtool places
+> > an
+> > orc_unwind_ip address just outside the section, so my algorithm
+> > fails
+> > to relocate this address. There are other issues as well that I
+> > still
+> > haven't root caused. I'll be addressing this in v5 and plan to have
+> > something that passes livepatch testing with that version.
 > 
-> The general principle of the mitigation is W^X. I would argue that
-> the above options are violations of the W^X principle. If they are
-> allowed today, they must be fixed. And they will be. So, we cannot
-> rely on them.
+> FWIW, I'm okay with seeing fgkaslr be developed progressively.
+> Getting
+> it working with !livepatching would be fine as a first step. There's
+> value in getting the general behavior landed, and then continuing to
+> improve it.
+> 
 
-Would you mind describing your threat model?
+In this case, part of the issue with livepatching appears to be a more
+general issue with objtool and how it creates the orc unwind entries
+when you have >64K sections. So livepatching is a good test case for
+making sure that the orc tables are actually correct. However, the
+other issue with livepatching (the duplicate symbols), might be worth
+deferring if the solution is complex - I will keep that in mind as I
+look at it more closely.
 
-Because I believe you are using model different from everyone else.
 
-In particular, I don't believe b) is a problem or should be fixed.
-
-I'll add d), application mmaps a file(R--), and uses write syscall to change
-trampolines in it.
-
-> b) This is again a violation. The kernel should refuse to give execute
-> ???????? permission to a page that was writeable in the past and refuse to
-> ???????? give write permission to a page that was executable in the past.
-
-Why?
-
-										Pavel
--- 
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blog.html
