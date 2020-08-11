@@ -1,23 +1,23 @@
-Return-Path: <SRS0=99tM=BV=lists.openwall.com=kernel-hardening-return-19590-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=SfcO=BV=lists.openwall.com=kernel-hardening-return-19591-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D075BC433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 12:17:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 91A8AC433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 12:41:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2A20D20578
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 12:17:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id D83F220756
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 12:41:36 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="SUZSVEhC"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2A20D20578
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19590-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18120 invoked by uid 550); 11 Aug 2020 12:16:53 -0000
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="PFQNuX5m"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D83F220756
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19591-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32376 invoked by uid 550); 11 Aug 2020 12:41:30 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,64 +25,100 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18079 invoked from network); 11 Aug 2020 12:16:53 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=BfaOWSVdZQ07T1WYL8SAoDKGztX/6CbsXqzUzK0St8s=;
-        b=SUZSVEhCg6bsE5g5AFV3Nu7ILrIBK14FCJeQTRW4bRuMioqVg6Xp+cvlp3Yg1AIoqp
-         +KJKITEVIQCC1qHMKKl6em+lfdg+/slX9FriU4yJcV/PdONBjp+w5Vg7c5lA5H/B30xo
-         kbK88mNEzpr+gxCHW2krRACRsrCFrXErLis+oz+OGxiTog21ZC3h/ORMHGljsYc9qYWV
-         ZeSRskj+HxmoIBBv6sNByjudCtnXj72+c/p3RBZs0DnyCBEZoD1zrdj3FaN1e60XJNeh
-         zDBtXC4LSVsOIfENZwvo9yqNGeotY1MPPOUoEKYypDhOkuCUPSA4AiGeNj248+s7ZXKA
-         jOMw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=BfaOWSVdZQ07T1WYL8SAoDKGztX/6CbsXqzUzK0St8s=;
-        b=MOCzGLXaGpitXEykpMKHYh9gT6zIZDQP/yNQO+JwwGdPvHfh7InVzCSJqsQxvtqgXc
-         6qdv1e88UXIYvJEo11hnKaofynQpW4hvXpfgPSvA3Gqfd5Ki7PkPkoi0cniMHHFyTSbJ
-         4W3DREoaD8JXC6TqkO4mfd11+7H6UKP4tNZ1a6AFtoqpRilL6xyJP6n1/fn4qlh/TYhX
-         bepTdM+LulyI7qhQzdBVd8CoZqhIrr7g2IMnzezZA7cGPoHajmvUZBgc9mVx6ICyF91B
-         Uo0kICzoA8BI8FzeBQFktZR2GvRs/p2y478loaezjNftOu+tRGhXF0tPgM4jfmsTW3+e
-         /LtQ==
-X-Gm-Message-State: AOAM533uh4lw/K7mXvwzDLOfuacJII29ROm1jB22TFM/kWy1sKx0YcFF
-	1iIZpken7fTqJhMTiMtWl6lUFKfJFUjKk+JHGgw=
-X-Google-Smtp-Source: ABdhPJzSaTIBww3RVWzclOnCFAapTOONrFiRaRjDySuKQvXkeW9wMlyEhPPRLW4/2hyPS3tLM0iChxXJ4fWU8jt/XPY=
-X-Received: by 2002:a4a:2c83:: with SMTP id o125mr823335ooo.84.1597148201081;
- Tue, 11 Aug 2020 05:16:41 -0700 (PDT)
+Received: (qmail 32356 invoked from network); 11 Aug 2020 12:41:29 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 7A2A120B4908
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
+	s=default; t=1597149677;
+	bh=/01YYim8UON1WnW57/jtTiKZ9zMxYZQ09Mw9cbuIu4A=;
+	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
+	b=PFQNuX5mWMquO2HGENEzafqUyJUE7/be/jyBGj5BPS+LLzBuKDCp8oxu/gpMGiuzS
+	 6nmE9EJ+VCIZo4ZznNZO0l1rypST2o/WGeVSn+KjlmzrdKh1od3CFRwpGX0UIvppY1
+	 +3sGwRwS/5aecpkyVSZ45vXgzNz/7thzHMTdnYOE=
+Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
+To: Pavel Machek <pavel@ucw.cz>
+Cc: Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com,
+ linux-api@vger.kernel.org, linux-arm-kernel@lists.infradead.org,
+ linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org,
+ linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org,
+ oleg@redhat.com, x86@kernel.org
+References: <aefc85852ea518982e74b233e11e16d2e707bc32>
+ <20200728131050.24443-1-madvenka@linux.microsoft.com>
+ <20200731180955.GC67415@C02TD0UTHF1T.local>
+ <6236adf7-4bed-534e-0956-fddab4fd96b6@linux.microsoft.com>
+ <20200804143018.GB7440@C02TD0UTHF1T.local>
+ <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
+ <20200808221748.GA1020@bug>
+From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
+Message-ID: <6cca8eac-f767-b891-dc92-eaa7504a0e8b@linux.microsoft.com>
+Date: Tue, 11 Aug 2020 07:41:15 -0500
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.10.0
 MIME-Version: 1.0
-References: <20200716030847.1564131-1-keescook@chromium.org>
- <87h7tpa3hg.fsf@nanos.tec.linutronix.de> <202007301113.45D24C9D@keescook> <CAOMdWSJQKHAWY1P297b9koOLd8sVtezEYEyWGtymN1YeY27M6A@mail.gmail.com>
-In-Reply-To: <CAOMdWSJQKHAWY1P297b9koOLd8sVtezEYEyWGtymN1YeY27M6A@mail.gmail.com>
-From: Allen <allen.lkml@gmail.com>
-Date: Tue, 11 Aug 2020 17:46:29 +0530
-Message-ID: <CAOMdWSLef4Vy=k-Kfp8RJ++=SsMwCQTU4+hEueK_APDGvJ-PaA@mail.gmail.com>
-Subject: Re: [PATCH 0/3] Modernize tasklet callback API
-To: Kees Cook <keescook@chromium.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	Oscar Carter <oscar.carter@gmx.com>, Romain Perier <romain.perier@gmail.com>, 
-	"David S. Miller" <davem@davemloft.net>, Peter Zijlstra <peterz@infradead.org>, 
-	Will Deacon <will@kernel.org>, linux-input@vger.kernel.org, linux-kernel@vger.kernel.org, 
-	netdev@vger.kernel.org, linux-s390@vger.kernel.org, 
-	devel@driverdev.osuosl.org, linux-usb@vger.kernel.org, 
-	kgdb-bugreport@lists.sourceforge.net, alsa-devel@alsa-project.org, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <20200808221748.GA1020@bug>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-Kees,
 
-> >
->
-> Here's the series re-based on top of 5.8
-> https://github.com/allenpais/tasklets/tree/V3
->
-> Let me know how you would want these to be reviewed.
->
 
-  I see the first set of infrastructure patches for tasklets have
-landed in Linus's tree. Good time to send out the ~200 patches?
+On 8/8/20 5:17 PM, Pavel Machek wrote:
+> Hi!
+> 
+>> Thanks for the lively discussion. I have tried to answer some of the
+>> comments below.
+> 
+>>> There are options today, e.g.
+>>>
+>>> a) If the restriction is only per-alias, you can have distinct aliases
+>>>    where one is writable and another is executable, and you can make it
+>>>    hard to find the relationship between the two.
+>>>
+>>> b) If the restriction is only temporal, you can write instructions into
+>>>    an RW- buffer, transition the buffer to R--, verify the buffer
+>>>    contents, then transition it to --X.
+>>>
+>>> c) You can have two processes A and B where A generates instrucitons into
+>>>    a buffer that (only) B can execute (where B may be restricted from
+>>>    making syscalls like write, mprotect, etc).
+>>
+>> The general principle of the mitigation is W^X. I would argue that
+>> the above options are violations of the W^X principle. If they are
+>> allowed today, they must be fixed. And they will be. So, we cannot
+>> rely on them.
+> 
+> Would you mind describing your threat model?
+> 
+> Because I believe you are using model different from everyone else.
+> 
+> In particular, I don't believe b) is a problem or should be fixed.
 
-- Allen
+It is a problem because a kernel that implements W^X properly
+will not allow it. It has no idea what has been done in userland.
+It has no idea that the user has checked and verified the buffer
+contents after transitioning the page to R--.
+
+
+> 
+> I'll add d), application mmaps a file(R--), and uses write syscall to change
+> trampolines in it.
+> 
+
+No matter how you do it, these are all user-level methods that can be
+hacked. The kernel cannot be sure that an attacker's code has
+not found its way into the file.
+
+>> b) This is again a violation. The kernel should refuse to give execute
+>> ???????? permission to a page that was writeable in the past and refuse to
+>> ???????? give write permission to a page that was executable in the past.
+> 
+> Why?
+
+I don't know about the latter part. I guess I need to think about it.
+But the former is valid. When a page is RW-, a hacker could hack the
+page. Then it does not matter that the page is transitioned to R--.
+Again, the kernel cannot be sure that the user has verified the contents
+after R--.
+
+IMO, W^X needs to be enforced temporally as well.
+
+Madhavan
