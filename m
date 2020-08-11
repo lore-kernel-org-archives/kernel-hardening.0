@@ -1,21 +1,20 @@
-Return-Path: <SRS0=KqGK=BV=lists.openwall.com=kernel-hardening-return-19599-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=CrGX=BV=lists.openwall.com=kernel-hardening-return-19600-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0 tests=BAD_ENC_HEADER,BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-4.0 required=3.0 tests=BAD_ENC_HEADER,BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9DBFCC433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 19:03:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EE0CBC433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 19:18:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AF488206DA
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 19:03:55 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AF488206DA
+	by mail.kernel.org (Postfix) with SMTP id 3FD5820774
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 19:18:40 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3FD5820774
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19599-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25880 invoked by uid 550); 11 Aug 2020 19:03:48 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19600-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1087 invoked by uid 550); 11 Aug 2020 19:18:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +22,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25811 invoked from network); 11 Aug 2020 19:03:36 -0000
+Received: (qmail 1067 invoked from network); 11 Aug 2020 19:18:33 -0000
 From: ebiederm@xmission.com (Eric W. Biederman)
 To: =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>
 Cc: linux-kernel@vger.kernel.org,  Aleksa Sarai <cyphar@cyphar.com>,  Alexei
@@ -51,76 +50,58 @@ Cc: linux-kernel@vger.kernel.org,  Aleksa Sarai <cyphar@cyphar.com>,  Alexei
   linux-security-module@vger.kernel.org,  linux-fsdevel@vger.kernel.org
 References: <20200723171227.446711-1-mic@digikod.net>
 	<20200723171227.446711-2-mic@digikod.net>
-Date: Tue, 11 Aug 2020 13:59:48 -0500
-In-Reply-To: <20200723171227.446711-2-mic@digikod.net> (=?utf-8?Q?=22Micka?=
- =?utf-8?Q?=C3=ABl_Sala=C3=BCn=22's?=
-	message of "Thu, 23 Jul 2020 19:12:21 +0200")
-Message-ID: <87eeodnh3v.fsf@x220.int.ebiederm.org>
+	<87eeodnh3v.fsf@x220.int.ebiederm.org>
+Date: Tue, 11 Aug 2020 14:14:43 -0500
+In-Reply-To: <87eeodnh3v.fsf@x220.int.ebiederm.org> (Eric W. Biederman's
+	message of "Tue, 11 Aug 2020 13:59:48 -0500")
+Message-ID: <874kp9ngf0.fsf@x220.int.ebiederm.org>
 User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-X-XM-SPF: eid=1k5ZYJ-0006gu-5w;;;mid=<87eeodnh3v.fsf@x220.int.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX19Ak6/vsLtopnFYs9ZfaNrZr8Zt2Ow/qiA=
+X-XM-SPF: eid=1k5Zmj-0008Qv-TU;;;mid=<874kp9ngf0.fsf@x220.int.ebiederm.org>;;;hst=in02.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX19nTKA3mnL/oyWdDp6PD6Bdr/fgnKMbcEc=
 X-SA-Exim-Connect-IP: 68.227.160.95
 X-SA-Exim-Mail-From: ebiederm@xmission.com
 Subject: Re: [PATCH v7 1/7] exec: Change uselib(2) IS_SREG() failure to EACCES
 X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
-X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
+X-SA-Exim-Scanned: Yes (on in02.mta.xmission.com)
 
-Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> writes:
+ebiederm@xmission.com (Eric W. Biederman) writes:
 
-> From: Kees Cook <keescook@chromium.org>
+> Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> writes:
 >
-> Change uselib(2)' S_ISREG() error return to EACCES instead of EINVAL so
-> the behavior matches execve(2), and the seemingly documented value.
-> The "not a regular file" failure mode of execve(2) is explicitly
-> documented[1], but it is not mentioned in uselib(2)[2] which does,
-> however, say that open(2) and mmap(2) errors may apply. The documentation
-> for open(2) does not include a "not a regular file" error[3], but mmap(2)
-> does[4], and it is EACCES.
+>> From: Kees Cook <keescook@chromium.org>
+>>
+>> Change uselib(2)' S_ISREG() error return to EACCES instead of EINVAL so
+>> the behavior matches execve(2), and the seemingly documented value.
+>> The "not a regular file" failure mode of execve(2) is explicitly
+>> documented[1], but it is not mentioned in uselib(2)[2] which does,
+>> however, say that open(2) and mmap(2) errors may apply. The documentation
+>> for open(2) does not include a "not a regular file" error[3], but mmap(2)
+>> does[4], and it is EACCES.
+>
+> Do you have enough visibility into uselib to be certain this will change
+> will not cause regressions?
+>
+> My sense of uselib is that it would be easier to remove the system call
+> entirely (I think it's last use was in libc5) than to validate that a
+> change like this won't cause problems for the users of uselib.
+>
+> For the kernel what is important are real world users and the manpages
+> are only important as far as they suggest what the real world users
+> do.
 
-Do you have enough visibility into uselib to be certain this will change
-will not cause regressions?
+Hmm.
 
-My sense of uselib is that it would be easier to remove the system call
-entirely (I think it's last use was in libc5) than to validate that a
-change like this won't cause problems for the users of uselib.
+My apologies. After reading the next patch I see that what really makes
+this safe is: 73601ea5b7b1 ("fs/open.c: allow opening only regular files
+during execve()").
 
-For the kernel what is important are real world users and the manpages
-are only important as far as they suggest what the real world users do.
+As in practice this change has already been made and uselib simply
+can not reach the !S_ISREG test.
+
+It might make sense to drop this patch or include that reference
+in the next posting of this patch.
 
 Eric
-
-
-> [1] http://man7.org/linux/man-pages/man2/execve.2.html#ERRORS
-> [2] http://man7.org/linux/man-pages/man2/uselib.2.html#ERRORS
-> [3] http://man7.org/linux/man-pages/man2/open.2.html#ERRORS
-> [4] http://man7.org/linux/man-pages/man2/mmap.2.html#ERRORS
->
-> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> Acked-by: Christian Brauner <christian.brauner@ubuntu.com>
-> Link: https://lore.kernel.org/r/20200605160013.3954297-2-keescook@chromiu=
-m.org
-> ---
->  fs/exec.c | 3 +--
->  1 file changed, 1 insertion(+), 2 deletions(-)
->
-> diff --git a/fs/exec.c b/fs/exec.c
-> index e6e8a9a70327..d7c937044d10 100644
-> --- a/fs/exec.c
-> +++ b/fs/exec.c
-> @@ -141,11 +141,10 @@ SYSCALL_DEFINE1(uselib, const char __user *, librar=
-y)
->  	if (IS_ERR(file))
->  		goto out;
->=20=20
-> -	error =3D -EINVAL;
-> +	error =3D -EACCES;
->  	if (!S_ISREG(file_inode(file)->i_mode))
->  		goto exit;
->=20=20
-> -	error =3D -EACCES;
->  	if (path_noexec(&file->f_path))
->  		goto exit;
