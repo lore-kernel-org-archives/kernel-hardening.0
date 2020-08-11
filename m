@@ -1,4 +1,4 @@
-Return-Path: <SRS0=cNfG=BV=lists.openwall.com=kernel-hardening-return-19588-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=R0Og=BV=lists.openwall.com=kernel-hardening-return-19589-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7D5FEC433DF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:49:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 37C80C433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:51:14 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D5E47206B2
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:49:43 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D5E47206B2
+	by mail.kernel.org (Postfix) with SMTP id 8F8C62076B
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:51:13 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8F8C62076B
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19588-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 27726 invoked by uid 550); 11 Aug 2020 08:49:37 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19589-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 29736 invoked by uid 550); 11 Aug 2020 08:51:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,11 +22,12 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27706 invoked from network); 11 Aug 2020 08:49:37 -0000
+Received: (qmail 29716 invoked from network); 11 Aug 2020 08:51:07 -0000
 Subject: Re: [PATCH v7 0/7] Add support for O_MAYEXEC
-To: Al Viro <viro@zeniv.linux.org.uk>
+To: David Laight <David.Laight@aculab.com>, Al Viro <viro@zeniv.linux.org.uk>
 Cc: Kees Cook <keescook@chromium.org>,
- Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org,
+ Andrew Morton <akpm@linux-foundation.org>,
+ "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
  Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
  Andy Lutomirski <luto@kernel.org>,
  Christian Brauner <christian.brauner@ubuntu.com>,
@@ -48,84 +49,67 @@ Cc: Kees Cook <keescook@chromium.org>,
  Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
  Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
  Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
- linux-fsdevel@vger.kernel.org
+ "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
+ "linux-api@vger.kernel.org" <linux-api@vger.kernel.org>,
+ "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>,
+ "linux-security-module@vger.kernel.org"
+ <linux-security-module@vger.kernel.org>,
+ "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>
 References: <20200723171227.446711-1-mic@digikod.net>
  <202007241205.751EBE7@keescook>
  <0733fbed-cc73-027b-13c7-c368c2d67fb3@digikod.net>
  <20200810202123.GC1236603@ZenIV.linux.org.uk>
- <917bb071-8b1a-3ba4-dc16-f8d7b4cc849f@digikod.net>
- <20200810230521.GG1236603@ZenIV.linux.org.uk>
+ <30b8c003f49d4280be5215f634ca2c06@AcuMS.aculab.com>
+ <20200810222838.GF1236603@ZenIV.linux.org.uk>
+ <2531a0e8-5122-867c-ba06-5d2e623a3834@digikod.net>
+ <26a4a8378f3b4ad28eaa476853092716@AcuMS.aculab.com>
 From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <c34e72c1-e7ef-7538-886e-c156ab278081@digikod.net>
-Date: Tue, 11 Aug 2020 10:49:24 +0200
+Message-ID: <c0224c08-f669-168e-3bb4-35eceec96a8b@digikod.net>
+Date: Tue, 11 Aug 2020 10:50:53 +0200
 User-Agent:
 MIME-Version: 1.0
-In-Reply-To: <20200810230521.GG1236603@ZenIV.linux.org.uk>
-Content-Type: text/plain; charset=iso-8859-15
+In-Reply-To: <26a4a8378f3b4ad28eaa476853092716@AcuMS.aculab.com>
+Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 8bit
 X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
 X-Antivirus-Code: 0x100000
 
 
-On 11/08/2020 01:05, Al Viro wrote:
-> On Tue, Aug 11, 2020 at 12:43:52AM +0200, Mickaël Salaün wrote:
+On 11/08/2020 10:09, David Laight wrote:
+>> On 11/08/2020 00:28, Al Viro wrote:
+>>> On Mon, Aug 10, 2020 at 10:09:09PM +0000, David Laight wrote:
+>>>>> On Mon, Aug 10, 2020 at 10:11:53PM +0200, MickaÃ«l SalaÃ¼n wrote:
+>>>>>> It seems that there is no more complains nor questions. Do you want me
+>>>>>> to send another series to fix the order of the S-o-b in patch 7?
+>>>>>
+>>>>> There is a major question regarding the API design and the choice of
+>>>>> hooking that stuff on open().  And I have not heard anything resembling
+>>>>> a coherent answer.
+>>>>
+>>>> To me O_MAYEXEC is just the wrong name.
+>>>> The bit would be (something like) O_INTERPRET to indicate
+>>>> what you want to do with the contents.
+>>
+>> The properties is "execute permission". This can then be checked by
+>> interpreters or other applications, then the generic O_MAYEXEC name.
 > 
->> Hooking on open is a simple design that enables processes to check files
->> they intend to open, before they open them.
-> 
-> Which is a good thing, because...?
-> 
->> From an API point of view,
->> this series extends openat2(2) with one simple flag: O_MAYEXEC. The
->> enforcement is then subject to the system policy (e.g. mount points,
->> file access rights, IMA, etc.).
-> 
-> That's what "unspecified" means - as far as the kernel concerned, it's
-> "something completely opaque, will let these hooks to play, semantics is
-> entirely up to them".
+> The english sense of MAYEXEC is just wrong for what you are trying
+> to check.
 
-I see it as an access controls mechanism; access may be granted or
-denied, as for O_RDONLY, O_WRONLY or (non-Linux) O_EXEC. Even for common
-access controls, there are capabilities to bypass them (i.e.
-CAP_DAC_OVERRIDE), but multiple layers may enforce different
-complementary policies.
-
->  
->> Checking on open enables to not open a file if it does not meet some
->> requirements, the same way as if the path doesn't exist or (for whatever
->> reasons, including execution permission) if access is denied. It is a
->> good practice to check as soon as possible such properties, and it may
->> enables to avoid (user space) time-of-check to time-of-use (TOCTOU)
->> attacks (i.e. misuse of already open resources).
-> 
-> ?????  You explicitly assume a cooperating caller.
-
-As said in the below (removed) reply, no, quite the contrary.
-
->  If it can't be trusted
-> to issue the check between open and use, or can be manipulated (ptraced,
-> etc.) into not doing so, how can you rely upon the flag having been passed
-> in the first place?  And TOCTOU window is definitely not wider that way.
-
-OK, I guess it would be considered a bug in the application (e.g. buggy
-resource management between threads).
+We think it reflects exactly what it's purpose is.
 
 > 
-> If you want to have it done immediately after open(), bloody well do it
-> immediately after open.  If attacker has subverted your control flow to the
-> extent that allows them to hit descriptor table in the interval between
-> these two syscalls, you have already lost - they'll simply prevent that
-> flag from being passed.
+>>> ... which does not answer the question - name of constant is the least of
+>>> the worries here.  Why the hell is "apply some unspecified checks to
+>>> file" combined with opening it, rather than being an independent primitive
+>>> you apply to an already opened file?  Just in case - "'cuz that's how we'd
+>>> done it" does not make a good answer...
 > 
-> What's the point of burying it inside openat2()?  A convenient multiplexor
-> to hook into?  We already have one - it's called do_syscall_...
-> 
+> Maybe an access_ok() that acts on an open fd would be more
+> appropriate.
+> Which might end up being an fcntrl() action.
+> That would give you a full 32bit mask of options.
 
-To check as soon as possible without opening something that should not
-be opened in the first place.
-
-Isn't a dedicated syscall a bit too much for this feature? What about
-adding a new command/flag to fcntl(2)?
+I previously talk about fcntl(2):
+https://lore.kernel.org/lkml/eaf5bc42-e086-740b-a90c-93e67c535eee@digikod.net/
