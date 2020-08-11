@@ -1,20 +1,20 @@
-Return-Path: <SRS0=w8Dy=BV=lists.openwall.com=kernel-hardening-return-19586-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=8LkD=BV=lists.openwall.com=kernel-hardening-return-19587-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 23C8EC433DF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:09:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 18FA1C433DF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:49:01 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7D8EB2065C
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:09:35 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7D8EB2065C
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=ACULAB.COM
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19586-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9352 invoked by uid 550); 11 Aug 2020 08:09:27 -0000
+	by mail.kernel.org (Postfix) with SMTP id 609E5206C3
+	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 08:49:00 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 609E5206C3
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19587-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 25872 invoked by uid 550); 11 Aug 2020 08:48:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,104 +22,139 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9332 invoked from network); 11 Aug 2020 08:09:27 -0000
-X-MC-Unique: 6yjApz6GO-e2kdqAupHRLw-1
-From: David Laight <David.Laight@ACULAB.COM>
-To: =?iso-8859-1?Q?=27Micka=EBl_Sala=FCn=27?= <mic@digikod.net>, Al Viro
-	<viro@zeniv.linux.org.uk>
-CC: Kees Cook <keescook@chromium.org>, Andrew Morton
-	<akpm@linux-foundation.org>, "linux-kernel@vger.kernel.org"
-	<linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, "Alexei
- Starovoitov" <ast@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Christian
- Brauner" <christian.brauner@ubuntu.com>, Christian Heimes
-	<christian@python.org>, Daniel Borkmann <daniel@iogearbox.net>, Deven Bowers
-	<deven.desai@linux.microsoft.com>, Dmitry Vyukov <dvyukov@google.com>, "Eric
- Biggers" <ebiggers@kernel.org>, Eric Chiang <ericchiang@google.com>, "Florian
- Weimer" <fweimer@redhat.com>, James Morris <jmorris@namei.org>, Jan Kara
-	<jack@suse.cz>, Jann Horn <jannh@google.com>, Jonathan Corbet
-	<corbet@lwn.net>, Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>,
-	=?iso-8859-1?Q?Philippe_Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	"Scott Shell" <scottsh@microsoft.com>, Sean Christopherson
-	<sean.j.christopherson@intel.com>, Shuah Khan <shuah@kernel.org>, Steve Dower
-	<steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, Tetsuo Handa
-	<penguin-kernel@i-love.sakura.ne.jp>, Thibaut Sautereau
-	<thibaut.sautereau@clip-os.org>, Vincent Strubel
-	<vincent.strubel@ssi.gouv.fr>, "kernel-hardening@lists.openwall.com"
-	<kernel-hardening@lists.openwall.com>, "linux-api@vger.kernel.org"
-	<linux-api@vger.kernel.org>, "linux-integrity@vger.kernel.org"
-	<linux-integrity@vger.kernel.org>, "linux-security-module@vger.kernel.org"
-	<linux-security-module@vger.kernel.org>, "linux-fsdevel@vger.kernel.org"
-	<linux-fsdevel@vger.kernel.org>
-Subject: RE: [PATCH v7 0/7] Add support for O_MAYEXEC
-Thread-Topic: [PATCH v7 0/7] Add support for O_MAYEXEC
-Thread-Index: AQHWb1PwbfAzth+cK0yvrOzhTaEjE6kx5WiAgAAMbuyAAJu5IA==
-Date: Tue, 11 Aug 2020 08:09:10 +0000
-Message-ID: <26a4a8378f3b4ad28eaa476853092716@AcuMS.aculab.com>
+Received: (qmail 25848 invoked from network); 11 Aug 2020 08:48:52 -0000
+Subject: Re: [PATCH v7 0/7] Add support for O_MAYEXEC
+To: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>,
+ Deven Bowers <deven.desai@linux.microsoft.com>,
+ Mimi Zohar <zohar@linux.ibm.com>
+Cc: Al Viro <viro@zeniv.linux.org.uk>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ kernel list <linux-kernel@vger.kernel.org>, Aleksa Sarai
+ <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
+ Andy Lutomirski <luto@kernel.org>,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ Christian Heimes <christian@python.org>,
+ Daniel Borkmann <daniel@iogearbox.net>, Dmitry Vyukov <dvyukov@google.com>,
+ Eric Biggers <ebiggers@kernel.org>, Eric Chiang <ericchiang@google.com>,
+ Florian Weimer <fweimer@redhat.com>, James Morris <jmorris@namei.org>,
+ Jan Kara <jack@suse.cz>, Jonathan Corbet <corbet@lwn.net>,
+ Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+ Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>,
+ =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+ Scott Shell <scottsh@microsoft.com>,
+ Sean Christopherson <sean.j.christopherson@intel.com>,
+ Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+ Steve Grubb <sgrubb@redhat.com>,
+ Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
+ Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
+ Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Linux API <linux-api@vger.kernel.org>, linux-integrity@vger.kernel.org,
+ linux-security-module <linux-security-module@vger.kernel.org>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>
 References: <20200723171227.446711-1-mic@digikod.net>
  <202007241205.751EBE7@keescook>
  <0733fbed-cc73-027b-13c7-c368c2d67fb3@digikod.net>
  <20200810202123.GC1236603@ZenIV.linux.org.uk>
- <30b8c003f49d4280be5215f634ca2c06@AcuMS.aculab.com>
- <20200810222838.GF1236603@ZenIV.linux.org.uk>
- <2531a0e8-5122-867c-ba06-5d2e623a3834@digikod.net>
-In-Reply-To: <2531a0e8-5122-867c-ba06-5d2e623a3834@digikod.net>
-Accept-Language: en-GB, en-US
-Content-Language: en-US
-X-MS-Has-Attach: 
-X-MS-TNEF-Correlator: 
-x-ms-exchange-transport-fromentityheader: Hosted
-x-originating-ip: [10.202.205.107]
+ <917bb071-8b1a-3ba4-dc16-f8d7b4cc849f@digikod.net>
+ <CAG48ez0NAV5gPgmbDaSjo=zzE=FgnYz=-OHuXwu0Vts=B5gesA@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <0cc94c91-afd3-27cd-b831-8ea16ca8ca93@digikod.net>
+Date: Tue, 11 Aug 2020 10:48:37 +0200
+User-Agent:
 MIME-Version: 1.0
-Authentication-Results: relay.mimecast.com;
-	auth=pass smtp.auth=C51A453 smtp.mailfrom=david.laight@aculab.com
-X-Mimecast-Spam-Score: 0
-X-Mimecast-Originator: aculab.com
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <CAG48ez0NAV5gPgmbDaSjo=zzE=FgnYz=-OHuXwu0Vts=B5gesA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-> On 11/08/2020 00:28, Al Viro wrote:
-> > On Mon, Aug 10, 2020 at 10:09:09PM +0000, David Laight wrote:
-> >>> On Mon, Aug 10, 2020 at 10:11:53PM +0200, Micka=C3=ABl Sala=C3=BCn wr=
-ote:
-> >>>> It seems that there is no more complains nor questions. Do you want =
-me
-> >>>> to send another series to fix the order of the S-o-b in patch 7?
-> >>>
-> >>> There is a major question regarding the API design and the choice of
-> >>> hooking that stuff on open().  And I have not heard anything resembli=
-ng
-> >>> a coherent answer.
-> >>
-> >> To me O_MAYEXEC is just the wrong name.
-> >> The bit would be (something like) O_INTERPRET to indicate
-> >> what you want to do with the contents.
->=20
-> The properties is "execute permission". This can then be checked by
-> interpreters or other applications, then the generic O_MAYEXEC name.
 
-The english sense of MAYEXEC is just wrong for what you are trying
-to check.
+On 11/08/2020 01:03, Jann Horn wrote:
+> On Tue, Aug 11, 2020 at 12:43 AM Mickaël Salaün <mic@digikod.net> wrote:
+>> On 10/08/2020 22:21, Al Viro wrote:
+>>> On Mon, Aug 10, 2020 at 10:11:53PM +0200, Mickaël Salaün wrote:
+>>>> It seems that there is no more complains nor questions. Do you want me
+>>>> to send another series to fix the order of the S-o-b in patch 7?
+>>>
+>>> There is a major question regarding the API design and the choice of
+>>> hooking that stuff on open().  And I have not heard anything resembling
+>>> a coherent answer.
+>>
+>> Hooking on open is a simple design that enables processes to check files
+>> they intend to open, before they open them. From an API point of view,
+>> this series extends openat2(2) with one simple flag: O_MAYEXEC. The
+>> enforcement is then subject to the system policy (e.g. mount points,
+>> file access rights, IMA, etc.).
+>>
+>> Checking on open enables to not open a file if it does not meet some
+>> requirements, the same way as if the path doesn't exist or (for whatever
+>> reasons, including execution permission) if access is denied.
+> 
+> You can do exactly the same thing if you do the check in a separate
+> syscall though.
+> 
+> And it provides a greater degree of flexibility; for example, you can
+> use it in combination with fopen() without having to modify the
+> internals of fopen() or having to use fdopen().
+> 
+>> It is a
+>> good practice to check as soon as possible such properties, and it may
+>> enables to avoid (user space) time-of-check to time-of-use (TOCTOU)
+>> attacks (i.e. misuse of already open resources).
+> 
+> The assumption that security checks should happen as early as possible
+> can actually cause security problems. For example, because seccomp was
+> designed to do its checks as early as possible, including before
+> ptrace, we had an issue for a long time where the ptrace API could be
+> abused to bypass seccomp filters.
+> 
+> Please don't decide that a check must be ordered first _just_ because
+> it is a security check. While that can be good for limiting attack
+> surface, it can also create issues when the idea is applied too
+> broadly.
 
-> > ... which does not answer the question - name of constant is the least =
-of
-> > the worries here.  Why the hell is "apply some unspecified checks to
-> > file" combined with opening it, rather than being an independent primit=
-ive
-> > you apply to an already opened file?  Just in case - "'cuz that's how w=
-e'd
-> > done it" does not make a good answer...
+I'd be interested with such security issue examples.
 
-Maybe an access_ok() that acts on an open fd would be more
-appropriate.
-Which might end up being an fcntrl() action.
-That would give you a full 32bit mask of options.
+I hope that delaying checks will not be an issue for mechanisms such as
+IMA or IPE:
+https://lore.kernel.org/lkml/1544699060.6703.11.camel@linux.ibm.com/
 
-=09David
+Any though Mimi, Deven, Chrome OS folks?
 
--
-Registered Address Lakeside, Bramley Road, Mount Farm, Milton Keynes, MK1 1=
-PT, UK
-Registration No: 1397386 (Wales)
+> 
+> I don't see how TOCTOU issues are relevant in any way here. If someone
+> can turn a script that is considered a trusted file into an untrusted
+> file and then maliciously change its contents, you're going to have
+> issues either way because the modifications could still happen after
+> openat(); if this was possible, the whole thing would kind of fall
+> apart. And if that isn't possible, I don't see any TOCTOU.
 
+Sure, and if the scripts are not protected in some way there is no point
+to check anything.
+
+> 
+>> It is important to keep
+>> in mind that the use cases we are addressing consider that the (user
+>> space) script interpreters (or linkers) are trusted and unaltered (i.e.
+>> integrity/authenticity checked). These are similar sought defensive
+>> properties as for SUID/SGID binaries: attackers can still launch them
+>> with malicious inputs (e.g. file paths, file descriptors, environment
+>> variables, etc.), but the binaries can then have a way to check if they
+>> can extend their trust to some file paths.
+>>
+>> Checking file descriptors may help in some use cases, but not the ones
+>> motivating this series.
+> 
+> It actually provides a superset of the functionality that your
+> existing patches provide.
+
+It also brings new issues with multiple file descriptor origins (e.g.
+memfd_create).
+
+> 
+>> Checking (already) opened resources could be a
+>> *complementary* way to check execute permission, but it is not in the
+>> scope of this series.
