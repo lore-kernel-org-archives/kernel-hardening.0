@@ -1,23 +1,20 @@
-Return-Path: <SRS0=IjqB=BV=lists.openwall.com=kernel-hardening-return-19606-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=gfh+=BW=lists.openwall.com=kernel-hardening-return-19607-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 429BBC433DF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 21:33:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6A001C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Aug 2020 10:07:17 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8F0E120756
-	for <kernel-hardening@archiver.kernel.org>; Tue, 11 Aug 2020 21:33:34 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="nO3gYAQ3"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8F0E120756
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19606-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 31787 invoked by uid 550); 11 Aug 2020 21:33:28 -0000
+	by mail.kernel.org (Postfix) with SMTP id BCC9D20781
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Aug 2020 10:07:16 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BCC9D20781
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=arm.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19607-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3957 invoked by uid 550); 12 Aug 2020 10:07:09 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,89 +22,146 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 31755 invoked from network); 11 Aug 2020 21:33:27 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=1XmU1UxtFoX+JxWRWBVQUmWx0SHpCQU0BLn06Acf+NU=;
-        b=nO3gYAQ3UHUw7olEjw932d3zFLqOCCUdnacl9cVKrUgmFx2PGjAFNp8CQwEB7V4Hmy
-         FGOy733ZHh3A1xH6oKC3op8DvO/HEaTRYWhxchiQa9h8rnO5vamgJzN81P21hsQ5n8I3
-         t7TvIriH92cU2JNs0mnOTN8SDZ89gDDMfKKUs=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=1XmU1UxtFoX+JxWRWBVQUmWx0SHpCQU0BLn06Acf+NU=;
-        b=BSN1Bg6Zk1yV0iR6XRLszq8Kjne3LbbUhs54sNMEqxPVCzuAC3qwchFt/37PYxNTBM
-         JypTbuhY/oBXQNzATm4v4/vpnrrCfrfUGm8RIOjGKx9jps6HNHPryU2OHklHJvEn7ST+
-         JwnLH+uWyZUoi5dM+jxTESJ3n0fSr/tT5Ms+gfy/obyByAyc51csq3O9soMNbpy3fY2a
-         j8wIZFqZPossoRg5I3bblMLuska1sDGYqsPcCT+eWgXq9uR1HlYNhjxCeHgNXDBklj6q
-         qPJOwXRf8s4sKrU7XF1oA1j4Hz61xJDBmE/IkNh7rOqqDReU0rGMdPYpNTtrLYoIKyH5
-         Jb2g==
-X-Gm-Message-State: AOAM532G1XcsNJ506adYA0OBW2MJp5VFj5/0a+RKfkLC7SQeMDamd60A
-	35BaJ6sbMhoxyNEa2JaRgGHjsg==
-X-Google-Smtp-Source: ABdhPJzVUgwczR2LI6waXoChEBBAZmQiyV+rznpXD/j383hrrCcUrIvWs+lVRQIEgQVz81ia6sNYwg==
-X-Received: by 2002:a17:90a:ccd:: with SMTP id 13mr2785480pjt.123.1597181595355;
-        Tue, 11 Aug 2020 14:33:15 -0700 (PDT)
-Date: Tue, 11 Aug 2020 14:33:13 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Allen <allen.lkml@gmail.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Oscar Carter <oscar.carter@gmx.com>,
-	Romain Perier <romain.perier@gmail.com>,
-	"David S. Miller" <davem@davemloft.net>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Will Deacon <will@kernel.org>, linux-input@vger.kernel.org,
-	linux-kernel@vger.kernel.org, netdev@vger.kernel.org,
-	linux-s390@vger.kernel.org, devel@driverdev.osuosl.org,
-	linux-usb@vger.kernel.org, kgdb-bugreport@lists.sourceforge.net,
-	alsa-devel@alsa-project.org,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Subject: Re: [PATCH 0/3] Modernize tasklet callback API
-Message-ID: <202008111427.D00FCCF@keescook>
-References: <20200716030847.1564131-1-keescook@chromium.org>
- <87h7tpa3hg.fsf@nanos.tec.linutronix.de>
- <202007301113.45D24C9D@keescook>
- <CAOMdWSJQKHAWY1P297b9koOLd8sVtezEYEyWGtymN1YeY27M6A@mail.gmail.com>
+Received: (qmail 3937 invoked from network); 12 Aug 2020 10:07:08 -0000
+Date: Wed, 12 Aug 2020 11:06:50 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+To: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
+Cc: kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+	linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org, oleg@redhat.com,
+	x86@kernel.org
+Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
+Message-ID: <20200812100650.GB28154@C02TD0UTHF1T.local>
+References: <aefc85852ea518982e74b233e11e16d2e707bc32>
+ <20200728131050.24443-1-madvenka@linux.microsoft.com>
+ <20200731180955.GC67415@C02TD0UTHF1T.local>
+ <6236adf7-4bed-534e-0956-fddab4fd96b6@linux.microsoft.com>
+ <20200804143018.GB7440@C02TD0UTHF1T.local>
+ <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <CAOMdWSJQKHAWY1P297b9koOLd8sVtezEYEyWGtymN1YeY27M6A@mail.gmail.com>
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
 
-On Mon, Aug 03, 2020 at 02:16:15PM +0530, Allen wrote:
-> Here's the series re-based on top of 5.8
-> https://github.com/allenpais/tasklets/tree/V3
+On Thu, Aug 06, 2020 at 12:26:02PM -0500, Madhavan T. Venkataraman wrote:
+> Thanks for the lively discussion. I have tried to answer some of the
+> comments below.
+> 
+> On 8/4/20 9:30 AM, Mark Rutland wrote:
+> >
+> >> So, the context is - if security settings in a system disallow a page to have
+> >> both write and execute permissions, how do you allow the execution of
+> >> genuine trampolines that are runtime generated and placed in a data
+> >> page or a stack page?
+> > There are options today, e.g.
+> >
+> > a) If the restriction is only per-alias, you can have distinct aliases
+> >    where one is writable and another is executable, and you can make it
+> >    hard to find the relationship between the two.
+> >
+> > b) If the restriction is only temporal, you can write instructions into
+> >    an RW- buffer, transition the buffer to R--, verify the buffer
+> >    contents, then transition it to --X.
+> >
+> > c) You can have two processes A and B where A generates instrucitons into
+> >    a buffer that (only) B can execute (where B may be restricted from
+> >    making syscalls like write, mprotect, etc).
+> 
+> The general principle of the mitigation is W^X. I would argue that
+> the above options are violations of the W^X principle. If they are
+> allowed today, they must be fixed. And they will be. So, we cannot
+> rely on them.
 
-Great!
+Hold on.
 
-> Let me know how you would want these to be reviewed.
+Contemporary W^X means that a given virtual alias cannot be writeable
+and executeable simultaneously, permitting (a) and (b). If you read the
+references on the Wikipedia page for W^X you'll see the OpenBSD 3.3
+release notes and related presentation make this clear, and further they
+expect (b) to occur with JITS flipping W/X with mprotect().
 
-Was a Coccinelle script used for any of these conversions? I wonder if
-it'd be easier to do a single treewide patch for the more mechanical
-changes.
+Please don't conflate your assumed stronger semantics with the general
+principle. It not matching you expectations does not necessarily mean
+that it is wrong.
 
-And, actually, I still think the "prepare" patches should just be
-collapsed into the actual "covert" patches -- there are only a few.
+If you want a stronger W^X semantics, please refer to this specifically
+with a distinct name.
 
-After those, yeah, I think getting these sent to their respective
-maintainers is the next step.
+> a) This requires a remap operation. Two mappings point to the same
+>      physical page. One mapping has W and the other one has X. This
+>      is a violation of W^X.
+> 
+> b) This is again a violation. The kernel should refuse to give execute
+>      permission to a page that was writeable in the past and refuse to
+>      give write permission to a page that was executable in the past.
+> 
+> c) This is just a variation of (a).
 
-> Also, I was thinking if removing tasklets completely could be a task
-> on KSPP wiki. If yes, I did like to take ownership of that task. I have a
-> couple of ideas in mind, which could be discussed in a separate email.
+As above, this is not true.
 
-Sure! I will add it to the tracker. Here's for the refactoring:
-https://github.com/KSPP/linux/issues/30
+If you have a rationale for why this is desirable or necessary, please
+justify that before using this as justification for additional features.
 
-and here's for the removal:
-https://github.com/KSPP/linux/issues/94
+> In general, the problem with user-level methods to map and execute
+> dynamic code is that the kernel cannot tell if a genuine application is
+> using them or an attacker is using them or piggy-backing on them.
 
-if you can added details/examples of how they should be removed, that'd
-help other folks too, if they wanted to jump in. :)
+Yes, and as I pointed out the same is true for trampfd unless you can
+somehow authenticate the calls are legitimate (in both callsite and the
+set of arguments), and I don't see any reasonable way of doing that.
 
--Kees
+If you relax your threat model to an attacker not being able to make
+arbitrary syscalls, then your suggestion that userspace can perorm
+chceks between syscalls may be sufficient, but as I pointed out that's
+equally true for a sealed memfd or similar.
 
--- 
-Kees Cook
+> Off the top of my head, I have tried to identify some examples
+> where we can have more trust on dynamic code and have the kernel
+> permit its execution.
+> 
+> 1. If the kernel can do the job, then that is one safe way. Here, the kernel
+>     is the code. There is no code generation involved. This is what I
+>     have presented in the patch series as the first cut.
+
+This is sleight-of-hand; it doesn't matter where the logic is performed
+if the power is identical. Practically speaking this is equivalent to
+some dynamic code generation.
+
+I think that it's misleading to say that because the kernel emulates
+something it is safe when the provenance of the syscall arguments cannot
+be verified.
+
+[...]
+
+> Anyway, these are just examples. The principle is - if we can identify
+> dynamic code that has a certain measure of trust, can the kernel
+> permit their execution?
+
+My point generally is that the kernel cannot identify this, and if
+usrspace code is trusted to dynamically generate trampfd arguments it
+can equally be trusted to dyncamilly generate code.
+
+[...]
+
+> As I have mentioned above, I intend to have the kernel generate code
+> only if the code generation is simple enough. For more complicated cases,
+> I plan to use a user-level code generator that is for exclusive kernel use.
+> I have yet to work out the details on how this would work. Need time.
+
+This reads to me like trampfd is only dealing with a few special cases
+and we know that we need a more general solution.
+
+I hope I am mistaken, but I get the strong impression that you're trying
+to justify your existing solution rather than trying to understand the
+problem space.
+
+To be clear, my strong opinion is that we should not be trying to do
+this sort of emulation or code generation within the kernel. I do think
+it's worthwhile to look at mechanisms to make it harder to subvert
+dynamic userspace code generation, but I think the code generation
+itself needs to live in userspace (e.g. for ABI reasons I previously
+mentioned).
+
+Mark.
