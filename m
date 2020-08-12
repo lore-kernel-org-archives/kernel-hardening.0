@@ -1,23 +1,23 @@
-Return-Path: <SRS0=wmUq=BW=lists.openwall.com=kernel-hardening-return-19612-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=I5nF=BW=lists.openwall.com=kernel-hardening-return-19613-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A3373C433DF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Aug 2020 18:47:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 570B9C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Aug 2020 21:52:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CE55E20774
-	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Aug 2020 18:47:56 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 9083C20774
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Aug 2020 21:52:14 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="lglW0NET"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CE55E20774
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19612-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11784 invoked by uid 550); 12 Aug 2020 18:47:49 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="JuuCrSJH"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9083C20774
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19613-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9690 invoked by uid 550); 12 Aug 2020 21:52:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,251 +25,171 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11761 invoked from network); 12 Aug 2020 18:47:48 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 9B3FF20B4908
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-	s=default; t=1597258056;
-	bh=ZEYJ2skMtGmgwMikDvI3uIWWgJOx/B8qnK+vU4Qzxfs=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=lglW0NETwS/sXrB4/K4MPBOK8R2Ar9WMk5JjHbAx93S7Ot8eDgoXiDoFR1CsUeIlR
-	 +1mTZkcYO4PWflsNOqdNmk00M1NDxBnFedUApWhrRyj3nVl41/nw29KYBqi596QwW5
-	 8Qp8XRV6IFf4T7w3Pq6k8K/kwHXpfh+WyRhdHYoE=
-Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org,
- linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
- linux-security-module@vger.kernel.org, oleg@redhat.com, x86@kernel.org
-References: <aefc85852ea518982e74b233e11e16d2e707bc32>
- <20200728131050.24443-1-madvenka@linux.microsoft.com>
- <20200731180955.GC67415@C02TD0UTHF1T.local>
- <6236adf7-4bed-534e-0956-fddab4fd96b6@linux.microsoft.com>
- <20200804143018.GB7440@C02TD0UTHF1T.local>
- <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
- <20200812100650.GB28154@C02TD0UTHF1T.local>
-From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Message-ID: <b05f16a9-d5c2-cdce-0905-f9881a9d9922@linux.microsoft.com>
-Date: Wed, 12 Aug 2020 13:47:34 -0500
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.10.0
+Received: (qmail 9667 invoked from network); 12 Aug 2020 21:52:06 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:mime-version:content-disposition;
+        bh=V87j311e4SaSage1A0MUzbfGo+GdO8JYJCvpjXUYsdU=;
+        b=JuuCrSJHL05yDhCIgMWwssihbT/0FU6HagnQ/Wc0qs8cW6L58XlfMSxbmLCUUtjU1v
+         e/jNDvxxuRg4YcxyWBm75ZSjMCMDVFTLy3WCkDteVC8Aw4gPTCv1vjasMtQDtl1ANk+L
+         m5KNdxdg0YrAP6Rd4Y24h25/3aYpE1yLmAboo=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:mime-version
+         :content-disposition;
+        bh=V87j311e4SaSage1A0MUzbfGo+GdO8JYJCvpjXUYsdU=;
+        b=Uc/2kZj63FauViMVd/5iSB8DO595axQ+sHuaADOGz9aK8JMovZOEZv7Hry5Xas1tWS
+         mM7BGfFaSV6ro6ZXUv++eovzCmIZXMr4V4f8PbJ3lLUlRMeEzYdVk2HgMDsqjLa1nsB+
+         GZ/UZUPSN3fSN4aPt7lbbhDUXwUkekOuSUc1/Olk/6kvbi+Bgh1IcHpKuwQrxFuw+oJT
+         szw+tv0JVvnlnvclj5GgP6G7Y7EvK1uiKlXbJMtT7PxAl8h3HEULY1olPtLV8YmFWO1E
+         EDbvp7xeJhzSnGF3dZkRTYAqf52QZdX+3ieL3DVKg9WDk0tKIULMZmpSsSHjkHe3qDon
+         +oXQ==
+X-Gm-Message-State: AOAM532QJHkGM8vP+EJtrxE+gqRN2NfCC3a/EEfX3t5TJFnV0R62Qjtg
+	PNBL5zlWlwTt5GtalE6fDv2Eug==
+X-Google-Smtp-Source: ABdhPJyiDFbmD/3ui8ViAYloP9167Bsd8mPA+tiO4XJENWoDt8gRZlflrI+O2XqLK4gRQNiqHiUtkw==
+X-Received: by 2002:a65:6287:: with SMTP id f7mr1039468pgv.307.1597269114622;
+        Wed, 12 Aug 2020 14:51:54 -0700 (PDT)
+Date: Wed, 12 Aug 2020 14:51:52 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: "Gustavo A. R. Silva" <gustavoars@kernel.org>,
+	Jason Gunthorpe <jgg@ziepe.ca>, Leon Romanovsky <leon@kernel.org>,
+	Matthew Wilcox <willy@infradead.org>, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: [PATCH] overflow: Add __must_check attribute to check_*() helpers
+Message-ID: <202008121450.405E4A3@keescook>
 MIME-Version: 1.0
-In-Reply-To: <20200812100650.GB28154@C02TD0UTHF1T.local>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+
+Since the destination variable of the check_*_overflow() helpers will
+contain a wrapped value on failure, it would be best to make sure callers
+really did check the return result of the helper. Adjust the macros to use
+a bool-wrapping static inline that is marked with __must_check. This means
+the macros can continue to have their type-agnostic behavior while gaining
+the function attribute (that cannot be applied directly to macros).
+
+Suggested-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ include/linux/overflow.h | 51 +++++++++++++++++++++++-----------------
+ 1 file changed, 30 insertions(+), 21 deletions(-)
+
+diff --git a/include/linux/overflow.h b/include/linux/overflow.h
+index 93fcef105061..ef7d538c2d08 100644
+--- a/include/linux/overflow.h
++++ b/include/linux/overflow.h
+@@ -43,6 +43,16 @@
+ #define is_non_negative(a) ((a) > 0 || (a) == 0)
+ #define is_negative(a) (!(is_non_negative(a)))
+ 
++/*
++ * Allows to effectively us apply __must_check to a macro so we can have
++ * both the type-agnostic benefits of the macros while also being able to
++ * enforce that the return value is, in fact, checked.
++ */
++static inline bool __must_check __must_check_bool(bool condition)
++{
++	return unlikely(condition);
++}
++
+ #ifdef COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW
+ /*
+  * For simplicity and code hygiene, the fallback code below insists on
+@@ -52,32 +62,32 @@
+  * alias for __builtin_add_overflow, but add type checks similar to
+  * below.
+  */
+-#define check_add_overflow(a, b, d) ({		\
++#define check_add_overflow(a, b, d) __must_check_bool(({	\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+ 	__builtin_add_overflow(__a, __b, __d);	\
+-})
++}))
+ 
+-#define check_sub_overflow(a, b, d) ({		\
++#define check_sub_overflow(a, b, d) __must_check_bool(({	\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+ 	__builtin_sub_overflow(__a, __b, __d);	\
+-})
++}))
+ 
+-#define check_mul_overflow(a, b, d) ({		\
++#define check_mul_overflow(a, b, d) __must_check_bool(({	\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+ 	__builtin_mul_overflow(__a, __b, __d);	\
+-})
++}))
+ 
+ #else
+ 
+@@ -190,21 +200,20 @@
+ })
+ 
+ 
+-#define check_add_overflow(a, b, d)					\
+-	__builtin_choose_expr(is_signed_type(typeof(a)),		\
+-			__signed_add_overflow(a, b, d),			\
+-			__unsigned_add_overflow(a, b, d))
++#define check_add_overflow(a, b, d)					   \
++	__must_check_bool(__builtin_choose_expr(is_signed_type(typeof(a)), \
++				__signed_add_overflow(a, b, d),		   \
++				__unsigned_add_overflow(a, b, d)))
+ 
+-#define check_sub_overflow(a, b, d)					\
+-	__builtin_choose_expr(is_signed_type(typeof(a)),		\
+-			__signed_sub_overflow(a, b, d),			\
+-			__unsigned_sub_overflow(a, b, d))
+-
+-#define check_mul_overflow(a, b, d)					\
+-	__builtin_choose_expr(is_signed_type(typeof(a)),		\
+-			__signed_mul_overflow(a, b, d),			\
+-			__unsigned_mul_overflow(a, b, d))
++#define check_sub_overflow(a, b, d)					   \
++	__must_check_bool(__builtin_choose_expr(is_signed_type(typeof(a)), \
++				__signed_sub_overflow(a, b, d),		   \
++				__unsigned_sub_overflow(a, b, d)))
+ 
++#define check_mul_overflow(a, b, d)					   \
++	__must_check_bool(__builtin_choose_expr(is_signed_type(typeof(a)), \
++				__signed_mul_overflow(a, b, d),		   \
++				__unsigned_mul_overflow(a, b, d)))
+ 
+ #endif /* COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW */
+ 
+@@ -227,7 +236,7 @@
+  * '*d' will hold the results of the attempted shift, but is not
+  * considered "safe for use" if false is returned.
+  */
+-#define check_shl_overflow(a, s, d) ({					\
++#define check_shl_overflow(a, s, d) __must_check_bool(({		\
+ 	typeof(a) _a = a;						\
+ 	typeof(s) _s = s;						\
+ 	typeof(d) _d = d;						\
+@@ -237,7 +246,7 @@
+ 	*_d = (_a_full << _to_shift);					\
+ 	(_to_shift != _s || is_negative(*_d) || is_negative(_a) ||	\
+ 	(*_d >> _to_shift) != _a);					\
+-})
++}))
+ 
+ /**
+  * array_size() - Calculate size of 2-dimensional array.
+-- 
+2.25.1
 
 
-
-On 8/12/20 5:06 AM, Mark Rutland wrote:
-> [..]
->>
->> The general principle of the mitigation is W^X. I would argue that
->> the above options are violations of the W^X principle. If they are
->> allowed today, they must be fixed. And they will be. So, we cannot
->> rely on them.
-> 
-> Hold on.
-> 
-> Contemporary W^X means that a given virtual alias cannot be writeable
-> and executeable simultaneously, permitting (a) and (b). If you read the
-> references on the Wikipedia page for W^X you'll see the OpenBSD 3.3
-> release notes and related presentation make this clear, and further they
-> expect (b) to occur with JITS flipping W/X with mprotect().
-> 
-> Please don't conflate your assumed stronger semantics with the general
-> principle. It not matching you expectations does not necessarily mean
-> that it is wrong.
-> 
-> If you want a stronger W^X semantics, please refer to this specifically
-> with a distinct name.
-
-OK. Fair enough. We can give a different name to the stronger requirement.
-Just for the sake of this discussion and for the want of a better name,
-let us call it WX2.
-
-
-> 
->> a) This requires a remap operation. Two mappings point to the same
->>      physical page. One mapping has W and the other one has X. This
->>      is a violation of W^X.
->>
->> b) This is again a violation. The kernel should refuse to give execute
->>      permission to a page that was writeable in the past and refuse to
->>      give write permission to a page that was executable in the past.
->>
->> c) This is just a variation of (a).
-> 
-> As above, this is not true.
-> 
-> If you have a rationale for why this is desirable or necessary, please
-> justify that before using this as justification for additional features.
-> 
-
-I already supplied the justification. Any user level method can potentially
-be hijacked by an attacker for his purpose.
-
-WX does not prevent all of the methods. We need WX2.
-
-
->> In general, the problem with user-level methods to map and execute
->> dynamic code is that the kernel cannot tell if a genuine application is
->> using them or an attacker is using them or piggy-backing on them.
-> 
-> Yes, and as I pointed out the same is true for trampfd unless you can
-> somehow authenticate the calls are legitimate (in both callsite and the
-> set of arguments), and I don't see any reasonable way of doing that.
-> 
-
-I am afraid I am not in agreement with this. If WX2 is not implemented,
-an attacker can hack both code and data. If WX2 is implemented, an attacker
-can only attack data. The attack surface is reduced.
-
-Also, trampfd calls coming from code from a signed file can be authenticated.
-trampfd calls coming from an attacker's generated code cannot be authenticated.
-
-
-> If you relax your threat model to an attacker not being able to make
-> arbitrary syscalls, then your suggestion that userspace can perorm
-> chceks between syscalls may be sufficient, but as I pointed out that's
-> equally true for a sealed memfd or similar.
-> 
-
-Actually, I did not suggest that userspace can perform checks. I said that
-the kernel can perform checks.
-
-User space cannot reliably perform checks between calls. A clever hacker
-can cover his tracks.
-
-In any case, the kernel has no knowledge of these checks. So, when execute
-permissions are requested for a page, a properly implemented WX2 can refuse.
-
-
->> Off the top of my head, I have tried to identify some examples
->> where we can have more trust on dynamic code and have the kernel
->> permit its execution.
->>
->> 1. If the kernel can do the job, then that is one safe way. Here, the kernel
->>     is the code. There is no code generation involved. This is what I
->>     have presented in the patch series as the first cut.
-> 
-> This is sleight-of-hand; it doesn't matter where the logic is performed
-> if the power is identical. Practically speaking this is equivalent to
-> some dynamic code generation.
-> 
-> I think that it's misleading to say that because the kernel emulates
-> something it is safe when the provenance of the syscall arguments cannot
-> be verified.
-
-
-I submit that there are two aspects - code and data. In one case, both
-code and data can be hacked. So, an attacker can modify both code
-and data. In the other case, the attacker can only modify data.
-The power is not identical. The attack surface is not the same.
-
-Most of the times, security measures are mitigations. They are not a 100%.
-This approach of not allowing the user to do certain things that can be
-exploited and having the kernel doing them increases our confidence.
-From that perspective, the two approaches are different and it is worth
-pursuing a kernel based mitigation.
-
-
-> 
-> [...]
-> 
->> Anyway, these are just examples. The principle is - if we can identify
->> dynamic code that has a certain measure of trust, can the kernel
->> permit their execution?
-> 
-> My point generally is that the kernel cannot identify this, and if
-> usrspace code is trusted to dynamically generate trampfd arguments it
-> can equally be trusted to dyncamilly generate code.
-
-I am afraid not. See my previous response. Ability to hack only data
-gives an attacker fewer options as compared to the ability to hack
-both code and data.
-
-> 
-> [...]
-> 
->> As I have mentioned above, I intend to have the kernel generate code
->> only if the code generation is simple enough. For more complicated cases,
->> I plan to use a user-level code generator that is for exclusive kernel use.
->> I have yet to work out the details on how this would work. Need time.
-> 
-> This reads to me like trampfd is only dealing with a few special cases
-> and we know that we need a more general solution.
-> 
-> I hope I am mistaken, but I get the strong impression that you're trying
-> to justify your existing solution rather than trying to understand the
-> problem space.
-> 
-
-I do understand the problem space. I wanted to address dynamic code in 3
-different ways in separate phases starting from the easiest and working
-my way up to the more difficult ones.
-
-1. Remove dynamic code where possible
-
-   If the kernel can replace user level dynamic code, then do it.
-   This is what I did in version 1.
-
-2. Replace dynamic code with static code
-
-   Where you cannot do (1), replace dynamic code with static code with
-   the kernel's help. I wanted to do this later. But I have decided to
-   do this in version 2. This combined with signature verification of
-   files adds a measure or trust in the code.
-
-3. Deal with JIT, DBT, etc
-
-   In (1) and (2), we deal with machine code. In (3), there is some source
-   from which dynamic code needs to be generated using a code generator.
-   E.g., JIT code from Java byte code. Here, the solution I had in mind
-   had two parts:
-
-       - Make the source more trustworthy by requiring it to be part
-         of a signed file
-       - Design a code generator trusted and used exclusively by the kernel
-
-In this patchset, I wanted to lay a foundation for all 3 and attempt to
-solve (1) first. Once this was in place, I wanted to do (2) and then (3).
-
-In retrospect, I should have probably started with the big picture first
-instead of starting with just item (1). But I always had the big picture
-in mind. That said, I did not necessarily have all the details fleshed
-out for all the phases. (3) is complex.
-
-My focus was to define the API in a generic enough fashion so that all
-3 phases can be implemented. But I realize that it is a hard sell at this
-point to convince people that the API is adequate for phase 3. So,
-I have decided to do (1) and (2). (3) has to be done separately with
-more thought and details put into it.
-
-Also, it may be the case that there are some examples of dynamic code
-out there than can never be addressed. My goal is to try to address a
-majority of the dynamic code out there.
-
-
-> To be clear, my strong opinion is that we should not be trying to do
-> this sort of emulation or code generation within the kernel. I do think
-> it's worthwhile to look at mechanisms to make it harder to subvert
-> dynamic userspace code generation, but I think the code generation
-> itself needs to live in userspace (e.g. for ABI reasons I previously
-> mentioned).
-> 
-
-I completely agree that the kernel should not deal with the complexities
-of code generation and ABI details. My version 1 did not have any code
-generation. But since a performance issue was raised, I explored the idea
-of kernel code generation. To be honest, I was not really that
-comfortable with the idea.
-
-That is why I have decided to implement the second piece I had in
-my plan now. This piece does not have the code generation complexities
-or ABI issues. This piece can be used to solve libffi, GCC, etc.
-I will still write the code in such a way that I can use the first
-approach in the future if I really need it. But it will not involve any
-code generation from the kernel. It will only be used for cases that
-don't mind the extra trip to the kernel.
-
-Madhavan
+-- 
+Kees Cook
