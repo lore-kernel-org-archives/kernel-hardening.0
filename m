@@ -1,21 +1,20 @@
-Return-Path: <SRS0=4gzZ=BX=lists.openwall.com=kernel-hardening-return-19622-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=iDr1=BX=lists.openwall.com=kernel-hardening-return-19623-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.0 required=3.0 tests=BAYES_00,
+X-Spam-Status: No, score=-10.0 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 46EDDC433E1
-	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 15:20:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A9755C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 15:31:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9EF022078D
-	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 15:20:17 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9EF022078D
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19622-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3456 invoked by uid 550); 13 Aug 2020 15:19:58 -0000
+	by mail.kernel.org (Postfix) with SMTP id 0785B20781
+	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 15:31:44 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0785B20781
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19623-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9664 invoked by uid 550); 13 Aug 2020 15:31:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,153 +22,160 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3393 invoked from network); 13 Aug 2020 15:19:57 -0000
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=sWVYbnLUoQh2/bQ8PJoxS/2ocrG/gYbDVzBuksdzAMQ=;
-        b=Et7BtefpKa31t7H1dnnETFq7Rim+ltp+IdVzwBrdiPpSYyctZd5+pjefRTAoo5Dy3f
-         nos/kEcrmpe/vYzWCPRKcaPIg2B2Yduz/JoBEDCRhVVQmrjIJeanC4F/up8WPJD6cDYt
-         bgC1kRz+i+LT1DcID+KbPETGhhADALc5ysEo2fFrD5eTonoA+qt2a5ck+eMbzHnbLX7H
-         JgNbkYyV+nR5vyKwzdD6ZhOIZE5KQuNu8S2aM2shpGbZ/AU1B1D2WLPZNechmKoQpi/2
-         pxZY1jTXtkQW0Ws1Q9Qdzi0J4+pFlgytmFoyWTSuiD5FBd2JRugFyi9HwZvZhNpVLAlR
-         x9Rw==
-X-Gm-Message-State: AOAM530pZ8bO4ZYNMoa2PRyAu8DuULyuAO5OeuwwLpWTOwqDfQf/iE6z
-	s942HLSxZz4zBtvQ+3lp+8Y=
-X-Google-Smtp-Source: ABdhPJwKxFGbrbkYgxZpXwjaDbyI5I0M4/6XBG+VYoGVV0KtiAQ9ydy+etzJBWJI2Bu24vC6GiUcYw==
-X-Received: by 2002:a1c:de88:: with SMTP id v130mr4675656wmg.98.1597331986347;
-        Thu, 13 Aug 2020 08:19:46 -0700 (PDT)
-From: Alexander Popov <alex.popov@linux.com>
-To: Kees Cook <keescook@chromium.org>,
-	Jann Horn <jannh@google.com>,
-	Will Deacon <will@kernel.org>,
-	Andrey Ryabinin <aryabinin@virtuozzo.com>,
-	Alexander Potapenko <glider@google.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Christoph Lameter <cl@linux.com>,
-	Pekka Enberg <penberg@kernel.org>,
-	David Rientjes <rientjes@google.com>,
-	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Masami Hiramatsu <mhiramat@kernel.org>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Krzysztof Kozlowski <krzk@kernel.org>,
-	Patrick Bellasi <patrick.bellasi@arm.com>,
-	David Howells <dhowells@redhat.com>,
-	Eric Biederman <ebiederm@xmission.com>,
-	Johannes Weiner <hannes@cmpxchg.org>,
-	Laura Abbott <labbott@redhat.com>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	kasan-dev@googlegroups.com,
-	linux-mm@kvack.org,
-	kernel-hardening@lists.openwall.com,
-	linux-kernel@vger.kernel.org,
-	Alexander Popov <alex.popov@linux.com>
-Cc: notify@kernel.org
-Subject: [PATCH RFC 2/2] lkdtm: Add heap spraying test
-Date: Thu, 13 Aug 2020 18:19:22 +0300
-Message-Id: <20200813151922.1093791-3-alex.popov@linux.com>
-X-Mailer: git-send-email 2.26.2
-In-Reply-To: <20200813151922.1093791-1-alex.popov@linux.com>
-References: <20200813151922.1093791-1-alex.popov@linux.com>
+Received: (qmail 9644 invoked from network); 13 Aug 2020 15:31:38 -0000
+Subject: Re: [PATCH v7 3/7] exec: Move path_noexec() check earlier
+To: "Eric W. Biederman" <ebiederm@xmission.com>,
+ Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
+ Alexei Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>,
+ Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski
+ <luto@kernel.org>, Christian Brauner <christian.brauner@ubuntu.com>,
+ Christian Heimes <christian@python.org>,
+ Daniel Borkmann <daniel@iogearbox.net>,
+ Deven Bowers <deven.desai@linux.microsoft.com>,
+ Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
+ Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
+ James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
+ Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
+ Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+ Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>,
+ =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+ Scott Shell <scottsh@microsoft.com>,
+ Sean Christopherson <sean.j.christopherson@intel.com>,
+ Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+ Steve Grubb <sgrubb@redhat.com>,
+ Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
+ Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
+ Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+ kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+ linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
+ linux-fsdevel@vger.kernel.org
+References: <20200723171227.446711-1-mic@digikod.net>
+ <20200723171227.446711-4-mic@digikod.net>
+ <87a6z1m0u1.fsf@x220.int.ebiederm.org>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <89b6bb7f-d841-cf0a-8d5c-26c611b56ae7@digikod.net>
+Date: Thu, 13 Aug 2020 17:31:22 +0200
+User-Agent:
 MIME-Version: 1.0
+In-Reply-To: <87a6z1m0u1.fsf@x220.int.ebiederm.org>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
 Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-Add a simple test for CONFIG_SLAB_QUARANTINE.
+Kees Cook wrote this patch, which is in Andrew Morton's tree, but I
+think you're talking about O_MAYEXEC, not this patch specifically.
 
-It performs heap spraying that aims to reallocate the recently freed heap
-object. This technique is used for exploiting use-after-free
-vulnerabilities in the kernel code.
+On 11/08/2020 21:36, Eric W. Biederman wrote:
+> Mickaël Salaün <mic@digikod.net> writes:
+> 
+>> From: Kees Cook <keescook@chromium.org>
+>>
+>> The path_noexec() check, like the regular file check, was happening too
+>> late, letting LSMs see impossible execve()s. Check it earlier as well
+>> in may_open() and collect the redundant fs/exec.c path_noexec() test
+>> under the same robustness comment as the S_ISREG() check.
+>>
+>> My notes on the call path, and related arguments, checks, etc:
+> 
+> A big question arises, that I think someone already asked.
 
-This test shows that CONFIG_SLAB_QUARANTINE breaks heap spraying
-exploitation technique.
+Al Viro and Jann Horn expressed such concerns for O_MAYEXEC:
+https://lore.kernel.org/lkml/0cc94c91-afd3-27cd-b831-8ea16ca8ca93@digikod.net/
 
-Signed-off-by: Alexander Popov <alex.popov@linux.com>
----
- drivers/misc/lkdtm/core.c  |  1 +
- drivers/misc/lkdtm/heap.c  | 40 ++++++++++++++++++++++++++++++++++++++
- drivers/misc/lkdtm/lkdtm.h |  1 +
- 3 files changed, 42 insertions(+)
+> 
+> Why perform this test in may_open directly instead of moving
+> it into inode_permission.  That way the code can be shared with
+> faccessat, and any other code path that wants it?
 
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index a5e344df9166..78b7669c35eb 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -126,6 +126,7 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(SLAB_FREE_DOUBLE),
- 	CRASHTYPE(SLAB_FREE_CROSS),
- 	CRASHTYPE(SLAB_FREE_PAGE),
-+	CRASHTYPE(HEAP_SPRAY),
- 	CRASHTYPE(SOFTLOCKUP),
- 	CRASHTYPE(HARDLOCKUP),
- 	CRASHTYPE(SPINLOCKUP),
-diff --git a/drivers/misc/lkdtm/heap.c b/drivers/misc/lkdtm/heap.c
-index 1323bc16f113..a72a241e314a 100644
---- a/drivers/misc/lkdtm/heap.c
-+++ b/drivers/misc/lkdtm/heap.c
-@@ -205,6 +205,46 @@ static void ctor_a(void *region)
- static void ctor_b(void *region)
- { }
- 
-+#define HEAP_SPRAY_SIZE 128
-+
-+void lkdtm_HEAP_SPRAY(void)
-+{
-+	int *addr;
-+	int *spray_addrs[HEAP_SPRAY_SIZE] = { 0 };
-+	unsigned long i = 0;
-+
-+	addr = kmem_cache_alloc(a_cache, GFP_KERNEL);
-+	if (!addr) {
-+		pr_info("Unable to allocate memory in lkdtm-heap-a cache\n");
-+		return;
-+	}
-+
-+	*addr = 0x31337;
-+	kmem_cache_free(a_cache, addr);
-+
-+	pr_info("Performing heap spraying...\n");
-+	for (i = 0; i < HEAP_SPRAY_SIZE; i++) {
-+		spray_addrs[i] = kmem_cache_alloc(a_cache, GFP_KERNEL);
-+		*spray_addrs[i] = 0x31337;
-+		pr_info("attempt %lu: spray alloc addr %p vs freed addr %p\n",
-+						i, spray_addrs[i], addr);
-+		if (spray_addrs[i] == addr) {
-+			pr_info("freed addr is reallocated!\n");
-+			break;
-+		}
-+	}
-+
-+	if (i < HEAP_SPRAY_SIZE)
-+		pr_info("FAIL! Heap spraying succeed :(\n");
-+	else
-+		pr_info("OK! Heap spraying hasn't succeed :)\n");
-+
-+	for (i = 0; i < HEAP_SPRAY_SIZE; i++) {
-+		if (spray_addrs[i])
-+			kmem_cache_free(a_cache, spray_addrs[i]);
-+	}
-+}
-+
- void __init lkdtm_heap_init(void)
- {
- 	double_free_cache = kmem_cache_create("lkdtm-heap-double_free",
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index 8878538b2c13..dfafb4ae6f3a 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -45,6 +45,7 @@ void lkdtm_READ_BUDDY_AFTER_FREE(void);
- void lkdtm_SLAB_FREE_DOUBLE(void);
- void lkdtm_SLAB_FREE_CROSS(void);
- void lkdtm_SLAB_FREE_PAGE(void);
-+void lkdtm_HEAP_SPRAY(void);
- 
- /* lkdtm_perms.c */
- void __init lkdtm_perms_init(void);
--- 
-2.26.2
+This patch is just a refactoring.
 
+About O_MAYEXEC, path-based LSM, IMA and IPE need to work on a struct
+file, whereas inode_permission() only gives a struct inode. However,
+faccessat2(2) (with extended flags) seems to be the perfect candidate if
+we want to be able to check file descriptors.
+
+> 
+> That would look to provide a more maintainable kernel.
+
+Why would it be more maintainable?
+
+> 
+> Eric
+> 
+> 
+>> do_open_execat()
+>>     struct open_flags open_exec_flags = {
+>>         .open_flag = O_LARGEFILE | O_RDONLY | __FMODE_EXEC,
+>>         .acc_mode = MAY_EXEC,
+>>         ...
+>>     do_filp_open(dfd, filename, open_flags)
+>>         path_openat(nameidata, open_flags, flags)
+>>             file = alloc_empty_file(open_flags, current_cred());
+>>             do_open(nameidata, file, open_flags)
+>>                 may_open(path, acc_mode, open_flag)
+>>                     /* new location of MAY_EXEC vs path_noexec() test */
+>>                     inode_permission(inode, MAY_OPEN | acc_mode)
+>>                         security_inode_permission(inode, acc_mode)
+>>                 vfs_open(path, file)
+>>                     do_dentry_open(file, path->dentry->d_inode, open)
+>>                         security_file_open(f)
+>>                         open()
+>>     /* old location of path_noexec() test */
+>>
+>> Signed-off-by: Mickaël Salaün <mic@digikod.net>
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> Link: https://lore.kernel.org/r/20200605160013.3954297-4-keescook@chromium.org
+>> ---
+>>  fs/exec.c  | 12 ++++--------
+>>  fs/namei.c |  4 ++++
+>>  2 files changed, 8 insertions(+), 8 deletions(-)
+>>
+>> diff --git a/fs/exec.c b/fs/exec.c
+>> index bdc6a6eb5dce..4eea20c27b01 100644
+>> --- a/fs/exec.c
+>> +++ b/fs/exec.c
+>> @@ -147,10 +147,8 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
+>>  	 * and check again at the very end too.
+>>  	 */
+>>  	error = -EACCES;
+>> -	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode)))
+>> -		goto exit;
+>> -
+>> -	if (path_noexec(&file->f_path))
+>> +	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode) ||
+>> +			 path_noexec(&file->f_path)))
+>>  		goto exit;
+>>  
+>>  	fsnotify_open(file);
+>> @@ -897,10 +895,8 @@ static struct file *do_open_execat(int fd, struct filename *name, int flags)
+>>  	 * and check again at the very end too.
+>>  	 */
+>>  	err = -EACCES;
+>> -	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode)))
+>> -		goto exit;
+>> -
+>> -	if (path_noexec(&file->f_path))
+>> +	if (WARN_ON_ONCE(!S_ISREG(file_inode(file)->i_mode) ||
+>> +			 path_noexec(&file->f_path)))
+>>  		goto exit;
+>>  
+>>  	err = deny_write_access(file);
+>> diff --git a/fs/namei.c b/fs/namei.c
+>> index a559ad943970..ddc9b25540fe 100644
+>> --- a/fs/namei.c
+>> +++ b/fs/namei.c
+>> @@ -2863,6 +2863,10 @@ static int may_open(const struct path *path, int acc_mode, int flag)
+>>  			return -EACCES;
+>>  		flag &= ~O_TRUNC;
+>>  		break;
+>> +	case S_IFREG:
+>> +		if ((acc_mode & MAY_EXEC) && path_noexec(path))
+>> +			return -EACCES;
+>> +		break;
+>>  	}
+>>  
+>>  	error = inode_permission(inode, MAY_OPEN | acc_mode);
