@@ -1,21 +1,20 @@
-Return-Path: <SRS0=DRp3=BX=lists.openwall.com=kernel-hardening-return-19619-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=n8VH=BX=lists.openwall.com=kernel-hardening-return-19620-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-15.0 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9121DC433DF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 14:49:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 48443C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 15:19:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 80A7420781
-	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 14:49:33 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 80A7420781
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19619-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9715 invoked by uid 550); 13 Aug 2020 14:49:26 -0000
+	by mail.kernel.org (Postfix) with SMTP id 6AD942078D
+	for <kernel-hardening@archiver.kernel.org>; Thu, 13 Aug 2020 15:19:56 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6AD942078D
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19620-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1523 invoked by uid 550); 13 Aug 2020 15:19:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,386 +22,159 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9695 invoked from network); 13 Aug 2020 14:49:25 -0000
-Subject: Re: [PATCH v7 5/7] fs,doc: Enable to enforce noexec mounts or file
- exec through O_MAYEXEC
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
- Alexei Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>,
- Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski
- <luto@kernel.org>, Christian Brauner <christian.brauner@ubuntu.com>,
- Christian Heimes <christian@python.org>,
- Daniel Borkmann <daniel@iogearbox.net>,
- Deven Bowers <deven.desai@linux.microsoft.com>,
- Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
- Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
- James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
- Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
- Kees Cook <keescook@chromium.org>,
- Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
- Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>,
- =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
- Scott Shell <scottsh@microsoft.com>,
- Sean Christopherson <sean.j.christopherson@intel.com>,
- Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
- Steve Grubb <sgrubb@redhat.com>,
- Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
- Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
- Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
- linux-fsdevel@vger.kernel.org,
- Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
- Randy Dunlap <rdunlap@infradead.org>
-References: <20200723171227.446711-1-mic@digikod.net>
- <20200723171227.446711-6-mic@digikod.net>
- <87364tkl99.fsf@x220.int.ebiederm.org>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <79e4d55f-a80b-5361-e18d-d8fa67ae640b@digikod.net>
-Date: Thu, 13 Aug 2020 16:49:11 +0200
-User-Agent:
+Received: (qmail 1500 invoked from network); 13 Aug 2020 15:19:48 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=kHpviHVAWFum71m9T91C+ViCrMTffHDaBIsRm4hTUyU=;
+        b=JPAKZgpPBTUC8QIQYBJD1sY5O8n1yIBpUGkRKVdp/O0bjth9kL8V1CTfF38PN9LBxW
+         eZGb/yTCBlA+6cogpeCxmMjGhJXY2ZHLXTjojHTGpNwt/b3GwZV+R0/NgbjF7uFQ7tK2
+         xJmz3Bl/lDmYrx1FomEBnZegW0oDlzO2E5veBHcw6vzMZN6U6djjDeokU9UBjN1i6Q50
+         VHmCUTd7U12Ch62i4IfFnz/kjEDVFUeK8vmAic6Sh9G8Tmo0Vr2JPyFtha0ErgSDtcLx
+         r33AVvfUx6aDVuUEZaIrh23hcf3zfm4s8aP2R7wR4T1fr4lfddDxUGjeFIMkU4Ke8ZMh
+         Eo5A==
+X-Gm-Message-State: AOAM531+o3WRIhroV5un2raUeXDdrPPI7xu1k8YNvO20OoL9b3FiussJ
+	KlrIQeGGlNTS0w1V0XUwQ+E=
+X-Google-Smtp-Source: ABdhPJwtcfXWy9ymXF9xh5AnIJbVJZKRsqkwfDB6bwfz2pR9v2SLKeaOyzgDFjsRvOSztqlcctDyPw==
+X-Received: by 2002:a5d:6505:: with SMTP id x5mr4470670wru.336.1597331977069;
+        Thu, 13 Aug 2020 08:19:37 -0700 (PDT)
+From: Alexander Popov <alex.popov@linux.com>
+To: Kees Cook <keescook@chromium.org>,
+	Jann Horn <jannh@google.com>,
+	Will Deacon <will@kernel.org>,
+	Andrey Ryabinin <aryabinin@virtuozzo.com>,
+	Alexander Potapenko <glider@google.com>,
+	Dmitry Vyukov <dvyukov@google.com>,
+	Christoph Lameter <cl@linux.com>,
+	Pekka Enberg <penberg@kernel.org>,
+	David Rientjes <rientjes@google.com>,
+	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Masami Hiramatsu <mhiramat@kernel.org>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Krzysztof Kozlowski <krzk@kernel.org>,
+	Patrick Bellasi <patrick.bellasi@arm.com>,
+	David Howells <dhowells@redhat.com>,
+	Eric Biederman <ebiederm@xmission.com>,
+	Johannes Weiner <hannes@cmpxchg.org>,
+	Laura Abbott <labbott@redhat.com>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	kasan-dev@googlegroups.com,
+	linux-mm@kvack.org,
+	kernel-hardening@lists.openwall.com,
+	linux-kernel@vger.kernel.org,
+	Alexander Popov <alex.popov@linux.com>
+Cc: notify@kernel.org
+Subject: [PATCH RFC 0/2] Break heap spraying needed for exploiting use-after-free
+Date: Thu, 13 Aug 2020 18:19:20 +0300
+Message-Id: <20200813151922.1093791-1-alex.popov@linux.com>
+X-Mailer: git-send-email 2.26.2
 MIME-Version: 1.0
-In-Reply-To: <87364tkl99.fsf@x220.int.ebiederm.org>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
 Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
 
+Hello everyone! Requesting for your comments.
 
+Use-after-free vulnerabilities in the Linux kernel are very popular for
+exploitation. A few examples:
+ https://googleprojectzero.blogspot.com/2018/09/a-cache-invalidation-bug-in-linux.html
+ https://googleprojectzero.blogspot.com/2019/11/bad-binder-android-in-wild-exploit.html?m=1
+ https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
 
-On 11/08/2020 21:58, Eric W. Biederman wrote:
-> Mickaël Salaün <mic@digikod.net> writes:
-> 
->> Allow for the enforcement of the O_MAYEXEC openat2(2) flag.  Thanks to
->> the noexec option from the underlying VFS mount, or to the file execute
->> permission, userspace can enforce these execution policies.  This may
->> allow script interpreters to check execution permission before reading
->> commands from a file, or dynamic linkers to allow shared object
->> loading.
-> 
-> Ick!!!!!
-> 
-> This feels like being so open minded your brains fall out.
+Use-after-free exploits usually employ heap spraying technique.
+Generally it aims to put controlled bytes at a predetermined memory
+location on the heap. Heap spraying for exploiting use-after-free in
+the Linux kernel relies on the fact that on kmalloc(), the slab allocator
+returns the address of the memory that was recently freed. So allocating
+a kernel object with the same size and controlled contents allows
+overwriting the vulnerable freed object.
 
-Really? :)
+I've found an easy way to break heap spraying for use-after-free
+exploitation. I simply extracted slab freelist quarantine from KASAN
+functionality and called it CONFIG_SLAB_QUARANTINE. Please see patch 1.
 
-> 
-> I can see having a sysctl that allows the new open flag to be ignored
-> so that the existing lack of enforcement when the flag is passed
-> continues.
+If this feature is enabled, freed allocations are stored in the quarantine
+and can't be instantly reallocated and overwritten by the exploit
+performing heap spraying.
 
-And that could break distros (i.e. multiple interpreters, with or
-without O_MAYEXEC, different versions, and different kernels).
+In patch 2 you can see the lkdtm test showing how CONFIG_SLAB_QUARANTINE
+prevents immediate reallocation of a freed heap object.
 
-> 
-> But having the sysctl be fine grained seems like way too much rope.
+I tested this patch series both for CONFIG_SLUB and CONFIG_SLAB.
 
-This follow the same rational: file permissions and mount options can
-change but they are controled by the sysadmin, how also configure sysctl
-values.
+CONFIG_SLAB_QUARANTINE disabled:
+  # echo HEAP_SPRAY > /sys/kernel/debug/provoke-crash/DIRECT
+  lkdtm: Performing direct entry HEAP_SPRAY
+  lkdtm: Performing heap spraying...
+  lkdtm: attempt 0: spray alloc addr 00000000f8699c7d vs freed addr 00000000f8699c7d
+  lkdtm: freed addr is reallocated!
+  lkdtm: FAIL! Heap spraying succeed :(
 
-> 
-> I don't think the code needs to do more than enforce or not enforce this
-> logic.
+CONFIG_SLAB_QUARANTINE enabled:
+  # echo HEAP_SPRAY > /sys/kernel/debug/provoke-crash/DIRECT
+  lkdtm: Performing direct entry HEAP_SPRAY
+  lkdtm: Performing heap spraying...
+  lkdtm: attempt 0: spray alloc addr 000000009cafb63f vs freed addr 00000000173cce94
+  lkdtm: attempt 1: spray alloc addr 000000003096911f vs freed addr 00000000173cce94
+  lkdtm: attempt 2: spray alloc addr 00000000da60d755 vs freed addr 00000000173cce94
+  lkdtm: attempt 3: spray alloc addr 000000000b415070 vs freed addr 00000000173cce94
+  ...
+  lkdtm: attempt 126: spray alloc addr 00000000e80ef807 vs freed addr 00000000173cce94
+  lkdtm: attempt 127: spray alloc addr 00000000398fe535 vs freed addr 00000000173cce94
+  lkdtm: OK! Heap spraying hasn't succeed :)
 
-I think this is the more viable behavior for an eclectic set of distros
-(and different use cases).
+I did a brief performance evaluation of this feature.
 
-> 
-> You can test the sysctl once when you process O_MAYEXEC.  But code such
-> as may_open should not have the conditional behavior.  It should get an
-> appropriate set of flags that are always enforced.  With the madness of
-> what to do left at the edge of userspace.
+1. Memory consumption. KASAN quarantine uses 1/32 of the memory.
+CONFIG_SLAB_QUARANTINE disabled:
+  # free -m
+                total        used        free      shared  buff/cache   available
+  Mem:           1987          39        1862          10          86        1907
+  Swap:             0           0           0
+CONFIG_SLAB_QUARANTINE enabled:
+  # free -m
+                total        used        free      shared  buff/cache   available
+  Mem:           1987         140        1760          10          87        1805
+  Swap:             0           0           0
 
-The problem is that this userspace is not in charge of the system-wide
-policy, the sysadmin is. As pointed out by the commit message, please
-take a look at the rational:
-https://lore.kernel.org/lkml/1477d3d7-4b36-afad-7077-a38f42322238@digikod.net/
+2. Performance penalty. I used `hackbench -s 256 -l 200 -g 15 -f 25 -P`.
+CONFIG_SLAB_QUARANTINE disabled (x86_64, CONFIG_SLUB):
+  Times: 3.088, 3.103, 3.068, 3.103, 3.107
+  Mean: 3.0938
+  Standard deviation: 0.0144
+CONFIG_SLAB_QUARANTINE enabled (x86_64, CONFIG_SLUB):
+  Times: 3.303, 3.329, 3.356, 3.314, 3.292
+  Mean: 3.3188 (+7.3%)
+  Standard deviation: 0.0223
 
-> 
-> Anything else appears to be madness, overengineering, and a failure to
-> separate concerns.
+I would appreciate your feedback!
 
-Oh! What a conclusion! :)
+Best regards,
+Alexander
 
-I'd say it is a pragmatic approach.
+Alexander Popov (2):
+  mm: Extract SLAB_QUARANTINE from KASAN
+  lkdtm: Add heap spraying test
 
-> 
-> Eric
-> 
-> 
->> Add a new sysctl fs.open_mayexec_enforce to enable system administrators
->> to enforce two complementary security policies according to the
->> installed system: enforce the noexec mount option, and enforce
->> executable file permission.  Indeed, because of compatibility with
->> installed systems, only system administrators are able to check that
->> this new enforcement is in line with the system mount points and file
->> permissions.  A following patch adds documentation.
->>
->> Being able to restrict execution also enables to protect the kernel by
->> restricting arbitrary syscalls that an attacker could perform with a
->> crafted binary or certain script languages.  It also improves multilevel
->> isolation by reducing the ability of an attacker to use side channels
->> with specific code.  These restrictions can natively be enforced for ELF
->> binaries (with the noexec mount option) but require this kernel
->> extension to properly handle scripts (e.g., Python, Perl).  To get a
->> consistent execution policy, additional memory restrictions should also
->> be enforced (e.g. thanks to SELinux).
->>
->> Because the O_MAYEXEC flag is a meant to enforce a system-wide security
->> policy (but not application-centric policies), it does not make sense
->> for userland to check the sysctl value.  Indeed, this new flag only
->> enables to extend the system ability to enforce a policy thanks to (some
->> trusted) userland collaboration.  Moreover, additional security policies
->> could be managed by LSMs.  This is a best-effort approach from the
->> application developer point of view:
->> https://lore.kernel.org/lkml/1477d3d7-4b36-afad-7077-a38f42322238@digikod.net/
->>
->> Signed-off-by: Mickaël Salaün <mic@digikod.net>
->> Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
->> Cc: Aleksa Sarai <cyphar@cyphar.com>
->> Cc: Al Viro <viro@zeniv.linux.org.uk>
->> Cc: Jonathan Corbet <corbet@lwn.net>
->> Cc: Kees Cook <keescook@chromium.org>
->> Cc: Randy Dunlap <rdunlap@infradead.org>
->> ---
->>
->> Changes since v6:
->> * Allow opening pipes, block devices and character devices with
->>   O_MAYEXEC when there is no enforced policy, but forbid any non-regular
->>   file opened with O_MAYEXEC otherwise (i.e. for any enforced policy).
->> * Add a paragraph about the non-regular files policy.
->> * Move path_noexec() calls out of the fast-path (suggested by Kees
->>   Cook).
->>
->> Changes since v5:
->> * Remove the static enforcement configuration through Kconfig because it
->>   makes the code more simple like this, and because the current sysctl
->>   configuration can only be set with CAP_SYS_ADMIN, the same way mount
->>   options (i.e. noexec) can be set.  If an harden distro wants to
->>   enforce a configuration, it should restrict capabilities or sysctl
->>   configuration.  Furthermore, an LSM can easily leverage O_MAYEXEC to
->>   fit its need.
->> * Move checks from inode_permission() to may_open() and make the error
->>   codes more consistent according to file types (in line with a previous
->>   commit): opening a directory with O_MAYEXEC returns EISDIR and other
->>   non-regular file types may return EACCES.
->> * In may_open(), when OMAYEXEC_ENFORCE_FILE is set, replace explicit
->>   call to generic_permission() with an artificial MAY_EXEC to avoid
->>   double calls.  This makes sense especially when an LSM policy forbids
->>   execution of a file.
->> * Replace the custom proc_omayexec() with
->>   proc_dointvec_minmax_sysadmin(), and then replace the CAP_MAC_ADMIN
->>   check with a CAP_SYS_ADMIN one (suggested by Kees Cook and Stephen
->>   Smalley).
->> * Use BIT() (suggested by Kees Cook).
->> * Rename variables (suggested by Kees Cook).
->> * Reword the kconfig help.
->> * Import the documentation patch (suggested by Kees Cook):
->>   https://lore.kernel.org/lkml/20200505153156.925111-6-mic@digikod.net/
->> * Update documentation and add LWN.net article.
->>
->> Changes since v4:
->> * Add kernel configuration options to enforce O_MAYEXEC at build time,
->>   and disable the sysctl in such case (requested by James Morris).
->> * Reword commit message.
->>
->> Changes since v3:
->> * Update comment with O_MAYEXEC.
->>
->> Changes since v2:
->> * Cosmetic changes.
->>
->> Changes since v1:
->> * Move code from Yama to the FS subsystem (suggested by Kees Cook).
->> * Make omayexec_inode_permission() static (suggested by Jann Horn).
->> * Use mode 0600 for the sysctl.
->> * Only match regular files (not directories nor other types), which
->>   follows the same semantic as commit 73601ea5b7b1 ("fs/open.c: allow
->>   opening only regular files during execve()").
->> ---
->>  Documentation/admin-guide/sysctl/fs.rst | 49 +++++++++++++++++++++++++
->>  fs/namei.c                              | 24 ++++++++++++
->>  include/linux/fs.h                      |  1 +
->>  kernel/sysctl.c                         | 12 +++++-
->>  4 files changed, 84 insertions(+), 2 deletions(-)
->>
->> diff --git a/Documentation/admin-guide/sysctl/fs.rst b/Documentation/admin-guide/sysctl/fs.rst
->> index 2a45119e3331..ce6e2081d3a9 100644
->> --- a/Documentation/admin-guide/sysctl/fs.rst
->> +++ b/Documentation/admin-guide/sysctl/fs.rst
->> @@ -37,6 +37,7 @@ Currently, these files are in /proc/sys/fs:
->>  - inode-nr
->>  - inode-state
->>  - nr_open
->> +- open_mayexec_enforce
->>  - overflowuid
->>  - overflowgid
->>  - pipe-user-pages-hard
->> @@ -165,6 +166,54 @@ system needs to prune the inode list instead of allocating
->>  more.
->>  
->>  
->> +open_mayexec_enforce
->> +--------------------
->> +
->> +While being ignored by :manpage:`open(2)` and :manpage:`openat(2)`, the
->> +``O_MAYEXEC`` flag can be passed to :manpage:`openat2(2)` to only open regular
->> +files that are expected to be executable.  If the file is not identified as
->> +executable, then the syscall returns -EACCES.  This may allow a script
->> +interpreter to check executable permission before reading commands from a file,
->> +or a dynamic linker to only load executable shared objects.  One interesting
->> +use case is to enforce a "write xor execute" policy through interpreters.
->> +
->> +The ability to restrict code execution must be thought as a system-wide policy,
->> +which first starts by restricting mount points with the ``noexec`` option.
->> +This option is also automatically applied to special filesystems such as /proc .
->> +This prevents files on such mount points to be directly executed by the kernel
->> +or mapped as executable memory (e.g. libraries).  With script interpreters
->> +using the ``O_MAYEXEC`` flag, the executable permission can then be checked
->> +before reading commands from files. This makes it possible to enforce the
->> +``noexec`` at the interpreter level, and thus propagates this security policy
->> +to scripts.  To be fully effective, these interpreters also need to handle the
->> +other ways to execute code: command line parameters (e.g., option ``-e`` for
->> +Perl), module loading (e.g., option ``-m`` for Python), stdin, file sourcing,
->> +environment variables, configuration files, etc.  According to the threat
->> +model, it may be acceptable to allow some script interpreters (e.g. Bash) to
->> +interpret commands from stdin, may it be a TTY or a pipe, because it may not be
->> +enough to (directly) perform syscalls.
->> +
->> +There are two complementary security policies: enforce the ``noexec`` mount
->> +option, and enforce executable file permission.  These policies are handled by
->> +the ``fs.open_mayexec_enforce`` sysctl (writable only with ``CAP_SYS_ADMIN``)
->> +as a bitmask:
->> +
->> +1 - Mount restriction: checks that the mount options for the underlying VFS
->> +    mount do not prevent execution.
->> +
->> +2 - File permission restriction: checks that the to-be-opened file is marked as
->> +    executable for the current process (e.g., POSIX permissions).
->> +
->> +Note that as long as a policy is enforced, opening any non-regular file with
->> +``O_MAYEXEC`` is denied (e.g. TTYs, pipe), even when such a file is marked as
->> +executable or is on an executable mount point.
->> +
->> +Code samples can be found in tools/testing/selftests/openat2/omayexec_test.c
->> +and interpreter patches (for the original O_MAYEXEC version) may be found at
->> +https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC .
->> +See also an overview article: https://lwn.net/Articles/820000/ .
->> +
->> +
->>  overflowgid & overflowuid
->>  -------------------------
->>  
->> diff --git a/fs/namei.c b/fs/namei.c
->> index 3f074ec77390..8ec13c7fd403 100644
->> --- a/fs/namei.c
->> +++ b/fs/namei.c
->> @@ -39,6 +39,7 @@
->>  #include <linux/bitops.h>
->>  #include <linux/init_task.h>
->>  #include <linux/uaccess.h>
->> +#include <linux/sysctl.h>
->>  
->>  #include "internal.h"
->>  #include "mount.h"
->> @@ -425,6 +426,11 @@ static int sb_permission(struct super_block *sb, struct inode *inode, int mask)
->>  	return 0;
->>  }
->>  
->> +#define OPEN_MAYEXEC_ENFORCE_MOUNT	BIT(0)
->> +#define OPEN_MAYEXEC_ENFORCE_FILE	BIT(1)
->> +
->> +int sysctl_open_mayexec_enforce __read_mostly;
->> +
->>  /**
->>   * inode_permission - Check for access rights to a given inode
->>   * @inode: Inode to check permission on
->> @@ -2861,11 +2867,29 @@ static int may_open(const struct path *path, int acc_mode, int flag)
->>  	case S_IFSOCK:
->>  		if (acc_mode & MAY_EXEC)
->>  			return -EACCES;
->> +		/*
->> +		 * Opening devices (e.g. TTYs) or pipes with O_MAYEXEC may be
->> +		 * legitimate when there is no enforced policy.
->> +		 */
->> +		if ((acc_mode & MAY_OPENEXEC) && sysctl_open_mayexec_enforce)
->> +			return -EACCES;
->>  		flag &= ~O_TRUNC;
->>  		break;
->>  	case S_IFREG:
->>  		if ((acc_mode & MAY_EXEC) && path_noexec(path))
->>  			return -EACCES;
->> +		if (acc_mode & MAY_OPENEXEC) {
->> +			if ((sysctl_open_mayexec_enforce & OPEN_MAYEXEC_ENFORCE_MOUNT)
->> +					&& path_noexec(path))
->> +				return -EACCES;
->> +			if (sysctl_open_mayexec_enforce & OPEN_MAYEXEC_ENFORCE_FILE)
->> +				/*
->> +				 * Because acc_mode may change here, the next and only
->> +				 * use of acc_mode should then be by the following call
->> +				 * to inode_permission().
->> +				 */
->> +				acc_mode |= MAY_EXEC;
->> +		}
->>  		break;
->>  	}
->>  
->> diff --git a/include/linux/fs.h b/include/linux/fs.h
->> index 56f835c9a87a..071f37707ccc 100644
->> --- a/include/linux/fs.h
->> +++ b/include/linux/fs.h
->> @@ -83,6 +83,7 @@ extern int sysctl_protected_symlinks;
->>  extern int sysctl_protected_hardlinks;
->>  extern int sysctl_protected_fifos;
->>  extern int sysctl_protected_regular;
->> +extern int sysctl_open_mayexec_enforce;
->>  
->>  typedef __kernel_rwf_t rwf_t;
->>  
->> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
->> index db1ce7af2563..5008a2566e79 100644
->> --- a/kernel/sysctl.c
->> +++ b/kernel/sysctl.c
->> @@ -113,6 +113,7 @@ static int sixty = 60;
->>  
->>  static int __maybe_unused neg_one = -1;
->>  static int __maybe_unused two = 2;
->> +static int __maybe_unused three = 3;
->>  static int __maybe_unused four = 4;
->>  static unsigned long zero_ul;
->>  static unsigned long one_ul = 1;
->> @@ -888,7 +889,6 @@ static int proc_taint(struct ctl_table *table, int write,
->>  	return err;
->>  }
->>  
->> -#ifdef CONFIG_PRINTK
->>  static int proc_dointvec_minmax_sysadmin(struct ctl_table *table, int write,
->>  				void *buffer, size_t *lenp, loff_t *ppos)
->>  {
->> @@ -897,7 +897,6 @@ static int proc_dointvec_minmax_sysadmin(struct ctl_table *table, int write,
->>  
->>  	return proc_dointvec_minmax(table, write, buffer, lenp, ppos);
->>  }
->> -#endif
->>  
->>  /**
->>   * struct do_proc_dointvec_minmax_conv_param - proc_dointvec_minmax() range checking structure
->> @@ -3264,6 +3263,15 @@ static struct ctl_table fs_table[] = {
->>  		.extra1		= SYSCTL_ZERO,
->>  		.extra2		= &two,
->>  	},
->> +	{
->> +		.procname       = "open_mayexec_enforce",
->> +		.data           = &sysctl_open_mayexec_enforce,
->> +		.maxlen         = sizeof(int),
->> +		.mode           = 0600,
->> +		.proc_handler	= proc_dointvec_minmax_sysadmin,
->> +		.extra1		= SYSCTL_ZERO,
->> +		.extra2		= &three,
->> +	},
->>  #if defined(CONFIG_BINFMT_MISC) || defined(CONFIG_BINFMT_MISC_MODULE)
->>  	{
->>  		.procname	= "binfmt_misc",
+ drivers/misc/lkdtm/core.c  |   1 +
+ drivers/misc/lkdtm/heap.c  |  40 ++++++++++++++
+ drivers/misc/lkdtm/lkdtm.h |   1 +
+ include/linux/kasan.h      | 107 ++++++++++++++++++++-----------------
+ include/linux/slab_def.h   |   2 +-
+ include/linux/slub_def.h   |   2 +-
+ init/Kconfig               |  11 ++++
+ mm/Makefile                |   3 +-
+ mm/kasan/Makefile          |   2 +
+ mm/kasan/kasan.h           |  75 +++++++++++++-------------
+ mm/kasan/quarantine.c      |   2 +
+ mm/kasan/slab_quarantine.c |  99 ++++++++++++++++++++++++++++++++++
+ mm/slub.c                  |   2 +-
+ 13 files changed, 258 insertions(+), 89 deletions(-)
+ create mode 100644 mm/kasan/slab_quarantine.c
+
+-- 
+2.26.2
+
