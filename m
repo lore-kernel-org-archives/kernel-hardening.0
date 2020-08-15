@@ -1,23 +1,23 @@
-Return-Path: <SRS0=++Hc=BZ=lists.openwall.com=kernel-hardening-return-19634-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=f0Tt=BZ=lists.openwall.com=kernel-hardening-return-19635-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 808BFC433E1
-	for <kernel-hardening@archiver.kernel.org>; Sat, 15 Aug 2020 17:00:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3E3EBC433DF
+	for <kernel-hardening@archiver.kernel.org>; Sat, 15 Aug 2020 17:09:46 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9CC0823AA0
-	for <kernel-hardening@archiver.kernel.org>; Sat, 15 Aug 2020 17:00:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 8C55D23B30
+	for <kernel-hardening@archiver.kernel.org>; Sat, 15 Aug 2020 17:09:45 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="bp6qJV4D"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9CC0823AA0
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="CI1KLRx+"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8C55D23B30
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19634-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13959 invoked by uid 550); 15 Aug 2020 17:00:10 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19635-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20073 invoked by uid 550); 15 Aug 2020 17:09:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,184 +25,170 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13933 invoked from network); 15 Aug 2020 17:00:09 -0000
+Received: (qmail 20047 invoked from network); 15 Aug 2020 17:09:38 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=Rb/IMQYAMEFrYCtyEvFVd8k7Hv2cYtIwx71PE3QM1p8=;
-        b=bp6qJV4DEhzLrf629/G+tL9EvTZVqc/ysLjd/vQMHp+0jiX1XZtLIgjqec6Lpt/AaN
-         WTq7cZUtJPMxGLrYA4iDCx3FAGjWmYa10boN5IBn8zvQ0LJy4jLy97V0yeOktIX46fym
-         j+NDd7YOcqJgHy11LHoejm8VJES3NQHihXr5g=
+        h=date:from:to:cc:subject:message-id:mime-version:content-disposition;
+        bh=soE2IFby27f3lT1vJqM47DLs36Y61YrsYS5+tpHeZ7Q=;
+        b=CI1KLRx+27luHuKs2XaeFptA0WMQW5Fz18CFhEPtVnkbVKV5k7fBMYmRMvP9FuTb7i
+         POd83LEdDrPoRKUNpQJZiUqmb1YMxIu3WAyCVpW3k18G+SD1Q3iGNo/NWnt2drExn+vL
+         j+P0BkgpDOAq7PVGoXtJGBjyX9cFgRCgT2DA0=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=Rb/IMQYAMEFrYCtyEvFVd8k7Hv2cYtIwx71PE3QM1p8=;
-        b=Yj0mZVFr/bBm5FfSfPH1jxGdKvHFmXV2x9BpIqbnnUKpratRQBKXHooiBxjvGIJMc2
-         vLkBX6Gq5SYsSKGgaTTrjVH9CU/ZWdSEla486hxN7O5lrAhb+geqab/0hX+Mv35tgayP
-         mIb4sPWexsxGJxhFGu3Z6AE3mlCxOGALCR2dw0WC00ZK9/2CTwlsxfWKoN/esUSyaMBS
-         U53uCHCTylEVQqgwN9im2C8VNOiUMKd6uxZeOQoAd+knfYGOQ8QvWNUD/9Vpg4Kf/5Bz
-         gAxa1NtsZ2aZ9pJa4c1PhnslbbCTxoB+xWexGhyclgJs6uBk5jbMvF2rT8HaeFRgGqwX
-         rMMg==
-X-Gm-Message-State: AOAM532cVV5a6wI+JqOflhVw3WbPkkIwT2QGy7ReGpxQK/wtESopqEKb
-	NcrUtqea5qplrx9/urJB+1SNaw==
-X-Google-Smtp-Source: ABdhPJzCrWUNRjB+5ydtKJX7u7Wr14mIRwWEOzQPie8wMcCnFEFODVqD0y9uyzTzDe5hmkp2qfJd5A==
-X-Received: by 2002:a17:90a:e986:: with SMTP id v6mr6862878pjy.88.1597510798065;
-        Sat, 15 Aug 2020 09:59:58 -0700 (PDT)
-Date: Sat, 15 Aug 2020 09:59:56 -0700
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:mime-version
+         :content-disposition;
+        bh=soE2IFby27f3lT1vJqM47DLs36Y61YrsYS5+tpHeZ7Q=;
+        b=mVWJfGJl+sep6RuKE7ZHXBQ+g/dMzkQ6Eh7SiMNFO/gga4pHMYIKZaDbOsrscSkbj6
+         /ibiFPAN4RdtcO9wF05urkg75D8482CPjz2FOTmi6YUSi+ouHtSh67RpdGJpTJTHyyDi
+         Lu3hNbKTJgkRujP3aFNQZ5KgtrlyQF2jRlY/vfXRx04SUOgxJWiOrOD6UR5Nr5tYcvsM
+         UQg6tGCp0Rs6OBCniAeyDMEv3NYgJWrAWSkOUvzD83zK45gZU26sq4yCSgEsey4lq3/9
+         awMDbNW0E2hHt1DQf/rTWApy3RxkLdLLvFpAlxQtjmgzIsAIpl8mVlDSZ8Em6777HzY7
+         sGBQ==
+X-Gm-Message-State: AOAM533YnFoGygy7vf5gah1vwhMsMqzwDrPN55UK7UOyzAm65/CU00+r
+	gUGWEqMp5xHenflsgwdkgSg1rw==
+X-Google-Smtp-Source: ABdhPJw++rQdsQjQ+F1CYSDJTNwjmrCJstNOaRhqVrb+4iAk5WeYCFnuaK3T5187FLXs3/JeJ8ejCw==
+X-Received: by 2002:a17:902:9a06:: with SMTP id v6mr6020983plp.57.1597511366548;
+        Sat, 15 Aug 2020 10:09:26 -0700 (PDT)
+Date: Sat, 15 Aug 2020 10:09:24 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Jann Horn <jannh@google.com>, Will Deacon <will@kernel.org>,
-	Andrey Ryabinin <aryabinin@virtuozzo.com>,
-	Alexander Potapenko <glider@google.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>,
-	David Rientjes <rientjes@google.com>,
-	Joonsoo Kim <iamjoonsoo.kim@lge.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Masami Hiramatsu <mhiramat@kernel.org>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Krzysztof Kozlowski <krzk@kernel.org>,
-	Patrick Bellasi <patrick.bellasi@arm.com>,
-	David Howells <dhowells@redhat.com>,
-	Eric Biederman <ebiederm@xmission.com>,
-	Johannes Weiner <hannes@cmpxchg.org>,
-	Laura Abbott <labbott@redhat.com>, Arnd Bergmann <arnd@arndb.de>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	kasan-dev@googlegroups.com, linux-mm@kvack.org,
-	kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org,
-	notify@kernel.org
-Subject: Re: [PATCH RFC 2/2] lkdtm: Add heap spraying test
-Message-ID: <202008150952.E81C4A52F@keescook>
-References: <20200813151922.1093791-1-alex.popov@linux.com>
- <20200813151922.1093791-3-alex.popov@linux.com>
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: "Gustavo A. R. Silva" <gustavoars@kernel.org>,
+	Jason Gunthorpe <jgg@ziepe.ca>, Leon Romanovsky <leon@kernel.org>,
+	Matthew Wilcox <willy@infradead.org>, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: [PATCH v2] overflow: Add __must_check attribute to check_*() helpers
+Message-ID: <202008151007.EF679DF@keescook>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200813151922.1093791-3-alex.popov@linux.com>
 
-On Thu, Aug 13, 2020 at 06:19:22PM +0300, Alexander Popov wrote:
-> Add a simple test for CONFIG_SLAB_QUARANTINE.
-> 
-> It performs heap spraying that aims to reallocate the recently freed heap
-> object. This technique is used for exploiting use-after-free
-> vulnerabilities in the kernel code.
-> 
-> This test shows that CONFIG_SLAB_QUARANTINE breaks heap spraying
-> exploitation technique.
+Since the destination variable of the check_*_overflow() helpers will
+contain a wrapped value on failure, it would be best to make sure callers
+really did check the return result of the helper. Adjust the macros to use
+a bool-wrapping static inline that is marked with __must_check. This means
+the macros can continue to have their type-agnostic behavior while gaining
+the function attribute (that cannot be applied directly to macros).
 
-Yay tests!
+Suggested-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+v2:
+- de-generalized __must_check_overflow() from being named "bool" (willy)
+- fix comment typos (rasmus)
+v1: https://lore.kernel.org/lkml/202008121450.405E4A3@keescook
+---
+ include/linux/overflow.h | 39 ++++++++++++++++++++++++---------------
+ 1 file changed, 24 insertions(+), 15 deletions(-)
 
-> 
-> Signed-off-by: Alexander Popov <alex.popov@linux.com>
-> ---
->  drivers/misc/lkdtm/core.c  |  1 +
->  drivers/misc/lkdtm/heap.c  | 40 ++++++++++++++++++++++++++++++++++++++
->  drivers/misc/lkdtm/lkdtm.h |  1 +
->  3 files changed, 42 insertions(+)
-> 
-> diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-> index a5e344df9166..78b7669c35eb 100644
-> --- a/drivers/misc/lkdtm/core.c
-> +++ b/drivers/misc/lkdtm/core.c
-> @@ -126,6 +126,7 @@ static const struct crashtype crashtypes[] = {
->  	CRASHTYPE(SLAB_FREE_DOUBLE),
->  	CRASHTYPE(SLAB_FREE_CROSS),
->  	CRASHTYPE(SLAB_FREE_PAGE),
-> +	CRASHTYPE(HEAP_SPRAY),
->  	CRASHTYPE(SOFTLOCKUP),
->  	CRASHTYPE(HARDLOCKUP),
->  	CRASHTYPE(SPINLOCKUP),
-> diff --git a/drivers/misc/lkdtm/heap.c b/drivers/misc/lkdtm/heap.c
-> index 1323bc16f113..a72a241e314a 100644
-> --- a/drivers/misc/lkdtm/heap.c
-> +++ b/drivers/misc/lkdtm/heap.c
-> @@ -205,6 +205,46 @@ static void ctor_a(void *region)
->  static void ctor_b(void *region)
->  { }
->  
-> +#define HEAP_SPRAY_SIZE 128
-> +
-> +void lkdtm_HEAP_SPRAY(void)
-> +{
-> +	int *addr;
-> +	int *spray_addrs[HEAP_SPRAY_SIZE] = { 0 };
+diff --git a/include/linux/overflow.h b/include/linux/overflow.h
+index 93fcef105061..f1c4e7b56bd9 100644
+--- a/include/linux/overflow.h
++++ b/include/linux/overflow.h
+@@ -43,6 +43,16 @@
+ #define is_non_negative(a) ((a) > 0 || (a) == 0)
+ #define is_negative(a) (!(is_non_negative(a)))
+ 
++/*
++ * Allows for effectively applying __must_check to a macro so we can have
++ * both the type-agnostic benefits of the macros while also being able to
++ * enforce that the return value is, in fact, checked.
++ */
++static inline bool __must_check __must_check_overflow(bool overflow)
++{
++	return unlikely(overflow);
++}
++
+ #ifdef COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW
+ /*
+  * For simplicity and code hygiene, the fallback code below insists on
+@@ -52,32 +62,32 @@
+  * alias for __builtin_add_overflow, but add type checks similar to
+  * below.
+  */
+-#define check_add_overflow(a, b, d) ({		\
++#define check_add_overflow(a, b, d) __must_check_overflow(({	\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+ 	__builtin_add_overflow(__a, __b, __d);	\
+-})
++}))
+ 
+-#define check_sub_overflow(a, b, d) ({		\
++#define check_sub_overflow(a, b, d) __must_check_overflow(({	\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+ 	__builtin_sub_overflow(__a, __b, __d);	\
+-})
++}))
+ 
+-#define check_mul_overflow(a, b, d) ({		\
++#define check_mul_overflow(a, b, d) __must_check_overflow(({	\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+ 	__builtin_mul_overflow(__a, __b, __d);	\
+-})
++}))
+ 
+ #else
+ 
+@@ -190,21 +200,20 @@
+ })
+ 
+ 
+-#define check_add_overflow(a, b, d)					\
++#define check_add_overflow(a, b, d)	__must_check_overflow(		\
+ 	__builtin_choose_expr(is_signed_type(typeof(a)),		\
+ 			__signed_add_overflow(a, b, d),			\
+-			__unsigned_add_overflow(a, b, d))
++			__unsigned_add_overflow(a, b, d)))
+ 
+-#define check_sub_overflow(a, b, d)					\
++#define check_sub_overflow(a, b, d)	__must_check_overflow(		\
+ 	__builtin_choose_expr(is_signed_type(typeof(a)),		\
+ 			__signed_sub_overflow(a, b, d),			\
+-			__unsigned_sub_overflow(a, b, d))
++			__unsigned_sub_overflow(a, b, d)))
+ 
+-#define check_mul_overflow(a, b, d)					\
++#define check_mul_overflow(a, b, d)	__must_check_overflow(		\
+ 	__builtin_choose_expr(is_signed_type(typeof(a)),		\
+ 			__signed_mul_overflow(a, b, d),			\
+-			__unsigned_mul_overflow(a, b, d))
+-
++			__unsigned_mul_overflow(a, b, d)))
+ 
+ #endif /* COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW */
+ 
+@@ -227,7 +236,7 @@
+  * '*d' will hold the results of the attempted shift, but is not
+  * considered "safe for use" if false is returned.
+  */
+-#define check_shl_overflow(a, s, d) ({					\
++#define check_shl_overflow(a, s, d) __must_check_overflow(({		\
+ 	typeof(a) _a = a;						\
+ 	typeof(s) _s = s;						\
+ 	typeof(d) _d = d;						\
+@@ -237,7 +246,7 @@
+ 	*_d = (_a_full << _to_shift);					\
+ 	(_to_shift != _s || is_negative(*_d) || is_negative(_a) ||	\
+ 	(*_d >> _to_shift) != _a);					\
+-})
++}))
+ 
+ /**
+  * array_size() - Calculate size of 2-dimensional array.
+-- 
+2.25.1
 
-(the 0 isn't needed -- and it was left there, it should be NULL)
-
-> +	unsigned long i = 0;
-> +
-> +	addr = kmem_cache_alloc(a_cache, GFP_KERNEL);
-
-I would prefer this test add its own cache (e.g. spray_cache), to avoid
-misbehaviors between tests. (e.g. the a and b caches already run the
-risk of getting corrupted weirdly.)
-
-> +	if (!addr) {
-> +		pr_info("Unable to allocate memory in lkdtm-heap-a cache\n");
-> +		return;
-> +	}
-> +
-> +	*addr = 0x31337;
-> +	kmem_cache_free(a_cache, addr);
-> +
-> +	pr_info("Performing heap spraying...\n");
-> +	for (i = 0; i < HEAP_SPRAY_SIZE; i++) {
-> +		spray_addrs[i] = kmem_cache_alloc(a_cache, GFP_KERNEL);
-> +		*spray_addrs[i] = 0x31337;
-> +		pr_info("attempt %lu: spray alloc addr %p vs freed addr %p\n",
-> +						i, spray_addrs[i], addr);
-
-That's 128 lines spewed into dmesg... I would leave this out.
-
-> +		if (spray_addrs[i] == addr) {
-> +			pr_info("freed addr is reallocated!\n");
-> +			break;
-> +		}
-> +	}
-> +
-> +	if (i < HEAP_SPRAY_SIZE)
-> +		pr_info("FAIL! Heap spraying succeed :(\n");
-
-I'd move this into the "if (spray_addrs[i] == addr)" test instead of the
-pr_info() that is there.
-
-> +	else
-> +		pr_info("OK! Heap spraying hasn't succeed :)\n");
-
-And then make this an "if (i == HEAP_SPRAY_SIZE)" test
-
-> +
-> +	for (i = 0; i < HEAP_SPRAY_SIZE; i++) {
-> +		if (spray_addrs[i])
-> +			kmem_cache_free(a_cache, spray_addrs[i]);
-> +	}
-> +}
-> +
->  void __init lkdtm_heap_init(void)
->  {
->  	double_free_cache = kmem_cache_create("lkdtm-heap-double_free",
-> diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-> index 8878538b2c13..dfafb4ae6f3a 100644
-> --- a/drivers/misc/lkdtm/lkdtm.h
-> +++ b/drivers/misc/lkdtm/lkdtm.h
-> @@ -45,6 +45,7 @@ void lkdtm_READ_BUDDY_AFTER_FREE(void);
->  void lkdtm_SLAB_FREE_DOUBLE(void);
->  void lkdtm_SLAB_FREE_CROSS(void);
->  void lkdtm_SLAB_FREE_PAGE(void);
-> +void lkdtm_HEAP_SPRAY(void);
->  
->  /* lkdtm_perms.c */
->  void __init lkdtm_perms_init(void);
-> -- 
-> 2.26.2
-> 
-
-I assume enabling the quarantine defense also ends up being seen in the
-SLAB_FREE_DOUBLE LKDTM test too, yes?
 
 -- 
 Kees Cook
