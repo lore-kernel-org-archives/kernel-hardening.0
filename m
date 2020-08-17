@@ -1,4 +1,4 @@
-Return-Path: <SRS0=mAww=B3=lists.openwall.com=kernel-hardening-return-19650-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=gas3=B3=lists.openwall.com=kernel-hardening-return-19651-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,
 	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 57AF3C433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 20:34:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4A0DEC433E3
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 21:04:22 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7C96820760
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 20:34:42 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7C96820760
+	by mail.kernel.org (Postfix) with SMTP id 71DDA2072D
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 21:04:21 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 71DDA2072D
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19650-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21710 invoked by uid 550); 17 Aug 2020 20:34:35 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19651-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5530 invoked by uid 550); 17 Aug 2020 21:04:14 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,26 +22,26 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21687 invoked from network); 17 Aug 2020 20:34:34 -0000
+Received: (qmail 5510 invoked from network); 17 Aug 2020 21:04:14 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=HMmAhojE6Pi6/w43OvxPWGnWTk1gFOr4fwGmxJ352yw=;
-        b=W+pS8KURlhZqfR+ul9eX8DVwcT1V3oloT+QZ5zJuP2Zr9H6qLlkkL8y4HuF7795xcE
-         vu19KWL9hebn3wyONzUcy0MO4ekPfx2OY5zA7mzsgC00ssIu4ads3Z/4Olcm28YJeQAa
-         YGEF8zKZ7VgE0WVHbUW/OCf+ZMTmwaymIkclpLqG2SzUG5ybflP8s/B8o+DtjocnCXER
-         mNIlYbRyAZmrAU04tVk1Cy0lOE2Ehrj5ZNsJ+riTGxxLi4BaVVk0Hrvac3g+K/4ICbc0
-         zSbuyD96g5X+YB9234H05P3QUXK6aDV6KauMM5jgDiZ6TqYqdEUvonJC0wU0axL2GE0D
-         zRXg==
-X-Gm-Message-State: AOAM533wNJQHtNmswULI2mD2SP6OxkW1ey8AVvDKV/fKs5Xi1JTcdZaO
-	b3Uyv1n6zh+4LNDpKVdOp6c=
-X-Google-Smtp-Source: ABdhPJx1aK0EUV28bsru/O3y1qmN0QHrU3RSMyKMIwqRNjU6hXIM4X7auJKsC2iOOWKYUNgbmfVSwA==
-X-Received: by 2002:a1c:2dcb:: with SMTP id t194mr15547368wmt.94.1597696463026;
-        Mon, 17 Aug 2020 13:34:23 -0700 (PDT)
+        bh=NBhHzgcaB0DndO5Bo1sbERPDqEvBm+Tpg5B38O5FP9Y=;
+        b=jf29v5YQisQs4CeCl+MkKK1dNHZQyo5Iwl0ioWukZ3HBbL3kfrZbIvXbH1bv+GAlCt
+         pNQEj03XF9qPqx4mEBB7A2G3PgryJtHS0WMse8B8ibxvy95qJH9Wzs/yDo8kwvP+heww
+         9sS4EtYkeTSBwyG9P4U73fWmFvHTgfM+PnH4pFGLn52hYndMO7w9EYMTvZ/kke9aBrLh
+         2Eu/TgjuIlYKDdxuFSDQ7ZHk2Q6CkdWQt3m/5M3hCADgdt57raAbJO6HaCh8gvpLUIpr
+         VzlyvRwWorKEYhFpfoZgY4pM403Kn4mKzVwwvCPEJPOZEU4vDDIOwAanGVQxK3JbMBdw
+         dDCg==
+X-Gm-Message-State: AOAM531x5GwacFHKEhZikV0W35CPDM4vDj6sB30V0tTrp3BhmDFaNtNk
+	jHTk67uHnZMsBQMH6KOgYR4=
+X-Google-Smtp-Source: ABdhPJx21gsuMXwrpwIahfhha39sWslHHPIeMPjlNl7akMRvTnqOKL03z0f1lBHPX5gqtVcg5l6sIg==
+X-Received: by 2002:a17:906:4f8c:: with SMTP id o12mr17336022eju.69.1597698243014;
+        Mon, 17 Aug 2020 14:04:03 -0700 (PDT)
 Subject: Re: [PATCH RFC 1/2] mm: Extract SLAB_QUARANTINE from KASAN
-To: Matthew Wilcox <willy@infradead.org>
+To: Pavel Machek <pavel@denx.de>, Matthew Wilcox <willy@infradead.org>
 Cc: Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
  Will Deacon <will@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>,
  Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>,
@@ -58,10 +58,11 @@ Cc: Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
  Arnd Bergmann <arnd@arndb.de>,
  Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kasan-dev@googlegroups.com,
  linux-mm@kvack.org, kernel-hardening@lists.openwall.com,
- linux-kernel@vger.kernel.org, notify@kernel.org
+ linux-kernel@vger.kernel.org, notify@kernel.org,
+ Andrey Konovalov <andreyknvl@google.com>
 References: <20200813151922.1093791-1-alex.popov@linux.com>
  <20200813151922.1093791-2-alex.popov@linux.com>
- <20200815185455.GB17456@casper.infradead.org>
+ <20200815185455.GB17456@casper.infradead.org> <20200816195930.GA4155@amd>
 From: Alexander Popov <alex.popov@linux.com>
 Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  mQINBFX15q4BEADZartsIW3sQ9R+9TOuCFRIW+RDCoBWNHhqDLu+Tzf2mZevVSF0D5AMJW4f
@@ -107,57 +108,51 @@ Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  gzBW8J8RW+nUJcTpudX4TC2SGeAOyxnM5O4XJ8yZyDUY334seDRJWtS4wRHxpfYcHKTewR96
  IsP1USE+9ndu6lrMXQ3aFsd1n1m1pfa/y8hiqsSYHy7JQ9Iuo9DxysOj22UNOmOE+OYPK48D
  j3lCqPk=
-Message-ID: <27cbe7f6-d372-f36c-d346-deb19b2cf39d@linux.com>
-Date: Mon, 17 Aug 2020 23:34:17 +0300
+Message-ID: <c6d3b4ce-cdb1-4bc9-d899-89228b4219cd@linux.com>
+Date: Tue, 18 Aug 2020 00:03:57 +0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <20200815185455.GB17456@casper.infradead.org>
-Content-Type: text/plain; charset=utf-8
+In-Reply-To: <20200816195930.GA4155@amd>
+Content-Type: text/plain; charset=windows-1252
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-On 15.08.2020 21:54, Matthew Wilcox wrote:
-> On Thu, Aug 13, 2020 at 06:19:21PM +0300, Alexander Popov wrote:
->> +config SLAB_QUARANTINE
->> +	bool "Enable slab freelist quarantine"
->> +	depends on !KASAN && (SLAB || SLUB)
->> +	help
->> +	  Enable slab freelist quarantine to break heap spraying technique
->> +	  used for exploiting use-after-free vulnerabilities in the kernel
->> +	  code. If this feature is enabled, freed allocations are stored
->> +	  in the quarantine and can't be instantly reallocated and
->> +	  overwritten by the exploit performing heap spraying.
->> +	  This feature is a part of KASAN functionality.
+On 16.08.2020 22:59, Pavel Machek wrote:
+> On Sat 2020-08-15 19:54:55, Matthew Wilcox wrote:
+>> On Thu, Aug 13, 2020 at 06:19:21PM +0300, Alexander Popov wrote:
+>>> +config SLAB_QUARANTINE
+>>> +	bool "Enable slab freelist quarantine"
+>>> +	depends on !KASAN && (SLAB || SLUB)
+>>> +	help
+>>> +	  Enable slab freelist quarantine to break heap spraying technique
+>>> +	  used for exploiting use-after-free vulnerabilities in the kernel
+>>> +	  code. If this feature is enabled, freed allocations are stored
+>>> +	  in the quarantine and can't be instantly reallocated and
+>>> +	  overwritten by the exploit performing heap spraying.
+>>> +	  This feature is a part of KASAN functionality.
+>>
+>> After this patch, it isn't part of KASAN any more ;-)
+>>
+>> The way this is written is a bit too low level.  Let's write it in terms
+>> that people who don't know the guts of the slab allocator or security
+>> terminology can understand:
+>>
+>> 	  Delay reuse of freed slab objects.  This makes some security
+>> 	  exploits harder to execute.  It reduces performance slightly
+>> 	  as objects will be cache cold by the time they are reallocated,
+>> 	  and it costs a small amount of memory.
 > 
-> After this patch, it isn't part of KASAN any more ;-)
-
-Ok, I'll change that to "this feature is used by KASAN" :)
-
-> The way this is written is a bit too low level.  Let's write it in terms
-> that people who don't know the guts of the slab allocator or security
-> terminology can understand:
+> Written this way, it invites questions:
 > 
-> 	  Delay reuse of freed slab objects.  This makes some security
-> 	  exploits harder to execute.  It reduces performance slightly
-> 	  as objects will be cache cold by the time they are reallocated,
-> 	  and it costs a small amount of memory.
-> 
-> (feel free to edit this)
+> Does it introduce any new deadlocks in near out-of-memory situations?
 
-Ok, I see.
-I'll start from high-level description and add low-level details at the end.
+Linux kernel with enabled KASAN is heavily tested by syzbot.
+I think Dmitry and Andrey can give good answers to your question.
 
->> +struct qlist_node {
->> +	struct qlist_node *next;
->> +};
-> 
-> I appreciate this isn't new, but why do we have a new singly-linked-list
-> abstraction being defined in this code?
-
-I don't know for sure.
-I suppose it is caused by SLAB/SLUB freelist implementation details (qlist_node
-in kasan_free_meta is also used for the allocator freelist).
+Some time ago I was doing Linux kernel fuzzing with syzkaller on low memory
+virtual machines (with KASAN and LOCKUP_DETECTOR enabled). I gave less than 1G
+to each debian stretch VM. I didn't get any special deadlock caused by OOM.
 
 Best regards,
 Alexander
