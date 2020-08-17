@@ -1,20 +1,20 @@
-Return-Path: <SRS0=vFsl=B3=lists.openwall.com=kernel-hardening-return-19639-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=R3+6=B3=lists.openwall.com=kernel-hardening-return-19640-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B56E1C433EA
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 03:05:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 01655C433DF
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 05:39:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1FFC720885
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 03:05:23 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1FFC720885
+	by mail.kernel.org (Postfix) with SMTP id 31028206FA
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 05:39:23 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 31028206FA
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19639-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9281 invoked by uid 550); 17 Aug 2020 03:05:16 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19640-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 12040 invoked by uid 550); 17 Aug 2020 05:39:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,168 +22,193 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9247 invoked from network); 17 Aug 2020 03:05:15 -0000
+Received: (qmail 12007 invoked from network); 17 Aug 2020 05:39:14 -0000
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/plain; charset=UTF-8
 Cc: <kernel-hardening@lists.openwall.com>
-Subject: Re: [PATCH v2 2/5] powerpc/lib: Initialize a temporary mm for code
- patching
+Subject: Re: [PATCH v2 1/5] powerpc/mm: Introduce temporary mm
 From: "Christopher M. Riedl" <cmr@informatik.wtf>
 To: "Daniel Axtens" <dja@axtens.net>, <linuxppc-dev@lists.ozlabs.org>
-Date: Sun, 16 Aug 2020 21:21:02 -0500
-Message-Id: <C4YWVI0APTMX.XJ5Z6LWTLBO6@geist>
-In-Reply-To: <87lfiso3rk.fsf@dja-thinkpad.axtens.net>
+Date: Mon, 17 Aug 2020 00:16:32 -0500
+Message-Id: <C4Z0LVCFINQP.21DBP0ZHGZQJ6@geist>
+In-Reply-To: <87o8noo96l.fsf@dja-thinkpad.axtens.net>
 X-Virus-Scanned: ClamAV using ClamSMTP
 
-On Thu Aug 6, 2020 at 8:24 AM CDT, Daniel Axtens wrote:
-> "Christopher M. Riedl" <cmr@informatik.wtf> writes:
->
-> > When code patching a STRICT_KERNEL_RWX kernel the page containing the
-> > address to be patched is temporarily mapped with permissive memory
-> > protections. Currently, a per-cpu vmalloc patch area is used for this
-> > purpose. While the patch area is per-cpu, the temporary page mapping is
-> > inserted into the kernel page tables for the duration of the patching.
-> > The mapping is exposed to CPUs other than the patching CPU - this is
-> > undesirable from a hardening perspective.
-> >
-> > Use the `poking_init` init hook to prepare a temporary mm and patching
-> > address. Initialize the temporary mm by copying the init mm. Choose a
-> > randomized patching address inside the temporary mm userspace address
-> > portion. The next patch uses the temporary mm and patching address for
-> > code patching.
-> >
-> > Based on x86 implementation:
-> >
-> > commit 4fc19708b165
-> > ("x86/alternatives: Initialize temporary mm for patching")
-> >
-> > Signed-off-by: Christopher M. Riedl <cmr@informatik.wtf>
-> > ---
-> >  arch/powerpc/lib/code-patching.c | 33 ++++++++++++++++++++++++++++++++
-> >  1 file changed, 33 insertions(+)
-> >
-> > diff --git a/arch/powerpc/lib/code-patching.c b/arch/powerpc/lib/code-p=
-atching.c
-> > index 0a051dfeb177..8ae1a9e5fe6e 100644
-> > --- a/arch/powerpc/lib/code-patching.c
-> > +++ b/arch/powerpc/lib/code-patching.c
-> > @@ -11,6 +11,8 @@
-> >  #include <linux/cpuhotplug.h>
-> >  #include <linux/slab.h>
-> >  #include <linux/uaccess.h>
-> > +#include <linux/sched/task.h>
-> > +#include <linux/random.h>
+On Thu Aug 6, 2020 at 6:27 AM CDT, Daniel Axtens wrote:
+> Hi Chris,
+>  =20
+> >  void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk);
+> > +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk);
+> >  bool ppc_breakpoint_available(void);
+> >  #ifdef CONFIG_PPC_ADV_DEBUG_REGS
+> >  extern void do_send_trap(struct pt_regs *regs, unsigned long address,
+> > diff --git a/arch/powerpc/include/asm/mmu_context.h b/arch/powerpc/incl=
+ude/asm/mmu_context.h
+> > index 1a474f6b1992..9269c7c7b04e 100644
+> > --- a/arch/powerpc/include/asm/mmu_context.h
+> > +++ b/arch/powerpc/include/asm/mmu_context.h
+> > @@ -10,6 +10,7 @@
+> >  #include <asm/mmu.h>=09
+> >  #include <asm/cputable.h>
+> >  #include <asm/cputhreads.h>
+> > +#include <asm/debug.h>
 > > =20
-> >  #include <asm/tlbflush.h>
-> >  #include <asm/page.h>
-> > @@ -44,6 +46,37 @@ int raw_patch_instruction(struct ppc_inst *addr, str=
-uct ppc_inst instr)
+> >  /*
+> >   * Most if the context management is out of line
+> > @@ -300,5 +301,68 @@ static inline int arch_dup_mmap(struct mm_struct *=
+oldmm,
+> >  	return 0;
 > >  }
 > > =20
-> >  #ifdef CONFIG_STRICT_KERNEL_RWX
+> > +struct temp_mm {
+> > +	struct mm_struct *temp;
+> > +	struct mm_struct *prev;
+> > +	bool is_kernel_thread;
+> > +	struct arch_hw_breakpoint brk[HBP_NUM_MAX];
+> > +};
+>
+> This is on the nitpicky end, but I wonder if this should be named
+> temp_mm, or should be labelled something else to capture its broader
+> purpose as a context for code patching? I'm thinking that a store of
+> breakpoints is perhaps unusual in a memory-managment structure?
+>
+> I don't have a better suggestion off the top of my head and I'm happy
+> for you to leave it, I just wanted to flag it as a possible way we could
+> be clearer.
+
+First of all thank you for the review!
+
+I had actually planned to move all this code into lib/code-patching.c
+directly (and it turns out that's what x86 ended up doing as well).
+
+>
 > > +
-> > +static struct mm_struct *patching_mm __ro_after_init;
-> > +static unsigned long patching_addr __ro_after_init;
-> > +
-> > +void __init poking_init(void)
+> > +static inline void init_temp_mm(struct temp_mm *temp_mm, struct mm_str=
+uct *mm)
 > > +{
-> > +	spinlock_t *ptl; /* for protecting pte table */
-> > +	pte_t *ptep;
+> > +	temp_mm->temp =3D mm;
+> > +	temp_mm->prev =3D NULL;
+> > +	temp_mm->is_kernel_thread =3D false;
+> > +	memset(&temp_mm->brk, 0, sizeof(temp_mm->brk));
+> > +}
+> > +
+> > +static inline void use_temporary_mm(struct temp_mm *temp_mm)
+> > +{
+> > +	lockdep_assert_irqs_disabled();
+> > +
+> > +	temp_mm->is_kernel_thread =3D current->mm =3D=3D NULL;
+> > +	if (temp_mm->is_kernel_thread)
+> > +		temp_mm->prev =3D current->active_mm;
+>
+> You don't seem to restore active_mm below. I don't know what active_mm
+> does, so I don't know if this is a problem.
+
+For kernel threads 'current->mm' is NULL since a kthread does not need
+a userspace mm; however they still need a mm so they "borrow" one which
+is indicated by 'current->active_mm'.
+
+'current->mm' needs to be restored because Hash requires a non-NULL
+value when handling a page fault and so 'current->mm' gets set to the
+temp_mm. This is a special case for kernel threads and Hash translation.
+
+>
+> > +	else
+> > +		temp_mm->prev =3D current->mm;
 > > +
 > > +	/*
-> > +	 * Some parts of the kernel (static keys for example) depend on
-> > +	 * successful code patching. Code patching under STRICT_KERNEL_RWX
-> > +	 * requires this setup - otherwise we cannot patch at all. We use
-> > +	 * BUG_ON() here and later since an early failure is preferred to
-> > +	 * buggy behavior and/or strange crashes later.
+> > +	 * Hash requires a non-NULL current->mm to allocate a userspace addre=
+ss
+> > +	 * when handling a page fault. Does not appear to hurt in Radix eithe=
+r.
 > > +	 */
-> > +	patching_mm =3D copy_init_mm();
-> > +	BUG_ON(!patching_mm);
+> > +	current->mm =3D temp_mm->temp;
+> > +	switch_mm_irqs_off(NULL, temp_mm->temp, current);
 > > +
-> > +	/*
-> > +	 * In hash we cannot go above DEFAULT_MAP_WINDOW easily.
-> > +	 * XXX: Do we want additional bits of entropy for radix?
-> > +	 */
-> > +	patching_addr =3D (get_random_long() & PAGE_MASK) %
-> > +		(DEFAULT_MAP_WINDOW - PAGE_SIZE);
+> > +	if (ppc_breakpoint_available()) {
 >
-> It took me a while to understand this calculation. I see that it's
-> calculating a base address for a page in which to do patching. It does
-> the following:
+> I wondered if this could be changed during a text-patching operation.
+> AIUI, it potentially can on a P9 via "dawr_enable_dangerous" in debugfs.
+>
+> I don't know if that's a problem. My concern is that you could turn off
+> breakpoints, call 'use_temporary_mm', then turn them back on again
+> before 'unuse_temporary_mm' and get a breakpoint while that can access
+> the temporary mm. Is there something else that makes that safe?
+> disabling IRQs maybe?
 
-I will add a comment explaining the calulcation in the next spin.
-
->
-> - get a random long
->
-> - mask with PAGE_MASK so as to get a page aligned value
->
-> - make sure that the base address is at least one PAGE_SIZE below
-> DEFAULT_MAP_WINDOW so we have a clear page between the base and
-> DEFAULT_MAP_WINDOW.
->
-> On 64-bit Book3S with 64K pages, that works out to be
->
-> PAGE_SIZE =3D 0x0000 0000 0001 0000
-> PAGE_MASK =3D 0xFFFF FFFF FFFF 0000
->
-> DEFAULT_MAP_WINDOW =3D DEFAULT_MAP_WINDOW_USER64 =3D TASK_SIZE_128TB
-> =3D 0x0000_8000_0000_0000
->
-> DEFAULT_MAP_WINDOW - PAGE_SIZE =3D 0x0000 7FFF FFFF 0000
->
-> It took a while (and a conversation with my wife who studied pure
-> maths!) but I am convinced that the modulo preserves the page-alignement
-> of the patching address.
-
-I am glad a proper mathematician agrees because my maths are decidedly
-unpure :)
+Hmm, I will have to investigate this more. I'm not sure if there is a
+better way to just completely disable breakpoints while the temporary mm
+is in use.
 
 >
-> One thing I did realise is that patching_addr can be zero at the end of
-> this process. That seems dubious and slightly error-prone to me - is
-> the patching process robust to that or should we exclude it?
-
-Good catch! I will fix this in the next spin.
-
+> > +		struct arch_hw_breakpoint null_brk =3D {0};
+> > +		int i =3D 0;
+> > +
+> > +		for (; i < nr_wp_slots(); ++i) {
 >
-> Anyway, if I have the maths right, that there are 0x7fffffff or ~2
-> billion possible locations for the patching page, which is just shy of
-> 31 bits of entropy.
+> super nitpicky, and I'm not sure if this is actually documented, but I'd
+> usually see this written as:
 >
-> I think this compares pretty favourably to most (K)ASLR implementations?
-
-I will stress that I am not an expert here, but it looks like this does
-compares favorably against other 64b ASLR [0].
-
-[0]: https://www.cs.ucdavis.edu/~peisert/research/2017-SecDev-AnalysisASLR.=
-pdf
-
+> for (i =3D 0; i < nr_wp_slots(); i++) {
 >
-> What's the range if built with 4k pages?
+> Not sure if there's any reason that it _shouldn't_ be written the way
+> you've written it (and I do like initialising the variable when it's
+> defined!), I'm just not used to it. (Likewise with the unuse function.)
+>
 
-Using the formula from my series coverletter, we should expect 34 bits
-of entropy since DEFAULT_MAP_WINDOW_USER64 is 64TB for 4K pages:
+I've found other places (even in arch/powerpc!) where this is done so I
+think it's fine. I prefer using this style when the variable
+declaration and initialization are "close" to the loop statement.
 
-	bits of entropy =3D log2(DEFAULT_MAP_WINDOW_USER64 / PAGE_SIZE)
-
-	PAGE_SIZE=3D4K, DEFAULT_MAP_WINDOW_USER64=3D64TB
-	bits of entropy =3D log2(64TB / 4K)
-	bits of entropy =3D 34
-
+> > +			__get_breakpoint(i, &temp_mm->brk[i]);
+> > +			if (temp_mm->brk[i].type !=3D 0)
+> > +				__set_breakpoint(i, &null_brk);
+> > +		}
+> > +	}
+> > +}
+> > +
 >
 > Kind regards,
 > Daniel
 >
+> > +static inline void unuse_temporary_mm(struct temp_mm *temp_mm)
+> > +{
+> > +	lockdep_assert_irqs_disabled();
 > > +
-> > +	ptep =3D get_locked_pte(patching_mm, patching_addr, &ptl);
-> > +	BUG_ON(!ptep);
-> > +	pte_unmap_unlock(ptep, ptl);
+> > +	if (temp_mm->is_kernel_thread)
+> > +		current->mm =3D NULL;
+> > +	else
+> > +		current->mm =3D temp_mm->prev;
+> > +	switch_mm_irqs_off(NULL, temp_mm->prev, current);
+> > +
+> > +	if (ppc_breakpoint_available()) {
+> > +		int i =3D 0;
+> > +
+> > +		for (; i < nr_wp_slots(); ++i)
+> > +			if (temp_mm->brk[i].type !=3D 0)
+> > +				__set_breakpoint(i, &temp_mm->brk[i]);
+> > +	}
 > > +}
 > > +
-> >  static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
+> >  #endif /* __KERNEL__ */
+> >  #endif /* __ASM_POWERPC_MMU_CONTEXT_H */
+> > diff --git a/arch/powerpc/kernel/process.c b/arch/powerpc/kernel/proces=
+s.c
+> > index 4650b9bb217f..b6c123bf5edd 100644
+> > --- a/arch/powerpc/kernel/process.c
+> > +++ b/arch/powerpc/kernel/process.c
+> > @@ -824,6 +824,11 @@ static inline int set_breakpoint_8xx(struct arch_h=
+w_breakpoint *brk)
+> >  	return 0;
+> >  }
 > > =20
-> >  static int text_area_cpu_up(unsigned int cpu)
+> > +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk)
+> > +{
+> > +	memcpy(brk, this_cpu_ptr(&current_brk[nr]), sizeof(*brk));
+> > +}
+> > +
+> >  void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk)
+> >  {
+> >  	memcpy(this_cpu_ptr(&current_brk[nr]), brk, sizeof(*brk));
 > > --=20
 > > 2.27.0
 
