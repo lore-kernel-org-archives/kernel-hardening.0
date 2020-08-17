@@ -1,4 +1,4 @@
-Return-Path: <SRS0=jU3Y=B3=lists.openwall.com=kernel-hardening-return-19645-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=jgBU=B3=lists.openwall.com=kernel-hardening-return-19646-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-11.8 required=3.0 tests=BAYES_00,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 49F7FC433E1
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 17:32:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D151DC433E1
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 17:54:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 454C920716
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 17:32:40 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 454C920716
+	by mail.kernel.org (Postfix) with SMTP id F2D342067C
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 17:54:29 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F2D342067C
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19645-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1251 invoked by uid 550); 17 Aug 2020 17:32:33 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19646-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9762 invoked by uid 550); 17 Aug 2020 17:54:22 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,27 +23,26 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1231 invoked from network); 17 Aug 2020 17:32:32 -0000
+Received: (qmail 9739 invoked from network); 17 Aug 2020 17:54:21 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=KF+Lijn2GoIDaHXMKcv5dyj265MiB5w1dhwFUWa9B/E=;
-        b=Y9FyHFUi491XT/FzhMvOWU5YV+y6D4ufVaQDoke1BKrx1y1E947weP2KaF2xPjwwYp
-         /rYgiErMt6BHUrj7gcMDICJtyQVmiTOVK+DANYosGQIDa4RLY8QjLcErw8yaoB+DtsmF
-         GstNBoNHzA+HEwpX3xE9wCONlASRE4qS0RxkZk/T80cXXyYPaJ/b6+9r9aXC0elWi7C5
-         kjUeB/2eDzSNU2gfdYcmjTFNLlKcEgUQ5la4j/3ORGuKh2D1VLuT1X+69M4C66bglSRg
-         WgqEuYQKLm7j+CMKG8NtOlAKX/ztyljDckt3Bdb3d/JQPS8juE7UAe9QvybsoHtFTyf8
-         DY/g==
-X-Gm-Message-State: AOAM531IDfalpXQsU1Yx5t3Ml4Dp6K2w8xciA4MZNKYpqZJIj48culOB
-	JqMxqwqYlOVtzDPfz7D1oJk=
-X-Google-Smtp-Source: ABdhPJxx4kyfB4OB5VvM7hPY7AUBVoAfwI72XJxabVD1RD2sncUAFLIE99/Or/L07gLNi5YR7gc2gA==
-X-Received: by 2002:adf:bc45:: with SMTP id a5mr16073823wrh.215.1597685541159;
-        Mon, 17 Aug 2020 10:32:21 -0700 (PDT)
-Subject: Re: [PATCH RFC 1/2] mm: Extract SLAB_QUARANTINE from KASAN
-To: Kees Cook <keescook@chromium.org>,
- Andrey Konovalov <andreyknvl@google.com>
+        bh=zioXayb3aZ1+dwOWJvBfiHPq2HNW4QALEO2XKd3ld70=;
+        b=BJ6j/zzXg/b/f/10YBUK6l7PLJHXAEBiwju/mw83XMQfd4XhgdY7snnoGpgykA4WFf
+         6lZfQeAPAikzRUaCUvPILW1Hj9U0HmKKY929jWSqLrPftNLY7NGWCtTvkeg23sclAcld
+         nMOzU7kP+b4OMaMBmLx+icyIP3vLE/y2YO751naHv37AiYKyu8qJ8X4P8pX/AbDpHmnO
+         80gPelfDJ1HNDgkrmUkDLTVlrW+FafR55IuHgv/nF5RAwyJDeXQ4BJsn3QG9SY+jMIUd
+         9R5YNQ7ukSLpe+eYJ2SSPX2wjCwYq/tr/jyKl6MiDyNgtJw+V7O1l/HqjrerdNI/bhfA
+         YBuw==
+X-Gm-Message-State: AOAM533q0Ox+OiZAvd+IMbwUpKCm1yhrv5i4nIvWGMPRnvb/6yEJJF1R
+	Tb7TUb5CNYw+pPpEZoqafeg=
+X-Google-Smtp-Source: ABdhPJzIjxWGJG7IRu20Xzg1ErsdYqzcEcGXzU5jfc0mRb4u7iMQ26jmEbVilrUIRoLoKxDCh9xp1A==
+X-Received: by 2002:a17:906:528d:: with SMTP id c13mr16654442ejm.61.1597686850290;
+        Mon, 17 Aug 2020 10:54:10 -0700 (PDT)
+Subject: Re: [PATCH RFC 2/2] lkdtm: Add heap spraying test
+To: Kees Cook <keescook@chromium.org>
 Cc: Jann Horn <jannh@google.com>, Will Deacon <will@kernel.org>,
  Andrey Ryabinin <aryabinin@virtuozzo.com>,
  Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>,
@@ -60,10 +59,11 @@ Cc: Jann Horn <jannh@google.com>, Will Deacon <will@kernel.org>,
  Arnd Bergmann <arnd@arndb.de>,
  Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kasan-dev@googlegroups.com,
  linux-mm@kvack.org, kernel-hardening@lists.openwall.com,
- linux-kernel@vger.kernel.org, notify@kernel.org
+ linux-kernel@vger.kernel.org, notify@kernel.org,
+ Andrey Konovalov <andreyknvl@google.com>
 References: <20200813151922.1093791-1-alex.popov@linux.com>
- <20200813151922.1093791-2-alex.popov@linux.com>
- <202008150939.A994680@keescook>
+ <20200813151922.1093791-3-alex.popov@linux.com>
+ <202008150952.E81C4A52F@keescook>
 From: Alexander Popov <alex.popov@linux.com>
 Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  mQINBFX15q4BEADZartsIW3sQ9R+9TOuCFRIW+RDCoBWNHhqDLu+Tzf2mZevVSF0D5AMJW4f
@@ -109,249 +109,152 @@ Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
  gzBW8J8RW+nUJcTpudX4TC2SGeAOyxnM5O4XJ8yZyDUY334seDRJWtS4wRHxpfYcHKTewR96
  IsP1USE+9ndu6lrMXQ3aFsd1n1m1pfa/y8hiqsSYHy7JQ9Iuo9DxysOj22UNOmOE+OYPK48D
  j3lCqPk=
-Message-ID: <82edcbac-a856-cf9e-b86d-69a4315ea8e4@linux.com>
-Date: Mon, 17 Aug 2020 20:32:13 +0300
+Message-ID: <37ec713d-10c8-0222-f624-27815b96da7a@linux.com>
+Date: Mon, 17 Aug 2020 20:54:04 +0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <202008150939.A994680@keescook>
+In-Reply-To: <202008150952.E81C4A52F@keescook>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-On 15.08.2020 19:52, Kees Cook wrote:
-> On Thu, Aug 13, 2020 at 06:19:21PM +0300, Alexander Popov wrote:
->> Heap spraying is an exploitation technique that aims to put controlled
->> bytes at a predetermined memory location on the heap. Heap spraying for
->> exploiting use-after-free in the Linux kernel relies on the fact that on
->> kmalloc(), the slab allocator returns the address of the memory that was
->> recently freed. Allocating a kernel object with the same size and
->> controlled contents allows overwriting the vulnerable freed object.
+On 15.08.2020 19:59, Kees Cook wrote:
+> On Thu, Aug 13, 2020 at 06:19:22PM +0300, Alexander Popov wrote:
+>> Add a simple test for CONFIG_SLAB_QUARANTINE.
 >>
->> Let's extract slab freelist quarantine from KASAN functionality and
->> call it CONFIG_SLAB_QUARANTINE. This feature breaks widespread heap
->> spraying technique used for exploiting use-after-free vulnerabilities
->> in the kernel code.
+>> It performs heap spraying that aims to reallocate the recently freed heap
+>> object. This technique is used for exploiting use-after-free
+>> vulnerabilities in the kernel code.
 >>
->> If this feature is enabled, freed allocations are stored in the quarantine
->> and can't be instantly reallocated and overwritten by the exploit
->> performing heap spraying.
+>> This test shows that CONFIG_SLAB_QUARANTINE breaks heap spraying
+>> exploitation technique.
 > 
-> It may be worth clarifying that this is specifically only direct UAF and
-> doesn't help with spray-and-overflow-into-a-neighboring-object attacks
-> (i.e. both tend to use sprays, but the former doesn't depend on a write
-> overflow).
+> Yay tests!
 
-Right, thank you.
+Yes :)
+I'm going to improve it to demonstrate the quarantine security properties.
 
 >> Signed-off-by: Alexander Popov <alex.popov@linux.com>
 >> ---
->>  include/linux/kasan.h      | 107 ++++++++++++++++++++-----------------
->>  include/linux/slab_def.h   |   2 +-
->>  include/linux/slub_def.h   |   2 +-
->>  init/Kconfig               |  11 ++++
->>  mm/Makefile                |   3 +-
->>  mm/kasan/Makefile          |   2 +
->>  mm/kasan/kasan.h           |  75 +++++++++++++-------------
->>  mm/kasan/quarantine.c      |   2 +
->>  mm/kasan/slab_quarantine.c |  99 ++++++++++++++++++++++++++++++++++
->>  mm/slub.c                  |   2 +-
->>  10 files changed, 216 insertions(+), 89 deletions(-)
->>  create mode 100644 mm/kasan/slab_quarantine.c
+>>  drivers/misc/lkdtm/core.c  |  1 +
+>>  drivers/misc/lkdtm/heap.c  | 40 ++++++++++++++++++++++++++++++++++++++
+>>  drivers/misc/lkdtm/lkdtm.h |  1 +
+>>  3 files changed, 42 insertions(+)
 >>
->> diff --git a/include/linux/kasan.h b/include/linux/kasan.h
->> index 087fba34b209..b837216f760c 100644
->> --- a/include/linux/kasan.h
->> +++ b/include/linux/kasan.h
-
-[...]
-
->>  #else /* CONFIG_KASAN_GENERIC */
->> +static inline void kasan_record_aux_stack(void *ptr) {}
->> +#endif /* CONFIG_KASAN_GENERIC */
+>> diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
+>> index a5e344df9166..78b7669c35eb 100644
+>> --- a/drivers/misc/lkdtm/core.c
+>> +++ b/drivers/misc/lkdtm/core.c
+>> @@ -126,6 +126,7 @@ static const struct crashtype crashtypes[] = {
+>>  	CRASHTYPE(SLAB_FREE_DOUBLE),
+>>  	CRASHTYPE(SLAB_FREE_CROSS),
+>>  	CRASHTYPE(SLAB_FREE_PAGE),
+>> +	CRASHTYPE(HEAP_SPRAY),
+>>  	CRASHTYPE(SOFTLOCKUP),
+>>  	CRASHTYPE(HARDLOCKUP),
+>>  	CRASHTYPE(SPINLOCKUP),
+>> diff --git a/drivers/misc/lkdtm/heap.c b/drivers/misc/lkdtm/heap.c
+>> index 1323bc16f113..a72a241e314a 100644
+>> --- a/drivers/misc/lkdtm/heap.c
+>> +++ b/drivers/misc/lkdtm/heap.c
+>> @@ -205,6 +205,46 @@ static void ctor_a(void *region)
+>>  static void ctor_b(void *region)
+>>  { }
 >>  
->> +#if defined(CONFIG_KASAN_GENERIC) || defined(CONFIG_SLAB_QUARANTINE)
->> +void kasan_cache_shrink(struct kmem_cache *cache);
->> +void kasan_cache_shutdown(struct kmem_cache *cache);
->> +#else /* CONFIG_KASAN_GENERIC || CONFIG_SLAB_QUARANTINE */
->>  static inline void kasan_cache_shrink(struct kmem_cache *cache) {}
->>  static inline void kasan_cache_shutdown(struct kmem_cache *cache) {}
->> -static inline void kasan_record_aux_stack(void *ptr) {}
->> -
->> -#endif /* CONFIG_KASAN_GENERIC */
->> +#endif /* CONFIG_KASAN_GENERIC || CONFIG_SLAB_QUARANTINE */
-> 
-> In doing this extraction, I wonder if function naming should be changed?
-> If it's going to live a new life outside of KASAN proper, maybe call
-> these functions quarantine_cache_*()? But perhaps that's too much
-> churn...
-
-These functions are kasan handlers that are called by allocator.
-I.e. allocator calls kasan handlers, and then kasan handlers call
-quarantine_put(), quarantine_reduce() and quarantine_remove_cache() among other
-things.
-
-Andrey Konovalov wrote:
-> If quarantine is to be used without the rest of KASAN, I'd prefer for
-> it to be separated from KASAN completely: move to e.g. mm/quarantine.c
-> and don't mention KASAN in function/config names.
-
-Hmm, making quarantine completely separate from KASAN would bring troubles.
-
-Currently, in many special places the allocator calls KASAN handlers:
-  kasan_cache_create()
-  kasan_slab_free()
-  kasan_kmalloc_large()
-  kasan_krealloc()
-  kasan_slab_alloc()
-  kasan_kmalloc()
-  kasan_cache_shrink()
-  kasan_cache_shutdown()
-  and some others.
-These functions do a lot of interesting things and also work with the quarantine
-using these helpers:
-  quarantine_put()
-  quarantine_reduce()
-  quarantine_remove_cache()
-
-Making quarantine completely separate from KASAN would require to move some
-internal logic of these KASAN handlers to allocator code.
-
-In this patch I used another approach, that doesn't require changing the API
-between allocators and KASAN. I added linux/mm/kasan/slab_quarantine.c with slim
-KASAN handlers that implement the minimal functionality needed for quarantine.
-
-Do you think that it's a bad solution?
-
->>  #ifdef CONFIG_KASAN_SW_TAGS
->>  
->> diff --git a/include/linux/slab_def.h b/include/linux/slab_def.h
->> index 9eb430c163c2..fc7548f27512 100644
->> --- a/include/linux/slab_def.h
->> +++ b/include/linux/slab_def.h
->> @@ -72,7 +72,7 @@ struct kmem_cache {
->>  	int obj_offset;
->>  #endif /* CONFIG_DEBUG_SLAB */
->>  
->> -#ifdef CONFIG_KASAN
->> +#if defined(CONFIG_KASAN) || defined(CONFIG_SLAB_QUARANTINE)
->>  	struct kasan_cache kasan_info;
->>  #endif
->>  
->> diff --git a/include/linux/slub_def.h b/include/linux/slub_def.h
->> index 1be0ed5befa1..71020cee9fd2 100644
->> --- a/include/linux/slub_def.h
->> +++ b/include/linux/slub_def.h
->> @@ -124,7 +124,7 @@ struct kmem_cache {
->>  	unsigned int *random_seq;
->>  #endif
->>  
->> -#ifdef CONFIG_KASAN
->> +#if defined(CONFIG_KASAN) || defined(CONFIG_SLAB_QUARANTINE)
->>  	struct kasan_cache kasan_info;
->>  #endif
->>  
->> diff --git a/init/Kconfig b/init/Kconfig
->> index d6a0b31b13dc..de5aa061762f 100644
->> --- a/init/Kconfig
->> +++ b/init/Kconfig
->> @@ -1931,6 +1931,17 @@ config SLAB_FREELIST_HARDENED
->>  	  sanity-checking than others. This option is most effective with
->>  	  CONFIG_SLUB.
->>  
->> +config SLAB_QUARANTINE
->> +	bool "Enable slab freelist quarantine"
->> +	depends on !KASAN && (SLAB || SLUB)
->> +	help
->> +	  Enable slab freelist quarantine to break heap spraying technique
->> +	  used for exploiting use-after-free vulnerabilities in the kernel
->> +	  code. If this feature is enabled, freed allocations are stored
->> +	  in the quarantine and can't be instantly reallocated and
->> +	  overwritten by the exploit performing heap spraying.
->> +	  This feature is a part of KASAN functionality.
+>> +#define HEAP_SPRAY_SIZE 128
 >> +
+>> +void lkdtm_HEAP_SPRAY(void)
+>> +{
+>> +	int *addr;
+>> +	int *spray_addrs[HEAP_SPRAY_SIZE] = { 0 };
 > 
-> To make this available to distros, I think this needs to be more than
-> just a CONFIG. I'd love to see this CONFIG control the availability, but
-> have a boot param control a ro-after-init static branch for these
-> functions (like is done for init_on_alloc, hardened usercopy, etc). Then
-> the branch can be off by default for regular distro users, and more
-> cautious folks could enable it with a boot param without having to roll
-> their own kernels.
+> (the 0 isn't needed -- and it was left there, it should be NULL)
 
-Good point, thanks, added to TODO list.
+It is used in tear-down below.
+I'll change it to { NULL }.
 
->> [...]
->> +struct kasan_track {
->> +	u32 pid;
+>> +	unsigned long i = 0;
+>> +
+>> +	addr = kmem_cache_alloc(a_cache, GFP_KERNEL);
 > 
-> pid_t?
+> I would prefer this test add its own cache (e.g. spray_cache), to avoid
+> misbehaviors between tests. (e.g. the a and b caches already run the
+> risk of getting corrupted weirdly.)
 
-Ok, I can change it (here I only moved the current definition of kasan_track).
+Ok, I'll do that.
 
->> +	depot_stack_handle_t stack;
->> +};
->> [...]
->> +#if defined(CONFIG_KASAN_GENERIC) && \
->> +	(defined(CONFIG_SLAB) || defined(CONFIG_SLUB)) || \
->> +	defined(CONFIG_SLAB_QUARANTINE)
+>> +	if (!addr) {
+>> +		pr_info("Unable to allocate memory in lkdtm-heap-a cache\n");
+>> +		return;
+>> +	}
+>> +
+>> +	*addr = 0x31337;
+>> +	kmem_cache_free(a_cache, addr);
+>> +
+>> +	pr_info("Performing heap spraying...\n");
+>> +	for (i = 0; i < HEAP_SPRAY_SIZE; i++) {
+>> +		spray_addrs[i] = kmem_cache_alloc(a_cache, GFP_KERNEL);
+>> +		*spray_addrs[i] = 0x31337;
+>> +		pr_info("attempt %lu: spray alloc addr %p vs freed addr %p\n",
+>> +						i, spray_addrs[i], addr);
 > 
-> This seems a bit messy. Perhaps an invisible CONFIG to do this logic and
-> then the files can test for that? CONFIG_USE_SLAB_QUARANTINE or
-> something?
-
-Ok, thanks, I'll try that.
-
->> [...]
->> + * Heap spraying is an exploitation technique that aims to put controlled
->> + * bytes at a predetermined memory location on the heap. Heap spraying for
->> + * exploiting use-after-free in the Linux kernel relies on the fact that on
->> + * kmalloc(), the slab allocator returns the address of the memory that was
->> + * recently freed. Allocating a kernel object with the same size and
->> + * controlled contents allows overwriting the vulnerable freed object.
->> + *
->> + * If freed allocations are stored in the quarantine, they can't be
->> + * instantly reallocated and overwritten by the exploit performing
->> + * heap spraying.
-> 
-> I would clarify this with the details of what is actually happening:
+> That's 128 lines spewed into dmesg... I would leave this out.
 
 Ok.
 
-> the allocation isn't _moved_ to a quarantine, yes? It's only marked as not
-> available for allocation?
-
-The allocation is put into the quarantine queues, where all allocations wait for
-actual freeing.
-
->> + */
+>> +		if (spray_addrs[i] == addr) {
+>> +			pr_info("freed addr is reallocated!\n");
+>> +			break;
+>> +		}
+>> +	}
 >> +
->> +#include <linux/kasan.h>
->> +#include <linux/bug.h>
->> +#include <linux/slab.h>
->> +#include <linux/mm.h>
->> +#include "../slab.h"
->> +#include "kasan.h"
+>> +	if (i < HEAP_SPRAY_SIZE)
+>> +		pr_info("FAIL! Heap spraying succeed :(\n");
+> 
+> I'd move this into the "if (spray_addrs[i] == addr)" test instead of the
+> pr_info() that is there.
+> 
+>> +	else
+>> +		pr_info("OK! Heap spraying hasn't succeed :)\n");
+> 
+> And then make this an "if (i == HEAP_SPRAY_SIZE)" test
+
+Do you mean that I need to avoid the additional line in the test output,
+printing only the final result?
+
 >> +
->> +void kasan_cache_create(struct kmem_cache *cache, unsigned int *size,
->> +			slab_flags_t *flags)
->> +{
->> +	cache->kasan_info.alloc_meta_offset = 0;
+>> +	for (i = 0; i < HEAP_SPRAY_SIZE; i++) {
+>> +		if (spray_addrs[i])
+>> +			kmem_cache_free(a_cache, spray_addrs[i]);
+>> +	}
+>> +}
 >> +
->> +	if (cache->flags & SLAB_TYPESAFE_BY_RCU || cache->ctor ||
->> +	     cache->object_size < sizeof(struct kasan_free_meta)) {
->> +		cache->kasan_info.free_meta_offset = *size;
->> +		*size += sizeof(struct kasan_free_meta);
->> +		BUG_ON(*size > KMALLOC_MAX_SIZE);
+>>  void __init lkdtm_heap_init(void)
+>>  {
+>>  	double_free_cache = kmem_cache_create("lkdtm-heap-double_free",
+>> diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
+>> index 8878538b2c13..dfafb4ae6f3a 100644
+>> --- a/drivers/misc/lkdtm/lkdtm.h
+>> +++ b/drivers/misc/lkdtm/lkdtm.h
+>> @@ -45,6 +45,7 @@ void lkdtm_READ_BUDDY_AFTER_FREE(void);
+>>  void lkdtm_SLAB_FREE_DOUBLE(void);
+>>  void lkdtm_SLAB_FREE_CROSS(void);
+>>  void lkdtm_SLAB_FREE_PAGE(void);
+>> +void lkdtm_HEAP_SPRAY(void);
+>>  
+>>  /* lkdtm_perms.c */
+>>  void __init lkdtm_perms_init(void);
+>> -- 
+>> 2.26.2
+>>
 > 
-> Please don't use BUG_ON()[1].
+> I assume enabling the quarantine defense also ends up being seen in the
+> SLAB_FREE_DOUBLE LKDTM test too, yes?
 
-Ok!
+I'll experiment with that.
 
-> Interesting!
-> 
-> -Kees
-> 
-> [1] https://www.kernel.org/doc/html/latest/process/deprecated.html#bug-and-bug-on
-> 
+Thank you!
 
+Best regards,
+Alexander
