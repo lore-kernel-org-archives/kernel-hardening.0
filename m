@@ -1,20 +1,21 @@
-Return-Path: <SRS0=R3+6=B3=lists.openwall.com=kernel-hardening-return-19640-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=CDEi=B3=lists.openwall.com=kernel-hardening-return-19641-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.2 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 01655C433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 05:39:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 84E77C433E3
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 09:10:20 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 31028206FA
-	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 05:39:23 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 31028206FA
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=informatik.wtf
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19640-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12040 invoked by uid 550); 17 Aug 2020 05:39:15 -0000
+	by mail.kernel.org (Postfix) with SMTP id D6DD72063A
+	for <kernel-hardening@archiver.kernel.org>; Mon, 17 Aug 2020 09:10:19 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D6DD72063A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19641-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17730 invoked by uid 550); 17 Aug 2020 09:10:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,193 +23,99 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12007 invoked from network); 17 Aug 2020 05:39:14 -0000
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset=UTF-8
-Cc: <kernel-hardening@lists.openwall.com>
-Subject: Re: [PATCH v2 1/5] powerpc/mm: Introduce temporary mm
-From: "Christopher M. Riedl" <cmr@informatik.wtf>
-To: "Daniel Axtens" <dja@axtens.net>, <linuxppc-dev@lists.ozlabs.org>
-Date: Mon, 17 Aug 2020 00:16:32 -0500
-Message-Id: <C4Z0LVCFINQP.21DBP0ZHGZQJ6@geist>
-In-Reply-To: <87o8noo96l.fsf@dja-thinkpad.axtens.net>
-X-Virus-Scanned: ClamAV using ClamSMTP
+Received: (qmail 17698 invoked from network); 17 Aug 2020 09:10:10 -0000
+X-Virus-Scanned: by amavisd-new at test-mx.suse.de
+Date: Mon, 17 Aug 2020 11:08:54 +0200
+From: David Sterba <dsterba@suse.cz>
+To: Kees Cook <keescook@chromium.org>
+Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>,
+	"Gustavo A. R. Silva" <gustavoars@kernel.org>,
+	Jason Gunthorpe <jgg@ziepe.ca>, Leon Romanovsky <leon@kernel.org>,
+	Matthew Wilcox <willy@infradead.org>, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH v2] overflow: Add __must_check attribute to check_*()
+ helpers
+Message-ID: <20200817090854.GA2026@twin.jikos.cz>
+Mail-Followup-To: dsterba@suse.cz, Kees Cook <keescook@chromium.org>,
+	Rasmus Villemoes <linux@rasmusvillemoes.dk>,
+	"Gustavo A. R. Silva" <gustavoars@kernel.org>,
+	Jason Gunthorpe <jgg@ziepe.ca>, Leon Romanovsky <leon@kernel.org>,
+	Matthew Wilcox <willy@infradead.org>, linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+References: <202008151007.EF679DF@keescook>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <202008151007.EF679DF@keescook>
+User-Agent: Mutt/1.5.23.1-rc1 (2014-03-12)
 
-On Thu Aug 6, 2020 at 6:27 AM CDT, Daniel Axtens wrote:
-> Hi Chris,
->  =20
-> >  void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk);
-> > +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk);
-> >  bool ppc_breakpoint_available(void);
-> >  #ifdef CONFIG_PPC_ADV_DEBUG_REGS
-> >  extern void do_send_trap(struct pt_regs *regs, unsigned long address,
-> > diff --git a/arch/powerpc/include/asm/mmu_context.h b/arch/powerpc/incl=
-ude/asm/mmu_context.h
-> > index 1a474f6b1992..9269c7c7b04e 100644
-> > --- a/arch/powerpc/include/asm/mmu_context.h
-> > +++ b/arch/powerpc/include/asm/mmu_context.h
-> > @@ -10,6 +10,7 @@
-> >  #include <asm/mmu.h>=09
-> >  #include <asm/cputable.h>
-> >  #include <asm/cputhreads.h>
-> > +#include <asm/debug.h>
-> > =20
-> >  /*
-> >   * Most if the context management is out of line
-> > @@ -300,5 +301,68 @@ static inline int arch_dup_mmap(struct mm_struct *=
-oldmm,
-> >  	return 0;
-> >  }
-> > =20
-> > +struct temp_mm {
-> > +	struct mm_struct *temp;
-> > +	struct mm_struct *prev;
-> > +	bool is_kernel_thread;
-> > +	struct arch_hw_breakpoint brk[HBP_NUM_MAX];
-> > +};
->
-> This is on the nitpicky end, but I wonder if this should be named
-> temp_mm, or should be labelled something else to capture its broader
-> purpose as a context for code patching? I'm thinking that a store of
-> breakpoints is perhaps unusual in a memory-managment structure?
->
-> I don't have a better suggestion off the top of my head and I'm happy
-> for you to leave it, I just wanted to flag it as a possible way we could
-> be clearer.
+On Sat, Aug 15, 2020 at 10:09:24AM -0700, Kees Cook wrote:
+> Since the destination variable of the check_*_overflow() helpers will
+> contain a wrapped value on failure, it would be best to make sure callers
+> really did check the return result of the helper. Adjust the macros to use
+> a bool-wrapping static inline that is marked with __must_check. This means
+> the macros can continue to have their type-agnostic behavior while gaining
+> the function attribute (that cannot be applied directly to macros).
+> 
+> Suggested-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+> v2:
+> - de-generalized __must_check_overflow() from being named "bool" (willy)
+> - fix comment typos (rasmus)
+> v1: https://lore.kernel.org/lkml/202008121450.405E4A3@keescook
+> ---
+>  include/linux/overflow.h | 39 ++++++++++++++++++++++++---------------
+>  1 file changed, 24 insertions(+), 15 deletions(-)
+> 
+> diff --git a/include/linux/overflow.h b/include/linux/overflow.h
+> index 93fcef105061..f1c4e7b56bd9 100644
+> --- a/include/linux/overflow.h
+> +++ b/include/linux/overflow.h
+> @@ -43,6 +43,16 @@
+>  #define is_non_negative(a) ((a) > 0 || (a) == 0)
+>  #define is_negative(a) (!(is_non_negative(a)))
+>  
+> +/*
+> + * Allows for effectively applying __must_check to a macro so we can have
+> + * both the type-agnostic benefits of the macros while also being able to
+> + * enforce that the return value is, in fact, checked.
+> + */
+> +static inline bool __must_check __must_check_overflow(bool overflow)
+> +{
+> +	return unlikely(overflow);
 
-First of all thank you for the review!
+How does the 'unlikely' hint propagate through return? It is in a static
+inline so compiler has complete information in order to use it, but I'm
+curious if it actually does.
 
-I had actually planned to move all this code into lib/code-patching.c
-directly (and it turns out that's what x86 ended up doing as well).
+> +}
+> +
+>  #ifdef COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW
+>  /*
+>   * For simplicity and code hygiene, the fallback code below insists on
+> @@ -52,32 +62,32 @@
+>   * alias for __builtin_add_overflow, but add type checks similar to
+>   * below.
+>   */
+> -#define check_add_overflow(a, b, d) ({		\
+> +#define check_add_overflow(a, b, d) __must_check_overflow(({	\
+>  	typeof(a) __a = (a);			\
+>  	typeof(b) __b = (b);			\
+>  	typeof(d) __d = (d);			\
+>  	(void) (&__a == &__b);			\
+>  	(void) (&__a == __d);			\
+>  	__builtin_add_overflow(__a, __b, __d);	\
+> -})
+> +}))
 
->
-> > +
-> > +static inline void init_temp_mm(struct temp_mm *temp_mm, struct mm_str=
-uct *mm)
-> > +{
-> > +	temp_mm->temp =3D mm;
-> > +	temp_mm->prev =3D NULL;
-> > +	temp_mm->is_kernel_thread =3D false;
-> > +	memset(&temp_mm->brk, 0, sizeof(temp_mm->brk));
-> > +}
-> > +
-> > +static inline void use_temporary_mm(struct temp_mm *temp_mm)
-> > +{
-> > +	lockdep_assert_irqs_disabled();
-> > +
-> > +	temp_mm->is_kernel_thread =3D current->mm =3D=3D NULL;
-> > +	if (temp_mm->is_kernel_thread)
-> > +		temp_mm->prev =3D current->active_mm;
->
-> You don't seem to restore active_mm below. I don't know what active_mm
-> does, so I don't know if this is a problem.
+In case the hint gets dropped, the fix would probably be
 
-For kernel threads 'current->mm' is NULL since a kthread does not need
-a userspace mm; however they still need a mm so they "borrow" one which
-is indicated by 'current->active_mm'.
-
-'current->mm' needs to be restored because Hash requires a non-NULL
-value when handling a page fault and so 'current->mm' gets set to the
-temp_mm. This is a special case for kernel threads and Hash translation.
-
->
-> > +	else
-> > +		temp_mm->prev =3D current->mm;
-> > +
-> > +	/*
-> > +	 * Hash requires a non-NULL current->mm to allocate a userspace addre=
-ss
-> > +	 * when handling a page fault. Does not appear to hurt in Radix eithe=
-r.
-> > +	 */
-> > +	current->mm =3D temp_mm->temp;
-> > +	switch_mm_irqs_off(NULL, temp_mm->temp, current);
-> > +
-> > +	if (ppc_breakpoint_available()) {
->
-> I wondered if this could be changed during a text-patching operation.
-> AIUI, it potentially can on a P9 via "dawr_enable_dangerous" in debugfs.
->
-> I don't know if that's a problem. My concern is that you could turn off
-> breakpoints, call 'use_temporary_mm', then turn them back on again
-> before 'unuse_temporary_mm' and get a breakpoint while that can access
-> the temporary mm. Is there something else that makes that safe?
-> disabling IRQs maybe?
-
-Hmm, I will have to investigate this more. I'm not sure if there is a
-better way to just completely disable breakpoints while the temporary mm
-is in use.
-
->
-> > +		struct arch_hw_breakpoint null_brk =3D {0};
-> > +		int i =3D 0;
-> > +
-> > +		for (; i < nr_wp_slots(); ++i) {
->
-> super nitpicky, and I'm not sure if this is actually documented, but I'd
-> usually see this written as:
->
-> for (i =3D 0; i < nr_wp_slots(); i++) {
->
-> Not sure if there's any reason that it _shouldn't_ be written the way
-> you've written it (and I do like initialising the variable when it's
-> defined!), I'm just not used to it. (Likewise with the unuse function.)
->
-
-I've found other places (even in arch/powerpc!) where this is done so I
-think it's fine. I prefer using this style when the variable
-declaration and initialization are "close" to the loop statement.
-
-> > +			__get_breakpoint(i, &temp_mm->brk[i]);
-> > +			if (temp_mm->brk[i].type !=3D 0)
-> > +				__set_breakpoint(i, &null_brk);
-> > +		}
-> > +	}
-> > +}
-> > +
->
-> Kind regards,
-> Daniel
->
-> > +static inline void unuse_temporary_mm(struct temp_mm *temp_mm)
-> > +{
-> > +	lockdep_assert_irqs_disabled();
-> > +
-> > +	if (temp_mm->is_kernel_thread)
-> > +		current->mm =3D NULL;
-> > +	else
-> > +		current->mm =3D temp_mm->prev;
-> > +	switch_mm_irqs_off(NULL, temp_mm->prev, current);
-> > +
-> > +	if (ppc_breakpoint_available()) {
-> > +		int i =3D 0;
-> > +
-> > +		for (; i < nr_wp_slots(); ++i)
-> > +			if (temp_mm->brk[i].type !=3D 0)
-> > +				__set_breakpoint(i, &temp_mm->brk[i]);
-> > +	}
-> > +}
-> > +
-> >  #endif /* __KERNEL__ */
-> >  #endif /* __ASM_POWERPC_MMU_CONTEXT_H */
-> > diff --git a/arch/powerpc/kernel/process.c b/arch/powerpc/kernel/proces=
-s.c
-> > index 4650b9bb217f..b6c123bf5edd 100644
-> > --- a/arch/powerpc/kernel/process.c
-> > +++ b/arch/powerpc/kernel/process.c
-> > @@ -824,6 +824,11 @@ static inline int set_breakpoint_8xx(struct arch_h=
-w_breakpoint *brk)
-> >  	return 0;
-> >  }
-> > =20
-> > +void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk)
-> > +{
-> > +	memcpy(brk, this_cpu_ptr(&current_brk[nr]), sizeof(*brk));
-> > +}
-> > +
-> >  void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk)
-> >  {
-> >  	memcpy(this_cpu_ptr(&current_brk[nr]), brk, sizeof(*brk));
-> > --=20
-> > 2.27.0
-
+#define check_add_overflow(a, b, d) unlikely(__must_check_overflow(({	\
+ 	typeof(a) __a = (a);			\
+ 	typeof(b) __b = (b);			\
+ 	typeof(d) __d = (d);			\
+ 	(void) (&__a == &__b);			\
+ 	(void) (&__a == __d);			\
+ 	__builtin_add_overflow(__a, __b, __d);	\
+})))
