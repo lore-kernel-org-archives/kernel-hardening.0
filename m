@@ -1,20 +1,23 @@
-Return-Path: <SRS0=jtad=B5=lists.openwall.com=kernel-hardening-return-19658-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pU2e=B5=lists.openwall.com=kernel-hardening-return-19659-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 38C4AC433E1
-	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Aug 2020 18:54:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8E114C433E1
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Aug 2020 23:24:12 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6DF96207FF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Aug 2020 18:54:20 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6DF96207FF
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19658-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5136 invoked by uid 550); 19 Aug 2020 18:54:12 -0000
+	by mail.kernel.org (Postfix) with SMTP id DACF8207DA
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Aug 2020 23:24:11 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="dQRNNAVM"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DACF8207DA
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19659-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 14020 invoked by uid 550); 19 Aug 2020 23:24:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,160 +25,58 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 4089 invoked from network); 19 Aug 2020 18:54:11 -0000
-Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
-To: Mark Rutland <mark.rutland@arm.com>,
- "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Cc: kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org,
- linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
- linux-security-module@vger.kernel.org, oleg@redhat.com, x86@kernel.org
-References: <aefc85852ea518982e74b233e11e16d2e707bc32>
- <20200728131050.24443-1-madvenka@linux.microsoft.com>
- <20200731180955.GC67415@C02TD0UTHF1T.local>
- <6236adf7-4bed-534e-0956-fddab4fd96b6@linux.microsoft.com>
- <20200804143018.GB7440@C02TD0UTHF1T.local>
- <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
- <20200812100650.GB28154@C02TD0UTHF1T.local>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <41c4de64-68d0-6fcb-e5c3-63ebd459262e@digikod.net>
-Date: Wed, 19 Aug 2020 20:53:42 +0200
-User-Agent:
+Received: (qmail 7570 invoked from network); 19 Aug 2020 22:18:58 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1597875527;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
+	bh=bjqS+7/ag+GlZL7MDHoI6q1qHsiFIMlTVT+GfWM93es=;
+	b=dQRNNAVMS7zgF1kARHRXN/XvkGGO4VHUY0m3xQtfi/RuIkEzLL/OK31yS9r/iZy5E837T+
+	dI9/glXAVUBnNFzqcFNbjXMsg/zcj4g0qQdjjxaB04Jw69vQuL2XY2nbk2mXeUhHbcPS6y
+	ncrWKVCHbiS8PotaTc8dQlR3Bb5es5A=
+X-MC-Unique: Ulev0jeUMOWGUvvwSBAbWg-1
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:from:date:message-id:subject:to:cc;
+        bh=bjqS+7/ag+GlZL7MDHoI6q1qHsiFIMlTVT+GfWM93es=;
+        b=M3AqD/74M6HiEVQ059YRr9rL6WWAam1DByiXpIsZvU7jDEKL4uD09NyZAJbU7iTSm3
+         MCjpVARMJexTVPFqeaKsNSl0pzquiqBN3bmZlUp/OFnGcR21I76r44uGFav+ibhUAuu6
+         x9JKvb7ZuzbU6t6stAFn0Z6FOYUYcjKUvTrHQv8NVutbP7wvSaeHs3SQD7eueHswkzM0
+         cQDPaYRbvDlDbLrotiTYJRhj9t65ShizMbdjfNrx09+K0VNC2TFGj7r3R4Rv+jOOYyjp
+         MkY8/N7Rpxh9qeUgsjcRJ9AIRaGWsd8LNrgsLuKg9hFq5FT/PnO95YPmpW57vgNH+3/F
+         gAeg==
+X-Gm-Message-State: AOAM5300dbVP898C5j6nFc99DhGSH/et3PnmMEQ2CfTs8VDTGA0tNgc+
+	AFm15cnx+VMJ2BKN7wt0FA5W4TOI+kMQj5B8jAk0E/arlV/i8D4fTFvcgKGR62YZsxojy8PVGF6
+	NwJhcdmhgFjQnUq0DAD6IVnhY6qfI85VOpGdbqleNDPU6atP6Fw==
+X-Received: by 2002:aa7:d85a:: with SMTP id f26mr131681eds.363.1597875523805;
+        Wed, 19 Aug 2020 15:18:43 -0700 (PDT)
+X-Google-Smtp-Source: ABdhPJwnZye/Q8HkQ4liS+Kqt3asNqB7AE105skhLVQlf7vnO2U3mWIqSDEIdoJ51ctolKi0kmHjHkkCYh4rXfBMZLk=
+X-Received: by 2002:aa7:d85a:: with SMTP id f26mr131670eds.363.1597875523651;
+ Wed, 19 Aug 2020 15:18:43 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <20200812100650.GB28154@C02TD0UTHF1T.local>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
-X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
-X-Antivirus-Code: 0x100000
+From: Jirka Hladky <jhladky@redhat.com>
+Date: Thu, 20 Aug 2020 00:18:33 +0200
+Message-ID: <CAE4VaGD8sKqUgOxr0im+OJgwrLxbbXDaKTSqpyAGRx=rr9isUg@mail.gmail.com>
+Subject: init_on_alloc/init_on_free boot options
+To: Alexander Potapenko <glider@google.com>
+Cc: kernel-hardening@lists.openwall.com, linux-mm@kvack.org, 
+	linux-security-module@vger.kernel.org
+Authentication-Results: relay.mimecast.com;
+	auth=pass smtp.auth=CUSA124A263 smtp.mailfrom=jhladky@redhat.com
+X-Mimecast-Spam-Score: 0.001
+X-Mimecast-Originator: redhat.com
+Content-Type: text/plain; charset="UTF-8"
 
+Hi Alex,
 
-On 12/08/2020 12:06, Mark Rutland wrote:
-> On Thu, Aug 06, 2020 at 12:26:02PM -0500, Madhavan T. Venkataraman wrote:
->> Thanks for the lively discussion. I have tried to answer some of the
->> comments below.
->>
->> On 8/4/20 9:30 AM, Mark Rutland wrote:
->>>
->>>> So, the context is - if security settings in a system disallow a page to have
->>>> both write and execute permissions, how do you allow the execution of
->>>> genuine trampolines that are runtime generated and placed in a data
->>>> page or a stack page?
->>> There are options today, e.g.
->>>
->>> a) If the restriction is only per-alias, you can have distinct aliases
->>>    where one is writable and another is executable, and you can make it
->>>    hard to find the relationship between the two.
->>>
->>> b) If the restriction is only temporal, you can write instructions into
->>>    an RW- buffer, transition the buffer to R--, verify the buffer
->>>    contents, then transition it to --X.
->>>
->>> c) You can have two processes A and B where A generates instrucitons into
->>>    a buffer that (only) B can execute (where B may be restricted from
->>>    making syscalls like write, mprotect, etc).
->>
->> The general principle of the mitigation is W^X. I would argue that
->> the above options are violations of the W^X principle. If they are
->> allowed today, they must be fixed. And they will be. So, we cannot
->> rely on them.
-> 
-> Hold on.
-> 
-> Contemporary W^X means that a given virtual alias cannot be writeable
-> and executeable simultaneously, permitting (a) and (b). If you read the
-> references on the Wikipedia page for W^X you'll see the OpenBSD 3.3
-> release notes and related presentation make this clear, and further they
-> expect (b) to occur with JITS flipping W/X with mprotect().
+Could you please help me to clarify the purpose of init_on_alloc=1
+when init_on_free is enabled?
 
-W^X (with "permanent" mprotect restrictions [1]) goes back to 2000 with
-PaX [2] (which predates partial OpenBSD implementation from 2003).
+If I get it right, init_on_free=1 alone guarantees that the memory
+returned by the page allocator and SL[AU]B is initialized with zeroes.
+What is the purpose of init_on_alloc=1 in that case? We are zeroing
+memory twice, or am I missing something?
 
-[1] https://pax.grsecurity.net/docs/mprotect.txt
-[2] https://undeadly.org/cgi?action=article;sid=20030417082752
+Thanks a lot!
+Jirka
 
-> 
-> Please don't conflate your assumed stronger semantics with the general
-> principle. It not matching you expectations does not necessarily mean
-> that it is wrong.
-> 
-> If you want a stronger W^X semantics, please refer to this specifically
-> with a distinct name.
-> 
->> a) This requires a remap operation. Two mappings point to the same
->>      physical page. One mapping has W and the other one has X. This
->>      is a violation of W^X.
->>
->> b) This is again a violation. The kernel should refuse to give execute
->>      permission to a page that was writeable in the past and refuse to
->>      give write permission to a page that was executable in the past.
->>
->> c) This is just a variation of (a).
-> 
-> As above, this is not true.
-> 
-> If you have a rationale for why this is desirable or necessary, please
-> justify that before using this as justification for additional features.
-> 
->> In general, the problem with user-level methods to map and execute
->> dynamic code is that the kernel cannot tell if a genuine application is
->> using them or an attacker is using them or piggy-backing on them.
-> 
-> Yes, and as I pointed out the same is true for trampfd unless you can
-> somehow authenticate the calls are legitimate (in both callsite and the
-> set of arguments), and I don't see any reasonable way of doing that.
-> 
-> If you relax your threat model to an attacker not being able to make
-> arbitrary syscalls, then your suggestion that userspace can perorm
-> chceks between syscalls may be sufficient, but as I pointed out that's
-> equally true for a sealed memfd or similar.
-> 
->> Off the top of my head, I have tried to identify some examples
->> where we can have more trust on dynamic code and have the kernel
->> permit its execution.
->>
->> 1. If the kernel can do the job, then that is one safe way. Here, the kernel
->>     is the code. There is no code generation involved. This is what I
->>     have presented in the patch series as the first cut.
-> 
-> This is sleight-of-hand; it doesn't matter where the logic is performed
-> if the power is identical. Practically speaking this is equivalent to
-> some dynamic code generation.
-> 
-> I think that it's misleading to say that because the kernel emulates
-> something it is safe when the provenance of the syscall arguments cannot
-> be verified.
-> 
-> [...]
-> 
->> Anyway, these are just examples. The principle is - if we can identify
->> dynamic code that has a certain measure of trust, can the kernel
->> permit their execution?
-> 
-> My point generally is that the kernel cannot identify this, and if
-> usrspace code is trusted to dynamically generate trampfd arguments it
-> can equally be trusted to dyncamilly generate code.
-> 
-> [...]
-> 
->> As I have mentioned above, I intend to have the kernel generate code
->> only if the code generation is simple enough. For more complicated cases,
->> I plan to use a user-level code generator that is for exclusive kernel use.
->> I have yet to work out the details on how this would work. Need time.
-> 
-> This reads to me like trampfd is only dealing with a few special cases
-> and we know that we need a more general solution.
-> 
-> I hope I am mistaken, but I get the strong impression that you're trying
-> to justify your existing solution rather than trying to understand the
-> problem space.
-> 
-> To be clear, my strong opinion is that we should not be trying to do
-> this sort of emulation or code generation within the kernel. I do think
-> it's worthwhile to look at mechanisms to make it harder to subvert
-> dynamic userspace code generation, but I think the code generation
-> itself needs to live in userspace (e.g. for ABI reasons I previously
-> mentioned).
-> 
-> Mark.
-> 
