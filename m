@@ -1,21 +1,20 @@
-Return-Path: <SRS0=lh57=B4=lists.openwall.com=kernel-hardening-return-19657-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=jtad=B5=lists.openwall.com=kernel-hardening-return-19658-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.1 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8BFC8C433DF
-	for <kernel-hardening@archiver.kernel.org>; Tue, 18 Aug 2020 20:50:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 38C4AC433E1
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Aug 2020 18:54:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B40352063A
-	for <kernel-hardening@archiver.kernel.org>; Tue, 18 Aug 2020 20:50:49 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B40352063A
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19657-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3638 invoked by uid 550); 18 Aug 2020 20:50:42 -0000
+	by mail.kernel.org (Postfix) with SMTP id 6DF96207FF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 19 Aug 2020 18:54:20 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6DF96207FF
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19658-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5136 invoked by uid 550); 19 Aug 2020 18:54:12 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,184 +22,160 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3618 invoked from network); 18 Aug 2020 20:50:42 -0000
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:reply-to:subject:to:cc:references:from:autocrypt
-         :message-id:date:user-agent:mime-version:in-reply-to
-         :content-language:content-transfer-encoding;
-        bh=5uvLQdwA9XnjdyJ8uI+0lrr22ouPyu6AUfsbqa6bRP0=;
-        b=JqJJRb5XNpfpWxOv6Gx2ES325IngjCwwn1xBE1Bsj3iURzLWIq7df19yv9Hkn1fnEn
-         aptaBUQwNni5ZzTkeWJT5qOunecKDiTSZOkknw8T6Fy7+4Zw+54aF3B69w1VbSZSlHJn
-         +JBZD32VWBL24F38ERPsh5W1KxJhv7uwHtZCvGX7zI45hJK0SvvghwSnYEfE0X/vTmPz
-         Fyit3sEuFwGjOgzNoBQsH0/RqlrcMjh0KxNrVJxb4F8Tt//cwEzf/Av1HuAz3gIcvgGZ
-         J4BvBM7E4hPml0nPm4FS4X3DcT7qxCwZoWx0EUDp4NByVjFiTa4Z7qmAjeKJ1VSglbuE
-         iJNw==
-X-Gm-Message-State: AOAM532Q3w4+CnKrG0nJb4uLiaPggL+tUwIvNLQ8nOlClEOkAZSlO0X/
-	gAYF8Q+IpQSl2evoUBvpX0U=
-X-Google-Smtp-Source: ABdhPJx7YSCjxJSt+xa1i/ZiHnHETNTHmOqROdabsUzZEHHjOE/VrsmdYwrBlROpEuLGqggHpWfCag==
-X-Received: by 2002:a05:6402:174d:: with SMTP id v13mr20748953edx.231.1597783830798;
-        Tue, 18 Aug 2020 13:50:30 -0700 (PDT)
-Subject: Re: [PATCH RFC 1/2] mm: Extract SLAB_QUARANTINE from KASAN
-To: Andrey Konovalov <andreyknvl@google.com>,
- Dmitry Vyukov <dvyukov@google.com>, Alexander Potapenko <glider@google.com>,
- Andrey Ryabinin <aryabinin@virtuozzo.com>,
- kasan-dev <kasan-dev@googlegroups.com>
-Cc: Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
- Will Deacon <will@kernel.org>, Christoph Lameter <cl@linux.com>,
- Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>,
- Joonsoo Kim <iamjoonsoo.kim@lge.com>,
- Andrew Morton <akpm@linux-foundation.org>,
- Masahiro Yamada <masahiroy@kernel.org>,
- Masami Hiramatsu <mhiramat@kernel.org>, Steven Rostedt
- <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>,
- Krzysztof Kozlowski <krzk@kernel.org>,
- Patrick Bellasi <patrick.bellasi@arm.com>,
- David Howells <dhowells@redhat.com>, Eric Biederman <ebiederm@xmission.com>,
- Johannes Weiner <hannes@cmpxchg.org>, Laura Abbott <labbott@redhat.com>,
- Arnd Bergmann <arnd@arndb.de>,
- Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
- Linux Memory Management List <linux-mm@kvack.org>,
- kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>,
- notify@kernel.org
-References: <20200813151922.1093791-1-alex.popov@linux.com>
- <20200813151922.1093791-2-alex.popov@linux.com>
- <202008150939.A994680@keescook>
- <82edcbac-a856-cf9e-b86d-69a4315ea8e4@linux.com>
- <CAAeHK+z9FPc9dqHwLA7sXTdpjt-iQweaQGQjq8L=eTYe2WdJ+g@mail.gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Autocrypt: addr=alex.popov@linux.com; prefer-encrypt=mutual; keydata=
- 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
- j3lCqPk=
-Message-ID: <b15d41a5-034c-6fb5-dedf-5fd75d609ccf@linux.com>
-Date: Tue, 18 Aug 2020 23:50:23 +0300
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.10.0
+Received: (qmail 4089 invoked from network); 19 Aug 2020 18:54:11 -0000
+Subject: Re: [PATCH v1 0/4] [RFC] Implement Trampoline File Descriptor
+To: Mark Rutland <mark.rutland@arm.com>,
+ "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
+Cc: kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+ linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+ linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
+ linux-security-module@vger.kernel.org, oleg@redhat.com, x86@kernel.org
+References: <aefc85852ea518982e74b233e11e16d2e707bc32>
+ <20200728131050.24443-1-madvenka@linux.microsoft.com>
+ <20200731180955.GC67415@C02TD0UTHF1T.local>
+ <6236adf7-4bed-534e-0956-fddab4fd96b6@linux.microsoft.com>
+ <20200804143018.GB7440@C02TD0UTHF1T.local>
+ <b3368692-afe6-89b5-d634-12f4f0a601f8@linux.microsoft.com>
+ <20200812100650.GB28154@C02TD0UTHF1T.local>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <41c4de64-68d0-6fcb-e5c3-63ebd459262e@digikod.net>
+Date: Wed, 19 Aug 2020 20:53:42 +0200
+User-Agent:
 MIME-Version: 1.0
-In-Reply-To: <CAAeHK+z9FPc9dqHwLA7sXTdpjt-iQweaQGQjq8L=eTYe2WdJ+g@mail.gmail.com>
+In-Reply-To: <20200812100650.GB28154@C02TD0UTHF1T.local>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
+X-Antivirus: Dr.Web (R) for Unix mail servers drweb plugin ver.6.0.2.8
+X-Antivirus-Code: 0x100000
 
-On 18.08.2020 18:45, Andrey Konovalov wrote:
-> On Mon, Aug 17, 2020 at 7:32 PM Alexander Popov <alex.popov@linux.com> wrote:
+
+On 12/08/2020 12:06, Mark Rutland wrote:
+> On Thu, Aug 06, 2020 at 12:26:02PM -0500, Madhavan T. Venkataraman wrote:
+>> Thanks for the lively discussion. I have tried to answer some of the
+>> comments below.
 >>
->> On 15.08.2020 19:52, Kees Cook wrote:
->>> On Thu, Aug 13, 2020 at 06:19:21PM +0300, Alexander Popov wrote:
->>>> Heap spraying is an exploitation technique that aims to put controlled
->>>> bytes at a predetermined memory location on the heap. Heap spraying for
->>>> exploiting use-after-free in the Linux kernel relies on the fact that on
->>>> kmalloc(), the slab allocator returns the address of the memory that was
->>>> recently freed. Allocating a kernel object with the same size and
->>>> controlled contents allows overwriting the vulnerable freed object.
->>>>
->>>> Let's extract slab freelist quarantine from KASAN functionality and
->>>> call it CONFIG_SLAB_QUARANTINE. This feature breaks widespread heap
->>>> spraying technique used for exploiting use-after-free vulnerabilities
->>>> in the kernel code.
->>>>
->>>> If this feature is enabled, freed allocations are stored in the quarantine
->>>> and can't be instantly reallocated and overwritten by the exploit
->>>> performing heap spraying.
+>> On 8/4/20 9:30 AM, Mark Rutland wrote:
 >>>
->>> It may be worth clarifying that this is specifically only direct UAF and
->>> doesn't help with spray-and-overflow-into-a-neighboring-object attacks
->>> (i.e. both tend to use sprays, but the former doesn't depend on a write
->>> overflow).
+>>>> So, the context is - if security settings in a system disallow a page to have
+>>>> both write and execute permissions, how do you allow the execution of
+>>>> genuine trampolines that are runtime generated and placed in a data
+>>>> page or a stack page?
+>>> There are options today, e.g.
+>>>
+>>> a) If the restriction is only per-alias, you can have distinct aliases
+>>>    where one is writable and another is executable, and you can make it
+>>>    hard to find the relationship between the two.
+>>>
+>>> b) If the restriction is only temporal, you can write instructions into
+>>>    an RW- buffer, transition the buffer to R--, verify the buffer
+>>>    contents, then transition it to --X.
+>>>
+>>> c) You can have two processes A and B where A generates instrucitons into
+>>>    a buffer that (only) B can execute (where B may be restricted from
+>>>    making syscalls like write, mprotect, etc).
 >>
->> Andrey Konovalov wrote:
->>> If quarantine is to be used without the rest of KASAN, I'd prefer for
->>> it to be separated from KASAN completely: move to e.g. mm/quarantine.c
->>> and don't mention KASAN in function/config names.
->>
->> Hmm, making quarantine completely separate from KASAN would bring troubles.
->>
->> Currently, in many special places the allocator calls KASAN handlers:
->>   kasan_cache_create()
->>   kasan_slab_free()
->>   kasan_kmalloc_large()
->>   kasan_krealloc()
->>   kasan_slab_alloc()
->>   kasan_kmalloc()
->>   kasan_cache_shrink()
->>   kasan_cache_shutdown()
->>   and some others.
->> These functions do a lot of interesting things and also work with the quarantine
->> using these helpers:
->>   quarantine_put()
->>   quarantine_reduce()
->>   quarantine_remove_cache()
->>
->> Making quarantine completely separate from KASAN would require to move some
->> internal logic of these KASAN handlers to allocator code.
+>> The general principle of the mitigation is W^X. I would argue that
+>> the above options are violations of the W^X principle. If they are
+>> allowed today, they must be fixed. And they will be. So, we cannot
+>> rely on them.
 > 
-> It doesn't look like there's quite a lot of KASAN-specific logic there.
+> Hold on.
 > 
-> All those quarantine_*() calls are either at the beginning or at the
-> end of some kasan annotations, so it should be quite easy to move
-> those out. E.g. quarantine_reduce() can be moved together with the
-> gfpflags_allow_blocking(flags) check and put before kasan_kmalloc()
-> calls (or maybe also into some other places?), quarantine_put() can be
-> put after kasan_slab_free(), etc.
-> 
->> In this patch I used another approach, that doesn't require changing the API
->> between allocators and KASAN. I added linux/mm/kasan/slab_quarantine.c with slim
->> KASAN handlers that implement the minimal functionality needed for quarantine.
->>
->> Do you think that it's a bad solution?
-> 
-> This solution doesn't look clean. Here you provide a second KASAN
-> runtime implementation, parallel to the original one, which only does
-> quarantine. It seems much cleaner to put quarantine logic into a
-> separate module, which can be either used independently, or together
-> with KASAN built on top of it.
+> Contemporary W^X means that a given virtual alias cannot be writeable
+> and executeable simultaneously, permitting (a) and (b). If you read the
+> references on the Wikipedia page for W^X you'll see the OpenBSD 3.3
+> release notes and related presentation make this clear, and further they
+> expect (b) to occur with JITS flipping W/X with mprotect().
 
-That sounds reasonable, I agree. Thanks, Andrey.
-Added to TODO list.
+W^X (with "permanent" mprotect restrictions [1]) goes back to 2000 with
+PaX [2] (which predates partial OpenBSD implementation from 2003).
 
-At first I'm going to focus on exploring security properties of the quarantine.
-And then I'll do the refactoring that you and Kees propose.
+[1] https://pax.grsecurity.net/docs/mprotect.txt
+[2] https://undeadly.org/cgi?action=article;sid=20030417082752
 
-Best regards,
-Alexander
+> 
+> Please don't conflate your assumed stronger semantics with the general
+> principle. It not matching you expectations does not necessarily mean
+> that it is wrong.
+> 
+> If you want a stronger W^X semantics, please refer to this specifically
+> with a distinct name.
+> 
+>> a) This requires a remap operation. Two mappings point to the same
+>>      physical page. One mapping has W and the other one has X. This
+>>      is a violation of W^X.
+>>
+>> b) This is again a violation. The kernel should refuse to give execute
+>>      permission to a page that was writeable in the past and refuse to
+>>      give write permission to a page that was executable in the past.
+>>
+>> c) This is just a variation of (a).
+> 
+> As above, this is not true.
+> 
+> If you have a rationale for why this is desirable or necessary, please
+> justify that before using this as justification for additional features.
+> 
+>> In general, the problem with user-level methods to map and execute
+>> dynamic code is that the kernel cannot tell if a genuine application is
+>> using them or an attacker is using them or piggy-backing on them.
+> 
+> Yes, and as I pointed out the same is true for trampfd unless you can
+> somehow authenticate the calls are legitimate (in both callsite and the
+> set of arguments), and I don't see any reasonable way of doing that.
+> 
+> If you relax your threat model to an attacker not being able to make
+> arbitrary syscalls, then your suggestion that userspace can perorm
+> chceks between syscalls may be sufficient, but as I pointed out that's
+> equally true for a sealed memfd or similar.
+> 
+>> Off the top of my head, I have tried to identify some examples
+>> where we can have more trust on dynamic code and have the kernel
+>> permit its execution.
+>>
+>> 1. If the kernel can do the job, then that is one safe way. Here, the kernel
+>>     is the code. There is no code generation involved. This is what I
+>>     have presented in the patch series as the first cut.
+> 
+> This is sleight-of-hand; it doesn't matter where the logic is performed
+> if the power is identical. Practically speaking this is equivalent to
+> some dynamic code generation.
+> 
+> I think that it's misleading to say that because the kernel emulates
+> something it is safe when the provenance of the syscall arguments cannot
+> be verified.
+> 
+> [...]
+> 
+>> Anyway, these are just examples. The principle is - if we can identify
+>> dynamic code that has a certain measure of trust, can the kernel
+>> permit their execution?
+> 
+> My point generally is that the kernel cannot identify this, and if
+> usrspace code is trusted to dynamically generate trampfd arguments it
+> can equally be trusted to dyncamilly generate code.
+> 
+> [...]
+> 
+>> As I have mentioned above, I intend to have the kernel generate code
+>> only if the code generation is simple enough. For more complicated cases,
+>> I plan to use a user-level code generator that is for exclusive kernel use.
+>> I have yet to work out the details on how this would work. Need time.
+> 
+> This reads to me like trampfd is only dealing with a few special cases
+> and we know that we need a more general solution.
+> 
+> I hope I am mistaken, but I get the strong impression that you're trying
+> to justify your existing solution rather than trying to understand the
+> problem space.
+> 
+> To be clear, my strong opinion is that we should not be trying to do
+> this sort of emulation or code generation within the kernel. I do think
+> it's worthwhile to look at mechanisms to make it harder to subvert
+> dynamic userspace code generation, but I think the code generation
+> itself needs to live in userspace (e.g. for ABI reasons I previously
+> mentioned).
+> 
+> Mark.
+> 
