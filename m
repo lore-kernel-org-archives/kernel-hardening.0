@@ -1,23 +1,21 @@
-Return-Path: <SRS0=utEW=CE=lists.openwall.com=kernel-hardening-return-19671-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=C0a6=CF=lists.openwall.com=kernel-hardening-return-19672-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no
+X-Spam-Status: No, score=-12.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 55257C433E1
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Aug 2020 19:53:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0F925C433DF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Aug 2020 05:24:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 97245207BC
-	for <kernel-hardening@archiver.kernel.org>; Wed, 26 Aug 2020 19:53:00 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=dilger-ca.20150623.gappssmtp.com header.i=@dilger-ca.20150623.gappssmtp.com header.b="rRl+Udx0"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 97245207BC
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=dilger.ca
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19671-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 8077 invoked by uid 550); 26 Aug 2020 19:52:54 -0000
+	by mail.kernel.org (Postfix) with SMTP id 2F33A20786
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Aug 2020 05:24:57 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2F33A20786
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=codefail.de
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19672-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 8119 invoked by uid 550); 27 Aug 2020 05:24:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,150 +23,184 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8055 invoked from network); 26 Aug 2020 19:52:53 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=dilger-ca.20150623.gappssmtp.com; s=20150623;
-        h=from:message-id:mime-version:subject:date:in-reply-to:cc:to
-         :references;
-        bh=VbJ9M0x7/6kdVUf5kyNPDEStbpnR2XDArodticGgnuw=;
-        b=rRl+Udx0c/tGT5sCZv6zDX1U97/r6hjWIJ1etf9yfwwvdhzwi+WnMpG8Qgm/MUoHJn
-         Ee4rGok0Wx4355BscUdPeV2RoMj6B5E9CiOF1MWXin/kkuRtjLAxhVt7FzOKKIYCnDBn
-         wy38Xp0nqiwlcVZ3HoDTBTTB6GOwKFLhD1XGxB8Ud1p55FRo9REe8djvCD/9myaSshs3
-         pjoSDjYgzeOQpVP3xPaYQ9LXXofKLVXT40825djtQaGq8HL3SUKL6UlGHfyYMFZ+v4zC
-         bEhMqDfO7oUnl3LMOLhPUPzJnm4Zr4xu6TxhiveZ1ND+AULjsg25FkSiel1XDB2cxyNn
-         l84A==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:message-id:mime-version:subject:date
-         :in-reply-to:cc:to:references;
-        bh=VbJ9M0x7/6kdVUf5kyNPDEStbpnR2XDArodticGgnuw=;
-        b=p8dfHigizw1R49bQ6uRhAZd2DaJRQyBW4sG4gCVMUD77BHQA1Q0kzwxhSNTz3rBnjV
-         zjoSYQugqVZgy/4xu//SSAb0wnrjAPz0WiRybpTmZHPBNrsPFZnWm0uBGsuqz1yv5XAZ
-         rpN9NVpPhal03Ju8yOIPJnWUevLLRbwdsxWZAWhlJL7e+DiMiUqkWM54r890kVwdqnhG
-         itNMhvnPh1Z80gv0VNsjivIhj6z03ChkiLJ8CBZ3vQaYs0wKa/zvA6d5/7/whzL3eoKi
-         XoAlMDYj4qa6LQKXdU9XWS+pXP5suerzd8kNYBrKlbSZq5fUlQvbpDu/i29PpkrIg/b3
-         zhQA==
-X-Gm-Message-State: AOAM530UDG1bg+9krHJ09XuInG57JU0TFGTcAIWluCiZmCvrBz8b1VWc
-	k86yXVNQp/Mav7DulpkenOoEqg==
-X-Google-Smtp-Source: ABdhPJz2tJUnfEf0SqTON1++961s4mS80Ys4vUdtGo5FqM5ZbNWVgz7JG4vIUMYBfxdhxOnPXyMo2A==
-X-Received: by 2002:a62:f843:: with SMTP id c3mr13624152pfm.247.1598471562130;
-        Wed, 26 Aug 2020 12:52:42 -0700 (PDT)
-From: Andreas Dilger <adilger@dilger.ca>
-Message-Id: <C1F49852-C886-4522-ACD6-DDBF7DE3B838@dilger.ca>
-Content-Type: multipart/signed;
- boundary="Apple-Mail=_97ED6957-F79E-438A-BEE2-A42EA0D99B36";
- protocol="application/pgp-signature"; micalg=pgp-sha256
-Mime-Version: 1.0 (Mac OS X Mail 10.3 \(3273\))
-Subject: Re: [PATCH v4 1/3] io_uring: use an enumeration for
- io_uring_register(2) opcodes
-Date: Wed, 26 Aug 2020 13:52:38 -0600
-In-Reply-To: <202008261241.074D8765@keescook>
-Cc: Stefano Garzarella <sgarzare@redhat.com>,
- Jens Axboe <axboe@kernel.dk>,
- Christian Brauner <christian.brauner@ubuntu.com>,
- Jann Horn <jannh@google.com>,
- Jeff Moyer <jmoyer@redhat.com>,
- linux-fsdevel <linux-fsdevel@vger.kernel.org>,
- Sargun Dhillon <sargun@sargun.me>,
- Alexander Viro <viro@zeniv.linux.org.uk>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Stefan Hajnoczi <stefanha@redhat.com>,
- Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
- Aleksa Sarai <asarai@suse.de>,
- io-uring@vger.kernel.org
-To: Kees Cook <keescook@chromium.org>
-References: <20200813153254.93731-1-sgarzare@redhat.com>
- <20200813153254.93731-2-sgarzare@redhat.com> <202008261241.074D8765@keescook>
-X-Mailer: Apple Mail (2.3273)
+Received: (qmail 8074 invoked from network); 27 Aug 2020 05:24:42 -0000
+From: "Christopher M. Riedl" <cmr@codefail.de>
+To: linuxppc-dev@lists.ozlabs.org
+Cc: kernel-hardening@lists.openwall.com
+Subject: [PATCH v3 4/6] powerpc: Introduce temporary mm
+Date: Thu, 27 Aug 2020 00:26:57 -0500
+Message-Id: <20200827052659.24922-5-cmr@codefail.de>
+X-Mailer: git-send-email 2.28.0
+In-Reply-To: <20200827052659.24922-1-cmr@codefail.de>
+References: <20200827052659.24922-1-cmr@codefail.de>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+X-Virus-Scanned: ClamAV using ClamSMTP
+X-Originating-IP: 198.54.122.47
+X-SpamExperts-Domain: o3.privateemail.com
+X-SpamExperts-Username: out-03
+Authentication-Results: registrar-servers.com; auth=pass (plain) smtp.auth=out-03@o3.privateemail.com
+X-SpamExperts-Outgoing-Class: ham
+X-SpamExperts-Outgoing-Evidence: SB/global_tokens (0.000410992690308)
+X-Recommended-Action: accept
+X-Filter-ID: Mvzo4OR0dZXEDF/gcnlw0fJi3Ojdyt5h9PLOIGvr3lipSDasLI4SayDByyq9LIhVFHJ2qMgYuGKo
+ fKr8UXe0k0TNWdUk1Ol2OGx3IfrIJKyP9eGNFz9TW9u+Jt8z2T3Kq02yUY2BU41HLqp9U+7si8M8
+ LdvJpZ7k99Lvu8YZXeI6p5bbhGYzvfahQ7X4A9L0Ye/JicEYVQv1wTfnWwJUGLoHT+TiZ2cHCmVO
+ a6Hj9ojJiXYVY/LWyydA4cEuciMeJODXbtOodkPED+RkHjVGH2xZ/WG2ZLv5RT/cF5Q6687AHRjU
+ JmjnvGEokRBTZJpViFKfD1jKgYfH+6S5qDVYoJU2GVfilQJSaX7ehrnJEB/bhw3Crbac1ieeuRax
+ ITFpzO11BRKqT8B4uLrn7iz8uvLBMzbIQcSG8L0jOzL80Q1MxDcqDeEvahfPkDkTlH91LgaQnmF8
+ H6pa6B8MTK1ligAJ9G0GMvMSOAhk0taEj8weJNI+C0vMCMVtmGEXbiaCRPGqg4v6OwYy/yt5Cj+T
+ 3txbXpCgbiKBsA+Ddi6maweYdUirBly/K12a4uqqibUj/dHBojDbLVZkEx6TcwTT039q0aZI3qbh
+ XsaDdLgW9brs8lq6YeUVTmb2st+aVE9JYOaeuiH/yEdZH8S1+TgcJBOjh0vPxcQOjKKOrYIQYpwa
+ mUdylUIKhf3z2GAHxH7IMNrut00GZ5qvF8IF7tMR7zZ0OXNO45l0fhWSb7cPfaFo+BnGy6ufsd3t
+ iveYHZpewov2GavqJ07j7hZY8mVbefiuK2KN35hXmy7nXQ2QuBuxX4OQOI/UQ6jnFfMBgzwOw1To
+ H/cUtROfGg27pVfRPjU3fSpvtX7kDRT+AqQr2T3rxJw/s9JEmzH0m3M+UGtqRLz8gWjPByeTxL35
+ h3XjL6/rSujC88C300HqAe+jlJ5DPDo3pDJlUlQ25PasjIMI9uAIvgWsH+Wq0zDLDi3S8euO5TcD
+ eKjrEmYPn2IVWRsZR6NeDQwp7lDA8K9tDm+p97/T4LRRVYxF+VXiiOfHJN40eTXlWiUAYdLmsJdA
+ oPKCpWwKtkkGG+bEnfOEkWTNI3SjTCvjMfNBc9ze9o81pXKSQ+GI7QB7PH97h6/L6Wb57LVs51cV
+ C2TOjdXlLnr1FFwa8AyQYqjO7qYtiXb+9Q==
+X-Report-Abuse-To: spam@se5.registrar-servers.com
 
+x86 supports the notion of a temporary mm which restricts access to
+temporary PTEs to a single CPU. A temporary mm is useful for situations
+where a CPU needs to perform sensitive operations (such as patching a
+STRICT_KERNEL_RWX kernel) requiring temporary mappings without exposing
+said mappings to other CPUs. A side benefit is that other CPU TLBs do
+not need to be flushed when the temporary mm is torn down.
 
---Apple-Mail=_97ED6957-F79E-438A-BEE2-A42EA0D99B36
-Content-Transfer-Encoding: 7bit
-Content-Type: text/plain;
-	charset=us-ascii
+Mappings in the temporary mm can be set in the userspace portion of the
+address-space.
 
-On Aug 26, 2020, at 1:43 PM, Kees Cook <keescook@chromium.org> wrote:
-> 
-> On Thu, Aug 13, 2020 at 05:32:52PM +0200, Stefano Garzarella wrote:
->> The enumeration allows us to keep track of the last
->> io_uring_register(2) opcode available.
->> 
->> Behaviour and opcodes names don't change.
->> 
->> Signed-off-by: Stefano Garzarella <sgarzare@redhat.com>
->> ---
->> include/uapi/linux/io_uring.h | 27 ++++++++++++++++-----------
->> 1 file changed, 16 insertions(+), 11 deletions(-)
->> 
->> diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
->> index d65fde732518..cdc98afbacc3 100644
->> --- a/include/uapi/linux/io_uring.h
->> +++ b/include/uapi/linux/io_uring.h
->> @@ -255,17 +255,22 @@ struct io_uring_params {
->> /*
->>  * io_uring_register(2) opcodes and arguments
->>  */
->> -#define IORING_REGISTER_BUFFERS		0
->> -#define IORING_UNREGISTER_BUFFERS	1
->> -#define IORING_REGISTER_FILES		2
->> -#define IORING_UNREGISTER_FILES		3
->> -#define IORING_REGISTER_EVENTFD		4
->> -#define IORING_UNREGISTER_EVENTFD	5
->> -#define IORING_REGISTER_FILES_UPDATE	6
->> -#define IORING_REGISTER_EVENTFD_ASYNC	7
->> -#define IORING_REGISTER_PROBE		8
->> -#define IORING_REGISTER_PERSONALITY	9
->> -#define IORING_UNREGISTER_PERSONALITY	10
->> +enum {
->> +	IORING_REGISTER_BUFFERS,
-> 
-> Actually, one *tiny* thought. Since this is UAPI, do we want to be extra
-> careful here and explicitly assign values? We can't change the meaning
-> of a number (UAPI) but we can add new ones, etc? This would help if an
-> OP were removed (to stop from triggering a cascade of changed values)...
-> 
-> for example:
-> 
-> enum {
-> 	IORING_REGISTER_BUFFERS = 0,
-> 	IORING_UNREGISTER_BUFFERS = 1,
-> 	...
+Interrupts must be disabled while the temporary mm is in use. HW
+breakpoints, which may have been set by userspace as watchpoints on
+addresses now within the temporary mm, are saved and disabled when
+loading the temporary mm. The HW breakpoints are restored when unloading
+the temporary mm. All HW breakpoints are indiscriminately disabled while
+the temporary mm is in use.
 
-Definitely that is preferred, IMHO, for enums used as part of UAPI,
-as it avoids accidental changes to the values, and it also makes it
-easier to see what the actual values are.
+Based on x86 implementation:
 
-Cheers, Andreas
+commit cefa929c034e
+("x86/mm: Introduce temporary mm structs")
 
+Signed-off-by: Christopher M. Riedl <cmr@codefail.de>
+---
+ arch/powerpc/include/asm/debug.h |  1 +
+ arch/powerpc/kernel/process.c    |  5 +++
+ arch/powerpc/lib/code-patching.c | 65 ++++++++++++++++++++++++++++++++
+ 3 files changed, 71 insertions(+)
 
+diff --git a/arch/powerpc/include/asm/debug.h b/arch/powerpc/include/asm/debug.h
+index ec57daf87f40..827350c9bcf3 100644
+--- a/arch/powerpc/include/asm/debug.h
++++ b/arch/powerpc/include/asm/debug.h
+@@ -46,6 +46,7 @@ static inline int debugger_fault_handler(struct pt_regs *regs) { return 0; }
+ #endif
+ 
+ void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk);
++void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk);
+ bool ppc_breakpoint_available(void);
+ #ifdef CONFIG_PPC_ADV_DEBUG_REGS
+ extern void do_send_trap(struct pt_regs *regs, unsigned long address,
+diff --git a/arch/powerpc/kernel/process.c b/arch/powerpc/kernel/process.c
+index 016bd831908e..0758a8db6342 100644
+--- a/arch/powerpc/kernel/process.c
++++ b/arch/powerpc/kernel/process.c
+@@ -843,6 +843,11 @@ static inline int set_breakpoint_8xx(struct arch_hw_breakpoint *brk)
+ 	return 0;
+ }
+ 
++void __get_breakpoint(int nr, struct arch_hw_breakpoint *brk)
++{
++	memcpy(brk, this_cpu_ptr(&current_brk[nr]), sizeof(*brk));
++}
++
+ void __set_breakpoint(int nr, struct arch_hw_breakpoint *brk)
+ {
+ 	memcpy(this_cpu_ptr(&current_brk[nr]), brk, sizeof(*brk));
+diff --git a/arch/powerpc/lib/code-patching.c b/arch/powerpc/lib/code-patching.c
+index 85d3fdca9452..89b37ece6d2f 100644
+--- a/arch/powerpc/lib/code-patching.c
++++ b/arch/powerpc/lib/code-patching.c
+@@ -17,6 +17,7 @@
+ #include <asm/code-patching.h>
+ #include <asm/setup.h>
+ #include <asm/inst.h>
++#include <asm/mmu_context.h>
+ 
+ static int __patch_instruction(struct ppc_inst *exec_addr, struct ppc_inst instr,
+ 			       struct ppc_inst *patch_addr)
+@@ -44,6 +45,70 @@ int raw_patch_instruction(struct ppc_inst *addr, struct ppc_inst instr)
+ }
+ 
+ #ifdef CONFIG_STRICT_KERNEL_RWX
++
++struct temp_mm {
++	struct mm_struct *temp;
++	struct mm_struct *prev;
++	bool is_kernel_thread;
++	struct arch_hw_breakpoint brk[HBP_NUM_MAX];
++};
++
++static inline void init_temp_mm(struct temp_mm *temp_mm, struct mm_struct *mm)
++{
++	temp_mm->temp = mm;
++	temp_mm->prev = NULL;
++	temp_mm->is_kernel_thread = false;
++	memset(&temp_mm->brk, 0, sizeof(temp_mm->brk));
++}
++
++static inline void use_temporary_mm(struct temp_mm *temp_mm)
++{
++	lockdep_assert_irqs_disabled();
++
++	temp_mm->is_kernel_thread = current->mm == NULL;
++	if (temp_mm->is_kernel_thread)
++		temp_mm->prev = current->active_mm;
++	else
++		temp_mm->prev = current->mm;
++
++	/*
++	 * Hash requires a non-NULL current->mm to allocate a userspace address
++	 * when handling a page fault. Does not appear to hurt in Radix either.
++	 */
++	current->mm = temp_mm->temp;
++	switch_mm_irqs_off(NULL, temp_mm->temp, current);
++
++	if (ppc_breakpoint_available()) {
++		struct arch_hw_breakpoint null_brk = {0};
++		int i = 0;
++
++		for (; i < nr_wp_slots(); ++i) {
++			__get_breakpoint(i, &temp_mm->brk[i]);
++			if (temp_mm->brk[i].type != 0)
++				__set_breakpoint(i, &null_brk);
++		}
++	}
++}
++
++static inline void unuse_temporary_mm(struct temp_mm *temp_mm)
++{
++	lockdep_assert_irqs_disabled();
++
++	if (temp_mm->is_kernel_thread)
++		current->mm = NULL;
++	else
++		current->mm = temp_mm->prev;
++	switch_mm_irqs_off(NULL, temp_mm->prev, current);
++
++	if (ppc_breakpoint_available()) {
++		int i = 0;
++
++		for (; i < nr_wp_slots(); ++i)
++			if (temp_mm->brk[i].type != 0)
++				__set_breakpoint(i, &temp_mm->brk[i]);
++	}
++}
++
+ static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
+ 
+ #ifdef CONFIG_LKDTM
+-- 
+2.28.0
 
-
-
-
---Apple-Mail=_97ED6957-F79E-438A-BEE2-A42EA0D99B36
-Content-Transfer-Encoding: 7bit
-Content-Disposition: attachment;
-	filename=signature.asc
-Content-Type: application/pgp-signature;
-	name=signature.asc
-Content-Description: Message signed with OpenPGP
-
------BEGIN PGP SIGNATURE-----
-Comment: GPGTools - http://gpgtools.org
-
-iQIzBAEBCAAdFiEEDb73u6ZejP5ZMprvcqXauRfMH+AFAl9GvYYACgkQcqXauRfM
-H+CDqw/+M9+szTISRR0mIIv0L6q5oHSmmJFu6N4WmXH9ZZfUYkGvC7f4CTNhd2k5
-mF1lXbrMAF4i2/0Aui4WjWC5UoW77PBFwOpPYrTw/dbF16AbXEw1HoFamlgZ1Ote
-APczb6wzuFTYYdN9rgX+jdSDUBnvjmdomJz++4ZmScTqTOzUHBkgIS7O4Lw+O6o/
-Hu9oXp/VS3WvHQyDFYFAuaUR+UPAUeOec4AXfRNbC0RdadsFKtNZKI5p3VV16I3v
-v5M9vGUxH/bweRVwBe7w2J0X0mQvtOKwXYVEFxpUrIHIMMzxBKx1FY8KbMpudyPB
-lgECtvuCo+fDQrEMZ7xaE8xclFQa0ts/YnHFi9qrPHH0AvtNY+zA//OQjBNm06tc
-t8uKkMnPuxWDv5krYrFZhtM9DM/YKJrdSf4Bq08u9aiRKYkE0HgoS3J7pZ9Vq2Kz
-+d2RFoEm0cpZMW5ut7jbcXO1tW1RnXadKCkvoVcYZ2yK+WytE5Y+S5vXg7jtLpML
-PKKWgX6hxJPQ3Nz+DOQGvnNQ/Xr0eT7BF2d9BSu2q5B4+s+NPKLunjnFZaWiAq5g
-Y2okqZKRc2hdkb+fAG0Qn3dTLJ/PooXW2V0zaTGI7Nx7KgqaAI+w/mb8TX48BhAk
-ZCjtvI/znZFgtzZjuDIfSa1pN2K2VJPBYla1Bdrx7r+CEhA7mEY=
-=gPQ0
------END PGP SIGNATURE-----
-
---Apple-Mail=_97ED6957-F79E-438A-BEE2-A42EA0D99B36--
