@@ -1,23 +1,23 @@
-Return-Path: <SRS0=pmyT=CF=lists.openwall.com=kernel-hardening-return-19693-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=eEYn=CF=lists.openwall.com=kernel-hardening-return-19694-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,NICE_REPLY_A,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9550FC433E1
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Aug 2020 13:41:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0A8BAC433E1
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Aug 2020 13:50:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C168E207CD
-	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Aug 2020 13:41:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 5780E22B40
+	for <kernel-hardening@archiver.kernel.org>; Thu, 27 Aug 2020 13:50:06 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="ScPOG99p"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C168E207CD
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19693-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24550 invoked by uid 550); 27 Aug 2020 13:41:27 -0000
+	dkim=pass (2048-bit key) header.d=kernel-dk.20150623.gappssmtp.com header.i=@kernel-dk.20150623.gappssmtp.com header.b="i2xtwAqs"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5780E22B40
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=kernel.dk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19694-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 31885 invoked by uid 550); 27 Aug 2020 13:49:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,228 +25,154 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24458 invoked from network); 27 Aug 2020 13:41:26 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1598535674;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=psWUqAIUCBktAIdbYbu1Z+WKwvyIp9OeRhsDYOnwnmE=;
-	b=ScPOG99pAzWc5TdCRcPZdL9sTLSoXp/KdGMsDaT6CSPU7Xo2bySfT0VSy3hGJ0fZ+60nBo
-	5yeQf7nC8BYiJLzKKfIAL3J61R9DmW5ecFaPW1buSu4yIr6w31IrczLkOHFLkrPTEbeK5F
-	QII141/7x+F1QU321g8aWI4PwYodRm8=
-X-MC-Unique: 3AekxEdzOg64YY2A_-5ErA-1
-From: Stefano Garzarella <sgarzare@redhat.com>
-To: Jens Axboe <axboe@kernel.dk>
+Received: (qmail 31863 invoked from network); 27 Aug 2020 13:49:59 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=kernel-dk.20150623.gappssmtp.com; s=20150623;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-language:content-transfer-encoding;
+        bh=ummG6Am4WVVHwG6OsEcF+5DXkgqqBrieiDmLqcZ52gg=;
+        b=i2xtwAqsurDUjdtcPOaRrUkN3kpRZdtKTDcjz9HwCGEOxQ6uuUwwioX2ctbvc+wVAg
+         +yIMBIVx4k5ydmaIA9+tRqrgESalSpR4HUJeavh/6+Z6tCm5LqgyImSd2vkjqiCjv0i/
+         +6uLeOZI/DQgZjzXsYQeAHPmy35xX0EdHohzYOUyUox6E65KaArNi4HMiwvJ4k44Z61m
+         1jj6+YKH+IbuKTnNTTYDGnWG5gtcgWxE/NmKF5V2XVaOu+5mig9Gz8SswY2+rgZCbn2D
+         J4sE12JGv+dI7ZhKQKveG/+f0eQ5+zgP+N7m8entyPNUh5ztEe9hGXqr6UnmXdFWHAaO
+         8A3A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
+         :content-transfer-encoding;
+        bh=ummG6Am4WVVHwG6OsEcF+5DXkgqqBrieiDmLqcZ52gg=;
+        b=mJYJWi9t/2x23IOITa/99nOLC9SLUBn4OQ2WIfZXTHu0voYKe97bzssVsqqhAw9Jmx
+         TfQm5LPDD/CrUIiqzFVfELV4QCZ4w/2pUdr+M3HjrTIY+i4ecLg0VmLekDlK4djmLOcj
+         vr3ZgBOIcn7bAMRVli72UZdx844DCT8pOmarKigz1MBRxeaOyOW5xeWe5HovH/JSuYpM
+         ESMkPZNCh0IJsBuOaMenCHK7GukkUK1lMUZfiwHSJjLwDHyUafFu29HUvHDB/9N6N0Nc
+         EagVV503zl5ZxdOsPcaGu84m/Bo9cpzLC5YF0v840u+YNKtWHfOKaBIHEN5pcfh+4shS
+         HqiQ==
+X-Gm-Message-State: AOAM5335hJk88iGmCt8mOQlAraItQrcx7I04uleEIB9Ay94xUQR4H08M
+	H/wozjwzRBmcZNx3/KBv3wDoPg==
+X-Google-Smtp-Source: ABdhPJxg8EFdtE5lch9P7WZZq4szMfYAPC4FnMVG1t1FuT14x/ja8mX6J3/sRpVLkRSFUHuqrwmpSg==
+X-Received: by 2002:a92:1b84:: with SMTP id f4mr17224386ill.180.1598536187325;
+        Thu, 27 Aug 2020 06:49:47 -0700 (PDT)
+Subject: Re: [PATCH v5 2/3] io_uring: add IOURING_REGISTER_RESTRICTIONS opcode
+To: Stefano Garzarella <sgarzare@redhat.com>
 Cc: Aleksa Sarai <asarai@suse.de>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Jann Horn <jannh@google.com>,
-	io-uring@vger.kernel.org,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	linux-fsdevel@vger.kernel.org,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Stefan Hajnoczi <stefanha@redhat.com>,
-	linux-kernel@vger.kernel.org,
-	Sargun Dhillon <sargun@sargun.me>,
-	Kees Cook <keescook@chromium.org>,
-	Jeff Moyer <jmoyer@redhat.com>
-Subject: [PATCH v5 3/3] io_uring: allow disabling rings during the creation
-Date: Thu, 27 Aug 2020 15:40:44 +0200
-Message-Id: <20200827134044.82821-4-sgarzare@redhat.com>
-In-Reply-To: <20200827134044.82821-1-sgarzare@redhat.com>
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Jann Horn <jannh@google.com>, io-uring@vger.kernel.org,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>,
+ Stefan Hajnoczi <stefanha@redhat.com>, linux-kernel@vger.kernel.org,
+ Sargun Dhillon <sargun@sargun.me>, Kees Cook <keescook@chromium.org>,
+ Jeff Moyer <jmoyer@redhat.com>
 References: <20200827134044.82821-1-sgarzare@redhat.com>
+ <20200827134044.82821-3-sgarzare@redhat.com>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <206a32b6-ba20-fc91-1906-e6bf377798ae@kernel.dk>
+Date: Thu, 27 Aug 2020 07:49:45 -0600
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.10.0
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Scanned-By: MIMEDefang 2.79 on 10.5.11.11
+In-Reply-To: <20200827134044.82821-3-sgarzare@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-This patch adds a new IORING_SETUP_R_DISABLED flag to start the
-rings disabled, allowing the user to register restrictions,
-buffers, files, before to start processing SQEs.
+On 8/27/20 7:40 AM, Stefano Garzarella wrote:
+> @@ -6414,6 +6425,19 @@ static int io_init_req(struct io_ring_ctx *ctx, struct io_kiocb *req,
+>  	if (unlikely(sqe_flags & ~SQE_VALID_FLAGS))
+>  		return -EINVAL;
+>  
+> +	if (unlikely(ctx->restricted)) {
+> +		if (!test_bit(req->opcode, ctx->restrictions.sqe_op))
+> +			return -EACCES;
+> +
+> +		if ((sqe_flags & ctx->restrictions.sqe_flags_required) !=
+> +		    ctx->restrictions.sqe_flags_required)
+> +			return -EACCES;
+> +
+> +		if (sqe_flags & ~(ctx->restrictions.sqe_flags_allowed |
+> +				  ctx->restrictions.sqe_flags_required))
+> +			return -EACCES;
+> +	}
+> +
 
-When IORING_SETUP_R_DISABLED is set, SQE are not processed and
-SQPOLL kthread is not started.
+This should be a separate function, ala:
 
-The restrictions registration are allowed only when the rings
-are disable to prevent concurrency issue while processing SQEs.
+if (unlikely(ctx->restricted)) {
+	ret = io_check_restriction(ctx, req);
+	if (ret)
+		return ret;
+}
 
-The rings can be enabled using IORING_REGISTER_ENABLE_RINGS
-opcode with io_uring_register(2).
+to move it totally out of the (very) hot path.
 
-Suggested-by: Jens Axboe <axboe@kernel.dk>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Stefano Garzarella <sgarzare@redhat.com>
----
-v4:
- - fixed io_uring_enter() exit path when ring is disabled
+>  	if ((sqe_flags & IOSQE_BUFFER_SELECT) &&
+>  	    !io_op_defs[req->opcode].buffer_select)
+>  		return -EOPNOTSUPP;
+> @@ -8714,6 +8738,71 @@ static int io_unregister_personality(struct io_ring_ctx *ctx, unsigned id)
+>  	return -EINVAL;
+>  }
+>  
+> +static int io_register_restrictions(struct io_ring_ctx *ctx, void __user *arg,
+> +				    unsigned int nr_args)
+> +{
+> +	struct io_uring_restriction *res;
+> +	size_t size;
+> +	int i, ret;
+> +
+> +	/* We allow only a single restrictions registration */
+> +	if (ctx->restricted)
+> +		return -EBUSY;
+> +
+> +	if (!arg || nr_args > IORING_MAX_RESTRICTIONS)
+> +		return -EINVAL;
+> +
+> +	size = array_size(nr_args, sizeof(*res));
+> +	if (size == SIZE_MAX)
+> +		return -EOVERFLOW;
+> +
+> +	res = memdup_user(arg, size);
+> +	if (IS_ERR(res))
+> +		return PTR_ERR(res);
+> +
+> +	for (i = 0; i < nr_args; i++) {
+> +		switch (res[i].opcode) {
+> +		case IORING_RESTRICTION_REGISTER_OP:
+> +			if (res[i].register_op >= IORING_REGISTER_LAST) {
+> +				ret = -EINVAL;
+> +				goto out;
+> +			}
+> +
+> +			__set_bit(res[i].register_op,
+> +				  ctx->restrictions.register_op);
+> +			break;
+> +		case IORING_RESTRICTION_SQE_OP:
+> +			if (res[i].sqe_op >= IORING_OP_LAST) {
+> +				ret = -EINVAL;
+> +				goto out;
+> +			}
+> +
+> +			__set_bit(res[i].sqe_op, ctx->restrictions.sqe_op);
+> +			break;
+> +		case IORING_RESTRICTION_SQE_FLAGS_ALLOWED:
+> +			ctx->restrictions.sqe_flags_allowed = res[i].sqe_flags;
+> +			break;
+> +		case IORING_RESTRICTION_SQE_FLAGS_REQUIRED:
+> +			ctx->restrictions.sqe_flags_required = res[i].sqe_flags;
+> +			break;
+> +		default:
+> +			ret = -EINVAL;
+> +			goto out;
+> +		}
+> +	}
+> +
+> +	ctx->restricted = 1;
+> +
+> +	ret = 0;
 
-v3:
- - enabled restrictions only when the rings start
+I'd set ret = 0 above the switch, that's the usual idiom - start at
+zero, have someone set it to -ERROR if something fails.
 
-RFC v2:
- - removed return value of io_sq_offload_start()
----
- fs/io_uring.c                 | 52 ++++++++++++++++++++++++++++++-----
- include/uapi/linux/io_uring.h |  2 ++
- 2 files changed, 47 insertions(+), 7 deletions(-)
-
-diff --git a/fs/io_uring.c b/fs/io_uring.c
-index 93b023930b0b..1820f704e6ca 100644
---- a/fs/io_uring.c
-+++ b/fs/io_uring.c
-@@ -226,6 +226,7 @@ struct io_restriction {
- 	DECLARE_BITMAP(sqe_op, IORING_OP_LAST);
- 	u8 sqe_flags_allowed;
- 	u8 sqe_flags_required;
-+	bool registered;
- };
- 
- struct io_ring_ctx {
-@@ -7481,8 +7482,8 @@ static int io_init_wq_offload(struct io_ring_ctx *ctx,
- 	return ret;
- }
- 
--static int io_sq_offload_start(struct io_ring_ctx *ctx,
--			       struct io_uring_params *p)
-+static int io_sq_offload_create(struct io_ring_ctx *ctx,
-+				struct io_uring_params *p)
- {
- 	int ret;
- 
-@@ -7516,7 +7517,6 @@ static int io_sq_offload_start(struct io_ring_ctx *ctx,
- 			ctx->sqo_thread = NULL;
- 			goto err;
- 		}
--		wake_up_process(ctx->sqo_thread);
- 	} else if (p->flags & IORING_SETUP_SQ_AFF) {
- 		/* Can't have SQ_AFF without SQPOLL */
- 		ret = -EINVAL;
-@@ -7533,6 +7533,12 @@ static int io_sq_offload_start(struct io_ring_ctx *ctx,
- 	return ret;
- }
- 
-+static void io_sq_offload_start(struct io_ring_ctx *ctx)
-+{
-+	if ((ctx->flags & IORING_SETUP_SQPOLL) && ctx->sqo_thread)
-+		wake_up_process(ctx->sqo_thread);
-+}
-+
- static inline void __io_unaccount_mem(struct user_struct *user,
- 				      unsigned long nr_pages)
- {
-@@ -8279,6 +8285,9 @@ SYSCALL_DEFINE6(io_uring_enter, unsigned int, fd, u32, to_submit,
- 	if (!percpu_ref_tryget(&ctx->refs))
- 		goto out_fput;
- 
-+	if (ctx->flags & IORING_SETUP_R_DISABLED)
-+		goto out_fput;
-+
- 	/*
- 	 * For SQ polling, the thread will do all submissions and completions.
- 	 * Just return the requested submit count, and wake the thread if
-@@ -8596,10 +8605,13 @@ static int io_uring_create(unsigned entries, struct io_uring_params *p,
- 	if (ret)
- 		goto err;
- 
--	ret = io_sq_offload_start(ctx, p);
-+	ret = io_sq_offload_create(ctx, p);
- 	if (ret)
- 		goto err;
- 
-+	if (!(p->flags & IORING_SETUP_R_DISABLED))
-+		io_sq_offload_start(ctx);
-+
- 	memset(&p->sq_off, 0, sizeof(p->sq_off));
- 	p->sq_off.head = offsetof(struct io_rings, sq.head);
- 	p->sq_off.tail = offsetof(struct io_rings, sq.tail);
-@@ -8662,7 +8674,8 @@ static long io_uring_setup(u32 entries, struct io_uring_params __user *params)
- 
- 	if (p.flags & ~(IORING_SETUP_IOPOLL | IORING_SETUP_SQPOLL |
- 			IORING_SETUP_SQ_AFF | IORING_SETUP_CQSIZE |
--			IORING_SETUP_CLAMP | IORING_SETUP_ATTACH_WQ))
-+			IORING_SETUP_CLAMP | IORING_SETUP_ATTACH_WQ |
-+			IORING_SETUP_R_DISABLED))
- 		return -EINVAL;
- 
- 	return  io_uring_create(entries, &p, params);
-@@ -8745,8 +8758,12 @@ static int io_register_restrictions(struct io_ring_ctx *ctx, void __user *arg,
- 	size_t size;
- 	int i, ret;
- 
-+	/* Restrictions allowed only if rings started disabled */
-+	if (!(ctx->flags & IORING_SETUP_R_DISABLED))
-+		return -EINVAL;
-+
- 	/* We allow only a single restrictions registration */
--	if (ctx->restricted)
-+	if (ctx->restrictions.registered)
- 		return -EBUSY;
- 
- 	if (!arg || nr_args > IORING_MAX_RESTRICTIONS)
-@@ -8791,7 +8808,7 @@ static int io_register_restrictions(struct io_ring_ctx *ctx, void __user *arg,
- 		}
- 	}
- 
--	ctx->restricted = 1;
-+	ctx->restrictions.registered = true;
- 
- 	ret = 0;
- out:
-@@ -8803,6 +8820,21 @@ static int io_register_restrictions(struct io_ring_ctx *ctx, void __user *arg,
- 	return ret;
- }
- 
-+static int io_register_enable_rings(struct io_ring_ctx *ctx)
-+{
-+	if (!(ctx->flags & IORING_SETUP_R_DISABLED))
-+		return -EINVAL;
-+
-+	if (ctx->restrictions.registered)
-+		ctx->restricted = 1;
-+
-+	ctx->flags &= ~IORING_SETUP_R_DISABLED;
-+
-+	io_sq_offload_start(ctx);
-+
-+	return 0;
-+}
-+
- static bool io_register_op_must_quiesce(int op)
- {
- 	switch (op) {
-@@ -8924,6 +8956,12 @@ static int __io_uring_register(struct io_ring_ctx *ctx, unsigned opcode,
- 			break;
- 		ret = io_unregister_personality(ctx, nr_args);
- 		break;
-+	case IORING_REGISTER_ENABLE_RINGS:
-+		ret = -EINVAL;
-+		if (arg || nr_args)
-+			break;
-+		ret = io_register_enable_rings(ctx);
-+		break;
- 	case IORING_REGISTER_RESTRICTIONS:
- 		ret = io_register_restrictions(ctx, arg, nr_args);
- 		break;
-diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
-index 6e7f2e5e917b..a0c85e0e9016 100644
---- a/include/uapi/linux/io_uring.h
-+++ b/include/uapi/linux/io_uring.h
-@@ -95,6 +95,7 @@ enum {
- #define IORING_SETUP_CQSIZE	(1U << 3)	/* app defines CQ size */
- #define IORING_SETUP_CLAMP	(1U << 4)	/* clamp SQ/CQ ring sizes */
- #define IORING_SETUP_ATTACH_WQ	(1U << 5)	/* attach to existing wq */
-+#define IORING_SETUP_R_DISABLED	(1U << 6)	/* start with ring disabled */
- 
- enum {
- 	IORING_OP_NOP,
-@@ -268,6 +269,7 @@ enum {
- 	IORING_REGISTER_PERSONALITY		= 9,
- 	IORING_UNREGISTER_PERSONALITY		= 10,
- 	IORING_REGISTER_RESTRICTIONS		= 11,
-+	IORING_REGISTER_ENABLE_RINGS		= 12,
- 
- 	/* this goes last */
- 	IORING_REGISTER_LAST
 -- 
-2.26.2
+Jens Axboe
 
