@@ -1,24 +1,23 @@
-Return-Path: <SRS0=32+O=CM=lists.openwall.com=kernel-hardening-return-19723-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=FljR=CM=lists.openwall.com=kernel-hardening-return-19724-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-12.8 required=3.0 tests=BAYES_00,
 	DKIM_ADSP_CUSTOM_MED,DKIM_INVALID,DKIM_SIGNED,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BD2DDC2D0E3
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Sep 2020 20:31:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A7142C433E2
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Sep 2020 20:32:01 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2144820897
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Sep 2020 20:31:49 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C387920684
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Sep 2020 20:32:00 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ppe0VpEZ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2144820897
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="VveOi2tH"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C387920684
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19723-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17986 invoked by uid 550); 3 Sep 2020 20:31:15 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19724-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18341 invoked by uid 550); 3 Sep 2020 20:31:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,43 +25,44 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17884 invoked from network); 3 Sep 2020 20:31:14 -0000
+Received: (qmail 18192 invoked from network); 3 Sep 2020 20:31:17 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=sender:date:in-reply-to:message-id:mime-version:references:subject
          :from:to:cc;
-        bh=wTbIhLiuyTm+XoSeGxmt2GAAo+IvKYWaIE8cYk7ZU44=;
-        b=ppe0VpEZBeDfsEU5ITwny6NkcdkxKAFIdZQ3UQnzTBxYV1ctHU67inW4vW137h4gBv
-         nWXa8buMLxkA1rBskFYK1Eq0jsE+Qw/6BSGfBW65fCge+eKI/kv4A55AD2s+47ypACRJ
-         cVE0+4wdwaCT6SrkHGr9ymZTLU8/wNLASZe7MqnKgh8hB4+OUomA4eJmR7t0BZXrjJW/
-         LOvoQCoshN1779crEt6wAJjVHKmUtlw45dC2cFZP8uDI0DaAgpfMMNr88O/e/upP1nRo
-         CSOVQI7ODlZsWF9jyXFOiYjx8Wwf0ptZxrDsx86udsnr+hYtU3KnXTgcc4ezeQUCHDis
-         66oQ==
+        bh=Ygth48f6RQ7AVK3M037lXI5lSip58PlMRJWKWtM7ReM=;
+        b=VveOi2tHUhJYrFJ6jIZsoPFYgSPEG1VrYrwXyKUSNgOeF4zvromJm+bPaJc9r6p17B
+         xvhOw7cFDtl6haPVhs2xQbizEhLtrnAsP+m1iS8aSNBrHHBONC5VbqvRXrDtSwFsWSf7
+         zEbw+oEOcqIWYYB57zTqb8o2KyvJTD/deul/7DsBBtPjQUSJyvZtTrcxWWmtmA/0T6eT
+         Ry3BjPrZIeJ1PUyqRECawCQwtDW4WqGIqsZbCjb93HOQusaouqohbd87BofC5UiMHBQi
+         +TRCT/C0DNSWYTBUrZBANISvKjFYcn/luvJizgqSba0Z1TWUXVpaPMtdTLBXtSuEKZwc
+         kJ0g==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=wTbIhLiuyTm+XoSeGxmt2GAAo+IvKYWaIE8cYk7ZU44=;
-        b=B4OC8gqMZVhuaZ8odlLytwTgnopcTZBHQThd8lfvRL7ApaZumwqojI/B+6z/D2wwsj
-         4dNAug7zwryVWu80I8HLd5ykt5fSpg3biKt2sal/83XDDTK9c82/rhAtQLZtT71P6eBz
-         w7GQNfenF0cwsYDyCWAgCNtW0W39/2e5TBEIyDcvgNMgHC93d4bG6awWqwljNVyP8k+8
-         Ds4HYrnmLcbMxQuqV1PjMrpii3+ew4Je+K6AI8i/dx6ZtLoke5Oh9XRAKrQioXtIH7an
-         5hs1aZgnyq2/wQhYdHOoaqO8wSo7sNhHHfM0FmXiajXUGY35BrMjak/KvCLuEd3Zly9h
-         w5gA==
-X-Gm-Message-State: AOAM532QGYOp5J4HoLg0HieqFXP4SC6HP1WZCWmG4lraTAVItPLZRy04
-	FNuFIMn9rUe2sKmZjaM7l/t5O8U3YCeDb1VEjmA=
-X-Google-Smtp-Source: ABdhPJyv9bEdV3xRGJWnQr7fgcxwXMprdZ7rQuE4G3j1pIhhWyO6nI10INeeai4ZhUeY9OF61z4g8Dh58X2KMzWpmUw=
+        bh=Ygth48f6RQ7AVK3M037lXI5lSip58PlMRJWKWtM7ReM=;
+        b=ZGeLSeE3efAGs1+DNKDK1jEO+8LSA5KJtVXEkWqGlxMJ6jgowN1AOo3Q0lrvwOMjyL
+         KNEFqxJC9PrZVXg/NeDvvCUh7n6JpUcSL3EkD2+TQhmPde38eEmNgOlSU+bRUNuoCJ6Q
+         ePCmfvh3YeCSeB5bcCVoL8jx6S8KJe1VbgosknbjjoDcxKupNlpyAD+7YGJklktQaY6H
+         RkvZsOuND+TD1aL5XDY4TzkQ/X+7LTql/LxBWI/Z7Hjdgqi39dIJAlD9mMnWvhTPQPat
+         kmb0SnCNEt9gFcp6cS45o9PBvxpB1u9wk1GPYwK1uhkAgeUa8Cp8Inmd4+7cR9b4v2jt
+         b9vA==
+X-Gm-Message-State: AOAM533wqn1B62itUi6VO+waeRKkjQ5DSRQv97G1wgpknoQCuZMn2C1G
+	CJ9iNpAtQBoUnrvzgibmSzccPS03y0jxvKdcG+4=
+X-Google-Smtp-Source: ABdhPJz85W6DE6Mm6fnLwMg8VMiWlldCr2fUmeCkDf6x0DGkEohQdcvqsi3V1rklGdldQ2YiHbOOTbnEtQo0Frap2UI=
 Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
 X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
- (user=samitolvanen job=sendgmr) by 2002:a0c:a342:: with SMTP id
- u60mr3554884qvu.2.1599165062979; Thu, 03 Sep 2020 13:31:02 -0700 (PDT)
-Date: Thu,  3 Sep 2020 13:30:29 -0700
+ (user=samitolvanen job=sendgmr) by 2002:a62:1cc4:0:b029:13c:1611:653d with
+ SMTP id c187-20020a621cc40000b029013c1611653dmr3883611pfc.15.1599165065144;
+ Thu, 03 Sep 2020 13:31:05 -0700 (PDT)
+Date: Thu,  3 Sep 2020 13:30:30 -0700
 In-Reply-To: <20200903203053.3411268-1-samitolvanen@google.com>
-Message-Id: <20200903203053.3411268-5-samitolvanen@google.com>
+Message-Id: <20200903203053.3411268-6-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20200624203200.78870-1-samitolvanen@google.com> <20200903203053.3411268-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.28.0.526.ge36021eeef-goog
-Subject: [PATCH v2 04/28] RAS/CEC: Fix cec_init() prototype
+Subject: [PATCH v2 05/28] objtool: Add a pass for generating __mcount_loc
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>
 Cc: Peter Zijlstra <peterz@infradead.org>, Steven Rostedt <rostedt@goodmis.org>, 
@@ -72,62 +72,201 @@ Cc: Peter Zijlstra <peterz@infradead.org>, Steven Rostedt <rostedt@goodmis.org>,
 	linux-arch@vger.kernel.org, linux-arm-kernel@lists.infradead.org, 
 	linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, 
 	linux-pci@vger.kernel.org, x86@kernel.org, 
-	Luca Stefani <luca.stefani.ge1@gmail.com>, Sami Tolvanen <samitolvanen@google.com>
+	Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-From: Luca Stefani <luca.stefani.ge1@gmail.com>
+From: Peter Zijlstra <peterz@infradead.org>
 
-late_initcall() expects a function that returns an integer. Update the
-function signature to match.
+Add the --mcount option for generating __mcount_loc sections
+needed for dynamic ftrace. Using this pass requires the kernel to
+be compiled with -mfentry and CC_USING_NOP_MCOUNT to be defined
+in Makefile.
 
- [ bp: Massage commit message into proper sentences. ]
-
-Fixes: 9554bfe403nd ("x86/mce: Convert the CEC to use the MCE notifier")
-Signed-off-by: Luca Stefani <luca.stefani.ge1@gmail.com>
-Signed-off-by: Borislav Petkov <bp@suse.de>
-Reviewed-by: Sami Tolvanen <samitolvanen@google.com>
-Tested-by: Sami Tolvanen <samitolvanen@google.com>
-Link: https://lkml.kernel.org/r/20200805095708.83939-1-luca.stefani.ge1@gmail.com
+Link: https://lore.kernel.org/lkml/20200625200235.GQ4781@hirez.programming.kicks-ass.net/
+Signed-off-by: Peter Zijlstra <peterz@infradead.org>
+[Sami: rebased to mainline, dropped config changes, fixed to actually use
+       --mcount, and wrote a commit message.]
+Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 ---
- drivers/ras/cec.c | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
+ tools/objtool/builtin-check.c |  3 +-
+ tools/objtool/builtin.h       |  2 +-
+ tools/objtool/check.c         | 83 +++++++++++++++++++++++++++++++++++
+ tools/objtool/check.h         |  1 +
+ tools/objtool/objtool.h       |  1 +
+ 5 files changed, 88 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/ras/cec.c b/drivers/ras/cec.c
-index 569d9ad2c594..6939aa5b3dc7 100644
---- a/drivers/ras/cec.c
-+++ b/drivers/ras/cec.c
-@@ -553,20 +553,20 @@ static struct notifier_block cec_nb = {
- 	.priority	= MCE_PRIO_CEC,
+diff --git a/tools/objtool/builtin-check.c b/tools/objtool/builtin-check.c
+index 7a44174967b5..71595cf4946d 100644
+--- a/tools/objtool/builtin-check.c
++++ b/tools/objtool/builtin-check.c
+@@ -18,7 +18,7 @@
+ #include "builtin.h"
+ #include "objtool.h"
+ 
+-bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux;
++bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux, mcount;
+ 
+ static const char * const check_usage[] = {
+ 	"objtool check [<options>] file.o",
+@@ -35,6 +35,7 @@ const struct option check_options[] = {
+ 	OPT_BOOLEAN('s', "stats", &stats, "print statistics"),
+ 	OPT_BOOLEAN('d', "duplicate", &validate_dup, "duplicate validation for vmlinux.o"),
+ 	OPT_BOOLEAN('l', "vmlinux", &vmlinux, "vmlinux.o validation"),
++	OPT_BOOLEAN('M', "mcount", &mcount, "generate __mcount_loc"),
+ 	OPT_END(),
  };
  
--static void __init cec_init(void)
-+static int __init cec_init(void)
- {
- 	if (ce_arr.disabled)
--		return;
-+		return -ENODEV;
+diff --git a/tools/objtool/builtin.h b/tools/objtool/builtin.h
+index 85c979caa367..94565a72b701 100644
+--- a/tools/objtool/builtin.h
++++ b/tools/objtool/builtin.h
+@@ -8,7 +8,7 @@
+ #include <subcmd/parse-options.h>
  
- 	ce_arr.array = (void *)get_zeroed_page(GFP_KERNEL);
- 	if (!ce_arr.array) {
- 		pr_err("Error allocating CE array page!\n");
--		return;
-+		return -ENOMEM;
- 	}
+ extern const struct option check_options[];
+-extern bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux;
++extern bool no_fp, no_unreachable, retpoline, module, backtrace, uaccess, stats, validate_dup, vmlinux, mcount;
  
- 	if (create_debugfs_nodes()) {
- 		free_page((unsigned long)ce_arr.array);
--		return;
-+		return -ENOMEM;
- 	}
- 
- 	INIT_DELAYED_WORK(&cec_work, cec_work_fn);
-@@ -575,6 +575,7 @@ static void __init cec_init(void)
- 	mce_register_decode_chain(&cec_nb);
- 
- 	pr_info("Correctable Errors collector initialized.\n");
-+	return 0;
+ extern int cmd_check(int argc, const char **argv);
+ extern int cmd_orc(int argc, const char **argv);
+diff --git a/tools/objtool/check.c b/tools/objtool/check.c
+index e034a8f24f46..6e0b478dc065 100644
+--- a/tools/objtool/check.c
++++ b/tools/objtool/check.c
+@@ -433,6 +433,65 @@ static int add_dead_ends(struct objtool_file *file)
+ 	return 0;
  }
- late_initcall(cec_init);
+ 
++static int create_mcount_loc_sections(struct objtool_file *file)
++{
++	struct section *sec, *reloc_sec;
++	struct reloc *reloc;
++	unsigned long *loc;
++	struct instruction *insn;
++	int idx;
++
++	sec = find_section_by_name(file->elf, "__mcount_loc");
++	if (sec) {
++		INIT_LIST_HEAD(&file->mcount_loc_list);
++		WARN("file already has __mcount_loc section, skipping");
++		return 0;
++	}
++
++	if (list_empty(&file->mcount_loc_list))
++		return 0;
++
++	idx = 0;
++	list_for_each_entry(insn, &file->mcount_loc_list, mcount_loc_node)
++		idx++;
++
++	sec = elf_create_section(file->elf, "__mcount_loc", sizeof(unsigned long), idx);
++	if (!sec)
++		return -1;
++
++	reloc_sec = elf_create_reloc_section(file->elf, sec, SHT_RELA);
++	if (!reloc_sec)
++		return -1;
++
++	idx = 0;
++	list_for_each_entry(insn, &file->mcount_loc_list, mcount_loc_node) {
++
++		loc = (unsigned long *)sec->data->d_buf + idx;
++		memset(loc, 0, sizeof(unsigned long));
++
++		reloc = malloc(sizeof(*reloc));
++		if (!reloc) {
++			perror("malloc");
++			return -1;
++		}
++		memset(reloc, 0, sizeof(*reloc));
++
++		reloc->sym = insn->sec->sym;
++		reloc->addend = insn->offset;
++		reloc->type = R_X86_64_64;
++		reloc->offset = idx * sizeof(unsigned long);
++		reloc->sec = reloc_sec;
++		elf_add_reloc(file->elf, reloc);
++
++		idx++;
++	}
++
++	if (elf_rebuild_reloc_section(file->elf, reloc_sec))
++		return -1;
++
++	return 0;
++}
++
+ /*
+  * Warnings shouldn't be reported for ignored functions.
+  */
+@@ -784,6 +843,22 @@ static int add_call_destinations(struct objtool_file *file)
+ 			insn->type = INSN_NOP;
+ 		}
+ 
++		if (mcount && !strcmp(insn->call_dest->name, "__fentry__")) {
++			if (reloc) {
++				reloc->type = R_NONE;
++				elf_write_reloc(file->elf, reloc);
++			}
++
++			elf_write_insn(file->elf, insn->sec,
++				       insn->offset, insn->len,
++				       arch_nop_insn(insn->len));
++
++			insn->type = INSN_NOP;
++
++			list_add_tail(&insn->mcount_loc_node,
++				      &file->mcount_loc_list);
++		}
++
+ 		/*
+ 		 * Whatever stack impact regular CALLs have, should be undone
+ 		 * by the RETURN of the called function.
+@@ -2791,6 +2866,7 @@ int check(const char *_objname, bool orc)
+ 
+ 	INIT_LIST_HEAD(&file.insn_list);
+ 	hash_init(file.insn_hash);
++	INIT_LIST_HEAD(&file.mcount_loc_list);
+ 	file.c_file = !vmlinux && find_section_by_name(file.elf, ".comment");
+ 	file.ignore_unreachables = no_unreachable;
+ 	file.hints = false;
+@@ -2838,6 +2914,13 @@ int check(const char *_objname, bool orc)
+ 		warnings += ret;
+ 	}
+ 
++	if (mcount) {
++		ret = create_mcount_loc_sections(&file);
++		if (ret < 0)
++			goto out;
++		warnings += ret;
++	}
++
+ 	if (orc) {
+ 		ret = create_orc(&file);
+ 		if (ret < 0)
+diff --git a/tools/objtool/check.h b/tools/objtool/check.h
+index 061aa96e15d3..b62afd3d970b 100644
+--- a/tools/objtool/check.h
++++ b/tools/objtool/check.h
+@@ -22,6 +22,7 @@ struct insn_state {
+ struct instruction {
+ 	struct list_head list;
+ 	struct hlist_node hash;
++	struct list_head mcount_loc_node;
+ 	struct section *sec;
+ 	unsigned long offset;
+ 	unsigned int len;
+diff --git a/tools/objtool/objtool.h b/tools/objtool/objtool.h
+index 528028a66816..427806079540 100644
+--- a/tools/objtool/objtool.h
++++ b/tools/objtool/objtool.h
+@@ -16,6 +16,7 @@ struct objtool_file {
+ 	struct elf *elf;
+ 	struct list_head insn_list;
+ 	DECLARE_HASHTABLE(insn_hash, 20);
++	struct list_head mcount_loc_list;
+ 	bool ignore_unreachables, c_file, hints, rodata;
+ };
  
 -- 
 2.28.0.402.g5ffc5be6b7-goog
