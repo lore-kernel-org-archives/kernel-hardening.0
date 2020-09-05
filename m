@@ -1,23 +1,22 @@
-Return-Path: <SRS0=yvVj=CO=lists.openwall.com=kernel-hardening-return-19787-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=kWpv=CO=lists.openwall.com=kernel-hardening-return-19788-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-15.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,INCLUDES_PATCH,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7ADEEC43461
-	for <kernel-hardening@archiver.kernel.org>; Sat,  5 Sep 2020 19:37:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E7710C43461
+	for <kernel-hardening@archiver.kernel.org>; Sat,  5 Sep 2020 20:18:38 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4B41D20757
-	for <kernel-hardening@archiver.kernel.org>; Sat,  5 Sep 2020 19:37:51 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id D5FE02073B
+	for <kernel-hardening@archiver.kernel.org>; Sat,  5 Sep 2020 20:18:37 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="l0Jpktin"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4B41D20757
+	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="2mT3GBG1"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D5FE02073B
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19787-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22158 invoked by uid 550); 5 Sep 2020 19:37:42 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19788-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5757 invoked by uid 550); 5 Sep 2020 20:18:31 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,32 +24,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22126 invoked from network); 5 Sep 2020 19:37:41 -0000
-DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-05.nifty.com 085JbA36027577
+Received: (qmail 5717 invoked from network); 5 Sep 2020 20:18:29 -0000
+DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-04.nifty.com 085KIAkh025831
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
-	s=dec2015msa; t=1599334631;
-	bh=qozGFnhPSdbD06RPHilTJ+T1xcEFy1jS07es42hBORQ=;
+	s=dec2015msa; t=1599337091;
+	bh=AM99QzFxxKGBKlEOzZ//FGYuWqlVjObjhMrW0TXZ1vI=;
 	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=l0JpktinNZUUOvq3YaMwDq/ifNpnDP0gI95M31CjjXo1Eo94WrN03LIDgJpLcYwtL
-	 z9rgrmnqKUqvwXcLrciQlOuCofICyLfOZbZEyHxIxKrJGKnjMzNdlZMhJk2CoYRgjR
-	 4QF3+yVbHIBOiW+LmEVHW+IwGpqUB26c6OLRm+7PfH4FyWoPT71PcG85ElPIfW6Omk
-	 1g+oXnyKP3MqKrTz+Krb4jydBoJ62bBXHUKz1EHULd5E8pmZrUzot7l8lQgSZabn53
-	 nohOP4JkiXeP2HPCD3KNOJE6maDBtMDY5G9YWljANdAXMZKw0EDzT7hvjXhujTuLny
-	 Yi65YfpHrkkMw==
-X-Nifty-SrcIP: [209.85.216.48]
-X-Gm-Message-State: AOAM530i5IyTyAwt3ojms84sXXEYxRfyJVlcq8beJ3zgb8lYB/maA3Np
-	NPx5Y4WOjJ/2C+qQWeXDPUPXKSmlS//TgkdifoU=
-X-Google-Smtp-Source: ABdhPJziZ9f8lgHmxEMKePErG9t9t5m7cVzvc4yA5ksVH1KdneA0j3i5ocVxCcNskDWKBlLw4HV4GrUALFdcs5gC5MA=
-X-Received: by 2002:a17:90b:1211:: with SMTP id gl17mr13959817pjb.87.1599334629836;
- Sat, 05 Sep 2020 12:37:09 -0700 (PDT)
+	b=2mT3GBG1wE8G/yhfLSiGJrSIlfMwrbNAUJKfC8gZ3etoILU0Zt8SumIhqPwfSULnc
+	 NiTXPP6y+jVKTSdF52qblNj8+Erwe44OAi3+JvNj3bnz1xnxKFq7ODs67zco8o0vN/
+	 3TsC6sQGntZygvez3VSOoQd+9TJdtVBzKLn31Tii+GMykpZKux2BYRxCt7WzqItnhf
+	 gQF8087kfcTGYy6+HQH8Nm7HxU9Soano2FeVeXwfbVYa1sktzUe5OKbi1/IDSFfoRv
+	 AQGmR5q2uh4wolJFo7NXbJsHPQOtZZYon5wxO3OEc6anfYAFK6QTSLvUTvWKMtN4DG
+	 SLh9BXK/ERc5Q==
+X-Nifty-SrcIP: [209.85.210.177]
+X-Gm-Message-State: AOAM530DreDoKS8hPsTd1iME9mHs/91x1SH4jBe83GzYOUXaEfh7m6XT
+	P8LWlHvHn8OXssax4EsNQWjtBz1/jNIGqmBP4yg=
+X-Google-Smtp-Source: ABdhPJyNsnmMbyAG66fOWmKiovR25YJyERnRLtPM25a82Zl3RS3nL26piTxmNQ2uNI60/yqc3rOaDVz5VEX2fwwCiOI=
+X-Received: by 2002:a62:8007:0:b029:13c:1611:6533 with SMTP id
+ j7-20020a6280070000b029013c16116533mr12182097pfd.5.1599337089871; Sat, 05 Sep
+ 2020 13:18:09 -0700 (PDT)
 MIME-Version: 1.0
 References: <20200624203200.78870-1-samitolvanen@google.com>
  <20200903203053.3411268-1-samitolvanen@google.com> <20200903203053.3411268-10-samitolvanen@google.com>
 In-Reply-To: <20200903203053.3411268-10-samitolvanen@google.com>
 From: Masahiro Yamada <masahiroy@kernel.org>
-Date: Sun, 6 Sep 2020 04:36:32 +0900
-X-Gmail-Original-Message-ID: <CAK7LNAQ40LGvfjca9DASXjyUgRbjFNDWZXgFtMXJ54Xmi6vwkg@mail.gmail.com>
-Message-ID: <CAK7LNAQ40LGvfjca9DASXjyUgRbjFNDWZXgFtMXJ54Xmi6vwkg@mail.gmail.com>
+Date: Sun, 6 Sep 2020 05:17:32 +0900
+X-Gmail-Original-Message-ID: <CAK7LNASTtxJ7OCMM_KxmaoSL3CDfTY-65Pu=-MYkMo7iz-_NOQ@mail.gmail.com>
+Message-ID: <CAK7LNASTtxJ7OCMM_KxmaoSL3CDfTY-65Pu=-MYkMo7iz-_NOQ@mail.gmail.com>
 Subject: Re: [PATCH v2 09/28] kbuild: add support for Clang LTO
 To: Sami Tolvanen <samitolvanen@google.com>
 Cc: Will Deacon <will@kernel.org>, Peter Zijlstra <peterz@infradead.org>,
@@ -79,18 +79,7 @@ On Fri, Sep 4, 2020 at 5:31 AM Sami Tolvanen <samitolvanen@google.com> wrote:
 >   https://llvm.org/docs/LinkTimeOptimization.html
 >
 > The Kconfig option CONFIG_LTO_CLANG is implemented as a choice,
-> which defaults to LTO being disabled.
-
-What is the reason for doing this in a choice?
-To turn off LTO_CLANG for compile-testing?
-
-I would rather want to give LTO_CLANG more chances
-to be enabled/tested.
-
-
-
-
-> To use LTO, the architecture
+> which defaults to LTO being disabled. To use LTO, the architecture
 > must select ARCH_SUPPORTS_LTO_CLANG and support:
 >
 >   - compiling with Clang,
@@ -146,25 +135,6 @@ to be enabled/tested.
 > +ifdef CONFIG_THINLTO
 > +CC_FLAGS_LTO_CLANG := -flto=thin -fsplit-lto-unit
 > +KBUILD_LDFLAGS += --thinlto-cache-dir=.thinlto-cache
-
-
-I think this would break external module builds
-because it would create cache files in the
-kernel source tree.
-
-External module builds should never ever touch
-the kernel tree, which is usually located under
-the read-only /usr/src/ in distros.
-
-
-.thinlto-cache should be created in the module tree
-when it is built with M=.
-
-
-
-
-
-
 > +else
 > +CC_FLAGS_LTO_CLANG := -flto
 > +endif
@@ -173,311 +143,24 @@ when it is built with M=.
 > +
 > +ifdef CONFIG_LTO
 > +CC_FLAGS_LTO   := $(CC_FLAGS_LTO_CLANG)
+
+
+$(CC_FLAGS_LTO_CLANG) is not used elsewhere.
+
+Why didn't you add the flags to CC_FLAGS_LTO
+directly?
+
+Will it be useful if LTO_GCC is supported ?
+
+
+
 > +KBUILD_CFLAGS  += $(CC_FLAGS_LTO)
 > +export CC_FLAGS_LTO
 > +endif
-> +
->  ifdef CONFIG_DEBUG_FORCE_FUNCTION_ALIGN_32B
->  KBUILD_CFLAGS += -falign-functions=32
->  endif
-> @@ -1499,7 +1515,7 @@ MRPROPER_FILES += include/config include/generated          \
->                   *.spec
->
->  # Directories & files removed with 'make distclean'
-> -DISTCLEAN_FILES += tags TAGS cscope* GPATH GTAGS GRTAGS GSYMS
-> +DISTCLEAN_FILES += tags TAGS cscope* GPATH GTAGS GRTAGS GSYMS .thinlto-cache
-
-
-
-This was suggested in v1, but I could not understand
-why doing this in distclean was appropriate.
-
-Is keeping cache files of kernel objects
-useful for external module builds?
-
-Also, please clean up .thinlto-cache for external module builds.
 
 
 
 
-
-
-
-
->
->  # clean - Delete most, but leave enough to build external modules
->  #
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index af14a567b493..11bb2f48dfe8 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -552,6 +552,74 @@ config SHADOW_CALL_STACK
->           reading and writing arbitrary memory may be able to locate them
->           and hijack control flow by modifying the stacks.
->
-> +config LTO
-> +       bool
-> +
-> +config ARCH_SUPPORTS_LTO_CLANG
-> +       bool
-> +       help
-> +         An architecture should select this option if it supports:
-> +         - compiling with Clang,
-> +         - compiling inline assembly with Clang's integrated assembler,
-> +         - and linking with LLD.
-> +
-> +config ARCH_SUPPORTS_THINLTO
-> +       bool
-> +       help
-> +         An architecture should select this option if it supports Clang's
-> +         ThinLTO.
-> +
-> +config THINLTO
-> +       bool "Clang ThinLTO"
-> +       depends on LTO_CLANG && ARCH_SUPPORTS_THINLTO
-> +       default y
-> +       help
-> +         This option enables Clang's ThinLTO, which allows for parallel
-> +         optimization and faster incremental compiles. More information
-> +         can be found from Clang's documentation:
-> +
-> +           https://clang.llvm.org/docs/ThinLTO.html
-> +
-> +choice
-> +       prompt "Link Time Optimization (LTO)"
-> +       default LTO_NONE
-> +       help
-> +         This option enables Link Time Optimization (LTO), which allows the
-> +         compiler to optimize binaries globally.
-> +
-> +         If unsure, select LTO_NONE.
-> +
-> +config LTO_NONE
-> +       bool "None"
-> +
-> +config LTO_CLANG
-> +       bool "Clang's Link Time Optimization (EXPERIMENTAL)"
-> +       # Clang >= 11: https://github.com/ClangBuiltLinux/linux/issues/510
-> +       depends on CC_IS_CLANG && CLANG_VERSION >= 110000 && LD_IS_LLD
-> +       depends on $(success,$(NM) --help | head -n 1 | grep -qi llvm)
-> +       depends on $(success,$(AR) --help | head -n 1 | grep -qi llvm)
-> +       depends on ARCH_SUPPORTS_LTO_CLANG
-> +       depends on !FTRACE_MCOUNT_RECORD
-> +       depends on !KASAN
-> +       depends on !GCOV_KERNEL
-> +       depends on !MODVERSIONS
-> +       select LTO
-> +       help
-> +          This option enables Clang's Link Time Optimization (LTO), which
-> +          allows the compiler to optimize the kernel globally. If you enable
-> +          this option, the compiler generates LLVM bitcode instead of ELF
-> +          object files, and the actual compilation from bitcode happens at
-> +          the LTO link step, which may take several minutes depending on the
-> +          kernel configuration. More information can be found from LLVM's
-> +          documentation:
-> +
-> +           https://llvm.org/docs/LinkTimeOptimization.html
-> +
-> +         To select this option, you also need to use LLVM tools to handle
-> +         the bitcode by passing LLVM=1 to make.
-> +
-> +endchoice
-> +
->  config HAVE_ARCH_WITHIN_STACK_FRAMES
->         bool
->         help
-> diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
-> index 5430febd34be..c1f0d58272bd 100644
-> --- a/include/asm-generic/vmlinux.lds.h
-> +++ b/include/asm-generic/vmlinux.lds.h
-> @@ -89,15 +89,18 @@
->   * .data. We don't want to pull in .data..other sections, which Linux
->   * has defined. Same for text and bss.
->   *
-> + * With LTO_CLANG, the linker also splits sections by default, so we need
-> + * these macros to combine the sections during the final link.
-> + *
->   * RODATA_MAIN is not used because existing code already defines .rodata.x
->   * sections to be brought in with rodata.
->   */
-> -#ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
-> +#if defined(CONFIG_LD_DEAD_CODE_DATA_ELIMINATION) || defined(CONFIG_LTO_CLANG)
->  #define TEXT_MAIN .text .text.[0-9a-zA-Z_]*
-> -#define DATA_MAIN .data .data.[0-9a-zA-Z_]* .data..LPBX*
-> +#define DATA_MAIN .data .data.[0-9a-zA-Z_]* .data..L* .data..compoundliteral*
->  #define SDATA_MAIN .sdata .sdata.[0-9a-zA-Z_]*
-> -#define RODATA_MAIN .rodata .rodata.[0-9a-zA-Z_]*
-> -#define BSS_MAIN .bss .bss.[0-9a-zA-Z_]*
-> +#define RODATA_MAIN .rodata .rodata.[0-9a-zA-Z_]* .rodata..L*
-> +#define BSS_MAIN .bss .bss.[0-9a-zA-Z_]* .bss..compoundliteral*
->  #define SBSS_MAIN .sbss .sbss.[0-9a-zA-Z_]*
->  #else
->  #define TEXT_MAIN .text
-> diff --git a/scripts/Makefile.build b/scripts/Makefile.build
-> index 6ecf30c70ced..a5f4b5d407e6 100644
-> --- a/scripts/Makefile.build
-> +++ b/scripts/Makefile.build
-> @@ -111,7 +111,7 @@ endif
->  # ---------------------------------------------------------------------------
->
->  quiet_cmd_cc_s_c = CC $(quiet_modtag)  $@
-> -      cmd_cc_s_c = $(CC) $(filter-out $(DEBUG_CFLAGS), $(c_flags)) $(DISABLE_LTO) -fverbose-asm -S -o $@ $<
-> +      cmd_cc_s_c = $(CC) $(filter-out $(DEBUG_CFLAGS) $(CC_FLAGS_LTO), $(c_flags)) -fverbose-asm -S -o $@ $<
->
->  $(obj)/%.s: $(src)/%.c FORCE
->         $(call if_changed_dep,cc_s_c)
-> @@ -428,8 +428,15 @@ $(obj)/lib.a: $(lib-y) FORCE
->  # Do not replace $(filter %.o,^) with $(real-prereqs). When a single object
->  # module is turned into a multi object module, $^ will contain header file
->  # dependencies recorded in the .*.cmd file.
-> +ifdef CONFIG_LTO_CLANG
-> +quiet_cmd_link_multi-m = AR [M]  $@
-> +cmd_link_multi-m =                                             \
-> +       rm -f $@;                                               \
-> +       $(AR) rcsTP$(KBUILD_ARFLAGS) $@ $(filter %.o,$^)
-> +else
->  quiet_cmd_link_multi-m = LD [M]  $@
->        cmd_link_multi-m = $(LD) $(ld_flags) -r -o $@ $(filter %.o,$^)
-> +endif
->
->  $(multi-used-m): FORCE
->         $(call if_changed,link_multi-m)
-> diff --git a/scripts/Makefile.modfinal b/scripts/Makefile.modfinal
-> index 411c1e600e7d..1005b147abd0 100644
-> --- a/scripts/Makefile.modfinal
-> +++ b/scripts/Makefile.modfinal
-> @@ -6,6 +6,7 @@
->  PHONY := __modfinal
->  __modfinal:
->
-> +include $(objtree)/include/config/auto.conf
->  include $(srctree)/scripts/Kbuild.include
->
->  # for c_flags
-> @@ -29,6 +30,12 @@ quiet_cmd_cc_o_c = CC [M]  $@
->
->  ARCH_POSTLINK := $(wildcard $(srctree)/arch/$(SRCARCH)/Makefile.postlink)
->
-> +ifdef CONFIG_LTO_CLANG
-> +# With CONFIG_LTO_CLANG, reuse the object file we compiled for modpost to
-> +# avoid a second slow LTO link
-> +prelink-ext := .lto
-> +endif
-> +
->  quiet_cmd_ld_ko_o = LD [M]  $@
->        cmd_ld_ko_o =                                                     \
->         $(LD) -r $(KBUILD_LDFLAGS)                                      \
-> @@ -37,7 +44,7 @@ quiet_cmd_ld_ko_o = LD [M]  $@
->                 -o $@ $(filter %.o, $^);                                \
->         $(if $(ARCH_POSTLINK), $(MAKE) -f $(ARCH_POSTLINK) $@, true)
->
-> -$(modules): %.ko: %.o %.mod.o $(KBUILD_LDS_MODULE) FORCE
-> +$(modules): %.ko: %$(prelink-ext).o %.mod.o $(KBUILD_LDS_MODULE) FORCE
->         +$(call if_changed,ld_ko_o)
->
->  targets += $(modules) $(modules:.ko=.mod.o)
-> diff --git a/scripts/Makefile.modpost b/scripts/Makefile.modpost
-> index f54b6ac37ac2..a70f1f7da6aa 100644
-> --- a/scripts/Makefile.modpost
-> +++ b/scripts/Makefile.modpost
-> @@ -102,12 +102,32 @@ $(input-symdump):
->         @echo >&2 'WARNING: Symbol version dump "$@" is missing.'
->         @echo >&2 '         Modules may not have dependencies or modversions.'
->
-> +ifdef CONFIG_LTO_CLANG
-> +# With CONFIG_LTO_CLANG, .o files might be LLVM bitcode, so we need to run
-> +# LTO to compile them into native code before running modpost
-> +prelink-ext = .lto
-> +
-> +quiet_cmd_cc_lto_link_modules = LTO [M] $@
-> +cmd_cc_lto_link_modules =                                              \
-> +       $(LD) $(ld_flags) -r -o $@                                      \
-> +               --whole-archive $(filter-out FORCE,$^)
-> +
-> +%.lto.o: %.o FORCE
-> +       $(call if_changed,cc_lto_link_modules)
-> +
-> +PHONY += FORCE
-> +FORCE:
-> +
-> +endif
-> +
-> +modules := $(sort $(shell cat $(MODORDER)))
-> +
->  # Read out modules.order to pass in modpost.
->  # Otherwise, allmodconfig would fail with "Argument list too long".
->  quiet_cmd_modpost = MODPOST $@
-> -      cmd_modpost = sed 's/ko$$/o/' $< | $(MODPOST) -T -
-> +      cmd_modpost = sed 's/\.ko$$/$(prelink-ext)\.o/' $< | $(MODPOST) -T -
->
-> -$(output-symdump): $(MODORDER) $(input-symdump) FORCE
-> +$(output-symdump): $(MODORDER) $(input-symdump) $(modules:.ko=$(prelink-ext).o) FORCE
->         $(call if_changed,modpost)
->
->  targets += $(output-symdump)
-> diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
-> index 372c3719f94c..ebb9f912aab6 100755
-> --- a/scripts/link-vmlinux.sh
-> +++ b/scripts/link-vmlinux.sh
-> @@ -56,6 +56,14 @@ modpost_link()
->                 ${KBUILD_VMLINUX_LIBS}                          \
->                 --end-group"
->
-> +       if [ -n "${CONFIG_LTO_CLANG}" ]; then
-> +               # This might take a while, so indicate that we're doing
-> +               # an LTO link
-> +               info LTO ${1}
-> +       else
-> +               info LD ${1}
-> +       fi
-> +
->         ${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${objects}
->  }
->
-> @@ -103,13 +111,22 @@ vmlinux_link()
->         fi
->
->         if [ "${SRCARCH}" != "um" ]; then
-> -               objects="--whole-archive                        \
-> -                       ${KBUILD_VMLINUX_OBJS}                  \
-> -                       --no-whole-archive                      \
-> -                       --start-group                           \
-> -                       ${KBUILD_VMLINUX_LIBS}                  \
-> -                       --end-group                             \
-> -                       ${@}"
-> +               if [ -n "${CONFIG_LTO_CLANG}" ]; then
-> +                       # Use vmlinux.o instead of performing the slow LTO
-> +                       # link again.
-> +                       objects="--whole-archive                \
-> +                               vmlinux.o                       \
-> +                               --no-whole-archive              \
-> +                               ${@}"
-> +               else
-> +                       objects="--whole-archive                \
-> +                               ${KBUILD_VMLINUX_OBJS}          \
-> +                               --no-whole-archive              \
-> +                               --start-group                   \
-> +                               ${KBUILD_VMLINUX_LIBS}          \
-> +                               --end-group                     \
-> +                               ${@}"
-> +               fi
->
->                 ${LD} ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}      \
->                         ${strip_debug#-Wl,}                     \
-> @@ -274,7 +291,6 @@ fi;
->  ${MAKE} -f "${srctree}/scripts/Makefile.build" obj=init need-builtin=1
->
->  #link vmlinux.o
-> -info LD vmlinux.o
->  modpost_link vmlinux.o
->  objtool_link vmlinux.o
->
-> --
-> 2.28.0.402.g5ffc5be6b7-goog
->
-
-
---
+-- 
 Best Regards
-
 Masahiro Yamada
