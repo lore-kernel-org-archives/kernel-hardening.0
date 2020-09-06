@@ -1,22 +1,24 @@
-Return-Path: <SRS0=NJGw=CP=lists.openwall.com=kernel-hardening-return-19789-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Yq23=CP=lists.openwall.com=kernel-hardening-return-19790-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C8CDAC433E2
-	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 00:25:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E3537C433E2
+	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 12:17:29 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8311B2075A
-	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 00:25:51 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 8BE86208B3
+	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 12:17:28 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="PkKiD5JB"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8311B2075A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19789-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7794 invoked by uid 550); 6 Sep 2020 00:25:43 -0000
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="B+kMDvbl"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8BE86208B3
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19790-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7621 invoked by uid 550); 6 Sep 2020 12:17:19 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,216 +26,247 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7762 invoked from network); 6 Sep 2020 00:25:42 -0000
-DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-03.nifty.com 0860PF0A018523
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
-	s=dec2015msa; t=1599351916;
-	bh=smhRM/0gS2ife7hbqoAb+BEFwkqlNArzwskfuvsPnHQ=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=PkKiD5JBmvPt9YbEpNWvP9dwiiCW89Jxh8yssXcCWUWpb1UiehH+fUUvKRbBUgq4l
-	 NJCrPtXNI/frWpVZlXNTv6mMZEMn1znlMPK9PuhVRxoYkDh6FzRbF6QzW/16gc0Ed7
-	 xNrcNj7AFuONFKBo1X1fnr+uXevgUh6aziZQ6k5e4UsmAxnEApAHjX39hDHv4+p6NK
-	 mM2wmm+uIjDNeSKYE5/K0doPqcK6xo3A5DOVvw4byts7cId1xdsUtAGsY/gcBoYaYz
-	 ZIX1o2UPo370CPlDYibWgwRJy+49SnBTE0YDk6pSDLco5iAKe8sWTPVLgx1xJJfeV1
-	 cLH7W80AR9Lrw==
-X-Nifty-SrcIP: [209.85.216.52]
-X-Gm-Message-State: AOAM530Ffg44gsPip+/nwdInZNxNjxZ8wYni05N6j1vH9oQ+xxp03La4
-	lGBnWFuW3YJA49wNxiKCMtYZ5NV6mtvR4k88zWA=
-X-Google-Smtp-Source: ABdhPJxbCWrj7SAKzQnfIYweG+DVFI5qXPfBL18NWV+r08yubtSKWeb87Imal2HX3Iks4twK5ZPYbZMtYaCw68W7ffo=
-X-Received: by 2002:a17:90b:360a:: with SMTP id ml10mr13696135pjb.198.1599351914954;
- Sat, 05 Sep 2020 17:25:14 -0700 (PDT)
+Received: (qmail 7601 invoked from network); 6 Sep 2020 12:17:19 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1599394583;
+	bh=fQwrab/3EerbqYpxqZ04WJLrtDjl6Vf1m279QN3M5dY=;
+	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
+	b=B+kMDvblQcck9rRUDTaTgdtvW4iQHy41+nPJXh4ycqmYmxHYApQJkpCoEngQW4/jg
+	 bdyTElk2mt64K0pLmjwWrJuiuxpdE/JMwI996osvzZbLkTVNH/CSqAHNiagkuo/WJz
+	 LlPVdmClYVftqYcWbfaI6Bplj3BDvm/Gq5YmSQ1U=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+From: John Wood <john.wood@gmx.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: John Wood <john.wood@gmx.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Ingo Molnar <mingo@redhat.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Juri Lelli <juri.lelli@redhat.com>,
+	Vincent Guittot <vincent.guittot@linaro.org>,
+	Dietmar Eggemann <dietmar.eggemann@arm.com>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Ben Segall <bsegall@google.com>,
+	Mel Gorman <mgorman@suse.de>,
+	Luis Chamberlain <mcgrof@kernel.org>,
+	Iurii Zaikin <yzaikin@google.com>,
+	James Morris <jmorris@namei.org>,
+	"Serge E. Hallyn" <serge@hallyn.com>,
+	linux-doc@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: [RFC PATCH 0/9] Fork brute force attack mitigation (fbfam)
+Date: Sun,  6 Sep 2020 14:15:35 +0200
+Message-Id: <20200906121544.4204-1-john.wood@gmx.com>
+X-Mailer: git-send-email 2.25.1
 MIME-Version: 1.0
-References: <20200624203200.78870-1-samitolvanen@google.com> <20200903203053.3411268-1-samitolvanen@google.com>
-In-Reply-To: <20200903203053.3411268-1-samitolvanen@google.com>
-From: Masahiro Yamada <masahiroy@kernel.org>
-Date: Sun, 6 Sep 2020 09:24:38 +0900
-X-Gmail-Original-Message-ID: <CAK7LNASDUkyJMDD0a5K_HT=1q5NEc6dcN4=FUb330yK0BCKcTw@mail.gmail.com>
-Message-ID: <CAK7LNASDUkyJMDD0a5K_HT=1q5NEc6dcN4=FUb330yK0BCKcTw@mail.gmail.com>
-Subject: Re: [PATCH v2 00/28] Add support for Clang LTO
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Will Deacon <will@kernel.org>, Peter Zijlstra <peterz@infradead.org>,
-        Steven Rostedt <rostedt@goodmis.org>,
-        Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-        "Paul E. McKenney" <paulmck@kernel.org>,
-        Kees Cook <keescook@chromium.org>,
-        Nick Desaulniers <ndesaulniers@google.com>,
-        clang-built-linux <clang-built-linux@googlegroups.com>,
-        Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        linux-arch <linux-arch@vger.kernel.org>,
-        linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
-        Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
-        Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-        linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
-Content-Type: multipart/mixed; boundary="000000000000c3236d05ae9a2200"
+Content-Transfer-Encoding: quoted-printable
+X-Provags-ID: V03:K1:AGT3UJ3W0iU8AA373PKnhI/b31jFD58Olo8G2LzHwLpYviT9FLx
+ 0RgaViNVNg4BteZYzjsXQMk3VBOPeIpDWRxF+1N2PIh3CCWUW59L5viHyRqePmpC5ZkpERs
+ QmNXUZYIP2vtNsk5d64jtTxcb0SHQAT80pHVRFwBwJ0bcUBGJMMsxjVqwsddQS5nwQOuZEw
+ 0eD5AAsrhlvg9PIN0t1iw==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:jBp4vi39wb8=:7s6s8X49DaOj2jSXkNjw0d
+ 9cmCDck8v33hk/6Pv4dylLZoIS5tHnZ2DyOFEL2cwaCCVKErOR5PWK3wYQWfe7j0tn5S9bs+C
+ gG6TmD3aK1rLEX4KhMnXt+nXfMfnyevRclLf1b3YuKtHvyuaBzZG1Pb0Jbdwh8ncVQi4/DDhL
+ rtH6DVQgxMFxoYtYXPmoITibSQwY1S2UvX+fqsOtx6jTynAOeAe5JjvY0zgm6ndxhI8VbWZjI
+ jr5GnytI+tJSbrPpB1FyV9bzdikPt1Q6SlfRYReXpPn9c+NghXDd9vb0OHupNkABo+I+P9mAp
+ pYTZ2EHtmMiNlaWWIyQkkpomsx5eYo03i/fH8+1MdFF24V6Ygn/44WVNzmKFvTfFyFqzCIlJ0
+ HLTTp1pKdCH/l6n4HqapqzwK0zHT8pGp+je7n8VogTtmrRUF2aXTk+zl2rkvJ5S/FO8zdeICa
+ 1ypuBMiq36mqQ4MfIExuEvFg+X/9LwO6AVzxFP1MKm/KHpeuvLHIt+y8Y/1X+52BIXqeNOmOd
+ J6npkyIV/O8gofrBhw6htAyj83BOGIHJQrN6IOoRW4Re/G/UXj107Y7j0BEL/EKt00e8LHPQW
+ Knl2wrc8IB0K2GloDmIqWilHfr5KoNIYCy5F0mg5d06L4IHiVJiNFcSrdLwTLizoHw0crye1r
+ DOXakKf0rJOLs4ETcPT9xQz4praSGLlLtFjx+57pheUdxabPOli0eTwgUnqyUiU3g5oNK8xNy
+ s9Vz1ywxxRYIWYNnK1ACrzrU+Bda+2imqYNwim2Avm6O+LAAT443pgdNvQuY2k4PKfuGQbQhg
+ p/e6yEBAwrv1jq3C4ArKkQn0PqEBRcL6BJTXO8j5ues194JP6AQXOxafLzQy5fwRJe6AP3tDH
+ 4nOJa2Ws9A8IgW4P3SSFKXzgyXwHn3NjgRREEqdLDsvh/hl+5Wsvd1HOtyr2b0iVqy9ZE8NFH
+ mFSAnqU03JrlpwSUeh8hV+YtqgxKkFktVMYdSzYvVrqrq5PfpuFKjgbwgy4vrLE+yamO/s+H9
+ 7UVGl1oTBzRQh/9SIlJtwzSUxJN3x3hmDYGZp5pueUOwbB+SmBNMcNNhxul97U4J1E09TdIXT
+ EEkPM4EaidwEtPbq3ZvAJzjbgEsRJzYcTeErLxCJld/JOT9489mnRmsecShbHMBbGfYnh3qjd
+ q2WETQ8KKZ3wSXTeB3Nh/yVrJg1J//eZ1LuRLjbAhIGG7jZNv8iDbPURYZzZeMsQoCqg5abJJ
+ TP1u+zt7+EdCyG8bE1pV01lprcry3KqdLyQ7ZNA==
 
---000000000000c3236d05ae9a2200
-Content-Type: text/plain; charset="UTF-8"
+The goal of this patch serie is to detect and mitigate a fork brute force
+attack.
 
-On Fri, Sep 4, 2020 at 5:30 AM Sami Tolvanen <samitolvanen@google.com> wrote:
->
-> This patch series adds support for building x86_64 and arm64 kernels
-> with Clang's Link Time Optimization (LTO).
->
-> In addition to performance, the primary motivation for LTO is
-> to allow Clang's Control-Flow Integrity (CFI) to be used in the
-> kernel. Google has shipped millions of Pixel devices running three
-> major kernel versions with LTO+CFI since 2018.
->
-> Most of the patches are build system changes for handling LLVM
-> bitcode, which Clang produces with LTO instead of ELF object files,
-> postponing ELF processing until a later stage, and ensuring initcall
-> ordering.
->
-> Note that patches 1-4 are not directly related to LTO, but are
-> needed to compile LTO kernels with ToT Clang, so I'm including them
-> in the series for your convenience:
->
->  - Patches 1-3 are required for building the kernel with ToT Clang,
->    and IAS, and patch 4 is needed to build allmodconfig with LTO.
->
->  - Patches 3-4 are already in linux-next, but not yet in 5.9-rc.
->
+Attacks with the purpose to break ASLR or bypass canaries traditionaly use
+some level of brute force with the help of the fork system call. This is
+possible since when creating a new process using fork its memory contents
+are the same as those of the parent process (the process that called the
+fork system call). So, the attacker can test the memory infinite times to
+find the correct memory values or the correct memory addresses without
+worrying about crashing the application.
 
+Based on the above scenario it would be nice to have this detected and
+mitigated, and this is the goal of this implementation.
 
-I still do not understand how this patch set works.
-(only me?)
+Other implementations
+=2D--------------------
 
-Please let me ask fundamental questions.
+The public version of grsecurity, as a summary, is based on the idea of
+delay the fork system call if a child died due to a fatal error. This has
+some issues:
 
+1.- Bad practices: Add delays to the kernel is, in general, a bad idea.
 
+2.- Weak points: This protection can be bypassed using two different
+    methods since it acts only when the fork is called after a child has
+    crashed.
 
-I applied this series on top of Linus' tree,
-and compiled for ARCH=arm64.
+    2.1.- Bypass 1: So, it would still be possible for an attacker to fork
+	  a big amount of children (in the order of thousands), then probe
+	  all of them, and finally wait the protection time before repeat
+	  the steps.
 
-I compared the kernel size with/without LTO.
-
+    2.2.- Bypass 2: This method is based on the idea that the protection
+	  doesn't act if the parent crashes. So, it would still be possible
+	  for an attacker to fork a process and probe itself. Then, fork
+	  the child process and probe itself again. This way, these steps
+	  can be repeated infinite times without any mitigation.
 
 
-[1] No LTO  (arm64 defconfig, CONFIG_LTO_NONE)
+This implementation
+=2D------------------
 
-$ llvm-size   vmlinux
-   text    data     bss     dec     hex filename
-15848692 10099449 493060 26441201 19375f1 vmlinux
+The main idea behind this implementation is to improve the existing ones
+focusing on the weak points annotated before. So, the solution for the
+first bypass method is to detect a fast crash rate instead of only one
+simple crash. For the second bypass method the solution is to detect both
+the crash of parent and child processes. Moreover, as a mitigation method
+it is better to kill all the offending tasks involve in the attack instead
+of use delays.
 
+So, the solution to the two bypass methods previously commented is to use
+some statistical data shared across all the processes that can have the
+same memory contents. Or in other words, a statistical data shared between
+all the processes that fork the task 0, and all the processes that fork
+after an execve system call.
 
+These statistics hold the timestamp for the first fork (case of a fork of
+task zero) or the timestamp for the execve system call (the other case).
+Also, hold the number of faults of all the tasks that share the same
+statistical data since the commented timestamp.
 
-[2] Clang LTO  (arm64 defconfig + CONFIG_LTO_CLANG)
+With this information it is possible to detect a brute force attack when a
+task die in a fatal way computing the crashing rate. This rate shows the
+milliseconds per fault and when it goes under a certain threshold there is
+a clear signal that something malicious is happening.
 
-$ llvm-size   vmlinux
-   text    data     bss     dec     hex filename
-15906864 10197445 490804 26595113 195cf29 vmlinux
+Once detected, the mitigation only kills the processes that share the same
+statistical data and so, all the tasks that can have the same memory
+contents. This way, an attack is rejected.
 
+The fbfam feature can be enabled, disabled and tuned as follows:
 
-I compared the size of raw binary, arch/arm64/boot/Image.
-Its size increased too.
+1.- Per system enabling: This feature can be enabled in build time using
+    the config application under:
 
+    Security options  --->  Fork brute force attack mitigation
 
+2.- Per process enabling/disabling: To allow that specific applications ca=
+n
+    turn off or turn on the detection and mitigation of a fork brute force
+    attack when required, there are two new prctls.
 
-So, in my experiment, enabling CONFIG_LTO_CLANG
-increases the kernel size.
-Is this correct?
+    prctl(PR_FBFAM_ENABLE, 0, 0, 0, 0)  -> To enable the feature
+    prctl(PR_FBFAM_DISABLE, 0, 0, 0, 0) -> To disable the feature
 
+    Both functions return zero on success and -EFAULT if the current task
+    doesn't have statistical data.
 
-One more thing, could you teach me
-how Clang LTO optimizes the code against
-relocatable objects?
+3.- Fine tuning: To customize the detection's sensibility there is a new
+    sysctl that allows to set the crashing rate threshold. It is accessibl=
+e
+    through the file:
 
+    /proc/sys/kernel/fbfam/crashing_rate_threshold
 
+    The units are in milliseconds per fault and the attack's mitigation is
+    triggered if the crashing rate of an application goes under this
+    threshold. So, the higher this value, the faster an attack will be
+    detected.
 
-When I learned Clang LTO first, I read this document:
-https://llvm.org/docs/LinkTimeOptimization.html
+So, knowing all this information I will explain now the different patches:
 
-It is easy to confirm the final executable
-does not contain foo2, foo3...
+The 1/9 patch adds a new config for the fbfam feature.
 
+The 2/9 and 3/9 patches add and use the api to manage the statistical data
+necessary to compute the crashing rate of an application.
 
+The 4/9 patch adds a new sysctl to fine tuning the detection's sensibility=
+.
 
-In contrast to userspace programs,
-kernel modules are basically relocatable objects.
+The 5/9 patch detects a fork brute force attack calculating the crashing
+rate.
 
-Does Clang drop unused symbols from relocatable objects?
-If so, how?
+The 6/9 patch mitigates the attack killing all the offending tasks.
 
-I implemented an example module (see the attachment),
-and checked the symbols.
-Nothing was dropped.
+The 7/9 patch adds two new prctls to allow per task enabling/disabling.
 
-The situation is the same for build-in
-because LTO is run against vmlinux.o, which is
-relocatable as well.
+The 8/9 patch adds general documentation.
 
+The 9/9 patch adds an entry to the maintainers list.
 
---
-Best Regards
+This patch series is a task of the KSPP [1] and it is worth to mention
+that there is a previous attempt without any continuation [2].
 
-Masahiro Yamada
+[1] https://github.com/KSPP/linux/issues/39
+[2] https://lore.kernel.org/linux-fsdevel/1419457167-15042-1-git-send-emai=
+l-richard@nod.at/
 
---000000000000c3236d05ae9a2200
-Content-Type: application/x-patch; name="0001-lto-test-module.patch"
-Content-Disposition: attachment; filename="0001-lto-test-module.patch"
-Content-Transfer-Encoding: base64
-Content-ID: <f_keqbde3n0>
-X-Attachment-Id: f_keqbde3n0
+Any constructive comments are welcome.
 
-RnJvbSBjMWRjNjQ2ZjczYmQ5NDhlZGJmMGM0YTdmMWJhYTkzZWNmOGMyMDhlIE1vbiBTZXAgMTcg
-MDA6MDA6MDAgMjAwMQpGcm9tOiBNYXNhaGlybyBZYW1hZGEgPG1hc2FoaXJveUBrZXJuZWwub3Jn
-PgpEYXRlOiBTdW4sIDYgU2VwIDIwMjAgMDg6MTE6MzIgKzA5MDAKU3ViamVjdDogW1BBVENIXSBs
-dG86IHRlc3QgbW9kdWxlCgpIZXJlIGlzIGEgZ3JlYXQgZXhhbXBsZSBmb3IgTFRPOgogIGh0dHBz
-Oi8vbGx2bS5vcmcvZG9jcy9MaW5rVGltZU9wdGltaXphdGlvbi5odG1sCgpMVE8gcmVtb3ZlcyBm
-b28yKCkgYW5kIGZvbzMoKSBmcm9tIHRoZSBmaW5hbCBleGVjdXRhYmxlIGZpbGUsICJtYWluIi4K
-KGFuZCBmb280KCkgaXMgYWxzbyBkcm9wcGVkIGlmIHlvdSBwYXNzIC1mbHRvIHRvIG1haW4uYykK
-ClRoaXMgcGF0Y2ggaW50ZWdyYXRlcyB0aGUgZXhhbXBsZSBjb2RlIGludG8gYSBrZXJuZWwgbW9k
-dWxlLgoKICBhLmMgICAgICAtPiAgIGtlcm5lbC9sdG8tdGVzdC1hLmMKICBtYWluLmMgICAtPiAg
-IGtlcm5lbC9sdG8tdGVzdC1tYWluLmMKCk9mIGNvdXJzZSwgSSByZXBsYWNlZCBwcmludGYoKSB3
-aXRoIHByaW50aygpLgoKSSBhcHBsaWVkIHRoaXMgdGVzdCBwYXRjaCBvbiB0b3Agb2YgU2FtaSdz
-IHYyOgogIGh0dHBzOi8vcGF0Y2h3b3JrLmtlcm5lbC5vcmcvcHJvamVjdC9saW51eC1rYnVpbGQv
-bGlzdC8/c2VyaWVzPTM0MzE1MwoKSSBjb21waWxlZCBhcm02NCBkZWZjb25maWcgKyBDT05GSUdf
-TFRPX0NMQU5HLgoKVGhpcyBpcyB0aGUgcmVzdWx0OgoKJCBhYXJjaDY0LWxpbnV4LWdudS1ubSBr
-ZXJuZWwvbHRvLXRlc3Qua28KMDAwMDAwMDAwMDAwMDAxMCBUIGZvbzEKMDAwMDAwMDAwMDAwMDAw
-MCBUIGZvbzIKMDAwMDAwMDAwMDAwMDA0YyBUIGZvbzQKMDAwMDAwMDAwMDAwMDAwMCBCIGkubGx2
-bS43NzEwNjQ1NjQyMDg1NjAyODkxCjAwMDAwMDAwMDAwMDAwMDAgciBfX2tzdHJ0YWJfbHRvX3Rl
-c3RfbWFpbgowMDAwMDAwMDAwMDAwMDBlIHIgX19rc3RydGFibnNfbHRvX3Rlc3RfbWFpbgowMDAw
-MDAwMDAwMDAwMDAwIHIgX19rc3ltdGFiX2x0b190ZXN0X21haW4KMDAwMDAwMDAwMDAwMDA2OCBU
-IGx0b190ZXN0X21haW4KMDAwMDAwMDAwMDAwMDAwMCByIF9ub3RlXzcKICAgICAgICAgICAgICAg
-ICBVIHByaW50awowMDAwMDAwMDAwMDAwMDAwIFIgLnN0ci5sbHZtLjg4NzY1MDMzMjQ4NDUxMjM4
-MAowMDAwMDAwMDAwMDAwMDAwIEQgX190aGlzX21vZHVsZQowMDAwMDAwMDAwMDAwMDYzIHIgX19V
-TklRVUVfSURfZGVwZW5kczI1NAowMDAwMDAwMDAwMDAwMDVhIHIgX19VTklRVUVfSURfaW50cmVl
-MjUzCjAwMDAwMDAwMDAwMDAwNGMgciBfX1VOSVFVRV9JRF9uYW1lMjUyCjAwMDAwMDAwMDAwMDAw
-MDAgciBfX1VOSVFVRV9JRF92ZXJtYWdpYzI1MQoKTW9kdWxlcyBhcmUgcmVsb2NhdGFibGUgb2Jq
-ZWN0cywgbm90IGV4ZWN1dGFibGVzLgpIb3cgY2FuIGNsYW5nIExUTyBrbm93IHVucmVhY2hhYmxl
-IHN5bWJvbHMgYXJlIHJlYWxseQp1bnJlYWNoYWJsZT8KCkFjY29yZGluZyB0byB0aGUgcmVzdWx0
-IGFib3ZlLCBmb28yIGlzIHJlbWFpbmluZy4KClRoZSBiZWhhdmlvciBpcyB0aGUgc2FtZSBmb3Ig
-b2JqLXkgYmVjYXVzZSBMVE8gaXMgcnVuIGFnYWluc3QKdm1saW51eC5vLCB3aGljaCBpcyBhIHJl
-bG9jYXRhYmxlIEVMRi4KClNpZ25lZC1vZmYtYnk6IE1hc2FoaXJvIFlhbWFkYSA8bWFzYWhpcm95
-QGtlcm5lbC5vcmc+Ci0tLQoga2VybmVsL01ha2VmaWxlICAgICAgICB8ICAzICsrKwoga2VybmVs
-L2x0by10ZXN0LWEuYyAgICB8IDIyICsrKysrKysrKysrKysrKysrKysrKysKIGtlcm5lbC9sdG8t
-dGVzdC1hLmggICAgfCAgMyArKysKIGtlcm5lbC9sdG8tdGVzdC1tYWluLmMgfCAxMiArKysrKysr
-KysrKysKIDQgZmlsZXMgY2hhbmdlZCwgNDAgaW5zZXJ0aW9ucygrKQogY3JlYXRlIG1vZGUgMTAw
-NjQ0IGtlcm5lbC9sdG8tdGVzdC1hLmMKIGNyZWF0ZSBtb2RlIDEwMDY0NCBrZXJuZWwvbHRvLXRl
-c3QtYS5oCiBjcmVhdGUgbW9kZSAxMDA2NDQga2VybmVsL2x0by10ZXN0LW1haW4uYwoKZGlmZiAt
-LWdpdCBhL2tlcm5lbC9NYWtlZmlsZSBiL2tlcm5lbC9NYWtlZmlsZQppbmRleCA5YTIwMDE2ZDQ5
-MDAuLjIxMTEyNTFjMjA5MyAxMDA2NDQKLS0tIGEva2VybmVsL01ha2VmaWxlCisrKyBiL2tlcm5l
-bC9NYWtlZmlsZQpAQCAtMTQ3LDMgKzE0Nyw2IEBAICQob2JqKS9raGVhZGVyc19kYXRhLnRhci54
-ejogRk9SQ0UKIAkkKGNhbGwgY21kLGdlbmlraCkKIAogY2xlYW4tZmlsZXMgOj0ga2hlYWRlcnNf
-ZGF0YS50YXIueHoga2hlYWRlcnMubWQ1CisKK29iai1tICs9IGx0by10ZXN0Lm8KK2x0by10ZXN0
-LW9ianMgOj0gbHRvLXRlc3QtYS5vIGx0by10ZXN0LW1haW4ubwpkaWZmIC0tZ2l0IGEva2VybmVs
-L2x0by10ZXN0LWEuYyBiL2tlcm5lbC9sdG8tdGVzdC1hLmMKbmV3IGZpbGUgbW9kZSAxMDA2NDQK
-aW5kZXggMDAwMDAwMDAwMDAwLi4xNWNkYzMyMGVjMWUKLS0tIC9kZXYvbnVsbAorKysgYi9rZXJu
-ZWwvbHRvLXRlc3QtYS5jCkBAIC0wLDAgKzEsMjIgQEAKKyNpbmNsdWRlICJsdG8tdGVzdC1hLmgi
-CisKK3N0YXRpYyBzaWduZWQgaW50IGkgPSAwOworCit2b2lkIGZvbzIodm9pZCkgeworICBpID0g
-LTE7Cit9CisKK3N0YXRpYyBpbnQgZm9vMyh2b2lkKSB7CisgIGZvbzQoKTsKKyAgcmV0dXJuIDEw
-OworfQorCitpbnQgZm9vMSh2b2lkKSB7CisgIGludCBkYXRhID0gMDsKKworICBpZiAoaSA8IDAp
-CisgICAgZGF0YSA9IGZvbzMoKTsKKworICBkYXRhID0gZGF0YSArIDQyOworICByZXR1cm4gZGF0
-YTsKK30KZGlmZiAtLWdpdCBhL2tlcm5lbC9sdG8tdGVzdC1hLmggYi9rZXJuZWwvbHRvLXRlc3Qt
-YS5oCm5ldyBmaWxlIG1vZGUgMTAwNjQ0CmluZGV4IDAwMDAwMDAwMDAwMC4uZmNhNGQxM2E1MmUw
-Ci0tLSAvZGV2L251bGwKKysrIGIva2VybmVsL2x0by10ZXN0LWEuaApAQCAtMCwwICsxLDMgQEAK
-K2V4dGVybiBpbnQgZm9vMSh2b2lkKTsKK2V4dGVybiB2b2lkIGZvbzIodm9pZCk7CitleHRlcm4g
-dm9pZCBmb280KHZvaWQpOwpkaWZmIC0tZ2l0IGEva2VybmVsL2x0by10ZXN0LW1haW4uYyBiL2tl
-cm5lbC9sdG8tdGVzdC1tYWluLmMKbmV3IGZpbGUgbW9kZSAxMDA2NDQKaW5kZXggMDAwMDAwMDAw
-MDAwLi42ZThjYWEyYzc2NjcKLS0tIC9kZXYvbnVsbAorKysgYi9rZXJuZWwvbHRvLXRlc3QtbWFp
-bi5jCkBAIC0wLDAgKzEsMTIgQEAKKyNpbmNsdWRlIDxsaW51eC9tb2R1bGUuaD4KKyNpbmNsdWRl
-IDxsaW51eC9leHBvcnQuaD4KKyNpbmNsdWRlICJsdG8tdGVzdC1hLmgiCisKK3ZvaWQgZm9vNCh2
-b2lkKSB7CisgIHByaW50aygiSGlcbiIpOworfQorCitpbnQgbHRvX3Rlc3RfbWFpbih2b2lkKSB7
-CisgIHJldHVybiBmb28xKCk7Cit9CitFWFBPUlRfU1lNQk9MKGx0b190ZXN0X21haW4pOwotLSAK
-Mi4yNS4xCgo=
---000000000000c3236d05ae9a2200--
+Note: During the compilation these warnings were shown:
+
+kernel/exit.o: warning: objtool: __x64_sys_exit_group()+0x18: unreachable =
+instruction
+arch/x86/kernel/cpu/mce/core.o: warning: objtool: mce_panic()+0x123: unrea=
+chable instruction
+arch/x86/kernel/smpboot.o: warning: objtool: native_play_dead()+0x122: unr=
+eachable instruction
+net/core/skbuff.o: warning: objtool: skb_push.cold()+0x14: unreachable ins=
+truction
+
+John Wood (9):
+  security/fbfam: Add a Kconfig to enable the fbfam feature
+  security/fbfam: Add the api to manage statistics
+  security/fbfam: Use the api to manage statistics
+  security/fbfam: Add a new sysctl to control the crashing rate
+    threshold
+  security/fbfam: Detect a fork brute force attack
+  security/fbfam: Mitigate a fork brute force attack
+  security/fbfam: Add two new prctls to enable and disable the fbfam
+    feature
+  Documentation/security: Add documentation for the fbfam feature
+  MAINTAINERS: Add a new entry for the fbfam feature
+
+ Documentation/security/fbfam.rst | 111 +++++++++++
+ Documentation/security/index.rst |   1 +
+ MAINTAINERS                      |   7 +
+ fs/coredump.c                    |   2 +
+ fs/exec.c                        |   2 +
+ include/fbfam/fbfam.h            |  29 +++
+ include/linux/sched.h            |   4 +
+ include/uapi/linux/prctl.h       |   4 +
+ kernel/exit.c                    |   2 +
+ kernel/fork.c                    |   4 +
+ kernel/sys.c                     |   8 +
+ kernel/sysctl.c                  |   9 +
+ security/Kconfig                 |   1 +
+ security/Makefile                |   4 +
+ security/fbfam/Kconfig           |  10 +
+ security/fbfam/Makefile          |   3 +
+ security/fbfam/fbfam.c           | 329 +++++++++++++++++++++++++++++++
+ security/fbfam/sysctl.c          |  20 ++
+ 18 files changed, 550 insertions(+)
+ create mode 100644 Documentation/security/fbfam.rst
+ create mode 100644 include/fbfam/fbfam.h
+ create mode 100644 security/fbfam/Kconfig
+ create mode 100644 security/fbfam/Makefile
+ create mode 100644 security/fbfam/fbfam.c
+ create mode 100644 security/fbfam/sysctl.c
+
+=2D-
+2.25.1
+
