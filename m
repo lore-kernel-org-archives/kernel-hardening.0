@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Yq23=CP=lists.openwall.com=kernel-hardening-return-19790-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=tyZN=CP=lists.openwall.com=kernel-hardening-return-19791-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,17 +8,17 @@ X-Spam-Status: No, score=-11.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E3537C433E2
-	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 12:17:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B9FAC43461
+	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 14:21:34 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8BE86208B3
-	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 12:17:28 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id EA4B32080A
+	for <kernel-hardening@archiver.kernel.org>; Sun,  6 Sep 2020 14:21:32 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="B+kMDvbl"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8BE86208B3
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="liWD4LF/"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EA4B32080A
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19790-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7621 invoked by uid 550); 6 Sep 2020 12:17:19 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19791-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7614 invoked by uid 550); 6 Sep 2020 14:21:25 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,66 +26,48 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7601 invoked from network); 6 Sep 2020 12:17:19 -0000
+Received: (qmail 7576 invoked from network); 6 Sep 2020 14:21:24 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1599394583;
+	s=badeba3b8450; t=1599402072;
 	bh=fQwrab/3EerbqYpxqZ04WJLrtDjl6Vf1m279QN3M5dY=;
 	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
-	b=B+kMDvblQcck9rRUDTaTgdtvW4iQHy41+nPJXh4ycqmYmxHYApQJkpCoEngQW4/jg
-	 bdyTElk2mt64K0pLmjwWrJuiuxpdE/JMwI996osvzZbLkTVNH/CSqAHNiagkuo/WJz
-	 LlPVdmClYVftqYcWbfaI6Bplj3BDvm/Gq5YmSQ1U=
+	b=liWD4LF/svptUw6dc0UH+eLoWnDa/EU1bN0dylHWxTAhZgqeNC8ymC372rsI8wg5I
+	 1eiec43kK21oSwr+s3bu35ILEPqdjJnggLXqQ/1zKl58zExIdbkUhQOkvqwQuzbD30
+	 7cXAgbUKEFSktob6fSCsQhU9c9VOK5Au51SjmHmg=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
 From: John Wood <john.wood@gmx.com>
 To: Kees Cook <keescook@chromium.org>
 Cc: John Wood <john.wood@gmx.com>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Ingo Molnar <mingo@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Juri Lelli <juri.lelli@redhat.com>,
-	Vincent Guittot <vincent.guittot@linaro.org>,
-	Dietmar Eggemann <dietmar.eggemann@arm.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Ben Segall <bsegall@google.com>,
-	Mel Gorman <mgorman@suse.de>,
-	Luis Chamberlain <mcgrof@kernel.org>,
-	Iurii Zaikin <yzaikin@google.com>,
-	James Morris <jmorris@namei.org>,
-	"Serge E. Hallyn" <serge@hallyn.com>,
-	linux-doc@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
 Subject: [RFC PATCH 0/9] Fork brute force attack mitigation (fbfam)
-Date: Sun,  6 Sep 2020 14:15:35 +0200
-Message-Id: <20200906121544.4204-1-john.wood@gmx.com>
+Date: Sun,  6 Sep 2020 16:20:20 +0200
+Message-Id: <20200906142029.6348-1-john.wood@gmx.com>
 X-Mailer: git-send-email 2.25.1
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:AGT3UJ3W0iU8AA373PKnhI/b31jFD58Olo8G2LzHwLpYviT9FLx
- 0RgaViNVNg4BteZYzjsXQMk3VBOPeIpDWRxF+1N2PIh3CCWUW59L5viHyRqePmpC5ZkpERs
- QmNXUZYIP2vtNsk5d64jtTxcb0SHQAT80pHVRFwBwJ0bcUBGJMMsxjVqwsddQS5nwQOuZEw
- 0eD5AAsrhlvg9PIN0t1iw==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:jBp4vi39wb8=:7s6s8X49DaOj2jSXkNjw0d
- 9cmCDck8v33hk/6Pv4dylLZoIS5tHnZ2DyOFEL2cwaCCVKErOR5PWK3wYQWfe7j0tn5S9bs+C
- gG6TmD3aK1rLEX4KhMnXt+nXfMfnyevRclLf1b3YuKtHvyuaBzZG1Pb0Jbdwh8ncVQi4/DDhL
- rtH6DVQgxMFxoYtYXPmoITibSQwY1S2UvX+fqsOtx6jTynAOeAe5JjvY0zgm6ndxhI8VbWZjI
- jr5GnytI+tJSbrPpB1FyV9bzdikPt1Q6SlfRYReXpPn9c+NghXDd9vb0OHupNkABo+I+P9mAp
- pYTZ2EHtmMiNlaWWIyQkkpomsx5eYo03i/fH8+1MdFF24V6Ygn/44WVNzmKFvTfFyFqzCIlJ0
- HLTTp1pKdCH/l6n4HqapqzwK0zHT8pGp+je7n8VogTtmrRUF2aXTk+zl2rkvJ5S/FO8zdeICa
- 1ypuBMiq36mqQ4MfIExuEvFg+X/9LwO6AVzxFP1MKm/KHpeuvLHIt+y8Y/1X+52BIXqeNOmOd
- J6npkyIV/O8gofrBhw6htAyj83BOGIHJQrN6IOoRW4Re/G/UXj107Y7j0BEL/EKt00e8LHPQW
- Knl2wrc8IB0K2GloDmIqWilHfr5KoNIYCy5F0mg5d06L4IHiVJiNFcSrdLwTLizoHw0crye1r
- DOXakKf0rJOLs4ETcPT9xQz4praSGLlLtFjx+57pheUdxabPOli0eTwgUnqyUiU3g5oNK8xNy
- s9Vz1ywxxRYIWYNnK1ACrzrU+Bda+2imqYNwim2Avm6O+LAAT443pgdNvQuY2k4PKfuGQbQhg
- p/e6yEBAwrv1jq3C4ArKkQn0PqEBRcL6BJTXO8j5ues194JP6AQXOxafLzQy5fwRJe6AP3tDH
- 4nOJa2Ws9A8IgW4P3SSFKXzgyXwHn3NjgRREEqdLDsvh/hl+5Wsvd1HOtyr2b0iVqy9ZE8NFH
- mFSAnqU03JrlpwSUeh8hV+YtqgxKkFktVMYdSzYvVrqrq5PfpuFKjgbwgy4vrLE+yamO/s+H9
- 7UVGl1oTBzRQh/9SIlJtwzSUxJN3x3hmDYGZp5pueUOwbB+SmBNMcNNhxul97U4J1E09TdIXT
- EEkPM4EaidwEtPbq3ZvAJzjbgEsRJzYcTeErLxCJld/JOT9489mnRmsecShbHMBbGfYnh3qjd
- q2WETQ8KKZ3wSXTeB3Nh/yVrJg1J//eZ1LuRLjbAhIGG7jZNv8iDbPURYZzZeMsQoCqg5abJJ
- TP1u+zt7+EdCyG8bE1pV01lprcry3KqdLyQ7ZNA==
+X-Provags-ID: V03:K1:8hr0c8NNY4iA0jFZysYWA+iPVc1BCWQwKHn/HIdKKe2GfR5V72M
+ EZ+MjnfrLih//IlV8gMdRjv//C10uau2ahy+JGPfUH0g4KYfzxIYOfRTnN0HTZeJaPyLsDZ
+ Yf7poGfcgXXnASjlVnLxYAsP1yAL4c+bqXYVdFRfTsLfgW1OIHNmKUIv9mdfb5+k1bP77xz
+ /Z5QrfLrH1pOHCYP1D1tA==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:QYCeYhDc6z4=:BR/kn8rOFhhghxNJ0s0bAj
+ l5B6tcHOgUBQjp251j3KhksMHzxIAdqTjeIhsHwe+raIj1Nhw8gptTMsVowR5+U2WmetFRnWD
+ hyLeoj65vKshz6yOGf8PgZkzXdrsZlS013EUDXdkGMUc6431PCMCmnkrWsov+vRQ3nmgWvUTY
+ 9kykBnYxtsmyAv0r8SoRu11Fbs1BZQvkKJl8v0vmoXhAkTfjkZloc9GAXjWNUJlSYSLGEUkDN
+ AdC417R/i0L32U9mA0hVZIJCjjVV5J7vSzZbVcWQQcF1vLDj8PTytkm3x2SYEQ3HpOpcpVhWn
+ D72hAySscu3rSw2qkEjkPa8YHc9JFPanD6YGaW0M8q15d35t1/mtK2S6tLxIUIOIRqR4wids/
+ mB8fJA6Bo0gXtljRFozRUtZMAJXMxQGOFEf95eFK1HyxePCi2hQ7gQmj57rieEuFvgrbbk3ni
+ ACdgFAGiUGnNHbTDxXdl+54jBXGNOrzWBVkz6Yx26goxlWoNXwNzEGoC3H011NdJ+jRGlW5ie
+ 4Dxl4F5kR4ar+F5WAthZGAmwVJkyggbGYX5uKamwjsZkL5/wdJVoGEYJ7JteVYf7bDezUhpOT
+ JdyitmqfAvLB3laOuUXCtfWRyBQUifTgrrReAnqyPvF+apO5m76osKGtgNJz16g9PV7VLiO1s
+ kJzmRHxFRu1oHGSKy4VxDRzqZ1qbOyalZN5k4NqM+oH5d904lmFPZJedlwpEmkWxLAT2Fby3z
+ heclPZSZdeVc/iXL835D+e8DqsMt6RiIT/cCzGsXFuo17J1Lib/ea1eXK/k+0BSxEoeRD1b/3
+ Kgn68rkHxGBDspingx/PaWtWJ2iLl6TPtRk5d8pXRC9uabsuUIMD+aX9hKZm3VOpVTi1CTyt4
+ Luj5AoUBrdYD5PvmTIfbgKNkMeEejxsNyv6SmHl3+/S20LVfvpkcLN2dMVhRxTe54CPCzpSPa
+ mA1eWnIjMzbfwfY0humPBmOdEr2WRBnUAl8GuHmzM2Z/rKmaZLoAiho0Mp3Q5I6ySsGGiTgXj
+ yfV+CyROKzE+mHmfoPbK6Dbg1HCtv1P/YT6D3drwtbXMv8aZ7FIRmtP/aQPbyHKUgZ7h+2YcW
+ 6Mh7E122INz236LdG6SoDq3inhedkBXkewgOadTzfsZ5kn2ye2FR/9HVzKmmeZTmjbbkKRo50
+ f4bQ9W+FAHDDqdiJgqDQiiQekpc0GMiql5Kd8srOs0Wz2XFAb1SzwtxGxtPNOtw3qCMUiiTPr
+ 6/zpzegy0PIXROVRMoBGkYxjnDbfNZ2w6IQbjTw==
 
 The goal of this patch serie is to detect and mitigate a fork brute force
 attack.
