@@ -1,22 +1,23 @@
-Return-Path: <SRS0=vZR5=CQ=lists.openwall.com=kernel-hardening-return-19797-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=4xOh=CQ=lists.openwall.com=kernel-hardening-return-19798-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8DDA6C433E2
-	for <kernel-hardening@archiver.kernel.org>; Mon,  7 Sep 2020 15:31:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CD2AEC433E2
+	for <kernel-hardening@archiver.kernel.org>; Mon,  7 Sep 2020 20:24:01 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 993F62065E
-	for <kernel-hardening@archiver.kernel.org>; Mon,  7 Sep 2020 15:31:17 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A0F93215A4
+	for <kernel-hardening@archiver.kernel.org>; Mon,  7 Sep 2020 20:24:00 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=nifty.com header.i=@nifty.com header.b="Yna4t3lc"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 993F62065E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19797-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21622 invoked by uid 550); 7 Sep 2020 15:31:11 -0000
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="Vf9HxRnj"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A0F93215A4
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19798-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9320 invoked by uid 550); 7 Sep 2020 20:23:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,210 +25,78 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21581 invoked from network); 7 Sep 2020 15:31:09 -0000
-DKIM-Filter: OpenDKIM Filter v2.10.3 conssluserg-05.nifty.com 087FUq8K012338
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=nifty.com;
-	s=dec2015msa; t=1599492652;
-	bh=LaAhPv7xf0fzyzAeNRC0oSM953AkWxA0K40O3j1oCJU=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=Yna4t3lcBn3ihm+SsMQJlSW4XLVip7NZS99xKV6wjegTr21Y5C+6/U7bVUwTlcnB3
-	 dAmf1vUY7jje4VMpEF5B9l3HdyZldxrn5AXwW+dJOhdygQuD1gpo1B7WlJLi4042rB
-	 wpL8A6q4haTi7v3IdY0Yz7k421Qa5DJ7HjSymgZP9UOkdS5L+VUN1HdPhWxO0fbpqq
-	 sqd7DXuvbF/TUg/5jmbJC5BH0SP6sb2Rjrmz2EPA8uMz+CX6itEvKBHdMkyZwmZ2lm
-	 UGnHdDg5OmpNRGnyEq7vt5ZnO4AVkuczrZKm7pug4SY+XcKT7YxjN66TWcAmcWHrm9
-	 GYuGjQJXsXUnw==
-X-Nifty-SrcIP: [209.85.216.46]
-X-Gm-Message-State: AOAM532nqTPadnxInhEwvB9Wy5L2fo043VNKtO+epVrQ5vKAvwL8/ogF
-	OHqFC+rLk5tAdfiqILV+3kMfZsieKvUtQFwYUT0=
-X-Google-Smtp-Source: ABdhPJyEfw+RTulZSFTnkTeBt2WLDcgnnJBCvvqMaD56gohQ35yMLXLHW+vK/ERS8QsJRkz5skzAxWakdk+WfgH2rog=
-X-Received: by 2002:a17:90b:208:: with SMTP id fy8mr4808973pjb.153.1599492651374;
- Mon, 07 Sep 2020 08:30:51 -0700 (PDT)
+Received: (qmail 26289 invoked from network); 7 Sep 2020 18:07:58 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1599502059;
+	bh=7zF5NpWcH8s21/87X/Ym+6fJSfQf2cvf0ytrQcgPlcY=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=Vf9HxRnjoi1CmjydjRcaBBL0vJheixiX9wqMHcDv4UuoZZOhsfNALRandZGDQgAd1
+	 kEbHGY2J98vTCwAl/Uj/kFGRFwj8h+KcFKNXR/Md6o1otMOlS4N73YyAYMWmZTqVBa
+	 pWARMSNopZ0y6w89mW0AfaKTCaA/xd/fDCtExbcs=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Mon, 7 Sep 2020 20:07:26 +0200
+From: John Wood <john.wood@gmx.com>
+To: Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>
+Cc: kernel-hardening@lists.openwall.com, John Wood <john.wood@gmx.com>
+Subject: Re: [RFC PATCH 0/9] Fork brute force attack mitigation (fbfam)
+Message-ID: <20200907180726.GA3243@ubuntu>
+References: <20200906142029.6348-1-john.wood@gmx.com>
+ <202009061323.75C4EC509F@keescook>
 MIME-Version: 1.0
-References: <20200624203200.78870-1-samitolvanen@google.com>
- <20200903203053.3411268-1-samitolvanen@google.com> <20200903203053.3411268-10-samitolvanen@google.com>
-In-Reply-To: <20200903203053.3411268-10-samitolvanen@google.com>
-From: Masahiro Yamada <masahiroy@kernel.org>
-Date: Tue, 8 Sep 2020 00:30:14 +0900
-X-Gmail-Original-Message-ID: <CAK7LNAR7SbBPz06s5Gf2d+zry+Px1=jcUrC9c=_zQiCJLttY3A@mail.gmail.com>
-Message-ID: <CAK7LNAR7SbBPz06s5Gf2d+zry+Px1=jcUrC9c=_zQiCJLttY3A@mail.gmail.com>
-Subject: Re: [PATCH v2 09/28] kbuild: add support for Clang LTO
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Will Deacon <will@kernel.org>, Peter Zijlstra <peterz@infradead.org>,
-        Steven Rostedt <rostedt@goodmis.org>,
-        Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-        "Paul E. McKenney" <paulmck@kernel.org>,
-        Kees Cook <keescook@chromium.org>,
-        Nick Desaulniers <ndesaulniers@google.com>,
-        clang-built-linux <clang-built-linux@googlegroups.com>,
-        Kernel Hardening <kernel-hardening@lists.openwall.com>,
-        linux-arch <linux-arch@vger.kernel.org>,
-        linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
-        Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
-        Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-        linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <202009061323.75C4EC509F@keescook>
+X-Provags-ID: V03:K1:r20XgpBZGGlIYes1JuwUvIHb52ySfa/yF/3UAxfqvL2afg8psFP
+ Q2mdi/dIifErvkekdX/r27PqHn9vVWRRZqvHeD+kZ6QQPpOdjXgYxO4rfDIrruhxCPxGqUC
+ FgR3vavJSJD+kjPayfRt4xpjr31ih/1SpW2einud3Vg9dxK2M7JkWjjc9nhSPgGnjsY3S8Y
+ AF7vKqLeCowcMlJIgP7bQ==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:mY5cKOoYAE4=:3EtrUYuFG0mSVvaFhHLttC
+ OxzNV6qBxB6rQMqNvU7YcfTXIxRVpjLHqu9VS/59HfV92/RoLI7LtPrl/DDtpb3Nc99zkCT0Z
+ cmJ22c3gAOKFm3+tU4YyZqMUGa5HtCWuwL9F09d3t43r4oIdXD+j+KIAmYZBq+pgxmHiB/dT9
+ y8joW4JfRfLqiOdh2OixoZdGdJpx4RG04WiGAkjBnbOGGgdXIJQcCIIN+Wz6wYg2l3VLThkjY
+ pj8/gq/VZibPNtaO9/rdg6oep3nHBzAfrDJoeGJaeEqT/ZiI3kEU3HQVhf/PdRZw0va0slrMx
+ iZNhGYxTfF1Z43Z8LTPgQFSU8EMZ4SkiOd/twmFmClKe3Hixu51vVz9yBUh1EyUcvgzb1K2Ab
+ PmsiwLxoSmoH381aBOpAbqjndRhwW4eMxMJaVmxXWC+VX8VwQyLI4wELvolJLpRdwiIYCajG2
+ eebV62XPDSQg3gpngCvlS8E+GfKE6YioxWz4ScPv8BgFUdigx64+0sENH34Vc4GmJccQmqJDH
+ NZG2M9N0ja0ikRvBPeGWQtLR4UYavCPfRk8CKZAcahIDxAcX54pIjmfPJJ4PVAblkcvQK46uO
+ Ru1q2Y/RVTw9iP5u4nbocaNGdcnAK6KM/8yhpe8wrhrqeTIdi1U4gk5pkA+JYIkcXDbHFf77F
+ jFh4uPshXB1iGQFWcpRj/rUX2NSNQt45qA4oiVb7J63IodkmCb1H6WYt8haHEiGv/yqtIoWV+
+ OZ2UUp7UrqnO0TF6gGILSh9+XrT1yuUUXv9AoB6k7Wp05gvheuQY9C4S1BTeCoO1gEOLogl5M
+ 4cqCWzoydMWvwe6wtieju+2FPxvr6Ac/4YTMM8itvRRdeGQ96hAEotvCawGZcUG2qVAzQIYcu
+ rZ6dZY20xew/72bahztc11MdcfoBAtl4LmBpan6MVolTbu/VcTeaQu2nWBw1MarR7BNcdqopW
+ totm52hwdUhIoyMp7oAw86L9gAHIZ9uzJo6KOVIO3AQcaUQDhk6VrywxpSUkAuJM/5oqKXjt/
+ UuUyf3skbmst/dVCOUOIFtLXkIuUt+pW/STcU93K3FoGevdTDJC8I1uyxPI5XiPYEvZD6abgd
+ EYAQRVuC4Rf9gYeEuegpicsFJQS4L26ESSnVknis8eZID27j80f6EoUz61MR3WwZUAhuJhYf9
+ RiPkTIFECkZSrpSHGWRLjFR4bP0HsQj66mIbCFcmdvEo9K6zus7oUlOffBdyggcBtI90KM4hK
+ 0B4xKeNcYjyn03xheJeWswxHuwS6pvkzPOds3Uw==
+Content-Transfer-Encoding: quoted-printable
 
-On Fri, Sep 4, 2020 at 5:31 AM Sami Tolvanen <samitolvanen@google.com> wrote:
->
-> This change adds build system support for Clang's Link Time
-> Optimization (LTO). With -flto, instead of ELF object files, Clang
-> produces LLVM bitcode, which is compiled into native code at link
-> time, allowing the final binary to be optimized globally. For more
-> details, see:
->
->   https://llvm.org/docs/LinkTimeOptimization.html
->
-> The Kconfig option CONFIG_LTO_CLANG is implemented as a choice,
-> which defaults to LTO being disabled. To use LTO, the architecture
-> must select ARCH_SUPPORTS_LTO_CLANG and support:
->
->   - compiling with Clang,
->   - compiling inline assembly with Clang's integrated assembler,
->   - and linking with LLD.
->
-> While using full LTO results in the best runtime performance, the
-> compilation is not scalable in time or memory. CONFIG_THINLTO
-> enables ThinLTO, which allows parallel optimization and faster
-> incremental builds. ThinLTO is used by default if the architecture
-> also selects ARCH_SUPPORTS_THINLTO:
->
->   https://clang.llvm.org/docs/ThinLTO.html
->
-> To enable LTO, LLVM tools must be used to handle bitcode files. The
-> easiest way is to pass the LLVM=1 option to make:
->
->   $ make LLVM=1 defconfig
->   $ scripts/config -e LTO_CLANG
->   $ make LLVM=1
->
-> Alternatively, at least the following LLVM tools must be used:
->
->   CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm
->
-> To prepare for LTO support with other compilers, common parts are
-> gated behind the CONFIG_LTO option, and LTO can be disabled for
-> specific files by filtering out CC_FLAGS_LTO.
->
-> Note that support for DYNAMIC_FTRACE and MODVERSIONS are added in
-> follow-up patches.
->
-> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-> ---
->  Makefile                          | 18 +++++++-
->  arch/Kconfig                      | 68 +++++++++++++++++++++++++++++++
->  include/asm-generic/vmlinux.lds.h | 11 +++--
->  scripts/Makefile.build            |  9 +++-
->  scripts/Makefile.modfinal         |  9 +++-
->  scripts/Makefile.modpost          | 24 ++++++++++-
->  scripts/link-vmlinux.sh           | 32 +++++++++++----
->  7 files changed, 154 insertions(+), 17 deletions(-)
+Hi,
 
-
-
->  #define TEXT_MAIN .text
-> diff --git a/scripts/Makefile.build b/scripts/Makefile.build
-> index 6ecf30c70ced..a5f4b5d407e6 100644
-> --- a/scripts/Makefile.build
-> +++ b/scripts/Makefile.build
-> @@ -111,7 +111,7 @@ endif
->  # ---------------------------------------------------------------------------
+On Sun, Sep 06, 2020 at 01:25:47PM -0700, Kees Cook wrote:
+> On Sun, Sep 06, 2020 at 04:20:20PM +0200, John Wood wrote:
+> > The goal of this patch serie is to detect and mitigate a fork brute fo=
+rce
+> > attack.
 >
->  quiet_cmd_cc_s_c = CC $(quiet_modtag)  $@
-> -      cmd_cc_s_c = $(CC) $(filter-out $(DEBUG_CFLAGS), $(c_flags)) $(DISABLE_LTO) -fverbose-asm -S -o $@ $<
-> +      cmd_cc_s_c = $(CC) $(filter-out $(DEBUG_CFLAGS) $(CC_FLAGS_LTO), $(c_flags)) -fverbose-asm -S -o $@ $<
+> I look forward to reviewing it on the list! :) In the meantime, you
+> could try adding this series as a branch on github (or whatever git
+> host) tree you have access to. That would allow contextual commenting
+> there too, if email continues to be a blocker.
+
+I've added this series as a branch on github. The branch's name is "fbfam"=
+.
+
+https://github.com/johwood/linux
+
+I hope this can allow a first review until Matthew send the series to the
+mailing list and I resolve the problems with my email account.
+Apologies.
+
 >
->  $(obj)/%.s: $(src)/%.c FORCE
->         $(call if_changed_dep,cc_s_c)
-> @@ -428,8 +428,15 @@ $(obj)/lib.a: $(lib-y) FORCE
->  # Do not replace $(filter %.o,^) with $(real-prereqs). When a single object
->  # module is turned into a multi object module, $^ will contain header file
->  # dependencies recorded in the .*.cmd file.
-> +ifdef CONFIG_LTO_CLANG
-> +quiet_cmd_link_multi-m = AR [M]  $@
-> +cmd_link_multi-m =                                             \
-> +       rm -f $@;                                               \
-> +       $(AR) rcsTP$(KBUILD_ARFLAGS) $@ $(filter %.o,$^)
+> --
+> Kees Cook
 
+Regards
+John Wood
 
-KBUILD_ARFLAGS no longer exists in the mainline.
-(commit 13dc8c029cabf52ba95f60c56eb104d4d95d5889)
-
-
-
-
-> +else
->  quiet_cmd_link_multi-m = LD [M]  $@
->        cmd_link_multi-m = $(LD) $(ld_flags) -r -o $@ $(filter %.o,$^)
-> +endif
->
->  $(multi-used-m): FORCE
->         $(call if_changed,link_multi-m)
-> diff --git a/scripts/Makefile.modfinal b/scripts/Makefile.modfinal
-> index 411c1e600e7d..1005b147abd0 100644
-> --- a/scripts/Makefile.modfinal
-> +++ b/scripts/Makefile.modfinal
-> @@ -6,6 +6,7 @@
->  PHONY := __modfinal
->  __modfinal:
->
-> +include $(objtree)/include/config/auto.conf
->  include $(srctree)/scripts/Kbuild.include
->
->  # for c_flags
-> @@ -29,6 +30,12 @@ quiet_cmd_cc_o_c = CC [M]  $@
->
->  ARCH_POSTLINK := $(wildcard $(srctree)/arch/$(SRCARCH)/Makefile.postlink)
->
-> +ifdef CONFIG_LTO_CLANG
-> +# With CONFIG_LTO_CLANG, reuse the object file we compiled for modpost to
-> +# avoid a second slow LTO link
-> +prelink-ext := .lto
-> +endif
-> +
->  quiet_cmd_ld_ko_o = LD [M]  $@
->        cmd_ld_ko_o =                                                     \
->         $(LD) -r $(KBUILD_LDFLAGS)                                      \
-> @@ -37,7 +44,7 @@ quiet_cmd_ld_ko_o = LD [M]  $@
->                 -o $@ $(filter %.o, $^);                                \
->         $(if $(ARCH_POSTLINK), $(MAKE) -f $(ARCH_POSTLINK) $@, true)
->
-> -$(modules): %.ko: %.o %.mod.o $(KBUILD_LDS_MODULE) FORCE
-> +$(modules): %.ko: %$(prelink-ext).o %.mod.o $(KBUILD_LDS_MODULE) FORCE
->         +$(call if_changed,ld_ko_o)
->
->  targets += $(modules) $(modules:.ko=.mod.o)
-> diff --git a/scripts/Makefile.modpost b/scripts/Makefile.modpost
-> index f54b6ac37ac2..a70f1f7da6aa 100644
-> --- a/scripts/Makefile.modpost
-> +++ b/scripts/Makefile.modpost
-> @@ -102,12 +102,32 @@ $(input-symdump):
->         @echo >&2 'WARNING: Symbol version dump "$@" is missing.'
->         @echo >&2 '         Modules may not have dependencies or modversions.'
->
-> +ifdef CONFIG_LTO_CLANG
-> +# With CONFIG_LTO_CLANG, .o files might be LLVM bitcode,
-
-or, .o files might be even thin archives.
-
-For example,
-
-$ file net/ipv6/netfilter/nf_defrag_ipv6.o
-net/ipv6/netfilter/nf_defrag_ipv6.o: thin archive with 6 symbol entries
-
-
-Now we have 3 possibilities for .o files:
-
-  - ELF  (real .o)
-  - LLVM bitcode (.bc)
-  - Thin archive (.a)
-
-
-Let me discuss how to proceed with this...
-
-
-
-
-
---
-Best Regards
-Masahiro Yamada
