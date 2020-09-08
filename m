@@ -1,4 +1,4 @@
-Return-Path: <SRS0=eGka=CR=lists.openwall.com=kernel-hardening-return-19828-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=YlhT=CR=lists.openwall.com=kernel-hardening-return-19829-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-14.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 703CEC433E2
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 21:23:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1C124C433E2
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 23:29:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AC9772145D
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 21:23:28 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 4F36A2080C
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 23:29:02 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="W3Pr3Jck"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AC9772145D
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="E/YiH9PD"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F36A2080C
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19828-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17708 invoked by uid 550); 8 Sep 2020 21:23:22 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19829-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3124 invoked by uid 550); 8 Sep 2020 23:28:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,35 +25,35 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17674 invoked from network); 8 Sep 2020 21:23:22 -0000
+Received: (qmail 3092 invoked from network); 8 Sep 2020 23:28:55 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=ih6QbdC2BlMXbYNA/XrG1Rz+rSEU4l2iSukj1ZYcfcE=;
-        b=W3Pr3JckrBkhsvVBPRqyalyPCHmDdjwsO8lMz82fl3992mSkJBCa/ynKYFlOpa29KS
-         YrQvjiSk8Gsj+2F0XyIFg6bT/TX3bdtqIzg+X9zApTyghMxBvgeVK7VjGnj0Xvez1x1T
-         vtDDvMHWVF2Q9VElpy4Et4CUBV2fAGlDpuHSIHxSfO2vTMGl2CEODJDA3aVOsYuSr2rb
-         54oZUVIzZ6F0vJ0E2vHEj9aGY9uEozAJoPE35B9/ZkY30GF+FwBSaPHMJZxUW1Gwmrih
-         hraJxCrNOD15xVsyVUJ11S0Z4yNK+aS0/3uKyQbwkUQtxQoq+M+Ub2vQlfRLbEhbUoo0
-         TnTQ==
+        bh=jUriBxBgOoiBsn5aO7jNWcqqf+vaiVxUYWRnLqNR1jM=;
+        b=E/YiH9PD3ihV0IVAR5rz+kH+b53wXLSIKmpoiOzCUGIjKpPkUvepTJzZ9+NUfPet6f
+         GjaxzmgrBjNjqjo0f2ixc8d1ESWRgiXmk3RC5UCTuoEZePHlVeleHkJJVCXbHB4Iy0lP
+         zLqt5AipHKpsckEr1GfvlWy6tszT/wsVnsbnykJcDboXcXvM/ADW0EnFJR3kQ6JqRDJF
+         dSHe06Qm/HcGK8ogoctsoW5WtSXiP+swQULLf66N1XBjDhEHsTBRP9zhxOTsHLpYe4Th
+         9lAz0y/0D5FyUST+gVXhf1nWDMBty0024ty3DlA3ziBDE0uWDvAZu1LLk2dJzbpawFdm
+         KS8Q==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=ih6QbdC2BlMXbYNA/XrG1Rz+rSEU4l2iSukj1ZYcfcE=;
-        b=X8qKzqb5Fzmk7Cvpoqm8wtQ0erDJGCLH+47UiO8zrVkbdkPfYk67ikNc8ci/n2+Sy1
-         Zf1zAlAimTATuZqHqQHm9sYIwLtwuSp7VrHAM3LaVsMc3bjwsHrOOZgRyHDxBljKp2aY
-         KL4ZDIkDsS3atF0/ZH/Q0IJDPpXuv4U3duhqPttiemdhBilq+KmnMKNuH9IKf+mtYQ9V
-         5XUcNiZEopjNv7vd/WEXPkPveu4LcALcDOVkCTL7JcUx23GGOxgTFwBy1wZQ8PJsU+MD
-         WRHp3fNaCv7JeYK8a/mzG/EArDhSTvPNsONbVfe6bYoDGwpIC8hLY58KQfV9xF7esSRC
-         rv1g==
-X-Gm-Message-State: AOAM531GzZnP87NEXaz7Px1DFrhBoOTcKbwVg7QWH/rjrTFrxpFfmLGc
-	HhLfR0thdG4MiTrZwBvqJd7Jqg==
-X-Google-Smtp-Source: ABdhPJxZtQ6suAAYIvComwJnL/d5p58yR7wkXLgcU+gM/W/qIhxDDa8Jsi9la7BgYDO45OUXHd5G6Q==
-X-Received: by 2002:a05:6a00:1356:b029:13e:d13d:a084 with SMTP id k22-20020a056a001356b029013ed13da084mr947839pfu.27.1599600189879;
-        Tue, 08 Sep 2020 14:23:09 -0700 (PDT)
-Date: Tue, 8 Sep 2020 14:23:02 -0700
+        bh=jUriBxBgOoiBsn5aO7jNWcqqf+vaiVxUYWRnLqNR1jM=;
+        b=kAgI6u1wP6Kz03BwYZnSC/N9RBiZ+0tjZPmLoBr6XoMWN1W7LGz1dfccUIku7+7Lip
+         SVN+NPa97UIPyL3HQuqpUVytVhG5zN8opEJQDCS2PHiBVPxU4/7YPEQlAvB3/GZNKwHB
+         422vmfic4SA4wW+2Ij/bH3Hq06oM3nsAKLbSQSAVPBe2kNJV8QxCq+QNnRBoIG/gFIvr
+         h1s4nDcSj6ERdNEBEvnyeaZKrZ6n6KTKZA1kdBmY9HKFPARoLQFWpM2OXfpvpzM5tOiD
+         PmfaDOL+Ix3TmqypqJ8qXxlIpLdxgArZs5GS+W36G4Ipa+Qhu+NaSQmJPvRBmT+bi/vM
+         tGBg==
+X-Gm-Message-State: AOAM5329/dOd1ebXTfDCtq5DiFqGRPrpIupx5pc7hCe1erz89jTsJyz5
+	UphKhTSG5PsLK8yV05VxSyq08A==
+X-Google-Smtp-Source: ABdhPJxtrczatAsJe/2asERi0zZusFb9ssrn7lKjqOGwCxb8YO5oCcKiBSLXYms184w0IymH7gdSoA==
+X-Received: by 2002:a17:902:b108:b029:d0:cbe1:e770 with SMTP id q8-20020a170902b108b02900d0cbe1e770mr1342847plr.23.1599607722874;
+        Tue, 08 Sep 2020 16:28:42 -0700 (PDT)
+Date: Tue, 8 Sep 2020 16:28:35 -0700
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Kees Cook <keescook@chromium.org>
 Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
@@ -67,28 +67,39 @@ Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
 	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
 	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
 	x86@kernel.org
-Subject: Re: [PATCH v2 22/28] arm64: export CC_USING_PATCHABLE_FUNCTION_ENTRY
-Message-ID: <20200908212302.GD1060586@google.com>
+Subject: Re: [PATCH v2 27/28] x86, relocs: Ignore L4_PAGE_OFFSET relocations
+Message-ID: <20200908232835.GE1060586@google.com>
 References: <20200624203200.78870-1-samitolvanen@google.com>
  <20200903203053.3411268-1-samitolvanen@google.com>
- <20200903203053.3411268-23-samitolvanen@google.com>
- <202009031544.D66F02D407@keescook>
+ <20200903203053.3411268-28-samitolvanen@google.com>
+ <202009031546.4854633F7@keescook>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <202009031544.D66F02D407@keescook>
+In-Reply-To: <202009031546.4854633F7@keescook>
 
-On Thu, Sep 03, 2020 at 03:44:18PM -0700, Kees Cook wrote:
-> On Thu, Sep 03, 2020 at 01:30:47PM -0700, Sami Tolvanen wrote:
-> > Since arm64 does not use -pg in CC_FLAGS_FTRACE with
-> > DYNAMIC_FTRACE_WITH_REGS, skip running recordmcount by
-> > exporting CC_USING_PATCHABLE_FUNCTION_ENTRY.
+On Thu, Sep 03, 2020 at 03:47:32PM -0700, Kees Cook wrote:
+> On Thu, Sep 03, 2020 at 01:30:52PM -0700, Sami Tolvanen wrote:
+> > L4_PAGE_OFFSET is a constant value, so don't warn about absolute
+> > relocations.
 > > 
 > > Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 > 
-> How stand-alone is this? Does it depend on the earlier mcount fixes?
+> Any other details on this? I assume this is an ld.lld-ism. Any idea why
+> this is only a problem under LTO? (Or is this an LLVM integrated
+> assembler-ism?) Regardless, yes, let's nail it down:
 
-It does, because exporting CC_USING_PATCHABLE_FUNCTION_ENTRY doesn't
-change anything without the earlier mcount changes.
+With the LTO v1 series, LLD generated this relocation somewhere in the
+.init.data section, but only with LTO:
+
+  $ arch/x86/tools/relocs --abs-relocs vmlinux
+  WARNING: Absolute relocations present
+  Offset     Info     Type     Sym.Value Sym.Name
+  ffffffff828e7fe0 0000000100000001 R_X86_64_64 0000000000000111
+  L4_PAGE_OFFSET
+
+It actually looks like this might not be a problem anymore with the
+current ToT kernel and the v2 series, but I'll do some more testing to
+confirm this and drop the patch from v3 if it's no longer needed.
 
 Sami
