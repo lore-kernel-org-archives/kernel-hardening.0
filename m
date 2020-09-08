@@ -1,21 +1,23 @@
-Return-Path: <SRS0=X7sj=CR=lists.openwall.com=kernel-hardening-return-19802-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=4MXA=CR=lists.openwall.com=kernel-hardening-return-19803-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.3 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_2 autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 69F59C2BBD0
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 08:00:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A9EA3C43461
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 12:29:26 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 59B6C2067C
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 08:00:50 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 59B6C2067C
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19802-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5502 invoked by uid 550); 8 Sep 2020 08:00:24 -0000
+	by mail.kernel.org (Postfix) with SMTP id C31862074D
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 12:29:24 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=ibm.com header.i=@ibm.com header.b="V9k77lhW"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C31862074D
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19803-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 6087 invoked by uid 550); 8 Sep 2020 12:29:17 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,559 +25,154 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5435 invoked from network); 8 Sep 2020 08:00:23 -0000
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-To: linux-kernel@vger.kernel.org
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
-	Aleksa Sarai <cyphar@cyphar.com>,
-	Alexei Starovoitov <ast@kernel.org>,
-	Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@kernel.org>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christian Heimes <christian@python.org>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	Eric Chiang <ericchiang@google.com>,
-	Florian Weimer <fweimer@redhat.com>,
-	James Morris <jmorris@namei.org>,
-	Jan Kara <jack@suse.cz>,
-	Jann Horn <jannh@google.com>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Kees Cook <keescook@chromium.org>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,
-	Matthew Wilcox <willy@infradead.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	Miklos Szeredi <mszeredi@redhat.com>,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	=?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Sean Christopherson <sean.j.christopherson@intel.com>,
-	Shuah Khan <shuah@kernel.org>,
-	Steve Dower <steve.dower@python.org>,
-	Steve Grubb <sgrubb@redhat.com>,
-	Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
-	Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com,
-	linux-api@vger.kernel.org,
-	linux-integrity@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Subject: [RFC PATCH v8 3/3] selftest/interpreter: Add tests for AT_INTERPRETED enforcing
-Date: Tue,  8 Sep 2020 09:59:56 +0200
-Message-Id: <20200908075956.1069018-4-mic@digikod.net>
-X-Mailer: git-send-email 2.28.0
-In-Reply-To: <20200908075956.1069018-1-mic@digikod.net>
+Received: (qmail 6067 invoked from network); 8 Sep 2020 12:29:16 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : subject :
+ from : to : cc : date : in-reply-to : references : content-type :
+ mime-version : content-transfer-encoding; s=pp1;
+ bh=b2FT1Yp+l4dJYunaB80AnvbJt6l0uG5k65Skbsx6Sy8=;
+ b=V9k77lhW3sb6csdZNpxIl9910mTpoiRoDp3MkEyld/e3fD02yY3g7sxiHE6/gzqLADC+
+ Si+yZmClFZwJQqQNCKq8JAMFBokvbdMnISuehKADurb/l9JjG94mxWNvh0lDzzMq8fW+
+ JLi4sbfAZz2qrDBW5U6Gclc/S0gRO4fiMBzMnLwsvMlMmo2G1vnFQcvUsTZse81XFv5O
+ 6eE0LjwIorjL7Zh62uo3d1btbdUld6I9gjsYhoYG3YI30Hwh49T8NUm5rJ0XmZLmUBuz
+ 5o7sB+/BBWEkHSJckKhWArL2nAqAnhKE6eLI9vE+A18yXbXhYeJp7sLz3ZdKQZCyZTyR Ag== 
+Message-ID: <d216615b48c093ebe9349a9dab3830b646575391.camel@linux.ibm.com>
+Subject: Re: [RFC PATCH v8 1/3] fs: Introduce AT_INTERPRETED flag for
+ faccessat2(2)
+From: Mimi Zohar <zohar@linux.ibm.com>
+To: =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>,
+        linux-kernel@vger.kernel.org
+Cc: Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
+        Al Viro <viro@zeniv.linux.org.uk>,
+        Andrew Morton
+ <akpm@linux-foundation.org>,
+        Andy Lutomirski <luto@kernel.org>,
+        Christian
+ Brauner <christian.brauner@ubuntu.com>,
+        Christian Heimes
+ <christian@python.org>,
+        Daniel Borkmann <daniel@iogearbox.net>,
+        Deven
+ Bowers <deven.desai@linux.microsoft.com>,
+        Dmitry Vyukov
+ <dvyukov@google.com>,
+        Eric Biggers <ebiggers@kernel.org>,
+        Eric Chiang
+ <ericchiang@google.com>,
+        Florian Weimer <fweimer@redhat.com>, James Morris
+ <jmorris@namei.org>,
+        Jan Kara <jack@suse.cz>, Jann Horn
+ <jannh@google.com>,
+        Jonathan Corbet <corbet@lwn.net>, Kees Cook
+ <keescook@chromium.org>,
+        Lakshmi Ramasubramanian
+ <nramas@linux.microsoft.com>,
+        Matthew Garrett <mjg59@google.com>,
+        Matthew
+ Wilcox <willy@infradead.org>,
+        Michael Kerrisk <mtk.manpages@gmail.com>,
+        Miklos Szeredi <mszeredi@redhat.com>,
+        Philippe =?ISO-8859-1?Q?Tr=E9buchet?=
+ <philippe.trebuchet@ssi.gouv.fr>,
+        Scott Shell <scottsh@microsoft.com>,
+        Sean
+ Christopherson <sean.j.christopherson@intel.com>,
+        Shuah Khan
+ <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+        Steve Grubb
+ <sgrubb@redhat.com>,
+        Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
+        Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
+        Vincent Strubel
+ <vincent.strubel@ssi.gouv.fr>,
+        kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+        linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
+        linux-fsdevel@vger.kernel.org,
+        Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+        =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>,
+        Stephen
+ Smalley <stephen.smalley.work@gmail.com>,
+        John Johansen
+ <john.johansen@canonical.com>
+Date: Tue, 08 Sep 2020 08:28:15 -0400
+In-Reply-To: <20200908075956.1069018-2-mic@digikod.net>
 References: <20200908075956.1069018-1-mic@digikod.net>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
+	 <20200908075956.1069018-2-mic@digikod.net>
+Content-Type: text/plain; charset="ISO-8859-15"
+X-Mailer: Evolution 3.28.5 (3.28.5-12.el8) 
+Mime-Version: 1.0
 Content-Transfer-Encoding: 8bit
+X-TM-AS-GCONF: 00
+X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:6.0.235,18.0.687
+ definitions=2020-09-08_06:2020-09-08,2020-09-08 signatures=0
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 bulkscore=0 mlxscore=0
+ adultscore=0 priorityscore=1501 suspectscore=0 clxscore=1011
+ impostorscore=0 malwarescore=0 phishscore=0 mlxlogscore=725
+ lowpriorityscore=0 spamscore=0 classifier=spam adjust=0 reason=mlx
+ scancount=1 engine=8.12.0-2006250000 definitions=main-2009080108
 
-From: Mickaël Salaün <mic@linux.microsoft.com>
+Hi Mickael,
 
-Test that checks performed by faccessat2(2) with AT_INTERPRETED on file
-path and file descriptors are consistent with noexec mount points and
-file execute permissions, according to the policy configured with the
-fs.interpreted_access sysctl.
+On Tue, 2020-09-08 at 09:59 +0200, Micka�l Sala�n wrote:
+> diff --git a/fs/open.c b/fs/open.c
+> index 9af548fb841b..879bdfbdc6fa 100644
+> --- a/fs/open.c
+> +++ b/fs/open.c
+> @@ -405,9 +405,13 @@ static long do_faccessat(int dfd, const char __user *filename, int mode, int fla
+>  	if (mode & ~S_IRWXO)	/* where's F_OK, X_OK, W_OK, R_OK? */
+>  		return -EINVAL;
+>  
+> -	if (flags & ~(AT_EACCESS | AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH))
+> +	if (flags & ~(AT_EACCESS | AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH |
+> +				AT_INTERPRETED))
+>  		return -EINVAL;
+>  
+> +	/* Only allows X_OK with AT_INTERPRETED for now. */
+> +	if ((flags & AT_INTERPRETED) && !(mode & S_IXOTH))
+> +		return -EINVAL;
+>  	if (flags & AT_SYMLINK_NOFOLLOW)
+>  		lookup_flags &= ~LOOKUP_FOLLOW;
+>  	if (flags & AT_EMPTY_PATH)
+> @@ -426,7 +430,30 @@ static long do_faccessat(int dfd, const char __user *filename, int mode, int fla
+>  
+>  	inode = d_backing_inode(path.dentry);
+>  
+> -	if ((mode & MAY_EXEC) && S_ISREG(inode->i_mode)) {
+> +	if ((flags & AT_INTERPRETED)) {
+> +		/*
+> +		 * For compatibility reasons, without a defined security policy
+> +		 * (via sysctl or LSM), using AT_INTERPRETED must map the
+> +		 * execute permission to the read permission.  Indeed, from
+> +		 * user space point of view, being able to execute data (e.g.
+> +		 * scripts) implies to be able to read this data.
+> +		 *
+> +		 * The MAY_INTERPRETED_EXEC bit is set to enable LSMs to add
+> +		 * custom checks, while being compatible with current policies.
+> +		 */
+> +		if ((mode & MAY_EXEC)) {
 
-Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Jann Horn <jannh@google.com>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Miklos Szeredi <mszeredi@redhat.com>
-Cc: Shuah Khan <shuah@kernel.org>
----
+Why is the ISREG() test being dropped?   Without dropping it, there
+would be no reason for making the existing test an "else" clause.
 
-Changes since v7:
-* Update tests with faccessat2/AT_INTERPRETED, including new ones to
-  check that setting R_OK or W_OK returns EINVAL.
-* Add tests for memfd, pipefs and nsfs.
-* Rename and move back tests to a standalone directory.
+> +			mode |= MAY_INTERPRETED_EXEC;
+> +			/*
+> +			 * For compatibility reasons, if the system-wide policy
+> +			 * doesn't enforce file permission checks, then
+> +			 * replaces the execute permission request with a read
+> +			 * permission request.
+> +			 */
+> +			mode &= ~MAY_EXEC;
+> +			/* To be executed *by* user space, files must be readable. */
+> +			mode |= MAY_READ;
 
-Changes since v6:
-* Add full combination tests for all file types, including block
-  devices, character devices, fifos, sockets and symlinks.
-* Properly save and restore initial sysctl value for all tests.
+After this change, I'm wondering if it makes sense to add a call to
+security_file_permission().  IMA doesn't currently define it, but
+could.
 
-Changes since v5:
-* Refactor with FIXTURE_VARIANT, which make the tests much more easy to
-  read and maintain.
-* Save and restore initial sysctl value (suggested by Kees Cook).
-* Test with a sysctl value of 0.
-* Check errno in sysctl_access_write test.
-* Update tests for the CAP_SYS_ADMIN switch.
-* Update tests to check -EISDIR (replacing -EACCES).
-* Replace FIXTURE_DATA() with FIXTURE() (spotted by Kees Cook).
-* Use global const strings.
+Mimi
 
-Changes since v3:
-* Replace RESOLVE_MAYEXEC with O_MAYEXEC.
-* Add tests to check that O_MAYEXEC is ignored by open(2) and openat(2).
-
-Changes since v2:
-* Move tests from exec/ to openat2/ .
-* Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).
-* Cleanup tests.
-
-Changes since v1:
-* Move tests from yama/ to exec/ .
-* Fix _GNU_SOURCE in kselftest_harness.h .
-* Add a new test sysctl_access_write to check if CAP_MAC_ADMIN is taken
-  into account.
-* Test directory execution which is always forbidden since commit
-  73601ea5b7b1 ("fs/open.c: allow opening only regular files during
-  execve()"), and also check that even the root user can not bypass file
-  execution checks.
-* Make sure delete_workspace() always as enough right to succeed.
-* Cosmetic cleanup.
----
- .../testing/selftests/interpreter/.gitignore  |   2 +
- tools/testing/selftests/interpreter/Makefile  |  18 +
- tools/testing/selftests/interpreter/config    |   1 +
- .../interpreter/interpreted_access_test.c     | 384 ++++++++++++++++++
- 4 files changed, 405 insertions(+)
- create mode 100644 tools/testing/selftests/interpreter/.gitignore
- create mode 100644 tools/testing/selftests/interpreter/Makefile
- create mode 100644 tools/testing/selftests/interpreter/config
- create mode 100644 tools/testing/selftests/interpreter/interpreted_access_test.c
-
-diff --git a/tools/testing/selftests/interpreter/.gitignore b/tools/testing/selftests/interpreter/.gitignore
-new file mode 100644
-index 000000000000..82a4846cbc4b
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/.gitignore
-@@ -0,0 +1,2 @@
-+# SPDX-License-Identifier: GPL-2.0-only
-+/*_test
-diff --git a/tools/testing/selftests/interpreter/Makefile b/tools/testing/selftests/interpreter/Makefile
-new file mode 100644
-index 000000000000..6b3e8c3e533b
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/Makefile
-@@ -0,0 +1,18 @@
-+# SPDX-License-Identifier: GPL-2.0-or-later
-+
-+CFLAGS += -Wall -O2
-+LDLIBS += -lcap
-+
-+src_test := $(wildcard *_test.c)
-+TEST_GEN_PROGS := $(src_test:.c=)
-+
-+KSFT_KHDR_INSTALL := 1
-+include ../lib.mk
-+
-+khdr_dir = $(top_srcdir)/usr/include
-+
-+$(khdr_dir)/asm-generic/unistd.h: khdr
-+	@:
-+
-+$(OUTPUT)/%_test: %_test.c $(khdr_dir)/asm-generic/unistd.h ../kselftest_harness.h
-+	$(LINK.c) $< $(LDLIBS) -o $@ -I$(khdr_dir)
-diff --git a/tools/testing/selftests/interpreter/config b/tools/testing/selftests/interpreter/config
-new file mode 100644
-index 000000000000..dd53c266bf52
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/config
-@@ -0,0 +1 @@
-+CONFIG_SYSCTL=y
-diff --git a/tools/testing/selftests/interpreter/interpreted_access_test.c b/tools/testing/selftests/interpreter/interpreted_access_test.c
-new file mode 100644
-index 000000000000..6458dccabe51
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/interpreted_access_test.c
-@@ -0,0 +1,384 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Test AT_INTERPRETED
-+ *
-+ * Copyright © 2018-2020 ANSSI
-+ *
-+ * Author: Mickaël Salaün <mic@digikod.net>
-+ */
-+
-+#define _GNU_SOURCE
-+#include <asm-generic/unistd.h>
-+#include <errno.h>
-+#include <fcntl.h>
-+#include <stdio.h>
-+#include <stdlib.h>
-+#include <sys/capability.h>
-+#include <sys/mman.h>
-+#include <sys/mount.h>
-+#include <sys/stat.h>
-+#include <sys/syscall.h>
-+#include <sys/sysmacros.h>
-+#include <unistd.h>
-+
-+#include "../kselftest_harness.h"
-+
-+#ifndef AT_INTERPRETED
-+#define AT_INTERPRETED		0x400
-+#endif
-+
-+#ifndef faccessat2
-+static int faccessat2(int dirfd, const char *pathname, int mode, int flags)
-+{
-+	errno = 0;
-+	return syscall(__NR_faccessat2, dirfd, pathname, mode, flags);
-+}
-+#endif
-+
-+static const char sysctl_path[] = "/proc/sys/fs/interpreted_access";
-+
-+static const char workdir_path[] = "./test-mount";
-+static const char reg_file_path[] = "./test-mount/regular_file";
-+static const char dir_path[] = "./test-mount/directory";
-+static const char symlink_path[] = "./test-mount/symlink";
-+static const char block_dev_path[] = "./test-mount/block_device";
-+static const char char_dev_path[] = "./test-mount/character_device";
-+static const char fifo_path[] = "./test-mount/fifo";
-+static const char sock_path[] = "./test-mount/socket";
-+
-+static void ignore_dac(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[2] = {
-+		CAP_DAC_OVERRIDE,
-+		CAP_DAC_READ_SEARCH,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void ignore_sys_admin(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[1] = {
-+		CAP_SYS_ADMIN,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void test_omx(struct __test_metadata *_metadata,
-+		const char *const path, const int err_open,
-+		const int err_access)
-+{
-+	int flags = O_RDONLY | O_NOFOLLOW | O_CLOEXEC;
-+	int fd, access_ret, access_errno;
-+
-+	/* Do not block on pipes. */
-+	if (path == fifo_path)
-+		flags |= O_NONBLOCK;
-+
-+	fd = open(path, flags);
-+	if (err_open) {
-+		ASSERT_EQ(err_open, errno) {
-+			TH_LOG("Wrong error for open %s: %s", path, strerror(errno));
-+		}
-+		ASSERT_EQ(-1, fd);
-+	} else {
-+		ASSERT_LE(0, fd) {
-+			TH_LOG("Failed to open %s: %s", path, strerror(errno));
-+		}
-+		access_ret = faccessat2(fd, "", X_OK, AT_EMPTY_PATH | AT_INTERPRETED);
-+		access_errno = errno;
-+		EXPECT_EQ(0, close(fd));
-+		if (err_access) {
-+			ASSERT_EQ(err_access, access_errno) {
-+				TH_LOG("Wrong error for faccessat2 w/o path %s: %s",
-+						path, strerror(access_errno));
-+			}
-+			ASSERT_EQ(-1, access_ret);
-+		} else {
-+			ASSERT_EQ(0, access_ret) {
-+				TH_LOG("Access denied for %s: %s", path, strerror(access_errno));
-+			}
-+		}
-+	}
-+
-+	access_ret = faccessat2(AT_FDCWD, path, X_OK, AT_SYMLINK_NOFOLLOW | AT_INTERPRETED);
-+	if (err_access) {
-+		ASSERT_EQ(err_access, errno) {
-+			TH_LOG("Wrong error for faccessat2 w/ path %s: %s", path, strerror(errno));
-+		}
-+		ASSERT_EQ(-1, access_ret);
-+	} else {
-+		ASSERT_EQ(0, access_ret) {
-+			TH_LOG("Access denied for %s: %s", path, strerror(errno));
-+		}
-+	}
-+
-+	/* Tests read access. */
-+	access_ret = faccessat2(AT_FDCWD, path, R_OK, AT_SYMLINK_NOFOLLOW | AT_INTERPRETED);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+
-+	/* Tests write access. */
-+	access_ret = faccessat2(AT_FDCWD, path, W_OK, AT_SYMLINK_NOFOLLOW | AT_INTERPRETED);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+}
-+
-+static void test_policy_fd(struct __test_metadata *_metadata, const int fd,
-+		const bool has_policy)
-+{
-+	const int ret = faccessat2(fd, "", X_OK, AT_EMPTY_PATH | AT_INTERPRETED);
-+
-+	if (has_policy) {
-+		ASSERT_EQ(-1, ret);
-+		ASSERT_EQ(EACCES, errno) {
-+			TH_LOG("Wrong error for faccessat2 with an FD: %s", strerror(errno));
-+		}
-+	} else {
-+		ASSERT_EQ(0, ret) {
-+			TH_LOG("Access denied for an FD: %s", strerror(errno));
-+		}
-+	}
-+}
-+
-+FIXTURE(access) {
-+	char initial_sysctl_value;
-+	int memfd, pipefd;
-+	int pipe_fds[2];
-+};
-+
-+static void test_file_types(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests are performed on a tmpfs mount point. */
-+	test_omx(_metadata, reg_file_path, 0, err_code);
-+	test_omx(_metadata, dir_path, 0, has_policy ? EACCES : 0);
-+	test_omx(_metadata, symlink_path, ELOOP, has_policy ? EACCES : 0);
-+	test_omx(_metadata, block_dev_path, 0, has_policy ? EACCES : 0);
-+	test_omx(_metadata, char_dev_path, 0, has_policy ? EACCES : 0);
-+	test_omx(_metadata, fifo_path, 0, has_policy ? EACCES : 0);
-+	test_omx(_metadata, sock_path, ENXIO, has_policy ? EACCES : 0);
-+
-+	test_omx(_metadata, "/proc/self/ns/mnt", ELOOP, has_policy ? EACCES : 0);
-+
-+	/* Checks that exec is denied for any memfd. */
-+	test_policy_fd(_metadata, self->memfd, has_policy);
-+
-+	/* Checks that exec is denied for any pipefs fd. */
-+	test_policy_fd(_metadata, self->pipefd, has_policy);
-+}
-+
-+static void test_files(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests as root. */
-+	ignore_dac(_metadata, 1);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+
-+	/* Tests without bypass. */
-+	ignore_dac(_metadata, 0);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+}
-+
-+static void sysctl_write_char(struct __test_metadata *_metadata, const char value)
-+{
-+	int fd;
-+
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, write(fd, &value, 1));
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+static char sysctl_read_char(struct __test_metadata *_metadata)
-+{
-+	int fd;
-+	char sysctl_value;
-+
-+	fd = open(sysctl_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, read(fd, &sysctl_value, 1));
-+	EXPECT_EQ(0, close(fd));
-+	return sysctl_value;
-+}
-+
-+FIXTURE_VARIANT(access) {
-+	const bool mount_exec;
-+	const bool file_exec;
-+	const int sysctl_err_code[3];
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_exec) {
-+	.mount_exec = true,
-+	.file_exec = true,
-+	.sysctl_err_code = {0, 0, 0},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_noexec)
-+{
-+	.mount_exec = true,
-+	.file_exec = false,
-+	.sysctl_err_code = {0, EACCES, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_exec)
-+{
-+	.mount_exec = false,
-+	.file_exec = true,
-+	.sysctl_err_code = {EACCES, 0, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_noexec)
-+{
-+	.mount_exec = false,
-+	.file_exec = false,
-+	.sysctl_err_code = {EACCES, EACCES, EACCES},
-+};
-+
-+FIXTURE_SETUP(access)
-+{
-+	int procfd_path_size;
-+	static const char path_template[] = "/proc/self/fd/%d";
-+	char procfd_path[sizeof(path_template) + 10];
-+
-+	/*
-+	 * Cleans previous workspace if any error previously happened (don't
-+	 * check errors).
-+	 */
-+	umount(workdir_path);
-+	rmdir(workdir_path);
-+
-+	/* Creates a clean mount point. */
-+	ASSERT_EQ(0, mkdir(workdir_path, 00700));
-+	ASSERT_EQ(0, mount("test", workdir_path, "tmpfs", MS_MGC_VAL |
-+				(variant->mount_exec ? 0 : MS_NOEXEC),
-+				"mode=0700,size=4k"));
-+
-+	/* Creates a regular file. */
-+	ASSERT_EQ(0, mknod(reg_file_path, S_IFREG | (variant->file_exec ? 0500 : 0400), 0));
-+	/* Creates a directory. */
-+	ASSERT_EQ(0, mkdir(dir_path, variant->file_exec ? 0500 : 0400));
-+	/* Creates a symlink pointing to the regular file. */
-+	ASSERT_EQ(0, symlink("regular_file", symlink_path));
-+	/* Creates a character device: /dev/null. */
-+	ASSERT_EQ(0, mknod(char_dev_path, S_IFCHR | 0400, makedev(1, 3)));
-+	/* Creates a block device: /dev/loop0 */
-+	ASSERT_EQ(0, mknod(block_dev_path, S_IFBLK | 0400, makedev(7, 0)));
-+	/* Creates a fifo. */
-+	ASSERT_EQ(0, mknod(fifo_path, S_IFIFO | 0400, 0));
-+	/* Creates a socket. */
-+	ASSERT_EQ(0, mknod(sock_path, S_IFSOCK | 0400, 0));
-+
-+	/* Creates a regular file without user mount point. */
-+	self->memfd = memfd_create("test-interpreted", MFD_CLOEXEC);
-+	ASSERT_LE(0, self->memfd);
-+	/* Sets mode, which must be ignored by the exec check. */
-+	ASSERT_EQ(0, fchmod(self->memfd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Creates a pipefs file descriptor. */
-+	ASSERT_EQ(0, pipe(self->pipe_fds));
-+	procfd_path_size = snprintf(procfd_path, sizeof(procfd_path),
-+			path_template, self->pipe_fds[0]);
-+	ASSERT_LT(procfd_path_size, sizeof(procfd_path));
-+	self->pipefd = open(procfd_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, self->pipefd);
-+	ASSERT_EQ(0, fchmod(self->pipefd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+
-+	/* Prepares for sysctl writes. */
-+	ignore_sys_admin(_metadata, 1);
-+}
-+
-+FIXTURE_TEARDOWN(access)
-+{
-+	EXPECT_EQ(0, close(self->memfd));
-+	EXPECT_EQ(0, close(self->pipefd));
-+	EXPECT_EQ(0, close(self->pipe_fds[0]));
-+	EXPECT_EQ(0, close(self->pipe_fds[1]));
-+
-+	/* Restores initial sysctl value. */
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+
-+	/* There is no need to unlink the test files. */
-+	ASSERT_EQ(0, umount(workdir_path));
-+	ASSERT_EQ(0, rmdir(workdir_path));
-+}
-+
-+TEST_F(access, sysctl_0)
-+{
-+	/* Do not enforce anything. */
-+	sysctl_write_char(_metadata, '0');
-+	test_files(_metadata, self, 0, false);
-+}
-+
-+TEST_F(access, sysctl_1)
-+{
-+	/* Enforces mount exec check. */
-+	sysctl_write_char(_metadata, '1');
-+	test_files(_metadata, self, variant->sysctl_err_code[0], true);
-+}
-+
-+TEST_F(access, sysctl_2)
-+{
-+	/* Enforces file exec check. */
-+	sysctl_write_char(_metadata, '2');
-+	test_files(_metadata, self, variant->sysctl_err_code[1], true);
-+}
-+
-+TEST_F(access, sysctl_3)
-+{
-+	/* Enforces mount and file exec check. */
-+	sysctl_write_char(_metadata, '3');
-+	test_files(_metadata, self, variant->sysctl_err_code[2], true);
-+}
-+
-+FIXTURE(cleanup) {
-+	char initial_sysctl_value;
-+};
-+
-+FIXTURE_SETUP(cleanup)
-+{
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+}
-+
-+FIXTURE_TEARDOWN(cleanup)
-+{
-+	/* Restores initial sysctl value. */
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+}
-+
-+TEST_F(cleanup, sysctl_access_write)
-+{
-+	int fd;
-+	ssize_t ret;
-+
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, '0');
-+
-+	ignore_sys_admin(_metadata, 0);
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ret = write(fd, "0", 1);
-+	ASSERT_EQ(-1, ret);
-+	ASSERT_EQ(EPERM, errno);
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+TEST_HARNESS_MAIN
--- 
-2.28.0
+> +		}
+> +	} else if ((mode & MAY_EXEC) && S_ISREG(inode->i_mode)) {
+>  		/*
+>  		 * MAY_EXEC on regular files is denied if the fs is mounted
+>  		 * with the "noexec" flag.
 
