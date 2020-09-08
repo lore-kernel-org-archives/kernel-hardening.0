@@ -1,20 +1,24 @@
-Return-Path: <SRS0=StYN=CR=lists.openwall.com=kernel-hardening-return-19821-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=OHI7=CR=lists.openwall.com=kernel-hardening-return-19822-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-17.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AB47CC433E2
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 17:22:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5EED3C433E2
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 17:31:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 96318206B5
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 17:22:16 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 96318206B5
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19821-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19672 invoked by uid 550); 8 Sep 2020 17:22:10 -0000
+	by mail.kernel.org (Postfix) with SMTP id 6EC0B2076C
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 17:31:03 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="AzIN32ul"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6EC0B2076C
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19822-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23769 invoked by uid 550); 8 Sep 2020 17:30:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,167 +26,172 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19652 invoked from network); 8 Sep 2020 17:22:09 -0000
-Subject: Re: [RFC PATCH v8 1/3] fs: Introduce AT_INTERPRETED flag for
- faccessat2(2)
-To: Mimi Zohar <zohar@linux.ibm.com>, linux-kernel@vger.kernel.org
-Cc: Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
- Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton
- <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>,
- Christian Brauner <christian.brauner@ubuntu.com>,
- Christian Heimes <christian@python.org>,
- Daniel Borkmann <daniel@iogearbox.net>,
- Deven Bowers <deven.desai@linux.microsoft.com>,
- Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
- Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
- James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
- Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
- Kees Cook <keescook@chromium.org>,
- Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
- Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>,
- Miklos Szeredi <mszeredi@redhat.com>,
- =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
- Scott Shell <scottsh@microsoft.com>,
- Sean Christopherson <sean.j.christopherson@intel.com>,
- Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
- Steve Grubb <sgrubb@redhat.com>,
- Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
- Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
- Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
- linux-fsdevel@vger.kernel.org,
- Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@linux.microsoft.com>,
- Stephen Smalley <stephen.smalley.work@gmail.com>,
- John Johansen <john.johansen@canonical.com>
-References: <20200908075956.1069018-1-mic@digikod.net>
- <20200908075956.1069018-2-mic@digikod.net>
- <d216615b48c093ebe9349a9dab3830b646575391.camel@linux.ibm.com>
- <75451684-58f3-b946-dca4-4760fa0d7440@digikod.net>
- <01c23b2607a7dbf734722399931473c053d9b362.camel@linux.ibm.com>
- <ed832b7f-dc47-fe54-468b-41de3b64fd83@digikod.net>
- <fd635b544ba4f409a76047a4620656ad67738db1.camel@linux.ibm.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <c2cfb75d-d166-9b97-a559-109c44363fe7@digikod.net>
-Date: Tue, 8 Sep 2020 19:21:54 +0200
-User-Agent:
+Received: (qmail 23728 invoked from network); 8 Sep 2020 17:30:55 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=/5WUqOjLHPAdLAI0MKh9zhuMyV7IC1nlysZjintZ/W0=;
+        b=AzIN32ulFSn0Cg8a7U6pqoMQp2nPeaRLHJAx4wWGA8CJaevtEmegxP/Z/uIxm/mEpu
+         QVOrS/Ir/CxKvGymkWaSrXUyeKbbg65sx4q09ssmoAXIt6bm8jV1LH45TsyB5/QvO6Qe
+         pSg9MqH9AVTpVpXvwoaCFmKjx/m6VIWugbAKBCS/XL0KnFFDPP0JrCP80TKO4jQk1l8S
+         wZd7N9m2+fYup3wy0GHLd7qSFjvCk9cqS0RN9Ik5g/nfu3wKrjCUUWhivmYZDrkqWnnn
+         OxFDZvlGFT0EA/qrpHwZR1QXKjTo0BlWMq5+aAWrCKqvUbyJyaxDNVHcgxbFAvzgGEAS
+         e78g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=/5WUqOjLHPAdLAI0MKh9zhuMyV7IC1nlysZjintZ/W0=;
+        b=psnadgl5siWsqnP9B2KnEmqX8aZQUA3AbReSCh4wrrBBrARtKDzhyWPU1WC9maOmpR
+         jG3VrDBb+vtPqtmHUtkPIvaDMKFfejX+FHJ+idKLqDGNtVXod4q5+VOHqR5YlhCMhNbH
+         PbEClX272DzhBba3LRJ6KVogF0fCmT/A73mTdM2H18D4jWI4NmPOx7HNEUKtApC8TjCx
+         XD/iFY+UCxuji6zIjvdWqSoxoTA2gSR6aZdEHb8LxvY6v7Hgtt3AcMse2Y88vR+gOykA
+         wsycn2EB0f04c1UMroS+Se37BGC/Y+kxrNSJ2EZpZ83z6LVtaYKkwg0iaTu94N+cpSq9
+         s3Fg==
+X-Gm-Message-State: AOAM532TfD5m8WAGoIwIp3U//jyUdVKloLXZfo01xuaNXitXKkPjjopr
+	ywx9iY3HJy2l+KAHTO5B5fLdPw==
+X-Google-Smtp-Source: ABdhPJzOBlE39s5MhGzUGu96iQjHpMxBRxzAFujrD+zw10TmjrKYdMPOuT7bZ60x6uln4rayX4+T8w==
+X-Received: by 2002:a63:ca0c:: with SMTP id n12mr18009749pgi.209.1599586243396;
+        Tue, 08 Sep 2020 10:30:43 -0700 (PDT)
+Date: Tue, 8 Sep 2020 10:30:36 -0700
+From: Sami Tolvanen <samitolvanen@google.com>
+To: Masahiro Yamada <masahiroy@kernel.org>
+Cc: Will Deacon <will@kernel.org>, Peter Zijlstra <peterz@infradead.org>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Kees Cook <keescook@chromium.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	clang-built-linux <clang-built-linux@googlegroups.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	linux-arch <linux-arch@vger.kernel.org>,
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
+	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>,
+	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+	linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
+Subject: Re: [PATCH v2 09/28] kbuild: add support for Clang LTO
+Message-ID: <20200908173036.GD2743468@google.com>
+References: <20200624203200.78870-1-samitolvanen@google.com>
+ <20200903203053.3411268-1-samitolvanen@google.com>
+ <20200903203053.3411268-10-samitolvanen@google.com>
+ <CAK7LNAR7SbBPz06s5Gf2d+zry+Px1=jcUrC9c=_zQiCJLttY3A@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <fd635b544ba4f409a76047a4620656ad67738db1.camel@linux.ibm.com>
-Content-Type: text/plain; charset=iso-8859-15
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAK7LNAR7SbBPz06s5Gf2d+zry+Px1=jcUrC9c=_zQiCJLttY3A@mail.gmail.com>
 
+On Tue, Sep 08, 2020 at 12:30:14AM +0900, Masahiro Yamada wrote:
+> On Fri, Sep 4, 2020 at 5:31 AM Sami Tolvanen <samitolvanen@google.com> wrote:
+> >
+> > This change adds build system support for Clang's Link Time
+> > Optimization (LTO). With -flto, instead of ELF object files, Clang
+> > produces LLVM bitcode, which is compiled into native code at link
+> > time, allowing the final binary to be optimized globally. For more
+> > details, see:
+> >
+> >   https://llvm.org/docs/LinkTimeOptimization.html
+> >
+> > The Kconfig option CONFIG_LTO_CLANG is implemented as a choice,
+> > which defaults to LTO being disabled. To use LTO, the architecture
+> > must select ARCH_SUPPORTS_LTO_CLANG and support:
+> >
+> >   - compiling with Clang,
+> >   - compiling inline assembly with Clang's integrated assembler,
+> >   - and linking with LLD.
+> >
+> > While using full LTO results in the best runtime performance, the
+> > compilation is not scalable in time or memory. CONFIG_THINLTO
+> > enables ThinLTO, which allows parallel optimization and faster
+> > incremental builds. ThinLTO is used by default if the architecture
+> > also selects ARCH_SUPPORTS_THINLTO:
+> >
+> >   https://clang.llvm.org/docs/ThinLTO.html
+> >
+> > To enable LTO, LLVM tools must be used to handle bitcode files. The
+> > easiest way is to pass the LLVM=1 option to make:
+> >
+> >   $ make LLVM=1 defconfig
+> >   $ scripts/config -e LTO_CLANG
+> >   $ make LLVM=1
+> >
+> > Alternatively, at least the following LLVM tools must be used:
+> >
+> >   CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm
+> >
+> > To prepare for LTO support with other compilers, common parts are
+> > gated behind the CONFIG_LTO option, and LTO can be disabled for
+> > specific files by filtering out CC_FLAGS_LTO.
+> >
+> > Note that support for DYNAMIC_FTRACE and MODVERSIONS are added in
+> > follow-up patches.
+> >
+> > Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+> > ---
+> >  Makefile                          | 18 +++++++-
+> >  arch/Kconfig                      | 68 +++++++++++++++++++++++++++++++
+> >  include/asm-generic/vmlinux.lds.h | 11 +++--
+> >  scripts/Makefile.build            |  9 +++-
+> >  scripts/Makefile.modfinal         |  9 +++-
+> >  scripts/Makefile.modpost          | 24 ++++++++++-
+> >  scripts/link-vmlinux.sh           | 32 +++++++++++----
+> >  7 files changed, 154 insertions(+), 17 deletions(-)
+> 
+> 
+> 
+> >  #define TEXT_MAIN .text
+> > diff --git a/scripts/Makefile.build b/scripts/Makefile.build
+> > index 6ecf30c70ced..a5f4b5d407e6 100644
+> > --- a/scripts/Makefile.build
+> > +++ b/scripts/Makefile.build
+> > @@ -111,7 +111,7 @@ endif
+> >  # ---------------------------------------------------------------------------
+> >
+> >  quiet_cmd_cc_s_c = CC $(quiet_modtag)  $@
+> > -      cmd_cc_s_c = $(CC) $(filter-out $(DEBUG_CFLAGS), $(c_flags)) $(DISABLE_LTO) -fverbose-asm -S -o $@ $<
+> > +      cmd_cc_s_c = $(CC) $(filter-out $(DEBUG_CFLAGS) $(CC_FLAGS_LTO), $(c_flags)) -fverbose-asm -S -o $@ $<
+> >
+> >  $(obj)/%.s: $(src)/%.c FORCE
+> >         $(call if_changed_dep,cc_s_c)
+> > @@ -428,8 +428,15 @@ $(obj)/lib.a: $(lib-y) FORCE
+> >  # Do not replace $(filter %.o,^) with $(real-prereqs). When a single object
+> >  # module is turned into a multi object module, $^ will contain header file
+> >  # dependencies recorded in the .*.cmd file.
+> > +ifdef CONFIG_LTO_CLANG
+> > +quiet_cmd_link_multi-m = AR [M]  $@
+> > +cmd_link_multi-m =                                             \
+> > +       rm -f $@;                                               \
+> > +       $(AR) rcsTP$(KBUILD_ARFLAGS) $@ $(filter %.o,$^)
+> 
+> 
+> KBUILD_ARFLAGS no longer exists in the mainline.
+> (commit 13dc8c029cabf52ba95f60c56eb104d4d95d5889)
 
-On 08/09/2020 18:44, Mimi Zohar wrote:
-> On Tue, 2020-09-08 at 17:44 +0200, Mickaël Salaün wrote:
->> On 08/09/2020 17:24, Mimi Zohar wrote:
->>> On Tue, 2020-09-08 at 14:43 +0200, Mickaël Salaün wrote:
->>>> On 08/09/2020 14:28, Mimi Zohar wrote:
->>>>> Hi Mickael,
->>>>>
->>>>> On Tue, 2020-09-08 at 09:59 +0200, Mickaël Salaün wrote:
->>>>>> diff --git a/fs/open.c b/fs/open.c
->>>>>> index 9af548fb841b..879bdfbdc6fa 100644
->>>>>> --- a/fs/open.c
->>>>>> +++ b/fs/open.c
->>>>>> @@ -405,9 +405,13 @@ static long do_faccessat(int dfd, const char __user *filename, int mode, int fla
->>>>>>  	if (mode & ~S_IRWXO)	/* where's F_OK, X_OK, W_OK, R_OK? */
->>>>>>  		return -EINVAL;
->>>>>>  
->>>>>> -	if (flags & ~(AT_EACCESS | AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH))
->>>>>> +	if (flags & ~(AT_EACCESS | AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH |
->>>>>> +				AT_INTERPRETED))
->>>>>>  		return -EINVAL;
->>>>>>  
->>>>>> +	/* Only allows X_OK with AT_INTERPRETED for now. */
->>>>>> +	if ((flags & AT_INTERPRETED) && !(mode & S_IXOTH))
->>>>>> +		return -EINVAL;
->>>>>>  	if (flags & AT_SYMLINK_NOFOLLOW)
->>>>>>  		lookup_flags &= ~LOOKUP_FOLLOW;
->>>>>>  	if (flags & AT_EMPTY_PATH)
->>>>>> @@ -426,7 +430,30 @@ static long do_faccessat(int dfd, const char __user *filename, int mode, int fla
->>>>>>  
->>>>>>  	inode = d_backing_inode(path.dentry);
->>>>>>  
->>>>>> -	if ((mode & MAY_EXEC) && S_ISREG(inode->i_mode)) {
->>>>>> +	if ((flags & AT_INTERPRETED)) {
->>>>>> +		/*
->>>>>> +		 * For compatibility reasons, without a defined security policy
->>>>>> +		 * (via sysctl or LSM), using AT_INTERPRETED must map the
->>>>>> +		 * execute permission to the read permission.  Indeed, from
->>>>>> +		 * user space point of view, being able to execute data (e.g.
->>>>>> +		 * scripts) implies to be able to read this data.
->>>>>> +		 *
->>>>>> +		 * The MAY_INTERPRETED_EXEC bit is set to enable LSMs to add
->>>>>> +		 * custom checks, while being compatible with current policies.
->>>>>> +		 */
->>>>>> +		if ((mode & MAY_EXEC)) {
->>>>>
->>>>> Why is the ISREG() test being dropped?   Without dropping it, there
->>>>> would be no reason for making the existing test an "else" clause.
->>>>
->>>> The ISREG() is not dropped, it is just moved below with the rest of the
->>>> original code. The corresponding code (with the path_noexec call) for
->>>> AT_INTERPRETED is added with the next commit, and it relies on the
->>>> sysctl configuration for compatibility reasons.
->>>
->>> Dropping the S_ISREG() check here without an explanation is wrong and
->>> probably unsafe, as it is only re-added in the subsequent patch and
->>> only for the "sysctl_interpreted_access" case.  Adding this new test
->>> after the existing test is probably safer.  If the original test fails,
->>> it returns the same value as this test -EACCES.
->>
->> The original S_ISREG() is ANDed with a MAY_EXEC check and with
->> path_noexec(). The goal of this patch is indeed to have a different
->> behavior than the original faccessat2(2) thanks to the AT_INTERPRETED
->> flag. This can't work if we add the sysctl check after the current
->> path_noexec() check. Moreover, in this patch an exec check is translated
->> to a read check. This new behavior is harmless because using
->> AT_INTERPRETED with the current faccessat2(2) would return -EINVAL. The
->> current vanilla behavior is then unchanged.
-> 
-> Don't get me wrong.  I'm very interested in having this support and
-> appreciate all the work you're doing on getting it upstreamed.  With
-> the change in this patch, I see the MAY_EXEC being changed to MAY_READ,
-> but I don't see -EINVAL being returned.  It sounds like this change is
-> dependent on the faccessat2 version for -EINVAL to be returned.
+Thanks, I'll drop this in the next version.
 
-No worries, unfortunately the patch format doesn't ease this review. :)
-access(2) and faccessat(2) have a flag value of 0. Only faccessat2(2)
-takes a flag from userspace. The -EINVAL is currently returned (by
-faccessat2) if there is an unknown flag provided by userspace. With this
-patch, only a mode equal to X_OK is allowed for the AT_INTERPRETED flag
-(cf. second hunk in this patch). As described in the cover letter, we
-could handle the other modes in the future though.
+> > +ifdef CONFIG_LTO_CLANG
+> > +# With CONFIG_LTO_CLANG, .o files might be LLVM bitcode,
+> 
+> or, .o files might be even thin archives.
 
+Right, and with LTO the thin archive might also point to a mix of bitcode
+and ELF to further complicate things.
+
+> For example,
 > 
->>
->> The whole point of this patch series is to have a policy which do not
->> break current systems and is easy to configure by the sysadmin through
->> sysctl. This patch series also enable LSMs to take advantage of it
->> without the current faccess* limitations. For instance, it is then
->> possible for an LSM to implement more complex policies which may allow
->> execution of data from pipes or sockets, while verifying the source of
->> this data. Enforcing S_ISREG() in this patch would forbid such policies
->> to be implemented. In the case of IMA, you may want to add the same
->> S_ISREG() check.
-> 
->>>
->>>>
->>>>>
->>>>>> +			mode |= MAY_INTERPRETED_EXEC;
->>>>>> +			/*
->>>>>> +			 * For compatibility reasons, if the system-wide policy
->>>>>> +			 * doesn't enforce file permission checks, then
->>>>>> +			 * replaces the execute permission request with a read
->>>>>> +			 * permission request.
->>>>>> +			 */
->>>>>> +			mode &= ~MAY_EXEC;
->>>>>> +			/* To be executed *by* user space, files must be readable. */
->>>>>> +			mode |= MAY_READ;
->>>
->>>
+> $ file net/ipv6/netfilter/nf_defrag_ipv6.o
+> net/ipv6/netfilter/nf_defrag_ipv6.o: thin archive with 6 symbol entries
 > 
 > 
+> Now we have 3 possibilities for .o files:
+> 
+>   - ELF  (real .o)
+>   - LLVM bitcode (.bc)
+>   - Thin archive (.a)
+> 
+> 
+> Let me discuss how to proceed with this...
+
+Did you have something in mind to make this cleaner?
+
+Sami
