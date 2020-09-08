@@ -1,23 +1,23 @@
-Return-Path: <SRS0=2k/e=CR=lists.openwall.com=kernel-hardening-return-19808-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=PgLE=CR=lists.openwall.com=kernel-hardening-return-19809-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A69E4C433E2
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 13:43:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 24343C433E2
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 13:45:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6D1692137B
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 13:43:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 422512192A
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Sep 2020 13:45:13 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="kS3dWB8V"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6D1692137B
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19808-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11408 invoked by uid 550); 8 Sep 2020 13:42:54 -0000
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="e+QVLB0M"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 422512192A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19809-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13555 invoked by uid 550); 8 Sep 2020 13:45:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,137 +25,157 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11376 invoked from network); 8 Sep 2020 13:42:53 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc:content-transfer-encoding;
-        bh=xd2oWJkrBNO95Z2fxVzWxksIKe3e21pnPKp8bkrKZIg=;
-        b=kS3dWB8VQiDisNP5NDkv/W0BWN4UdAih//KXxzs5yABpE8/YVcEafAUuD/EiZUE17N
-         KWnVPvP2s8+B7PvOPerD6j1Iys4qnAj0OvjI02KA1Bi3+mGKN8NDHhwIC/rEnXDFZ/k7
-         3dhaai01z54o5WRQ4oAoKoR0fxXZ/qJRmSAGFBfd0liQVThAcYg8gWSsTyAvKOapSLM+
-         yluUFiraOydcoP51UhqZk+TNvyNcDugW0AEpCGXXbKcifQOYfAYZK8hQEaSxhZpTIWd+
-         W5dnITZDGDNV66aJpXzDKe1hF3SSxFsQzvcQA2Fr8+c2o14nIfHJcBsOFy6Vp+EGGDZL
-         3G2g==
+Received: (qmail 13532 invoked from network); 8 Sep 2020 13:45:07 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1599572695;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=0nFHBAUKZtW6gfmKK0htBo0gwbtsv3Iq0Ml6HLLohY8=;
+	b=e+QVLB0Ma+/mQ7QEluebEMWQAC4VoiSsWt5Up7QY484Fpd9NtVNR12sjcDEYNfKpn2hUit
+	NL4tYBCE8z+DwfJfOZ+M4k+Qgkq3Z28ZdMITLtxXe6v4OwGAP+gM26GKCtLmHF92vSR372
+	ContH0k3cQnrCFI4ltsNyj2ZECW5kJo=
+X-MC-Unique: suUR1XVGPA-fiwKbKT3QfA-1
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc:content-transfer-encoding;
-        bh=xd2oWJkrBNO95Z2fxVzWxksIKe3e21pnPKp8bkrKZIg=;
-        b=sr4DA3JLx4/W55Yo5Aqx7B6EdgxUISE8VNxxf6sesuccIgGfM17JEDewviBEkfkHDm
-         F6nCGGQ//dnXmKJmxzlKUCAuS9Lu8igA/ONE+H+JtJ5oreYTqj/XcPrJVtoJ/ToT0s5Z
-         CCvAkg/uV6DpnRCyXnHjkugMmh3FeVAFzHW1df31MXz3PfHYMPfdr9f+j7tUUDN5JvdC
-         OEP0Tb/sNm+MObQwo46FAWLkTvooFAdk0yfwrdEERPgBrpl0zkYloO3SwiAG8GsSCNPK
-         k9xIP9Xrdi+PIzfjMDPgZBuCr9uR6TiHYlxCSCQvcByrRrsvVBnvuseYJ0jZMzmwRhEl
-         7OoQ==
-X-Gm-Message-State: AOAM533BXwCyZuKdtSp3fwNY5vdxg1WLBpYFqKGW7miT7bpyvygWRD7y
-	sra9a4P5fq5PFwImxXwHc6tN9GdS3yLx+o0AXhg=
-X-Google-Smtp-Source: ABdhPJy+kWXzj4FNXLYPJloVYc68j27SGmn6I5quJn/kq76MG8ycRFt5yJHDRK5ChXdsc0RHpMQxGbsaXoNtMmIP7ao=
-X-Received: by 2002:a9d:7a92:: with SMTP id l18mr17096154otn.89.1599572561763;
- Tue, 08 Sep 2020 06:42:41 -0700 (PDT)
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=0nFHBAUKZtW6gfmKK0htBo0gwbtsv3Iq0Ml6HLLohY8=;
+        b=BOANj2eSiA/Zr1dvp/uEvKfRRYWZGyWHYj0y3A0pHxVOW1rqPQUKHYmuAqFSHBQ0MA
+         3DMB8N379+D0IV4aidL5hrdmApFDvymnR5bZXEhWYzm7e0mUGTMD6wUvt1/AVoGTFcRs
+         CdQ5AjkKb21CozeLL7M/n32t1twyQ7PgBUEDG69Xt/1EmdrHqFHAkXTwqFJhmLG7qf+G
+         psk4K+FqmWDhMZb6JoS2RMI9jo7Sq2bBGpP2DqMPSJ/gu8LVonuQmg12CDF56D6pfrWL
+         xh9XPu6qS8okSZnRTCZ27Ff65P+YcoHjngsDTFfJBh1r6I4iZ2DqHZOTgwdWEhOzF6pW
+         EYYA==
+X-Gm-Message-State: AOAM532SLQ69FIjhy18YLtrVhPy+1mm4u5wKqaQddOZOi+BgTVDc491U
+	g+N752Zw3F370Hj7Xm1WA6Lf7c9klpYp83g+kN67WnO5UH6R+vt0tdUnoAfKZaWhVpnJzM/ik3P
+	C2KOG+4b5xB1qbkJTensA4lBmw4yNszvnjw==
+X-Received: by 2002:a5d:680e:: with SMTP id w14mr25476336wru.50.1599572692188;
+        Tue, 08 Sep 2020 06:44:52 -0700 (PDT)
+X-Google-Smtp-Source: ABdhPJy9ir0JHeXFpAb6judRqJTvTeaAaWL4TLCJr6544I6qsmBmpMMbYdbvWqjAJ6jpsRsfpch5mg==
+X-Received: by 2002:a5d:680e:: with SMTP id w14mr25476320wru.50.1599572691912;
+        Tue, 08 Sep 2020 06:44:51 -0700 (PDT)
+Date: Tue, 8 Sep 2020 15:44:48 +0200
+From: Stefano Garzarella <sgarzare@redhat.com>
+To: Jens Axboe <axboe@kernel.dk>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	linux-fsdevel@vger.kernel.org, io-uring@vger.kernel.org,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Stefan Hajnoczi <stefanha@redhat.com>, Jann Horn <jannh@google.com>,
+	Jeff Moyer <jmoyer@redhat.com>, Aleksa Sarai <asarai@suse.de>,
+	Sargun Dhillon <sargun@sargun.me>, linux-kernel@vger.kernel.org,
+	Kees Cook <keescook@chromium.org>
+Subject: Re: [PATCH v6 3/3] io_uring: allow disabling rings during the
+ creation
+Message-ID: <20200908134448.sg7evdrfn6xa67sn@steredhat>
+References: <20200827145831.95189-1-sgarzare@redhat.com>
+ <20200827145831.95189-4-sgarzare@redhat.com>
 MIME-Version: 1.0
-References: <20200908075956.1069018-1-mic@digikod.net> <20200908075956.1069018-2-mic@digikod.net>
- <d216615b48c093ebe9349a9dab3830b646575391.camel@linux.ibm.com>
- <75451684-58f3-b946-dca4-4760fa0d7440@digikod.net> <CAEjxPJ49_BgGX50ZAhHh79Qy3OMN6sssnUHT_2yXqdmgyt==9w@mail.gmail.com>
- <CAEjxPJ6ZTKeunzJvWf_kS3QYjca6v1yJq=ad-jCCuDSgG6n60g@mail.gmail.com> <bdc10ab89cf9197e104f02a751009cf0d549ddf5.camel@linux.ibm.com>
-In-Reply-To: <bdc10ab89cf9197e104f02a751009cf0d549ddf5.camel@linux.ibm.com>
-From: Stephen Smalley <stephen.smalley.work@gmail.com>
-Date: Tue, 8 Sep 2020 09:42:30 -0400
-Message-ID: <CAEjxPJ5evWDSv-T-p=4OX29Pr584ZRAsnYoxSRd4qFDoryB+fQ@mail.gmail.com>
-Subject: Re: [RFC PATCH v8 1/3] fs: Introduce AT_INTERPRETED flag for faccessat2(2)
-To: Mimi Zohar <zohar@linux.ibm.com>
-Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, 
-	linux-kernel <linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, 
-	Alexei Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, 
-	Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, 
-	Christian Brauner <christian.brauner@ubuntu.com>, Christian Heimes <christian@python.org>, 
-	Daniel Borkmann <daniel@iogearbox.net>, Deven Bowers <deven.desai@linux.microsoft.com>, 
-	Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>, 
-	Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>, 
-	James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>, Jann Horn <jannh@google.com>, 
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, Matthew Garrett <mjg59@google.com>, 
-	Matthew Wilcox <willy@infradead.org>, Michael Kerrisk <mtk.manpages@gmail.com>, 
-	Miklos Szeredi <mszeredi@redhat.com>, 
-	=?UTF-8?Q?Philippe_Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>, 
-	Scott Shell <scottsh@microsoft.com>, 
-	Sean Christopherson <sean.j.christopherson@intel.com>, Shuah Khan <shuah@kernel.org>, 
-	Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, 
-	Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, 
-	Thibaut Sautereau <thibaut.sautereau@clip-os.org>, 
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, 
-	linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, 
-	LSM List <linux-security-module@vger.kernel.org>, 
-	Linux FS Devel <linux-fsdevel@vger.kernel.org>, 
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, 
-	=?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>, 
-	John Johansen <john.johansen@canonical.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20200827145831.95189-4-sgarzare@redhat.com>
+Authentication-Results: relay.mimecast.com;
+	auth=pass smtp.auth=CUSA124A263 smtp.mailfrom=sgarzare@redhat.com
+X-Mimecast-Spam-Score: 0.002
+X-Mimecast-Originator: redhat.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 
-On Tue, Sep 8, 2020 at 9:29 AM Mimi Zohar <zohar@linux.ibm.com> wrote:
->
-> On Tue, 2020-09-08 at 08:52 -0400, Stephen Smalley wrote:
-> > On Tue, Sep 8, 2020 at 8:50 AM Stephen Smalley
-> > <stephen.smalley.work@gmail.com> wrote:
-> > >
-> > > On Tue, Sep 8, 2020 at 8:43 AM Micka=C3=ABl Sala=C3=BCn <mic@digikod.=
-net> wrote:
-> > > >
-> > > >
-> > > > On 08/09/2020 14:28, Mimi Zohar wrote:
-> > > > > Hi Mickael,
-> > > > >
-> > > > > On Tue, 2020-09-08 at 09:59 +0200, Micka=C3=ABl Sala=C3=BCn wrote=
-:
-> > > > >> +                    mode |=3D MAY_INTERPRETED_EXEC;
-> > > > >> +                    /*
-> > > > >> +                     * For compatibility reasons, if the system=
--wide policy
-> > > > >> +                     * doesn't enforce file permission checks, =
-then
-> > > > >> +                     * replaces the execute permission request =
-with a read
-> > > > >> +                     * permission request.
-> > > > >> +                     */
-> > > > >> +                    mode &=3D ~MAY_EXEC;
-> > > > >> +                    /* To be executed *by* user space, files mu=
-st be readable. */
-> > > > >> +                    mode |=3D MAY_READ;
-> > > > >
-> > > > > After this change, I'm wondering if it makes sense to add a call =
-to
-> > > > > security_file_permission().  IMA doesn't currently define it, but
-> > > > > could.
-> > > >
-> > > > Yes, that's the idea. We could replace the following inode_permissi=
-on()
-> > > > with file_permission(). I'm not sure how this will impact other LSM=
-s though.
->
-> I wasn't suggesting replacing the existing security_inode_permission
-> hook later, but adding a new security_file_permission hook here.
->
-> > >
-> > > They are not equivalent at least as far as SELinux is concerned.
-> > > security_file_permission() was only to be used to revalidate
-> > > read/write permissions previously checked at file open to support
-> > > policy changes and file or process label changes.  We'd have to modif=
-y
-> > > the SELinux hook if we wanted to have it check execute access even if
-> > > nothing has changed since open time.
-> >
-> > Also Smack doesn't appear to implement file_permission at all, so it
-> > would skip Smack checking.
->
-> My question is whether adding a new security_file_permission call here
-> would break either SELinux or Apparmor?
+Hi Jens,
 
-selinux_inode_permission() has special handling for MAY_ACCESS so we'd
-need to duplicate that into selinux_file_permission() ->
-selinux_revalidate_file_permission().  Also likely need to adjust
-selinux_file_permission() to explicitly check whether the mask
-includes any permissions not checked at open time.  So some changes
-would be needed here.  By default, it would be a no-op unless there
-was a policy reload or the file was relabeled between the open(2) and
-the faccessat(2) call.
+On Thu, Aug 27, 2020 at 04:58:31PM +0200, Stefano Garzarella wrote:
+> This patch adds a new IORING_SETUP_R_DISABLED flag to start the
+> rings disabled, allowing the user to register restrictions,
+> buffers, files, before to start processing SQEs.
+> 
+> When IORING_SETUP_R_DISABLED is set, SQE are not processed and
+> SQPOLL kthread is not started.
+> 
+> The restrictions registration are allowed only when the rings
+> are disable to prevent concurrency issue while processing SQEs.
+> 
+> The rings can be enabled using IORING_REGISTER_ENABLE_RINGS
+> opcode with io_uring_register(2).
+> 
+> Suggested-by: Jens Axboe <axboe@kernel.dk>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Stefano Garzarella <sgarzare@redhat.com>
+> ---
+> v4:
+>  - fixed io_uring_enter() exit path when ring is disabled
+> 
+> v3:
+>  - enabled restrictions only when the rings start
+> 
+> RFC v2:
+>  - removed return value of io_sq_offload_start()
+> ---
+>  fs/io_uring.c                 | 52 ++++++++++++++++++++++++++++++-----
+>  include/uapi/linux/io_uring.h |  2 ++
+>  2 files changed, 47 insertions(+), 7 deletions(-)
+> 
+> diff --git a/fs/io_uring.c b/fs/io_uring.c
+> index 5f62997c147b..b036f3373fbe 100644
+> --- a/fs/io_uring.c
+> +++ b/fs/io_uring.c
+> @@ -226,6 +226,7 @@ struct io_restriction {
+>  	DECLARE_BITMAP(sqe_op, IORING_OP_LAST);
+>  	u8 sqe_flags_allowed;
+>  	u8 sqe_flags_required;
+> +	bool registered;
+>  };
+>  
+>  struct io_ring_ctx {
+> @@ -7497,8 +7498,8 @@ static int io_init_wq_offload(struct io_ring_ctx *ctx,
+>  	return ret;
+>  }
+>  
+> -static int io_sq_offload_start(struct io_ring_ctx *ctx,
+> -			       struct io_uring_params *p)
+> +static int io_sq_offload_create(struct io_ring_ctx *ctx,
+> +				struct io_uring_params *p)
+>  {
+>  	int ret;
+>  
+> @@ -7532,7 +7533,6 @@ static int io_sq_offload_start(struct io_ring_ctx *ctx,
+>  			ctx->sqo_thread = NULL;
+>  			goto err;
+>  		}
+> -		wake_up_process(ctx->sqo_thread);
+>  	} else if (p->flags & IORING_SETUP_SQ_AFF) {
+>  		/* Can't have SQ_AFF without SQPOLL */
+>  		ret = -EINVAL;
+> @@ -7549,6 +7549,12 @@ static int io_sq_offload_start(struct io_ring_ctx *ctx,
+>  	return ret;
+>  }
+>  
+> +static void io_sq_offload_start(struct io_ring_ctx *ctx)
+> +{
+> +	if ((ctx->flags & IORING_SETUP_SQPOLL) && ctx->sqo_thread)
+> +		wake_up_process(ctx->sqo_thread);
+> +}
+> +
+>  static inline void __io_unaccount_mem(struct user_struct *user,
+>  				      unsigned long nr_pages)
+>  {
+> @@ -8295,6 +8301,9 @@ SYSCALL_DEFINE6(io_uring_enter, unsigned int, fd, u32, to_submit,
+>  	if (!percpu_ref_tryget(&ctx->refs))
+>  		goto out_fput;
+>  
+> +	if (ctx->flags & IORING_SETUP_R_DISABLED)
+> +		goto out_fput;
+> +
+
+While writing the man page paragraph, I discovered that if the rings are
+disabled I returned ENXIO error in io_uring_enter(), coming from the previous
+check.
+
+I'm not sure it is the best one, maybe I can return EBADFD or another
+error.
+
+What do you suggest?
+
+I'll add a test for this case.
+
+Thanks,
+Stefano
+
