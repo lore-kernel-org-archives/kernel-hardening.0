@@ -1,22 +1,20 @@
-Return-Path: <SRS0=3wiH=CS=lists.openwall.com=kernel-hardening-return-19832-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=+ncu=CS=lists.openwall.com=kernel-hardening-return-19833-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 959BCC43461
-	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Sep 2020 17:09:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 77D27C433E2
+	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Sep 2020 17:14:24 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9D41F21919
-	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Sep 2020 17:09:56 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="W0z7Ggqi"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9D41F21919
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19832-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11889 invoked by uid 550); 9 Sep 2020 17:09:48 -0000
+	by mail.kernel.org (Postfix) with SMTP id A6F16206E6
+	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Sep 2020 17:14:23 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A6F16206E6
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=zeniv.linux.org.uk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19833-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15832 invoked by uid 550); 9 Sep 2020 17:14:17 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,22 +22,11 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11866 invoked from network); 9 Sep 2020 17:09:48 -0000
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-	d=infradead.org; s=casper.20170209; h=In-Reply-To:Content-Transfer-Encoding:
-	Content-Type:MIME-Version:References:Message-ID:Subject:Cc:To:From:Date:
-	Sender:Reply-To:Content-ID:Content-Description;
-	bh=MRdA/hKdv0ZcdKd+zTHc7r+qLakKPSZ3f21yjj7iix8=; b=W0z7GgqihZ/V4Z7UeVxZGpUsGi
-	fNtN2kOEVeoJg5PsX4hYNOL9UiKCDC1aL6S8iu96XC/lfTSWIcTebCpqJ42vX/9r6SALHImHwdpEA
-	w7x5dNWyxDOj35NtO6bfUn0jhcKHgNnDIik72Xdto/v3qNPbg2L8s335x9JHltpJEUoFNxzi0jMZM
-	56LECQWH4AagiWAmkERe4aycbsVrjyL+mF0zcaH9PgyWiPunyhED6QEeXT32E2RCY2sPDVmsdl36+
-	X1Kl0YB/gsqBOMjd8Swoai7DBdYFxORo1iIW5YcAOH8/JyAJQk3ipHD1bhuZmBnXCqF23m8pepW8E
-	GSsMNYIg==;
-Date: Wed, 9 Sep 2020 18:08:51 +0100
-From: Matthew Wilcox <willy@infradead.org>
+Received: (qmail 15806 invoked from network); 9 Sep 2020 17:14:16 -0000
+Date: Wed, 9 Sep 2020 18:13:16 +0100
+From: Al Viro <viro@zeniv.linux.org.uk>
 To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org,
-	Aleksa Sarai <cyphar@cyphar.com>,
+Cc: linux-kernel@vger.kernel.org, Aleksa Sarai <cyphar@cyphar.com>,
 	Alexei Starovoitov <ast@kernel.org>,
 	Andrew Morton <akpm@linux-foundation.org>,
 	Andy Lutomirski <luto@kernel.org>,
@@ -56,6 +43,7 @@ Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org,
 	Kees Cook <keescook@chromium.org>,
 	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
 	Matthew Garrett <mjg59@google.com>,
+	Matthew Wilcox <willy@infradead.org>,
 	Michael Kerrisk <mtk.manpages@gmail.com>,
 	Miklos Szeredi <mszeredi@redhat.com>,
 	Mimi Zohar <zohar@linux.ibm.com>,
@@ -72,7 +60,7 @@ Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
 	linux-fsdevel@vger.kernel.org
 Subject: Re: [RFC PATCH v8 0/3] Add support for AT_INTERPRETED (was O_MAYEXEC)
-Message-ID: <20200909170851.GL6583@casper.infradead.org>
+Message-ID: <20200909171316.GW1236603@ZenIV.linux.org.uk>
 References: <20200908075956.1069018-1-mic@digikod.net>
  <20200908185026.GU1236603@ZenIV.linux.org.uk>
  <e3223b50-0d00-3b64-1e09-cfb1b9648b02@digikod.net>
@@ -81,6 +69,7 @@ Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 In-Reply-To: <e3223b50-0d00-3b64-1e09-cfb1b9648b02@digikod.net>
+Sender: Al Viro <viro@ftp.linux.org.uk>
 
 On Wed, Sep 09, 2020 at 09:19:11AM +0200, Mickaël Salaün wrote:
 > 
@@ -97,12 +86,11 @@ On Wed, Sep 09, 2020 at 09:19:11AM +0200, Mickaël Salaün wrote:
 > > 
 > > Again, why is that folded into lookup/open/whatnot, rather than being
 > > an operation applied to a file (e.g. O_PATH one)?
+> > 
 > 
 > I don't understand your question. AT_INTERPRETED can and should be used
 > with AT_EMPTY_PATH. The two checks I wrote about was for IMA.
 
-Al is saying you should add a new syscall, not try to fold it into
-some existing syscall.
-
-I agree with him.  Add a new syscall, just like you were told to do it
-last time.
+Once more, with feeling: don't hide that behind existing syscalls.
+If you want to tell LSM have a look at given fs object in a special
+way, *add* *a* *new* *system* *call* *for* *doing* *just* *that*.
