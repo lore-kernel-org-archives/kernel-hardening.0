@@ -1,21 +1,21 @@
-Return-Path: <SRS0=ut/e=CT=lists.openwall.com=kernel-hardening-return-19843-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=BIWo=CT=lists.openwall.com=kernel-hardening-return-19844-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.7 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-12.7 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DB779C433E2
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:46:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4CD31C43461
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:47:08 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 828B9206DB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:46:56 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 828B9206DB
+	by mail.kernel.org (Postfix) with SMTP id BFC7A206DB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:47:06 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BFC7A206DB
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19843-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18015 invoked by uid 550); 10 Sep 2020 16:46:41 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19844-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18207 invoked by uid 550); 10 Sep 2020 16:46:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17960 invoked from network); 10 Sep 2020 16:46:40 -0000
+Received: (qmail 18149 invoked from network); 10 Sep 2020 16:46:43 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -67,11 +67,11 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-integrity@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
 	linux-fsdevel@vger.kernel.org,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
-Subject: [RFC PATCH v9 1/3] fs: Add introspect_access(2) syscall implementation and related sysctl
-Date: Thu, 10 Sep 2020 18:46:10 +0200
-Message-Id: <20200910164612.114215-2-mic@digikod.net>
+	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>,
+	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+Subject: [RFC PATCH v9 2/3] arch: Wire up introspect_access(2)
+Date: Thu, 10 Sep 2020 18:46:11 +0200
+Message-Id: <20200910164612.114215-3-mic@digikod.net>
 X-Mailer: git-send-email 2.28.0
 In-Reply-To: <20200910164612.114215-1-mic@digikod.net>
 References: <20200910164612.114215-1-mic@digikod.net>
@@ -81,431 +81,233 @@ Content-Transfer-Encoding: 8bit
 
 From: Mickaël Salaün <mic@linux.microsoft.com>
 
-The introspect_access() syscall enables user space tasks to check that
-files are allowed to be executed or interpreted by user space.  This may
-allow script interpreters to check execution permission before reading
-commands from a file, or dynamic linkers to allow shared object loading.
-This may be seen as a way for a trusted task (e.g. interpreter) to check
-the trustworthiness of files (e.g. scripts) before extending its control
-flow graph with new ones originating from these files.
+Wire up access_interpreted(2) for all architectures.
 
-The security policy is consistently managed by the kernel through a
-sysctl or implemented by an LSM thanks to the inode_permission hook and
-a new kernel flag: MAY_INTROSPECTION_EXEC .
-
-The new sysctl fs.introspection_policy enables system administrators to
-enforce two complementary security policies according to the installed
-system: enforce the noexec mount option, and enforce executable file
-permission.  Indeed, because of compatibility with installed systems,
-only system administrators are able to check that this new enforcement
-is in line with the system mount points and file permissions.
-
-The underlying idea is to be able to restrict scripts interpretation
-according to a policy defined by the system administrator.  For this to
-be possible, script interpreters must use introspect_access(2) with the
-X_OK mode.  To be fully effective, these interpreters also need to
-handle the other ways to execute code: command line parameters (e.g.,
-option -e for Perl), module loading (e.g., option -m for Python), stdin,
-file sourcing, environment variables, configuration files, etc.
-According to the threat model, it may be acceptable to allow some script
-interpreters (e.g. Bash) to interpret commands from stdin, may it be a
-TTY or a pipe, because it may not be enough to (directly) perform
-syscalls.
-
-Even without enforced security policy, user space interpreters can use
-this syscall to try as much as possible to enforce the system policy at
-their level, knowing that it will not break anything on running systems
-which do not care about this feature.  However, on systems which want
-this feature enforced, there will be knowledgeable people (i.e.  system
-administrator who configured fs.introspection_policy deliberately) to
-manage it.
-
-Because introspect_access(2) with X_OK mode is a mean to enforce a
-system-wide security policy (but not application-centric policies), it
-does not make sense for user space to check the sysctl value.  Indeed,
-this new flag only enables to extend the system ability to enforce a
-policy thanks to (some trusted) user space collaboration.  Moreover,
-additional security policies could be managed by LSMs.  This is a
-best-effort approach from the application developer point of view:
-https://lore.kernel.org/lkml/1477d3d7-4b36-afad-7077-a38f42322238@digikod.net/
-
-introspect_access(2) with X_OK should not be confused with the O_EXEC
-flag (for open) which is intended for execute-only, which obviously
-doesn't work for scripts.  However, a similar behavior could be
-implemented in user space with O_PATH:
-https://lore.kernel.org/lkml/1e2f6913-42f2-3578-28ed-567f6a4bdda1@digikod.net/
-
-Being able to restrict execution also enables to protect the kernel by
-restricting arbitrary syscalls that an attacker could perform with a
-crafted binary or certain script languages.  It also improves multilevel
-isolation by reducing the ability of an attacker to use side channels
-with specific code.  These restrictions can natively be enforced for ELF
-binaries (with the noexec mount option) but require this kernel
-extension to properly handle scripts (e.g. Python, Perl).  To get a
-consistent execution policy, additional memory restrictions should also
-be enforced (e.g. thanks to SELinux).
-
-This is a new implementation of a patch initially written by
-Vincent Strubel for CLIP OS 4:
-https://github.com/clipos-archive/src_platform_clip-patches/blob/f5cb330d6b684752e403b4e41b39f7004d88e561/1901_open_mayexec.patch
-This patch has been used for more than 12 years with customized script
-interpreters.  Some examples (with the original O_MAYEXEC) can be found
-here:
-https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC
-
-Co-developed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Signed-off-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
 Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
+Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
 Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: Andrew Morton <akpm@linux-foundation.org>
 Cc: Arnd Bergmann <arnd@arndb.de>
-Cc: Jonathan Corbet <corbet@lwn.net>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
 ---
 
-Changes since v8:
-* Add a dedicated syscall introspect_access() (requested by Al Viro).
-* Rename MAY_INTERPRETED_EXEC to MAY_INTROSPECTION_EXEC .
-* Rename the sysctl fs.interpreted_access to fs.introspection_policy .
-* Update documentation.
-
 Changes since v7:
-* Replaces openat2/O_MAYEXEC with faccessat2/X_OK/AT_INTERPRETED .
-  Switching to an FD-based syscall was suggested by Al Viro and Jann
-  Horn.
-* Handle special file descriptors.
-* Add a compatibility mode for execute/read check.
-* Move the sysctl policy from fs/namei.c to fs/open.c for the new
-  faccessat2/AT_INTERPRETED.
-* Rename the sysctl from fs.open_mayexec_enforce to
-  fs.interpreted_access .
-* Update documentation accordingly.
-
-Changes since v6:
-* Allow opening pipes, block devices and character devices with
-  O_MAYEXEC when there is no enforced policy, but forbid any non-regular
-  file opened with O_MAYEXEC otherwise (i.e. for any enforced policy).
-* Add a paragraph about the non-regular files policy.
-* Move path_noexec() calls out of the fast-path (suggested by Kees
-  Cook).
-* Do not set __FMODE_EXEC for now because of inconsistent behavior:
-  https://lore.kernel.org/lkml/202007160822.CCDB5478@keescook/
-* Returns EISDIR when opening a directory with O_MAYEXEC.
-* Removed Deven Bowers and Kees Cook Reviewed-by tags because of the
-  current update.
-
-Changes since v5:
-* Remove the static enforcement configuration through Kconfig because it
-  makes the code more simple like this, and because the current sysctl
-  configuration can only be set with CAP_SYS_ADMIN, the same way mount
-  options (i.e. noexec) can be set.  If an harden distro wants to
-  enforce a configuration, it should restrict capabilities or sysctl
-  configuration.  Furthermore, an LSM can easily leverage O_MAYEXEC to
-  fit its need.
-* Move checks from inode_permission() to may_open() and make the error
-  codes more consistent according to file types (in line with a previous
-  commit): opening a directory with O_MAYEXEC returns EISDIR and other
-  non-regular file types may return EACCES.
-* In may_open(), when OMAYEXEC_ENFORCE_FILE is set, replace explicit
-  call to generic_permission() with an artificial MAY_EXEC to avoid
-  double calls.  This makes sense especially when an LSM policy forbids
-  execution of a file.
-* Replace the custom proc_omayexec() with
-  proc_dointvec_minmax_sysadmin(), and then replace the CAP_MAC_ADMIN
-  check with a CAP_SYS_ADMIN one (suggested by Kees Cook and Stephen
-  Smalley).
-* Use BIT() (suggested by Kees Cook).
-* Rename variables (suggested by Kees Cook).
-* Reword the kconfig help.
-* Import the documentation patch (suggested by Kees Cook):
-  https://lore.kernel.org/lkml/20200505153156.925111-6-mic@digikod.net/
-* Update documentation and add LWN.net article.
-
-Changes since v4:
-* Add kernel configuration options to enforce O_MAYEXEC at build time,
-  and disable the sysctl in such case (requested by James Morris).
-* Reword commit message.
-
-Changes since v3:
-* Switch back to O_MAYEXEC, but only handle it with openat2(2) which
-  checks unknown flags (suggested by Aleksa Sarai). Cf.
-  https://lore.kernel.org/lkml/20200430015429.wuob7m5ofdewubui@yavin.dot.cyphar.com/
-
-Changes since v2:
-* Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).  This change
-  enables to not break existing application using bogus O_* flags that
-  may be ignored by current kernels by using a new dedicated flag, only
-  usable through openat2(2) (suggested by Jeff Layton).  Using this flag
-  will results in an error if the running kernel does not support it.
-  User space needs to manage this case, as with other RESOLVE_* flags.
-  The best effort approach to security (for most common distros) will
-  simply consists of ignoring such an error and retry without
-  RESOLVE_MAYEXEC.  However, a fully controlled system may which to
-  error out if such an inconsistency is detected.
-* Cosmetic changes.
-
-Changes since v1:
-* Set __FMODE_EXEC when using O_MAYEXEC to make this information
-  available through the new fanotify/FAN_OPEN_EXEC event (suggested by
-  Jan Kara and Matthew Bobrowski):
-  https://lore.kernel.org/lkml/20181213094658.GA996@lithium.mbobrowski.org/
-* Move code from Yama to the FS subsystem (suggested by Kees Cook).
-* Make omayexec_inode_permission() static (suggested by Jann Horn).
-* Use mode 0600 for the sysctl.
-* Only match regular files (not directories nor other types), which
-  follows the same semantic as commit 73601ea5b7b1 ("fs/open.c: allow
-  opening only regular files during execve()").
+* New patch for the new syscall.
+* Increase syscall numbers by 2 to leave space for new ones (in
+  linux-next): watch_mount(2) and process_madvise(2).
 ---
- Documentation/admin-guide/sysctl/fs.rst | 50 ++++++++++++++++
- fs/open.c                               | 79 +++++++++++++++++++++++++
- include/linux/fs.h                      |  3 +
- include/linux/syscalls.h                |  1 +
- kernel/sysctl.c                         | 12 +++-
- 5 files changed, 143 insertions(+), 2 deletions(-)
+ arch/alpha/kernel/syscalls/syscall.tbl      | 1 +
+ arch/arm/tools/syscall.tbl                  | 1 +
+ arch/arm64/include/asm/unistd.h             | 2 +-
+ arch/arm64/include/asm/unistd32.h           | 2 ++
+ arch/ia64/kernel/syscalls/syscall.tbl       | 1 +
+ arch/m68k/kernel/syscalls/syscall.tbl       | 1 +
+ arch/microblaze/kernel/syscalls/syscall.tbl | 1 +
+ arch/mips/kernel/syscalls/syscall_n32.tbl   | 1 +
+ arch/mips/kernel/syscalls/syscall_n64.tbl   | 1 +
+ arch/mips/kernel/syscalls/syscall_o32.tbl   | 1 +
+ arch/parisc/kernel/syscalls/syscall.tbl     | 1 +
+ arch/powerpc/kernel/syscalls/syscall.tbl    | 1 +
+ arch/s390/kernel/syscalls/syscall.tbl       | 1 +
+ arch/sh/kernel/syscalls/syscall.tbl         | 1 +
+ arch/sparc/kernel/syscalls/syscall.tbl      | 1 +
+ arch/x86/entry/syscalls/syscall_32.tbl      | 1 +
+ arch/x86/entry/syscalls/syscall_64.tbl      | 1 +
+ arch/xtensa/kernel/syscalls/syscall.tbl     | 1 +
+ include/uapi/asm-generic/unistd.h           | 4 +++-
+ 19 files changed, 22 insertions(+), 2 deletions(-)
 
-diff --git a/Documentation/admin-guide/sysctl/fs.rst b/Documentation/admin-guide/sysctl/fs.rst
-index f48277a0a850..2f244e968a1d 100644
---- a/Documentation/admin-guide/sysctl/fs.rst
-+++ b/Documentation/admin-guide/sysctl/fs.rst
-@@ -36,6 +36,7 @@ Currently, these files are in /proc/sys/fs:
- - inode-max
- - inode-nr
- - inode-state
-+- introspection_policy
- - nr_open
- - overflowuid
- - overflowgid
-@@ -165,6 +166,55 @@ system needs to prune the inode list instead of allocating
- more.
+diff --git a/arch/alpha/kernel/syscalls/syscall.tbl b/arch/alpha/kernel/syscalls/syscall.tbl
+index ec8bed9e7b75..6c0d26a4910a 100644
+--- a/arch/alpha/kernel/syscalls/syscall.tbl
++++ b/arch/alpha/kernel/syscalls/syscall.tbl
+@@ -479,3 +479,4 @@
+ 547	common	openat2				sys_openat2
+ 548	common	pidfd_getfd			sys_pidfd_getfd
+ 549	common	faccessat2			sys_faccessat2
++552	common	introspect_access		sys_introspect_access
+diff --git a/arch/arm/tools/syscall.tbl b/arch/arm/tools/syscall.tbl
+index 171077cbf419..b444148d49be 100644
+--- a/arch/arm/tools/syscall.tbl
++++ b/arch/arm/tools/syscall.tbl
+@@ -453,3 +453,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/arm64/include/asm/unistd.h b/arch/arm64/include/asm/unistd.h
+index 3b859596840d..949788f5ba40 100644
+--- a/arch/arm64/include/asm/unistd.h
++++ b/arch/arm64/include/asm/unistd.h
+@@ -38,7 +38,7 @@
+ #define __ARM_NR_compat_set_tls		(__ARM_NR_COMPAT_BASE + 5)
+ #define __ARM_NR_COMPAT_END		(__ARM_NR_COMPAT_BASE + 0x800)
  
+-#define __NR_compat_syscalls		440
++#define __NR_compat_syscalls		443
+ #endif
  
-+introspection_policy
-+--------------------
-+
-+An interpreter can call :manpage:`introspect_access(2)` with an ``X_OK`` mode
-+to check that opened regular files are expected to be executable.  If the file
-+is not identified as executable, then the syscall returns -EACCES.  This may
-+allow a script interpreter to check executable permission before reading
-+commands from a file, or a dynamic linker to only load executable shared
-+objects.  One interesting use case is to enforce a "write xor execute" policy
-+through interpreters.
-+
-+The ability to restrict code execution must be thought as a system-wide policy,
-+which first starts by restricting mount points with the ``noexec`` option.
-+This option is also automatically applied to special filesystems such as /proc .
-+This prevents files on such mount points to be directly executed by the kernel
-+or mapped as executable memory (e.g. libraries).  With script interpreters
-+using :manpage:`introspect_access(2)`, the executable permission can then be
-+checked before reading commands from files.  This makes it possible to enforce
-+the ``noexec`` at the interpreter level, and thus propagates this security
-+policy to scripts.  To be fully effective, these interpreters also need to
-+handle the other ways to execute code: command line parameters (e.g., option
-+``-e`` for Perl), module loading (e.g., option ``-m`` for Python), stdin, file
-+sourcing, environment variables, configuration files, etc.  According to the
-+threat model, it may be acceptable to allow some script interpreters (e.g.
-+Bash) to interpret commands from stdin, may it be a TTY or a pipe, because it
-+may not be enough to (directly) perform syscalls.
-+
-+There are two complementary security policies: enforce the ``noexec`` mount
-+option, and enforce executable file permission.  These policies are handled by
-+the ``fs.introspection_policy`` sysctl (writable only with ``CAP_SYS_ADMIN``)
-+as a bitmask:
-+
-+1 - Mount restriction: checks that the mount options for the underlying VFS
-+    mount do not prevent execution.
-+
-+2 - File permission restriction: checks that the file is marked as
-+    executable for the current process (e.g., POSIX permissions, ACLs).
-+
-+Note that as long as a policy is enforced, checking any non-regular file with
-+:manpage:`introspect_access(2)` returns -EACCES (e.g. TTYs, pipe), even when
-+such a file is marked as executable or is on an executable mount point.
-+
-+Code samples can be found in
-+tools/testing/selftests/interpreter/introspection_policy_test.c and interpreter
-+patches (for the original O_MAYEXEC) are available at
-+https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC .
-+See also an overview article: https://lwn.net/Articles/820000/ .
-+
-+
- overflowgid & overflowuid
- -------------------------
- 
-diff --git a/fs/open.c b/fs/open.c
-index 9af548fb841b..390cef411236 100644
---- a/fs/open.c
-+++ b/fs/open.c
-@@ -32,6 +32,7 @@
- #include <linux/ima.h>
- #include <linux/dnotify.h>
- #include <linux/compat.h>
-+#include <linux/sysctl.h>
- 
- #include "internal.h"
- 
-@@ -482,6 +483,84 @@ SYSCALL_DEFINE2(access, const char __user *, filename, int, mode)
- 	return do_faccessat(AT_FDCWD, filename, mode, 0);
- }
- 
-+#define INTROSPECTION_EXEC_MOUNT		BIT(0)
-+#define INTROSPECTION_EXEC_FILE			BIT(1)
-+
-+int sysctl_introspection_policy __read_mostly;
-+
-+SYSCALL_DEFINE3(introspect_access, const int, fd, const int, mode, const int, flags)
-+{
-+	int mask, err = -EACCES;
-+	struct fd f;
-+	struct inode *inode;
-+
-+	if (flags)
-+		return -EINVAL;
-+
-+	/* Only allows X_OK for now. */
-+	if (mode != S_IXOTH)
-+		return -EINVAL;
-+	mask = MAY_EXEC;
-+
-+	f = fdget(fd);
-+	if (!f.file)
-+		return -EBADF;
-+	inode = d_backing_inode(f.file->f_path.dentry);
-+
-+	/*
-+	 * For compatibility reasons, without a defined security policy (via
-+	 * sysctl or LSM), we must map the execute permission to the read
-+	 * permission.  Indeed, from user space point of view, being able to
-+	 * execute data (e.g. scripts) implies to be able to read this data.
-+	 *
-+	 * The MAY_INTROSPECTION_EXEC bit is set to enable LSMs to add custom
-+	 * checks, while being compatible with current policies.
-+	 */
-+	if ((mask & MAY_EXEC)) {
-+		mask |= MAY_INTROSPECTION_EXEC;
-+		/*
-+		 * If there is a system-wide execute policy enforced, then
-+		 * forbids access to non-regular files and special superblocks.
-+		 */
-+		if ((sysctl_introspection_policy & (INTROSPECTION_EXEC_MOUNT |
-+						INTROSPECTION_EXEC_FILE))) {
-+			if (!S_ISREG(inode->i_mode))
-+				goto out_fd;
-+			/*
-+			 * Denies access to pseudo filesystems that will never
-+			 * be mountable (e.g. sockfs, pipefs) but can still be
-+			 * reachable through /proc/self/fd, or memfd-like file
-+			 * descriptors, or nsfs-like files.
-+			 *
-+			 * According to the tests, SB_NOEXEC seems to be only
-+			 * used by proc and nsfs filesystems.  Is it correct?
-+			 */
-+			if ((f.file->f_path.dentry->d_sb->s_flags &
-+						(SB_NOUSER | SB_KERNMOUNT | SB_NOEXEC)))
-+				goto out_fd;
-+		}
-+
-+		if ((sysctl_introspection_policy & INTROSPECTION_EXEC_MOUNT) &&
-+				path_noexec(&f.file->f_path))
-+			goto out_fd;
-+		/*
-+		 * For compatibility reasons, if the system-wide policy doesn't
-+		 * enforce file permission checks, then replaces the execute
-+		 * permission request with a read permission request.
-+		 */
-+		if (!(sysctl_introspection_policy & INTROSPECTION_EXEC_FILE))
-+			mask &= ~MAY_EXEC;
-+		/* To be executed *by* user space, files must be readable. */
-+		mask |= MAY_READ;
-+	}
-+
-+	err = inode_permission(inode, mask | MAY_ACCESS);
-+
-+out_fd:
-+	fdput(f);
-+	return err;
-+}
-+
- SYSCALL_DEFINE1(chdir, const char __user *, filename)
- {
- 	struct path path;
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 7519ae003a08..3f9c4fe199ce 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -83,6 +83,7 @@ extern int sysctl_protected_symlinks;
- extern int sysctl_protected_hardlinks;
- extern int sysctl_protected_fifos;
- extern int sysctl_protected_regular;
-+extern int sysctl_introspection_policy;
- 
- typedef __kernel_rwf_t rwf_t;
- 
-@@ -101,6 +102,8 @@ typedef int (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
- #define MAY_CHDIR		0x00000040
- /* called from RCU mode, don't block */
- #define MAY_NOT_BLOCK		0x00000080
-+/* introspection accesses, cf. introspect_access(2) */
-+#define MAY_INTROSPECTION_EXEC	0x00000100
+ #define __ARCH_WANT_SYS_CLONE
+diff --git a/arch/arm64/include/asm/unistd32.h b/arch/arm64/include/asm/unistd32.h
+index 734860ac7cf9..a5b3cd7973ff 100644
+--- a/arch/arm64/include/asm/unistd32.h
++++ b/arch/arm64/include/asm/unistd32.h
+@@ -887,6 +887,8 @@ __SYSCALL(__NR_openat2, sys_openat2)
+ __SYSCALL(__NR_pidfd_getfd, sys_pidfd_getfd)
+ #define __NR_faccessat2 439
+ __SYSCALL(__NR_faccessat2, sys_faccessat2)
++#define __NR_introspect_access 442
++__SYSCALL(__NR_introspect_access, sys_introspect_access)
  
  /*
-  * flags in file.f_mode.  Note that FMODE_READ and FMODE_WRITE must correspond
-diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
-index 75ac7f8ae93c..e8cb6846dea2 100644
---- a/include/linux/syscalls.h
-+++ b/include/linux/syscalls.h
-@@ -429,6 +429,7 @@ asmlinkage long sys_fallocate(int fd, int mode, loff_t offset, loff_t len);
- asmlinkage long sys_faccessat(int dfd, const char __user *filename, int mode);
- asmlinkage long sys_faccessat2(int dfd, const char __user *filename, int mode,
- 			       int flags);
-+asmlinkage long sys_introspect_access(int fd, int mode, int flags);
- asmlinkage long sys_chdir(const char __user *filename);
- asmlinkage long sys_fchdir(unsigned int fd);
- asmlinkage long sys_chroot(const char __user *filename);
-diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index 09e70ee2332e..d9c2aca9a0c0 100644
---- a/kernel/sysctl.c
-+++ b/kernel/sysctl.c
-@@ -113,6 +113,7 @@ static int sixty = 60;
+  * Please add new compat syscalls above this comment and update
+diff --git a/arch/ia64/kernel/syscalls/syscall.tbl b/arch/ia64/kernel/syscalls/syscall.tbl
+index f52a41f4c340..6b0ff458392a 100644
+--- a/arch/ia64/kernel/syscalls/syscall.tbl
++++ b/arch/ia64/kernel/syscalls/syscall.tbl
+@@ -360,3 +360,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/m68k/kernel/syscalls/syscall.tbl b/arch/m68k/kernel/syscalls/syscall.tbl
+index 81fc799d8392..37ae4690bc26 100644
+--- a/arch/m68k/kernel/syscalls/syscall.tbl
++++ b/arch/m68k/kernel/syscalls/syscall.tbl
+@@ -439,3 +439,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/microblaze/kernel/syscalls/syscall.tbl b/arch/microblaze/kernel/syscalls/syscall.tbl
+index b4e263916f41..e797242a8849 100644
+--- a/arch/microblaze/kernel/syscalls/syscall.tbl
++++ b/arch/microblaze/kernel/syscalls/syscall.tbl
+@@ -445,3 +445,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/mips/kernel/syscalls/syscall_n32.tbl b/arch/mips/kernel/syscalls/syscall_n32.tbl
+index f9df9edb67a4..7b8ad951f3e7 100644
+--- a/arch/mips/kernel/syscalls/syscall_n32.tbl
++++ b/arch/mips/kernel/syscalls/syscall_n32.tbl
+@@ -378,3 +378,4 @@
+ 437	n32	openat2				sys_openat2
+ 438	n32	pidfd_getfd			sys_pidfd_getfd
+ 439	n32	faccessat2			sys_faccessat2
++442	n32	introspect_access		sys_introspect_access
+diff --git a/arch/mips/kernel/syscalls/syscall_n64.tbl b/arch/mips/kernel/syscalls/syscall_n64.tbl
+index 557f9954a2b9..96ad1861e004 100644
+--- a/arch/mips/kernel/syscalls/syscall_n64.tbl
++++ b/arch/mips/kernel/syscalls/syscall_n64.tbl
+@@ -354,3 +354,4 @@
+ 437	n64	openat2				sys_openat2
+ 438	n64	pidfd_getfd			sys_pidfd_getfd
+ 439	n64	faccessat2			sys_faccessat2
++442	n64	introspect_access		sys_introspect_access
+diff --git a/arch/mips/kernel/syscalls/syscall_o32.tbl b/arch/mips/kernel/syscalls/syscall_o32.tbl
+index 195b43cf27c8..963a6ebe5ece 100644
+--- a/arch/mips/kernel/syscalls/syscall_o32.tbl
++++ b/arch/mips/kernel/syscalls/syscall_o32.tbl
+@@ -427,3 +427,4 @@
+ 437	o32	openat2				sys_openat2
+ 438	o32	pidfd_getfd			sys_pidfd_getfd
+ 439	o32	faccessat2			sys_faccessat2
++442	o32	introspect_access		sys_introspect_access
+diff --git a/arch/parisc/kernel/syscalls/syscall.tbl b/arch/parisc/kernel/syscalls/syscall.tbl
+index def64d221cd4..209e66c024c0 100644
+--- a/arch/parisc/kernel/syscalls/syscall.tbl
++++ b/arch/parisc/kernel/syscalls/syscall.tbl
+@@ -437,3 +437,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/powerpc/kernel/syscalls/syscall.tbl b/arch/powerpc/kernel/syscalls/syscall.tbl
+index c2d737ff2e7b..474e00ee811c 100644
+--- a/arch/powerpc/kernel/syscalls/syscall.tbl
++++ b/arch/powerpc/kernel/syscalls/syscall.tbl
+@@ -529,3 +529,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/s390/kernel/syscalls/syscall.tbl b/arch/s390/kernel/syscalls/syscall.tbl
+index 10456bc936fb..ca0233bee7c1 100644
+--- a/arch/s390/kernel/syscalls/syscall.tbl
++++ b/arch/s390/kernel/syscalls/syscall.tbl
+@@ -442,3 +442,4 @@
+ 437  common	openat2			sys_openat2			sys_openat2
+ 438  common	pidfd_getfd		sys_pidfd_getfd			sys_pidfd_getfd
+ 439  common	faccessat2		sys_faccessat2			sys_faccessat2
++442  common	introspect_access		sys_introspect_access		sys_introspect_access
+diff --git a/arch/sh/kernel/syscalls/syscall.tbl b/arch/sh/kernel/syscalls/syscall.tbl
+index ae0a00beea5f..fcd71c2ce909 100644
+--- a/arch/sh/kernel/syscalls/syscall.tbl
++++ b/arch/sh/kernel/syscalls/syscall.tbl
+@@ -442,3 +442,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/sparc/kernel/syscalls/syscall.tbl b/arch/sparc/kernel/syscalls/syscall.tbl
+index 4af114e84f20..d0c5fff613c7 100644
+--- a/arch/sparc/kernel/syscalls/syscall.tbl
++++ b/arch/sparc/kernel/syscalls/syscall.tbl
+@@ -485,3 +485,4 @@
+ 437	common	openat2			sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/arch/x86/entry/syscalls/syscall_32.tbl b/arch/x86/entry/syscalls/syscall_32.tbl
+index 9d1102873666..64e270d811dd 100644
+--- a/arch/x86/entry/syscalls/syscall_32.tbl
++++ b/arch/x86/entry/syscalls/syscall_32.tbl
+@@ -444,3 +444,4 @@
+ 437	i386	openat2			sys_openat2
+ 438	i386	pidfd_getfd		sys_pidfd_getfd
+ 439	i386	faccessat2		sys_faccessat2
++442	i386	introspect_access		sys_introspect_access
+diff --git a/arch/x86/entry/syscalls/syscall_64.tbl b/arch/x86/entry/syscalls/syscall_64.tbl
+index f30d6ae9a688..afaf848bf8cd 100644
+--- a/arch/x86/entry/syscalls/syscall_64.tbl
++++ b/arch/x86/entry/syscalls/syscall_64.tbl
+@@ -361,6 +361,7 @@
+ 437	common	openat2			sys_openat2
+ 438	common	pidfd_getfd		sys_pidfd_getfd
+ 439	common	faccessat2		sys_faccessat2
++442	common	introspect_access		sys_introspect_access
  
- static int __maybe_unused neg_one = -1;
- static int __maybe_unused two = 2;
-+static int __maybe_unused three = 3;
- static int __maybe_unused four = 4;
- static unsigned long zero_ul;
- static unsigned long one_ul = 1;
-@@ -887,7 +888,6 @@ static int proc_taint(struct ctl_table *table, int write,
- 	return err;
- }
+ #
+ # x32-specific system call numbers start at 512 to avoid cache impact
+diff --git a/arch/xtensa/kernel/syscalls/syscall.tbl b/arch/xtensa/kernel/syscalls/syscall.tbl
+index 6276e3c2d3fc..815be731b6df 100644
+--- a/arch/xtensa/kernel/syscalls/syscall.tbl
++++ b/arch/xtensa/kernel/syscalls/syscall.tbl
+@@ -410,3 +410,4 @@
+ 437	common	openat2				sys_openat2
+ 438	common	pidfd_getfd			sys_pidfd_getfd
+ 439	common	faccessat2			sys_faccessat2
++442	common	introspect_access		sys_introspect_access
+diff --git a/include/uapi/asm-generic/unistd.h b/include/uapi/asm-generic/unistd.h
+index 995b36c2ea7d..57120ab8a0b7 100644
+--- a/include/uapi/asm-generic/unistd.h
++++ b/include/uapi/asm-generic/unistd.h
+@@ -859,9 +859,11 @@ __SYSCALL(__NR_openat2, sys_openat2)
+ __SYSCALL(__NR_pidfd_getfd, sys_pidfd_getfd)
+ #define __NR_faccessat2 439
+ __SYSCALL(__NR_faccessat2, sys_faccessat2)
++#define __NR_introspect_access 442
++__SYSCALL(__NR_introspect_access, sys_introspect_access)
  
--#ifdef CONFIG_PRINTK
- static int proc_dointvec_minmax_sysadmin(struct ctl_table *table, int write,
- 				void *buffer, size_t *lenp, loff_t *ppos)
- {
-@@ -896,7 +896,6 @@ static int proc_dointvec_minmax_sysadmin(struct ctl_table *table, int write,
+ #undef __NR_syscalls
+-#define __NR_syscalls 440
++#define __NR_syscalls 443
  
- 	return proc_dointvec_minmax(table, write, buffer, lenp, ppos);
- }
--#endif
- 
- /**
-  * struct do_proc_dointvec_minmax_conv_param - proc_dointvec_minmax() range checking structure
-@@ -3293,6 +3292,15 @@ static struct ctl_table fs_table[] = {
- 		.extra1		= SYSCTL_ZERO,
- 		.extra2		= &two,
- 	},
-+	{
-+		.procname       = "introspection_policy",
-+		.data           = &sysctl_introspection_policy,
-+		.maxlen         = sizeof(int),
-+		.mode           = 0600,
-+		.proc_handler	= proc_dointvec_minmax_sysadmin,
-+		.extra1		= SYSCTL_ZERO,
-+		.extra2		= &three,
-+	},
- #if defined(CONFIG_BINFMT_MISC) || defined(CONFIG_BINFMT_MISC_MODULE)
- 	{
- 		.procname	= "binfmt_misc",
+ /*
+  * 32 bit systems traditionally used different
 -- 
 2.28.0
 
