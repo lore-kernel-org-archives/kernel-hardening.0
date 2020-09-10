@@ -1,24 +1,23 @@
-Return-Path: <SRS0=bM64=CT=lists.openwall.com=kernel-hardening-return-19839-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=IbRI=CT=lists.openwall.com=kernel-hardening-return-19840-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-20.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no
-	version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7EBF1C43461
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 13:48:39 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D10E7C43461
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 15:07:31 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7D10821D81
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 13:48:38 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id CB3EA2087C
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 15:07:30 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="WgG0SFGn"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7D10821D81
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="eS8Omoyt"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CB3EA2087C
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19839-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1776 invoked by uid 550); 10 Sep 2020 13:48:31 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19840-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11708 invoked by uid 550); 10 Sep 2020 15:07:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,74 +25,81 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1744 invoked from network); 10 Sep 2020 13:48:31 -0000
+Received: (qmail 11673 invoked from network); 10 Sep 2020 15:07:23 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=sender:date:message-id:mime-version:subject:from:to:cc;
-        bh=CKC4riJvJK5v9Z9Ok50HMBgYPff3aChRh0QJLVpJjvg=;
-        b=WgG0SFGnDfGbjr63kBibCRJ2m30nMFyLODKO7uNWW8B11XC1UwmPIs+QtSGJ9LWSsg
-         9u74K8ShTi8lfKM8fOFrrE3iPMvEPHrLBNqAtSHRKL8hTEwoyHZSZV837a92ZZexxqyR
-         DGBHW1zi/gx6uKdESbNPxmI3gIK+PrbZU483OVXEelYoY+UBrFa3gypGemNz1jC+7L4B
-         osZ1fQVDztT3Z7ZbUlUHHmdprHw3yV3cWhSiSDcDwhf9wy4UHlPpMa0t0Y4SDteGyM8M
-         Wsw1dGDSsoexSvilfwqdewaJXBRgiDyytB2ffdovKX7/xDlDk1RcSslRxR332JpOwrDs
-         wLdw==
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=CkdZTgPQtli4HqKjoybGJC69i/K2eo+/Y/ueOVTU/uQ=;
+        b=eS8OmoytThC7KUY/Rbjn9+OdhHCTAxZHZhtO9Ll397opaMxtZwThboa+C2O8ZFCyZO
+         3yO7BFlQAHn+yHQOjTkSFxrGQT55I8zRk+ACqC8mUlAGEgaJBYVxdtDOeJYvRXY7OjD1
+         qoTqm7lymwBPWk5HvlxgcsMnJSmrWwc/CDEf5vU234aNsYZC/feumKaSOaVQM1oeg2rp
+         5mn5icPj2L2oVd+okglM+aUogVgHmTvRe+DoweL0N0v4d2/lpxJ7oBj1ZuDkqyJtw+x2
+         MyX0f8gzheaFJLMAEkWsyGR+2G8QUbr85wv/70bydcasoZ+1oXcDIR0JEbGlmuon6m7C
+         zqwA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:date:message-id:mime-version:subject:from
-         :to:cc;
-        bh=CKC4riJvJK5v9Z9Ok50HMBgYPff3aChRh0QJLVpJjvg=;
-        b=YIOGjP76A8uCRMsMSmOhH2O+OEeUD34UIEd9ubBvjmlPvGuIpjqDG7tm9BqqMGJnnm
-         Sv3F5LRBhO0CDmVPwP9iTH3Q5dtx5P8LVL43kj2X+z4/mqOuD3yJ3GSFUrqXdFKDqHI+
-         YxGU0YcSv0SzIxu41ipMPHgg/WL54qdkRdtFOEtqWSa/aTlhpS68MroRPL7qmEjaWktW
-         6AT/YaLrFDhNu4Fclxs6Y7Y2H3p50ftmRiu2tarABMvXLuqOZrjjYJ0wixTuwwd0s/iz
-         iBqsP1TnSojHH6ThS/iMHWLv7Z7ICEPuutaoKfE1Pyda+kOCC6OlLgQPSBAt8xmIZq1a
-         jBKg==
-X-Gm-Message-State: AOAM530cq0cbGB2/QNJuidgZJHuoGczDDyQGDR1kIKKCu/+BuMNfsjoi
-	RvxxJOx5N8VAkThyxvAD+HOFMS5tLcP0ZkD5h+FQFOpBDM/i2/tjiO0q5aJZx1DwiMtIH+NSdz4
-	UPMZBNVxd9hGEPuyj/z2Fu5K9t0S43Yef8QN0O3CqwtZkE2RpGZ5BcO5KIu7pj+jlQJikv7xkcK
-	F5tZsDqQ==
-X-Google-Smtp-Source: ABdhPJzXGzHqMjZogwlFUVQYV32E/MmMQjyUoqvNm+QW2oFEVjVBfHVxiQC+Yt6DXR0L9wrVPmfbdeimv9tD
-Sender: "lenaptr via sendgmr" <lenaptr@lenaptr.lon.corp.google.com>
-X-Received: from lenaptr.lon.corp.google.com ([2a00:79e0:d:210:f693:9fff:fef4:29c9])
- (user=lenaptr job=sendgmr) by 2002:a5d:44cc:: with SMTP id
- z12mr9413494wrr.189.1599745699562; Thu, 10 Sep 2020 06:48:19 -0700 (PDT)
-Date: Thu, 10 Sep 2020 14:48:02 +0100
-Message-Id: <20200910134802.3160311-1-lenaptr@google.com>
-Mime-Version: 1.0
-X-Mailer: git-send-email 2.28.0.526.ge36021eeef-goog
-Subject: [PATCH] sched.h: drop in_ubsan field when UBSAN is in trap mode
-From: Elena Petrova <lenaptr@google.com>
-To: kernel-hardening@lists.openwall.com
-Cc: Elena Petrova <lenaptr@google.com>, linux-kernel@vger.kernel.org, 
-	Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset="UTF-8"
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=CkdZTgPQtli4HqKjoybGJC69i/K2eo+/Y/ueOVTU/uQ=;
+        b=rECYtMBl98jeuXVZQ1EzyLNy96WfWA+Y0GZoF1432QFP16st+M0JSEHVYDqSFi4u4N
+         RzHR+Q8jRfj4AgMcaZKVO4/3WI6i8YXTGg/SdbVSYJx/yMyzzzGyU6bx0OjQ8aJILEx+
+         n7mrEoysrui4PWJNWx6JDV4MM8VtzajFjSndieryKF8SgDCkJj5mIdD8APUVicz+EcB/
+         0bVmdQKopyUx6urNdopJtn6sXSoGsqeTdMlGu0Qq1ClFzm1Z+oMKXj5E2W7qdP27bKk2
+         +BIuu070c+PTiukQeuupCqrH+7g/LOvCFuUo5+LPIi0MryFRaR8d9WkcAAgm7qeF9aHj
+         DrxQ==
+X-Gm-Message-State: AOAM5327aLyCqjA94mbwImSYQv5haSM47XDrzPVWvDj+C2ddHiN9qQ+N
+	l9/2id9mQP5qU5KRQZXb1yG/aQ==
+X-Google-Smtp-Source: ABdhPJzgkkNJGQRPeFg7lZtu3UZBjQBkf2nGy3Om/c9n+Dj7KFkAAjDpg1xpd04kYgbe9qjhwsW3RQ==
+X-Received: by 2002:a17:902:82c1:: with SMTP id u1mr6062512plz.38.1599750430560;
+        Thu, 10 Sep 2020 08:07:10 -0700 (PDT)
+Date: Thu, 10 Sep 2020 08:07:04 -0700
+From: Sami Tolvanen <samitolvanen@google.com>
+To: David Woodhouse <dwmw2@infradead.org>
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Kees Cook <keescook@chromium.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
+	x86@kernel.org
+Subject: Re: [PATCH v2 15/28] init: lto: ensure initcall ordering
+Message-ID: <20200910150704.GA2041735@google.com>
+References: <20200624203200.78870-1-samitolvanen@google.com>
+ <20200903203053.3411268-1-samitolvanen@google.com>
+ <20200903203053.3411268-16-samitolvanen@google.com>
+ <5f45f55340cf54f5506a50adf61e49b27b904322.camel@infradead.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <5f45f55340cf54f5506a50adf61e49b27b904322.camel@infradead.org>
 
-in_ubsan field of task_struct is only used in lib/ubsan.c, which in its
-turn is used only `ifneq ($(CONFIG_UBSAN_TRAP),y)`.
+On Thu, Sep 10, 2020 at 10:25:40AM +0100, David Woodhouse wrote:
+> On Thu, 2020-09-03 at 13:30 -0700, Sami Tolvanen wrote:
+> > With LTO, the compiler doesn't necessarily obey the link order for
+> > initcalls, and initcall variables need globally unique names to avoid
+> > collisions at link time.
+> > 
+> > This change exports __KBUILD_MODNAME and adds the initcall_id() macro,
+> > which uses it together with __COUNTER__ and __LINE__ to help ensure
+> > these variables have unique names, and moves each variable to its own
+> > section when LTO is enabled, so the correct order can be specified using
+> > a linker script.
+> > 
+> > The generate_initcall_ordering.pl script uses nm to find initcalls from
+> > the object files passed to the linker, and generates a linker script
+> > that specifies the intended order. With LTO, the script is called in
+> > link-vmlinux.sh.
+> 
+> Is this guaranteed to give you the *same* initcall ordering with LTO as
+> without?
 
-Removing unnecessary field from a task_struct will help preserve the
-ABI between vanilla and CONFIG_UBSAN_TRAP'ed kernels. In particular,
-this will help enabling bounds sanitizer transparently for Android's
-GKI.
+Yes. It follows the link order, just like the linker without LTO, and
+also preserves the order within each file.
 
-Signed-off-by: Elena Petrova <lenaptr@google.com>
----
- include/linux/sched.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index afe01e232935..5c7b8dec236e 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1008,7 +1008,7 @@ struct task_struct {
- 	struct held_lock		held_locks[MAX_LOCK_DEPTH];
- #endif
- 
--#ifdef CONFIG_UBSAN
-+#if defined(CONFIG_UBSAN) && !defined(CONFIG_UBSAN_TRAP)
- 	unsigned int			in_ubsan;
- #endif
- 
--- 
-2.28.0.526.ge36021eeef-goog
-
+Sami
