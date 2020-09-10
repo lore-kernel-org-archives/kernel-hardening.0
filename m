@@ -1,23 +1,23 @@
-Return-Path: <SRS0=sD/m=CT=lists.openwall.com=kernel-hardening-return-19865-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=HNla=CT=lists.openwall.com=kernel-hardening-return-19866-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-16.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D2C64C433E2
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 20:28:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EA4C1C433E2
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 20:39:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E281B20BED
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 20:28:19 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1CBAD20829
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 20:39:48 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="C/Nbbf4T"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E281B20BED
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="WH2gIvD2"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1CBAD20829
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19865-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32631 invoked by uid 550); 10 Sep 2020 20:28:13 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19866-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 10133 invoked by uid 550); 10 Sep 2020 20:39:43 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,43 +25,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32611 invoked from network); 10 Sep 2020 20:28:13 -0000
+Received: (qmail 10109 invoked from network); 10 Sep 2020 20:39:42 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=dOtT3N7XbGpRxpxc8ChGzc7KDQ9tSEwlVL00HtmCks8=;
-        b=C/Nbbf4T5rPk5brkoe050E2pcKCOvUasKnRCCFebyKdoxklwvBx0WXCmqjsDrbtpQV
-         jR6WiarrGjbLiEQkOEZuNuB/YvertASUjGXTd4haT9x7o9clqXR3JKVcu0UMmGqYZUmU
-         VAsc6ulw4hGipMG2uE+lsgPcKmNCYpytB/IHs6Oxg8HuAoZWBCKBvclBqizD+4L+LwfK
-         nsSI43tbcdKmURrSC9zJfS5oLkDHyWRaABxsMPLIICw+pxAgpBCM5dVXdO+OuZg2E//b
-         2h5kExRMIJy0tPvpHdEeBK6feABcxtN2G01klGZ6ScnLzyaR3hPS/Of9tc91a739PUWU
-         5RXw==
+        bh=QYmngQGxhwrP1IO10+U44hIuDR+Bh29FacWTWPCzifs=;
+        b=WH2gIvD2kocNW47TzoJUq8vy8koxj0ikTiqTurIt6Osqva8P4NIsbGtJVGwywUIjkq
+         xe3qkruoqIuEPaS3xmqhN2h7V3FGdVjN/fZNXtAtjbUs+ii6wOWOxYBwlihrbKA6Dsi2
+         ZcxxkAAiqBfwAJnSmslWIncB3hpPqqLBsQnucMZPZcNa3susHR1gFRdjKlEQ6Zwl4evT
+         Ngj6/THEyDfAL+bxEhBtLcLnD1Efcq5a03Byz8i2VKTt0P9PSzdVa+iwn8BOcmkqFZjj
+         WKCR+bEgC/b8wFZGdDbKxyU2GcFt1zleojRTJ6mzpqrmZfP30xuKihxrC7oSbqE+O1e4
+         z6+A==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=dOtT3N7XbGpRxpxc8ChGzc7KDQ9tSEwlVL00HtmCks8=;
-        b=PspFHlIGUP1Ye+KkgCQrsYhqRyocuLyc9KJePEoXxTi+A/wDqqDZliV6LTxm0Ol3FN
-         1/bUnLYCdKAGPyZBt3FxN+S5mKqPQmJcBl/Z3RfPFgErL0X8jYzLQgR4lSTmJxjw5YxS
-         KKMUWl8V9Aq5yIHhNKwFG6X1h2LLkgiT9ellsg+JFVOcySu/1K/RJveP9LZ+iMnvGNLT
-         JtyHqVSpEwI0Vk/3SGg4yDY2Yh7QJZH8EP3T2SeKuGxzyJftBscwh1zfqoINVYhkxwng
-         8kUt/wL3Sjxa1OLhqbei/8D1BzbxDZa0Wu2YaAmgd5Cs0xhIcyjfnfsh8E1LQdbxPmzZ
-         vj7w==
-X-Gm-Message-State: AOAM532VNh7Q3uy5gj/mPEf0YPhDs9iH8Xag5tSfunmw40Ri3MXOLUPo
-	YocWmj67ZKHzoIFlKawfjBdZi+aYXXPG64ZDSDh5EQ==
-X-Google-Smtp-Source: ABdhPJw5R/5Ez4aDdMGu21cR5k0AUCPks8j2VqSHJM0t1OaVkhoHiaB7U2J+4k9K0u43oPA3YLYttkRf9QTiPALFrsk=
-X-Received: by 2002:a50:fe98:: with SMTP id d24mr11069998edt.223.1599769681295;
- Thu, 10 Sep 2020 13:28:01 -0700 (PDT)
+        bh=QYmngQGxhwrP1IO10+U44hIuDR+Bh29FacWTWPCzifs=;
+        b=WrJQGInKSdiFAYGqrW1W3NkuA3LAZ38wB67s7R6/Q6GX9O9WSMcFcvaptMVTTZ2Qhc
+         F8AUZxgZOFITvpsnPSR3qiD9zjnX4SoXQcPZiBMQbKC5TQA1gT99oWMOcXCbYV3u2pgV
+         1a0j3KLFIqX6xsrjsllTaPODu+a2phMQCJWmTomFTXIO470pzAGLXfkvNXc27/FtnxcF
+         nLA/1uZb5rHxFsUvF5VdjCx4c2qSQVauYs38geTJPRTf/Ih7TDcHOQhM9jZbnvNUezxU
+         UoF2Peqqp9nEDFWkDwX7lppb3p8BoOGem382dP+4W+8/+uoaJP0k3hqWSMHHxBoV4gL5
+         ZD2w==
+X-Gm-Message-State: AOAM530gfZdbaCZ+sd198dAE9bkAoDBo4CCy7Xo7kXA+mTB73/4pBM5E
+	qzbsM8E4Y86a/xi/9wO7HkunREcFS49m5ipK6SqlAQ==
+X-Google-Smtp-Source: ABdhPJzQ6i+tHlAxsWiND/QkNM3WvkTC+Ju6Mk1rDHZmgMyEa8UX1fZqVV5xbVt8ItiYrZl+V7nr/bCNAXGD3jgXwtk=
+X-Received: by 2002:a05:6402:7d2:: with SMTP id u18mr11556708edy.69.1599770370678;
+ Thu, 10 Sep 2020 13:39:30 -0700 (PDT)
 MIME-Version: 1.0
-References: <20200910202107.3799376-1-keescook@chromium.org> <20200910202107.3799376-4-keescook@chromium.org>
-In-Reply-To: <20200910202107.3799376-4-keescook@chromium.org>
+References: <20200910202107.3799376-1-keescook@chromium.org>
+In-Reply-To: <20200910202107.3799376-1-keescook@chromium.org>
 From: Jann Horn <jannh@google.com>
-Date: Thu, 10 Sep 2020 22:27:35 +0200
-Message-ID: <CAG48ez3om6tRSjZhq4RBtbRCZaupTPJewEYbtN9Q-NCUzDjkqA@mail.gmail.com>
-Subject: Re: [RFC PATCH 3/6] security/fbfam: Use the api to manage statistics
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, John Wood <john.wood@gmx.com>, 
+Date: Thu, 10 Sep 2020 22:39:04 +0200
+Message-ID: <CAG48ez0WzMpTqaTgtZwQ9MenCoWuyFn1yRhL9R0+s+=pbonTQA@mail.gmail.com>
+Subject: Re: [RESEND][RFC PATCH 0/6] Fork brute force attack mitigation (fbfam)
+To: Kees Cook <keescook@chromium.org>, John Wood <john.wood@gmx.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, 
 	Matthew Wilcox <willy@infradead.org>, Jonathan Corbet <corbet@lwn.net>, 
 	Alexander Viro <viro@zeniv.linux.org.uk>, Ingo Molnar <mingo@redhat.com>, 
 	Peter Zijlstra <peterz@infradead.org>, Juri Lelli <juri.lelli@redhat.com>, 
@@ -75,12 +75,21 @@ Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, John Wood <john.wood
 Content-Type: text/plain; charset="UTF-8"
 
 On Thu, Sep 10, 2020 at 10:21 PM Kees Cook <keescook@chromium.org> wrote:
-> Use the previous defined api to manage statistics calling it accordingly
-> when a task forks, calls execve or exits.
+> [kees: re-sending this series on behalf of John Wood <john.wood@gmx.com>
+> also visible at https://github.com/johwood/linux fbfam]
+[...]
+> The goal of this patch serie is to detect and mitigate a fork brute force
+> attack.
+>
+> Attacks with the purpose to break ASLR or bypass canaries traditionaly use
+> some level of brute force with the help of the fork system call. This is
+> possible since when creating a new process using fork its memory contents
+> are the same as those of the parent process (the process that called the
+> fork system call). So, the attacker can test the memory infinite times to
+> find the correct memory values or the correct memory addresses without
+> worrying about crashing the application.
 
-You defined functions that return error codes in the previous patch,
-but here you ignore the return values. That's a bad idea.
-
-You should probably check the return value in execve() (and fail the
-execution in the case where memory allocation fails), and make it so
-that the other functions always succeed.
+For the next version of this patchset, you may want to clarify that
+this is intended to stop brute force attacks *against vulnerable
+userspace processes* that fork off worker processes. I was halfway
+through the patch series before I realized that.
