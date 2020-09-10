@@ -1,4 +1,4 @@
-Return-Path: <SRS0=BIWo=CT=lists.openwall.com=kernel-hardening-return-19844-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=LhSm=CT=lists.openwall.com=kernel-hardening-return-19845-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-12.7 required=3.0 tests=BAYES_00,
 	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4CD31C43461
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:47:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 10993C433E2
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:47:19 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BFC7A206DB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:47:06 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BFC7A206DB
+	by mail.kernel.org (Postfix) with SMTP id C32DF206DB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Sep 2020 16:47:17 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C32DF206DB
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19844-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18207 invoked by uid 550); 10 Sep 2020 16:46:44 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19845-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18375 invoked by uid 550); 10 Sep 2020 16:46:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18149 invoked from network); 10 Sep 2020 16:46:43 -0000
+Received: (qmail 18293 invoked from network); 10 Sep 2020 16:46:45 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
@@ -69,9 +69,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-fsdevel@vger.kernel.org,
 	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>,
 	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Subject: [RFC PATCH v9 2/3] arch: Wire up introspect_access(2)
-Date: Thu, 10 Sep 2020 18:46:11 +0200
-Message-Id: <20200910164612.114215-3-mic@digikod.net>
+Subject: [RFC PATCH v9 3/3] selftest/interpreter: Add tests for introspect_access(2) policies
+Date: Thu, 10 Sep 2020 18:46:12 +0200
+Message-Id: <20200910164612.114215-4-mic@digikod.net>
 X-Mailer: git-send-email 2.28.0
 In-Reply-To: <20200910164612.114215-1-mic@digikod.net>
 References: <20200910164612.114215-1-mic@digikod.net>
@@ -81,233 +81,486 @@ Content-Transfer-Encoding: 8bit
 
 From: Mickaël Salaün <mic@linux.microsoft.com>
 
-Wire up access_interpreted(2) for all architectures.
+Test that checks performed by introspect_access(2) on file descriptors
+are consistent with noexec mount points and file execute permissions,
+according to the policy configured with the fs.introspection_policy
+sysctl.
 
 Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
 Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
 Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Andrew Morton <akpm@linux-foundation.org>
 Cc: Arnd Bergmann <arnd@arndb.de>
+Cc: Andrew Morton <akpm@linux-foundation.org>
 Cc: Kees Cook <keescook@chromium.org>
+Cc: Shuah Khan <shuah@kernel.org>
 Cc: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
 ---
 
-Changes since v7:
-* New patch for the new syscall.
-* Increase syscall numbers by 2 to leave space for new ones (in
-  linux-next): watch_mount(2) and process_madvise(2).
----
- arch/alpha/kernel/syscalls/syscall.tbl      | 1 +
- arch/arm/tools/syscall.tbl                  | 1 +
- arch/arm64/include/asm/unistd.h             | 2 +-
- arch/arm64/include/asm/unistd32.h           | 2 ++
- arch/ia64/kernel/syscalls/syscall.tbl       | 1 +
- arch/m68k/kernel/syscalls/syscall.tbl       | 1 +
- arch/microblaze/kernel/syscalls/syscall.tbl | 1 +
- arch/mips/kernel/syscalls/syscall_n32.tbl   | 1 +
- arch/mips/kernel/syscalls/syscall_n64.tbl   | 1 +
- arch/mips/kernel/syscalls/syscall_o32.tbl   | 1 +
- arch/parisc/kernel/syscalls/syscall.tbl     | 1 +
- arch/powerpc/kernel/syscalls/syscall.tbl    | 1 +
- arch/s390/kernel/syscalls/syscall.tbl       | 1 +
- arch/sh/kernel/syscalls/syscall.tbl         | 1 +
- arch/sparc/kernel/syscalls/syscall.tbl      | 1 +
- arch/x86/entry/syscalls/syscall_32.tbl      | 1 +
- arch/x86/entry/syscalls/syscall_64.tbl      | 1 +
- arch/xtensa/kernel/syscalls/syscall.tbl     | 1 +
- include/uapi/asm-generic/unistd.h           | 4 +++-
- 19 files changed, 22 insertions(+), 2 deletions(-)
+Changes since v8:
+* Update with the dedicated syscall introspect_access(2) and the renamed
+  fs.introspection_policy sysctl.
+* Remove check symlink which can't be use as is anymore.
+* Use socketpair(2) to test UNIX socket.
 
-diff --git a/arch/alpha/kernel/syscalls/syscall.tbl b/arch/alpha/kernel/syscalls/syscall.tbl
-index ec8bed9e7b75..6c0d26a4910a 100644
---- a/arch/alpha/kernel/syscalls/syscall.tbl
-+++ b/arch/alpha/kernel/syscalls/syscall.tbl
-@@ -479,3 +479,4 @@
- 547	common	openat2				sys_openat2
- 548	common	pidfd_getfd			sys_pidfd_getfd
- 549	common	faccessat2			sys_faccessat2
-+552	common	introspect_access		sys_introspect_access
-diff --git a/arch/arm/tools/syscall.tbl b/arch/arm/tools/syscall.tbl
-index 171077cbf419..b444148d49be 100644
---- a/arch/arm/tools/syscall.tbl
-+++ b/arch/arm/tools/syscall.tbl
-@@ -453,3 +453,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/arm64/include/asm/unistd.h b/arch/arm64/include/asm/unistd.h
-index 3b859596840d..949788f5ba40 100644
---- a/arch/arm64/include/asm/unistd.h
-+++ b/arch/arm64/include/asm/unistd.h
-@@ -38,7 +38,7 @@
- #define __ARM_NR_compat_set_tls		(__ARM_NR_COMPAT_BASE + 5)
- #define __ARM_NR_COMPAT_END		(__ARM_NR_COMPAT_BASE + 0x800)
- 
--#define __NR_compat_syscalls		440
-+#define __NR_compat_syscalls		443
- #endif
- 
- #define __ARCH_WANT_SYS_CLONE
-diff --git a/arch/arm64/include/asm/unistd32.h b/arch/arm64/include/asm/unistd32.h
-index 734860ac7cf9..a5b3cd7973ff 100644
---- a/arch/arm64/include/asm/unistd32.h
-+++ b/arch/arm64/include/asm/unistd32.h
-@@ -887,6 +887,8 @@ __SYSCALL(__NR_openat2, sys_openat2)
- __SYSCALL(__NR_pidfd_getfd, sys_pidfd_getfd)
- #define __NR_faccessat2 439
- __SYSCALL(__NR_faccessat2, sys_faccessat2)
-+#define __NR_introspect_access 442
-+__SYSCALL(__NR_introspect_access, sys_introspect_access)
- 
- /*
-  * Please add new compat syscalls above this comment and update
-diff --git a/arch/ia64/kernel/syscalls/syscall.tbl b/arch/ia64/kernel/syscalls/syscall.tbl
-index f52a41f4c340..6b0ff458392a 100644
---- a/arch/ia64/kernel/syscalls/syscall.tbl
-+++ b/arch/ia64/kernel/syscalls/syscall.tbl
-@@ -360,3 +360,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/m68k/kernel/syscalls/syscall.tbl b/arch/m68k/kernel/syscalls/syscall.tbl
-index 81fc799d8392..37ae4690bc26 100644
---- a/arch/m68k/kernel/syscalls/syscall.tbl
-+++ b/arch/m68k/kernel/syscalls/syscall.tbl
-@@ -439,3 +439,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/microblaze/kernel/syscalls/syscall.tbl b/arch/microblaze/kernel/syscalls/syscall.tbl
-index b4e263916f41..e797242a8849 100644
---- a/arch/microblaze/kernel/syscalls/syscall.tbl
-+++ b/arch/microblaze/kernel/syscalls/syscall.tbl
-@@ -445,3 +445,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/mips/kernel/syscalls/syscall_n32.tbl b/arch/mips/kernel/syscalls/syscall_n32.tbl
-index f9df9edb67a4..7b8ad951f3e7 100644
---- a/arch/mips/kernel/syscalls/syscall_n32.tbl
-+++ b/arch/mips/kernel/syscalls/syscall_n32.tbl
-@@ -378,3 +378,4 @@
- 437	n32	openat2				sys_openat2
- 438	n32	pidfd_getfd			sys_pidfd_getfd
- 439	n32	faccessat2			sys_faccessat2
-+442	n32	introspect_access		sys_introspect_access
-diff --git a/arch/mips/kernel/syscalls/syscall_n64.tbl b/arch/mips/kernel/syscalls/syscall_n64.tbl
-index 557f9954a2b9..96ad1861e004 100644
---- a/arch/mips/kernel/syscalls/syscall_n64.tbl
-+++ b/arch/mips/kernel/syscalls/syscall_n64.tbl
-@@ -354,3 +354,4 @@
- 437	n64	openat2				sys_openat2
- 438	n64	pidfd_getfd			sys_pidfd_getfd
- 439	n64	faccessat2			sys_faccessat2
-+442	n64	introspect_access		sys_introspect_access
-diff --git a/arch/mips/kernel/syscalls/syscall_o32.tbl b/arch/mips/kernel/syscalls/syscall_o32.tbl
-index 195b43cf27c8..963a6ebe5ece 100644
---- a/arch/mips/kernel/syscalls/syscall_o32.tbl
-+++ b/arch/mips/kernel/syscalls/syscall_o32.tbl
-@@ -427,3 +427,4 @@
- 437	o32	openat2				sys_openat2
- 438	o32	pidfd_getfd			sys_pidfd_getfd
- 439	o32	faccessat2			sys_faccessat2
-+442	o32	introspect_access		sys_introspect_access
-diff --git a/arch/parisc/kernel/syscalls/syscall.tbl b/arch/parisc/kernel/syscalls/syscall.tbl
-index def64d221cd4..209e66c024c0 100644
---- a/arch/parisc/kernel/syscalls/syscall.tbl
-+++ b/arch/parisc/kernel/syscalls/syscall.tbl
-@@ -437,3 +437,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/powerpc/kernel/syscalls/syscall.tbl b/arch/powerpc/kernel/syscalls/syscall.tbl
-index c2d737ff2e7b..474e00ee811c 100644
---- a/arch/powerpc/kernel/syscalls/syscall.tbl
-+++ b/arch/powerpc/kernel/syscalls/syscall.tbl
-@@ -529,3 +529,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/s390/kernel/syscalls/syscall.tbl b/arch/s390/kernel/syscalls/syscall.tbl
-index 10456bc936fb..ca0233bee7c1 100644
---- a/arch/s390/kernel/syscalls/syscall.tbl
-+++ b/arch/s390/kernel/syscalls/syscall.tbl
-@@ -442,3 +442,4 @@
- 437  common	openat2			sys_openat2			sys_openat2
- 438  common	pidfd_getfd		sys_pidfd_getfd			sys_pidfd_getfd
- 439  common	faccessat2		sys_faccessat2			sys_faccessat2
-+442  common	introspect_access		sys_introspect_access		sys_introspect_access
-diff --git a/arch/sh/kernel/syscalls/syscall.tbl b/arch/sh/kernel/syscalls/syscall.tbl
-index ae0a00beea5f..fcd71c2ce909 100644
---- a/arch/sh/kernel/syscalls/syscall.tbl
-+++ b/arch/sh/kernel/syscalls/syscall.tbl
-@@ -442,3 +442,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/sparc/kernel/syscalls/syscall.tbl b/arch/sparc/kernel/syscalls/syscall.tbl
-index 4af114e84f20..d0c5fff613c7 100644
---- a/arch/sparc/kernel/syscalls/syscall.tbl
-+++ b/arch/sparc/kernel/syscalls/syscall.tbl
-@@ -485,3 +485,4 @@
- 437	common	openat2			sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/arch/x86/entry/syscalls/syscall_32.tbl b/arch/x86/entry/syscalls/syscall_32.tbl
-index 9d1102873666..64e270d811dd 100644
---- a/arch/x86/entry/syscalls/syscall_32.tbl
-+++ b/arch/x86/entry/syscalls/syscall_32.tbl
-@@ -444,3 +444,4 @@
- 437	i386	openat2			sys_openat2
- 438	i386	pidfd_getfd		sys_pidfd_getfd
- 439	i386	faccessat2		sys_faccessat2
-+442	i386	introspect_access		sys_introspect_access
-diff --git a/arch/x86/entry/syscalls/syscall_64.tbl b/arch/x86/entry/syscalls/syscall_64.tbl
-index f30d6ae9a688..afaf848bf8cd 100644
---- a/arch/x86/entry/syscalls/syscall_64.tbl
-+++ b/arch/x86/entry/syscalls/syscall_64.tbl
-@@ -361,6 +361,7 @@
- 437	common	openat2			sys_openat2
- 438	common	pidfd_getfd		sys_pidfd_getfd
- 439	common	faccessat2		sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
- 
- #
- # x32-specific system call numbers start at 512 to avoid cache impact
-diff --git a/arch/xtensa/kernel/syscalls/syscall.tbl b/arch/xtensa/kernel/syscalls/syscall.tbl
-index 6276e3c2d3fc..815be731b6df 100644
---- a/arch/xtensa/kernel/syscalls/syscall.tbl
-+++ b/arch/xtensa/kernel/syscalls/syscall.tbl
-@@ -410,3 +410,4 @@
- 437	common	openat2				sys_openat2
- 438	common	pidfd_getfd			sys_pidfd_getfd
- 439	common	faccessat2			sys_faccessat2
-+442	common	introspect_access		sys_introspect_access
-diff --git a/include/uapi/asm-generic/unistd.h b/include/uapi/asm-generic/unistd.h
-index 995b36c2ea7d..57120ab8a0b7 100644
---- a/include/uapi/asm-generic/unistd.h
-+++ b/include/uapi/asm-generic/unistd.h
-@@ -859,9 +859,11 @@ __SYSCALL(__NR_openat2, sys_openat2)
- __SYSCALL(__NR_pidfd_getfd, sys_pidfd_getfd)
- #define __NR_faccessat2 439
- __SYSCALL(__NR_faccessat2, sys_faccessat2)
-+#define __NR_introspect_access 442
-+__SYSCALL(__NR_introspect_access, sys_introspect_access)
- 
- #undef __NR_syscalls
--#define __NR_syscalls 440
-+#define __NR_syscalls 443
- 
- /*
-  * 32 bit systems traditionally used different
+Changes since v7:
+* Update tests with faccessat2/AT_INTERPRETED, including new ones to
+  check that setting R_OK or W_OK returns EINVAL.
+* Add tests for memfd, pipefs and nsfs.
+* Rename and move back tests to a standalone directory.
+
+Changes since v6:
+* Add full combination tests for all file types, including block
+  devices, character devices, fifos, sockets and symlinks.
+* Properly save and restore initial sysctl value for all tests.
+
+Changes since v5:
+* Refactor with FIXTURE_VARIANT, which make the tests much more easy to
+  read and maintain.
+* Save and restore initial sysctl value (suggested by Kees Cook).
+* Test with a sysctl value of 0.
+* Check errno in sysctl_access_write test.
+* Update tests for the CAP_SYS_ADMIN switch.
+* Update tests to check -EISDIR (replacing -EACCES).
+* Replace FIXTURE_DATA() with FIXTURE() (spotted by Kees Cook).
+* Use global const strings.
+
+Changes since v3:
+* Replace RESOLVE_MAYEXEC with O_MAYEXEC.
+* Add tests to check that O_MAYEXEC is ignored by open(2) and openat(2).
+
+Changes since v2:
+* Move tests from exec/ to openat2/ .
+* Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).
+* Cleanup tests.
+
+Changes since v1:
+* Move tests from yama/ to exec/ .
+* Fix _GNU_SOURCE in kselftest_harness.h .
+* Add a new test sysctl_access_write to check if CAP_MAC_ADMIN is taken
+  into account.
+* Test directory execution which is always forbidden since commit
+  73601ea5b7b1 ("fs/open.c: allow opening only regular files during
+  execve()"), and also check that even the root user can not bypass file
+  execution checks.
+* Make sure delete_workspace() always as enough right to succeed.
+* Cosmetic cleanup.
+---
+ .../testing/selftests/interpreter/.gitignore  |   2 +
+ tools/testing/selftests/interpreter/Makefile  |  18 +
+ tools/testing/selftests/interpreter/config    |   1 +
+ .../interpreter/introspection_policy_test.c   | 361 ++++++++++++++++++
+ 4 files changed, 382 insertions(+)
+ create mode 100644 tools/testing/selftests/interpreter/.gitignore
+ create mode 100644 tools/testing/selftests/interpreter/Makefile
+ create mode 100644 tools/testing/selftests/interpreter/config
+ create mode 100644 tools/testing/selftests/interpreter/introspection_policy_test.c
+
+diff --git a/tools/testing/selftests/interpreter/.gitignore b/tools/testing/selftests/interpreter/.gitignore
+new file mode 100644
+index 000000000000..82a4846cbc4b
+--- /dev/null
++++ b/tools/testing/selftests/interpreter/.gitignore
+@@ -0,0 +1,2 @@
++# SPDX-License-Identifier: GPL-2.0-only
++/*_test
+diff --git a/tools/testing/selftests/interpreter/Makefile b/tools/testing/selftests/interpreter/Makefile
+new file mode 100644
+index 000000000000..6b3e8c3e533b
+--- /dev/null
++++ b/tools/testing/selftests/interpreter/Makefile
+@@ -0,0 +1,18 @@
++# SPDX-License-Identifier: GPL-2.0-or-later
++
++CFLAGS += -Wall -O2
++LDLIBS += -lcap
++
++src_test := $(wildcard *_test.c)
++TEST_GEN_PROGS := $(src_test:.c=)
++
++KSFT_KHDR_INSTALL := 1
++include ../lib.mk
++
++khdr_dir = $(top_srcdir)/usr/include
++
++$(khdr_dir)/asm-generic/unistd.h: khdr
++	@:
++
++$(OUTPUT)/%_test: %_test.c $(khdr_dir)/asm-generic/unistd.h ../kselftest_harness.h
++	$(LINK.c) $< $(LDLIBS) -o $@ -I$(khdr_dir)
+diff --git a/tools/testing/selftests/interpreter/config b/tools/testing/selftests/interpreter/config
+new file mode 100644
+index 000000000000..dd53c266bf52
+--- /dev/null
++++ b/tools/testing/selftests/interpreter/config
+@@ -0,0 +1 @@
++CONFIG_SYSCTL=y
+diff --git a/tools/testing/selftests/interpreter/introspection_policy_test.c b/tools/testing/selftests/interpreter/introspection_policy_test.c
+new file mode 100644
+index 000000000000..e5a63cb05877
+--- /dev/null
++++ b/tools/testing/selftests/interpreter/introspection_policy_test.c
+@@ -0,0 +1,361 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Test introspect_access(2) with fs.introspection_policy sysctl
++ *
++ * Copyright © 2018-2020 ANSSI
++ *
++ * Author: Mickaël Salaün <mic@digikod.net>
++ */
++
++#define _GNU_SOURCE
++#include <asm-generic/unistd.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/capability.h>
++#include <sys/mman.h>
++#include <sys/mount.h>
++#include <sys/socket.h>
++#include <sys/stat.h>
++#include <sys/syscall.h>
++#include <sys/sysmacros.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#include "../kselftest_harness.h"
++
++#ifndef introspect_access
++static int introspect_access(const int fd, const int mode, const int flags)
++{
++	errno = 0;
++	return syscall(__NR_introspect_access, fd, mode, flags);
++}
++#endif
++
++static const char sysctl_path[] = "/proc/sys/fs/introspection_policy";
++
++static const char workdir_path[] = "./test-mount";
++static const char reg_file_path[] = "./test-mount/regular_file";
++static const char dir_path[] = "./test-mount/directory";
++static const char block_dev_path[] = "./test-mount/block_device";
++static const char char_dev_path[] = "./test-mount/character_device";
++static const char fifo_path[] = "./test-mount/fifo";
++
++static void ignore_dac(struct __test_metadata *_metadata, int override)
++{
++	cap_t caps;
++	const cap_value_t cap_val[2] = {
++		CAP_DAC_OVERRIDE,
++		CAP_DAC_READ_SEARCH,
++	};
++
++	caps = cap_get_proc();
++	ASSERT_NE(NULL, caps);
++	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_val,
++				override ? CAP_SET : CAP_CLEAR));
++	ASSERT_EQ(0, cap_set_proc(caps));
++	EXPECT_EQ(0, cap_free(caps));
++}
++
++static void ignore_sys_admin(struct __test_metadata *_metadata, int override)
++{
++	cap_t caps;
++	const cap_value_t cap_val[1] = {
++		CAP_SYS_ADMIN,
++	};
++
++	caps = cap_get_proc();
++	ASSERT_NE(NULL, caps);
++	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_val,
++				override ? CAP_SET : CAP_CLEAR));
++	ASSERT_EQ(0, cap_set_proc(caps));
++	EXPECT_EQ(0, cap_free(caps));
++}
++
++static void test_omx(struct __test_metadata *_metadata,
++		const char *const path, const int err_access)
++{
++	int flags = O_RDONLY | O_CLOEXEC;
++	int fd, access_ret, access_errno;
++
++	/* Do not block on pipes. */
++	if (path == fifo_path)
++		flags |= O_NONBLOCK;
++
++	fd = open(path, flags);
++	ASSERT_LE(0, fd) {
++		TH_LOG("Failed to open %s: %s", path, strerror(errno));
++	}
++	access_ret = introspect_access(fd, X_OK, 0);
++	access_errno = errno;
++	if (err_access) {
++		ASSERT_EQ(err_access, access_errno) {
++			TH_LOG("Wrong error for introspect_access(2) with %s: %s",
++					path, strerror(access_errno));
++		}
++		ASSERT_EQ(-1, access_ret);
++	} else {
++		ASSERT_EQ(0, access_ret) {
++			TH_LOG("Access denied for %s: %s", path, strerror(access_errno));
++		}
++	}
++
++	/* Tests read access. */
++	access_ret = introspect_access(fd, R_OK, 0);
++	ASSERT_EQ(-1, access_ret);
++	ASSERT_EQ(EINVAL, errno);
++
++	/* Tests write access. */
++	access_ret = introspect_access(fd, W_OK, 0);
++	ASSERT_EQ(-1, access_ret);
++	ASSERT_EQ(EINVAL, errno);
++
++	EXPECT_EQ(0, close(fd));
++}
++
++static void test_policy_fd(struct __test_metadata *_metadata, const int fd,
++		const bool has_policy)
++{
++	const int ret = introspect_access(fd, X_OK, 0);
++
++	if (has_policy) {
++		ASSERT_EQ(-1, ret);
++		ASSERT_EQ(EACCES, errno) {
++			TH_LOG("Wrong error for introspect_access(2) with FD: %s", strerror(errno));
++		}
++	} else {
++		ASSERT_EQ(0, ret) {
++			TH_LOG("Access denied for FD: %s", strerror(errno));
++		}
++	}
++}
++
++FIXTURE(access) {
++	char initial_sysctl_value;
++	int memfd, pipefd;
++	int pipe_fds[2], socket_fds[2];
++};
++
++static void test_file_types(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
++		const int err_code, const bool has_policy)
++{
++	/* Tests are performed on a tmpfs mount point. */
++	test_omx(_metadata, reg_file_path, err_code);
++	test_omx(_metadata, dir_path, has_policy ? EACCES : 0);
++	test_omx(_metadata, block_dev_path, has_policy ? EACCES : 0);
++	test_omx(_metadata, char_dev_path, has_policy ? EACCES : 0);
++	test_omx(_metadata, fifo_path, has_policy ? EACCES : 0);
++
++	/* Checks that exec is denied for any socket FD. */
++	test_policy_fd(_metadata, self->socket_fds[0], has_policy);
++
++	/* Checks that exec is denied for any memfd. */
++	test_policy_fd(_metadata, self->memfd, has_policy);
++
++	/* Checks that exec is denied for any pipefs FD. */
++	test_policy_fd(_metadata, self->pipefd, has_policy);
++}
++
++static void test_files(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
++		const int err_code, const bool has_policy)
++{
++	/* Tests as root. */
++	ignore_dac(_metadata, 1);
++	test_file_types(_metadata, self, err_code, has_policy);
++
++	/* Tests without bypass. */
++	ignore_dac(_metadata, 0);
++	test_file_types(_metadata, self, err_code, has_policy);
++}
++
++static void sysctl_write_char(struct __test_metadata *_metadata, const char value)
++{
++	int fd;
++
++	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
++	ASSERT_LE(0, fd);
++	ASSERT_EQ(1, write(fd, &value, 1));
++	EXPECT_EQ(0, close(fd));
++}
++
++static char sysctl_read_char(struct __test_metadata *_metadata)
++{
++	int fd;
++	char sysctl_value;
++
++	fd = open(sysctl_path, O_RDONLY | O_CLOEXEC);
++	ASSERT_LE(0, fd);
++	ASSERT_EQ(1, read(fd, &sysctl_value, 1));
++	EXPECT_EQ(0, close(fd));
++	return sysctl_value;
++}
++
++FIXTURE_VARIANT(access) {
++	const bool mount_exec;
++	const bool file_exec;
++	const int sysctl_err_code[3];
++};
++
++FIXTURE_VARIANT_ADD(access, mount_exec_file_exec) {
++	.mount_exec = true,
++	.file_exec = true,
++	.sysctl_err_code = {0, 0, 0},
++};
++
++FIXTURE_VARIANT_ADD(access, mount_exec_file_noexec)
++{
++	.mount_exec = true,
++	.file_exec = false,
++	.sysctl_err_code = {0, EACCES, EACCES},
++};
++
++FIXTURE_VARIANT_ADD(access, mount_noexec_file_exec)
++{
++	.mount_exec = false,
++	.file_exec = true,
++	.sysctl_err_code = {EACCES, 0, EACCES},
++};
++
++FIXTURE_VARIANT_ADD(access, mount_noexec_file_noexec)
++{
++	.mount_exec = false,
++	.file_exec = false,
++	.sysctl_err_code = {EACCES, EACCES, EACCES},
++};
++
++FIXTURE_SETUP(access)
++{
++	int procfd_path_size;
++	static const char path_template[] = "/proc/self/fd/%d";
++	char procfd_path[sizeof(path_template) + 10];
++
++	/*
++	 * Cleans previous workspace if any error previously happened (don't
++	 * check errors).
++	 */
++	umount(workdir_path);
++	rmdir(workdir_path);
++
++	/* Creates a clean mount point. */
++	ASSERT_EQ(0, mkdir(workdir_path, 00700));
++	ASSERT_EQ(0, mount("test", workdir_path, "tmpfs", MS_MGC_VAL |
++				(variant->mount_exec ? 0 : MS_NOEXEC),
++				"mode=0700,size=4k"));
++
++	/* Creates a regular file. */
++	ASSERT_EQ(0, mknod(reg_file_path, S_IFREG | (variant->file_exec ? 0500 : 0400), 0));
++	/* Creates a directory. */
++	ASSERT_EQ(0, mkdir(dir_path, variant->file_exec ? 0500 : 0400));
++	/* Creates a character device: /dev/null. */
++	ASSERT_EQ(0, mknod(char_dev_path, S_IFCHR | 0400, makedev(1, 3)));
++	/* Creates a block device: /dev/loop0 */
++	ASSERT_EQ(0, mknod(block_dev_path, S_IFBLK | 0400, makedev(7, 0)));
++	/* Creates a fifo. */
++	ASSERT_EQ(0, mknod(fifo_path, S_IFIFO | 0400, 0));
++
++	/* Creates a regular file without user mount point. */
++	self->memfd = memfd_create("test-interpreted", MFD_CLOEXEC);
++	ASSERT_LE(0, self->memfd);
++	/* Sets mode, which must be ignored by the exec check. */
++	ASSERT_EQ(0, fchmod(self->memfd, variant->file_exec ? 0500 : 0400));
++
++	/* Creates a pipefs file descriptor. */
++	ASSERT_EQ(0, pipe(self->pipe_fds));
++	procfd_path_size = snprintf(procfd_path, sizeof(procfd_path),
++			path_template, self->pipe_fds[0]);
++	ASSERT_LT(procfd_path_size, sizeof(procfd_path));
++	self->pipefd = open(procfd_path, O_RDONLY | O_CLOEXEC);
++	ASSERT_LE(0, self->pipefd);
++	ASSERT_EQ(0, fchmod(self->pipefd, variant->file_exec ? 0500 : 0400));
++
++	/* Creates a socket file descriptor. */
++	ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0, self->socket_fds));
++
++	/* Saves initial sysctl value. */
++	self->initial_sysctl_value = sysctl_read_char(_metadata);
++
++	/* Prepares for sysctl writes. */
++	ignore_sys_admin(_metadata, 1);
++}
++
++FIXTURE_TEARDOWN(access)
++{
++	EXPECT_EQ(0, close(self->memfd));
++	EXPECT_EQ(0, close(self->pipefd));
++	EXPECT_EQ(0, close(self->pipe_fds[0]));
++	EXPECT_EQ(0, close(self->pipe_fds[1]));
++	EXPECT_EQ(0, close(self->socket_fds[0]));
++	EXPECT_EQ(0, close(self->socket_fds[1]));
++
++	/* Restores initial sysctl value. */
++	sysctl_write_char(_metadata, self->initial_sysctl_value);
++
++	/* There is no need to unlink the test files. */
++	ASSERT_EQ(0, umount(workdir_path));
++	ASSERT_EQ(0, rmdir(workdir_path));
++}
++
++TEST_F(access, sysctl_0)
++{
++	/* Do not enforce anything. */
++	sysctl_write_char(_metadata, '0');
++	test_files(_metadata, self, 0, false);
++}
++
++TEST_F(access, sysctl_1)
++{
++	/* Enforces mount exec check. */
++	sysctl_write_char(_metadata, '1');
++	test_files(_metadata, self, variant->sysctl_err_code[0], true);
++}
++
++TEST_F(access, sysctl_2)
++{
++	/* Enforces file exec check. */
++	sysctl_write_char(_metadata, '2');
++	test_files(_metadata, self, variant->sysctl_err_code[1], true);
++}
++
++TEST_F(access, sysctl_3)
++{
++	/* Enforces mount and file exec check. */
++	sysctl_write_char(_metadata, '3');
++	test_files(_metadata, self, variant->sysctl_err_code[2], true);
++}
++
++FIXTURE(cleanup) {
++	char initial_sysctl_value;
++};
++
++FIXTURE_SETUP(cleanup)
++{
++	/* Saves initial sysctl value. */
++	self->initial_sysctl_value = sysctl_read_char(_metadata);
++}
++
++FIXTURE_TEARDOWN(cleanup)
++{
++	/* Restores initial sysctl value. */
++	ignore_sys_admin(_metadata, 1);
++	sysctl_write_char(_metadata, self->initial_sysctl_value);
++}
++
++TEST_F(cleanup, sysctl_access_write)
++{
++	int fd;
++	ssize_t ret;
++
++	ignore_sys_admin(_metadata, 1);
++	sysctl_write_char(_metadata, '0');
++
++	ignore_sys_admin(_metadata, 0);
++	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
++	ASSERT_LE(0, fd);
++	ret = write(fd, "0", 1);
++	ASSERT_EQ(-1, ret);
++	ASSERT_EQ(EPERM, errno);
++	EXPECT_EQ(0, close(fd));
++}
++
++TEST_HARNESS_MAIN
 -- 
 2.28.0
 
