@@ -1,21 +1,23 @@
-Return-Path: <SRS0=Pord=CU=lists.openwall.com=kernel-hardening-return-19880-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=xCzc=CU=lists.openwall.com=kernel-hardening-return-19881-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.7 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-11.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 28A21C43461
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 14:43:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A57BAC43461
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 16:22:51 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 02B80222D5
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 14:43:52 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 02B80222D5
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=omprussia.ru
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19880-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 14095 invoked by uid 550); 11 Sep 2020 14:43:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id C594122204
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 16:22:50 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Ae4tquuk"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C594122204
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19881-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19743 invoked by uid 550); 11 Sep 2020 16:22:43 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,105 +25,136 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5663 invoked from network); 11 Sep 2020 14:15:21 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 mxout04.lancloud.ru 27D1B20A0DEC
-Subject: Re: [RFC PATCH v9 0/3] Add introspect_access(2) (was O_MAYEXEC)
-To: Matthew Wilcox <willy@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>
-CC: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, Mimi Zohar
-	<zohar@linux.ibm.com>, <linux-kernel@vger.kernel.org>, Aleksa Sarai
-	<cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>, Andrew Morton
-	<akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann
-	<arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Christian Brauner
-	<christian.brauner@ubuntu.com>, Christian Heimes <christian@python.org>,
-	Daniel Borkmann <daniel@iogearbox.net>, Deven Bowers
-	<deven.desai@linux.microsoft.com>, Dmitry Vyukov <dvyukov@google.com>, Eric
- Biggers <ebiggers@kernel.org>, Eric Chiang <ericchiang@google.com>, Florian
- Weimer <fweimer@redhat.com>, James Morris <jmorris@namei.org>, Jan Kara
-	<jack@suse.cz>, Jann Horn <jannh@google.com>, Jonathan Corbet
-	<corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Lakshmi Ramasubramanian
-	<nramas@linux.microsoft.com>, Matthew Garrett <mjg59@google.com>, Michael
- Kerrisk <mtk.manpages@gmail.com>, Miklos Szeredi <mszeredi@redhat.com>,
-	=?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Scott
- Shell <scottsh@microsoft.com>, Sean Christopherson
-	<sean.j.christopherson@intel.com>, Shuah Khan <shuah@kernel.org>, Steve Dower
-	<steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, Tetsuo Handa
-	<penguin-kernel@i-love.sakura.ne.jp>, Thibaut Sautereau
-	<thibaut.sautereau@clip-os.org>, Vincent Strubel
-	<vincent.strubel@ssi.gouv.fr>, <kernel-hardening@lists.openwall.com>,
-	<linux-api@vger.kernel.org>, <linux-integrity@vger.kernel.org>,
-	<linux-security-module@vger.kernel.org>, <linux-fsdevel@vger.kernel.org>
-References: <20200910164612.114215-1-mic@digikod.net>
- <20200910170424.GU6583@casper.infradead.org>
- <f6e2358c-8e5e-e688-3e66-2cdd943e360e@digikod.net>
- <a48145770780d36e90f28f1526805a7292eb74f6.camel@linux.ibm.com>
- <880bb4ee-89a2-b9b0-747b-0f779ceda995@digikod.net>
- <20200910184033.GX6583@casper.infradead.org>
- <20200910200010.GF1236603@ZenIV.linux.org.uk>
- <20200910200543.GY6583@casper.infradead.org>
-From: Igor Zhbanov <i.zhbanov@omprussia.ru>
-Message-ID: <c77abad8-55a6-d66a-8d4d-dfc598fe5251@omprussia.ru>
-Date: Fri, 11 Sep 2020 17:15:10 +0300
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:52.0) Gecko/20100101
- Thunderbird/52.9.1
+Received: (qmail 19709 invoked from network); 11 Sep 2020 16:22:42 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=evNZKysAyJVDJFT66khLohp3xUs13A1xSWcEfi9b540=;
+        b=Ae4tquukEefgUlPmUmJU0RsPNNyjRmp/EcJwNrsDA4qCmFhdDh9bYbZ7o/pXQ7tnT4
+         svI/zhr2xDJ83F4ISMrwM3VLNLJGxaT9vhQrAE/9eDcRATsuHPM5THKfI9WzUCyJGKWC
+         hNGME51ilNarXtOPN2bD5Ve9/meaJCLFgBJF/TZwW2ufT/quianqVNX4Gbk47G+RpJZc
+         pZwL8/KHBuHRDv8Qujoba+Ef9Jb/LVnmsjpKi8BwAcGrQvalpwjdeyzmyN2udZtQ4Pb3
+         i3lHMW7qaKFoCp+cM8dKpFBDGLFeYk5c46WtvzAtz9fa9GiR1M4cfxsbexzvnHOL33yW
+         4i+A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=evNZKysAyJVDJFT66khLohp3xUs13A1xSWcEfi9b540=;
+        b=KSY15rQqc3NGF1c50QQdZFeSq+UCIdADFFAEcTq6FXsnTPosXnLk2sTReuQI2R+kcc
+         6JrCAR03sSrkiEC8PhxsROdUsi30Oz3gjqWlKmhRU9/VrBK09UKrTj/0PAKX6lMOkJKV
+         I+rxdr6ad7/61FvlqIVnLOjo32bV7qYVYgmXHoHI1LaoF7nPhFEOBl8D3UIiKhxS22sL
+         2RHh8KM6LENgYCCeZRvCE0gdBwsIAAlcpM9fCoSDZlwjaHv7tTJa5JuxeEqgfEX12kWL
+         W7FU3B86MEdTBSfRF1/TMbMjZkpbTWlTigN41HjpoibrqKNxb9Kg7CzJwTBCi9PDfXCq
+         X3Tw==
+X-Gm-Message-State: AOAM532n0c5gIUh/NFgFk+Ss/GlW/gWQ9szldgzG8b+WqNYAA1ShZxuc
+	e+rZTyY71P0JIa6YHLdFKcf6/lEdeA+b/LQBJ/+Btw==
+X-Google-Smtp-Source: ABdhPJyqHiecqUtumffmsrD9npH6L2n5M/zdIGPahrdtL0+0os1gIs7YjYfDjXWuBz5n1Y8EJ2sQXjRZ/jbRS55PAlw=
+X-Received: by 2002:a17:906:a0c2:: with SMTP id bh2mr2837607ejb.493.1599841351050;
+ Fri, 11 Sep 2020 09:22:31 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <20200910200543.GY6583@casper.infradead.org>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Language: ru-RU
-Content-Transfer-Encoding: 8bit
-X-Originating-IP: [89.179.245.198]
-X-ClientProxiedBy: LFEXT01.lancloud.ru (fd00:f066::141) To LFEX15.lancloud.ru
- (fd00:f066::45)
+References: <20200910134802.3160311-1-lenaptr@google.com> <CAG48ez3x51kkDt19ONXbi8Se+2swMgwfmaj7AFbBqmss=D38Ug@mail.gmail.com>
+ <CABvBcwY2FLJxc80Leibv=zZ-e_YbjkE+ZBH2LNoFy8HAeD8m6Q@mail.gmail.com>
+In-Reply-To: <CABvBcwY2FLJxc80Leibv=zZ-e_YbjkE+ZBH2LNoFy8HAeD8m6Q@mail.gmail.com>
+From: Jann Horn <jannh@google.com>
+Date: Fri, 11 Sep 2020 18:22:04 +0200
+Message-ID: <CAG48ez1cEC1q1o4_--aVjuGmC-G9i9PUQQ2Pumr3aSrox_MZ+A@mail.gmail.com>
+Subject: Re: [PATCH] sched.h: drop in_ubsan field when UBSAN is in trap mode
+To: Elena Petrova <lenaptr@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	kernel list <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, 
+	Andrew Morton <akpm@linux-foundation.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On 10.09.2020 23:05, Matthew Wilcox wrote:
-> On Thu, Sep 10, 2020 at 09:00:10PM +0100, Al Viro wrote:
->> On Thu, Sep 10, 2020 at 07:40:33PM +0100, Matthew Wilcox wrote:
->>> On Thu, Sep 10, 2020 at 08:38:21PM +0200, Mickaël Salaün wrote:
->>>> There is also the use case of noexec mounts and file permissions. From
->>>> user space point of view, it doesn't matter which kernel component is in
->>>> charge of defining the policy. The syscall should then not be tied with
->>>> a verification/integrity/signature/appraisal vocabulary, but simply an
->>>> access control one.
->>>
->>> permission()?
->>
->> int lsm(int fd, const char *how, char *error, int size);
->>
->> Seriously, this is "ask LSM to apply special policy to file"; let's
->> _not_ mess with flags, etc. for that; give it decent bandwidth
->> and since it's completely opaque for the rest of the kernel,
->> just a pass a string to be parsed by LSM as it sees fit.
-> 
-> Hang on, it does have some things which aren't BD^W^WLSM.  It lets
-> the interpreter honour the mount -o noexec option.  I presume it's
-> not easily defeated by
-> 	cat /home/salaun/bin/bad.pl | perl -
+On Fri, Sep 11, 2020 at 5:15 PM Elena Petrova <lenaptr@google.com> wrote:
+> On Thu, 10 Sep 2020 at 20:35, Jann Horn <jannh@google.com> wrote:
+> > On Thu, Sep 10, 2020 at 3:48 PM Elena Petrova <lenaptr@google.com> wrote:
+> > > in_ubsan field of task_struct is only used in lib/ubsan.c, which in its
+> > > turn is used only `ifneq ($(CONFIG_UBSAN_TRAP),y)`.
+> > >
+> > > Removing unnecessary field from a task_struct will help preserve the
+> > > ABI between vanilla and CONFIG_UBSAN_TRAP'ed kernels. In particular,
+> > > this will help enabling bounds sanitizer transparently for Android's
+> > > GKI.
+> >
+> > The diff looks reasonable to me, but I'm curious about the
+> > justification in the commit message:
+> >
+> > Is the intent here that you want to be able to build a module without
+> > CONFIG_UBSAN and load it into a kernel that is built with
+> > CONFIG_UBSAN? Or the inverse?
+>
+> The former. But more precisely, with GKI Google gives a promise, that
+> when certain GKI is released, i.e. at 4.19, its ABI will never ever
+> change (or, perhaps only change with <next letter> Android release),
 
-Hi!
+Really? How does that work when a kernel update needs to add elements
+to existing structs that are part of that "ABI"? Especially when those
+structs have something at the end that's variable-length (like
+task_struct) or they're embedded in something else?
 
-It could be bypassed this way. There are several ways of executing some
-script:
+Maybe you should've done something like BPF's CORE if you really want
+to do something like that, teaching the compiler to generate
+relocations for struct offsets...
 
-1) /unsigned.sh (Already handled by IMA)
-2) bash /unsigned.sh (Not handled. Works even with "-o noexec" mount)
-3) bash < /unsigned.sh (Not handled. Works even with "-o noexec" mount)
-4) cat /unsigned.sh | bash (Not handled. Works even with "-o noexec" mount)
+> so vendor modules could have an independent development lifecycle. And
+> this patch, when backported, will help enable boundsan on kernels
+> where ABI has already been frozen.
+>
+> > Does this mean that in the future, gating new exported functions, or
+> > new struct fields, on CONFIG_UBSAN (independent of whether
+> > CONFIG_UBSAN_TRAP is set) will break Android?
+>
+> I don't understand what you mean here, sorry.
 
-AFAIK, the proposed syscall solves #2 and may be #3. As for #4 in security
-critical environments there should be system-wide options to disable
-interpreting scripts from the standard input. I suppose, executing commands
-from the stdin is a rare case, and could be avoided entirely in security
-critical environments. And yes, some help from the interpreters is needed
-for that.
+Let's assume that at a later point, someone wants to track for each
+process how many UBSAN errors that process has seen so far. And maybe
+at that point, we have error recovery support in trap mode. So that
+person sends a patch that, among other things, adds something like
+this to task_struct:
 
-As for the usage of the system call, I have a proposal to extend its usage
-to validate systemd unit files. Because a unit file could specify what UID
-to use for a service, also it contains ExecStartPre which is actually a script
-and is running as root (for the system session services).
+    #ifdef CONFIG_UBSAN
+    unsigned int ubsan_errors_seen;
+    #endif
 
-For the syscall name it could be:
-- trusted_file()
-- trusted_file_content()
-- valid_file()
-- file_integrity()
-because what we are checking here is the file content integrity (IMA) and
-may be file permissions/attrs integrity (EVM).
+If that patch lands, ABI compatibility between UBSAN=y&&UBSAN_TRAP=y
+and UBSAN=n will break again.
+
+
+I believe that it should normally be possible to add stuff like
+
+    #ifdef CONFIG_<something>
+    <some field declaration>
+    #endif
+
+to an existing kernel struct without breaking anything (outside UAPI
+headers and such). Your patch assumes that that won't happen for
+CONFIG_UBSAN.
+
+> > If you really want to do this, and using alternatives to patch out the
+> > ubsan instructions is not an option, I wonder whether it would be more
+> > reasonable to at least add a configuration where CONFIG_UBSAN is
+> > enabled but the compiler flag is not actually set. Then you could
+> > unconditionally build that android kernel and its modules with that
+> > config option, and wouldn't have to worry about structure size issues,
+> > dependencies on undefined symbols and so on.
+>
+> Such setup might be confusing for developers.
+
+Yeah, but I think that that's still cleaner than assuming that some
+normal kernel flag won't change struct layouts...
+
+Anyway, the diff itself looks reasonable to me (although I dislike the
+commit message), but don't be surprised if this "ABI" is broken again
+in the future.
+
+> We were considering
+> something similar: to keep the in_ubsan field regardless of the
+> CONFIG_UBSAN option. But since non-trap mode is unlikely to be used on
+> production devices due to size and performance overheads, I think it's
+> better to just get rid of an unused field, rather than balloon
+> task_struct.
+>
+> Cheers,
+> *lenaptr
