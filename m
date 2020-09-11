@@ -1,23 +1,20 @@
-Return-Path: <SRS0=bQzH=CU=lists.openwall.com=kernel-hardening-return-19878-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=wrf1=CU=lists.openwall.com=kernel-hardening-return-19879-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.7 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B5012C43461
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 00:21:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 65AB0C433E2
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 12:16:48 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C9CFD208FE
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 00:21:12 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="SijTA2JB"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C9CFD208FE
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19878-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25975 invoked by uid 550); 11 Sep 2020 00:21:05 -0000
+	by mail.kernel.org (Postfix) with SMTP id 56CB421D40
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Sep 2020 12:16:47 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 56CB421D40
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19879-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3199 invoked by uid 550); 11 Sep 2020 12:16:38 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,95 +22,90 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25955 invoked from network); 11 Sep 2020 00:21:05 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=IyAAsSx7nFV/dq/SzL35IFpVJ+Yn15D4pJKs31u9n78=;
-        b=SijTA2JBh2igQyUFhnGY43n8X9KiE/1xBjEYzMfT6RvTVPBWKIf2S98WFdxu9pntLY
-         3FWTWsLcOBbZZP+uQKQQFz4ztqRQDTHyvvYDTLpZ/Yx9mHMQtmxixW2u+2Iv/F2pmzx0
-         9Shwb8Rd2BYkk5HW11A7nj4k+Z9OU+m6AuaF06ISqWp+Wo0Dxl3Ftte6cYPtPbWW1yZR
-         JLLqu2Dvol/xqraTUN3AMxutXgpUnMwIbPWTFot3PWxuMyymTw8Kv6tYWx+E0bQ1fw0S
-         kVuDX8lq+sS+iKyOplLtlkXB4ZB4Y983W8fe/h7lUU2TIMbQmGvwGw79xY/i1sapn5fC
-         JATA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=IyAAsSx7nFV/dq/SzL35IFpVJ+Yn15D4pJKs31u9n78=;
-        b=Kf6DfvEvGH9Ia4ytQOH5iLyC+u2+KzjchgfxeGa+fMi50u9W+tUofPRJPrzc8cAhGV
-         1yQGqqmdAe3/sI4OfdYlY6UAQsxstciOod9v6QUL9kHJr0eReLwDkP9gbD8Tm23XXd/d
-         +ftmFcbVTno2uIGOX5bMSFjeoWDrIupw54myt4/F93hxlZkrtqhjLGJ+zjVyljg0YKMR
-         Hii93AwcRKI78X4eZ+50KExEMt7Op4GHjFDFXWfIQyJC2wtrFuQbqqwaN1iytbtD1J64
-         fPtSXvR0XgO/iebnufXnuTtKpokdJOKqLNQmBbdeKAZgtKBO05l8+b5AlCj3ojGUzpwa
-         CA9Q==
-X-Gm-Message-State: AOAM531KOWHlGAnHt45JlerDA/T2gETXszSdxfeC7knm1izx9Sxnlurp
-	LctQs80yY3DYXBxt3YQWuunOQOtXeBSrt3Ht7YL/VA==
-X-Google-Smtp-Source: ABdhPJwL5k8zeWDPprG5Mrub7BhXpdPNFjl1twNR0wyPykMPOKHhl8JhWG8zU9BNykiHZwGZd8sG1UHbIbv8RO4puvk=
-X-Received: by 2002:a17:906:a0c2:: with SMTP id bh2mr11898964ejb.493.1599783653707;
- Thu, 10 Sep 2020 17:20:53 -0700 (PDT)
+Received: (qmail 3177 invoked from network); 11 Sep 2020 12:16:38 -0000
+Subject: Re: [RFC PATCH v9 0/3] Add introspect_access(2) (was O_MAYEXEC)
+To: Matthew Wilcox <willy@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>
+Cc: Mimi Zohar <zohar@linux.ibm.com>, linux-kernel@vger.kernel.org,
+ Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
+ Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski
+ <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ Christian Heimes <christian@python.org>,
+ Daniel Borkmann <daniel@iogearbox.net>,
+ Deven Bowers <deven.desai@linux.microsoft.com>,
+ Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
+ Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
+ James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
+ Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
+ Kees Cook <keescook@chromium.org>,
+ Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+ Matthew Garrett <mjg59@google.com>, Michael Kerrisk
+ <mtk.manpages@gmail.com>, Miklos Szeredi <mszeredi@redhat.com>,
+ =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+ Scott Shell <scottsh@microsoft.com>,
+ Sean Christopherson <sean.j.christopherson@intel.com>,
+ Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+ Steve Grubb <sgrubb@redhat.com>,
+ Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
+ Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
+ Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+ kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+ linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org,
+ linux-fsdevel@vger.kernel.org
+References: <20200910164612.114215-1-mic@digikod.net>
+ <20200910170424.GU6583@casper.infradead.org>
+ <f6e2358c-8e5e-e688-3e66-2cdd943e360e@digikod.net>
+ <a48145770780d36e90f28f1526805a7292eb74f6.camel@linux.ibm.com>
+ <880bb4ee-89a2-b9b0-747b-0f779ceda995@digikod.net>
+ <20200910184033.GX6583@casper.infradead.org>
+ <20200910200010.GF1236603@ZenIV.linux.org.uk>
+ <20200910200543.GY6583@casper.infradead.org>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <3dd9b2b3-6304-03df-bfba-13864169453e@digikod.net>
+Date: Fri, 11 Sep 2020 14:16:23 +0200
+User-Agent:
 MIME-Version: 1.0
-References: <20200910202107.3799376-1-keescook@chromium.org>
- <20200910202107.3799376-7-keescook@chromium.org> <202009101649.2A0BF95@keescook>
-In-Reply-To: <202009101649.2A0BF95@keescook>
-From: Jann Horn <jannh@google.com>
-Date: Fri, 11 Sep 2020 02:20:27 +0200
-Message-ID: <CAG48ez2=8y7jC9vWSPyYNhwASxGrQaewSBczbr02Ri2YnBJwVA@mail.gmail.com>
-Subject: Re: [RFC PATCH 6/6] security/fbfam: Mitigate a fork brute force attack
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, John Wood <john.wood@gmx.com>, 
-	Matthew Wilcox <willy@infradead.org>, Jonathan Corbet <corbet@lwn.net>, 
-	Alexander Viro <viro@zeniv.linux.org.uk>, Ingo Molnar <mingo@redhat.com>, 
-	Peter Zijlstra <peterz@infradead.org>, Juri Lelli <juri.lelli@redhat.com>, 
-	Vincent Guittot <vincent.guittot@linaro.org>, Dietmar Eggemann <dietmar.eggemann@arm.com>, 
-	Steven Rostedt <rostedt@goodmis.org>, Ben Segall <bsegall@google.com>, Mel Gorman <mgorman@suse.de>, 
-	Luis Chamberlain <mcgrof@kernel.org>, Iurii Zaikin <yzaikin@google.com>, James Morris <jmorris@namei.org>, 
-	"Serge E. Hallyn" <serge@hallyn.com>, linux-doc@vger.kernel.org, 
-	kernel list <linux-kernel@vger.kernel.org>, 
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
-	linux-security-module <linux-security-module@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <20200910200543.GY6583@casper.infradead.org>
+Content-Type: text/plain; charset=iso-8859-15
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
 
-On Fri, Sep 11, 2020 at 1:56 AM Kees Cook <keescook@chromium.org> wrote:
-> On Thu, Sep 10, 2020 at 01:21:07PM -0700, Kees Cook wrote:
-> > From: John Wood <john.wood@gmx.com>
-> >
-> > In order to mitigate a fork brute force attack it is necessary to kill
-> > all the offending tasks. This tasks are all the ones that share the
-> > statistical data with the current task (the task that has crashed).
-> >
-> > Since the attack detection is done in the function fbfam_handle_attack()
-> > that is called every time a core dump is triggered, only is needed to
-> > kill the others tasks that share the same statistical data, not the
-> > current one as this is in the path to be killed.
-[...]
-> > +     for_each_process(p) {
-> > +             if (p == current || p->fbfam_stats != stats)
-> > +                     continue;
-> > +
-> > +             do_send_sig_info(SIGKILL, SEND_SIG_PRIV, p, PIDTYPE_PID);
-> > +             pr_warn("fbfam: Offending process with PID %d killed\n",
-> > +                     p->pid);
-[...]
-> > +
-> > +             killed += 1;
-> > +             if (killed >= to_kill)
-> > +                     break;
-> > +     }
-> > +
-> > +     rcu_read_unlock();
->
-> Can't newly created processes escape this RCU read lock? I think this
-> need alternate locking, or something in the task_alloc hook that will
-> block any new process from being created within the stats group.
 
-Good point; the proper way to deal with this would probably be to take
-the tasklist_lock in read mode around this loop (with
-read_lock(&tasklist_lock) / read_unlock(&tasklist_lock)), which pairs
-with the write_lock_irq(&tasklist_lock) in copy_process(). Thanks to
-the fatal_signal_pending() check while holding the lock in
-copy_process(), that would be race-free - any fork() that has not yet
-inserted the new task into the global task list would wait for us to
-drop the tasklist_lock, then bail out at the fatal_signal_pending()
-check.
+On 10/09/2020 22:05, Matthew Wilcox wrote:
+> On Thu, Sep 10, 2020 at 09:00:10PM +0100, Al Viro wrote:
+>> On Thu, Sep 10, 2020 at 07:40:33PM +0100, Matthew Wilcox wrote:
+>>> On Thu, Sep 10, 2020 at 08:38:21PM +0200, Mickaël Salaün wrote:
+>>>> There is also the use case of noexec mounts and file permissions. From
+>>>> user space point of view, it doesn't matter which kernel component is in
+>>>> charge of defining the policy. The syscall should then not be tied with
+>>>> a verification/integrity/signature/appraisal vocabulary, but simply an
+>>>> access control one.
+>>>
+>>> permission()?
+>>
+>> int lsm(int fd, const char *how, char *error, int size);
+>>
+>> Seriously, this is "ask LSM to apply special policy to file"; let's
+>> _not_ mess with flags, etc. for that; give it decent bandwidth
+>> and since it's completely opaque for the rest of the kernel,
+>> just a pass a string to be parsed by LSM as it sees fit.
+
+Well, I don't know why you're so angry against LSM, but as noticed by
+Matthew, the main focus of this patch series is not about LSM (no hook,
+no security/* code, only file permission and mount option checks,
+nothing fancy). Moreover, the syscall you're proposing doesn't make
+sense, but I guess it's yet another sarcastic reply. Please, cool down.
+We asked for constructive comments and already followed your previous
+requests (even if we didn't get answers for some questions), but
+seriously, this one is nonsense.
+
+> 
+> Hang on, it does have some things which aren't BD^W^WLSM.  It lets
+> the interpreter honour the mount -o noexec option.  I presume it's
+> not easily defeated by
+> 	cat /home/salaun/bin/bad.pl | perl -
+> 
+
+Funny. I know there is a lot of text and links but please read the
+commit messages before further comments.
