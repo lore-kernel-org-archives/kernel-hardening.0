@@ -1,23 +1,24 @@
-Return-Path: <SRS0=HDWh=CV=lists.openwall.com=kernel-hardening-return-19887-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=HqLt=CV=lists.openwall.com=kernel-hardening-return-19888-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-8.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 66FFFC43461
-	for <kernel-hardening@archiver.kernel.org>; Sat, 12 Sep 2020 09:38:16 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 54A7FC433E2
+	for <kernel-hardening@archiver.kernel.org>; Sat, 12 Sep 2020 12:25:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6332121D6C
-	for <kernel-hardening@archiver.kernel.org>; Sat, 12 Sep 2020 09:38:15 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id F18882087C
+	for <kernel-hardening@archiver.kernel.org>; Sat, 12 Sep 2020 12:25:56 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="FftAd7pn"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6332121D6C
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="ZF95JOjX"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F18882087C
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19887-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1747 invoked by uid 550); 12 Sep 2020 09:38:07 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19888-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27948 invoked by uid 550); 12 Sep 2020 12:25:49 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,20 +26,20 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1724 invoked from network); 12 Sep 2020 09:38:07 -0000
+Received: (qmail 27928 invoked from network); 12 Sep 2020 12:25:48 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1599903434;
-	bh=skrUagSvgqgEZzCi9PdeBBeP4Cqi1Erda0k0fJgiIB8=;
+	s=badeba3b8450; t=1599913491;
+	bh=cyVUZti2CjaYGbyBo+/FrS/YkqKumirWsJ3OYoBuVZI=;
 	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=FftAd7pnCH3fzdB/mQwK5o3526+5rvmiQVz+tQTbnxcymkk3GlkdpnrB1m2vpsdbp
-	 bVEFr4c00PT2nMP+9JAormOkurommMEJuzzsM4/u0ca4qnWDib1RRNZL4PXOSjCKAh
-	 fDfSSux5fckZULv312TbZpx8w+A0tRK5qrIOmacA=
+	b=ZF95JOjXqYx9AJ4KoGxnCuPu4JILIy6LlDlprJhWoKsV5P+mPqEGRqg+wJIjEejsw
+	 Q23P6kPYr7DdcYSETv+a/wnV+8T1ZOtRsNI+iLkqjvEc/gmp6DG5pUr0JC8KJDmVap
+	 GwqE9oZbuM4YF9Xq05Zt3HIcMfDEwSnmQwPSNen8=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Sat, 12 Sep 2020 11:36:52 +0200
+Date: Sat, 12 Sep 2020 14:24:34 +0200
 From: John Wood <john.wood@gmx.com>
-To: James Morris <jmorris@namei.org>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com,
-	John Wood <john.wood@gmx.com>, Matthew Wilcox <willy@infradead.org>,
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, John Wood <john.wood@gmx.com>,
+	Jann Horn <jannh@google.com>, Matthew Wilcox <willy@infradead.org>,
 	Jonathan Corbet <corbet@lwn.net>,
 	Alexander Viro <viro@zeniv.linux.org.uk>,
 	Ingo Molnar <mingo@redhat.com>,
@@ -49,72 +50,88 @@ Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com,
 	Steven Rostedt <rostedt@goodmis.org>,
 	Ben Segall <bsegall@google.com>, Mel Gorman <mgorman@suse.de>,
 	Luis Chamberlain <mcgrof@kernel.org>,
-	Iurii Zaikin <yzaikin@google.com>,
+	Iurii Zaikin <yzaikin@google.com>, James Morris <jmorris@namei.org>,
 	"Serge E. Hallyn" <serge@hallyn.com>, linux-doc@vger.kernel.org,
 	linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
 	linux-security-module@vger.kernel.org
 Subject: Re: [RESEND][RFC PATCH 0/6] Fork brute force attack mitigation
  (fbfam)
-Message-ID: <20200912093652.GA3041@ubuntu>
+Message-ID: <20200912101606.GB3041@ubuntu>
 References: <20200910202107.3799376-1-keescook@chromium.org>
- <alpine.LRH.2.21.2009121002100.17638@namei.org>
- <202009120055.F6BF704620@keescook>
+ <202009101656.FB68C6A@keescook>
+ <20200911144806.GA4128@ubuntu>
+ <202009120053.9FB7F2A7@keescook>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <202009120055.F6BF704620@keescook>
-X-Provags-ID: V03:K1:82dXCEl3cI4cxk3DUO6WIKkws0kGiKuodYSB2Poy3pHIMexgZ3i
- ocFk/YHAJ3DjbN6PRnUmpAr0uwh00WrBXziJGf+yniVRw7LGtyUeiPQxsr9LYsq68ZOZ/WG
- OENMjSgGJ5obexYYwh4gx7hG4Wndyaod5tu/wNF+B9F43ME0vKJv7InV5yifThD30BcMIi2
- Q7LJJJvz5chA4C5qqIZxQ==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:B2c/eYE3vYI=:Zbn3OSff8V0GZehoI25jPB
- XIfX7t9qpGtZR8iToZ2IiS6lBYW3veovlwaqN8mf32YrZRUISKTblWhYZOBmzwc6y1t6GWQFg
- NdXxqlWHuT/7m6k6X/TrkwVRrGN25qz+McCYG8lPBpTCw7ivlZfj9Z735ZZ5uyw755BwbxKH2
- Mcahz9+L5cwafaC6wE+M3yFzSdDdqgOjLEneU3IiQe9CTo6o2/XnE+5on3hC6R5N5Y/2wDA1d
- e4Nnj6ywD8yk/2CJj10pGq6SUZacy1ZB7XDohXjC0rYrS6WCSuKTw9DBk+yy15YbsEvPdlA2N
- U61QJgWqOuK7zU9LSzpDbGlzdDkM29EjmqSg8P2SlrTrkBRGhfgRapA8x8jtt2G4JUr6RTnPT
- U8pEJsZM7xoOvN8OzB0KEELqXvLCwnGb26LA9reUNMcWkpu1B5cNO0ZtKB/pSiuWGE7RTChJb
- l5S+YoiivwbgZwCkA9KRrYfEE27VDdXvdizZqQesZOP1P5mOqbwqDei1qY2Sv0yXC1qPnTOkz
- 2p0M3jHGbC2w8rgDcdZXLGPjbtoT7xTwD3cEBxAcclCYf0WWOTq/olDnkhk/m/uZvK2dVhHlS
- WjQwncs9EkPlHrctJvP2Oe2OS9q8wHNtJBIDdeppW9IJm8Qii6I31cidHaVDNjYX1mBhCFkLN
- jiScnSXnSMd1b/7nVji25Xc3vuYViuTid6XK9zHV7YyP+iL2R5BpKiRTdMtgSv5CHC/pBSzko
- JDSvogEy9A5MmMidBC+cOz55JnA3hHDDfs/7A1NmktypKRT11aVSggosuWvmDBjMJJdOWEl7H
- uMFJ54BGGSRmkHruKcQQJ725axPIs21Kt6iBcda6GFvnWDVGBa20iL4mT0yqMunGI5UabkMaT
- fZbWHEO+dHExVkhgVhOK5FbTAYXqmf+xh1GQWmR7t5wfL9Ca5InGyqkBXRyorIMZJTVAR2/PU
- +0HSLXm/WAi1uBa5W3DiiKIqzLwGM/N26IefxV4lU4Llo9ttwCaSbT53Z6Sgn2C23GZja/Rnb
- pw05y6c0WGrchZCat0neiVuDUAaVQJg1Qp/LUGvu6/DholigBT2VFgsI+Rs7fRD4x9Vw4YQC7
- mMkA9u/JNdyN2AIqH8u52XMNg7egvycBRjfeMC/whjW1damf6Wjredeau9o/d5+3ZJF1XpIiH
- /lOMjNgOO53bzcOPNaS3HB3MpkPxpyK+D3BtdQwAK9AxA7TtZvKdMNdfvTKHQTXVpfh9ez+8i
- u+gvCQ8PYYgQYTpOab3Yestd59t2YICSNXMfnpA==
+In-Reply-To: <202009120053.9FB7F2A7@keescook>
+X-Provags-ID: V03:K1:npjZWnUf5TOz3ACicrJqbfTigA7qrI003qPlqypDTuPvgm+95jg
+ YVCSKfru8/GIlF7z/GnQmjEwFn18T6mdKX+7Kq1cdpggQuT8QQGQLlWl8cizXN0QO2ImlWp
+ lsK9Lh4rxK295qEcLuudCA1FoiK4uAHqvuFPFA7mxK0UwS7n2iKXVTejRXkMrPzz0a/DPWg
+ jB7cnY0DAPVNYPNGHmFYA==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:kM4SSDt4uQQ=:nBe8EQ3ju1FY8S52B8tufT
+ SLY/PdHmHsxOukdrVgPSqeUShbvq8DRdaERY8a4NT7BpQbtnkpjbWU8mo5y3io4UUxNY5XDgV
+ YF3rKRRa3nfY/9g2WJYT7q3RPCMFI3fhFX4ad4+G1FxWPS6DoX3KVs6LU304crJkil2dmNYge
+ wHzqP25Rpct/MdgYTOgMQt64xxRTBJIJzDdUzqInPM0Z4hVmcFLBlpVkQ08bF3OwDRpa3ucZL
+ AZRMq6H2xyNVZZGS8m8PgCF8u7Kp/NWRo7zpkuUUVSrrgUs4banrntqpog0lPiHGXE6LsHgSm
+ Z014RPcLlPr+AjXK4OfqArHi4v7VNrQKVRnnTsgaf3J4YydkwR/i5XFwtxaWQbm/PGxl8jeSB
+ jh2/gu1pqh7+R+H5nYuwBaPZJVvkfj7y4D6mmAcV/KvPWXpe4n3eF8Yc4YNy+lSDJw4VfUU/B
+ qz9lu5WkxMFF+8Mj2zruobOloJSPBc4BDiiZNiNSngXqRypXFHXRg/YP4nJO9JLeqbSRzxI7J
+ EVvwGkw3/FatpigE9YkQ8hm0727NIzsEyfvkutchG3zl2mzvbHTwfBwK0A1yY8Ur1SxCBPRzQ
+ BDI0TGsbfxP7I5AmNHoI6rBWXeqJLgqGQAtp+eddcuv4qetkHTDwMx43p/aLbxbpgZXNx6Khi
+ 54Cy4wdMPX39chpt5nfh8jUxvmQu8VrBHnwwcaaS7IfmI+s5Xos3wDflrcSXjT3QxQmrfG0TN
+ WdfMoJzXjFRn1k5xT96TDaZJ7OAI+/qUU+flkaTwUTMhDV9zztY8AnDq0As7D/rHs7ESVCUHZ
+ hqpVkSzCOw17QSfHkPfGsDrxCShjzmuiyIzsgV8E1L/NbjldC5dKLdYMWRLne/c5dR1j0mrEB
+ hTNXegbDyXLRcD5SiZ4tiPdySnPyfZYiaMQjVcqWQfsqj+qt69MEOoXWlHhorhaLQHdsh430d
+ VmlLwcS5iDjeTkkDUizHhpsop+jxk2tqUbBsqnWfYSQ9OxH+XACFINzDlziIs/f7zTnYRHHLO
+ 03gMAODv5GF0vse0mOEI6uz1gfg84DmE6LlEPboPsPxypFBz8aWIpIXFzS7y80YjaGpb4IPEA
+ i06V9hcC4dvueYqa6iR/bWftKb8j/m//xqw8W5VzG2XTBfayHF1AI9W5dHUnd/0NzUzITJwMb
+ cFlL20/KWViropiQ8VZwCFU2q2dtJF0KJOQg0o2sdp3sisfv+DYnuoyXzfAA1s13Hy/WKV8B6
+ 6AajfiVfu9W8SL12enciU8YYeeZ33/JLgLu8XaA==
 Content-Transfer-Encoding: quoted-printable
 
-On Sat, Sep 12, 2020 at 12:56:18AM -0700, Kees Cook wrote:
-> On Sat, Sep 12, 2020 at 10:03:23AM +1000, James Morris wrote:
-> > On Thu, 10 Sep 2020, Kees Cook wrote:
+On Sat, Sep 12, 2020 at 12:55:03AM -0700, Kees Cook wrote:
+> On Fri, Sep 11, 2020 at 04:48:06PM +0200, John Wood wrote:
+> > My original patch serie is composed of 9 patches, so the 3 lasts are l=
+ost.
+> > Kees: Have you removed them for some reason? Can you send them for rev=
+iew?
 > >
-> > > [kees: re-sending this series on behalf of John Wood <john.wood@gmx.=
-com>
-> > >  also visible at https://github.com/johwood/linux fbfam]
-> > >
-> > > From: John Wood <john.wood@gmx.com>
+> > security/fbfam: Add two new prctls to enable and disable the fbfam fea=
+ture
+> > https://github.com/johwood/linux/commit/8a36399847213e7eb7b45b853568a5=
+3666bd0083
 > >
-> > Why are you resending this? The author of the code needs to be able to
-> > send and receive emails directly as part of development and maintenanc=
-e.
+> > Documentation/security: Add documentation for the fbfam feature
+> > https://github.com/johwood/linux/commit/fb46804541f5c0915f3f48acefbe6d=
+c998815609
+> >
+> > MAINTAINERS: Add a new entry for the fbfam feature
+> > https://github.com/johwood/linux/commit/4303bc8935334136c6ef47b5e50b87=
+cd2c472c1f
+>
+> Oh, hm, I'm not sure where they went. I think they were missing from my
+> inbox when I saved your series from email. An oversight on my part;
+> apologies!
 
-I tried to send the full patch serie by myself but my email got blocked. A=
-fter
-get support from my email provider it told to me that my account is young,
-and due to its spam policie I am not allow, for now, to send a big amount
-of mails in a short period. They also informed me that soon I will be able
-to send more mails. The quantity increase with the age of the account.
+I sent the full serie to Matthew Wilcox <willy@infradead.org> only, as he
+wanted to help re-sending the full serie. Then I saw that only 6 patches
+appeared in the linux-doc mailing list.
 
-I hope that for the next version all works as expected.
-Apologies.
+I can try to send the three pending patches in different stages (for examp=
+le
+one patch every 4 or 5 hours) to avoid blocking my email. I hope. Or I can
+send the three pending patches only to the kernel-hardening mailing list
+and you re-send to all the people involved. Or any other solution you
+propose. It's up to you.
 
-> I wanted to flush it from my "review" TODO list, mainly.
+> > Is there a problem if I ask for some guidance (replying to this thread=
+)
+> > during the process to do my second patch series?
+>
+> Please feel free! I'm happy to help. :)
 
-Thanks Kees for the re-send and review.
+It's a pleasure working with you. Thanks a lot.
 
 > --
 > Kees Cook
