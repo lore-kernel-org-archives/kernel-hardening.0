@@ -1,20 +1,23 @@
-Return-Path: <SRS0=2AhK=CX=lists.openwall.com=kernel-hardening-return-19895-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=aCS9=CX=lists.openwall.com=kernel-hardening-return-19896-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-14.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B7CE5C433E2
-	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 16:43:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8955EC433E2
+	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 19:39:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D4DBA206A5
-	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 16:43:40 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D4DBA206A5
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19895-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26441 invoked by uid 550); 14 Sep 2020 16:43:32 -0000
+	by mail.kernel.org (Postfix) with SMTP id 930882193E
+	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 19:39:56 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="KMb8YL82"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 930882193E
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19896-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28304 invoked by uid 550); 14 Sep 2020 19:39:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,81 +25,123 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26421 invoked from network); 14 Sep 2020 16:43:32 -0000
-Subject: Re: [RFC PATCH v9 0/3] Add introspect_access(2) (was O_MAYEXEC)
-Cc: James Morris <jmorris@namei.org>, Matthew Wilcox <willy@infradead.org>,
- Mimi Zohar <zohar@linux.ibm.com>, linux-kernel@vger.kernel.org,
- Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
- Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton
- <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Christian Brauner <christian.brauner@ubuntu.com>,
- Christian Heimes <christian@python.org>,
- Daniel Borkmann <daniel@iogearbox.net>,
- Deven Bowers <deven.desai@linux.microsoft.com>,
- Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
- Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
- Jan Kara <jack@suse.cz>, Jann Horn <jannh@google.com>,
- Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
- Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
- Matthew Garrett <mjg59@google.com>, Miklos Szeredi <mszeredi@redhat.com>,
- =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
- Scott Shell <scottsh@microsoft.com>,
- Sean Christopherson <sean.j.christopherson@intel.com>,
- Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
- Steve Grubb <sgrubb@redhat.com>,
- Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
- Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
- Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org,
- linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
-References: <20200910164612.114215-1-mic@digikod.net>
- <20200910170424.GU6583@casper.infradead.org>
- <f6e2358c-8e5e-e688-3e66-2cdd943e360e@digikod.net>
- <a48145770780d36e90f28f1526805a7292eb74f6.camel@linux.ibm.com>
- <880bb4ee-89a2-b9b0-747b-0f779ceda995@digikod.net>
- <20200910184033.GX6583@casper.infradead.org>
- <alpine.LRH.2.21.2009121019050.17638@namei.org>
-To: Arnd Bergmann <arnd@arndb.de>, Michael Kerrisk <mtk.manpages@gmail.com>,
- linux-api@vger.kernel.org
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <d7126fd7-cca1-42e4-6a7b-6a3b9e77306e@digikod.net>
-Date: Mon, 14 Sep 2020 18:43:17 +0200
-User-Agent:
+Received: (qmail 28283 invoked from network); 14 Sep 2020 19:39:48 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=lG5XGf95bwNJOiL8PcjSLhdHd8W32J8QXR/kZviOKdg=;
+        b=KMb8YL82jYt+MdR+06nAv1SDjyBvY4xZgeT/ZSDzaA/sIk4BMgBJiDBRB+e1bufy3+
+         8ZUWjMH8ilySI8ll0tpW9SGHNcwfcXvuO/ogAr+JiAJ+gLYB2oFiAISVMsXaZiFZKhG6
+         rNV9jXE4AzKiGnJtbZ01dTfsAaRXm01QgaG5C8WCbA0mkKFr6J1uj1+DZPrJ9hzkpFLt
+         7CafX7kXEWTa72gmB4FzIyzXC1KrE0sLckGmAtvfbSZqoUxrNCh+knJSNyZnBMhxAxTx
+         dNPT5gnmXVGLWsSSXLj6HwJ+ZnTlIAmp/gH/hWa2wQfaMmrOBh6HBlLkbN6H+zlGsjQ8
+         UTIw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=lG5XGf95bwNJOiL8PcjSLhdHd8W32J8QXR/kZviOKdg=;
+        b=uZRG72dk8uL/KcPOPPk5TezHdPh/kvIzX2RKM+9Sc3Il0Oc3ccmIOIwAuYNY+oxVGa
+         sn0PD33mAppWqu9RVrKS+mWiG0nb0YHG8NpxyUyj7rZqVwQ7HaGefqjs4hBA4UlYTx4b
+         +zoc/87KDGDQs88Y7wRKlozwRyY6n0pkwOXh9RPpIu3wkYj0NZtBHSDGKGp2hC8mbtjZ
+         BB8vfYfryZSNuCHwecBhBh8Py/fz44s6yOugSZNpj/IgehpeHgHB8L4XHWMFBnH0CDWZ
+         xEq7Nl0R2fW8z+M0m8bzRkSqb803EI1ZO1kYEyQRAjqJukW2MorAUDKF/ss071fd1d+9
+         ZlUw==
+X-Gm-Message-State: AOAM533Qf2bXph5daNRJzRIrczCuW0ffMoaKaaHDswSe6ZJOLBsZX/0Y
+	76lEfHzAYB/ZM3Mpa+N9VY+TVyy6lQXdQWxMjmw5sg==
+X-Google-Smtp-Source: ABdhPJxc/PtfgEbkD4fcsDei9QMBxurLSxbpcXluh3HHDXLs/uUkzi3B73RmIjNWnbIXKDpCIS3Fg5qNSvIHPX0J6v4=
+X-Received: by 2002:a50:e807:: with SMTP id e7mr19255309edn.84.1600112376719;
+ Mon, 14 Sep 2020 12:39:36 -0700 (PDT)
 MIME-Version: 1.0
-In-Reply-To: <alpine.LRH.2.21.2009121019050.17638@namei.org>
-Content-Type: text/plain; charset=iso-8859-15
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+References: <20200910202107.3799376-1-keescook@chromium.org>
+ <20200910202107.3799376-6-keescook@chromium.org> <202009101634.52ED6751AD@keescook>
+ <CAG48ez2fP7yupg6Th+Hg0tL3o06p2PR1HtQcvy4Ro+Q5T2Nfkw@mail.gmail.com> <20200913152724.GB2873@ubuntu>
+In-Reply-To: <20200913152724.GB2873@ubuntu>
+From: Jann Horn <jannh@google.com>
+Date: Mon, 14 Sep 2020 21:39:10 +0200
+Message-ID: <CAG48ez3aQXb3EuGRVvLLo7BxycqJ4Y2mL83QhY9-QMK_qkfCuQ@mail.gmail.com>
+Subject: Re: [RFC PATCH 5/6] security/fbfam: Detect a fork brute force attack
+To: John Wood <john.wood@gmx.com>
+Cc: Kees Cook <keescook@chromium.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Matthew Wilcox <willy@infradead.org>, 
+	Jonathan Corbet <corbet@lwn.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Ingo Molnar <mingo@redhat.com>, 
+	Peter Zijlstra <peterz@infradead.org>, Juri Lelli <juri.lelli@redhat.com>, 
+	Vincent Guittot <vincent.guittot@linaro.org>, Dietmar Eggemann <dietmar.eggemann@arm.com>, 
+	Steven Rostedt <rostedt@goodmis.org>, Ben Segall <bsegall@google.com>, Mel Gorman <mgorman@suse.de>, 
+	Luis Chamberlain <mcgrof@kernel.org>, Iurii Zaikin <yzaikin@google.com>, James Morris <jmorris@namei.org>, 
+	"Serge E. Hallyn" <serge@hallyn.com>, linux-doc@vger.kernel.org, 
+	kernel list <linux-kernel@vger.kernel.org>, 
+	linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
+	linux-security-module <linux-security-module@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-Arnd and Michael,
+On Sun, Sep 13, 2020 at 6:56 PM John Wood <john.wood@gmx.com> wrote:
+> On Fri, Sep 11, 2020 at 02:01:56AM +0200, Jann Horn wrote:
+> > On Fri, Sep 11, 2020 at 1:49 AM Kees Cook <keescook@chromium.org> wrote:
+> > > On Thu, Sep 10, 2020 at 01:21:06PM -0700, Kees Cook wrote:
+> > > > diff --git a/fs/coredump.c b/fs/coredump.c
+> > > > index 76e7c10edfc0..d4ba4e1828d5 100644
+> > > > --- a/fs/coredump.c
+> > > > +++ b/fs/coredump.c
+> > > > @@ -51,6 +51,7 @@
+> > > >  #include "internal.h"
+> > > >
+> > > >  #include <trace/events/sched.h>
+> > > > +#include <fbfam/fbfam.h>
+> > > >
+> > > >  int core_uses_pid;
+> > > >  unsigned int core_pipe_limit;
+> > > > @@ -825,6 +826,7 @@ void do_coredump(const kernel_siginfo_t *siginfo)
+> > > >  fail_creds:
+> > > >       put_cred(cred);
+> > > >  fail:
+> > > > +     fbfam_handle_attack(siginfo->si_signo);
+> > >
+> > > I don't think this is the right place for detecting a crash -- isn't
+> > > this only for the "dumping core" condition? In other words, don't you
+> > > want to do this in get_signal()'s "fatal" block? (i.e. very close to the
+> > > do_coredump, but without the "should I dump?" check?)
+> > >
+> > > Hmm, but maybe I'm wrong? It looks like you're looking at noticing the
+> > > process taking a signal from SIG_KERNEL_COREDUMP_MASK ?
+> > >
+> > > (Better yet: what are fatal conditions that do NOT match
+> > > SIG_KERNEL_COREDUMP_MASK, and should those be covered?)
+> > >
+> > > Regardless, *this* looks like the only place without an LSM hook. And it
+> > > doesn't seem unreasonable to add one here. I assume it would probably
+> > > just take the siginfo pointer, which is also what you're checking.
+> >
+> > Good point, making this an LSM might be a good idea.
+> >
+> > > e.g. for include/linux/lsm_hook_defs.h:
+> > >
+> > > LSM_HOOK(int, 0, task_coredump, const kernel_siginfo_t *siginfo);
+> >
+> > I guess it should probably be an LSM_RET_VOID hook? And since, as you
+> > said, it's not really semantically about core dumping, maybe it should
+> > be named task_fatal_signal or something like that.
+>
+> If I understand correctly you propose to add a new LSM hook without return
+> value and place it here:
+>
+> diff --git a/kernel/signal.c b/kernel/signal.c
+> index a38b3edc6851..074492d23e98 100644
+> --- a/kernel/signal.c
+> +++ b/kernel/signal.c
+> @@ -2751,6 +2751,8 @@ bool get_signal(struct ksignal *ksig)
+>                         do_coredump(&ksig->info);
+>                 }
+>
+> +               // Add the new LSM hook here
+> +
+>                 /*
+>                  * Death signals, no core dump.
+>                  */
 
-What do you think of "should_faccessat" or "entrusted_faccessat" for
-this new system call?
-
-
-On 12/09/2020 02:28, James Morris wrote:
-> On Thu, 10 Sep 2020, Matthew Wilcox wrote:
-> 
->> On Thu, Sep 10, 2020 at 08:38:21PM +0200, Mickaël Salaün wrote:
->>> There is also the use case of noexec mounts and file permissions. From
->>> user space point of view, it doesn't matter which kernel component is in
->>> charge of defining the policy. The syscall should then not be tied with
->>> a verification/integrity/signature/appraisal vocabulary, but simply an
->>> access control one.
->>
->> permission()?
->>
-> 
-> The caller is not asking the kernel to grant permission, it's asking 
-> "SHOULD I access this file?"
-> 
-> The caller doesn't know, for example, if the script file it's about to 
-> execute has been signed, or if it's from a noexec mount. It's asking the 
-> kernel, which does know. (Note that this could also be extended to reading 
-> configuration files).
-> 
-> How about: should_faccessat ?
-> 
-
-Sounds good to me.
+It should probably be in the "if (sig_kernel_coredump(signr)) {"
+branch. And I'm not sure whether it should be before or after
+do_coredump() - if you do it after do_coredump(), the hook will have
+to wait until the core dump file has been written, which may take a
+little bit of time.
