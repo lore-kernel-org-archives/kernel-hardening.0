@@ -1,23 +1,20 @@
-Return-Path: <SRS0=1VU7=CW=lists.openwall.com=kernel-hardening-return-19894-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=2AhK=CX=lists.openwall.com=kernel-hardening-return-19895-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6D492C433E2
-	for <kernel-hardening@archiver.kernel.org>; Sun, 13 Sep 2020 17:56:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B7CE5C433E2
+	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 16:43:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C9C2E20658
-	for <kernel-hardening@archiver.kernel.org>; Sun, 13 Sep 2020 17:56:15 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="ODcKTz4A"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C9C2E20658
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19894-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1374 invoked by uid 550); 13 Sep 2020 17:56:05 -0000
+	by mail.kernel.org (Postfix) with SMTP id D4DBA206A5
+	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 16:43:40 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D4DBA206A5
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19895-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26441 invoked by uid 550); 14 Sep 2020 16:43:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,177 +22,81 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1351 invoked from network); 13 Sep 2020 17:56:04 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1600019709;
-	bh=37/K9jmay+vWoED09geZGDHT0GBiGgqzABktSn8pAO8=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=ODcKTz4Afh6HJdZgzJuUnf3INw5pPrKK+VS9kZo3PB2I4vIQ8wUz3c7YZbmEkqMvM
-	 3qzE7f6yYI7BYfrfvm6xxFe/YnqNEJX7+OPsU3jU/ubzHqEmBbN61Pok8bGUcHdoUp
-	 H5MGoDvs0+gUKAqdnwXy2VWvTzo1nzkPdcScx78Q=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Sun, 13 Sep 2020 19:54:51 +0200
-From: John Wood <john.wood@gmx.com>
-To: Jann Horn <jannh@google.com>
-Cc: Kees Cook <keescook@chromium.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	John Wood <john.wood@gmx.com>, Matthew Wilcox <willy@infradead.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Ingo Molnar <mingo@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Juri Lelli <juri.lelli@redhat.com>,
-	Vincent Guittot <vincent.guittot@linaro.org>,
-	Dietmar Eggemann <dietmar.eggemann@arm.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Ben Segall <bsegall@google.com>, Mel Gorman <mgorman@suse.de>,
-	Luis Chamberlain <mcgrof@kernel.org>,
-	Iurii Zaikin <yzaikin@google.com>, James Morris <jmorris@namei.org>,
-	"Serge E. Hallyn" <serge@hallyn.com>, linux-doc@vger.kernel.org,
-	kernel list <linux-kernel@vger.kernel.org>,
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>,
-	linux-security-module <linux-security-module@vger.kernel.org>
-Subject: Re: [RFC PATCH 5/6] security/fbfam: Detect a fork brute force attack
-Message-ID: <20200913172415.GA2880@ubuntu>
-References: <20200910202107.3799376-1-keescook@chromium.org>
- <20200910202107.3799376-6-keescook@chromium.org>
- <CAG48ez1gbu+eBA_PthLemcVVR+AU7Xa1zzbJ8tLMLBDCe_a+fQ@mail.gmail.com>
+Received: (qmail 26421 invoked from network); 14 Sep 2020 16:43:32 -0000
+Subject: Re: [RFC PATCH v9 0/3] Add introspect_access(2) (was O_MAYEXEC)
+Cc: James Morris <jmorris@namei.org>, Matthew Wilcox <willy@infradead.org>,
+ Mimi Zohar <zohar@linux.ibm.com>, linux-kernel@vger.kernel.org,
+ Aleksa Sarai <cyphar@cyphar.com>, Alexei Starovoitov <ast@kernel.org>,
+ Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton
+ <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ Christian Heimes <christian@python.org>,
+ Daniel Borkmann <daniel@iogearbox.net>,
+ Deven Bowers <deven.desai@linux.microsoft.com>,
+ Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
+ Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
+ Jan Kara <jack@suse.cz>, Jann Horn <jannh@google.com>,
+ Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
+ Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+ Matthew Garrett <mjg59@google.com>, Miklos Szeredi <mszeredi@redhat.com>,
+ =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+ Scott Shell <scottsh@microsoft.com>,
+ Sean Christopherson <sean.j.christopherson@intel.com>,
+ Shuah Khan <shuah@kernel.org>, Steve Dower <steve.dower@python.org>,
+ Steve Grubb <sgrubb@redhat.com>,
+ Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
+ Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
+ Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+ kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org,
+ linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
+References: <20200910164612.114215-1-mic@digikod.net>
+ <20200910170424.GU6583@casper.infradead.org>
+ <f6e2358c-8e5e-e688-3e66-2cdd943e360e@digikod.net>
+ <a48145770780d36e90f28f1526805a7292eb74f6.camel@linux.ibm.com>
+ <880bb4ee-89a2-b9b0-747b-0f779ceda995@digikod.net>
+ <20200910184033.GX6583@casper.infradead.org>
+ <alpine.LRH.2.21.2009121019050.17638@namei.org>
+To: Arnd Bergmann <arnd@arndb.de>, Michael Kerrisk <mtk.manpages@gmail.com>,
+ linux-api@vger.kernel.org
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <d7126fd7-cca1-42e4-6a7b-6a3b9e77306e@digikod.net>
+Date: Mon, 14 Sep 2020 18:43:17 +0200
+User-Agent:
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAG48ez1gbu+eBA_PthLemcVVR+AU7Xa1zzbJ8tLMLBDCe_a+fQ@mail.gmail.com>
-X-Provags-ID: V03:K1:rqCReVk5SG3AVcU2RIp3vqC5UKPhITO5SKjMkNjMy5pBF/LfL1Z
- MUWrU+w9/m5uuZXKCY4TSUD7M+aDK7+73N2qYlkGfzrEgFHEDW21lRrbX9BW0O9dVXbpnIj
- 0UghsETC4sfdX+e2dYJXlrVX4wNYhKRX08XcuyaN2mwNB7PoKqUBRKRtCGWGB76A8Hp1eIO
- sRdupJBh1R/eAqBaSMbRQ==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:LHzyUdNgCa8=:h+NeD4HnUlM+L9S1sUoGQn
- TIbDmNwwVnptY6RreiUctJEjebk/Iy26DJB4jPCzXjdOac+XK5dE4k7z56ZnRyNTkY7ZwTBUs
- lQkLgz4bajSnG5e+PRUXbaLG+ilivuzR+cJMMswrVHK6jbOzLKOBzEyt2Vdpm66VgKmzqNWxp
- EfKKO70GidjNbMdHPdi6QIeCqGhGj7Hmm3Vqsm1yVWR0VCJ++VcPT440934UnWIjfNa4rKatS
- rNC34S0h0SK3iw+GhHwTxHSfucO5xncfYI0DrVeceJjW+1Tw54En+FtZRDj9EjO4TwsuKCxeD
- I86lzOuF8m7dJOUvRn0yK6E2uximOyhSPMmXYYlAaWVuMvPbmruvOWinbNA0rjbl49RfbmJ6B
- KeNm6Q0JdjH1i/EOg5CCcYABrdouD2FtLVmmivbdQXAJe1PL7t3KUSES6O+rKkB6CMnTMNQWd
- TX6xYdqlT7ngZYbZ3g1bk0yExPOF8qnxSJReemmwUzz3xSK4/gWvcXFvKEcOWSd/xjiE4cIQJ
- kmpPtIRoIO7v1mEpu63xKT5En29hZCEfi00pzLkzkpSfRw6biUEklCwLgmDy3CMf5S1oqMOq5
- wf7fjEB0/0vDqejk3wGQKcMpJfmGof8b+V345pQkUlujdCzkirZ8eBeJC4EYRer72kHT6b8j2
- pey5HTbwJsR4Bcjjdz7Otr4/jvtKWeV0m9yl11LB9RBq0jKymT702jtg3WrpZA+62NaT8JX+M
- NeBeHBI36cL5j+ZiNUnEWy+mROrvBCoVhCrXGuu4rrXC/ptN1yf2+cm0L8dEIOEyvkuOiepXq
- 0R0rFizOPtLBxGQ3Vko1ldVFGgBh4K4OjoVDEn55gjCINxBivhNuNM+Xpu7waJJ/XZaT0k2Nn
- Btbxa2JjGx5yYRoOQsph78xg0YFs8tHh6lz/uU3U88rht0DNiizXk7VN9/DfZI0Wx6imwqxZm
- Y/X4eo6PvtT7G0skba+UvJBhQV1zHOgAn0Vj7hCKF49cD/ngqsKJO8zcywbDW7QZQ24XJ1AE+
- 8nsZEDdRsQ51uSOE/mKE03TmYO9pmTrwxaDf/ZDRRau2vWkoVwx7bMF//hGLKZw/j7IGEtbO+
- z8oNpE4+3RPWwORbh+Oj+2boXskF7KE3/77WHDAsE29xNhtF7zqEo0O50EORQYPHBm10EKRst
- EO8e4FVJUWvwUS36NH4F3y+wcQzsd1OiJkld3xfNyGeC0+kf6V/O2TnFHnr2uuXVjCYvHyHWH
- 3PmCdiTigVJG38v+lBAEFzBfuk2yAAaicF/en7A==
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <alpine.LRH.2.21.2009121019050.17638@namei.org>
+Content-Type: text/plain; charset=iso-8859-15
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
 
-Hi,
+Arnd and Michael,
 
-On Thu, Sep 10, 2020 at 11:10:38PM +0200, Jann Horn wrote:
-> On Thu, Sep 10, 2020 at 10:22 PM Kees Cook <keescook@chromium.org> wrote=
-:
-> > To detect a fork brute force attack it is necessary to compute the
-> > crashing rate of the application. This calculation is performed in eac=
-h
-> > fatal fail of a task, or in other words, when a core dump is triggered=
-.
-> > If this rate shows that the application is crashing quickly, there is =
-a
-> > clear signal that an attack is happening.
-> >
-> > Since the crashing rate is computed in milliseconds per fault, if this
-> > rate goes under a certain threshold a warning is triggered.
-> [...]
-> > +/**
-> > + * fbfam_handle_attack() - Fork brute force attack detection.
-> > + * @signal: Signal number that causes the core dump.
-> > + *
-> > + * The crashing rate of an application is computed in milliseconds pe=
-r fault in
-> > + * each crash. So, if this rate goes under a certain threshold there =
-is a clear
-> > + * signal that the application is crashing quickly. At this moment, a=
- fork brute
-> > + * force attack is happening.
-> > + *
-> > + * Return: -EFAULT if the current task doesn't have statistical data.=
- Zero
-> > + *         otherwise.
-> > + */
-> > +int fbfam_handle_attack(int signal)
-> > +{
-> > +       struct fbfam_stats *stats =3D current->fbfam_stats;
-> > +       u64 delta_jiffies, delta_time;
-> > +       u64 crashing_rate;
-> > +
-> > +       if (!stats)
-> > +               return -EFAULT;
-> > +
-> > +       if (!(signal =3D=3D SIGILL || signal =3D=3D SIGBUS || signal =
-=3D=3D SIGKILL ||
-> > +             signal =3D=3D SIGSEGV || signal =3D=3D SIGSYS))
-> > +               return 0;
->
-> As far as I can tell, you can never get here with SIGKILL, since
-> SIGKILL doesn't trigger core dumping and also isn't used by seccomp?
+What do you think of "should_faccessat" or "entrusted_faccessat" for
+this new system call?
 
-Understood.
 
-> > +
-> > +       stats->faults +=3D 1;
->
-> This is a data race. If you want to be able to increment a variable
-> that may be concurrently incremented by other tasks, use either
-> locking or the atomic_t helpers.
+On 12/09/2020 02:28, James Morris wrote:
+> On Thu, 10 Sep 2020, Matthew Wilcox wrote:
+> 
+>> On Thu, Sep 10, 2020 at 08:38:21PM +0200, Mickaël Salaün wrote:
+>>> There is also the use case of noexec mounts and file permissions. From
+>>> user space point of view, it doesn't matter which kernel component is in
+>>> charge of defining the policy. The syscall should then not be tied with
+>>> a verification/integrity/signature/appraisal vocabulary, but simply an
+>>> access control one.
+>>
+>> permission()?
+>>
+> 
+> The caller is not asking the kernel to grant permission, it's asking 
+> "SHOULD I access this file?"
+> 
+> The caller doesn't know, for example, if the script file it's about to 
+> execute has been signed, or if it's from a noexec mount. It's asking the 
+> kernel, which does know. (Note that this could also be extended to reading 
+> configuration files).
+> 
+> How about: should_faccessat ?
+> 
 
-Ok, I will correct this for the next version. Thanks.
-
-> > +       delta_jiffies =3D get_jiffies_64() - stats->jiffies;
-> > +       delta_time =3D jiffies64_to_msecs(delta_jiffies);
-> > +       crashing_rate =3D delta_time / (u64)stats->faults;
->
-> Do I see this correctly, is this computing the total runtime of this
-> process hierarchy divided by the total number of faults seen in this
-> process hierarchy? If so, you may want to reconsider whether that's
-> really the behavior you want. For example, if I configure the minimum
-> period between crashes to be 30s (as is the default in the sysctl
-> patch), and I try to attack a server that has been running without any
-> crashes for a month, I'd instantly be able to crash around
-> 30*24*60*60/30 =3D 86400 times before the detection kicks in. That seems
-> suboptimal.
-
-You are right. This is not the behaviour we want. So, for the next
-version it would be better to compute the crashing period as the time
-between two faults, or the time between the execve call and the first
-fault (first fault case).
-
-However, I am afraid of a premature detection if a child process fails
-twice in a short period.
-
-So, I think it would be a good idea add a new sysctl to setup a
-minimum number of faults before the time between faults starts to be
-computed. And so, the attack detection only will be triggered if the
-application crashes quickly but after a number of crashes.
-
-What do you think?
-
->
-> (By the way, it kind of annoys me that you call it the "rate" when
-> it's actually the inverse of the rate. "Period" might be more
-> appropriate?)
-
-Yes, "period" it's more appropiate. Thanks for the clarification.
-
-> > +       if (crashing_rate < (u64)sysctl_crashing_rate_threshold)
-> > +               pr_warn("fbfam: Fork brute force attack detected\n");
-> > +
-> > +       return 0;
-> > +}
-> > +
-> > --
-> > 2.25.1
-> >
-
-Regards,
-John Wood
-
+Sounds good to me.
