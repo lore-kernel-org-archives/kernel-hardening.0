@@ -1,23 +1,23 @@
-Return-Path: <SRS0=9BVu=CY=lists.openwall.com=kernel-hardening-return-19899-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=7MFi=CY=lists.openwall.com=kernel-hardening-return-19900-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+X-Spam-Status: No, score=-3.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BD579C43461
-	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Sep 2020 17:38:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 00CFAC43461
+	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Sep 2020 18:45:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7E57E20678
-	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Sep 2020 17:38:14 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C8CAF2068D
+	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Sep 2020 18:45:30 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="eeQDvAac"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7E57E20678
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="EsuZ9KON"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C8CAF2068D
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19899-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26241 invoked by uid 550); 15 Sep 2020 17:38:05 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19900-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11525 invoked by uid 550); 15 Sep 2020 18:45:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,16 +25,16 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26221 invoked from network); 15 Sep 2020 17:38:05 -0000
+Received: (qmail 11505 invoked from network); 15 Sep 2020 18:45:23 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1600191432;
-	bh=NJ6O5rFyFRlQXoAS3XFVS8BQi/rApnd7lWRwhfK2Xlg=;
+	s=badeba3b8450; t=1600195470;
+	bh=B31pD7D2sccJgZjLSpQrpxyG+i1b3lP7zRQ7GgeJ0Ig=;
 	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=eeQDvAacH1VlXwy4iH3Fxv2qyTjt32iVfeKBKyzgI7+LGScpg5JNVDryxc0pkFL7N
-	 zqoJ1hZ3D0VN3JGismE3Z9ckMhtWuP06kvJvEVLGhRUkTahazF+9UvM7UneJRJLpW9
-	 Z5eKxS0WNWMmopdQzAW4AkXHnNEFwNzlLAhdqHfM=
+	b=EsuZ9KONYBvLuz1orfuvnb/zRCqBqa/mXqJIWVfBiMWs0Jk0xokvTM2/RzzN+mdiy
+	 l/hztbBJckUE5aZK3raUkSJ7ZucSYhvlt707gaN+no6MwVKEpkxYWWL5QKtoe8SL74
+	 FDrftWHjo348TLOzXJ7Ztow/mOWgXJQZNbZTjX6o=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Tue, 15 Sep 2020 19:36:27 +0200
+Date: Tue, 15 Sep 2020 20:44:19 +0200
 From: John Wood <john.wood@gmx.com>
 To: Jann Horn <jannh@google.com>
 Cc: John Wood <john.wood@gmx.com>, Kees Cook <keescook@chromium.org>,
@@ -56,136 +56,82 @@ Cc: John Wood <john.wood@gmx.com>, Kees Cook <keescook@chromium.org>,
 	linux-fsdevel <linux-fsdevel@vger.kernel.org>,
 	linux-security-module <linux-security-module@vger.kernel.org>
 Subject: Re: [RFC PATCH 5/6] security/fbfam: Detect a fork brute force attack
-Message-ID: <20200915173627.GA2900@ubuntu>
+Message-ID: <20200915175831.GB2900@ubuntu>
 References: <20200910202107.3799376-1-keescook@chromium.org>
  <20200910202107.3799376-6-keescook@chromium.org>
- <202009101634.52ED6751AD@keescook>
- <CAG48ez2fP7yupg6Th+Hg0tL3o06p2PR1HtQcvy4Ro+Q5T2Nfkw@mail.gmail.com>
- <20200913152724.GB2873@ubuntu>
- <CAG48ez3aQXb3EuGRVvLLo7BxycqJ4Y2mL83QhY9-QMK_qkfCuQ@mail.gmail.com>
+ <CAG48ez1gbu+eBA_PthLemcVVR+AU7Xa1zzbJ8tLMLBDCe_a+fQ@mail.gmail.com>
+ <20200913172415.GA2880@ubuntu>
+ <CAG48ez0BcSY0is2LzdkizcOQYkaOJwfa=5ZSwjKb+faRwG9QCA@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAG48ez3aQXb3EuGRVvLLo7BxycqJ4Y2mL83QhY9-QMK_qkfCuQ@mail.gmail.com>
-X-Provags-ID: V03:K1:+Tv9EY0th3c1INR7wYqsaQT1v7XmqULQmf1mCMF8tBv7us+6tmw
- 383m5XxCtjIbCae841iMOqJ2Kb5mfB5OzM0d7bWnQ/N2gDAhnuzMcocEglMiEwyJSk3JQJY
- A8urH8HcByeEI58owhYnERH7vdI+cm29w8O8VDx8RuXDp3riBg1FpBliC3UfpGBZw8KurB1
- T/YoWfU4tpzRllQytfgJQ==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:4Yu2qoJjF0U=:HHZzV9mfG2ygAGqXu5SlIO
- b6fw//682jHONr9ldrDNb1XyJothxmBz6Vmqu5LRz+VzKi+Iobvg71yk1utVXXrr4ydn7w1i4
- Bo8DAIv8PN4nGmuQR0RWyRtNXdKVtbVhLrZ0aZNjY74rEbgcOZ5GvhU03dXUlp6uiVNWc8TqQ
- NGsPryfvIf3RXG18FTT4H8dvxc9A/Y6QFhgEv/z1GGEUNFkqS52ZarT2g5pt9KF1UNKJUNOG+
- rV2I1k1OS49aa+PEZcbx+C4I/mT7T2mB15tgn+t42ZMBKUYChBtQS1VZvuP2v29vNARx+8vUH
- McELVzXcPTYr5DuNcjjTYcfmow++F314PGCjv8akNZxqbrdRa+8sZ++pA9sKQ5XvRpsHrM2Ak
- KSxXaA5SjItMhrt9SttV05Zd4wVNNa5IK6KSAoESbQCF7XT3dscdb+CCO3cWaiqoeZCRLCFqi
- o4bOlv01jjtpTBD3UboqgTQBIPAcZsAMi8D8rzM7A/mJID5///rWiIPwQVccM8/0VBsdgBqOR
- e/kEkRQ6ngbozYc1hfQ2g3zEJEUe/wx7fc/IB0FE8cmZhQDiN23foVrbrebSKdIJO5j0pgk1a
- jz3wW4Y/A3oyDGMpsmuzCG4JkhpXEnVH0qogH2t8jb/sxii946biEIJX1YJiMxMugB0e0BAm9
- w8iZuq1aeviwjREDIGBOK/znjdQSDs8mDTxlEsRgYKpjebiHBtnkZlzRu/k+JJ5xOwR9kc0Y9
- mO0Fdl3Hh34SSKOiutb8SORvzXNnIRVpc3M7Vp/WyLRJLQ8PgL2znh+Iz3HzSxiwrW11BCiCv
- 6SOjKvurvS/n5cvweUytu7zv3ZGkGcyT1Ysuee/GfgH809X/ExdqBIb3914Q6GdRH1pZGh+1F
- UPo7Ir5FJsba4vmFFpTTRycPRNP7YuiC7w89snTutAfOrHXwiQIzbqoJE5eX54BP11hzCOu+o
- kfSX6Q627hloSFcUUu+Qa4FeNLTSCDId4gHZ4s6PuDotn6DGIvbzvuB35j3FgZxZrgZshZg0+
- U/rivOUkkySAi5J9pHKIWcY4Pe+pZYs+5viKmvT1uqldov+53m53Bq8tnNzUNi1vA778qzrd8
- afJ7aIRJOoUeCmyAcuT0SrwjKu2GPVZZWN7iiuRHqHjcjLfxaoUq+Br+e2i2VF67MG0wFHoIf
- K71Wpu1k0LR0wCuAoUFm2wXJOIl+tFJMKd5Riwoy7QO8/52Tfoke+fdGEv7LLWDUZxPoEN1TX
- 78MvWsWqHA0c669IvrfXYcskGlGCPN7xB8N4Bfg==
+In-Reply-To: <CAG48ez0BcSY0is2LzdkizcOQYkaOJwfa=5ZSwjKb+faRwG9QCA@mail.gmail.com>
+X-Provags-ID: V03:K1:HFDnSb2MWhINTQ+V1WFfxA497qE6aAUEa/2kIVw6n9wfon3ph1l
+ 1qX2pXf4G8fZlf1vXI5CUUJ0xAowRC3vdgBEc2p6hocs7C1ts73hYxVw1HwXQxFef+GxdK8
+ zqMWid9SgMcrL+CYGopt594fxmc+sEKZYRTg4JNnf71Kf1Ob6hpSAxueSdYfR+sOjZQPrms
+ edQ8vMbuZcbovLlFEvsyQ==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:xx2DZ+0hWyI=:nvyTRQBte31zC0s60s8C+M
+ kOGSY2G49n+xtijXKjcz/mq3JhxmKX0l3Z8m4go9IvN5zXRHrY0nlqpzQLCVHRTcfxIFjYw/G
+ JwVTyeHsRwnIwyYeY8j8WTHGisSariEVK/UcNGio5yD6cUfqEioz+S0WOGfE4Klh+0Szf3wqv
+ +IH8doSThUkx7Fd97LddLDl+KO7uZ6o4mMwOwbcOOr9oA2HXGv7UEPvob8SSf8XiG9y9HCWOr
+ 4L+ecdZU95mq21cIZ8CUVbUpxVN3x2gHVOIk2GwjtqEJct2XZNDtMmnqrZoDJyiMAgjS3d0b/
+ gF9vsPAz7MGQXwmIB/6F5d/pK9zhiTKwrrHsaj2aN0dVQ+7k3j4eTNoMUMMomIAVxzRZrFdW4
+ 3RtJHMTItTuQ+q+ME0hmpy07hTHbo74C7OJqkuPctK8Qu2BfGT2cVTZ5X4IkJpLiKDQPxZtwh
+ S0wJBasnev76pI6n6dSh1rw15g+PGdvMXhWs+07UFOrDlT5s8KVhyI2xEAKOq3oaGvm/VYcoF
+ twHcwUHfTeBwHNdz0CkqPSm0fFs2ploxanxppsXMHZvHU0Ktjvu6krX6+ctZxxK1a5b0gqv6k
+ fm5bNISVkH36XSelod+TA+S4Ir8ebVm8zI7+04BXpIWIpHC3d985CVAndn3WJLg/2eiP8WjnR
+ k9EqGZCT/lIq1zyEE/8SOU0xrJyUExgWqnhC4i1zWkm9kKpvdzXdDcCMwLZ1ewXC7oAFFj80V
+ r4hY+cl3mRdHAlAy4JgkEIZoQVulOc5eqMLf/0mSnM5Qgd+7DL64vAg2xcqBZQzlXuJ89M1Qg
+ 6aV5gGH9YLeHMW82/F4d443Vx43f5bQung3/I0hUfV+bRg2Me50xt2AH3uC7Bnsv58+nMSuPG
+ yN1YtjDYsCwO4enn+wLzGjQbHHQ7eWYFtKPD0jSoQnM9fAnCSWzLcolztviAnaRBiEXIFA0ZS
+ K1VJ2DenRCbTHJ0nTi0FGy4TLXkUcKoIDcAPud3eqcbDkW9X5OcudSoACAqfYz9nthbwMBwGw
+ a5kaGMAGxoeNm1xFuZULgnM/yjddeYmH1kVZZES8UziLJXIWstV4z4MgEcPJ0v96YEdI46go+
+ V5XBeBXn1IYQS/lE1ZMfj99NqbqGMv0g7beOt3mHy2Ulyq06VPPB3QZn2GJUSsjAl7Y0/4CrB
+ 2qxAUhOLpobD5nwrQYVzYcQmUM8Vh2kSPQrqezetYanOKsBLqD5unw7gxvcEA017Zo/iErihG
+ B3bwnEwSe/MFCUXchIhdJgKStou1HNct+WoL6FQ==
 Content-Transfer-Encoding: quoted-printable
 
-Hi,
-
-On Mon, Sep 14, 2020 at 09:39:10PM +0200, Jann Horn wrote:
-> On Sun, Sep 13, 2020 at 6:56 PM John Wood <john.wood@gmx.com> wrote:
-> > On Fri, Sep 11, 2020 at 02:01:56AM +0200, Jann Horn wrote:
-> > > On Fri, Sep 11, 2020 at 1:49 AM Kees Cook <keescook@chromium.org> wr=
-ote:
-> > > > On Thu, Sep 10, 2020 at 01:21:06PM -0700, Kees Cook wrote:
-> > > > [...]
-> > > > I don't think this is the right place for detecting a crash -- isn=
-'t
-> > > > this only for the "dumping core" condition? In other words, don't =
-you
-> > > > want to do this in get_signal()'s "fatal" block? (i.e. very close =
-to the
-> > > > do_coredump, but without the "should I dump?" check?)
-> > > >
-> > > > Hmm, but maybe I'm wrong? It looks like you're looking at noticing=
- the
-> > > > process taking a signal from SIG_KERNEL_COREDUMP_MASK ?
-> > > >
-> > > > (Better yet: what are fatal conditions that do NOT match
-> > > > SIG_KERNEL_COREDUMP_MASK, and should those be covered?)
-> > > >
-> > > > Regardless, *this* looks like the only place without an LSM hook. =
-And it
-> > > > doesn't seem unreasonable to add one here. I assume it would proba=
-bly
-> > > > just take the siginfo pointer, which is also what you're checking.
+On Mon, Sep 14, 2020 at 09:42:37PM +0200, Jann Horn wrote:
+> On Sun, Sep 13, 2020 at 7:55 PM John Wood <john.wood@gmx.com> wrote:
+> > On Thu, Sep 10, 2020 at 11:10:38PM +0200, Jann Horn wrote:
+> > > > +       delta_jiffies =3D get_jiffies_64() - stats->jiffies;
+> > > > +       delta_time =3D jiffies64_to_msecs(delta_jiffies);
+> > > > +       crashing_rate =3D delta_time / (u64)stats->faults;
 > > >
-> > > Good point, making this an LSM might be a good idea.
-> > >
-> > > > e.g. for include/linux/lsm_hook_defs.h:
-> > > >
-> > > > LSM_HOOK(int, 0, task_coredump, const kernel_siginfo_t *siginfo);
-> > >
-> > > I guess it should probably be an LSM_RET_VOID hook? And since, as yo=
-u
-> > > said, it's not really semantically about core dumping, maybe it shou=
-ld
-> > > be named task_fatal_signal or something like that.
+> > > Do I see this correctly, is this computing the total runtime of this
+> > > process hierarchy divided by the total number of faults seen in this
+> > > process hierarchy? If so, you may want to reconsider whether that's
+> > > really the behavior you want. For example, if I configure the minimu=
+m
+> > > period between crashes to be 30s (as is the default in the sysctl
+> > > patch), and I try to attack a server that has been running without a=
+ny
+> > > crashes for a month, I'd instantly be able to crash around
+> > > 30*24*60*60/30 =3D 86400 times before the detection kicks in. That s=
+eems
+> > > suboptimal.
 > >
-> > If I understand correctly you propose to add a new LSM hook without re=
-turn
-> > value and place it here:
+> > You are right. This is not the behaviour we want. So, for the next
+> > version it would be better to compute the crashing period as the time
+> > between two faults, or the time between the execve call and the first
+> > fault (first fault case).
 > >
-> > diff --git a/kernel/signal.c b/kernel/signal.c
-> > index a38b3edc6851..074492d23e98 100644
-> > --- a/kernel/signal.c
-> > +++ b/kernel/signal.c
-> > @@ -2751,6 +2751,8 @@ bool get_signal(struct ksignal *ksig)
-> >                         do_coredump(&ksig->info);
-> >                 }
+> > However, I am afraid of a premature detection if a child process fails
+> > twice in a short period.
 > >
-> > +               // Add the new LSM hook here
-> > +
-> >                 /*
-> >                  * Death signals, no core dump.
-> >                  */
+> > So, I think it would be a good idea add a new sysctl to setup a
+> > minimum number of faults before the time between faults starts to be
+> > computed. And so, the attack detection only will be triggered if the
+> > application crashes quickly but after a number of crashes.
+> >
+> > What do you think?
 >
-> It should probably be in the "if (sig_kernel_coredump(signr)) {"
-> branch. And I'm not sure whether it should be before or after
-> do_coredump() - if you do it after do_coredump(), the hook will have
-> to wait until the core dump file has been written, which may take a
-> little bit of time.
+> You could keep a list of the timestamps of the last five crashes or
+> so, and then take action if the last five crashes happened within
+> (5-1)*crash_period_limit time.
 
-But if the LSM hook is placed in the "if (sig_kernel_coredump(signr)) {"
-branch, then only the following signals will be passed to it.
-
-SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGFPE, SIGSEGV, SIGBUS, SIGSYS,
-SIGXCPU, SIGXFSZ, SIGEMT
-
-The above signals are extracted from SIG_KERNEL_COREDUMP_MASK macro, and
-are only related to coredump.
-
-So, if we add a new LSM hook (named task_fatal_signal) to detect a fatal
-signal it would be better to place it just above the if statement.
-
-diff --git a/kernel/signal.c b/kernel/signal.c
-index a38b3edc6851..406af87f2f96 100644
-=2D-- a/kernel/signal.c
-+++ b/kernel/signal.c
-@@ -2736,6 +2736,8 @@ bool get_signal(struct ksignal *ksig)
-                 */
-                current->flags |=3D PF_SIGNALED;
-
-+               // Place the new LSM hook here
-+
-                if (sig_kernel_coredump(signr)) {
-                        if (print_fatal_signals)
-                                print_fatal_signal(ksig->info.si_signo);
-
-This way all the fatal signals are caught and we also avoid the commented
-delay if a core dump is necessary.
+Ok, your proposed solution seems a more clever one. Anyway I think that a
+new sysctl for fine tuning the number of timestamps would be needed.
 
 Thanks,
 John Wood
