@@ -1,23 +1,20 @@
-Return-Path: <SRS0=H91+=CX=lists.openwall.com=kernel-hardening-return-19897-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=a7Oq=CY=lists.openwall.com=kernel-hardening-return-19898-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DC359C43461
-	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 19:43:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A87B6C43461
+	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Sep 2020 13:32:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C60EB2193E
-	for <kernel-hardening@archiver.kernel.org>; Mon, 14 Sep 2020 19:43:21 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="MvgJXiZx"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C60EB2193E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19897-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 31780 invoked by uid 550); 14 Sep 2020 19:43:15 -0000
+	by mail.kernel.org (Postfix) with SMTP id 96629206BE
+	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Sep 2020 13:32:51 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 96629206BE
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=arndb.de
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19898-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 4009 invoked by uid 550); 15 Sep 2020 13:32:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,98 +22,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 31757 invoked from network); 14 Sep 2020 19:43:15 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=B26ZPwSMQkEgl0FLKfBn1bcFzAEPMlr/0cRYgdbCJm4=;
-        b=MvgJXiZx2nV1v+RFwDa0Ew2gpF/YMUm1Qzl9uP0JoeTwPkWschjlATZudFOjyAIymN
-         jJB7CAfq+BpdKpEqeroG5Y7ueTlhTlgM+6LKj7M/TcVdvxK4rdi9pYpCVGasFgNnIweT
-         66+OK8SAHXNYBvklweFjzvmaa+Q7pxQDrOuyV4OSavfjbUh/GTOB0/dTGHcXB5og63fs
-         hvyUH+1dQT5+qQQyzqRC8vgQa2klF9z87EZ56xelz5zRMKd7xRTRJDyE/7GPPA7Gsper
-         vQGtuke/Cs2S3Z/KC4HPmMFtSHp3XPc5cMLPQw2vv+ytvQBW4AUOUbR1dxtFSHQYUW0E
-         xajw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=B26ZPwSMQkEgl0FLKfBn1bcFzAEPMlr/0cRYgdbCJm4=;
-        b=X2lSYED0gR/+V2RC1f1SRIMh0cZv/hTRwbQ98skduVqdZjdPmhBsSIun5aUl+PALXC
-         jTOiifi1Ba5to04g24k/grbrnDrqVxlFAaHbHKDH2jhdWLl4K3K2v0/tVjFur+TYDELm
-         FfpXa2HgX4rAPhp8rw4IZeYC1pY/pJhCUkTJTeyjcMPcWB7ToLviDMOrXAuZzy9kkKW9
-         D0vJLbnei2dUqtL8v+04RlBClL8R3cxXJrXOE+p8c/NAV8+wHHPE+Eg90jPjiZ1c1lBh
-         Y2IaY3Ob+Zog+hJN6uIbTVVDwBwQT7TD3FtxYX94S0nYZfSUEL6t9/fiU9dRdN0hyKqH
-         YLPA==
-X-Gm-Message-State: AOAM533L94QjT1QHDoGugYf5C+5OqyyINB2zyE6sbMBSU5p2CyLHu1ui
-	L/yV3mrUCRPF1cH6ZsApiv4YO9xIOoHI62bluEP73w==
-X-Google-Smtp-Source: ABdhPJwIyj+9kqnlMOpAnTl++v/tLI6DikXxNqu6vECzgkcVLWCncCazo3lOF4hNj+FGq7wU79q5bP4k/TU5T/il6ac=
-X-Received: by 2002:a05:6402:176c:: with SMTP id da12mr19288248edb.386.1600112583753;
- Mon, 14 Sep 2020 12:43:03 -0700 (PDT)
+Received: (qmail 3986 invoked from network); 15 Sep 2020 13:32:42 -0000
+X-Gm-Message-State: AOAM531Gonz4BIgnYvFQdLsRrw8PtoOxubbxp7U9ilDSKHfvUNR/e+GU
+	GwMPnPh3x0hCOGZZNtFBXMqiVgKoRNE/91KRG+4=
+X-Google-Smtp-Source: ABdhPJxxLmMCN4A/oxqNJBXyjnHh2EThJJR2LF/8Sz6ABSTqKRD1ROg//n2YBFK6xkQVViDw3D8KsqM5aPAmkXBsQb0=
+X-Received: by 2002:aed:2ce5:: with SMTP id g92mr5576894qtd.204.1600176747244;
+ Tue, 15 Sep 2020 06:32:27 -0700 (PDT)
 MIME-Version: 1.0
-References: <20200910202107.3799376-1-keescook@chromium.org>
- <20200910202107.3799376-6-keescook@chromium.org> <CAG48ez1gbu+eBA_PthLemcVVR+AU7Xa1zzbJ8tLMLBDCe_a+fQ@mail.gmail.com>
- <20200913172415.GA2880@ubuntu>
-In-Reply-To: <20200913172415.GA2880@ubuntu>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 14 Sep 2020 21:42:37 +0200
-Message-ID: <CAG48ez0BcSY0is2LzdkizcOQYkaOJwfa=5ZSwjKb+faRwG9QCA@mail.gmail.com>
-Subject: Re: [RFC PATCH 5/6] security/fbfam: Detect a fork brute force attack
-To: John Wood <john.wood@gmx.com>
-Cc: Kees Cook <keescook@chromium.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Matthew Wilcox <willy@infradead.org>, 
-	Jonathan Corbet <corbet@lwn.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Ingo Molnar <mingo@redhat.com>, 
-	Peter Zijlstra <peterz@infradead.org>, Juri Lelli <juri.lelli@redhat.com>, 
-	Vincent Guittot <vincent.guittot@linaro.org>, Dietmar Eggemann <dietmar.eggemann@arm.com>, 
-	Steven Rostedt <rostedt@goodmis.org>, Ben Segall <bsegall@google.com>, Mel Gorman <mgorman@suse.de>, 
-	Luis Chamberlain <mcgrof@kernel.org>, Iurii Zaikin <yzaikin@google.com>, James Morris <jmorris@namei.org>, 
-	"Serge E. Hallyn" <serge@hallyn.com>, linux-doc@vger.kernel.org, 
-	kernel list <linux-kernel@vger.kernel.org>, 
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
-	linux-security-module <linux-security-module@vger.kernel.org>
+References: <20200910164612.114215-1-mic@digikod.net> <20200910164612.114215-3-mic@digikod.net>
+In-Reply-To: <20200910164612.114215-3-mic@digikod.net>
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 15 Sep 2020 15:32:11 +0200
+X-Gmail-Original-Message-ID: <CAK8P3a2bhKp8pHYP1nDg__pgPoNssVUkLo3y6bFiGjCKv-c0cA@mail.gmail.com>
+Message-ID: <CAK8P3a2bhKp8pHYP1nDg__pgPoNssVUkLo3y6bFiGjCKv-c0cA@mail.gmail.com>
+Subject: Re: [RFC PATCH v9 2/3] arch: Wire up introspect_access(2)
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, 
+	Alexei Starovoitov <ast@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, 
+	Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, 
+	Casey Schaufler <casey@schaufler-ca.com>, Christian Brauner <christian.brauner@ubuntu.com>, 
+	Christian Heimes <christian@python.org>, Daniel Borkmann <daniel@iogearbox.net>, 
+	Deven Bowers <deven.desai@linux.microsoft.com>, Dmitry Vyukov <dvyukov@google.com>, 
+	Eric Biggers <ebiggers@kernel.org>, Eric Chiang <ericchiang@google.com>, 
+	Florian Weimer <fweimer@redhat.com>, James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>, 
+	Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
+	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, Matthew Garrett <mjg59@google.com>, 
+	Matthew Wilcox <willy@infradead.org>, Michael Kerrisk <mtk.manpages@gmail.com>, 
+	Miklos Szeredi <mszeredi@redhat.com>, Mimi Zohar <zohar@linux.ibm.com>, 
+	=?UTF-8?Q?Philippe_Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>, 
+	Scott Shell <scottsh@microsoft.com>, 
+	Sean Christopherson <sean.j.christopherson@intel.com>, Shuah Khan <shuah@kernel.org>, 
+	Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, 
+	Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, 
+	Thibaut Sautereau <thibaut.sautereau@clip-os.org>, 
+	Vincent Strubel <vincent.strubel@ssi.gouv.fr>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
+	linux-integrity@vger.kernel.org, 
+	LSM List <linux-security-module@vger.kernel.org>, 
+	Linux FS-devel Mailing List <linux-fsdevel@vger.kernel.org>, 
+	=?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>, 
+	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
 Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+X-Provags-ID: V03:K1:VlNM/dz8CyjDd73UFKdheylTiZF2qrNzrdVdElLiIN4tyfwlYfz
+ Ok5TSez6kaPzUHHgd4tbSeDPocajTukDzlqjXzCHoVSNpeOMOOx16n5fwK9wYX9M4VpVEmD
+ E5EtxVa7qJRkTHLti7xLLEMrvesYGPvn6iwT+ssuWySp3dL5FH0i8CQuo/lwy9FsaP8Z0Ws
+ T+DXOhEhHbxs4pesyhoBw==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:aC1okdJjcqk=:nUzDxpmINupUo3KoLbMieA
+ QoSj4cmohf31op9BBd+iRq5M5/jPuaYhgCG9vDDBeLwxQoBz6T1DAF9w8LVOjnQutD7Gzw/Be
+ HWPlaswugYINcXsTif4gDd8XOSD/jnnyEgais7fuEAbnyFNPH4Zy7EGM67NTwtbjcSQnSpv6e
+ HIJ4jaELUxvSZkwnqrpntpUNQAxrApZquY0zbS4N4ec0IBfHxaTPnFWKpbEUwn9u7kJyBx5GK
+ HRXbCeLBNnq174LfZY+n/83ETNR8B38Q68MZh2A4mha2vsFoIlpaW5047kFo+ZRx9kziq5svr
+ KJylN1kFy+oDABnkeJby+/qVHVya0bkgoS7j3faIainvCuvBNna5dYeWMuWhxS/hgZJND64NG
+ iXd39PlDQOt2N6fU8JmzzXA5LPfvPnbplwwEl+UPH7fzV9k4US3MBpxdCbqiwDUlH2I/SWrMg
+ q2W8WmljnBCnke3gnoDETKGyn3zW+sYaATQe41r+sXJZB6sAejUEX3FBRGfqxkwEK7a6Ydidb
+ /FPbwxYd6uKdyrtM5qtLyTiRt7FK7e0SdrjoWNcj9rjncu86UHw37ryr+cIfnRD9XdHiJ4R2W
+ K56ZcEfdXQt3gDwrM36HSKZ0UXpMmOilqXCcbdbpXwBcoL9fGC0lWkmubvAYPtd2ltUxM3nFC
+ mHpe5yFBrkaPH6rCFqg5p937aJREPpL8m3MfbodXwfHXFBHZw3d+ls0ZW5WXLsY1LSymnilwo
+ f6tlbgnZjDUl5rXFV5vcqPgzDbt7sg7PTVPzGT0NHHyTu7dJlc6NsTP0EsgtysAMRxR6/EOyG
+ 6N/sr93wHK4lrncxF+IZlhBoVMhLvevo9MDaJ+MWCufK4lmjcm9bdfeBMzBqmCWddlaglEzfV
+ zuUll7FmNup1nL6fOtHZkyg58uIZVX5uldQm35w0vdLNQJuDKpnpGK+J6Mgt3fDQGveXAaWtE
+ OeCPOEtCoveH4FzjoP6HxGyAdxuVj1IF786TDyib1q/ma2QdKLylE
 
-On Sun, Sep 13, 2020 at 7:55 PM John Wood <john.wood@gmx.com> wrote:
-> On Thu, Sep 10, 2020 at 11:10:38PM +0200, Jann Horn wrote:
-> > On Thu, Sep 10, 2020 at 10:22 PM Kees Cook <keescook@chromium.org> wrote:
-> > > To detect a fork brute force attack it is necessary to compute the
-> > > crashing rate of the application. This calculation is performed in each
-> > > fatal fail of a task, or in other words, when a core dump is triggered.
-> > > If this rate shows that the application is crashing quickly, there is a
-> > > clear signal that an attack is happening.
-> > >
-> > > Since the crashing rate is computed in milliseconds per fault, if this
-> > > rate goes under a certain threshold a warning is triggered.
-[...]
-> > > +       delta_jiffies = get_jiffies_64() - stats->jiffies;
-> > > +       delta_time = jiffies64_to_msecs(delta_jiffies);
-> > > +       crashing_rate = delta_time / (u64)stats->faults;
-> >
-> > Do I see this correctly, is this computing the total runtime of this
-> > process hierarchy divided by the total number of faults seen in this
-> > process hierarchy? If so, you may want to reconsider whether that's
-> > really the behavior you want. For example, if I configure the minimum
-> > period between crashes to be 30s (as is the default in the sysctl
-> > patch), and I try to attack a server that has been running without any
-> > crashes for a month, I'd instantly be able to crash around
-> > 30*24*60*60/30 = 86400 times before the detection kicks in. That seems
-> > suboptimal.
+On Thu, Sep 10, 2020 at 6:46 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
+wrote:
 >
-> You are right. This is not the behaviour we want. So, for the next
-> version it would be better to compute the crashing period as the time
-> between two faults, or the time between the execve call and the first
-> fault (first fault case).
+> From: Micka=C3=ABl Sala=C3=BCn <mic@linux.microsoft.com>
 >
-> However, I am afraid of a premature detection if a child process fails
-> twice in a short period.
+> Wire up access_interpreted(2) for all architectures.
 >
-> So, I think it would be a good idea add a new sysctl to setup a
-> minimum number of faults before the time between faults starts to be
-> computed. And so, the attack detection only will be triggered if the
-> application crashes quickly but after a number of crashes.
+> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@linux.microsoft.com>
+> Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+> Cc: Al Viro <viro@zeniv.linux.org.uk>
+> Cc: Andrew Morton <akpm@linux-foundation.org>
+> Cc: Arnd Bergmann <arnd@arndb.de>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
+> ---
 >
-> What do you think?
+> Changes since v7:
+> * New patch for the new syscall.
+> * Increase syscall numbers by 2 to leave space for new ones (in
+>   linux-next): watch_mount(2) and process_madvise(2).
 
-You could keep a list of the timestamps of the last five crashes or
-so, and then take action if the last five crashes happened within
-(5-1)*crash_period_limit time.
+I checked that the syscall calling conventions are sane and that
+it is wired up correctly on all architectures in this patch.
+
+Acked-by: Arnd Bergmann <arnd@arndb.de>
+
+I did not look at the system call implementation or its purpose though,
+as that is not my area.
