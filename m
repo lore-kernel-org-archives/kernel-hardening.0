@@ -1,24 +1,23 @@
-Return-Path: <SRS0=l/Yv=C2=lists.openwall.com=kernel-hardening-return-19912-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=YdCl=C2=lists.openwall.com=kernel-hardening-return-19913-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-12.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8F10CC433E2
-	for <kernel-hardening@archiver.kernel.org>; Thu, 17 Sep 2020 18:41:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AF4E0C43464
+	for <kernel-hardening@archiver.kernel.org>; Thu, 17 Sep 2020 22:05:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5B6DC21D7B
-	for <kernel-hardening@archiver.kernel.org>; Thu, 17 Sep 2020 18:41:15 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id BF6C2206B6
+	for <kernel-hardening@archiver.kernel.org>; Thu, 17 Sep 2020 22:05:40 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="e9t1Z/p/"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5B6DC21D7B
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19912-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1134 invoked by uid 550); 17 Sep 2020 18:41:08 -0000
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="gZfnTVPq"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BF6C2206B6
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19913-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11665 invoked by uid 550); 17 Sep 2020 22:05:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,20 +25,36 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1111 invoked from network); 17 Sep 2020 18:41:07 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1600368012;
-	bh=BJaSI38+zQjgcLqD+dMdPDjGZYHwT/xid39c3EhZ514=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=e9t1Z/p/aOHSebcLMutxKwgppPMe/c4ATNfVeaagoYuVRoFaa2lcxDVvXkzWR76hB
-	 YofRiSl0Oz66n/3Ox6RXXKJl0zCEVor4IEaBtxU8K7RZNYnhgrVIaB3LpC3/tCCxMV
-	 KpFqJTeep7knJ//m+d/o4g/0m+imNEeAr2az4VAk=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Thu, 17 Sep 2020 20:40:06 +0200
-From: John Wood <john.wood@gmx.com>
-To: Kees Cook <keescook@chromium.org>
+Received: (qmail 11645 invoked from network); 17 Sep 2020 22:05:33 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to;
+        bh=RVejrFx8lqGVUKgRhIUmNAugSkLKO3AWaoC/1SxxcL0=;
+        b=gZfnTVPqJkwyJQbCSxJtksOl0Wp3oPCryqhhzYqmD6nXS59iDI+KLW4Fe8f0f8zL3n
+         /elUdPuoSqhgtEl2zfjQjTb/kbloI1vZr9vae5Jthw3imZMzfP9Eia8WaXmx3/Q3AM39
+         b9Swp7NuoP77Vi0xXufmukO6fA00nsfebrOJI=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to;
+        bh=RVejrFx8lqGVUKgRhIUmNAugSkLKO3AWaoC/1SxxcL0=;
+        b=YtmRpsLb+ssorCkQp69XPgl0lir0ipIAAQ5aP8mnpLb1I1bHiXuLYTJr2OtPblo9NQ
+         ImE4WJOSTrG5tFaLdva5fmDH4RXTxi0l1/gcNX1jI8lvdUSPGXoa3WAzxx19TXF6MCMf
+         gQpMHHMtcoG1+CNx0w61zJvDHm6B4f8S+6nFISEiXAPCZXahqy/09f2UUGsgcus+8bf8
+         mDxGck+oMD89CuC6xNZVjT0lZ3xP/y1PGUjfRLGrxflJZih/Xm8wSBqvXEHBBZ38y7PU
+         5LZDNPOKe4S7Yjrd+z/oxkEKVcaojWSTw9sJAx7CXWa6PS1WrI9fMu9ybQcZS7skV0/k
+         WPiw==
+X-Gm-Message-State: AOAM531zZzvArTr6/g1ld0MvQCfnHqd6yJTiR/EpACwB0K6zIKC5ipk6
+	E/lKlwPv6IuCQO4Ga6W729kjMg==
+X-Google-Smtp-Source: ABdhPJxpTQhskINmsg7Ej2h7teJJR0+5sPJiS7FT04TblAYOWkDs4Jwx5Cao9/nMc6ypwIWmOhsmsw==
+X-Received: by 2002:a63:1e0c:: with SMTP id e12mr6153286pge.346.1600380320847;
+        Thu, 17 Sep 2020 15:05:20 -0700 (PDT)
+Date: Thu, 17 Sep 2020 15:05:18 -0700
+From: Kees Cook <keescook@chromium.org>
+To: John Wood <john.wood@gmx.com>
 Cc: Jann Horn <jannh@google.com>, kernel-hardening@lists.openwall.com,
-	John Wood <john.wood@gmx.com>, Matthew Wilcox <willy@infradead.org>,
+	Matthew Wilcox <willy@infradead.org>,
 	Jonathan Corbet <corbet@lwn.net>,
 	Alexander Viro <viro@zeniv.linux.org.uk>,
 	Ingo Molnar <mingo@redhat.com>,
@@ -56,94 +71,72 @@ Cc: Jann Horn <jannh@google.com>, kernel-hardening@lists.openwall.com,
 	linux-security-module@vger.kernel.org
 Subject: Re: [RFC PATCH 1/6] security/fbfam: Add a Kconfig to enable the
  fbfam feature
-Message-ID: <20200917175146.GB3637@ubuntu>
+Message-ID: <202009171504.841FA53@keescook>
 References: <20200910202107.3799376-1-keescook@chromium.org>
  <20200910202107.3799376-2-keescook@chromium.org>
  <202009101615.8566BA3967@keescook>
+ <20200917175146.GB3637@ubuntu>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <202009101615.8566BA3967@keescook>
-X-Provags-ID: V03:K1:hfSrV/JuouzV96KqzDpTM0p1F5fgksRQkQ6glwDqKnplLy7aA51
- LEXmlmjhZhsKwcw5j0kbmt75CSucf6iASudyPU5ybTSp6TwgdsHyhmEvzYWejOaYtXBaxA/
- PnRKC9PzHtt0+UFq1WxYfr9s9ZeCojzAxzMMqSLlO3HjvJvoExAeNrCrqI6qFldyYkuwPt5
- pa5DJIH2/13k0Vpfy5WPw==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:F+CYmWgFS1M=:BsRffWDkQBmHd+tKnquYN/
- 8GM8gVMJzJUHm1wLN6sXJNkaM1TtRt/1V5S2aDYLosqzA7/u+EEtothfBo8QFKI9FsOFNyOFy
- H4gOTJ0PF86fTmrXj6o7Tz1Z6U8o7uI4HIj5/mIYwLFl/TTv52z/+P6riiqXobBwn6C+80my/
- gFNP+8JTHOp6yYAVBo+A8OSWoCQ5MagOVy0OoyK9mTw/3jXZItatZ2UsEYTSyPeb9+sQXm2tH
- LLvGlF9TZ83maf5WrMyEJMqXha5sf7FjN4voWB3UEc8J4dWImKh15qpA/hr2sicARZPIKPe6F
- K6QNgXaMIap5HLkHsnQETPu+cPdKK61VbmNLxFBwlfNcvFNu4y05X0UuH7IrTqMxlfV4MSus1
- mkxSH4DErxV9mJfPRiannVBfsktkpXJAC8eczFtHls1VXsqZ+UTYg6BRGmdK4MGtH1ReFH9ZA
- ywFRgt+be+8LcK4jyQAFgZQpRqrGJRqYUGTdFbGZ/tEdNcBc/q8s9ygAr7KMCKBmITyFkDRYN
- E2K4u3EPUFOIaJqgd7EZ84wtGR39Sqniot95q5qpQEC8HNFBJ6yGzLnHy311i48kU+X2Z2yjp
- kfxfaNP66eE/U59rDWestmaYslNyqva/9g2civeO4EtLuH3mpUwArmBzb0/qlIit5/fVwI/Cf
- RN1Ur93LTn76zDgltjycZ8ALztU4UiZeDL5ChGXw3vK1pDz8pndc4M+kTZMdxWLAjKfqQURqJ
- PKMjOcNHsujSTb9s3fJVMCIuM1ndW0RPV89rtBn38eMK77nv3r4yrzQpZdykSZQmvi2wgvWiK
- HUz6U8VlqmJVX0IcIupeW1EWfrtdYb9JcWvMnhX8yfjg7N0/4Ijrly8zmsppeNTu3kZrMdLj1
- VO7J368MKPC0a5VAZ510UDgycg7VfOfLijEnyU5EmK6FwTQJ3AodhBVWJJt/b4CUCs1gdsrIC
- dXLbIuM177k0+HIj51B+7ikdPWBivlOy8obh0XKgsNk5GliXVn6jCrxTUtT+C1WvaxSYOlUxm
- 8ZSYhm/OSApgQDJD2mvOL9huMsK/GHuEMP5N2x78Ewd6j8QsvmGBY3daU7p5WFAac5BELEUmp
- IOhwYHNGrrQI/FUuAy1z5G/w46UgEIYf4p5lOTNp+lmjx9tHvtb0EoAdpU/1t1rzPsPSwXc5d
- jQWlqvI38Yv94/imXFKlXrwpMtvjpHh39fqQxvy1z7m85HSQrL5DuN01Fp0JhxQtXd/s24Dsq
- V81jzjHU6ZR+y6kUDixI7ItGZU/kNMJFd4Eerpw==
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20200917175146.GB3637@ubuntu>
 
-Hi,
-
-On Thu, Sep 10, 2020 at 04:18:08PM -0700, Kees Cook wrote:
-> On Thu, Sep 10, 2020 at 01:21:02PM -0700, Kees Cook wrote:
-> > From: John Wood <john.wood@gmx.com>
+On Thu, Sep 17, 2020 at 08:40:06PM +0200, John Wood wrote:
+> Hi,
+> 
+> On Thu, Sep 10, 2020 at 04:18:08PM -0700, Kees Cook wrote:
+> > On Thu, Sep 10, 2020 at 01:21:02PM -0700, Kees Cook wrote:
+> > > From: John Wood <john.wood@gmx.com>
+> > >
+> > > Add a menu entry under "Security options" to enable the "Fork brute
+> > > force attack mitigation" feature.
+> > >
+> > > Signed-off-by: John Wood <john.wood@gmx.com>
+> > > ---
+> > >  security/Kconfig       |  1 +
+> > >  security/fbfam/Kconfig | 10 ++++++++++
+> > >  2 files changed, 11 insertions(+)
+> > >  create mode 100644 security/fbfam/Kconfig
+> > >
+> > > diff --git a/security/Kconfig b/security/Kconfig
+> > > index 7561f6f99f1d..00a90e25b8d5 100644
+> > > --- a/security/Kconfig
+> > > +++ b/security/Kconfig
+> > > @@ -290,6 +290,7 @@ config LSM
+> > >  	  If unsure, leave this as the default.
+> > >
+> > >  source "security/Kconfig.hardening"
+> > > +source "security/fbfam/Kconfig"
 > >
-> > Add a menu entry under "Security options" to enable the "Fork brute
-> > force attack mitigation" feature.
+> > Given the layout you've chosen and the interface you've got, I think
+> > this should just be treated like a regular LSM.
+> 
+> Yes, throughout the review it seems the most appropiate is treat
+> this feature as a regular LSM. Thanks.
+> 
+> > >
+> > >  endmenu
+> > >
+> > > diff --git a/security/fbfam/Kconfig b/security/fbfam/Kconfig
+> > > new file mode 100644
+> > > index 000000000000..bbe7f6aad369
+> > > --- /dev/null
+> > > +++ b/security/fbfam/Kconfig
+> > > @@ -0,0 +1,10 @@
+> > > +# SPDX-License-Identifier: GPL-2.0
+> > > +config FBFAM
 > >
-> > Signed-off-by: John Wood <john.wood@gmx.com>
-> > ---
-> >  security/Kconfig       |  1 +
-> >  security/fbfam/Kconfig | 10 ++++++++++
-> >  2 files changed, 11 insertions(+)
-> >  create mode 100644 security/fbfam/Kconfig
-> >
-> > diff --git a/security/Kconfig b/security/Kconfig
-> > index 7561f6f99f1d..00a90e25b8d5 100644
-> > --- a/security/Kconfig
-> > +++ b/security/Kconfig
-> > @@ -290,6 +290,7 @@ config LSM
-> >  	  If unsure, leave this as the default.
-> >
-> >  source "security/Kconfig.hardening"
-> > +source "security/fbfam/Kconfig"
->
-> Given the layout you've chosen and the interface you've got, I think
-> this should just be treated like a regular LSM.
+> > To jump on the bikeshed: how about just calling this
+> > FORK_BRUTE_FORCE_DETECTION or FORK_BRUTE, and the directory could be
+> > "brute", etc. "fbfam" doesn't tell anyone anything.
+> 
+> Understood. But how about use the fbfam abbreviation in the code? Like as
+> function name prefix, struct name prefix, ... It would be better to use a
+> more descriptive name in this scenario? It is not clear to me.
 
-Yes, throughout the review it seems the most appropiate is treat
-this feature as a regular LSM. Thanks.
+I don't feel too strongly, but I think having the CONFIG roughly match
+the directory name, roughly match the function prefixes should be best.
+Maybe call the directory and function prefix "brute"?
 
-> >
-> >  endmenu
-> >
-> > diff --git a/security/fbfam/Kconfig b/security/fbfam/Kconfig
-> > new file mode 100644
-> > index 000000000000..bbe7f6aad369
-> > --- /dev/null
-> > +++ b/security/fbfam/Kconfig
-> > @@ -0,0 +1,10 @@
-> > +# SPDX-License-Identifier: GPL-2.0
-> > +config FBFAM
->
-> To jump on the bikeshed: how about just calling this
-> FORK_BRUTE_FORCE_DETECTION or FORK_BRUTE, and the directory could be
-> "brute", etc. "fbfam" doesn't tell anyone anything.
-
-Understood. But how about use the fbfam abbreviation in the code? Like as
-function name prefix, struct name prefix, ... It would be better to use a
-more descriptive name in this scenario? It is not clear to me.
-
-> --
-> Kees Cook
-
-Thanks,
-John Wood
-
+-- 
+Kees Cook
