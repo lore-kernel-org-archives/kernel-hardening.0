@@ -1,24 +1,24 @@
-Return-Path: <SRS0=XNSn=C3=lists.openwall.com=kernel-hardening-return-19923-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/tQh=C3=lists.openwall.com=kernel-hardening-return-19924-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-20.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable
+	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1A71CC43463
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:16:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D8D3BC43467
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:16:11 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 250D820684
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:16:00 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 809AB2074B
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:16:10 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="kOFoCTd2"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 250D820684
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="BHDVtSDH"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 809AB2074B
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19923-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15749 invoked by uid 550); 18 Sep 2020 20:15:07 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19924-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 16035 invoked by uid 550); 18 Sep 2020 20:15:10 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,43 +26,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15641 invoked from network); 18 Sep 2020 20:15:06 -0000
+Received: (qmail 15900 invoked from network); 18 Sep 2020 20:15:09 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=sender:date:in-reply-to:message-id:mime-version:references:subject
          :from:to:cc;
-        bh=TOBnIZLn7hTmqm3x2JBReVnrcc+31akc4aFm1uMW9E4=;
-        b=kOFoCTd2FrUUKnCgnEw8fv7o1qa+wmfRKSJE7DESuzOriLdT6KRMVuJelBjZTPWmjv
-         hcDMZ6eRTe3iEYXYYraJYirqopgmczBB1BvP5hOrngWEf/fJbpBz7Sj2ruTbsoRETl29
-         O7E7brX0kO22gIX86Vdn9SrCa3mebEscFAw0lojJhTqtnAkLGvP02ofXmERBjubIHHQK
-         t7UD4ZZSX0u9/8uvxMAjisPSz3BRkcsoaicvmVdgo3PttZXSpnN03wSqMqeZkfmkBk2J
-         sEFprVm9QM8nc23vRgjZ+UPh4svXmTbLma/ZToJN6dcDACCd3xjRpcEHrZhhhibZCAUO
-         2qfg==
+        bh=0FkP4B0/Lnp0DM8m5kyaL0nHymB5hvp+911UgypF4fg=;
+        b=BHDVtSDHetldKKo2hdUPaejxOUg5e/yc8Cf5jPF8KvuEYU3GPeekWljxiMYHIrEQq0
+         SlyjQ7nTB2hb4xCe7jrH9NeG7+TDkN36Iz/j80rDR1o/RiwSrjXAJOEYsiCKVTp1EsS6
+         kPHqV1oAHjGCvpXDEdRkyfZWKXgLztHP1xvR0z0sbav9R8NYsmyZq8qKO5Ia151oKysY
+         OCZWaSCUeytDPg1IKXVAcTOAuX1oTxatIgD0DWK0uypAG8DRSWlWJ4vJsZUQFtoH7CT/
+         NjL3ZYY2wH7uPQXbbCEmQSU4LkhsBSSMBwvyPvVqydWk1LcDUSp0FxblKNC9q59gwKrA
+         ljEA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=TOBnIZLn7hTmqm3x2JBReVnrcc+31akc4aFm1uMW9E4=;
-        b=Tt0mfTzpxj3R9r7ciAYF0W8+qQDmnNJU6mRZZ3v4n0ljpGtlOb8wCowvA6MQBYucg2
-         EXYDSeYKgT8b8xARDNP6cuc0bANpu9QZU6O2sl5dBCftFY2sNXoxXDiqvuPaHQ7kyjGy
-         uJqtXqHILVNVmRqlXJWN9OSy9mVkoZ9QeNoUpK2BZycM7xoCBo3KBeNtZRNrblyZdnoL
-         i8zr212E+rYUPZzsBYdGAFeNsvHKPBZ/w+9CChLQ1CcJqj/PUp2FZcU69y2Qv3bSFJFm
-         h8ShdxcH1mTdjVdBxiDTuicb1+97xn2zh/ngQzcO7pChWswAxRwe/ZFrGVmLGAlIkY8Y
-         SUZQ==
-X-Gm-Message-State: AOAM530nwi9k1znYC5Y3FrpvQKgY67YmU+f7Q9Bk2OgHi4T5VTgGWWP6
-	7KR/EQghKgK+53VxdSnt1rInwyBtcPNk0U2zWZs=
-X-Google-Smtp-Source: ABdhPJwPfv5GKIky8nZ4/qO1HfgSl+GRdDXQT/EDjzvo193fwzx6dbwv1k7QAc3pOuPuB6s1Frhn6PBXdOnzsCVgbLU=
+        bh=0FkP4B0/Lnp0DM8m5kyaL0nHymB5hvp+911UgypF4fg=;
+        b=ipGEW7YdQ3ifjSXUF/6a0c+yr5fUiEtFASV2CrRCFK5aPS6odPNKZ2SB2BmIowKU/m
+         ++iCjPIVHJz3lBZFnmm6C3iqfUBhQxsFJUwFXimTc7tieQUWdBhiETz0siUR9V8xbVJN
+         v1vLNs8LEFxJmtvGi+wfnzAZxoxHVNt1Zx/MyL9vMCj4/DlDKs7tpA00tb2mHD7B2K2I
+         LWGxt3mSeWfCQ+MLnMUuFoLMXzKZkh+efeUfIx8rp7NkTC9/QQ+Lo/E95CoqbLCbNEFW
+         P/bbu4CgNWC/Cp65A7fPFMjFQ+GRz1a7C1cAmU8Frk9tPmm074ce62M52ijXE681RX2J
+         /8Fg==
+X-Gm-Message-State: AOAM533PcxE/KZhoZ0+QAksy+Dwc7XQc42cDHoISbeB2z9U3b577nSXK
+	s+Q1IAi7LY9ehRlsEPitDm+URwqRi6TedOWOmPQ=
+X-Google-Smtp-Source: ABdhPJwQq1wvH1AAA6gtJNKkwcmiCxJWA5rmyg/i+mPJ3ehFUf0yVGK9jkmjYXbCBq8XTq/g+Yqu8LuBqPuiMAszYNA=
 Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
 X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
- (user=samitolvanen job=sendgmr) by 2002:a25:be13:: with SMTP id
- h19mr55802534ybk.50.1600460094899; Fri, 18 Sep 2020 13:14:54 -0700 (PDT)
-Date: Fri, 18 Sep 2020 13:14:13 -0700
+ (user=samitolvanen job=sendgmr) by 2002:a25:cf15:: with SMTP id
+ f21mr5192645ybg.408.1600460097335; Fri, 18 Sep 2020 13:14:57 -0700 (PDT)
+Date: Fri, 18 Sep 2020 13:14:14 -0700
 In-Reply-To: <20200918201436.2932360-1-samitolvanen@google.com>
-Message-Id: <20200918201436.2932360-8-samitolvanen@google.com>
+Message-Id: <20200918201436.2932360-9-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20200918201436.2932360-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
-Subject: [PATCH v3 07/30] objtool: Don't autodetect vmlinux.o
+Subject: [PATCH v3 08/30] kbuild: add support for objtool mcount
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>
 Cc: Peter Zijlstra <peterz@infradead.org>, Steven Rostedt <rostedt@goodmis.org>, 
@@ -75,55 +75,131 @@ Cc: Peter Zijlstra <peterz@infradead.org>, Steven Rostedt <rostedt@goodmis.org>,
 	Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-With LTO, we run objtool on vmlinux.o, but don't want noinstr
-validation. This change requires --vmlinux to be passed to objtool
-explicitly.
+This change adds build support for using objtool to generate
+__mcount_loc sections.
 
-Suggested-by: Peter Zijlstra <peterz@infradead.org>
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
 ---
- scripts/link-vmlinux.sh       |  2 +-
- tools/objtool/builtin-check.c | 10 +---------
- 2 files changed, 2 insertions(+), 10 deletions(-)
+ Makefile               | 38 ++++++++++++++++++++++++++++++--------
+ kernel/trace/Kconfig   |  5 +++++
+ scripts/Makefile.build |  9 +++++----
+ 3 files changed, 40 insertions(+), 12 deletions(-)
 
-diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
-index e6e2d9e5ff48..372c3719f94c 100755
---- a/scripts/link-vmlinux.sh
-+++ b/scripts/link-vmlinux.sh
-@@ -64,7 +64,7 @@ objtool_link()
- 	local objtoolopt;
+diff --git a/Makefile b/Makefile
+index 24fd733c142e..d2fb3cd0f506 100644
+--- a/Makefile
++++ b/Makefile
+@@ -858,17 +858,34 @@ ifdef CONFIG_HAVE_FENTRY
+   ifeq ($(call cc-option-yn, -mfentry),y)
+     CC_FLAGS_FTRACE	+= -mfentry
+     CC_FLAGS_USING	+= -DCC_USING_FENTRY
++    export CC_USING_FENTRY := 1
+   endif
+ endif
+ export CC_FLAGS_FTRACE
+-KBUILD_CFLAGS	+= $(CC_FLAGS_FTRACE) $(CC_FLAGS_USING)
+-KBUILD_AFLAGS	+= $(CC_FLAGS_USING)
+ ifdef CONFIG_DYNAMIC_FTRACE
+-	ifdef CONFIG_HAVE_C_RECORDMCOUNT
+-		BUILD_C_RECORDMCOUNT := y
+-		export BUILD_C_RECORDMCOUNT
+-	endif
++  ifndef CC_USING_RECORD_MCOUNT
++  ifndef CC_USING_PATCHABLE_FUNCTION_ENTRY
++    # use objtool or recordmcount to generate mcount tables
++    ifdef CONFIG_HAVE_OBJTOOL_MCOUNT
++      ifdef CC_USING_FENTRY
++        USE_OBJTOOL_MCOUNT := y
++        CC_FLAGS_USING += -DCC_USING_NOP_MCOUNT
++        export USE_OBJTOOL_MCOUNT
++      endif
++    endif
++    ifndef USE_OBJTOOL_MCOUNT
++      USE_RECORDMCOUNT := y
++      export USE_RECORDMCOUNT
++      ifdef CONFIG_HAVE_C_RECORDMCOUNT
++        BUILD_C_RECORDMCOUNT := y
++        export BUILD_C_RECORDMCOUNT
++      endif
++    endif
++  endif
++  endif
+ endif
++KBUILD_CFLAGS	+= $(CC_FLAGS_FTRACE) $(CC_FLAGS_USING)
++KBUILD_AFLAGS	+= $(CC_FLAGS_USING)
+ endif
  
- 	if [ -n "${CONFIG_VMLINUX_VALIDATION}" ]; then
--		objtoolopt="check"
-+		objtoolopt="check --vmlinux"
- 		if [ -z "${CONFIG_FRAME_POINTER}" ]; then
- 			objtoolopt="${objtoolopt} --no-fp"
- 		fi
-diff --git a/tools/objtool/builtin-check.c b/tools/objtool/builtin-check.c
-index 71595cf4946d..eaa06eb18690 100644
---- a/tools/objtool/builtin-check.c
-+++ b/tools/objtool/builtin-check.c
-@@ -41,18 +41,10 @@ const struct option check_options[] = {
+ # We trigger additional mismatches with less inlining
+@@ -1213,11 +1230,16 @@ uapi-asm-generic:
+ PHONY += prepare-objtool prepare-resolve_btfids
+ prepare-objtool: $(objtool_target)
+ ifeq ($(SKIP_STACK_VALIDATION),1)
++objtool-lib-prompt := "please install libelf-dev, libelf-devel or elfutils-libelf-devel"
++ifdef USE_OBJTOOL_MCOUNT
++	@echo "error: Cannot generate __mcount_loc for CONFIG_DYNAMIC_FTRACE=y, $(objtool-lib-prompt)" >&2
++	@false
++endif
+ ifdef CONFIG_UNWINDER_ORC
+-	@echo "error: Cannot generate ORC metadata for CONFIG_UNWINDER_ORC=y, please install libelf-dev, libelf-devel or elfutils-libelf-devel" >&2
++	@echo "error: Cannot generate ORC metadata for CONFIG_UNWINDER_ORC=y, $(objtool-lib-prompt)" >&2
+ 	@false
+ else
+-	@echo "warning: Cannot use CONFIG_STACK_VALIDATION=y, please install libelf-dev, libelf-devel or elfutils-libelf-devel" >&2
++	@echo "warning: Cannot use CONFIG_STACK_VALIDATION=y, $(objtool-lib-prompt)" >&2
+ endif
+ endif
  
- int cmd_check(int argc, const char **argv)
- {
--	const char *objname, *s;
--
- 	argc = parse_options(argc, argv, check_options, check_usage, 0);
+diff --git a/kernel/trace/Kconfig b/kernel/trace/Kconfig
+index a4020c0b4508..b510af5b216c 100644
+--- a/kernel/trace/Kconfig
++++ b/kernel/trace/Kconfig
+@@ -56,6 +56,11 @@ config HAVE_C_RECORDMCOUNT
+ 	help
+ 	  C version of recordmcount available?
  
- 	if (argc != 1)
- 		usage_with_options(check_usage, check_options);
++config HAVE_OBJTOOL_MCOUNT
++	bool
++	help
++	  Arch supports objtool --mcount
++
+ config TRACER_MAX_TRACE
+ 	bool
  
--	objname = argv[0];
--
--	s = strstr(objname, "vmlinux.o");
--	if (s && !s[9])
--		vmlinux = true;
--
--	return check(objname, false);
-+	return check(argv[0], false);
- }
+diff --git a/scripts/Makefile.build b/scripts/Makefile.build
+index a467b9323442..6ecf30c70ced 100644
+--- a/scripts/Makefile.build
++++ b/scripts/Makefile.build
+@@ -178,8 +178,7 @@ cmd_modversions_c =								\
+ 	fi
+ endif
+ 
+-ifdef CONFIG_FTRACE_MCOUNT_RECORD
+-ifndef CC_USING_RECORD_MCOUNT
++ifdef USE_RECORDMCOUNT
+ # compiler will not generate __mcount_loc use recordmcount or recordmcount.pl
+ ifdef BUILD_C_RECORDMCOUNT
+ ifeq ("$(origin RECORDMCOUNT_WARN)", "command line")
+@@ -206,8 +205,7 @@ recordmcount_source := $(srctree)/scripts/recordmcount.pl
+ endif # BUILD_C_RECORDMCOUNT
+ cmd_record_mcount = $(if $(findstring $(strip $(CC_FLAGS_FTRACE)),$(_c_flags)),	\
+ 	$(sub_cmd_record_mcount))
+-endif # CC_USING_RECORD_MCOUNT
+-endif # CONFIG_FTRACE_MCOUNT_RECORD
++endif # USE_RECORDMCOUNT
+ 
+ ifdef CONFIG_STACK_VALIDATION
+ ifneq ($(SKIP_STACK_VALIDATION),1)
+@@ -230,6 +228,9 @@ endif
+ ifdef CONFIG_X86_SMAP
+   objtool_args += --uaccess
+ endif
++ifdef USE_OBJTOOL_MCOUNT
++  objtool_args += --mcount
++endif
+ 
+ # 'OBJECT_FILES_NON_STANDARD := y': skip objtool checking for a directory
+ # 'OBJECT_FILES_NON_STANDARD_foo.o := 'y': skip objtool checking for a file
 -- 
 2.28.0.681.g6f77f65b4e-goog
 
