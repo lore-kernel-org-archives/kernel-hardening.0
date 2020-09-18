@@ -1,24 +1,24 @@
-Return-Path: <SRS0=hPlm=C3=lists.openwall.com=kernel-hardening-return-19919-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Rb5m=C3=lists.openwall.com=kernel-hardening-return-19920-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-25.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-20.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 79525C43465
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:15:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2D3CAC43464
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:15:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4F1822311C
-	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:15:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id DB220207D3
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Sep 2020 20:15:33 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="kS9nJccC"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4F1822311C
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="LkhMujvC"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DB220207D3
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19919-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13675 invoked by uid 550); 18 Sep 2020 20:14:57 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19920-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13927 invoked by uid 550); 18 Sep 2020 20:15:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,43 +26,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13575 invoked from network); 18 Sep 2020 20:14:57 -0000
+Received: (qmail 13790 invoked from network); 18 Sep 2020 20:14:59 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=sender:date:in-reply-to:message-id:mime-version:references:subject
          :from:to:cc;
-        bh=QG37uO1d4USzrK2i79mol19BZHF3voEs5YXCH0vFDXg=;
-        b=kS9nJccCRITkbrAyCK9Hc7v1LETkgjrZzbCI78fOJk9GspwsE0lD6AsMWWG9e/Ya6w
-         kQ7OAgO+NsJbiNEURN/xqwJc+nMm2JlmzicPoqTkbkTgYLChVmHJmFrbVcTMgiIM1LfM
-         AMIn2fwD4sdTg9b5RFBa3v7hPzAOv72tQhHG2zedzbaGOgS5AllQnoGhiut1jy6gfUPb
-         IHOl5kVpEYZmlx3J300NFEalCTngIq2wdGL7A0LMMidJtwteLyUB84t3JQdj/BGr11/r
-         XP03Hd7VXorIrHoqHnVpAgFdqejQhRQlU/QiTZkkxeCP6z2bKBR11111wx5Cdsjef2hw
-         h1Og==
+        bh=46CPzhkDZEHeVpITNsapIjJxI0GjMO0SMNC0C8zkP90=;
+        b=LkhMujvCwkAUduIkDT6HnIktUCrB5Z/3D25w6G0QNw860IsQ40FImypNjlzxTcr/Au
+         n+9fzi/agpuqfcXrcQ0fs9gpA6EUdSxDWeZLY+Wxjj2BNQ+BzNcCsZyFoGMw1SoQwEn7
+         Vky9ALkSplpzqGWE5ykTJHhmKQkB6SRsw37Q2teNcRRCdFq/BbTNSY0YT6cxl/Z8WsQt
+         IkHTEo/6oT5i0M4N8CmxnPlDoqLO1RePr9TKMuxW0t+rJZ+H6sI7VXPD+4lmX8P4dGQf
+         2ba7OnV3lWFKvPMTDiYCW9d1dVAmP+S6qXdzk6tIQJuuHskbsLDbby7gT/dawv97DBLV
+         kMuA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=QG37uO1d4USzrK2i79mol19BZHF3voEs5YXCH0vFDXg=;
-        b=IUrrE+G3kdvK94c4E+l2bKzDZqKDsSZOvMvxu0f8+0bpkmrnsHGULKfwM0TuUN+Y/G
-         cJJaj7fCHB/pXx+yBx0wfAGYWHWD+L4hvnbhB+QDufnYw1vkdBqD4mVXXGG5M7npRROQ
-         878bMNz14MRzeWjO7k+zYUinVfB1YK4pZp0BEqTtM5ZAQ0UWRb8uIgFMW2GibQgFfPow
-         Hetckyy7ygCXYB5A2vmV7z1FRrUw3d93ZITxYZm/ZIz58H+BB95rpVx7yrk+8CmN0RCl
-         XIS9uOdQhT61lMiAZK+WzfLK5Z0PrF4lv5vyJIm9uJBOWLdK9LvQ4R493f3Rs9n9huO+
-         fv+g==
-X-Gm-Message-State: AOAM532xVPHUmcW5igc3vWwKRQHMY6xLbWwsGVzt0P1pRCayrip2HEl0
-	wh3cyY9SIXw0fs/XuNFjw1Qz7LisInwfT2BCJy4=
-X-Google-Smtp-Source: ABdhPJxOIBe5IUGDSTHVDRZfdndNloI1irNa0De5LGLJBg+ujXNg2cTfcMKCeIjDmjymnjpy+o5CvxVSn10XK63j+fc=
+        bh=46CPzhkDZEHeVpITNsapIjJxI0GjMO0SMNC0C8zkP90=;
+        b=WF0jzcSomboFyU+ltmI6xCAAkrANjS8ySYFbf4qhC/RQFINGR1/AaXtY/271vwm+Da
+         e4zNHVJFn3aBMQiqIwp1hlUYTsl0GeZuE8gId4W2U2p/dOqFoYNC51IhnDoF33BQ2AnX
+         go3JjMNPZaLwMAuvVTMMzvlBsrqch3eLl33GM0qsKOFTwouftUxSzGYvCGVv7fjoo1Ac
+         hDzQPGNcCbNHXt2NFVo9qphZOzZcyoH1gNDSWaYUMoav/oBJtKXROhoaNCY6XjLcn5ar
+         yaX2tlo2ifF5U734PPMVEFPDwPB9NM0l64PdICB574DcZ+bYpbEj51GO/IIcmQnUWJeU
+         Hshw==
+X-Gm-Message-State: AOAM5319eEZd2nLImA9QuzGBi0cRecI9xzNJ621mfPdWIruEQMNy6YVE
+	o1y5RCX0OOeQEd70fuNSvAv3+HcOhT+7dVhzgYY=
+X-Google-Smtp-Source: ABdhPJzkhvMi5i8NysjPP44Ym29blfdYM/w5M8ZctCd+TLmrbSAkk8b9xov7oP7EJd5gSzIpsOENgUxOQTCr56AGzHg=
 Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
 X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
- (user=samitolvanen job=sendgmr) by 2002:a25:3744:: with SMTP id
- e65mr19951166yba.275.1600460085079; Fri, 18 Sep 2020 13:14:45 -0700 (PDT)
-Date: Fri, 18 Sep 2020 13:14:09 -0700
+ (user=samitolvanen job=sendgmr) by 2002:a0c:d443:: with SMTP id
+ r3mr35786354qvh.17.1600460087054; Fri, 18 Sep 2020 13:14:47 -0700 (PDT)
+Date: Fri, 18 Sep 2020 13:14:10 -0700
 In-Reply-To: <20200918201436.2932360-1-samitolvanen@google.com>
-Message-Id: <20200918201436.2932360-4-samitolvanen@google.com>
+Message-Id: <20200918201436.2932360-5-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20200918201436.2932360-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
-Subject: [PATCH v3 03/30] x86/boot/compressed: Disable relocation relaxation
+Subject: [PATCH v3 04/30] x86/asm: Replace __force_order with memory clobber
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>
 Cc: Peter Zijlstra <peterz@infradead.org>, Steven Rostedt <rostedt@goodmis.org>, 
@@ -77,79 +77,168 @@ Content-Type: text/plain; charset="UTF-8"
 
 From: Arvind Sankar <nivedita@alum.mit.edu>
 
-The x86-64 psABI [0] specifies special relocation types
-(R_X86_64_[REX_]GOTPCRELX) for indirection through the Global Offset
-Table, semantically equivalent to R_X86_64_GOTPCREL, which the linker
-can take advantage of for optimization (relaxation) at link time. This
-is supported by LLD and binutils versions 2.26 onwards.
+The CRn accessor functions use __force_order as a dummy operand to
+prevent the compiler from reordering CRn reads/writes with respect to
+each other.
 
-The compressed kernel is position-independent code, however, when using
-LLD or binutils versions before 2.27, it must be linked without the -pie
-option. In this case, the linker may optimize certain instructions into
-a non-position-independent form, by converting foo@GOTPCREL(%rip) to $foo.
+The fact that the asm is volatile should be enough to prevent this:
+volatile asm statements should be executed in program order. However GCC
+4.9.x and 5.x have a bug that might result in reordering. This was fixed
+in 8.1, 7.3 and 6.5. Versions prior to these, including 5.x and 4.9.x,
+may reorder volatile asm statements with respect to each other.
 
-This potential issue has been present with LLD and binutils-2.26 for a
-long time, but it has never manifested itself before now:
-- LLD and binutils-2.26 only relax
-	movq	foo@GOTPCREL(%rip), %reg
-  to
-	leaq	foo(%rip), %reg
-  which is still position-independent, rather than
-	mov	$foo, %reg
-  which is permitted by the psABI when -pie is not enabled.
-- gcc happens to only generate GOTPCREL relocations on mov instructions.
-- clang does generate GOTPCREL relocations on non-mov instructions, but
-  when building the compressed kernel, it uses its integrated assembler
-  (due to the redefinition of KBUILD_CFLAGS dropping -no-integrated-as),
-  which has so far defaulted to not generating the GOTPCRELX
-  relocations.
+There are some issues with __force_order as implemented:
+- It is used only as an input operand for the write functions, and hence
+  doesn't do anything additional to prevent reordering writes.
+- It allows memory accesses to be cached/reordered across write
+  functions, but CRn writes affect the semantics of memory accesses, so
+  this could be dangerous.
+- __force_order is not actually defined in the kernel proper, but the
+  LLVM toolchain can in some cases require a definition: LLVM (as well
+  as GCC 4.9) requires it for PIE code, which is why the compressed
+  kernel has a definition, but also the clang integrated assembler may
+  consider the address of __force_order to be significant, resulting in
+  a reference that requires a definition.
 
-Nick Desaulniers reports [1,2]:
-  A recent change [3] to a default value of configuration variable
-  (ENABLE_X86_RELAX_RELOCATIONS OFF -> ON) in LLVM now causes Clang's
-  integrated assembler to emit R_X86_64_GOTPCRELX/R_X86_64_REX_GOTPCRELX
-  relocations. LLD will relax instructions with these relocations based
-  on whether the image is being linked as position independent or not.
-  When not, then LLD will relax these instructions to use absolute
-  addressing mode (R_RELAX_GOT_PC_NOPIC). This causes kernels built with
-  Clang and linked with LLD to fail to boot.
+Fix this by:
+- Using a memory clobber for the write functions to additionally prevent
+  caching/reordering memory accesses across CRn writes.
+- Using a dummy input operand with an arbitrary constant address for the
+  read functions, instead of a global variable. This will prevent reads
+  from being reordered across writes, while allowing memory loads to be
+  cached/reordered across CRn reads, which should be safe.
 
-Patch series [4] is a solution to allow the compressed kernel to be
-linked with -pie unconditionally, but even if merged is unlikely to be
-backported. As a simple solution that can be applied to stable as well,
-prevent the assembler from generating the relaxed relocation types using
-the -mrelax-relocations=no option. For ease of backporting, do this
-unconditionally.
-
-[0] https://gitlab.com/x86-psABIs/x86-64-ABI/-/blob/master/x86-64-ABI/linker-optimization.tex#L65
-[1] https://lore.kernel.org/lkml/20200807194100.3570838-1-ndesaulniers@google.com/
-[2] https://github.com/ClangBuiltLinux/linux/issues/1121
-[3] https://reviews.llvm.org/rGc41a18cf61790fc898dcda1055c3efbf442c14c0
-[4] https://lore.kernel.org/lkml/20200731202738.2577854-1-nivedita@alum.mit.edu/
-
-Reported-by: Nick Desaulniers <ndesaulniers@google.com>
 Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
-Tested-by: Nick Desaulniers <ndesaulniers@google.com>
+Tested-by: Nathan Chancellor <natechancellor@gmail.com>
 Tested-by: Sedat Dilek <sedat.dilek@gmail.com>
-Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
-Cc: stable@vger.kernel.org
+Reviewed-by: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Link: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82602
+Link: https://lore.kernel.org/lkml/20200527135329.1172644-1-arnd@arndb.de/
 ---
- arch/x86/boot/compressed/Makefile | 2 ++
- 1 file changed, 2 insertions(+)
+ arch/x86/boot/compressed/pgtable_64.c |  9 ---------
+ arch/x86/include/asm/special_insns.h  | 28 ++++++++++++++-------------
+ arch/x86/kernel/cpu/common.c          |  4 ++--
+ 3 files changed, 17 insertions(+), 24 deletions(-)
 
-diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-index 3962f592633d..ff7894f39e0e 100644
---- a/arch/x86/boot/compressed/Makefile
-+++ b/arch/x86/boot/compressed/Makefile
-@@ -43,6 +43,8 @@ KBUILD_CFLAGS += -Wno-pointer-sign
- KBUILD_CFLAGS += $(call cc-option,-fmacro-prefix-map=$(srctree)/=)
- KBUILD_CFLAGS += -fno-asynchronous-unwind-tables
- KBUILD_CFLAGS += -D__DISABLE_EXPORTS
-+# Disable relocation relaxation in case the link is not PIE.
-+KBUILD_CFLAGS += $(call as-option,-Wa$(comma)-mrelax-relocations=no)
+diff --git a/arch/x86/boot/compressed/pgtable_64.c b/arch/x86/boot/compressed/pgtable_64.c
+index c8862696a47b..7d0394f4ebf9 100644
+--- a/arch/x86/boot/compressed/pgtable_64.c
++++ b/arch/x86/boot/compressed/pgtable_64.c
+@@ -5,15 +5,6 @@
+ #include "pgtable.h"
+ #include "../string.h"
  
- KBUILD_AFLAGS  := $(KBUILD_CFLAGS) -D__ASSEMBLY__
- GCOV_PROFILE := n
+-/*
+- * __force_order is used by special_insns.h asm code to force instruction
+- * serialization.
+- *
+- * It is not referenced from the code, but GCC < 5 with -fPIE would fail
+- * due to an undefined symbol. Define it to make these ancient GCCs work.
+- */
+-unsigned long __force_order;
+-
+ #define BIOS_START_MIN		0x20000U	/* 128K, less than this is insane */
+ #define BIOS_START_MAX		0x9f000U	/* 640K, absolute maximum */
+ 
+diff --git a/arch/x86/include/asm/special_insns.h b/arch/x86/include/asm/special_insns.h
+index 59a3e13204c3..d6e3bb9363d2 100644
+--- a/arch/x86/include/asm/special_insns.h
++++ b/arch/x86/include/asm/special_insns.h
+@@ -11,45 +11,47 @@
+ #include <linux/jump_label.h>
+ 
+ /*
+- * Volatile isn't enough to prevent the compiler from reordering the
+- * read/write functions for the control registers and messing everything up.
+- * A memory clobber would solve the problem, but would prevent reordering of
+- * all loads stores around it, which can hurt performance. Solution is to
+- * use a variable and mimic reads and writes to it to enforce serialization
++ * The compiler should not reorder volatile asm statements with respect to each
++ * other: they should execute in program order. However GCC 4.9.x and 5.x have
++ * a bug (which was fixed in 8.1, 7.3 and 6.5) where they might reorder
++ * volatile asm. The write functions are not affected since they have memory
++ * clobbers preventing reordering. To prevent reads from being reordered with
++ * respect to writes, use a dummy memory operand.
+  */
+-extern unsigned long __force_order;
++
++#define __FORCE_ORDER "m"(*(unsigned int *)0x1000UL)
+ 
+ void native_write_cr0(unsigned long val);
+ 
+ static inline unsigned long native_read_cr0(void)
+ {
+ 	unsigned long val;
+-	asm volatile("mov %%cr0,%0\n\t" : "=r" (val), "=m" (__force_order));
++	asm volatile("mov %%cr0,%0\n\t" : "=r" (val) : __FORCE_ORDER);
+ 	return val;
+ }
+ 
+ static __always_inline unsigned long native_read_cr2(void)
+ {
+ 	unsigned long val;
+-	asm volatile("mov %%cr2,%0\n\t" : "=r" (val), "=m" (__force_order));
++	asm volatile("mov %%cr2,%0\n\t" : "=r" (val) : __FORCE_ORDER);
+ 	return val;
+ }
+ 
+ static __always_inline void native_write_cr2(unsigned long val)
+ {
+-	asm volatile("mov %0,%%cr2": : "r" (val), "m" (__force_order));
++	asm volatile("mov %0,%%cr2": : "r" (val) : "memory");
+ }
+ 
+ static inline unsigned long __native_read_cr3(void)
+ {
+ 	unsigned long val;
+-	asm volatile("mov %%cr3,%0\n\t" : "=r" (val), "=m" (__force_order));
++	asm volatile("mov %%cr3,%0\n\t" : "=r" (val) : __FORCE_ORDER);
+ 	return val;
+ }
+ 
+ static inline void native_write_cr3(unsigned long val)
+ {
+-	asm volatile("mov %0,%%cr3": : "r" (val), "m" (__force_order));
++	asm volatile("mov %0,%%cr3": : "r" (val) : "memory");
+ }
+ 
+ static inline unsigned long native_read_cr4(void)
+@@ -64,10 +66,10 @@ static inline unsigned long native_read_cr4(void)
+ 	asm volatile("1: mov %%cr4, %0\n"
+ 		     "2:\n"
+ 		     _ASM_EXTABLE(1b, 2b)
+-		     : "=r" (val), "=m" (__force_order) : "0" (0));
++		     : "=r" (val) : "0" (0), __FORCE_ORDER);
+ #else
+ 	/* CR4 always exists on x86_64. */
+-	asm volatile("mov %%cr4,%0\n\t" : "=r" (val), "=m" (__force_order));
++	asm volatile("mov %%cr4,%0\n\t" : "=r" (val) : __FORCE_ORDER);
+ #endif
+ 	return val;
+ }
+diff --git a/arch/x86/kernel/cpu/common.c b/arch/x86/kernel/cpu/common.c
+index c5d6f17d9b9d..178499f90366 100644
+--- a/arch/x86/kernel/cpu/common.c
++++ b/arch/x86/kernel/cpu/common.c
+@@ -359,7 +359,7 @@ void native_write_cr0(unsigned long val)
+ 	unsigned long bits_missing = 0;
+ 
+ set_register:
+-	asm volatile("mov %0,%%cr0": "+r" (val), "+m" (__force_order));
++	asm volatile("mov %0,%%cr0": "+r" (val) : : "memory");
+ 
+ 	if (static_branch_likely(&cr_pinning)) {
+ 		if (unlikely((val & X86_CR0_WP) != X86_CR0_WP)) {
+@@ -378,7 +378,7 @@ void native_write_cr4(unsigned long val)
+ 	unsigned long bits_changed = 0;
+ 
+ set_register:
+-	asm volatile("mov %0,%%cr4": "+r" (val), "+m" (cr4_pinned_bits));
++	asm volatile("mov %0,%%cr4": "+r" (val) : : "memory");
+ 
+ 	if (static_branch_likely(&cr_pinning)) {
+ 		if (unlikely((val & cr4_pinned_mask) != cr4_pinned_bits)) {
 -- 
 2.28.0.681.g6f77f65b4e-goog
 
