@@ -1,23 +1,24 @@
-Return-Path: <SRS0=b39O=C4=lists.openwall.com=kernel-hardening-return-19953-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=OMcC=C6=lists.openwall.com=kernel-hardening-return-19954-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-22.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9F344C43464
-	for <kernel-hardening@archiver.kernel.org>; Sat, 19 Sep 2020 08:03:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CA64BC43466
+	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Sep 2020 15:54:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9B8D721481
-	for <kernel-hardening@archiver.kernel.org>; Sat, 19 Sep 2020 08:03:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B1FFB22574
+	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Sep 2020 15:54:14 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="gCp0Pxfe"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B8D721481
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19953-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16082 invoked by uid 550); 19 Sep 2020 08:02:58 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="wS3DJbGh"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B1FFB22574
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19954-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9630 invoked by uid 550); 21 Sep 2020 15:54:03 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,93 +26,139 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16062 invoked from network); 19 Sep 2020 08:02:58 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1600502522;
-	bh=4XgdFtvAi6R4B5XmudteHuz8hEx5VkQonxbFFxSLuwY=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=gCp0Pxfe1yp36A3FUcn3Ym16DzjHZUgk64Ut9YWbXYe/BKi3p8cyxtAJI0hgpxtYP
-	 e0+AlAlOyP8R57EgIGKVjk4e38bY9yau4aydPoEJ9autBnx7bJm9yJroWGVQs8csFs
-	 jPkF+SEyN4GWAfOSKf5in74y2MfJDeGl+9Aq+Vjo=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Sat, 19 Sep 2020 10:01:43 +0200
-From: John Wood <john.wood@gmx.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: John Wood <john.wood@gmx.com>, kernel-hardening@lists.openwall.com,
-	Jann Horn <jannh@google.com>, Matthew Wilcox <willy@infradead.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Alexander Viro <viro@zeniv.linux.org.uk>,
-	Ingo Molnar <mingo@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Juri Lelli <juri.lelli@redhat.com>,
-	Vincent Guittot <vincent.guittot@linaro.org>,
-	Dietmar Eggemann <dietmar.eggemann@arm.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Ben Segall <bsegall@google.com>, Mel Gorman <mgorman@suse.de>,
-	Luis Chamberlain <mcgrof@kernel.org>,
-	Iurii Zaikin <yzaikin@google.com>, James Morris <jmorris@namei.org>,
-	"Serge E. Hallyn" <serge@hallyn.com>, linux-doc@vger.kernel.org,
-	linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-	linux-security-module@vger.kernel.org
-Subject: Re: [RFC PATCH 6/6] security/fbfam: Mitigate a fork brute force
- attack
-Message-ID: <20200919080143.GA2998@ubuntu>
-References: <20200910202107.3799376-1-keescook@chromium.org>
- <20200910202107.3799376-7-keescook@chromium.org>
- <202009101649.2A0BF95@keescook>
- <20200918152116.GB3229@ubuntu>
- <202009181433.EAF237C36@keescook>
+Received: (qmail 9592 invoked from network); 21 Sep 2020 15:54:02 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=Fn5z5p0KWkT8F7kdqXLtUSD00/eNhULjEnaQyt7HO3c=;
+        b=wS3DJbGh/toEWGHMWfIYAyfl62a2xPnkTm7cNhPym3mzQxK28qL+kZCrSZggBSROXa
+         NIIsRsLPprRNfrNxq/O7SgGIAQv+11RPoBUmYfVay0H+wQrvpSFqZGCCwczoE0PI3NwM
+         BajK6bGuvdWSOxCULPkkElyJinqDQbfrg3BX4qxe0nSoLtxoqCUZ4DYY8jlgM9XNnsxV
+         m952IZLwDFx/YDBae5MI6BosCFQlIVPnADU67SRlbPRPa3XZPP99q/tE/mqTrWmaFUGB
+         Cr7PUOGoUwpYEL9jPXyQWHhnShzEybRi2A7whxiV331Jx4G8BVdc/1kDmDMbH8AHeYn9
+         IaBA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=Fn5z5p0KWkT8F7kdqXLtUSD00/eNhULjEnaQyt7HO3c=;
+        b=SETKaZGsVTI0oHYWTFE6Wtlt2VQIeoO/7oMayLX9N6vwcvo73UsYnRq7of0FwT+sOK
+         YTWQE+SGQHUNze67HL/zr0AVOwVjkRo8AQ2Q6HMMEAq6+XP+N0g6AlAN8MIRUwRsVtF3
+         PqsOXVVi1it5uK8qKNbMFIVNbH2SdN6QIdzUCMREixKQS0HWrHn/buUol58I80PA+LLh
+         u8sl4TyR+mvwThvj19/+9+w9IKW+cPHDI0NY6eAPcZIPE2+8OKRmB5fSu65S+EXqaaIm
+         Lj5ZTxPfD/LjmJsqnxZHUvJ+2RONzuNb9g7qNECZhaNH59JgbPvMyO8NkAapo5kBymyZ
+         ZdeQ==
+X-Gm-Message-State: AOAM531ts9SVpxn6USewoLdaMe/lTyJn+5OKnkNi80H3oq1Li5VC2zxu
+	5wOU2wS5HUFfou9CjroLaR/sa0SrPgJPCSbmsPyEyw==
+X-Google-Smtp-Source: ABdhPJxEx7C1NCFiroHZ1htfv1qkh42nY8oGzcnOH06wOhFq2SsYUT8w4mdvW5J7C4BtXsEWH+72M+TnlFjXmM5sSRs=
+X-Received: by 2002:a17:90b:889:: with SMTP id bj9mr28426pjb.101.1600703630255;
+ Mon, 21 Sep 2020 08:53:50 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <202009181433.EAF237C36@keescook>
-X-Provags-ID: V03:K1:9L/Tjnvsa4rFId2m/ThIutvMMgMjZ/IzDuYdTCkaziufEFzDKT/
- IRrFLRh5iZZijoWA9cyyfuQ4k6jgKMd25Kk8d4GzwKnS21hKdASly6qgEiapWsHmSbTaFO+
- ENvVfY9y27mz4HzAjPWRFPwB2wIeSzoU1ixZMKt41hEE37FmLQuxey8tSSV1y7BasThZLWK
- UFxckuz1NmniW0O7Dq3Tw==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:DsrSIZNTKX4=:fcgG2vxOYNU28XvduGgWSa
- l8OZ/b33w3ZI6C2efMkW4M4v7bTdHnASMI4IqpDRJr818NfR2aEPc0wQF/se2ZEijsoc+fbZm
- g6oyJlTgpJSpsWyfvKwOSmljP4gX09HDMTHcVypA7NU+ujsxjA58GmgDEzM/a8tQT0maE6MkT
- 84zWkocT9nX/OtvYtNW5b1/JijWJkxtRk61NJPv14n1twCS8Mzl3Tw643fLm2K3wzEB8bnjGc
- OmlW6f04gTRYuNs5JpPApQxOCM6P4btmbltAm99vq9C8V4QWGrqSnlAPBArJf9/tzIjdTl/ZV
- cfAso21lbNzw9SFeRQyweLS/zOflRENFU9ISWCBnulBelTGqKi5S9MOtt4WkPJHbnTp0vXAOE
- Y3K++PK1wcas5NxxoCltB/JlKLdQz6dxsR3OgCEXpcieMaOyxxzsLHLvZYH1rmMGHGD1gbsAu
- VVzBIZ8dc3GFVnmGRTUL+VJfk+9P+LXhtSEcs29a2mWA6gs9997OxBHVz0Oqpqci1J/nqxs9y
- LG4jzr9JCMOqkF8xexq410aveWcLckUQp4k2RA+BQrk26YC+kN0Mj9Xse78p4EN96svVeLKbj
- Lqlj5k1+KEqd1qJfnhCxEG3suUQhW3xQh354D2+q45dSf1FlqlnBpbFzBt2wvVNq26prssG/X
- KK0vyakF7pgD5Wx9sV3XRmV6Zm4QuoTN+ZTnHHSLwgIICtSnrVQVLzn8GsKAbZtXYdPVc3Avl
- xvhafXunIOq2wROMVBjr9Z7srPprj1rUFtQdz0Nwlm/he+HlVwvSa8KcTazoXWepxIdyF7+HV
- BbSCC5D3Lk/DWhSkQ84CK5NIVlH8auL3JXuiT5AtkGNzzgPBf/hMpvP4GKhrVcY7fsmVTP0ow
- LkFRL7xchZ9ergYtr90Euxz6nV0Ko71ORgua7sVn+IeijeftZHqB3+ASSRommPaZzMeFNWKtQ
- 8j3sW3Zy4NNNdmi0BKNpV1FHOiQQKHNedyCUm4QTeQUALWHQxDr1lETNzG8O9iDvzpAZHa4SV
- W9bN3Iik9vt0yh8POyczQC94lONDsRZ1duce+iDjqfvdH8U239jL2GNwWyxOGfLzRHIHgdnT+
- UtdphSgI1cUGccdFzgH1EtmPf7mGGyAB2utUt75IHNLONIrMAfTxpK7eNTlSrTS4BPtbbM4e2
- e5Fk8i4DtMwmE1+qey/Od3qJdIcnFM3e1UUlGMI0Q3xOc4ZQsLqUYtDyzUzMcx+Iwlx5LkWCw
- tJj4wRrbj6ekneFnF4EzqQplU3U5eCTOuu4LMaQ==
-Content-Transfer-Encoding: quoted-printable
+References: <20200918201436.2932360-1-samitolvanen@google.com> <20200918201436.2932360-4-samitolvanen@google.com>
+In-Reply-To: <20200918201436.2932360-4-samitolvanen@google.com>
+From: Nick Desaulniers <ndesaulniers@google.com>
+Date: Mon, 21 Sep 2020 08:53:39 -0700
+Message-ID: <CAKwvOdk7pR5dK0ynxPOWHVYVWLMF1CUn6c=_GvpF-80YHNhQEQ@mail.gmail.com>
+Subject: Re: [PATCH v3 03/30] x86/boot/compressed: Disable relocation relaxation
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, 
+	Peter Zijlstra <peterz@infradead.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
+	Kees Cook <keescook@chromium.org>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
+	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
+	linux-pci@vger.kernel.org, 
+	"maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>, Arvind Sankar <nivedita@alum.mit.edu>
+Content-Type: text/plain; charset="UTF-8"
 
-On Fri, Sep 18, 2020 at 02:35:12PM -0700, Kees Cook wrote:
-> On Fri, Sep 18, 2020 at 06:02:16PM +0200, John Wood wrote:
-> > On Thu, Sep 10, 2020 at 04:56:19PM -0700, Kees Cook wrote:
-> > > On Thu, Sep 10, 2020 at 01:21:07PM -0700, Kees Cook wrote:
-> > > > +		pr_warn("fbfam: Offending process with PID %d killed\n",
-> > > > +			p->pid);
-> > >
-> > > I'd make this ratelimited (along with Jann's suggestions).
-> >
-> > Sorry, but I don't understand what you mean with "make this ratelimite=
-d".
-> > A clarification would be greatly appreciated.
+It looks like this just hit mainline over the weekend. FWIW. EOM.
+
+On Fri, Sep 18, 2020 at 1:14 PM Sami Tolvanen <samitolvanen@google.com> wrote:
 >
-> Ah! Yes, sorry for not being more clear. There are ratelimit helpers for
-> the pr_*() family of functions, e.g.:
+> From: Arvind Sankar <nivedita@alum.mit.edu>
 >
-> 	pr_warn_ratelimited("brute: Offending process with PID...
-
-Thanks for the clarification.
-
+> The x86-64 psABI [0] specifies special relocation types
+> (R_X86_64_[REX_]GOTPCRELX) for indirection through the Global Offset
+> Table, semantically equivalent to R_X86_64_GOTPCREL, which the linker
+> can take advantage of for optimization (relaxation) at link time. This
+> is supported by LLD and binutils versions 2.26 onwards.
+>
+> The compressed kernel is position-independent code, however, when using
+> LLD or binutils versions before 2.27, it must be linked without the -pie
+> option. In this case, the linker may optimize certain instructions into
+> a non-position-independent form, by converting foo@GOTPCREL(%rip) to $foo.
+>
+> This potential issue has been present with LLD and binutils-2.26 for a
+> long time, but it has never manifested itself before now:
+> - LLD and binutils-2.26 only relax
+>         movq    foo@GOTPCREL(%rip), %reg
+>   to
+>         leaq    foo(%rip), %reg
+>   which is still position-independent, rather than
+>         mov     $foo, %reg
+>   which is permitted by the psABI when -pie is not enabled.
+> - gcc happens to only generate GOTPCREL relocations on mov instructions.
+> - clang does generate GOTPCREL relocations on non-mov instructions, but
+>   when building the compressed kernel, it uses its integrated assembler
+>   (due to the redefinition of KBUILD_CFLAGS dropping -no-integrated-as),
+>   which has so far defaulted to not generating the GOTPCRELX
+>   relocations.
+>
+> Nick Desaulniers reports [1,2]:
+>   A recent change [3] to a default value of configuration variable
+>   (ENABLE_X86_RELAX_RELOCATIONS OFF -> ON) in LLVM now causes Clang's
+>   integrated assembler to emit R_X86_64_GOTPCRELX/R_X86_64_REX_GOTPCRELX
+>   relocations. LLD will relax instructions with these relocations based
+>   on whether the image is being linked as position independent or not.
+>   When not, then LLD will relax these instructions to use absolute
+>   addressing mode (R_RELAX_GOT_PC_NOPIC). This causes kernels built with
+>   Clang and linked with LLD to fail to boot.
+>
+> Patch series [4] is a solution to allow the compressed kernel to be
+> linked with -pie unconditionally, but even if merged is unlikely to be
+> backported. As a simple solution that can be applied to stable as well,
+> prevent the assembler from generating the relaxed relocation types using
+> the -mrelax-relocations=no option. For ease of backporting, do this
+> unconditionally.
+>
+> [0] https://gitlab.com/x86-psABIs/x86-64-ABI/-/blob/master/x86-64-ABI/linker-optimization.tex#L65
+> [1] https://lore.kernel.org/lkml/20200807194100.3570838-1-ndesaulniers@google.com/
+> [2] https://github.com/ClangBuiltLinux/linux/issues/1121
+> [3] https://reviews.llvm.org/rGc41a18cf61790fc898dcda1055c3efbf442c14c0
+> [4] https://lore.kernel.org/lkml/20200731202738.2577854-1-nivedita@alum.mit.edu/
+>
+> Reported-by: Nick Desaulniers <ndesaulniers@google.com>
+> Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
+> Tested-by: Nick Desaulniers <ndesaulniers@google.com>
+> Tested-by: Sedat Dilek <sedat.dilek@gmail.com>
+> Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
+> Cc: stable@vger.kernel.org
+> ---
+>  arch/x86/boot/compressed/Makefile | 2 ++
+>  1 file changed, 2 insertions(+)
+>
+> diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+> index 3962f592633d..ff7894f39e0e 100644
+> --- a/arch/x86/boot/compressed/Makefile
+> +++ b/arch/x86/boot/compressed/Makefile
+> @@ -43,6 +43,8 @@ KBUILD_CFLAGS += -Wno-pointer-sign
+>  KBUILD_CFLAGS += $(call cc-option,-fmacro-prefix-map=$(srctree)/=)
+>  KBUILD_CFLAGS += -fno-asynchronous-unwind-tables
+>  KBUILD_CFLAGS += -D__DISABLE_EXPORTS
+> +# Disable relocation relaxation in case the link is not PIE.
+> +KBUILD_CFLAGS += $(call as-option,-Wa$(comma)-mrelax-relocations=no)
+>
+>  KBUILD_AFLAGS  := $(KBUILD_CFLAGS) -D__ASSEMBLY__
+>  GCOV_PROFILE := n
 > --
-> Kees Cook
+> 2.28.0.681.g6f77f65b4e-goog
+>
 
-Regards,
-John Wood
+
+-- 
+Thanks,
+~Nick Desaulniers
