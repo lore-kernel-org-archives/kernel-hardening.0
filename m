@@ -1,24 +1,23 @@
-Return-Path: <SRS0=Ceod=C6=lists.openwall.com=kernel-hardening-return-19955-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=hGVz=C7=lists.openwall.com=kernel-hardening-return-19956-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-14.3 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 794ADC4346E
-	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Sep 2020 18:58:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6221BC2D0E2
+	for <kernel-hardening@archiver.kernel.org>; Tue, 22 Sep 2020 21:53:59 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 87B4C20888
-	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Sep 2020 18:58:49 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id E13F120773
+	for <kernel-hardening@archiver.kernel.org>; Tue, 22 Sep 2020 21:53:57 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="VwM6SxPc"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 87B4C20888
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19955-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30306 invoked by uid 550); 21 Sep 2020 18:58:42 -0000
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="FrGs+jdt"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E13F120773
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19956-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7370 invoked by uid 550); 22 Sep 2020 21:53:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,93 +25,387 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30273 invoked from network); 21 Sep 2020 18:58:41 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=rrEufNVuY5dCBzinzTyZLnRAK6NDit4k748EnZ9ZGyU=;
-        b=VwM6SxPchzpHYvDq5MuGqptnfOCO+2u8UOZQsUHmvXP+yQTF+Z7wlraeVtjd/s9jlB
-         wV193ZvJeoHSX0mG5NaEp1P+oe7FoNjVRmUSb2Z+JinKsMwFIqn+MpalsijQarctvj4U
-         FH4y6mRhga1p9JKtJgLYS2O01gvN0JoRMzpIJ8sTPjHm+K3XvxLJoxyawOroxTt3ewXo
-         2erVwwtPxW6qCdmd6A02Wa5wSMbzwpQ/xA7DOELk4+u1Yv0Dw6Gb0gPjk1AInJx+Npb8
-         9g541oYiyMOVYQWN0p1s+dSK+qehJVoUb8ZcAzai39YkrQsAMRZIWHvBa3cE/5jkadoT
-         Dtig==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=rrEufNVuY5dCBzinzTyZLnRAK6NDit4k748EnZ9ZGyU=;
-        b=daVKKqtIY2k7NgSPJXMKnUY/61gskl6tBOqoGQVy6eFqXUXOpHnEjAMK15uVp1zRO/
-         GEpzDLN6V1LXIWdJZVeusiCJS3oEIuf+Fo0cEeCu0XSATlIOJKgL/1vhp4s9bW99Dk+t
-         knYbu42l79uRDtSnpeTIJvhxHz+gSvDEkAsg/3bzizRQB74HgKTOfU2aKDtdXj/JEb/T
-         KTUi9GLaDgxHGnfG2Mw6BEWaKAVc0Yka8t5bNJ4qkJYDlX0pM6FPuoyz6hyV+GiSQLq5
-         5dATi4nM3cEf/CH2N1xe5yFQyHlwTBbb3P1KE6DfsYeQD0Ne9q6aK8P+EcfdMbg0qqXt
-         ISGg==
-X-Gm-Message-State: AOAM533SWzVaAc6IEdzjGVThyRvKfE/hKSLV6tmBQMfIhyf9zMaz/igv
-	omMHL+5IPFXOhmpDLQemdVk7bmksBrMe3SPqESuFjg==
-X-Google-Smtp-Source: ABdhPJwAs9ksH6re9qMXbI2fsKP5Ghj4mOoCzkBFQS+BQszgLy1pqKFO8fFSdMFWe7XQ/UpW1tcdUlWla4BBqoqymc8=
-X-Received: by 2002:a17:906:ecf1:: with SMTP id qt17mr960026ejb.158.1600714709946;
- Mon, 21 Sep 2020 11:58:29 -0700 (PDT)
-MIME-Version: 1.0
-References: <20200918201436.2932360-1-samitolvanen@google.com>
- <20200918201436.2932360-14-samitolvanen@google.com> <202009181427.86DE61B@keescook>
-In-Reply-To: <202009181427.86DE61B@keescook>
-From: Sami Tolvanen <samitolvanen@google.com>
-Date: Mon, 21 Sep 2020 11:58:19 -0700
-Message-ID: <CABCJKuf5pKqEDaAKix5CaUmv92M5HOAB-psdNg=awF7BDZ+yvA@mail.gmail.com>
-Subject: Re: [PATCH v3 13/30] kbuild: lto: postpone objtool
-To: Kees Cook <keescook@chromium.org>
-Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, 
-	Peter Zijlstra <peterz@infradead.org>, Steven Rostedt <rostedt@goodmis.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Nick Desaulniers <ndesaulniers@google.com>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
-	linux-kbuild <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
-	linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Received: (qmail 7350 invoked from network); 22 Sep 2020 21:53:47 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 6889320B7179
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
+	s=default; t=1600811615;
+	bh=zrGiUhjxyMnxOLwrTFBUCA0dM8YhyXnysJ2s/i76Yw8=;
+	h=From:To:Subject:Date:In-Reply-To:References:From;
+	b=FrGs+jdtlaGCW3OhEwxZHi9vtoQ8whjM/oMijaUv/3lIfKPHBTC5e36Y+pVphsyFN
+	 PswG4CtPB0eFn/8TTBFIHm8MnxFQwSNdTZc72vfa+A4DN6+PnjXyXiHhB4MxxdJ6yA
+	 cNhCa9sw8h1xBfNp1RSwA2gIwFywZJpEZDPfozg4=
+From: madvenka@linux.microsoft.com
+To: kernel-hardening@lists.openwall.com,
+	linux-api@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-integrity@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	oleg@redhat.com,
+	x86@kernel.org,
+	luto@kernel.org,
+	David.Laight@ACULAB.COM,
+	fweimer@redhat.com,
+	mark.rutland@arm.com,
+	mic@digikod.net,
+	pavel@ucw.cz,
+	madvenka@linux.microsoft.com
+Subject: [PATCH v2 0/4] [RFC] Implement Trampoline File Descriptor
+Date: Tue, 22 Sep 2020 16:53:22 -0500
+Message-Id: <20200922215326.4603-1-madvenka@linux.microsoft.com>
+X-Mailer: git-send-email 2.17.1
+In-Reply-To: <210d7cd762d5307c2aa1676705b392bd445f1baa>
+References: <210d7cd762d5307c2aa1676705b392bd445f1baa>
 
-Nick and 0-day bot both let me know that there's a typo in this patch,
-which I'll fix in v4:
+From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
 
-diff --git a/scripts/Makefile.lib b/scripts/Makefile.lib
-index f7daa59ff14f..00d7baaf7949 100644
---- a/scripts/Makefile.lib
-+++ b/scripts/Makefile.lib
-@@ -223,7 +223,7 @@ dtc_cpp_flags  = -Wp,-MMD,$(depfile).pre.tmp
--nostdinc                    \
- objtool_args =                                                         \
-        $(if $(CONFIG_UNWINDER_ORC),orc generate,check)                 \
-        $(if $(part-of-module), --module,)                              \
--       $(if $(CONFIG_FRAME_POINTER), --no-fp,)                         \
-+       $(if $(CONFIG_FRAME_POINTER),, --no-fp)                         \
-        $(if $(CONFIG_GCOV_KERNEL), --no-unreachable,)                  \
-        $(if $(CONFIG_RETPOLINE), --retpoline,)                         \
-        $(if $(CONFIG_X86_SMAP), --uaccess,)                            \
+Introduction
+============
 
-Sami
+Dynamic code is used in many different user applications. Dynamic code is
+often generated at runtime. Dynamic code can also just be a pre-defined
+sequence of machine instructions in a data buffer. Examples of dynamic
+code are trampolines, JIT code, DBT code, etc.
 
-On Fri, Sep 18, 2020 at 2:27 PM Kees Cook <keescook@chromium.org> wrote:
->
-> On Fri, Sep 18, 2020 at 01:14:19PM -0700, Sami Tolvanen wrote:
-> > With LTO, LLVM bitcode won't be compiled into native code until
-> > modpost_link, or modfinal for modules. This change postpones calls
-> > to objtool until after these steps, and moves objtool_args to
-> > Makefile.lib, so the arguments can be reused in Makefile.modfinal.
-> >
-> > Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
->
-> Thanks for reorganizing this!
->
-> Reviewed-by: Kees Cook <keescook@chromium.org>
->
-> --
-> Kees Cook
->
-> --
-> You received this message because you are subscribed to the Google Groups "Clang Built Linux" group.
-> To unsubscribe from this group and stop receiving emails from it, send an email to clang-built-linux+unsubscribe@googlegroups.com.
-> To view this discussion on the web visit https://groups.google.com/d/msgid/clang-built-linux/202009181427.86DE61B%40keescook.
+Dynamic code is placed either in a data page or in a stack page. In order
+to execute dynamic code, the page it resides in needs to be mapped with
+execute permissions. Writable pages with execute permissions provide an
+attack surface for hackers. Attackers can use this to inject malicious
+code, modify existing code or do other harm.
+
+To mitigate this, LSMs such as SELinux implement W^X. That is, they may not
+allow pages to have both write and execute permissions. This prevents
+dynamic code from executing and blocks applications that use it. To allow
+genuine applications to run, exceptions have to be made for them (by setting
+execmem, etc) which opens the door to security issues.
+
+The W^X implementation today is not complete. There exist many user level
+tricks that can be used to load and execute dynamic code. E.g.,
+
+- Load the code into a file and map the file with R-X.
+
+- Load the code in an RW- page. Change the permissions to R--. Then,
+  change the permissions to R-X.
+
+- Load the code in an RW- page. Remap the page with R-X to get a separate
+  mapping to the same underlying physical page.
+
+IMO, these are all security holes as an attacker can exploit them to inject
+his own code.
+
+In the future, these holes will definitely be closed. For instance, LSMs
+(such as the IPE proposal [1]) may only allow code in properly signed object
+files to be mapped with execute permissions. This will do two things:
+
+	- user level tricks using anonymous pages will fail as anonymous
+	  pages have no file identity
+
+	- loading the code in a temporary file and mapping it with R-X
+	  will fail as the temporary file would not have a signature
+
+We need a way to execute such code without making security exceptions.
+Trampolines are a good example of dynamic code. A couple of examples
+of trampolines are given below. My first use case for this RFC is
+libffi.
+
+Examples of trampolines
+=======================
+
+libffi (A Portable Foreign Function Interface Library):
+
+libffi allows a user to define functions with an arbitrary list of
+arguments and return value through a feature called "Closures".
+Closures use trampolines to jump to ABI handlers that handle calling
+conventions and call a target function. libffi is used by a lot
+of different applications. To name a few:
+
+	- Python
+	- Java
+	- Javascript
+	- Ruby FFI
+	- Lisp
+	- Objective C
+
+GCC nested functions:
+
+GCC has traditionally used trampolines for implementing nested
+functions. The trampoline is placed on the user stack. So, the stack
+needs to be executable.
+
+Currently available solution
+============================
+
+One solution that has been proposed to allow trampolines to be executed
+without making security exceptions is Trampoline Emulation. See:
+
+https://pax.grsecurity.net/docs/emutramp.txt
+
+In this solution, the kernel recognizes certain sequences of instructions
+as "well-known" trampolines. When such a trampoline is executed, a page
+fault happens because the trampoline page does not have execute permission.
+The kernel recognizes the trampoline and emulates it. Basically, the
+kernel does the work of the trampoline on behalf of the application.
+
+Currently, the emulated trampolines are the ones used in libffi and GCC
+nested functions. To my knowledge, only X86 is supported at this time.
+
+As noted in emutramp.txt, this is not a generic solution. For every new
+trampoline that needs to be supported, new instruction sequences need to
+be recognized by the kernel and emulated. And this has to be done for
+every architecture that needs to be supported.
+
+emutramp.txt notes the following:
+
+"... the real solution is not in emulation but by designing a kernel API
+for runtime code generation and modifying userland to make use of it."
+
+Solution proposed in this RFC
+=============================
+
+From this RFC's perspective, there are two scenarios for dynamic code:
+
+Scenario 1
+----------
+
+We know what code we need only at runtime. For instance, JIT code generated
+for frequently executed Java methods. Only at runtime do we know what
+methods need to be JIT compiled. Such code cannot be statically defined. It
+has to be generated at runtime.
+
+Scenario 2
+----------
+
+We know what code we need in advance. User trampolines are a good example of
+this. It is possible to define such code statically with some help from the
+kernel.
+
+This RFC addresses (2). (1) needs a general purpose trusted code generator
+and is out of scope for this RFC.
+
+For (2), the solution is to convert dynamic code to static code and place it
+in a source file. The binary generated from the source can be signed. The
+kernel can use signature verification to authenticate the binary and
+allow the code to be mapped and executed.
+
+The problem is that the static code has to be able to find the data that it
+needs when it executes. For functions, the ABI defines the way to pass
+parameters. But, for arbitrary dynamic code, there isn't a standard ABI
+compliant way to pass data to the code for most architectures. Each instance
+of dynamic code defines its own way. For instance, co-location of code and
+data and PC-relative data referencing are used in cases where the ISA
+supports it.
+
+We need one standard way that would work for all architectures and ABIs.
+
+The solution proposed here is:
+
+1. Write the static code assuming that the data needed by the code is already
+   pointed to by a designated register.
+
+2. Get the kernel to supply a small universal trampoline that does the
+   following:
+
+	- Load the address of the data in a designated register
+	- Load the address of the static code in a designated register
+	- Jump to the static code
+
+User code would use a kernel supplied API to create and map the trampoline.
+The address values would be baked into the code so that no special ISA
+features are needed.
+
+To conserve memory, the kernel will pack as many trampolines as possible in
+a page and provide a trampoline table to user code. The table itself is
+managed by the user.
+
+Trampoline File Descriptor (trampfd)
+==========================
+
+I am proposing a kernel API using anonymous file descriptors that can be
+used to create the trampolines. The API is described in patch 1/4 of this
+patchset. I provide a summary here:
+
+	- Create a trampoline file object
+
+	- Write a code descriptor into the trampoline file and specify:
+
+		- the number of trampolines desired
+		- the name of the code register
+		- user pointer to a table of code addresses, one address
+		  per trampoline
+
+	- Write a data descriptor into the trampoline file and specify:
+
+		- the name of the data register
+		- user pointer to a table of data addresses, one address
+		  per trampoline
+
+	- mmap() the trampoline file. The kernel generates a table of
+	  trampolines in a page and returns the trampoline table address
+
+	- munmap() a trampoline file mapping
+
+	- Close the trampoline file
+
+Each mmap() will only map a single base page. Large pages are not supported.
+
+A trampoline file can only be mapped once in an address space.
+
+Trampoline file mappings cannot be shared across address spaces. So,
+sending the trampoline file descriptor over a unix domain socket and
+mapping it in another process will not work.
+
+It is recommended that the code descriptor and the code table be placed
+in the .rodata section so an attacker cannot modify them.
+
+Trampoline use and reuse
+========================
+
+The code for trampoline X in the trampoline table is:
+
+	load	&code_table[X], code_reg
+	load	(code_reg), code_reg
+	load	&data_table[X], data_reg
+	load	(data_reg), data_reg
+	jump	code_reg
+
+The addresses &code_table[X] and &data_table[X] are baked into the
+trampoline code. So, PC-relative data references are not needed. The user
+can modify code_table[X] and data_table[X] dynamically.
+
+For instance, within libffi, the same trampoline X can be used for different
+closures at different times by setting:
+
+	data_table[X] = closure;
+	code_table[X] = ABI handling code;
+
+Advantages of the Trampoline File Descriptor approach
+=====================================================
+
+- Using this support from the kernel, dynamic code can be converted to
+  static code with a little effort so applications and libraries can move to
+  a more secure model. In the simplest cases such as libffi, dynamic code can
+  even be eliminated.
+
+- This initial work is targeted towards X86 and ARM. But it can be supported
+  easily on all architectures. We don't need any special ISA features such
+  as PC-relative data referencing.
+
+- The only code generation needed is for this small, universal trampoline.
+
+- The kernel does not have to deal with any ABI issues in the generation of
+  this trampoline.
+
+- The kernel provides a trampoline table to conserve memory.
+
+- An SELinux setting called "exectramp" can be implemented along the
+  lines of "execmem", "execstack" and "execheap" to selectively allow the
+  use of trampolines on a per application basis.
+
+- In version 1, a trip to the kernel was required to execute the trampoline.
+  In version 2, that is not required. So, there are no performance
+  concerns in this approach.
+
+libffi
+======
+
+I have implemented my solution for libffi and provided the changes for
+X86 and ARM, 32-bit and 64-bit. Here is the reference patch:
+
+http://linux.microsoft.com/~madvenka/libffi/libffi.v2.txt
+
+If the trampfd patchset gets accepted, I will send the libffi changes
+to the maintainers for a review. BTW, I have also successfully executed
+the libffi self tests.
+
+Work that is pending
+====================
+
+- I am working on implementing the SELinux setting - "exectramp".
+
+- I have a test program to test the kernel API. I am working on adding it
+  to selftests.
+
+References
+==========
+
+[1] https://microsoft.github.io/ipe/
+---
+
+Changelog:
+
+v1
+	Introduced the Trampfd feature.
+
+v2
+	- Changed the system call. Version 2 does not support different
+	  trampoline types and their associated type structures. It only
+	  supports a kernel generated trampoline.
+
+	  The system call now returns information to the user that is
+	  used to define trampoline descriptors. E.g., the maximum
+	  number of trampolines that can be packed in a single page.
+
+	- Removed all the trampoline contexts such as register contexts
+	  and stack contexts. This is based on the feedback that the kernel
+	  should not have to worry about ABI issues and H/W features that
+	  may deal with the context of a process.
+
+	- Removed the need to make a trip into the kernel on trampoline
+	  invocation. This is based on the feedback about performance.
+
+	- Removed the ability to share trampolines across address spaces.
+	  This would have made sense to different trampoline types based
+	  on their semantics. But since I support only one specific
+	  trampoline, sharing does not make sense.
+
+	- Added calls to specify trampoline descriptors that the kernel
+	  uses to generate trampolines.
+
+	- Added architecture-specific code to generate the small, universal
+	  trampoline for X86 32 and 64-bit, ARM 32 and 64-bit.
+
+	- Implemented the trampoline table in a page.
+Madhavan T. Venkataraman (4):
+  Implement the kernel API for the trampoline file descriptor.
+  Implement i386 and X86 support for the trampoline file descriptor.
+  Implement ARM64 support for the trampoline file descriptor.
+  Implement ARM support for the trampoline file descriptor.
+
+ arch/arm/include/uapi/asm/ptrace.h     |  21 +++
+ arch/arm/kernel/Makefile               |   1 +
+ arch/arm/kernel/trampfd.c              | 124 +++++++++++++
+ arch/arm/tools/syscall.tbl             |   1 +
+ arch/arm64/include/asm/unistd.h        |   2 +-
+ arch/arm64/include/asm/unistd32.h      |   2 +
+ arch/arm64/include/uapi/asm/ptrace.h   |  59 ++++++
+ arch/arm64/kernel/Makefile             |   2 +
+ arch/arm64/kernel/trampfd.c            | 244 +++++++++++++++++++++++++
+ arch/x86/entry/syscalls/syscall_32.tbl |   1 +
+ arch/x86/entry/syscalls/syscall_64.tbl |   1 +
+ arch/x86/include/uapi/asm/ptrace.h     |  38 ++++
+ arch/x86/kernel/Makefile               |   1 +
+ arch/x86/kernel/trampfd.c              | 238 ++++++++++++++++++++++++
+ fs/Makefile                            |   1 +
+ fs/trampfd/Makefile                    |   5 +
+ fs/trampfd/trampfd_fops.c              | 241 ++++++++++++++++++++++++
+ fs/trampfd/trampfd_map.c               | 142 ++++++++++++++
+ include/linux/syscalls.h               |   2 +
+ include/linux/trampfd.h                |  49 +++++
+ include/uapi/asm-generic/unistd.h      |   4 +-
+ include/uapi/linux/trampfd.h           | 184 +++++++++++++++++++
+ init/Kconfig                           |   7 +
+ kernel/sys_ni.c                        |   3 +
+ 24 files changed, 1371 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/kernel/trampfd.c
+ create mode 100644 arch/arm64/kernel/trampfd.c
+ create mode 100644 arch/x86/kernel/trampfd.c
+ create mode 100644 fs/trampfd/Makefile
+ create mode 100644 fs/trampfd/trampfd_fops.c
+ create mode 100644 fs/trampfd/trampfd_map.c
+ create mode 100644 include/linux/trampfd.h
+ create mode 100644 include/uapi/linux/trampfd.h
+
+-- 
+2.17.1
+
