@@ -1,4 +1,4 @@
-Return-Path: <SRS0=cco7=DA=lists.openwall.com=kernel-hardening-return-19964-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Z0+R=DA=lists.openwall.com=kernel-hardening-return-19965-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-5.2 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
 	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C8C8FC2D0A8
-	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Sep 2020 08:14:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A1717C2D0A8
+	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Sep 2020 08:42:55 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 98AF2238A1
-	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Sep 2020 08:14:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 98AF2238A1
+	by mail.kernel.org (Postfix) with SMTP id E61F9221F0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Sep 2020 08:42:54 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E61F9221F0
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=ucw.cz
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19964-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25915 invoked by uid 550); 23 Sep 2020 08:14:40 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19965-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32767 invoked by uid 550); 23 Sep 2020 08:42:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,8 +22,8 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25873 invoked from network); 23 Sep 2020 08:14:40 -0000
-Date: Wed, 23 Sep 2020 10:14:26 +0200
+Received: (qmail 32747 invoked from network); 23 Sep 2020 08:42:44 -0000
+Date: Wed, 23 Sep 2020 10:42:32 +0200
 From: Pavel Machek <pavel@ucw.cz>
 To: madvenka@linux.microsoft.com
 Cc: kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
@@ -33,79 +33,63 @@ Cc: kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
 	x86@kernel.org, luto@kernel.org, David.Laight@ACULAB.COM,
 	fweimer@redhat.com, mark.rutland@arm.com, mic@digikod.net
 Subject: Re: [PATCH v2 0/4] [RFC] Implement Trampoline File Descriptor
-Message-ID: <20200923081426.GA30279@amd>
+Message-ID: <20200923084232.GB30279@amd>
 References: <210d7cd762d5307c2aa1676705b392bd445f1baa>
  <20200922215326.4603-1-madvenka@linux.microsoft.com>
 MIME-Version: 1.0
 Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="ew6BAiZeqk4r7MaW"
+	protocol="application/pgp-signature"; boundary="zx4FCpZtqtKETZ7O"
 Content-Disposition: inline
 In-Reply-To: <20200922215326.4603-1-madvenka@linux.microsoft.com>
 User-Agent: Mutt/1.5.23 (2014-03-12)
 
 
---ew6BAiZeqk4r7MaW
+--zx4FCpZtqtKETZ7O
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 Content-Transfer-Encoding: quoted-printable
 
 Hi!
 
-> Introduction
-> =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+> Solution proposed in this RFC
+> =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D
 >=20
-> Dynamic code is used in many different user applications. Dynamic code is
-> often generated at runtime. Dynamic code can also just be a pre-defined
-> sequence of machine instructions in a data buffer. Examples of dynamic
-> code are trampolines, JIT code, DBT code, etc.
+> >From this RFC's perspective, there are two scenarios for dynamic code:
 >=20
-> Dynamic code is placed either in a data page or in a stack page. In order
-> to execute dynamic code, the page it resides in needs to be mapped with
-> execute permissions. Writable pages with execute permissions provide an
-> attack surface for hackers. Attackers can use this to inject malicious
-> code, modify existing code or do other harm.
+> Scenario 1
+> ----------
 >=20
-> To mitigate this, LSMs such as SELinux implement W^X. That is, they may n=
-ot
-> allow pages to have both write and execute permissions. This prevents
-> dynamic code from executing and blocks applications that use it. To allow
-> genuine applications to run, exceptions have to be made for them (by sett=
-ing
-> execmem, etc) which opens the door to security issues.
+> We know what code we need only at runtime. For instance, JIT code generat=
+ed
+> for frequently executed Java methods. Only at runtime do we know what
+> methods need to be JIT compiled. Such code cannot be statically defined. =
+It
+> has to be generated at runtime.
 >=20
-> The W^X implementation today is not complete. There exist many user level
-> tricks that can be used to load and execute dynamic code. E.g.,
+> Scenario 2
+> ----------
 >=20
-> - Load the code into a file and map the file with R-X.
+> We know what code we need in advance. User trampolines are a good example=
+ of
+> this. It is possible to define such code statically with some help from t=
+he
+> kernel.
 >=20
-> - Load the code in an RW- page. Change the permissions to R--. Then,
->   change the permissions to R-X.
->=20
-> - Load the code in an RW- page. Remap the page with R-X to get a separate
->   mapping to the same underlying physical page.
->=20
-> IMO, these are all security holes as an attacker can exploit them to inje=
-ct
-> his own code.
+> This RFC addresses (2). (1) needs a general purpose trusted code generator
+> and is out of scope for this RFC.
 
-IMO, you are smoking crack^H^H very seriously misunderstanding what
-W^X is supposed to protect from.
+This is slightly less crazy talk than introduction talking about holes
+in W^X. But it is very, very far from normal Unix system, where you
+have selection of interpretters to run your malware on (sh, python,
+awk, emacs, ...) and often you can even compile malware from sources.=20
 
-W^X is not supposed to protect you from attackers that can already do
-system calls. So loading code into a file then mapping the file as R-X
-is in no way security hole in W^X.
+And as you noted, we don't have "a general purpose trusted code
+generator" for our systems.
 
-If you want to provide protection from attackers that _can_ do system
-calls, fine, but please don't talk about W^X and please specify what
-types of attacks you want to prevent and why that's good thing.
-
-Hint: attacker that can "Load the code into a file and map the file
-with R-X." can probably also load the code into /foo and
-os.system("/usr/bin/python /foo").
-
-This is not first crazy patch from your company. Perhaps you should
-have a person with strong Unix/Linux experience performing "straight
-face test" on outgoing patches?
+I believe you should simply delete confusing "introduction" and
+provide details of super-secure system where your patches would be
+useful, instead.
 
 Best regards,
 									Pavel
@@ -114,16 +98,16 @@ Best regards,
 (cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
 g.html
 
---ew6BAiZeqk4r7MaW
+--zx4FCpZtqtKETZ7O
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: Digital signature
 
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iEYEARECAAYFAl9rA+IACgkQMOfwapXb+vLeswCgxLsVovoEu7Zr4CWuzSbUatKX
-B5wAnRA2x52GHgeeAkFmdWf8Tz3etxRA
-=lIi4
+iEYEARECAAYFAl9rCngACgkQMOfwapXb+vKeqgCgpVQMutlRE7F/wzcDjcBTlXwI
+RbAAnjRDzunOtf0iSPKO6rIM9FPy6+JQ
+=wVZX
 -----END PGP SIGNATURE-----
 
---ew6BAiZeqk4r7MaW--
+--zx4FCpZtqtKETZ7O--
