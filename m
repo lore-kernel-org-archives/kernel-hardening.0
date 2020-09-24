@@ -1,23 +1,21 @@
-Return-Path: <SRS0=gqBK=DA=lists.openwall.com=kernel-hardening-return-19996-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ayoC=DB=lists.openwall.com=kernel-hardening-return-19997-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BA753C4363D
-	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Sep 2020 23:53:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4FB7CC4363D
+	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Sep 2020 13:06:29 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E49012063A
-	for <kernel-hardening@archiver.kernel.org>; Wed, 23 Sep 2020 23:53:41 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="XU8UVx4l"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E49012063A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.microsoft.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19996-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15863 invoked by uid 550); 23 Sep 2020 23:53:35 -0000
+	by mail.kernel.org (Postfix) with SMTP id 2BB3A2311A
+	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Sep 2020 13:06:27 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2BB3A2311A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-19997-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27868 invoked by uid 550); 24 Sep 2020 13:06:19 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,89 +23,82 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15819 invoked from network); 23 Sep 2020 23:53:34 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 035D320B7179
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-	s=default; t=1600905202;
-	bh=stfW7VJ9ixikhAwpOM4Y5v+Co/aY6HnPcRI9MXRFn5o=;
-	h=Subject:To:Cc:References:From:Date:In-Reply-To:From;
-	b=XU8UVx4l9QT/FMwo8coMBjnSlLBVk+KBoR6KrO3k/zZ6+mnhEd9ikKjXqtLLVZvX8
-	 6L4k3p2sXtnrt7iHN48ZKcWMojIdvdW6wCunGopAI4Vm339QmzKeUGR7hpZh3q8OSK
-	 MOlqBqWNABhGiq2M7DKxely5hf7eFnDLY3+f4pu8=
-Subject: Re: [PATCH v2 0/4] [RFC] Implement Trampoline File Descriptor
-To: Florian Weimer <fweimer@redhat.com>, Solar Designer <solar@openwall.com>
-Cc: Pavel Machek <pavel@ucw.cz>, kernel-hardening@lists.openwall.com,
- linux-api@vger.kernel.org, linux-arm-kernel@lists.infradead.org,
- linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org,
- linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org,
- oleg@redhat.com, x86@kernel.org, luto@kernel.org, David.Laight@ACULAB.COM,
- mark.rutland@arm.com, mic@digikod.net, Rich Felker <dalias@libc.org>
-References: <20200922215326.4603-1-madvenka@linux.microsoft.com>
- <20200923081426.GA30279@amd> <20200923091456.GA6177@openwall.com>
- <87wo0ko8v0.fsf@oldenburg2.str.redhat.com>
-From: "Madhavan T. Venkataraman" <madvenka@linux.microsoft.com>
-Message-ID: <1a7c9989-fb98-20f7-c0d9-2261aa50d967@linux.microsoft.com>
-Date: Wed, 23 Sep 2020 18:53:21 -0500
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.10.0
+Received: (qmail 27841 invoked from network); 24 Sep 2020 13:06:19 -0000
+X-Virus-Scanned: by amavisd-new at test-mx.suse.de
+Date: Thu, 24 Sep 2020 15:06:06 +0200 (CEST)
+From: Miroslav Benes <mbenes@suse.cz>
+To: Kristen Carlson Accardi <kristen@linux.intel.com>
+cc: keescook@chromium.org, tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, 
+    Josh Poimboeuf <jpoimboe@redhat.com>, Jiri Kosina <jikos@kernel.org>, 
+    Petr Mladek <pmladek@suse.com>, Joe Lawrence <joe.lawrence@redhat.com>, 
+    arjan@linux.intel.com, x86@kernel.org, linux-kernel@vger.kernel.org, 
+    kernel-hardening@lists.openwall.com, rick.p.edgecombe@intel.com, 
+    live-patching@vger.kernel.org
+Subject: Re: [PATCH v5 10/10] livepatch: only match unique symbols when using
+ fgkaslr
+In-Reply-To: <20200923173905.11219-11-kristen@linux.intel.com>
+Message-ID: <alpine.LSU.2.21.2009241453400.6602@pobox.suse.cz>
+References: <20200923173905.11219-1-kristen@linux.intel.com> <20200923173905.11219-11-kristen@linux.intel.com>
+User-Agent: Alpine 2.21 (LSU 202 2017-01-01)
 MIME-Version: 1.0
-In-Reply-To: <87wo0ko8v0.fsf@oldenburg2.str.redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=US-ASCII
 
+Hi,
 
+On Wed, 23 Sep 2020, Kristen Carlson Accardi wrote:
 
-On 9/23/20 9:39 AM, Florian Weimer wrote:
-> * Solar Designer:
+> If any type of function granular randomization is enabled, the sympos
+> algorithm will fail, as it will be impossible to resolve symbols when
+> there are duplicates using the previous symbol position.
 > 
->> While I share my opinion here, I don't mean that to block Madhavan's
->> work.  I'd rather defer to people more knowledgeable in current userland
->> and ABI issues/limitations and plans on dealing with those, especially
->> to Florian Weimer.  I haven't seen Florian say anything specific for or
->> against Madhavan's proposal, and I'd like to.  (Have I missed that?)
+> Override the value of sympos to always be zero if fgkaslr is enabled for
+> either the core kernel or modules, forcing the algorithm
+> to require that only unique symbols are allowed to be patched.
 > 
-> There was a previous discussion, where I provided feedback (not much
-> different from the feedback here, given that the mechanism is mostly the
-> same).
+> Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+> ---
+>  kernel/livepatch/core.c | 11 +++++++++++
+>  1 file changed, 11 insertions(+)
 > 
-> I think it's unnecessary for the libffi use case.  Precompiled code can
-> be loaded from disk because the libffi trampolines are so regular.  On
-> most architectures, it's not even the code that's patched, but some of
-> the data driving it, which happens to be located on the same page due to
-> a libffi quirk.
-> 
-> The libffi use case is a bit strange anyway: its trampolines are
-> type-generic, and the per-call adjustment is data-driven.  This means
-> that once you have libffi in the process, you have a generic
-> data-to-function-call mechanism available that can be abused (it's even
-> fully CET compatible in recent versions).  And then you need to look at
-> the processes that use libffi.  A lot of them contain bytecode
-> interpreters, and those enable data-driven arbitrary code execution as
-> well.  I know that there are efforts under way to harden Python, but
-> it's going to be tough to get to the point where things are still
-> difficult for an attacker once they have the ability to make mprotect
-> calls.
-> 
-> It was pointed out to me that libffi is doing things wrong, and the
-> trampolines should not be type-generic, but generated so that they match
-> the function being called.  That is, the marshal/unmarshal code would be
-> open-coded in the trampoline, rather than using some generic mechanism
-> plus run-time dispatch on data tables describing the function type.
-> That is a very different design (and typically used by compilers (JIT or
-> not JIT) to implement native calls).  Mapping some code page with a
-> repeating pattern would no longer work to defeat anti-JIT measures
-> because it's closer to real JIT.  I don't know if kernel support could
-> make sense in this context, but it would be a completely different
-> patch.
-> 
-> Thanks,
-> Florian
-> 
-Hi Florian,
+> diff --git a/kernel/livepatch/core.c b/kernel/livepatch/core.c
+> index f76fdb925532..da08e40f2da2 100644
+> --- a/kernel/livepatch/core.c
+> +++ b/kernel/livepatch/core.c
+> @@ -170,6 +170,17 @@ static int klp_find_object_symbol(const char *objname, const char *name,
+>  		kallsyms_on_each_symbol(klp_find_callback, &args);
+>  	mutex_unlock(&module_mutex);
+>  
+> +	/*
+> +	 * If any type of function granular randomization is enabled, it
+> +	 * will be impossible to resolve symbols when there are duplicates
+> +	 * using the previous symbol position (i.e. sympos != 0). Override
+> +	 * the value of sympos to always be zero in this case. This will
+> +	 * force the algorithm to require that only unique symbols are
+> +	 * allowed to be patched.
+> +	 */
+> +	if (IS_ENABLED(CONFIG_FG_KASLR) || IS_ENABLED(CONFIG_MODULE_FG_KASLR))
+> +		sympos = 0;
 
-I am making myself familiar with anti-JIT measures before I can respond
-to this comment. Bear with me. I will also respond to the above
-libffi comment.
+This should work, but I wonder if we should make it more explicit. With 
+the change the user will get the error with "unresolvable ambiguity for 
+symbol..." if they specify sympos and the symbol is not unique. It could 
+confuse them.
 
-Madhavan
+So, how about it making it something like
+
+if (IS_ENABLED(CONFIG_FG_KASLR) || IS_ENABLED(CONFIG_MODULE_FG_KASLR))
+	if (sympos) {
+		pr_err("fgkaslr is enabled, specifying sympos for symbol '%s' in object '%s' does not work.\n",
+			name, objname);
+		*addr = 0;
+		return -EINVAL;
+	}
+
+? (there could be goto to the error out at the end of the function).
+
+In that case, if sympos is not specified, the user will get the message 
+which matches the reality. If the user specifies it, they will get the 
+error in case of fgkaslr.
+
+Thanks for dealing with it
+Miroslav
