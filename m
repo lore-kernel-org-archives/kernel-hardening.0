@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Z2It=DH=lists.openwall.com=kernel-hardening-return-20073-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=EtuI=DH=lists.openwall.com=kernel-hardening-return-20074-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-12.1 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EC70DC4741F
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 21:58:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6BC51C4363D
+	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 22:13:19 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F2C9620658
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 21:58:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A7D1D206F7
+	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 22:13:18 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="LHz9Zcam"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F2C9620658
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="vIRIWKYp"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A7D1D206F7
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20073-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22453 invoked by uid 550); 30 Sep 2020 21:58:25 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20074-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28560 invoked by uid 550); 30 Sep 2020 22:13:12 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,47 +25,45 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22421 invoked from network); 30 Sep 2020 21:58:24 -0000
+Received: (qmail 28521 invoked from network); 30 Sep 2020 22:13:11 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=t4yHwQDoeC7Qpj3w+ohiUiQzIr7R18uaPZSHZDC/wBA=;
-        b=LHz9Zcam7CeKHZ2FruDPRDuY0e07YHSqVvGalfh32T3Fuffnt2bHgr5rwgpKJmywr5
-         vYYvj2pj3Prw08WL6qW4WlpRdEOLUCrT+9hncLjFVN1Ft8Md5FT+cXeVzwCbCclkl92o
-         hiVEXzmM9WAhHeXPsScWmhH08ZPlqMeItatEG49WX1OQPxwmMQyfc2iYMB/Z7txm5yp9
-         RRa0vfTlhSB0oEdLv191LDpEXlrqdDLR97VB59MmnkaiwZ4LOuqrpJLUtPF1GuZMwqmk
-         sGSI3yP3GaxL9/tqCvhaOlXgx1uB7P44MkrgKvdzV+0gcVnwItyMO1mDDu9EjVXS5h+m
-         ERsg==
+        bh=/5JyINSMzWB8voXWZyV8ASlSh5pqRDmgZFl229b53xc=;
+        b=vIRIWKYp7RTSUGB8ntUgtpTfuIX9PNECXrtz7OF4WuzjxaB6ucqKe+labxFFw91k3e
+         QxLYAkxotsyYRcimIeAn7Z8xictu3hpLg464s+yhLPGoBBznroXq6KWSnvggTT+OKc+4
+         aDiohWxi2bv6qcv/jsb8X6MLhFKoc5VlhLVAgI9mvRP+ESLwvXgjzFulM/aycHPXZ43C
+         1PZWgQU//0UlvKQQQTsVxdhKKn2R1cZHSse1ucxAjFxlIjoTBB5mxWh5AjLIfsBpQ8Qr
+         kwHSrW70qM469yHzjDZCiyJ6JH0YYN8N5o79By5EDLYjMuAR2Pr4Z/ShSwy2ytzZ+9o+
+         xxNw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=t4yHwQDoeC7Qpj3w+ohiUiQzIr7R18uaPZSHZDC/wBA=;
-        b=M9WM3xXbifes8FX+IkW5dPpl1dlTgXi/MTykAviI2zH06M4lBfJ4TOKaPfbBfM5Qbk
-         tj5HKouPqLfLwxEobnuokNASViDyaIG3C0SZxMq1esVbIlGdAbcfTq7ghijhZWZtvMd5
-         fs+HzvB1YEouqsO2zVs7V2iUKKEB6rqvq6mjpfUqP2GWIDUsosU5FZse+v/yVCmZ1JoU
-         mMHvwOfHLELAtPp/FF3vbQA1APbDDgS0hrmf1XKSt6R2Mb9HQ9pgKzqGGhL82d1lwbLG
-         MPHe3w3xkWF9KZWxqJhgHMLXbG3uueEWElhNsn/xyhqywRlJr4MSiS6QmXIPnZI2HfyZ
-         lp0Q==
-X-Gm-Message-State: AOAM531n59UWfVbBRShetxTHxLdFIq2o2NH0wTkRwJzOKe667WHRMSm9
-	wJBDanto0iHlHJj6mFIGiTrPdpSA+nbNkn1OFdMY+g==
-X-Google-Smtp-Source: ABdhPJwzX9Viqx7zQJehaAJaWpHju7adBUzL4TnFBbDcXOlCvSY7YI0nAchHwIA2JZ5jrnbbiiAg20J+xNYGNfRzTkU=
-X-Received: by 2002:a17:902:c40d:b029:d2:93e8:1f4b with SMTP id
- k13-20020a170902c40db02900d293e81f4bmr4327278plk.29.1601503091998; Wed, 30
- Sep 2020 14:58:11 -0700 (PDT)
+        bh=/5JyINSMzWB8voXWZyV8ASlSh5pqRDmgZFl229b53xc=;
+        b=BwwAXhk/QxEIlr6iHRvTGHuqi5Dd5fofiy1GT84wjxDj3tGNSoOWTKptrOegIgXTj9
+         1aheFwfyMsEleua5D1ZbztUdCaqxzltY9b+ZmlNIrXTZs8Y5voTeKIF8NsCiuVM9IHQi
+         u9KQ497g3SBOAaXYWqUUWs1MkvCMEayUFlBvEpZPIeYHpBYcC4Dy9CU7UxtI4pu/pFIF
+         oEOq9ajy3i9yWZPgW1vN65/bBeI2CMh/76lxK+eH7aqxNQoYSt0L0qiqPd6/1W6cLSil
+         7KHmLGBLah+3GeKziyjdkTHH3/+aNQx/Jic3BPuLzryb95LHyyOCrRCuhwn+/E3dfMJT
+         LHvw==
+X-Gm-Message-State: AOAM530jv2LAoYJNsqH6/t9CC4A0PRH/lW5rc0QEc7pO348Z5ro8tHoQ
+	QQ4e5CYFwbMwlAJO7Duv/hwB+28rJLU2n8FLK/oOfg==
+X-Google-Smtp-Source: ABdhPJzjWahTDCS64Nwdg2Qz+9IkGNUdbgNKy/rFx3FC7CVjfHrBmMTaxElMCOz9QatJ5KolJbRCcmnwy3926ope18M=
+X-Received: by 2002:aa7:c0d3:: with SMTP id j19mr5304520edp.40.1601503980129;
+ Wed, 30 Sep 2020 15:13:00 -0700 (PDT)
 MIME-Version: 1.0
-References: <20200929214631.3516445-1-samitolvanen@google.com>
-In-Reply-To: <20200929214631.3516445-1-samitolvanen@google.com>
-From: Nick Desaulniers <ndesaulniers@google.com>
-Date: Wed, 30 Sep 2020 14:58:00 -0700
-Message-ID: <CAKwvOdnYBkUx9YpY9XLONbNYFD7JrOfGbRFQ8ZTf-sa2GTgQdQ@mail.gmail.com>
+References: <20200929214631.3516445-1-samitolvanen@google.com> <CAKwvOdnYBkUx9YpY9XLONbNYFD7JrOfGbRFQ8ZTf-sa2GTgQdQ@mail.gmail.com>
+In-Reply-To: <CAKwvOdnYBkUx9YpY9XLONbNYFD7JrOfGbRFQ8ZTf-sa2GTgQdQ@mail.gmail.com>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Wed, 30 Sep 2020 15:12:49 -0700
+Message-ID: <CABCJKufUU=s6GcRCRcmuKnANtyyKEBNJVuaPw416C1OPNgywEQ@mail.gmail.com>
 Subject: Re: [PATCH v4 00/29] Add support for Clang LTO
-To: Sami Tolvanen <samitolvanen@google.com>
+To: Nick Desaulniers <ndesaulniers@google.com>, Peter Zijlstra <peterz@infradead.org>
 Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, 
-	Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, 
+	Steven Rostedt <rostedt@goodmis.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
+	"Paul E. McKenney" <paulmck@kernel.org>, Kees Cook <keescook@chromium.org>, 
 	clang-built-linux <clang-built-linux@googlegroups.com>, 
 	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
 	linux-arch <linux-arch@vger.kernel.org>, 
@@ -75,91 +73,64 @@ Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>,
 	"maintainer:X86 ARCHITECTURE (32-BIT AND 64-BIT)" <x86@kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 
-On Tue, Sep 29, 2020 at 2:46 PM Sami Tolvanen <samitolvanen@google.com> wrote:
+On Wed, Sep 30, 2020 at 2:58 PM Nick Desaulniers
+<ndesaulniers@google.com> wrote:
 >
-> This patch series adds support for building x86_64 and arm64 kernels
-> with Clang's Link Time Optimization (LTO).
+> On Tue, Sep 29, 2020 at 2:46 PM Sami Tolvanen <samitolvanen@google.com> wrote:
+> >
+> > This patch series adds support for building x86_64 and arm64 kernels
+> > with Clang's Link Time Optimization (LTO).
+> >
+> > In addition to performance, the primary motivation for LTO is
+> > to allow Clang's Control-Flow Integrity (CFI) to be used in the
+> > kernel. Google has shipped millions of Pixel devices running three
+> > major kernel versions with LTO+CFI since 2018.
+> >
+> > Most of the patches are build system changes for handling LLVM
+> > bitcode, which Clang produces with LTO instead of ELF object files,
+> > postponing ELF processing until a later stage, and ensuring initcall
+> > ordering.
 >
-> In addition to performance, the primary motivation for LTO is
-> to allow Clang's Control-Flow Integrity (CFI) to be used in the
-> kernel. Google has shipped millions of Pixel devices running three
-> major kernel versions with LTO+CFI since 2018.
+> Sami, thanks for continuing to drive the series. I encourage you to
+> keep resending with fixes accumulated or dropped on a weekly cadence.
 >
-> Most of the patches are build system changes for handling LLVM
-> bitcode, which Clang produces with LTO instead of ELF object files,
-> postponing ELF processing until a later stage, and ensuring initcall
-> ordering.
+> The series worked well for me on arm64, but for x86_64 on mainline I
+> saw a stream of new objtool warnings:
+[...]
 
-Sami, thanks for continuing to drive the series. I encourage you to
-keep resending with fixes accumulated or dropped on a weekly cadence.
+Objtool normally won't print out these warnings when run on vmlinux.o,
+but we can't pass --vmlinux to objtool as that also implies noinstr
+validation right now. I think we'd have to split that from --vmlinux
+to avoid these. I can include a patch to add a --noinstr flag in v5.
+Peter, any thoughts about this?
 
-The series worked well for me on arm64, but for x86_64 on mainline I
-saw a stream of new objtool warnings:
+> I think those should be resolved before I provide any kind of tested
+> by tag.  My other piece of feedback was that I like the default
+> ThinLTO, but I think the help text in the Kconfig which is visible
+> during menuconfig could be improved by informing the user the
+> tradeoffs.  For example, if CONFIG_THINLTO is disabled, it should be
+> noted that full LTO will be used instead.  Also, that full LTO may
+> produce slightly better optimized binaries than ThinLTO, at the cost
+> of not utilizing multiple cores when linking and thus significantly
+> slower to link.
+>
+> Maybe explaining that setting it to "n" implies a full LTO build,
+> which will be much slower to link but possibly slightly faster would
+> be good?  It's not visible unless LTO_CLANG and ARCH_SUPPORTS_THINLTO
+> is enabled, so I don't think you need to explain that THINLTO without
+> those is *not* full LTO.  I'll leave the precise wording to you. WDYT?
 
-testing your LTO series; x86_64 defconfig + CONFIG_THINLTO:
-``` LTO vmlinux.o OBJTOOL vmlinux.o vmlinux.o: warning: objtool:
-wakeup_long64()+0x61: indirect jump found in RETPOLINE build
-vmlinux.o: warning: objtool: .text+0x308a: indirect jump found in
-RETPOLINE build vmlinux.o: warning: objtool: .text+0x30c5: indirect
-jump found in RETPOLINE build vmlinux.o: warning: objtool:
-copy_user_enhanced_fast_string() falls through to next function
-copy_user_generic_unrolled() vmlinux.o: warning: objtool:
-__memcpy_mcsafe() falls through to next function mcsafe_handle_tail()
-vmlinux.o: warning: objtool: memset() falls through to next function
-memset_erms() vmlinux.o: warning: objtool: __memcpy() falls through to
-next function memcpy_erms() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_rax() falls through to next function
-__x86_retpoline_rax() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_rbx() falls through to next function
-__x86_retpoline_rbx() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_rcx() falls through to next function
-__x86_retpoline_rcx() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_rdx() falls through to next function
-__x86_retpoline_rdx() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_rsi() falls through to next function
-__x86_retpoline_rsi() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_rdi() falls through to next function
-__x86_retpoline_rdi() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_rbp() falls through to next function
-__x86_retpoline_rbp() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r8() falls through to next function
-__x86_retpoline_r8() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r9() falls through to next function
-__x86_retpoline_r9() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r10() falls through to next function
-__x86_retpoline_r10() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r11() falls through to next function
-__x86_retpoline_r11() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r12() falls through to next function
-__x86_retpoline_r12() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r13() falls through to next function
-__x86_retpoline_r13() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r14() falls through to next function
-__x86_retpoline_r14() vmlinux.o: warning: objtool:
-__x86_indirect_thunk_r15() falls through to next function
-__x86_retpoline_r15() ```
+Sure, sounds good. I'll update the help text in the next version.
 
-I think those should be resolved before I provide any kind of tested
-by tag.  My other piece of feedback was that I like the default
-ThinLTO, but I think the help text in the Kconfig which is visible
-during menuconfig could be improved by informing the user the
-tradeoffs.  For example, if CONFIG_THINLTO is disabled, it should be
-noted that full LTO will be used instead.  Also, that full LTO may
-produce slightly better optimized binaries than ThinLTO, at the cost
-of not utilizing multiple cores when linking and thus significantly
-slower to link.
+> Also, when I look at your treewide DISABLE_LTO patch, I think "does
+> that need to be a part of this series, or is it a cleanup that can
+> stand on its own?"  I think it may be the latter?  Maybe it would help
+> shed one more patch than to have to carry it to just send it?  Or did
+> I miss something as to why it should remain a part of this series?
 
-Maybe explaining that setting it to "n" implies a full LTO build,
-which will be much slower to link but possibly slightly faster would
-be good?  It's not visible unless LTO_CLANG and ARCH_SUPPORTS_THINLTO
-is enabled, so I don't think you need to explain that THINLTO without
-those is *not* full LTO.  I'll leave the precise wording to you. WDYT?
+I suppose it could be stand-alone, but as these patches are also
+disabling LTO by filtering out flags in some of the same files,
+removing the unused DISABLE_LTO flags first would reduce confusion.
+But I'm fine with sending it separately too if that's preferred.
 
-Also, when I look at your treewide DISABLE_LTO patch, I think "does
-that need to be a part of this series, or is it a cleanup that can
-stand on its own?"  I think it may be the latter?  Maybe it would help
-shed one more patch than to have to carry it to just send it?  Or did
-I miss something as to why it should remain a part of this series?
--- 
-Thanks,
-~Nick Desaulniers
+Sami
