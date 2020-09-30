@@ -1,21 +1,24 @@
-Return-Path: <SRS0=cgDi=DH=lists.openwall.com=kernel-hardening-return-20066-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=aGid=DH=lists.openwall.com=kernel-hardening-return-20067-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.5 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_2 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-18.1 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E4E0FC4727E
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 11:02:39 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BA55FC4727E
+	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 12:51:31 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C854C2074B
-	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 11:02:38 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C854C2074B
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=huawei.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20066-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11408 invoked by uid 550); 30 Sep 2020 11:02:31 -0000
+	by mail.kernel.org (Postfix) with SMTP id B470120674
+	for <kernel-hardening@archiver.kernel.org>; Wed, 30 Sep 2020 12:51:30 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="L7X6TOpx"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B470120674
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20067-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20104 invoked by uid 550); 30 Sep 2020 12:51:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,262 +26,114 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9420 invoked from network); 30 Sep 2020 09:27:36 -0000
-Date: Wed, 30 Sep 2020 10:27:22 +0100
-From: Jonathan Cameron <Jonathan.Cameron@huawei.com>
-To: Ard Biesheuvel <ardb@kernel.org>
-CC: Linux ARM <linux-arm-kernel@lists.infradead.org>, "Jason A . Donenfeld"
-	<Jason@zx2c4.com>, Lorenzo Pieralisi <lorenzo.pieralisi@arm.com>, "Kernel
- Hardening" <kernel-hardening@lists.openwall.com>, Catalin Marinas
-	<catalin.marinas@arm.com>, ACPI Devel Maling List
-	<linux-acpi@vger.kernel.org>, Sudeep Holla <sudeep.holla@arm.com>, "Will
- Deacon" <will@kernel.org>, Linuxarm <linuxarm@huawei.com>
-Subject: Re: [PATCH v3 1/2] arm64/acpi: disallow AML memory opregions to
- access kernel memory
-Message-ID: <20200930102722.00000bff@huawei.com>
-In-Reply-To: <CAMj1kXGLVgAc0u9pSy0cKkmQXntdqjkkoM5wpdwLiwZfKOXKPA@mail.gmail.com>
-References: <20200626155832.2323789-1-ardb@kernel.org>
-	<20200626155832.2323789-2-ardb@kernel.org>
-	<20200928170216.00006ff2@huawei.com>
-	<CAMj1kXH1LZ15gzfW+7X5A4dMCD33DqNLnVrnLRo1zpw1Ekg+Lw@mail.gmail.com>
-	<20200928181755.000019bf@huawei.com>
-	<CAMj1kXGLVgAc0u9pSy0cKkmQXntdqjkkoM5wpdwLiwZfKOXKPA@mail.gmail.com>
-Organization: Huawei tech. R&D (UK)  Ltd.
-X-Mailer: Claws Mail 3.17.4 (GTK+ 2.24.32; i686-w64-mingw32)
+Received: (qmail 20084 invoked from network); 30 Sep 2020 12:51:22 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc:content-transfer-encoding;
+        bh=061+j+6egSPgQBxcQTsTW5phFlVIKpu1EERfRNYFm3I=;
+        b=L7X6TOpxVSA1+/tKoz+lBrre35i6hykvaIsiSKRHazC1OEzRn8KvgpXAhkiiZiVegY
+         hdXFas3bd8RElezjRN1Xeo7xyo7N2TkVLXtqU3NGt5Q8cVO3mr5kv+TEr1CYFZCRj4Z/
+         NW5e/35SOVX/7oaogpcsuZY+pT2bwreoZd2XwBqQnwrCKrSePcNpSqJb0uFF/Id6AfFs
+         KOYk8XjmATWuR/1g8kLMRJOhm10DPe9hbErIsERzBQXL30eRmJc/Lg9yUE0wgl2QU6er
+         RnRvuI5XvMS9yKOd/4XI7PcEwBEw2l3rf/ujZ4+IWPrfSKuDeZm1cQ/nKtWd1HwBDjMP
+         EdIA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=061+j+6egSPgQBxcQTsTW5phFlVIKpu1EERfRNYFm3I=;
+        b=ISSX3jUhmjbMPKe3+E8+giDC5BDb9fvU6BmR08Sk5EazVrvojPbRVoIPp2vervqP/U
+         2MTSnwyQuQ7tjQ47Bf26dS+BZePKuBTvMV76bCWPT8/Lvs0J1l5YeqIOjVk9XusW+7K/
+         4iK+4RoTiFtvj8tEZzDtypPfk4UZFDNSjnoOMWsigb97tbEpu+VuV/H/TtKIq06iDRk8
+         xgCB9tZz/ICFyAxpUYNlXsGmtbdJm8AKWpnloptO9Tj52xkGO3BL/VsD5t/ldFMPWTZO
+         h/GQNctdps4IEBuJNu4VHQ0kSajA0cFV/S2aey25oYkkjcGCSLpvl691JHIO2cC2Iyh5
+         uhMA==
+X-Gm-Message-State: AOAM530KxfY3Qv4I7gcXWcQqdNyl2rXcii4WpxlWgut0Tdw8Y8mIlM6L
+	acp3LN7yKg+5uQTsovN6itRy7nXxzT5VFhhY9EIIkA==
+X-Google-Smtp-Source: ABdhPJzmy6011bRCaz/kYoxOSxfcZV6R3wEOIH1+eORfD6559vOkDZuINzOB4rqg9WTL3BgoD4kKzA3W5h9iSh2kySo=
+X-Received: by 2002:a7b:cd93:: with SMTP id y19mr2785473wmj.112.1601470270876;
+ Wed, 30 Sep 2020 05:51:10 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset="US-ASCII"
-Content-Transfer-Encoding: 7bit
-X-Originating-IP: [10.227.96.57]
-X-ClientProxiedBy: lhreml710-chm.china.huawei.com (10.201.108.61) To
- lhreml710-chm.china.huawei.com (10.201.108.61)
-X-CFilter-Loop: Reflected
+References: <20200929183513.380760-1-alex.popov@linux.com> <20200929183513.380760-3-alex.popov@linux.com>
+In-Reply-To: <20200929183513.380760-3-alex.popov@linux.com>
+From: Alexander Potapenko <glider@google.com>
+Date: Wed, 30 Sep 2020 14:50:59 +0200
+Message-ID: <CAG_fn=WY9OFKuy6utMHOgyr+1DYNsuzVruGCGHMDnEnaLY6s9g@mail.gmail.com>
+Subject: Re: [PATCH RFC v2 2/6] mm/slab: Perform init_on_free earlier
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, 
+	Will Deacon <will@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, 
+	Dmitry Vyukov <dvyukov@google.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, 
+	David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, 
+	Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <masahiroy@kernel.org>, 
+	Masami Hiramatsu <mhiramat@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Peter Zijlstra <peterz@infradead.org>, Krzysztof Kozlowski <krzk@kernel.org>, 
+	Patrick Bellasi <patrick.bellasi@arm.com>, David Howells <dhowells@redhat.com>, 
+	Eric Biederman <ebiederm@xmission.com>, Johannes Weiner <hannes@cmpxchg.org>, 
+	Laura Abbott <labbott@redhat.com>, Arnd Bergmann <arnd@arndb.de>, 
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Daniel Micay <danielmicay@gmail.com>, 
+	Andrey Konovalov <andreyknvl@google.com>, Matthew Wilcox <willy@infradead.org>, 
+	Pavel Machek <pavel@denx.de>, Valentin Schneider <valentin.schneider@arm.com>, 
+	kasan-dev <kasan-dev@googlegroups.com>, 
+	Linux Memory Management List <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	LKML <linux-kernel@vger.kernel.org>, notify@kernel.org
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-On Tue, 29 Sep 2020 11:29:48 +0200
-Ard Biesheuvel <ardb@kernel.org> wrote:
+On Tue, Sep 29, 2020 at 8:35 PM Alexander Popov <alex.popov@linux.com> wrot=
+e:
+>
+> Currently in CONFIG_SLAB init_on_free happens too late, and heap
+> objects go to the heap quarantine being dirty. Lets move memory
+> clearing before calling kasan_slab_free() to fix that.
+>
+> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+Reviewed-by: Alexander Potapenko <glider@google.com>
 
-> On Mon, 28 Sep 2020 at 19:18, Jonathan Cameron
-> <Jonathan.Cameron@huawei.com> wrote:
-> >
-> > On Mon, 28 Sep 2020 18:49:35 +0200
-> > Ard Biesheuvel <ardb@kernel.org> wrote:
-> >  
-> > > On Mon, 28 Sep 2020 at 18:02, Jonathan Cameron
-> > > <Jonathan.Cameron@huawei.com> wrote:  
-> > > >
-> > > > On Fri, 26 Jun 2020 17:58:31 +0200
-> > > > Ard Biesheuvel <ardb@kernel.org> wrote:
-> > > >  
-> > > > > AML uses SystemMemory opregions to allow AML handlers to access MMIO
-> > > > > registers of, e.g., GPIO controllers, or access reserved regions of
-> > > > > memory that are owned by the firmware.
-> > > > >
-> > > > > Currently, we also allow AML access to memory that is owned by the
-> > > > > kernel and mapped via the linear region, which does not seem to be
-> > > > > supported by a valid use case, and exposes the kernel's internal
-> > > > > state to AML methods that may be buggy and exploitable.
-> > > > >
-> > > > > On arm64, ACPI support requires booting in EFI mode, and so we can cross
-> > > > > reference the requested region against the EFI memory map, rather than
-> > > > > just do a minimal check on the first page. So let's only permit regions
-> > > > > to be remapped by the ACPI core if
-> > > > > - they don't appear in the EFI memory map at all (which is the case for
-> > > > >   most MMIO), or
-> > > > > - they are covered by a single region in the EFI memory map, which is not
-> > > > >   of a type that describes memory that is given to the kernel at boot.
-> > > > >
-> > > > > Reported-by: Jason A. Donenfeld <Jason@zx2c4.com>
-> > > > > Signed-off-by: Ard Biesheuvel <ardb@kernel.org>  
-> > > >
-> > > > Hi Ard,
-> > > >
-> > > > Ran into a problem with this one. See below
-> > > >  
-> > > > > ---
-> > > > >  arch/arm64/include/asm/acpi.h | 15 +----
-> > > > >  arch/arm64/kernel/acpi.c      | 66 ++++++++++++++++++++
-> > > > >  2 files changed, 67 insertions(+), 14 deletions(-)
-> > > > >
-> > > > > diff --git a/arch/arm64/include/asm/acpi.h b/arch/arm64/include/asm/acpi.h
-> > > > > index a45366c3909b..bd68e1b7f29f 100644
-> > > > > --- a/arch/arm64/include/asm/acpi.h
-> > > > > +++ b/arch/arm64/include/asm/acpi.h
-> > > > > @@ -47,20 +47,7 @@
-> > > > >  pgprot_t __acpi_get_mem_attribute(phys_addr_t addr);
-> > > > >
-> > > > >  /* ACPI table mapping after acpi_permanent_mmap is set */
-> > > > > -static inline void __iomem *acpi_os_ioremap(acpi_physical_address phys,
-> > > > > -                                         acpi_size size)
-> > > > > -{
-> > > > > -     /* For normal memory we already have a cacheable mapping. */
-> > > > > -     if (memblock_is_map_memory(phys))
-> > > > > -             return (void __iomem *)__phys_to_virt(phys);
-> > > > > -
-> > > > > -     /*
-> > > > > -      * We should still honor the memory's attribute here because
-> > > > > -      * crash dump kernel possibly excludes some ACPI (reclaim)
-> > > > > -      * regions from memblock list.
-> > > > > -      */
-> > > > > -     return __ioremap(phys, size, __acpi_get_mem_attribute(phys));
-> > > > > -}
-> > > > > +void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size);
-> > > > >  #define acpi_os_ioremap acpi_os_ioremap
-> > > > >
-> > > > >  typedef u64 phys_cpuid_t;
-> > > > > diff --git a/arch/arm64/kernel/acpi.c b/arch/arm64/kernel/acpi.c
-> > > > > index a7586a4db142..01b861e225b0 100644
-> > > > > --- a/arch/arm64/kernel/acpi.c
-> > > > > +++ b/arch/arm64/kernel/acpi.c
-> > > > > @@ -261,6 +261,72 @@ pgprot_t __acpi_get_mem_attribute(phys_addr_t addr)
-> > > > >       return __pgprot(PROT_DEVICE_nGnRnE);
-> > > > >  }
-> > > > >
-> > > > > +void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size)
-> > > > > +{
-> > > > > +     efi_memory_desc_t *md, *region = NULL;
-> > > > > +     pgprot_t prot;
-> > > > > +
-> > > > > +     if (WARN_ON_ONCE(!efi_enabled(EFI_MEMMAP)))
-> > > > > +             return NULL;
-> > > > > +
-> > > > > +     for_each_efi_memory_desc(md) {
-> > > > > +             u64 end = md->phys_addr + (md->num_pages << EFI_PAGE_SHIFT);
-> > > > > +
-> > > > > +             if (phys < md->phys_addr || phys >= end)
-> > > > > +                     continue;
-> > > > > +
-> > > > > +             if (phys + size > end) {
-> > > > > +                     pr_warn(FW_BUG "requested region covers multiple EFI memory regions\n");
-> > > > > +                     return NULL;
-> > > > > +             }
-> > > > > +             region = md;
-> > > > > +             break;
-> > > > > +     }
-> > > > > +
-> > > > > +     /*
-> > > > > +      * It is fine for AML to remap regions that are not represented in the
-> > > > > +      * EFI memory map at all, as it only describes normal memory, and MMIO
-> > > > > +      * regions that require a virtual mapping to make them accessible to
-> > > > > +      * the EFI runtime services.
-> > > > > +      */
-> > > > > +     prot = __pgprot(PROT_DEVICE_nGnRnE);
-> > > > > +     if (region) {
-> > > > > +             switch (region->type) {
-> > > > > +             case EFI_LOADER_CODE:
-> > > > > +             case EFI_LOADER_DATA:  
-> > > >
-> > > > Unfortunately this seems to have broken overriding of ACPI tables from an initrd.
-> > > > My particular test environment is qemu + EDK2.
-> > > >
-> > > > It only has obvious visible affect on tables that are used late in the boot such as PPTT
-> > > > as they get dropped before they are used.
-> > > >
-> > > > These are read after ACPICA is initialized and acpi_reallocate_root_table()
-> > > > has been called.  The back trace is:
-> > > >
-> > > > acpi_os_ioremap+0xfc/0x288
-> > > > acpi_os_map_iomem+0xc4/0x188
-> > > > acpi_os_map_memory+0x18/0x28
-> > > > acpi_tb_acquire_table+0x54/0x8c
-> > > > acpi_tb_validate_table+0x34/0x5c
-> > > > acpi_tb_validate_temp_table+0x34/0x40
-> > > > acpi_tb_verify_temp_table+0x48/0x250
-> > > > acpi_reallocate_root_table+0x12c/0x160
-> > > >
-> > > > Seems that the table is in a region of type EFI_LOADER_DATA.
-> > > >
-> > > > I don't really know enough about this area to be sure what the right fix is or
-> > > > even whether this is a kernel issue, or one that should be fixed elsewhere in
-> > > > the stack.
-> > > >
-> > > > For now I'm just carry a hack that treats EFI_LOADER_DATA in the same fashion as
-> > > > EFI_ACPI_RECLAIM_MEMORY below.
-> > > >
-> > > > What's the right way to fix this?
-> > > >  
-> > >
-> > > Hi Jonathan,
-> > >
-> > > That is an excellent question.
-> > >
-> > > The purpose of this change is to ensure that firmware cannot
-> > > manipulate the internal state of the kernel. So as long as we can
-> > > ensure that this memory is not claimed by the kernel's memory
-> > > subsystem, we should be fine.
-> > >
-> > > Since this is an obvious debug feature, what we could do is reserve
-> > > this memory permanently in some way, and make the test take this into
-> > > account.  
-> >
-> > Whilst it is a debug feature, I wonder if it gets shipped in production
-> > hardware.  If not, could be we cynical and just drop the check if the
-> > relevant config option is enabled?
-> >
-> > Perhaps just don't release the EFI_LOADER_DATA for other use? (if
-> > this option is enabled only)
-> >  
-> > >
-> > > Do you have a full stack trace? How early does this run?  
-> >
-> > For the place where it first occurs, ie the trace above, the acpi_reallocate_root_table() is
-> > the call from acpi_early_init() from start_kernel().
-> >
-> > We hit the table a lot during later calls though and hence would run into the
-> > same problem.
-> >  
-> 
-> Could you try the patch below? Since the memory holding the tables is
-> already memblock_reserve()d, we can just mark it NOMAP, and permit r/o
-> remapping of NOMAP regions.
-
-Looks good.  Thanks.
-
-Tested-by: Jonathan Cameron <Jonathan.Cameron@huawei.com>
-Reviewed-by: Jonathan Cameron <Jonathan.Cameron@huawei.com>
-
-
-> 
-> diff --git a/arch/arm64/kernel/acpi.c b/arch/arm64/kernel/acpi.c
-> index a85174d05473..84da869c5ac4 100644
-> --- a/arch/arm64/kernel/acpi.c
-> +++ b/arch/arm64/kernel/acpi.c
-> @@ -298,8 +298,11 @@ void __iomem
-> *acpi_os_ioremap(acpi_physical_address phys, acpi_size size)
->                 case EFI_BOOT_SERVICES_DATA:
->                 case EFI_CONVENTIONAL_MEMORY:
->                 case EFI_PERSISTENT_MEMORY:
-> -                       pr_warn(FW_BUG "requested region covers kernel
-> memory @ %pa\n", &phys);
-> -                       return NULL;
-> +                       if (memblock_is_map_memory(phys)) {
-> +                               pr_warn(FW_BUG "requested region
-> covers kernel memory @ %pa\n", &phys);
-> +                               return NULL;
-> +                       }
-> +                       fallthrough;
-> 
->                 case EFI_RUNTIME_SERVICES_CODE:
->                         /*
-> @@ -388,3 +391,8 @@ int apei_claim_sea(struct pt_regs *regs)
-> 
->         return err;
->  }
+> ---
+>  mm/slab.c | 5 +++--
+>  1 file changed, 3 insertions(+), 2 deletions(-)
+>
+> diff --git a/mm/slab.c b/mm/slab.c
+> index 3160dff6fd76..5140203c5b76 100644
+> --- a/mm/slab.c
+> +++ b/mm/slab.c
+> @@ -3414,6 +3414,9 @@ static void cache_flusharray(struct kmem_cache *cac=
+hep, struct array_cache *ac)
+>  static __always_inline void __cache_free(struct kmem_cache *cachep, void=
+ *objp,
+>                                          unsigned long caller)
+>  {
+> +       if (unlikely(slab_want_init_on_free(cachep)))
+> +               memset(objp, 0, cachep->object_size);
 > +
-> +void arch_reserve_mem_area(acpi_physical_address addr, size_t size)
-> +{
-> +       memblock_mark_nomap(addr, size);
-> +}
-> diff --git a/include/linux/acpi.h b/include/linux/acpi.h
-> index 1e4cdc6c7ae2..64ae25c59d55 100644
-> --- a/include/linux/acpi.h
-> +++ b/include/linux/acpi.h
-> @@ -958,7 +958,7 @@ void acpi_os_set_prepare_extended_sleep(int
-> (*func)(u8 sleep_state,
->  acpi_status acpi_os_prepare_extended_sleep(u8 sleep_state,
->                                            u32 val_a, u32 val_b);
-> 
-> -#ifdef CONFIG_X86
-> +#ifndef CONFIG_IA64
->  void arch_reserve_mem_area(acpi_physical_address addr, size_t size);
->  #else
->  static inline void arch_reserve_mem_area(acpi_physical_address addr,
+>         /* Put the object into the quarantine, don't touch it for now. */
+>         if (kasan_slab_free(cachep, objp, _RET_IP_))
+>                 return;
+> @@ -3432,8 +3435,6 @@ void ___cache_free(struct kmem_cache *cachep, void =
+*objp,
+>         struct array_cache *ac =3D cpu_cache_get(cachep);
+>
+>         check_irq_off();
+> -       if (unlikely(slab_want_init_on_free(cachep)))
+> -               memset(objp, 0, cachep->object_size);
+>         kmemleak_free_recursive(objp, cachep->flags);
+>         objp =3D cache_free_debugcheck(cachep, objp, caller);
+>         memcg_slab_free_hook(cachep, virt_to_head_page(objp), objp);
+> --
+> 2.26.2
+>
 
+
+--=20
+Alexander Potapenko
+Software Engineer
+
+Google Germany GmbH
+Erika-Mann-Stra=C3=9Fe, 33
+80636 M=C3=BCnchen
+
+Gesch=C3=A4ftsf=C3=BChrer: Paul Manicle, Halimah DeLaine Prado
+Registergericht und -nummer: Hamburg, HRB 86891
+Sitz der Gesellschaft: Hamburg
