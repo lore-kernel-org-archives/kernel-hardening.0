@@ -1,20 +1,23 @@
-Return-Path: <SRS0=cTou=DI=lists.openwall.com=kernel-hardening-return-20084-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=LBZR=DJ=lists.openwall.com=kernel-hardening-return-20085-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 57C0EC4727E
-	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Oct 2020 21:27:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 40C67C4363D
+	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Oct 2020 14:13:43 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4785E20796
-	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Oct 2020 21:27:34 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4785E20796
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=tycho.pizza
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20084-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 23662 invoked by uid 550); 1 Oct 2020 21:27:27 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4600C206DD
+	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Oct 2020 14:13:41 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="jIxXL97f"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4600C206DD
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20085-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32028 invoked by uid 550); 2 Oct 2020 14:13:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,102 +25,62 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1935 invoked from network); 1 Oct 2020 19:33:36 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=tycho.pizza; h=
-	date:from:to:cc:subject:message-id:references:mime-version
-	:content-type:content-transfer-encoding:in-reply-to; s=fm1; bh=T
-	avF71lBlL6nBdjv5tFqv1tjUk2DGNXMCqE9op0VZ2Q=; b=H7sl1jHjD7RJU5Xfy
-	R7+BWtx6TORRox+x/EBMJICRYKvR6xgTrQ+djSOjK1xEUENmSxmfDaReKKu1sVSX
-	oVoZ0W/NrADNHFEg7vOIurQmHwFwU2RQXEUcIZuzNLyH6/a3h67/QgAu2Otkpt4J
-	ZVGx4VlJz4B/HG2XT+irPPs5LkC/d52PPyv5mi816tRUzPK72rAlsTRRVelu4yTu
-	FmpBXbepqilYZY+Z1bSxXXETyMEeJ8Rq+Tm2GVFoRJ57PiTuyXiFTKMK2vNltzNO
-	tSh43UpIhFUvYWTNrZK0hS9nILr26nXi9Z2cQzBl3jWBRe5RN9CBFTz8AdZN7PDt
-	GNyqg==
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-	messagingengine.com; h=cc:content-transfer-encoding:content-type
-	:date:from:in-reply-to:message-id:mime-version:references
-	:subject:to:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender
-	:x-sasl-enc; s=fm3; bh=TavF71lBlL6nBdjv5tFqv1tjUk2DGNXMCqE9op0VZ
-	2Q=; b=hAH2AVTa9yCO7FGUQGrojKp/3r6j0dYp8ieilCpUAuZP7vcDYF9spGl7/
-	ZCF0cwDyATtI9QvAm2bXy8iC5s2FQx/kusgT89ax1PTgED1hwFS2XuB+qcWcJ5do
-	DIYigOh6swsrd6ekJBSMf0v8ZvfvTnALIWSsD9zL+ddF90LcSAK86olirh7ULGXI
-	P9I6h++5tyIlIvI1R40pI4BO/Ac0TG7Z2b9nSOFH5ANXktE6bz/YSd9XUMXRC2PG
-	Ml4nHJU1W1aKT+C/4BS1ZfisY3A2uaOcef6bvY+DFgjDLdmyGliiEB98Zsvqoesz
-	+FXH6Y5wyIrugIY1sITtfUZ5gBhIA==
-X-ME-Sender: <xms:_S52X187-qJxUt7IQ-jYKh0FfXBFw3u32M0ThHucgNiJhDkiItUJyQ>
-    <xme:_S52X5u9bJvf-deIsQ_khz8fGcdpuZy-bgparwGQyQ9obhtV_UWfcFs0pksZ4Ll9K
-    -E-X31M1Bhj5ReYDSU>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedujedrfeeggddugedvucetufdoteggodetrfdotf
-    fvucfrrhhofhhilhgvmecuhfgrshhtofgrihhlpdfqfgfvpdfurfetoffkrfgpnffqhgen
-    uceurghilhhouhhtmecufedttdenucesvcftvggtihhpihgvnhhtshculddquddttddmne
-    cujfgurhepfffhvffukfhfgggtugfgjgesthekredttddtudenucfhrhhomhepvfihtghh
-    ohcutehnuggvrhhsvghnuceothihtghhohesthihtghhohdrphhiiiiirgeqnecuggftrf
-    grthhtvghrnheplefgudefleejhefhvedufeegudffgfelgeevgfejfeffieeufefgffet
-    udeljeefnecukfhppeduvdekrddutdejrddvgedurddujeeinecuvehluhhsthgvrhfuih
-    iivgeptdenucfrrghrrghmpehmrghilhhfrhhomhepthihtghhohesthihtghhohdrphhi
-    iiiirg
-X-ME-Proxy: <xmx:_S52XzBV6gtZHK1akrygkJU1hQhCNNEC-GqUotHiOC8Qt9ROd43xcw>
-    <xmx:_S52X5fRcgiySVAueUx9Dzr_6NNywkMDxpsPseB0L0XPQaHnvjiwGg>
-    <xmx:_S52X6OrqCaEHBqw9O47JJfc5eBWrFPnYdlxjp5XgJquckmunk4uEw>
-    <xmx:Ay92XzMHukmtAlVW3f0yw7L0osJxhu2Evb0JtOoYWHOQTQ8AXQ5EGyGGevY>
-Date: Thu, 1 Oct 2020 13:33:06 -0600
-From: Tycho Andersen <tycho@tycho.pizza>
-To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>,	Arnd Bergmann <arnd@arndb.de>,
- James Morris <jmorris@namei.org>,	Jonathan Corbet <corbet@lwn.net>,
- Shuah Khan <shuah@kernel.org>,	Aleksa Sarai <cyphar@cyphar.com>,
-	Alexei Starovoitov <ast@kernel.org>,	Andy Lutomirski <luto@kernel.org>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christian Heimes <christian@python.org>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>,	Eric Biggers <ebiggers@kernel.org>,
-	Eric Chiang <ericchiang@google.com>,	Florian Weimer <fweimer@redhat.com>,
- Jan Kara <jack@suse.cz>,	Jann Horn <jannh@google.com>,
- Kees Cook <keescook@chromium.org>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,	Matthew Wilcox <willy@infradead.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	Miklos Szeredi <mszeredi@redhat.com>,	Mimi Zohar <zohar@linux.ibm.com>,
-	Philippe =?iso-8859-1?Q?Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Sean Christopherson <sean.j.christopherson@intel.com>,
-	Steve Dower <steve.dower@python.org>,	Steve Grubb <sgrubb@redhat.com>,
-	Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
-	Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org,
-	linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org,
-	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Subject: Re: [PATCH v11 2/3] arch: Wire up trusted_for(2)
-Message-ID: <20201001193306.GE1260245@cisco>
-References: <20201001170232.522331-1-mic@digikod.net>
- <20201001170232.522331-3-mic@digikod.net>
+Received: (qmail 32005 invoked from network); 2 Oct 2020 14:13:32 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1601648000;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=T8R1XgQI7k4cK5q1LMAze0lbj0we9wkSuLhijnQjdY4=;
+	b=jIxXL97fgKS9jwteVh9H03knarsGTvXqdIqSk0HItgAMFHydlC+y/UrmJUzhY1WgFH9fc/
+	NSWlgKg4y34O2ilkA9L3opSRT92pxWipvq3ders2w07JNaHURmHCxRCz/24OVklySqc/h+
+	utujEff2mFKsSP7KZZE4hYPQNNyTv9Q=
+X-MC-Unique: KaOFE74rOgejG5g4BEKn6g-1
+Date: Fri, 2 Oct 2020 09:13:03 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Miroslav Benes <mbenes@suse.cz>,
+	Sami Tolvanen <samitolvanen@google.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Will Deacon <will@kernel.org>, Steven Rostedt <rostedt@goodmis.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Kees Cook <keescook@chromium.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
+	x86@kernel.org, jthierry@redhat.com
+Subject: Re: [PATCH v4 04/29] objtool: Add a pass for generating __mcount_loc
+Message-ID: <20201002141303.hyl72to37wudoi66@treble>
+References: <20200929214631.3516445-1-samitolvanen@google.com>
+ <20200929214631.3516445-5-samitolvanen@google.com>
+ <alpine.LSU.2.21.2010011504340.6689@pobox.suse.cz>
+ <20201001133612.GQ2628@hirez.programming.kicks-ass.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20201001170232.522331-3-mic@digikod.net>
+In-Reply-To: <20201001133612.GQ2628@hirez.programming.kicks-ass.net>
+X-Scanned-By: MIMEDefang 2.79 on 10.5.11.13
 
-On Thu, Oct 01, 2020 at 07:02:31PM +0200, Mickaël Salaün wrote:
-> --- a/include/uapi/asm-generic/unistd.h
-> +++ b/include/uapi/asm-generic/unistd.h
-> @@ -859,9 +859,11 @@ __SYSCALL(__NR_openat2, sys_openat2)
->  __SYSCALL(__NR_pidfd_getfd, sys_pidfd_getfd)
->  #define __NR_faccessat2 439
->  __SYSCALL(__NR_faccessat2, sys_faccessat2)
-> +#define __NR_trusted_for 443
-> +__SYSCALL(__NR_trusted_for, sys_trusted_for)
->  
->  #undef __NR_syscalls
-> -#define __NR_syscalls 440
-> +#define __NR_syscalls 444
+On Thu, Oct 01, 2020 at 03:36:12PM +0200, Peter Zijlstra wrote:
+> On Thu, Oct 01, 2020 at 03:17:07PM +0200, Miroslav Benes wrote:
+> 
+> > I also wonder about making 'mcount' command separate from 'check'. Similar 
+> > to what is 'orc' now. But that could be done later.
+> 
+> I'm not convinced more commands make sense. That only begets us the
+> problem of having to run multiple commands.
 
-Looks like a rebase problem here?
+Agreed, it gets hairy when we need to combine things.  I think "orc" as
+a separate subcommand was a mistake.
 
-Tycho
+We should change to something like
+
+  objtool run [--check] [--orc] [--mcount]
+  objtool dump [--orc] [--mcount]
+
+-- 
+Josh
+
