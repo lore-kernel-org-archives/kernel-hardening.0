@@ -1,20 +1,23 @@
-Return-Path: <SRS0=VtsP=DJ=lists.openwall.com=kernel-hardening-return-20087-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=CF2e=DK=lists.openwall.com=kernel-hardening-return-20088-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=BAYES_00,
+X-Spam-Status: No, score=-3.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 67A7FC4363C
-	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Oct 2020 15:22:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C0C0DC4363D
+	for <kernel-hardening@archiver.kernel.org>; Sat,  3 Oct 2020 09:53:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6DC74206DC
-	for <kernel-hardening@archiver.kernel.org>; Fri,  2 Oct 2020 15:22:47 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6DC74206DC
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=1wt.eu
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20087-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25910 invoked by uid 550); 2 Oct 2020 15:22:41 -0000
+	by mail.kernel.org (Postfix) with SMTP id BED56206C9
+	for <kernel-hardening@archiver.kernel.org>; Sat,  3 Oct 2020 09:53:29 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=gmx.net header.i=@gmx.net header.b="YgyxAo9i"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BED56206C9
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20088-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 12000 invoked by uid 550); 3 Oct 2020 09:53:21 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,42 +25,110 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25878 invoked from network); 2 Oct 2020 15:22:40 -0000
-Date: Fri, 2 Oct 2020 17:22:19 +0200
-From: Willy Tarreau <w@1wt.eu>
-To: Thibaut Sautereau <thibaut.sautereau@clip-os.org>
-Cc: "David S . Miller" <davem@davemloft.net>, Jakub Kicinski <kuba@kernel.org>,
-        Kees Cook <keescook@chromium.org>, netdev@vger.kernel.org,
-        kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org,
-        Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-        Linus Torvalds <torvalds@linux-foundation.org>,
-        Emese Revfy <re.emese@gmail.com>
-Subject: Re: [PATCH] random32: Restore __latent_entropy attribute on
- net_rand_state
-Message-ID: <20201002152219.GB3875@1wt.eu>
-References: <20201002151610.24258-1-thibaut.sautereau@clip-os.org>
+Received: (qmail 11977 invoked from network); 3 Oct 2020 09:53:21 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1601718746;
+	bh=+J10i8bNFrOqOG+3GURM3R/KC2tKxHk7bbB91+yozrE=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=YgyxAo9ipXCQEdwyhONQS+h1PTqn+hieEUf2kcfmMKmC2iYTGHN7xL2TmTFzp0TtB
+	 mf5ffJupFNvyQJoKYlHbI2fMpjGIMKdHsig7UZZDDhhNc/MOlDRh66QmtxQASKpHsh
+	 uBc2ARI0Bt9UPKGOIeW6rbl2UzdAcJDvpo0/4NVg=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Sat, 3 Oct 2020 11:52:12 +0200
+From: John Wood <john.wood@gmx.com>
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com,
+	John Wood <john.wood@gmx.com>, Matthew Wilcox <willy@infradead.org>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Alexander Viro <viro@zeniv.linux.org.uk>,
+	Ingo Molnar <mingo@redhat.com>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Juri Lelli <juri.lelli@redhat.com>,
+	Vincent Guittot <vincent.guittot@linaro.org>,
+	Dietmar Eggemann <dietmar.eggemann@arm.com>,
+	Ben Segall <bsegall@google.com>, Mel Gorman <mgorman@suse.de>,
+	Luis Chamberlain <mcgrof@kernel.org>,
+	Iurii Zaikin <yzaikin@google.com>, James Morris <jmorris@namei.org>,
+	"Serge E. Hallyn" <serge@hallyn.com>, linux-doc@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+	linux-security-module@vger.kernel.org
+Subject: Re: [RFC PATCH 3/6] security/fbfam: Use the api to manage statistics
+Message-ID: <20201003095212.GA2911@ubuntu>
+References: <20200910202107.3799376-1-keescook@chromium.org>
+ <20200910202107.3799376-4-keescook@chromium.org>
+ <202009101625.0E3B6242@keescook>
+ <20200929194712.541c860c@oasis.local.home>
+ <20200929194924.31640617@oasis.local.home>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20201002151610.24258-1-thibaut.sautereau@clip-os.org>
-User-Agent: Mutt/1.6.1 (2016-04-27)
+In-Reply-To: <20200929194924.31640617@oasis.local.home>
+X-Provags-ID: V03:K1:ggAP+Xm36kOZKXGb8H7ns8txs5t75Yr2LN5k1wKKGh7OrSyP4rv
+ hABdr9ji9QjJMvdKJxa0Bo3pYk88oKRhyy8fuCUgx+hQKixmUvHbc1MDhKrV5cNsE+bxTP2
+ Dk9PDaf2LUhtvdfHI+c0tcesCUkPkqHAYbnqWHE26/KCx1PlkWnubZnT6EbHkaMsMgXGyuU
+ xlSBDE65qQDt9mTbJg9QA==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:3i4hMYig/Sg=:QgDlo3Fo4OAuy7Zosj84zw
+ ldZ6Q2QLZiTRCIufr3bSmOYnjwZ1lFU18uEMJkn+4Fr8NbsA9s42eEVDlMksDspaRsYMexdGO
+ 45XVRt/IoXnOVWdrg2jyNDsQsFsDT+3H1Ktx5oT8R9JIL9uxREu+JqSjEwscQEoNmE+2FDWK9
+ w3ENzD6ACmNPB7bStYhkzZXhtS3OlXIMeRHFBKaPl4LjgliDTwfcZ42K2KSfJaV2ut3iyunwk
+ OvrkZsHIHx2N+CC45RRk+zAse5/4ZmTd2llFRdGacvZyVD5G5Amt5tmbhEK8Io7fSkxqtQMTb
+ yDTVfCdXw9Ou2YjoTZGdc29O3NWP9ksSQr2s0Jm4KF+PSAIFY0MVvQ3tkz9QEGZeCTNiJl24t
+ AYWmCP8MFQunYK+/7KQUkV4syjZfKQsOGhWoBeGCogNxTVGAl7eau5NWc506r8MwznKGP0E7X
+ 5H/soS8iQ9tGJsbrQW2bi4Cr9aI+n9aKj8QSpG9Gyg+tJSh7pnxX7nDG0r5KOYZIavMNAoJTm
+ 7O1XtZagVphvyo8BF5X4B0nqUuRwvWiHSa0j31be255+FxswtdXj4AGteOxTeHdryUNcC2N4c
+ IXfBlvZOOtceo/mv8+KomewuYW8ZJyA2FiOXYI98B17Ox7ywOnqeJ33erC301YOEqIhKqpSUB
+ +SnDwitQk+63gfTYzwTfBb6WyjfY0SG+ko9aDzqPTtrRgQU9k9GDC50hN0+lTY6UcxuKz2GWx
+ 3rsTrH4I5k+HD4pxZRyybfx9ezKoAeC+CW17blJUyroVYsqcc7BoaOllFwrrHUqHL8MY4U8Wn
+ gaaOtEm4hIEfgxa4uztTg0NUDg7O7ioBZqC/x+IvNEswdLiS1uYlqTYNUvFhyO49Is7036EVX
+ LiR8BLxqRq3Q+T9OXQQzLOe1RMa2iZjvWxCHq0e9nKAq/mZxo+ZeNv24yNDjQ4pafCASpkTl5
+ 70/RcD2tUgsEg2XVTTpfBuOCUXF3pJr8FyW26PMeJ87GMMR/QCJWUzw4O7E/hT95AP5/rpNIL
+ VaoQENCp6HmFy1Y4ufI99vRrKQHUYIhaGbVh8XMbtSsb9LUS0MtfJUWhVAO0d1T9xywLoHp/e
+ ZgQE09w+RUrtSAEjD6tj+aj/MuFI7e4IMmAqlimOSAnwzxIyC44HiVHojeYn6G4FKtK74g6sC
+ NtpHowXAs6E12LUUobi0vXwNrCdz1IgyUGcpsfaU6OcKS4f50Pb61rPs/b3S5+WDqCnUgcMhI
+ US28q0ydgG9GDKNrO6/GL+5MNwwcCb3XfMxjC9g==
+Content-Transfer-Encoding: quoted-printable
 
-On Fri, Oct 02, 2020 at 05:16:11PM +0200, Thibaut Sautereau wrote:
-> From: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-> 
-> Commit f227e3ec3b5c ("random32: update the net random state on interrupt
-> and activity") broke compilation and was temporarily fixed by Linus in
-> 83bdc7275e62 ("random32: remove net_rand_state from the latent entropy
-> gcc plugin") by entirely moving net_rand_state out of the things handled
-> by the latent_entropy GCC plugin.
-> 
-> From what I understand when reading the plugin code, using the
-> __latent_entropy attribute on a declaration was the wrong part and
-> simply keeping the __latent_entropy attribute on the variable definition
-> was the correct fix.
+Hi Steven,
 
-Ah thank you, this is what I tried to figure and failed to! Spender
-mentioned that a one-liner was all that was needed to fix this but
-never responded to my request asking about it.
+On Tue, Sep 29, 2020 at 07:49:24PM -0400, Steven Rostedt wrote:
+> On Tue, 29 Sep 2020 19:47:12 -0400
+> Steven Rostedt <rostedt@goodmis.org> wrote:
+>
+> > On Thu, 10 Sep 2020 16:33:38 -0700
+> > Kees Cook <keescook@chromium.org> wrote:
+> >
+> > > > @@ -1940,6 +1941,7 @@ static int bprm_execve(struct linux_binprm *=
+bprm,
+> > > >  	task_numa_free(current, false);
+> > > >  	if (displaced)
+> > > >  		put_files_struct(displaced);
+> > > > +	fbfam_execve();
+> > >
+> > > As mentioned in the other emails, I think this could trivially be
+> > > converted into an LSM: all the hooks are available AFAICT. If you on=
+ly
+> > > want to introspect execve _happening_, you can use bprm_creds_for_ex=
+ec
+> > > which is called a few lines above. Otherwise, my prior suggestion ("=
+the
+> > > exec has happened" hook via brpm_cred_committing, etc).
+> >
+> > And if its information only, you could just register a callback to the
+> > trace_sched_process_exec() tracepoint and do whatever you want then.
+> >
+> > The tracepoints are available for anyone to attach to. Not just tracin=
+g.
+> >
+> And there's also trace_sched_process_fork() and
+> trace_sched_process_exit().
 
-Willy
+Since this feature requires a pointer to the statistical data in the
+task_struct structure, and the LSM allows this using the security blobs,
+I think that the best for now is convert all the code to an LSM. Anyway,
+thanks for the suggestion.
+
+> -- Steve
+
+Thanks,
+John Wood
+
