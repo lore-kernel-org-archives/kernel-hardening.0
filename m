@@ -1,23 +1,23 @@
-Return-Path: <SRS0=JgKd=DN=lists.openwall.com=kernel-hardening-return-20105-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=w4wO=DN=lists.openwall.com=kernel-hardening-return-20106-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.6 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-11.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BD583C4363A
-	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Oct 2020 02:12:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AE76FC4363A
+	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Oct 2020 02:16:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BE7CE2085B
-	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Oct 2020 02:12:49 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id B12382085B
+	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Oct 2020 02:16:56 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="Qxk3h4dI"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BE7CE2085B
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20105-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7604 invoked by uid 550); 6 Oct 2020 02:12:44 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="VSSaWD0W"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B12382085B
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20106-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 10188 invoked by uid 550); 6 Oct 2020 02:16:50 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,77 +25,92 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7565 invoked from network); 6 Oct 2020 02:12:43 -0000
+Received: (qmail 10168 invoked from network); 6 Oct 2020 02:16:50 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=VZRD+TMaL8IPQ0MGbmyliD18F5b146FgOWwgTc6dgq4=;
-        b=Qxk3h4dI0WGdYw3MgojRy3uS/mvhPwWzlYo/2snbGBUZgqXvojT2aIw2SZNRj7ahCC
-         Dsc457ZOM4KJAIYzcXJphrjNvv7Ix2ADoPqRBGeYI39hntpFj/WvtjN1Uu9O29p0Yxce
-         1Toi3J6qBr54e1SZCFb4ekFCzxtw+4I88tsNM=
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=ifD/jW+MjbtS2EijgQAS4OITv0Z9zRA4cL1N04HQHu4=;
+        b=VSSaWD0WAT8lHVeaIEU8br+ZuZLpGvG3RSgyTiKVEHpRLj5caJa8VuxrOzMMZmi4/I
+         +jc18B7Thyp3/FetZnGQgiu+3jGf71BUbdlYdfQ/sXkO4yIffJZxsNlUT3OTfTYc+V53
+         s/rD9zQmzH7e/+nYz+ii0l6JB/cgE0XhGNA8YvQrzBYVVZv+tfs+QQFQOzjgU6l2HxUK
+         XgMhDW8lxfC88/jHL1K9CxVfkjKO7y42/ifl50NEIctn5atANq4PIvf9c4TvRkLRtmhv
+         tnJm3J56L+FQTruYZN7URj8QELVaRv71JNVB9HeCWh34hlHaMpNzgxJKGO/gMn3MIfVk
+         OgKg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=VZRD+TMaL8IPQ0MGbmyliD18F5b146FgOWwgTc6dgq4=;
-        b=lvUmvTwxUOM2j+zIc9P0+rHS21lecr2Zf+HET3SyQ3uIHg4a99fbidZ85sVYc8ZbGz
-         bCZoPVmKLe2lD3VPeb0VnrOATNCwp2dWWcdtwCLtOL2FWAlKPiz6KNXVxpoNvQ8ZcH/i
-         mHUJDzB/Yg/wCzFUiknrj7NFSA69WqBDPwT3+sKk+rj8BOkfM+XSh7ZCupb8zS7Xb+ya
-         pB7AWelG5H6JsqFV2oDDe9f2+BzaL0HSEU3gZLY2oF7rNCGhZoLJtTaLQpcZM9BfJG4I
-         DZCXb9hkqZ7ZEBJZ1IWKEjVEN9kdxelWXtElD/Ve5BP0z1WvrF2QTCAxaKHHOPTuC5gR
-         hYuA==
-X-Gm-Message-State: AOAM531Iai9KcpmRDvJBzlo4X/9aiCFb8JZ+H93GajxW5f4zYU0DM5Jj
-	dSIU7gpqDQFCZKoRZyAeptiLrA==
-X-Google-Smtp-Source: ABdhPJyVFFS9wGSPx2kS3ePT3bDnzMoFQeQuxGgqj3ijS0b1+VmeQQ38aHDXOr3umuIHUuzRADHQMA==
-X-Received: by 2002:aa7:97a8:0:b029:13e:d13d:a105 with SMTP id d8-20020aa797a80000b029013ed13da105mr2299234pfq.33.1601950351477;
-        Mon, 05 Oct 2020 19:12:31 -0700 (PDT)
-Date: Mon, 5 Oct 2020 19:12:29 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Thibaut Sautereau <thibaut.sautereau@clip-os.org>
-Cc: "David S . Miller" <davem@davemloft.net>,
-	Jakub Kicinski <kuba@kernel.org>, netdev@vger.kernel.org,
-	kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Willy Tarreau <w@1wt.eu>, Emese Revfy <re.emese@gmail.com>,
-	Theodore Ts'o <tytso@mit.edu>,
-	Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH] random32: Restore __latent_entropy attribute on
- net_rand_state
-Message-ID: <202010051910.BC7E9F4@keescook>
-References: <20201002151610.24258-1-thibaut.sautereau@clip-os.org>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=ifD/jW+MjbtS2EijgQAS4OITv0Z9zRA4cL1N04HQHu4=;
+        b=d7nD5izj82BAIey7ct3MADY7XqJN7e2Cq1IXGmv5Jg1TL7sXd2gMeV/jc1mdrPO8Pi
+         pzDPlHhrgZxgkB2inuSIjbspQZ7azCT1J754kToYRQex3tKWi+MVR+1TMPLJdrqLXYlJ
+         cRFshLK8434ceg/s6IYbIoVH2fzaOqAMNazc0qEtloUk7Y+suJ35n4aWi5HEcl98on9y
+         SawWpCCHReSQXGGTl7sdQnlrcNH6qMuy9tDcuaUYRqO1FAJrWDH8kuehmhiCBnQh3xcK
+         OU7tf8WII+FBsfYT1xT+WoV1yt97+skJ4z2oe9rOwNgXcI+hs/qlKJBs+DuJBRqSOfLj
+         s7gA==
+X-Gm-Message-State: AOAM5303Eor5P2kay0uBCu+FxjDVG5YA5plDlsaB02t1boZlZiSHWMKE
+	g8EXItYjT6fAfDXPLjojakRcBK+YZgjKD9livBhaUw==
+X-Google-Smtp-Source: ABdhPJwxo4AWg8S4Ze5aWA5+V2LLRVib5nWtluQURuOp9DVBriFY+LJHVl4ksm/ZNF2+q+SZWj8S0GCu3SVtK3S+aco=
+X-Received: by 2002:a17:906:fcae:: with SMTP id qw14mr2849150ejb.537.1601950598646;
+ Mon, 05 Oct 2020 19:16:38 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201002151610.24258-1-thibaut.sautereau@clip-os.org>
+References: <20200929183513.380760-1-alex.popov@linux.com> <91d564a6-9000-b4c5-15fd-8774b06f5ab0@linux.com>
+ <CAG48ez1tNU_7n8qtnxTYZ5qt-upJ81Fcb0P2rZe38ARK=iyBkA@mail.gmail.com>
+ <20201006004414.GP20115@casper.infradead.org> <202010051905.62D79560@keescook>
+In-Reply-To: <202010051905.62D79560@keescook>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 6 Oct 2020 04:16:12 +0200
+Message-ID: <CAG48ez19ecXyqz+GZVsqqM73WZo7tNL4F7Q1vTTP6QG75NaWKw@mail.gmail.com>
+Subject: Re: [PATCH RFC v2 0/6] Break heap spraying needed for exploiting use-after-free
+To: Kees Cook <keescook@chromium.org>
+Cc: Matthew Wilcox <willy@infradead.org>, Alexander Popov <alex.popov@linux.com>, 
+	Will Deacon <will@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, 
+	Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Christoph Lameter <cl@linux.com>, 
+	Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, 
+	Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, 
+	Masahiro Yamada <masahiroy@kernel.org>, Masami Hiramatsu <mhiramat@kernel.org>, 
+	Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, 
+	Krzysztof Kozlowski <krzk@kernel.org>, Patrick Bellasi <patrick.bellasi@arm.com>, 
+	David Howells <dhowells@redhat.com>, Eric Biederman <ebiederm@xmission.com>, 
+	Johannes Weiner <hannes@cmpxchg.org>, Laura Abbott <labbott@redhat.com>, Arnd Bergmann <arnd@arndb.de>, 
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Daniel Micay <danielmicay@gmail.com>, 
+	Andrey Konovalov <andreyknvl@google.com>, Pavel Machek <pavel@denx.de>, 
+	Valentin Schneider <valentin.schneider@arm.com>, kasan-dev <kasan-dev@googlegroups.com>, 
+	Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	kernel list <linux-kernel@vger.kernel.org>, notify@kernel.org
+Content-Type: text/plain; charset="UTF-8"
 
-On Fri, Oct 02, 2020 at 05:16:11PM +0200, Thibaut Sautereau wrote:
-> From: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-> 
-> Commit f227e3ec3b5c ("random32: update the net random state on interrupt
-> and activity") broke compilation and was temporarily fixed by Linus in
-> 83bdc7275e62 ("random32: remove net_rand_state from the latent entropy
-> gcc plugin") by entirely moving net_rand_state out of the things handled
-> by the latent_entropy GCC plugin.
-> 
-> From what I understand when reading the plugin code, using the
-> __latent_entropy attribute on a declaration was the wrong part and
-> simply keeping the __latent_entropy attribute on the variable definition
-> was the correct fix.
-> 
-> Fixes: 83bdc7275e62 ("random32: remove net_rand_state from the latent entropy gcc plugin")
-> Cc: Linus Torvalds <torvalds@linux-foundation.org>
-> Cc: Willy Tarreau <w@1wt.eu>
-> Cc: Emese Revfy <re.emese@gmail.com>
-> Signed-off-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+On Tue, Oct 6, 2020 at 4:09 AM Kees Cook <keescook@chromium.org> wrote:
+> On Tue, Oct 06, 2020 at 01:44:14AM +0100, Matthew Wilcox wrote:
+> > On Tue, Oct 06, 2020 at 12:56:33AM +0200, Jann Horn wrote:
+> > > It seems to me like, if you want to make UAF exploitation harder at
+> > > the heap allocator layer, you could do somewhat more effective things
+> > > with a probably much smaller performance budget. Things like
+> > > preventing the reallocation of virtual kernel addresses with different
+> > > types, such that an attacker can only replace a UAF object with
+> > > another object of the same type. (That is not an idea I like very much
+> > > either, but I would like it more than this proposal.) (E.g. some
+> > > browsers implement things along those lines, I believe.)
+> >
+> > The slab allocator already has that functionality.  We call it
+> > TYPESAFE_BY_RCU, but if forcing that on by default would enhance security
+> > by a measurable amount, it wouldn't be a terribly hard sell ...
+>
+> Isn't the "easy" version of this already controlled by slab_merge? (i.e.
+> do not share same-sized/flagged kmem_caches between different caches)
 
-Yes, that looks correct. Thank you!
+Yes, but slab_merge still normally frees slab pages to the page allocator.
 
-Acked-by: Kees Cook <keescook@chromium.org>
+> The large trouble are the kmalloc caches, which don't have types
+> associated with them. Having implicit kmem caches based on the type
+> being allocated there would need some pretty extensive plumbing, I
+> think?
 
-I'm not sure the best tree for this. Ted, Andrew, Linus? I'll take it
-via my gcc plugin tree if no one else takes it. :)
-
--- 
-Kees Cook
+Well, a bit of plumbing, at least. You'd need to teach the compiler
+frontend to grab type names from sizeof() and stuff that type
+information somewhere, e.g. by generating an extra function argument
+referring to the type, or something like that. Could be as simple as a
+reference to a bss section variable that encodes the type in the name,
+and the linker already has the logic to automatically deduplicate
+those across compilation units - that way, on the compiler side, a
+pure frontend plugin might do the job?
