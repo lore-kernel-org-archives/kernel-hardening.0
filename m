@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Ns9r=DQ=lists.openwall.com=kernel-hardening-return-20134-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/9PO=DQ=lists.openwall.com=kernel-hardening-return-20135-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,17 +8,17 @@ X-Spam-Status: No, score=-20.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E872CC2D0A2
-	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Oct 2020 16:14:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0D44FC43457
+	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Oct 2020 16:14:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 30B2E222C3
-	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Oct 2020 16:14:37 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id EA6C32227E
+	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Oct 2020 16:14:48 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Cs8QGabJ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 30B2E222C3
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="DN2nbIA+"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EA6C32227E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20134-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1707 invoked by uid 550); 9 Oct 2020 16:14:00 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20135-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1921 invoked by uid 550); 9 Oct 2020 16:14:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,43 +26,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1630 invoked from network); 9 Oct 2020 16:13:59 -0000
+Received: (qmail 1826 invoked from network); 9 Oct 2020 16:14:01 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=sender:date:in-reply-to:message-id:mime-version:references:subject
          :from:to:cc;
-        bh=U9AWLI1l8Wt7A0cF28qGkPASeONcRk66Flk+7SBLZDk=;
-        b=Cs8QGabJC78gMfxCfdvLPfCPnCBG8mqCKPXEuMCN2NC6cv08XQMiyI4smlwEiGiNII
-         K5gTrYd24O0LiqamFF0wMr7ffmfDahQ9HIbIV6xVeWfcY4n4loXTL7qB4SwSDhaTv22i
-         JczK/qDFNcSAT/rGSksO53/MTogKRMrT4041PX2tsxI6Ol1/yOYMbOF5s0gzKJQaLOor
-         yww9sOX437QtKLvGDUEhwKcWSCy/hihhvRz4D2dTrLX4XDXEq0a/ORKzM2aJL7PziE+Q
-         dfJ53ml7GAYdcnN7kTVctFYRDH3JwtUPDTivWPnwTUWriMtoL1NC1u8waNqdhrkRHmX2
-         5NJw==
+        bh=7nDmrXZCx73dwVoWaBJWws0sco61U1uoy5jdWelG6WI=;
+        b=DN2nbIA+Ea8OlLc+3AKBonqGM3GmMfTUWyTWEDPwWZmqVLbuyDQg2tEgeCIbhY5vT+
+         sqSiOaSNRm3/Cu5BzKeCFhq+5iMo6w/ptNEV+j1q/1MfrtYqQGZWUnE/fLQqMyAZlX3W
+         PSUcsiKiIapwRVSIMFV/W2U2CeTcSUwN70Oev3fkE69QWb8hpcDfymgWJ8F4ZFdyTyz6
+         MAvOq723ZTZBn4zC0IwEfsfwhe+oKD9lgxZEFm4MPduNm99CSDhTm5ACDGPS5kU7Rvbr
+         qsSkgu/3HHoW/4RWIbDFlaHtadE7SdMv1F9oo5Cgh3cRfFkpZKYD0Pm/52Tpfpv6wcto
+         ZPHA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=U9AWLI1l8Wt7A0cF28qGkPASeONcRk66Flk+7SBLZDk=;
-        b=Tmcujy4dQnPKo14dnrbFpKKActXVJsF1Zx/MZBIYwcvu2nnZ3Fhwaet4VOAxqNel5f
-         I2D8eRQmiU18PXXMWJU+xFDfk+XxM8/AxBQHO25fdg9UKa+d9D9pYmNNOqer8TgTkHj6
-         4pMuhLCD/ZMjwVAkvHPdLjC+s2iUMgOrn98wBjGoA664K23kCB22zIfiqCR2sMtSgzFf
-         Xd48cTHSbL/U1YU+noH1IuX7LOFrB5X7VdmEgxOOvrvSsJ6z4uuUKwph+ay2bL/4V22Q
-         R1L8uyIIzH0NpZiRTwLzTRFHu3fr2Yd8Kw4eIi4sFzKSJrryn60OYc6UibBqw9VQwZjn
-         ukHg==
-X-Gm-Message-State: AOAM532U2k5YaTyOuo5DyUc37GxLn2wbXRqBeWgnAiHiv9yLGoLsSjPa
-	RDGw2msA8zfbgWoTE0DdXISYBGnCstC1X0ULbkQ=
-X-Google-Smtp-Source: ABdhPJw4RMWV15gzdZdV2Vo6jQV+j2a4t3/6R15rRlHdwc/PJqRQfP3Xi6A8PE05kNsUfa7/hoQh3uRP5EnfqZb7Aso=
+        bh=7nDmrXZCx73dwVoWaBJWws0sco61U1uoy5jdWelG6WI=;
+        b=bi+xLdHYHpWMyPVlv5a5SWaZwqVtzQ3oPinqlbxMyeCciwfuXDlDVqo6OGURqOUlIP
+         Usq73Y7RK+w3uHdN7io+ftwfFsaqlvqcujvbporjnAz4ZGEd2hn6veX8BzmErlrBLkaA
+         Kscq/4G/clCy6huSxxZ5GEuyzuViRbVqMfhl1TzI0oDIHHDmWrol4v7t34fK4DzOwfce
+         fm8+fifWwCSYmuN7NxvcJy/8yn3JDdRCbAgCiDISeXi1bcbL5PtPLGlGgGgEFBYOk6Q8
+         f+AUwDkZxD4eBp85ArjsNzGAHT6xcQhvZSdU0ss09XFkhJXYw6baodCuFVRrFET3wDdW
+         wdLA==
+X-Gm-Message-State: AOAM53023lU9NV2hbn9jtCw0sGP6WY/SShN1QSrlGhMuc8YjAptcGnfZ
+	RlpAEFuK/jdg0UiZSeGhIpfD+f5NuL938FL95FA=
+X-Google-Smtp-Source: ABdhPJwW7/o9ouK/TWL+PhtJ8niBTly20ssnNSGwHpOCGkYkG2ug1tHo8HcISNULAZuU3cPOjrarbQEzNyUkjBWQ9rU=
 Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
 X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
- (user=samitolvanen job=sendgmr) by 2002:ad4:4454:: with SMTP id
- l20mr13954751qvt.49.1602260026976; Fri, 09 Oct 2020 09:13:46 -0700 (PDT)
-Date: Fri,  9 Oct 2020 09:13:12 -0700
+ (user=samitolvanen job=sendgmr) by 2002:a17:90a:e00f:: with SMTP id
+ u15mr5630295pjy.87.1602260029576; Fri, 09 Oct 2020 09:13:49 -0700 (PDT)
+Date: Fri,  9 Oct 2020 09:13:13 -0700
 In-Reply-To: <20201009161338.657380-1-samitolvanen@google.com>
-Message-Id: <20201009161338.657380-4-samitolvanen@google.com>
+Message-Id: <20201009161338.657380-5-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20201009161338.657380-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.28.0.1011.ga647a8990f-goog
-Subject: [PATCH v5 03/29] objtool: Don't autodetect vmlinux.o
+Subject: [PATCH v5 04/29] tracing: move function tracer options to Kconfig
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, 
 	Steven Rostedt <rostedt@goodmis.org>
@@ -75,55 +75,117 @@ Cc: Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfound
 	Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-With LTO, we run objtool on vmlinux.o, but don't want noinstr
-validation. This change requires --vmlinux to be passed to objtool
-explicitly.
+Move function tracer options to Kconfig to make it easier to add
+new methods for generating __mcount_loc, and to make the options
+available also when building kernel modules.
 
-Suggested-by: Peter Zijlstra <peterz@infradead.org>
+Note that FTRACE_MCOUNT_USE_* options are updated on rebuild and
+therefore, work even if the .config was generated in a different
+environment.
+
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
 ---
- scripts/link-vmlinux.sh       | 2 +-
- tools/objtool/builtin-check.c | 6 +-----
- 2 files changed, 2 insertions(+), 6 deletions(-)
+ Makefile               | 20 ++++++++------------
+ kernel/trace/Kconfig   | 16 ++++++++++++++++
+ scripts/Makefile.build |  6 ++----
+ 3 files changed, 26 insertions(+), 16 deletions(-)
 
-diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
-index e6e2d9e5ff48..372c3719f94c 100755
---- a/scripts/link-vmlinux.sh
-+++ b/scripts/link-vmlinux.sh
-@@ -64,7 +64,7 @@ objtool_link()
- 	local objtoolopt;
+diff --git a/Makefile b/Makefile
+index a913a6829754..434da9fcbf3c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -841,12 +841,8 @@ KBUILD_CFLAGS += $(DEBUG_CFLAGS)
+ export DEBUG_CFLAGS
  
- 	if [ -n "${CONFIG_VMLINUX_VALIDATION}" ]; then
--		objtoolopt="check"
-+		objtoolopt="check --vmlinux"
- 		if [ -z "${CONFIG_FRAME_POINTER}" ]; then
- 			objtoolopt="${objtoolopt} --no-fp"
- 		fi
-diff --git a/tools/objtool/builtin-check.c b/tools/objtool/builtin-check.c
-index 6518c1a6ad1e..ff4d7f5c0e80 100644
---- a/tools/objtool/builtin-check.c
-+++ b/tools/objtool/builtin-check.c
-@@ -41,7 +41,7 @@ const struct option check_options[] = {
+ ifdef CONFIG_FUNCTION_TRACER
+-ifdef CONFIG_FTRACE_MCOUNT_RECORD
+-  # gcc 5 supports generating the mcount tables directly
+-  ifeq ($(call cc-option-yn,-mrecord-mcount),y)
+-    CC_FLAGS_FTRACE	+= -mrecord-mcount
+-    export CC_USING_RECORD_MCOUNT := 1
+-  endif
++ifdef CONFIG_FTRACE_MCOUNT_USE_CC
++  CC_FLAGS_FTRACE	+= -mrecord-mcount
+   ifdef CONFIG_HAVE_NOP_MCOUNT
+     ifeq ($(call cc-option-yn, -mnop-mcount),y)
+       CC_FLAGS_FTRACE	+= -mnop-mcount
+@@ -854,6 +850,12 @@ ifdef CONFIG_FTRACE_MCOUNT_RECORD
+     endif
+   endif
+ endif
++ifdef CONFIG_FTRACE_MCOUNT_USE_RECORDMCOUNT
++  ifdef CONFIG_HAVE_C_RECORDMCOUNT
++    BUILD_C_RECORDMCOUNT := y
++    export BUILD_C_RECORDMCOUNT
++  endif
++endif
+ ifdef CONFIG_HAVE_FENTRY
+   ifeq ($(call cc-option-yn, -mfentry),y)
+     CC_FLAGS_FTRACE	+= -mfentry
+@@ -863,12 +865,6 @@ endif
+ export CC_FLAGS_FTRACE
+ KBUILD_CFLAGS	+= $(CC_FLAGS_FTRACE) $(CC_FLAGS_USING)
+ KBUILD_AFLAGS	+= $(CC_FLAGS_USING)
+-ifdef CONFIG_DYNAMIC_FTRACE
+-	ifdef CONFIG_HAVE_C_RECORDMCOUNT
+-		BUILD_C_RECORDMCOUNT := y
+-		export BUILD_C_RECORDMCOUNT
+-	endif
+-endif
+ endif
  
- int cmd_check(int argc, const char **argv)
- {
--	const char *objname, *s;
-+	const char *objname;
- 	struct objtool_file *file;
- 	int ret;
+ # We trigger additional mismatches with less inlining
+diff --git a/kernel/trace/Kconfig b/kernel/trace/Kconfig
+index a4020c0b4508..927ad004888a 100644
+--- a/kernel/trace/Kconfig
++++ b/kernel/trace/Kconfig
+@@ -595,6 +595,22 @@ config FTRACE_MCOUNT_RECORD
+ 	depends on DYNAMIC_FTRACE
+ 	depends on HAVE_FTRACE_MCOUNT_RECORD
  
-@@ -52,10 +52,6 @@ int cmd_check(int argc, const char **argv)
++config FTRACE_MCOUNT_USE_PATCHABLE_FUNCTION_ENTRY
++	bool
++	depends on FTRACE_MCOUNT_RECORD
++
++config FTRACE_MCOUNT_USE_CC
++	def_bool y
++	depends on $(cc-option,-mrecord-mcount)
++	depends on !FTRACE_MCOUNT_USE_PATCHABLE_FUNCTION_ENTRY
++	depends on FTRACE_MCOUNT_RECORD
++
++config FTRACE_MCOUNT_USE_RECORDMCOUNT
++	def_bool y
++	depends on !FTRACE_MCOUNT_USE_PATCHABLE_FUNCTION_ENTRY
++	depends on !FTRACE_MCOUNT_USE_CC
++	depends on FTRACE_MCOUNT_RECORD
++
+ config TRACING_MAP
+ 	bool
+ 	depends on ARCH_HAVE_NMI_SAFE_CMPXCHG
+diff --git a/scripts/Makefile.build b/scripts/Makefile.build
+index a467b9323442..a4634aae1506 100644
+--- a/scripts/Makefile.build
++++ b/scripts/Makefile.build
+@@ -178,8 +178,7 @@ cmd_modversions_c =								\
+ 	fi
+ endif
  
- 	objname = argv[0];
+-ifdef CONFIG_FTRACE_MCOUNT_RECORD
+-ifndef CC_USING_RECORD_MCOUNT
++ifdef CONFIG_FTRACE_MCOUNT_USE_RECORDMCOUNT
+ # compiler will not generate __mcount_loc use recordmcount or recordmcount.pl
+ ifdef BUILD_C_RECORDMCOUNT
+ ifeq ("$(origin RECORDMCOUNT_WARN)", "command line")
+@@ -206,8 +205,7 @@ recordmcount_source := $(srctree)/scripts/recordmcount.pl
+ endif # BUILD_C_RECORDMCOUNT
+ cmd_record_mcount = $(if $(findstring $(strip $(CC_FLAGS_FTRACE)),$(_c_flags)),	\
+ 	$(sub_cmd_record_mcount))
+-endif # CC_USING_RECORD_MCOUNT
+-endif # CONFIG_FTRACE_MCOUNT_RECORD
++endif # CONFIG_FTRACE_MCOUNT_USE_RECORDMCOUNT
  
--	s = strstr(objname, "vmlinux.o");
--	if (s && !s[9])
--		vmlinux = true;
--
- 	file = objtool_open_read(objname);
- 	if (!file)
- 		return 1;
+ ifdef CONFIG_STACK_VALIDATION
+ ifneq ($(SKIP_STACK_VALIDATION),1)
 -- 
 2.28.0.1011.ga647a8990f-goog
 
