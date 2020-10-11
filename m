@@ -1,23 +1,23 @@
-Return-Path: <SRS0=3Mjb=DR=lists.openwall.com=kernel-hardening-return-20166-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Cyef=DS=lists.openwall.com=kernel-hardening-return-20167-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-16.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
-	USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2CE42C433E7
-	for <kernel-hardening@archiver.kernel.org>; Sat, 10 Oct 2020 00:01:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 764FBC433DF
+	for <kernel-hardening@archiver.kernel.org>; Sun, 11 Oct 2020 06:24:53 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2C69F221FD
-	for <kernel-hardening@archiver.kernel.org>; Sat, 10 Oct 2020 00:01:20 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 6BEFA20795
+	for <kernel-hardening@archiver.kernel.org>; Sun, 11 Oct 2020 06:24:52 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="mijmHtCM"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2C69F221FD
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20166-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12250 invoked by uid 550); 10 Oct 2020 00:01:14 -0000
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="aB8IV3i4"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6BEFA20795
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20167-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1186 invoked by uid 550); 11 Oct 2020 06:24:43 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,84 +25,55 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12217 invoked from network); 10 Oct 2020 00:01:14 -0000
+Received: (qmail 1150 invoked from network); 11 Oct 2020 06:24:43 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=NyEG6unrPY9TR7tF+FNQAaLApT1kctBGIfqP3l5IFb4=;
-        b=mijmHtCMvGsgDu4uYd7w3AkGuavHKsRtISq1sPYHXYFaJw1WU+TYM2fX64XYscUKFv
-         oU1cjxRYTJM1zp/QWqADJjTuB9hPhK+ZKhKINQnaiff6eqCzhX5w5wrxbRlGrJ0vyWiv
-         ro3O+Z6DBIysL9dvjFawfl9YpJ7VnqXVeFq0auogXHWgzG/yIY2Ex8Vg0F1RLU4QxqSG
-         bPLvghG+BsOIiRJ7zUxm1IgTps9IY/HH1VRZFA09lds3Gl17NZfWxvoZiUPcmFwlV7So
-         V3Y3SV5Dt+Y35HFON8xSJwLyPjVkAmtWcAvVa4XffcGawnjsCdKwV9RsaQRB1eOPndHI
-         e4Ew==
+        d=gmail.com; s=20161025;
+        h=mime-version:from:date:message-id:subject:to:cc;
+        bh=zegky+Rq+o8gqkwuaNNc9MiixR/91JzID9lMBKd1E5s=;
+        b=aB8IV3i4HHkN71iTTI+J+tAUbGO1LD90ziI/GL8uL5f/CUb+vIEcygS4ZSpFNDxxLU
+         bRz/2mB5lSTU58Q/7Pb+vQ5St5mgdbeYIEqiyMflXkZ4jL8L1SIwDnn3EPgRQZMOoodW
+         xNsNlviqL59n7xsrs0aGZ8nJ9BhMPznWA5GLKMKYdRTx1KGzEM/CDy/33dkD3vhPGBUS
+         FmN85V6nALARET4OzoM2pODNLMTqGtPtQgnCZ7/uOOLaPLMRWr/QMEdJzzfZLBlcqaBB
+         KLffgvc1O2xOFhM/ZlbGuT46Cx68h1oKRRV6We7boZO6YVEzQ3RUFe51ddusyCF0dbJ8
+         /mIA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=NyEG6unrPY9TR7tF+FNQAaLApT1kctBGIfqP3l5IFb4=;
-        b=JsjsNwaeqYi4bgudxaAqszU8krB65UmcbriKC6cOhKMuzMGGiwwzdAGj2rphuOplfc
-         mMQU3Sb04ldGe9hQAKF8z7FYhO2xX9OTLOLWaQ5X4YDznXa8Xod626ImrEYVsVS2Pk7K
-         dR9OcWJ8+X7B3uXykdsHfp7Cjgw1ro5uwaUusfmk5zKrMrVJ9OKw1WZx5F6/CHSVKeHn
-         vKQD+xlz31GEvjoP8TZrqdolUtkAcHnbwW37/UBOsTC2erZxpmxg3FX17vszIcnHe9AK
-         ZDcxJGIfn0RNrNzcGirgABTqB6JK6WXgGyQRhi8ZTJ3EZgXmQIdLDKbSH2OpjRikvfFq
-         YFLA==
-X-Gm-Message-State: AOAM5308CLdNWH9sm2fnyCpT3sMWd7JkwKzIntXtTj/Bgl8ez6+sHR/A
-	N0E/tKfwa84X3xIVa97tZ3MHgKl+bwwqk1p65yk7CQ==
-X-Google-Smtp-Source: ABdhPJygCrm7pkL/BYEq335cylOsmwx8yyljt1uWu6UwT8l62xqSHabdTtXkuhnBI7dZHTHKXqo8112Hls6msX6/ovk=
-X-Received: by 2002:a50:dec9:: with SMTP id d9mr1852468edl.145.1602288062227;
- Fri, 09 Oct 2020 17:01:02 -0700 (PDT)
+        h=x-gm-message-state:mime-version:from:date:message-id:subject:to:cc;
+        bh=zegky+Rq+o8gqkwuaNNc9MiixR/91JzID9lMBKd1E5s=;
+        b=mtXaGh42M1KfIQ0379bs6nFNxWffzIVSbJZec7ur3+lMddewF5NYsNuByia4PuWctd
+         ak95adV+r/llQfSvy2Aq9sHbsExENQ5LXWLJovl/uNXyo9YGqDG9f+zfe9oqc0m6Il5r
+         7vg/gsptZrod+3LEj77MahrEiEemvjiKlTQ80lv/2HT7M4jm+5IeXkrz9K4v2hKUbcjq
+         qJFr/YisGbo+RYYqSsFiSEeS209XN9lqFuJco8ceelUNG4NN/ldGfb/yqnsdijgG7xuA
+         2c6uUJ8ASWLK/+j8cCGYhB7L3Lfunn12EabWDLzDgABmqpAeHhbNmzLLpOEc+tx0G3UQ
+         Bn0A==
+X-Gm-Message-State: AOAM5309h19D6/DqPTvoX0POVOGBkyn5srZBHd/UCFDp4xEGC96vFChJ
+	QnPyID2KMSl1N8fMhhlGuMb3obUYcdIXlmkFe8l+iwez
+X-Google-Smtp-Source: ABdhPJyoSbN1t4Q1CYhG55OkCaU7g9hrVFtDI1oryQTfJJUqf3+5mqjKhIIJJ0YDgnhWaend7zrJ5HwYVEHBq/hli6Y=
+X-Received: by 2002:a02:1cc1:: with SMTP id c184mr15696179jac.29.1602397470349;
+ Sat, 10 Oct 2020 23:24:30 -0700 (PDT)
 MIME-Version: 1.0
-References: <20201009161338.657380-1-samitolvanen@google.com>
- <20201009153512.1546446a@gandalf.local.home> <20201009210548.GB1448445@google.com>
- <20201009193759.13043836@oasis.local.home>
-In-Reply-To: <20201009193759.13043836@oasis.local.home>
-From: Sami Tolvanen <samitolvanen@google.com>
-Date: Fri, 9 Oct 2020 17:00:51 -0700
-Message-ID: <CABCJKueGW5UeH1++ES7ZRDcAnZ6hV-tFVwt6usjcZUnR95YQPQ@mail.gmail.com>
-Subject: Re: [PATCH v5 00/29] Add support for Clang LTO
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Masahiro Yamada <masahiroy@kernel.org>, Will Deacon <will@kernel.org>, 
-	Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	"Paul E. McKenney" <paulmck@kernel.org>, Kees Cook <keescook@chromium.org>, 
-	Nick Desaulniers <ndesaulniers@google.com>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
-	linux-kbuild <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
-	linux-pci@vger.kernel.org, X86 ML <x86@kernel.org>
+From: Romain Perier <romain.perier@gmail.com>
+Date: Sun, 11 Oct 2020 08:24:19 +0200
+Message-ID: <CABgxDoJwP+5Z3qUKuv3Tr=P24eGidk2cjO+yq0y_NwNmSbvQKA@mail.gmail.com>
+Subject: Remove all strlcpy() uses in favor of strscpy() (#89)
+To: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>
+Content-Type: multipart/alternative; boundary="000000000000025e9e05b15f3c22"
+
+--000000000000025e9e05b15f3c22
 Content-Type: text/plain; charset="UTF-8"
 
-On Fri, Oct 9, 2020 at 4:38 PM Steven Rostedt <rostedt@goodmis.org> wrote:
->
-> On Fri, 9 Oct 2020 14:05:48 -0700
-> Sami Tolvanen <samitolvanen@google.com> wrote:
->
-> > Ah yes, X86_DECODER_SELFTEST seems to be broken in tip/master. If you
-> > prefer, I have these patches on top of mainline here:
-> >
-> >   https://github.com/samitolvanen/linux/tree/clang-lto
-> >
-> > Testing your config with LTO on this tree, it does build and boot for
-> > me, although I saw a couple of new objtool warnings, and with LLVM=1,
-> > one warning from llvm-objdump.
->
-> Thanks, I disabled X86_DECODER_SELFTEST and it now builds.
->
-> I forced the objdump mcount logic with the below patch, which produces:
->
-> CONFIG_FTRACE_MCOUNT_RECORD=y
-> CONFIG_FTRACE_MCOUNT_USE_OBJTOOL=y
->
-> But I don't see the __mcount_loc sections being created.
->
-> I applied patches 1 - 6.
+Hi,
 
-Patch 6 is missing the part where we actually pass --mcount to
-objtool, it's in patch 11 ("kbuild: lto: postpone objtool"). I'll fix
-this in v6. In the meanwhile, please apply patches 1-11 to test the
-objtool change. Do you have any thoughts about the approach otherwise?
+That's just to let you know that I start to work on this task,
+I have also added a comment on the bugtracker.
 
-Sami
+Regards,
+Romain
+
+--000000000000025e9e05b15f3c22
+Content-Type: text/html; charset="UTF-8"
+
+<div dir="ltr"><div>Hi,</div><div><br></div><div>That&#39;s just to let you know that I start to work on this task,</div><div>I have also added a comment on the bugtracker.</div><div><br></div><div>Regards,</div><div>Romain<br></div></div>
+
+--000000000000025e9e05b15f3c22--
