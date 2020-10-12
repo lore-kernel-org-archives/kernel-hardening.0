@@ -1,23 +1,24 @@
-Return-Path: <SRS0=M0S/=DT=lists.openwall.com=kernel-hardening-return-20169-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=jueF=DT=lists.openwall.com=kernel-hardening-return-20170-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-14.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=ham
-	autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4D8ACC433DF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 12 Oct 2020 19:04:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 101A6C433DF
+	for <kernel-hardening@archiver.kernel.org>; Mon, 12 Oct 2020 20:45:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 35BDC22248
-	for <kernel-hardening@archiver.kernel.org>; Mon, 12 Oct 2020 19:04:11 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 3C43D20790
+	for <kernel-hardening@archiver.kernel.org>; Mon, 12 Oct 2020 20:45:19 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="NmUmPZg9"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 35BDC22248
+	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="iBvAVUob"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3C43D20790
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20169-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16146 invoked by uid 550); 12 Oct 2020 19:04:03 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20170-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15941 invoked by uid 550); 12 Oct 2020 20:45:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,52 +26,87 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16097 invoked from network); 12 Oct 2020 19:04:02 -0000
+Received: (qmail 15873 invoked from network); 12 Oct 2020 20:45:12 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=QuVx9sAPms7htZv0saHN7NQDUb2yJw+Ga5qw85soIMU=;
-        b=NmUmPZg9Idy7qVfkHwFPrkWRO7+IaMdKn+O81wwbBPAGCLOdlip6o6Z6qjN+yFiSlF
-         NPzGraH0kimFmHLGUlTddXKmC3A+RqBHR7rXBgm90BX5CNq58BfBKuXC+ITmS68kUTCq
-         59En7+OWY1GeSkZZ63PRBrf6Oea2CeZUYH364=
+        bh=/je9IGonHzFsuF/SNifo0ZcXgtv4yeAu6zOR0qhli4g=;
+        b=iBvAVUobGLxYChgzQDFIjdgKitAhC2jHTTevcSYvj7umuQsfw68FrsiS588nddPL9n
+         rvr2pXp07ZQWqM/LOhZO8EaapVG+BSzu0jORrfEH3ohPyD3qyDxXqnlKu5B0F1SooZd2
+         mIgofFGRcvthuFUyb4XxZSLu96zkfV5bLY9hc=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=QuVx9sAPms7htZv0saHN7NQDUb2yJw+Ga5qw85soIMU=;
-        b=rVke/6DXGOEqRAXJVRvVu/mJMqdksSY+AovOZw4/gE/HQUVhluefu3HXf8qc7ICcsz
-         2F9ArB9YrLFR9XH9JG+iHbKUckefqX6iRJ7Fbk04C9kq6BYZUYKosDf1FJWyzBfNMVZR
-         ZFHpQwQg6ObR5CX1/NKpd3LvUkqv6zDrRERk02z4shDj7SixbrFFyC4e1VEZSM7nGLBf
-         gdR3Ez3UUE26q9LwpSi8h+zcTHX8X08+7cxstBfm6MLcTyzjEC+hi5oECd6DcC7/CmTo
-         mLbDqpWdA5DlSeq9FInZEt3CIQLIb0r2DuGrA5Ce8sZGG+i+rlmnOSuoEYoT9lBoi74t
-         +Gfg==
-X-Gm-Message-State: AOAM532oOH8xELEOe9AflmTfnPCWICXgAH2xw8hsaiNPJ9TDusC+EQf9
-	5HgQTiSTcQBACQ0s4QV3MDiA2A==
-X-Google-Smtp-Source: ABdhPJwD+wj3NS7cqdsTNAN7U+IBKOAjHZ8WgflFeaZM9/aZMmfaPdCV93WkwTOUnOqlY3Tqy9Io7Q==
-X-Received: by 2002:a62:7cd4:0:b029:152:5198:3f19 with SMTP id x203-20020a627cd40000b029015251983f19mr24870595pfc.31.1602529430348;
-        Mon, 12 Oct 2020 12:03:50 -0700 (PDT)
-Date: Mon, 12 Oct 2020 12:03:48 -0700
+        bh=/je9IGonHzFsuF/SNifo0ZcXgtv4yeAu6zOR0qhli4g=;
+        b=BLTXhO9Re5o1kyxFt9rZVt1zIheLH/Uc+CgjbF1ibc0VauUIRbZL8my1bgI06Q2X92
+         KN7PHWVzkxTzLYrvFA+hUZfbyTFgReoTOSfGidCq7mAO3jpKRWo7f42l3M9MhbgbjKjR
+         PrY5fu9xdLUvdhnijdbe/bWraT55Zvncx+04CWPz9KodpJz8rhl0Ms5iX8UqiYBwRIEw
+         K3S8K2EeQoY8wFeUonjC543bl+HyNsy5DZ2zmtzzczCW1E3gG0KECV5hK5cm18mu2kPw
+         XvLfCBwwqecyFa9kHTeKwCEjEixPpum+evb7ehOLAtdvs88VJGyjzkYIuIjMSeNS83eJ
+         Wudg==
+X-Gm-Message-State: AOAM530D21aIoN6dAijFWJsirGodKcTQnexOb3lcjN/ZJTaWuoUgI8tE
+	fRP+LvTKBe/jtXDQidaVjHhMZQ==
+X-Google-Smtp-Source: ABdhPJxf12qi2TvIPdMo3b44hzG/IVxwKW/VadUKNptF9UK+YkxRipHLl4jP/u0pgN9HY2DkPgijnw==
+X-Received: by 2002:a17:902:cd07:b029:d3:9be0:2679 with SMTP id g7-20020a170902cd07b02900d39be02679mr25530237ply.68.1602535499967;
+        Mon, 12 Oct 2020 13:44:59 -0700 (PDT)
+Date: Mon, 12 Oct 2020 13:44:56 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Romain Perier <romain.perier@gmail.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-hardening@vger.kernel.org
-Subject: Re: Remove all strlcpy() uses in favor of strscpy() (#89)
-Message-ID: <202010121201.6ED466E1C7@keescook>
-References: <CABgxDoJwP+5Z3qUKuv3Tr=P24eGidk2cjO+yq0y_NwNmSbvQKA@mail.gmail.com>
+To: Will Deacon <will@kernel.org>
+Cc: Sami Tolvanen <samitolvanen@google.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Steven Rostedt <rostedt@goodmis.org>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
+	x86@kernel.org
+Subject: Re: [PATCH v5 25/29] arm64: allow LTO_CLANG and THINLTO to be
+ selected
+Message-ID: <202010121344.53780D8CD2@keescook>
+References: <20201009161338.657380-1-samitolvanen@google.com>
+ <20201009161338.657380-26-samitolvanen@google.com>
+ <20201012083116.GA785@willie-the-truck>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CABgxDoJwP+5Z3qUKuv3Tr=P24eGidk2cjO+yq0y_NwNmSbvQKA@mail.gmail.com>
+In-Reply-To: <20201012083116.GA785@willie-the-truck>
 
-On Sun, Oct 11, 2020 at 08:24:19AM +0200, Romain Perier wrote:
-> That's just to let you know that I start to work on this task,
-> I have also added a comment on the bugtracker.
+On Mon, Oct 12, 2020 at 09:31:16AM +0100, Will Deacon wrote:
+> On Fri, Oct 09, 2020 at 09:13:34AM -0700, Sami Tolvanen wrote:
+> > Allow CONFIG_LTO_CLANG and CONFIG_THINLTO to be enabled.
+> > 
+> > Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+> > Reviewed-by: Kees Cook <keescook@chromium.org>
+> > ---
+> >  arch/arm64/Kconfig | 2 ++
+> >  1 file changed, 2 insertions(+)
+> > 
+> > diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> > index ad522b021f35..7016d193864f 100644
+> > --- a/arch/arm64/Kconfig
+> > +++ b/arch/arm64/Kconfig
+> > @@ -72,6 +72,8 @@ config ARM64
+> >  	select ARCH_USE_SYM_ANNOTATIONS
+> >  	select ARCH_SUPPORTS_MEMORY_FAILURE
+> >  	select ARCH_SUPPORTS_SHADOW_CALL_STACK if CC_HAVE_SHADOW_CALL_STACK
+> > +	select ARCH_SUPPORTS_LTO_CLANG
+> > +	select ARCH_SUPPORTS_THINLTO
+> 
+> Please don't enable this for arm64 until we have the dependency stuff sorted
+> out. I posted patches [1] for this before, but I think they should be part
+> of this series as they don't make sense on their own.
 
-Okay, great; thanks! I'll reply there; it looks like there are several
-approaches that could be taken.
+Oh, hm. We've been trying to trim down this series, since it's already
+quite large. Why can't [1] land first? It would make this easier to deal
+with, IMO.
 
-(For reference, this is https://github.com/KSPP/linux/issues/89 )
+> [1] https://git.kernel.org/pub/scm/linux/kernel/git/will/linux.git/log/?h=rwonce/read-barrier-depends
 
 -- 
 Kees Cook
