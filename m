@@ -1,20 +1,22 @@
-Return-Path: <SRS0=crbt=DV=lists.openwall.com=kernel-hardening-return-20201-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=orZ1=DV=lists.openwall.com=kernel-hardening-return-20202-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C1F06C433DF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 18:08:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B6A8C43467
+	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 18:21:53 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A126D21D81
-	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 18:08:07 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A126D21D81
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=namei.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20201-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24535 invoked by uid 550); 14 Oct 2020 18:07:59 -0000
+	by mail.kernel.org (Postfix) with SMTP id CDAEF2224D
+	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 18:21:51 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="icPeuHkh"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CDAEF2224D
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20202-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32380 invoked by uid 550); 14 Oct 2020 18:21:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,59 +24,47 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24498 invoked from network); 14 Oct 2020 18:07:58 -0000
-Date: Thu, 15 Oct 2020 05:07:12 +1100 (AEDT)
-From: James Morris <jmorris@namei.org>
-To: =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-cc: linux-kernel@vger.kernel.org, "Serge E . Hallyn" <serge@hallyn.com>,
-        Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>,
-        Andy Lutomirski <luto@amacapital.net>,
-        Anton Ivanov <anton.ivanov@cambridgegreys.com>,
-        Arnd Bergmann <arnd@arndb.de>,
-        Casey Schaufler <casey@schaufler-ca.com>, Jann Horn <jannh@google.com>,
-        Jeff Dike <jdike@addtoit.com>, Jonathan Corbet <corbet@lwn.net>,
-        Kees Cook <keescook@chromium.org>,
-        Michael Kerrisk <mtk.manpages@gmail.com>,
-        Shuah Khan <shuah@kernel.org>,
-        Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
-        kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-        linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
-        linux-fsdevel@vger.kernel.org, linux-kselftest@vger.kernel.org,
-        linux-security-module@vger.kernel.org, x86@kernel.org,
-        =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>
-Subject: Re: [PATCH v21 07/12] landlock: Support filesystem access-control
-In-Reply-To: <20201008153103.1155388-8-mic@digikod.net>
-Message-ID: <alpine.LRH.2.21.2010150504360.26012@namei.org>
-References: <20201008153103.1155388-1-mic@digikod.net> <20201008153103.1155388-8-mic@digikod.net>
-User-Agent: Alpine 2.21 (LRH 202 2017-01-01)
+Received: (qmail 32357 invoked from network); 14 Oct 2020 18:21:43 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=merlin.20170209; h=In-Reply-To:Content-Type:MIME-Version:
+	References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description;
+	bh=4D+6T/0Jyivj7fxKw3DZP3bEv4Hi+6DaIRYNjOGogQc=; b=icPeuHkhwm/7g2D5K7SjNoPM5s
+	al/it2gTFcFnA3j1b1bbGIvp9LTWyagOXzUN5jvmI0GDPi6ml4eD0d52R2OwRtyKSvCS+k4demdSu
+	VT5KGDheTz5gEsE3WBJE9K02m+nLco4ZktkKbpuxeQdHPW3/i9FtrGhn6R3XCDKJQd/onhJsK73W4
+	LKhukfnTNYT9ZUzSX6bJ/yNVJYi9sFnQkAK2Ap4gEoxUpX3920FOVTde0jJ7FAsLgwsBb9awOT8wF
+	J2wNgf1SGp7lO6tY4adBbux1qDforNMyg6G3iWIsLIfBozBc0lW3wPEQ/gxl/dF/llRv6F8wwIxxm
+	oZgiXiXg==;
+Date: Wed, 14 Oct 2020 20:21:15 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Sami Tolvanen <samitolvanen@google.com>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Kees Cook <keescook@chromium.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
+	x86@kernel.org, Josh Poimboeuf <jpoimboe@redhat.com>
+Subject: Re: [PATCH v6 02/25] objtool: Add a pass for generating __mcount_loc
+Message-ID: <20201014182115.GF2594@hirez.programming.kicks-ass.net>
+References: <20201013003203.4168817-1-samitolvanen@google.com>
+ <20201013003203.4168817-3-samitolvanen@google.com>
+ <20201014165004.GA3593121@gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="1665246916-928235661-1602698835=:26012"
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20201014165004.GA3593121@gmail.com>
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
+On Wed, Oct 14, 2020 at 06:50:04PM +0200, Ingo Molnar wrote:
+> Meh, adding --mcount as an option to 'objtool check' was a valid hack for a 
+> prototype patchset, but please turn this into a proper subcommand, just 
+> like 'objtool orc' is.
+> 
+> 'objtool check' should ... keep checking. :-)
 
---1665246916-928235661-1602698835=:26012
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8BIT
-
-On Thu, 8 Oct 2020, Mickaël Salaün wrote:
-
-> +config ARCH_EPHEMERAL_STATES
-> +	def_bool n
-> +	help
-> +	  An arch should select this symbol if it does not keep an internal kernel
-> +	  state for kernel objects such as inodes, but instead relies on something
-> +	  else (e.g. the host kernel for an UML kernel).
-> +
-
-This is used to disable Landlock for UML, correct? I wonder if it could be 
-more specific: "ephemeral states" is a very broad term.
-
-How about something like ARCH_OWN_INODES ?
-
-
--- 
-James Morris
-<jmorris@namei.org>
-
---1665246916-928235661-1602698835=:26012--
+No, no subcommands. orc being a subcommand was a mistake.
