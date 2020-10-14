@@ -1,23 +1,23 @@
-Return-Path: <SRS0=1vIO=DV=lists.openwall.com=kernel-hardening-return-20211-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ftyI=DV=lists.openwall.com=kernel-hardening-return-20212-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-11.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=ham autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8289BC433DF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 22:58:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ACFA4C433E7
+	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 23:24:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6947820797
-	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 22:58:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 785CA2072D
+	for <kernel-hardening@archiver.kernel.org>; Wed, 14 Oct 2020 23:24:26 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=chromium.org header.i=@chromium.org header.b="R63EBTH6"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6947820797
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20211-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15741 invoked by uid 550); 14 Oct 2020 22:58:26 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="WE7IFwP9"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 785CA2072D
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20212-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24361 invoked by uid 550); 14 Oct 2020 23:24:20 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,117 +25,96 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15704 invoked from network); 14 Oct 2020 22:58:25 -0000
+Received: (qmail 24341 invoked from network); 14 Oct 2020 23:24:19 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=WUVth3Yi/0Gf6s7eybXLKtt4uMjJ4xi70yGGSwDkLw0=;
-        b=R63EBTH6+0dTkzS267+O24BYdxnurWecDwGpDuhGH5wyKY0Pg8ynHUH/iEecP4Gnho
-         RfNGPWH3YDit4Wmb0luYZWOyRplddz6hFIgmHH4CLhIZt4IyCFh8a/BvWIZDZQnBcGoK
-         FZBeYg7LPlk+kUu4N8sYcxncY/8J8OqwbusLI=
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=G1p4V+7SeMLHnh08qcMlfbDl3wtxivqtmtup/MyvFDY=;
+        b=WE7IFwP9IhL8DE1zZKJle/ZGrNF6+L4elBdskKUHhzr6aRc+x7wWJi20JSldqtkJ7Z
+         j/7BB6dyuTbU5p9PSE8H3XtV1HRU//Yqj6FJa8U+jMWDY41ES81W1cB++Kto9YrI/Q9M
+         lg7UOj5OnYiqZbnuwDy16M4Ygj4NgVILO1Me3MLBRFSsQxX9nkWQCeKpS7ipOCfd1Eqg
+         M0MC2h3UVNaHCnV0m7sBQfkfVwxLkCsUo4Uff8EHxKLN05AZsmdIMReoJfBYKlL6Kg3q
+         +7i9vZUIztJLnoCIPO/bJoqUuwmFkJ1IK4411mBF4oyBnjITBziC24r05hMyonx/2eTu
+         eLyw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=WUVth3Yi/0Gf6s7eybXLKtt4uMjJ4xi70yGGSwDkLw0=;
-        b=qwxHJbP+v4NChrvOxYxgCHxaiCRATt2XK1BYi2TiTL12XBvPYVnmqNd7DEdgj9hazR
-         NPzdiXVfjAW5feeM77RHljMgK8OW7SrisL4CdiXL+jBYAKO7FTfFohPHtnnnG+heX3aL
-         fp3LMXgOjpLRtSY9Ks7KKCWTjjQ9we8mwkBacGFSq4L6/V/2m5gwBCyTzxASenQYXgLS
-         ILuChPUv7ozQ5dt56FntuoQ3ZwqpYQHKmj3DH16HGHyHjQjgueR6kuWjkUdQLM7GkgyB
-         GgI043zl3z0CuSnwwTKykMU1R+84IN5oyz08pcQYlDDLZjWLkU3SYkjFuht93g9RhKB2
-         bnBQ==
-X-Gm-Message-State: AOAM5329D7cTiXg/kbq+d6JaOWu7HHHDWzpdMalio8h9zcJe6bkQvsy5
-	7g9nBQOZPfgbU6aVXguFWXI08gEMDrq9pg==
-X-Google-Smtp-Source: ABdhPJzHdqdE46WrFZlw8R7S7F1x+3bND/WLRTw47I4euXQao8J+1ZC4KoSJiwuZcz/FXnt7OEBn6A==
-X-Received: by 2002:a17:902:59da:b029:d4:c71a:357a with SMTP id d26-20020a17090259dab02900d4c71a357amr1496188plj.38.1602716293981;
-        Wed, 14 Oct 2020 15:58:13 -0700 (PDT)
-Date: Wed, 14 Oct 2020 15:58:12 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Bjorn Helgaas <bhelgaas@google.com>
-Cc: Masahiro Yamada <masahiroy@kernel.org>,
-	Sami Tolvanen <samitolvanen@google.com>,
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	clang-built-linux@googlegroups.com,
-	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
-	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
-	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org,
-	x86@kernel.org
-Subject: Re: [PATCH v6 17/25] PCI: Fix PREL32 relocations for LTO
-Message-ID: <202010141556.DC58D913@keescook>
-References: <20201013003203.4168817-1-samitolvanen@google.com>
- <20201013003203.4168817-18-samitolvanen@google.com>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=G1p4V+7SeMLHnh08qcMlfbDl3wtxivqtmtup/MyvFDY=;
+        b=ek9aZM1clcVEn8I3wvcyNel56OvLRRUeU7TQicbV/CxFnquiiQfzzIVu/ViiEZyiEa
+         ZoFQfDDgarBqIUsbrD/jpTM3U2g7I5yjRSXmlWv3A/rymsGufOHPfUvRKusxVFpNwzbw
+         f3wT7clPiKGNw9I10vYGIdT9luRlBJzVz/1apKKdnZfnisq3KpK46FkbQMXO6xC+nXTz
+         +D37BC5ynVpd8hpgF6227gn5dn8Tm90Y32KWuoIebHbyxggG2G8reRmkC6Fxn7Ma9O8p
+         RwFhRlnAqgxWv3+Nla9UFShe4QeMRSaKGLwKEixKqOHLLpvrHL7xObSKnXEcwCLx50gy
+         0b3w==
+X-Gm-Message-State: AOAM533YXjd+mEcccyoh3/dG7wbW+6UG6bWZpXxK+x4JS79ecS6e+Gf2
+	wvYSSOh+Lix5+3HdRzUn2vPxzCYgtDwpO0ZDUR26dg==
+X-Google-Smtp-Source: ABdhPJydMCD+XHL2TSxEVaZRxaszslycs2dTV+hsdRxTeju9rh0yCfYdZANr/pfddpUzM3d5IpL0YBG2d5o1ouutlCY=
+X-Received: by 2002:a2e:e1a:: with SMTP id 26mr156295ljo.377.1602717848016;
+ Wed, 14 Oct 2020 16:24:08 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201013003203.4168817-18-samitolvanen@google.com>
+References: <20201013003203.4168817-1-samitolvanen@google.com> <20201013003203.4168817-23-samitolvanen@google.com>
+In-Reply-To: <20201013003203.4168817-23-samitolvanen@google.com>
+From: Jann Horn <jannh@google.com>
+Date: Thu, 15 Oct 2020 01:23:41 +0200
+Message-ID: <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
+Subject: Re: [PATCH v6 22/25] x86/asm: annotate indirect jumps
+To: Sami Tolvanen <samitolvanen@google.com>, Josh Poimboeuf <jpoimboe@redhat.com>, 
+	Peter Zijlstra <peterz@infradead.org>, "the arch/x86 maintainers" <x86@kernel.org>
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Will Deacon <will@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
+	"Paul E. McKenney" <paulmck@kernel.org>, Kees Cook <keescook@chromium.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	Linux ARM <linux-arm-kernel@lists.infradead.org>, linux-kbuild@vger.kernel.org, 
+	kernel list <linux-kernel@vger.kernel.org>, linux-pci@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
 
-On Mon, Oct 12, 2020 at 05:31:55PM -0700, Sami Tolvanen wrote:
-> With Clang's Link Time Optimization (LTO), the compiler can rename
-> static functions to avoid global naming collisions. As PCI fixup
-> functions are typically static, renaming can break references
-> to them in inline assembly. This change adds a global stub to
-> DECLARE_PCI_FIXUP_SECTION to fix the issue when PREL32 relocations
-> are used.
-> 
-> Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-> Acked-by: Bjorn Helgaas <bhelgaas@google.com>
-> Reviewed-by: Kees Cook <keescook@chromium.org>
++objtool folks
 
-Another independent patch! :) Bjorn, since you've already Acked this
-patch, would be be willing to pick it up for your tree?
+On Tue, Oct 13, 2020 at 2:35 AM Sami Tolvanen <samitolvanen@google.com> wrote:
+> Running objtool --vmlinux --duplicate on vmlinux.o produces a few
+> warnings about indirect jumps with retpoline:
+>
+>   vmlinux.o: warning: objtool: wakeup_long64()+0x61: indirect jump
+>   found in RETPOLINE build
+>   ...
+>
+> This change adds ANNOTATE_RETPOLINE_SAFE annotations to the jumps
+> in assembly code to stop the warnings.
 
--Kees
+In other words, this patch deals with the fact that
+OBJECT_FILES_NON_STANDARD stops being effective for object files that
+are linked into the main kernel when LTO is on, right?
+All the files you're touching here are supposed to be excluded from
+objtool warnings at the moment:
 
-> ---
->  include/linux/pci.h | 19 ++++++++++++++-----
->  1 file changed, 14 insertions(+), 5 deletions(-)
-> 
-> diff --git a/include/linux/pci.h b/include/linux/pci.h
-> index 835530605c0d..4e64421981c7 100644
-> --- a/include/linux/pci.h
-> +++ b/include/linux/pci.h
-> @@ -1909,19 +1909,28 @@ enum pci_fixup_pass {
->  };
->  
->  #ifdef CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
-> -#define __DECLARE_PCI_FIXUP_SECTION(sec, name, vendor, device, class,	\
-> -				    class_shift, hook)			\
-> -	__ADDRESSABLE(hook)						\
-> +#define ___DECLARE_PCI_FIXUP_SECTION(sec, name, vendor, device, class,	\
-> +				    class_shift, hook, stub)		\
-> +	void stub(struct pci_dev *dev);					\
-> +	void stub(struct pci_dev *dev)					\
-> +	{ 								\
-> +		hook(dev); 						\
-> +	}								\
->  	asm(".section "	#sec ", \"a\"				\n"	\
->  	    ".balign	16					\n"	\
->  	    ".short "	#vendor ", " #device "			\n"	\
->  	    ".long "	#class ", " #class_shift "		\n"	\
-> -	    ".long "	#hook " - .				\n"	\
-> +	    ".long "	#stub " - .				\n"	\
->  	    ".previous						\n");
-> +
-> +#define __DECLARE_PCI_FIXUP_SECTION(sec, name, vendor, device, class,	\
-> +				  class_shift, hook, stub)		\
-> +	___DECLARE_PCI_FIXUP_SECTION(sec, name, vendor, device, class,	\
-> +				  class_shift, hook, stub)
->  #define DECLARE_PCI_FIXUP_SECTION(sec, name, vendor, device, class,	\
->  				  class_shift, hook)			\
->  	__DECLARE_PCI_FIXUP_SECTION(sec, name, vendor, device, class,	\
-> -				  class_shift, hook)
-> +				  class_shift, hook, __UNIQUE_ID(hook))
->  #else
->  /* Anonymous variables would be nice... */
->  #define DECLARE_PCI_FIXUP_SECTION(section, name, vendor, device, class,	\
-> -- 
-> 2.28.0.1011.ga647a8990f-goog
-> 
+$ grep OBJECT_FILES_NON_STANDARD arch/x86/kernel/acpi/Makefile
+OBJECT_FILES_NON_STANDARD_wakeup_$(BITS).o := y
+$ grep OBJECT_FILES_NON_STANDARD arch/x86/platform/pvh/Makefile
+OBJECT_FILES_NON_STANDARD_head.o := y
+$ grep OBJECT_FILES_NON_STANDARD arch/x86/power/Makefile
+OBJECT_FILES_NON_STANDARD_hibernate_asm_$(BITS).o := y
 
--- 
-Kees Cook
+It would probably be good to keep LTO and non-LTO builds in sync about
+which files are subjected to objtool checks. So either you should be
+removing the OBJECT_FILES_NON_STANDARD annotations for anything that
+is linked into the main kernel (which would be a nice cleanup, if that
+is possible), or alternatively ensure that code from these files is
+excluded from objtool checks even with LTO (that'd probably be messy
+and a bad idea?).
+
+Grepping for other files marked as OBJECT_FILES_NON_STANDARD that
+might be included in the main kernel on x86, I also see stuff like:
+
+    5 arch/x86/crypto/Makefile                            5
+OBJECT_FILES_NON_STANDARD := y
+   10 arch/x86/kernel/Makefile                           39
+OBJECT_FILES_NON_STANDARD_ftrace_$(BITS).o          := y
+   12 arch/x86/kvm/Makefile                               7
+OBJECT_FILES_NON_STANDARD_vmenter.o := y
+
+for which I think the same thing applies.
