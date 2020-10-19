@@ -1,20 +1,21 @@
-Return-Path: <SRS0=hrJa=D2=lists.openwall.com=kernel-hardening-return-20223-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=0Tt1=D2=lists.openwall.com=kernel-hardening-return-20224-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-12.7 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 907EDC433E7
-	for <kernel-hardening@archiver.kernel.org>; Mon, 19 Oct 2020 16:58:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8C123C433E7
+	for <kernel-hardening@archiver.kernel.org>; Mon, 19 Oct 2020 18:29:31 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 74FBF22269
-	for <kernel-hardening@archiver.kernel.org>; Mon, 19 Oct 2020 16:58:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 74FBF22269
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-m68k.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20223-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20371 invoked by uid 550); 19 Oct 2020 16:58:41 -0000
+	by mail.kernel.org (Postfix) with SMTP id 461DE2231B
+	for <kernel-hardening@archiver.kernel.org>; Mon, 19 Oct 2020 18:29:29 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 461DE2231B
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=canonical.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20224-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 24455 invoked by uid 550); 19 Oct 2020 18:29:22 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,84 +23,269 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20343 invoked from network); 19 Oct 2020 16:58:40 -0000
+Received: (qmail 24420 invoked from network); 19 Oct 2020 18:29:21 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc:content-transfer-encoding;
-        bh=hL7mfN1EupeS+kSdK5Vs5Sf+DfzTZOfmEItZgZZEYaA=;
-        b=oymJ99x2wz9ZiEwPXhzvqoJ9vMUE44Uk5rh3Q/909+GmDY6Gl+VkcgVZ3UCCaYH0an
-         IJJllfFT5+M8GLKjFQnRcwUKCaoDbtXhBlNeEKn3lrOgLsumZcyiWQsWeVEHmrEMbUdq
-         gg1xmZvAqcPHN/baahbLwtAGwAbdcLSNuIvw9EitR9hXzoC9OBf6M2qvJCmpOrw9O5Ig
-         vTknOHMY0rtAfq2eWyDhrAMGuRB4jk7OfmbYCKLQFCldjbL8E5ErZT02hvF5K/jlBm+4
-         glfcvBw8n4mu+Sj6uBuW6fjaB1vbG46qldpnrNYKXeAOEicMp6SrTGQbzxfB1sAdHiUa
-         soAA==
-X-Gm-Message-State: AOAM530ukmTCihxgLwAowyu5TOC55d+kifwe2+2b4o6tKfxcgSVPDpDM
-	MYRA+Oz8VqmKwkO3MwWofhZsI43T6TC04OjWV0s=
-X-Google-Smtp-Source: ABdhPJwtsUP8OaqlrBo/FWg0iCrXu7PdM3v6/RshAxTARIxWSfsYxMhDPOLE743HjM1wPlbcpacytmQvt8D03nTnkIg=
-X-Received: by 2002:a9d:3b76:: with SMTP id z109mr676938otb.250.1603126709134;
- Mon, 19 Oct 2020 09:58:29 -0700 (PDT)
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=nFSi4OtxvAk/2TeYa4t3Di2sFP7xbSzpmy1A/2ESiB0=;
+        b=mbxRjtb55OyLGBPkSrNwwCYmr8r9C/QdYAN8Vz+eZHA9qkYG74howER6/t/A2INKmw
+         iIBrLCgOyOiUiUHS56aJ+w+wQktWHv8eKJ1vcJGT75h9LMo8/XJarolZEJTz4NGvAEtp
+         XRwLEGCkkk1Lr2+PY0IZfo10hRxzgdWYRbk4mZHkm5A/GXKYjaJLsFQllgs0gywLJ0+5
+         M1c7HcVoM+FgJr2k1Knx45BET0a1uk4EfrwcNFU+7qwzZ1ety3sXSHxm9FWOQh2MoBtA
+         u2ieOZXzXUWuHem3oKz320DhS9ffOc6wKmv863eSzqpSihoViMKVQ6yBVtY0W5KoAA/j
+         FMKQ==
+X-Gm-Message-State: AOAM530IaR+lrgMCv4pR3r/R1eHXk/Uepf7IEu0Y0G9pgPwE6g3S5ozS
+	a3YXEzUA2Ky1ZCUXPIuC7Fn1LxmKKRBfBYCcCXAOVMtBoSc4ECJJjWS2qnxZYPBp4xHoa+G1qpC
+	Y/TP3j1/QYWihYrxPx0Fz5/8AIQzAL9DwSiIj8TXd1ZZchGcD1kE=
+X-Received: by 2002:a05:620a:66d:: with SMTP id a13mr822569qkh.301.1603132146513;
+        Mon, 19 Oct 2020 11:29:06 -0700 (PDT)
+X-Google-Smtp-Source: ABdhPJwXOLphwHsQlpyOjL1HNupZgTMWTIQz+87TljMlP/X3Ky+1N7HyJN4kOuI75JMPlJY5OisJow==
+X-Received: by 2002:a05:620a:66d:: with SMTP id a13mr822176qkh.301.1603132140231;
+        Mon, 19 Oct 2020 11:29:00 -0700 (PDT)
+From: "Guilherme G. Piccoli" <gpiccoli@canonical.com>
+To: linux-mm@kvack.org
+Cc: kernel-hardening@lists.openwall.com,
+	linux-hardening@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	gpiccoli@canonical.com,
+	kernel@gpiccoli.net,
+	cascardo@canonical.com,
+	Alexander Potapenko <glider@google.com>,
+	James Morris <jamorris@linux.microsoft.com>,
+	Kees Cook <keescook@chromium.org>,
+	Michal Hocko <mhocko@suse.cz>,
+	Mike Kravetz <mike.kravetz@oracle.com>
+Subject: [PATCH] mm, hugetlb: Avoid double clearing for hugetlb pages
+Date: Mon, 19 Oct 2020 15:28:53 -0300
+Message-Id: <20201019182853.7467-1-gpiccoli@canonical.com>
+X-Mailer: git-send-email 2.28.0
 MIME-Version: 1.0
-References: <20201019164932.1430614-1-mic@digikod.net> <20201019164932.1430614-3-mic@digikod.net>
-In-Reply-To: <20201019164932.1430614-3-mic@digikod.net>
-From: Geert Uytterhoeven <geert@linux-m68k.org>
-Date: Mon, 19 Oct 2020 18:58:17 +0200
-Message-ID: <CAMuHMdV6Ee0pU119akfK36FKEp1_XHO_ka0LFSE1Yn3qUjJ_0g@mail.gmail.com>
-Subject: Re: [RESEND PATCH v11 2/3] arch: Wire up trusted_for(2)
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Aleksa Sarai <cyphar@cyphar.com>, 
-	Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, 
-	Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, 
-	Christian Brauner <christian.brauner@ubuntu.com>, Christian Heimes <christian@python.org>, 
-	Deven Bowers <deven.desai@linux.microsoft.com>, Dmitry Vyukov <dvyukov@google.com>, 
-	Eric Biggers <ebiggers@kernel.org>, Eric Chiang <ericchiang@google.com>, 
-	Florian Weimer <fweimer@redhat.com>, James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>, 
-	Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, 
-	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>, Matthew Garrett <mjg59@google.com>, 
-	Matthew Wilcox <willy@infradead.org>, Michael Kerrisk <mtk.manpages@gmail.com>, 
-	Miklos Szeredi <mszeredi@redhat.com>, Mimi Zohar <zohar@linux.ibm.com>, 
-	=?UTF-8?Q?Philippe_Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>, 
-	Scott Shell <scottsh@microsoft.com>, 
-	Sean Christopherson <sean.j.christopherson@intel.com>, Shuah Khan <shuah@kernel.org>, 
-	Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, 
-	Thibaut Sautereau <thibaut.sautereau@clip-os.org>, 
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, 
-	Linux API <linux-api@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, 
-	linux-integrity <linux-integrity@vger.kernel.org>, 
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, 
-	linux-security-module <linux-security-module@vger.kernel.org>, 
-	=?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>, 
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Content-Transfer-Encoding: 8bit
 
-On Mon, Oct 19, 2020 at 6:50 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
-wrote:
-> From: Micka=C3=ABl Sala=C3=BCn <mic@linux.microsoft.com>
->
-> Wire up trusted_for(2) for all architectures.
->
-> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@linux.microsoft.com>
-> Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+Commit 6471384af2a6 ("mm: security: introduce init_on_alloc=1 and init_on_free=1
+boot options") introduced the option for clearing/initializing kernel
+pages on allocation time - this can be achieved either using a parameter
+or a Kconfig setting. The goal for the change was a kernel hardening measure.
 
->  arch/m68k/kernel/syscalls/syscall.tbl       | 1 +
+Despite the performance degradation with "init_on_alloc" is considered
+low, there is one case in which it can be noticed and it may impact
+latency of the system - this is when hugetlb pages are allocated.
+Those pages are meant to be used by userspace *only* (differently of THP,
+for example). In allocation time for hugetlb, their component pages go
+through the initialization/clearing process in
 
-Acked-by: Geert Uytterhoeven <geert@linux-m68k.org>
+ prep_new_page()
+  kernel_init_free_pages()
 
-(haven't seen any other arch Acked-by tags yet?)
+and, when used in userspace mappings, the hugetlb are _again_ cleared;
+I've checked that in practice by running the kernel selftest[0] for
+hugetlb mapping - the pages go through clear_huge_pages() on page
+fault [ see hugetlb_no_page() ].
 
-Gr{oetje,eeting}s,
+This patch proposes a way to prevent this resource waste by skipping
+the page initialization/clearing if the page is a component of hugetlb
+page (even if "init_on_alloc" or the respective Kconfig are set).
+The performance improvement measured in [1] demonstrates that it is
+effective and bring the hugetlb allocation time to the same level as
+with "init_on_alloc" disabled. Despite we've used sysctl to allocate
+hugetlb pages in our tests, the same delay happens in early boot time
+when hugetlb parameters are set on kernel cmdline (and "init_on_alloc"
+is set).
 
-                        Geert
+[0] tools/testing/selftests/vm/map_hugetlb.c
+
+[1] Test results - all tests executed in a pristine kernel 5.9+, from
+2020-10-19, at commit 7cf726a594353010. A virtual machine with 96G of
+total memory was used, the test consists in allocating 64G of 2M hugetlb
+pages. Results below:
+
+* Without this patch, init_on_alloc=1
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   97892212 kB
+Hugetlb:               0 kB
+
+$ time echo 32768 > /proc/sys/vm/nr_hugepages
+real    0m24.189s
+user    0m0.000s
+sys     0m24.184s
+
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   30784732 kB
+Hugetlb:        67108864 kB
+
+* Without this patch, init_on_alloc=0
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   97892752 kB
+Hugetlb:               0 kB
+
+$ time echo 32768 > /proc/sys/vm/nr_hugepages
+real    0m0.316s
+user    0m0.000s
+sys     0m0.316s
+
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   30783628 kB
+Hugetlb:        67108864 kB
+
+* WITH this patch, init_on_alloc=1
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   97891952 kB
+Hugetlb:               0 kB
+
+$ time echo 32768 > /proc/sys/vm/nr_hugepages
+real    0m0.209s
+user    0m0.000s
+sys     0m0.209s
+
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   30782964 kB
+Hugetlb:        67108864 kB
+
+* WITH this patch, init_on_alloc=0
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   97892620 kB
+Hugetlb:               0 kB
+
+$ time echo 32768 > /proc/sys/vm/nr_hugepages
+real    0m0.206s
+user    0m0.000s
+sys     0m0.206s
+
+$ cat /proc/meminfo |grep "MemA\|Hugetlb"
+MemAvailable:   30783804 kB
+Hugetlb:        67108864 kB
+
+Signed-off-by: Guilherme G. Piccoli <gpiccoli@canonical.com>
+Suggested-by: Thadeu Lima de Souza Cascardo <cascardo@canonical.com>
+Cc: Alexander Potapenko <glider@google.com>
+Cc: James Morris <jamorris@linux.microsoft.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Michal Hocko <mhocko@suse.cz>
+Cc: Mike Kravetz <mike.kravetz@oracle.com>
+---
 
 
---
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k=
-.org
+Hi everybody, thanks in advance for the review/comments. I'd like to
+point 2 things related to the implementation:
 
-In personal conversations with technical people, I call myself a hacker. Bu=
-t
-when I'm talking to journalists I just say "programmer" or something like t=
-hat.
-                                -- Linus Torvalds
+1) I understand that adding GFP flags is not really welcome by the
+mm community; I've considered passing that as function parameter but
+that would be a hacky mess, so I decided to add the flag since it seems
+this is a fair use of the flag mechanism (to control actions on pages).
+If anybody has a better/simpler suggestion to implement this, I'm all
+ears - thanks!
+
+2) The checkpatch script gave me the following error, but I decided to
+ignore it in order to maintain the same format present in the file:
+
+ERROR: space required after that close brace '}'
+#171: FILE: include/trace/events/mmflags.h:52:
+
+
+ include/linux/gfp.h            | 14 +++++++++-----
+ include/linux/mm.h             |  2 +-
+ include/trace/events/mmflags.h |  3 ++-
+ mm/hugetlb.c                   |  7 +++++++
+ tools/perf/builtin-kmem.c      |  1 +
+ 5 files changed, 20 insertions(+), 7 deletions(-)
+
+diff --git a/include/linux/gfp.h b/include/linux/gfp.h
+index c603237e006c..c03909f8e7b6 100644
+--- a/include/linux/gfp.h
++++ b/include/linux/gfp.h
+@@ -39,8 +39,9 @@ struct vm_area_struct;
+ #define ___GFP_HARDWALL		0x100000u
+ #define ___GFP_THISNODE		0x200000u
+ #define ___GFP_ACCOUNT		0x400000u
++#define ___GFP_NOINIT_ON_ALLOC	0x800000u
+ #ifdef CONFIG_LOCKDEP
+-#define ___GFP_NOLOCKDEP	0x800000u
++#define ___GFP_NOLOCKDEP	0x1000000u
+ #else
+ #define ___GFP_NOLOCKDEP	0
+ #endif
+@@ -215,16 +216,19 @@ struct vm_area_struct;
+  * %__GFP_COMP address compound page metadata.
+  *
+  * %__GFP_ZERO returns a zeroed page on success.
++ *
++ * %__GFP_NOINIT_ON_ALLOC avoids uspace pages to be double-cleared (like HugeTLB)
+  */
+-#define __GFP_NOWARN	((__force gfp_t)___GFP_NOWARN)
+-#define __GFP_COMP	((__force gfp_t)___GFP_COMP)
+-#define __GFP_ZERO	((__force gfp_t)___GFP_ZERO)
++#define __GFP_NOWARN		((__force gfp_t)___GFP_NOWARN)
++#define __GFP_COMP		((__force gfp_t)___GFP_COMP)
++#define __GFP_ZERO		((__force gfp_t)___GFP_ZERO)
++#define __GFP_NOINIT_ON_ALLOC	((__force gfp_t)___GFP_NOINIT_ON_ALLOC)
+ 
+ /* Disable lockdep for GFP context tracking */
+ #define __GFP_NOLOCKDEP ((__force gfp_t)___GFP_NOLOCKDEP)
+ 
+ /* Room for N __GFP_FOO bits */
+-#define __GFP_BITS_SHIFT (23 + IS_ENABLED(CONFIG_LOCKDEP))
++#define __GFP_BITS_SHIFT (24 + IS_ENABLED(CONFIG_LOCKDEP))
+ #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
+ 
+ /**
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index ef360fe70aaf..7fa60d22a90a 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -2882,7 +2882,7 @@ DECLARE_STATIC_KEY_FALSE(init_on_alloc);
+ static inline bool want_init_on_alloc(gfp_t flags)
+ {
+ 	if (static_branch_unlikely(&init_on_alloc) &&
+-	    !page_poisoning_enabled())
++	    !page_poisoning_enabled() && !(flags & __GFP_NOINIT_ON_ALLOC))
+ 		return true;
+ 	return flags & __GFP_ZERO;
+ }
+diff --git a/include/trace/events/mmflags.h b/include/trace/events/mmflags.h
+index 67018d367b9f..89b0c0ddcc52 100644
+--- a/include/trace/events/mmflags.h
++++ b/include/trace/events/mmflags.h
+@@ -48,7 +48,8 @@
+ 	{(unsigned long)__GFP_WRITE,		"__GFP_WRITE"},		\
+ 	{(unsigned long)__GFP_RECLAIM,		"__GFP_RECLAIM"},	\
+ 	{(unsigned long)__GFP_DIRECT_RECLAIM,	"__GFP_DIRECT_RECLAIM"},\
+-	{(unsigned long)__GFP_KSWAPD_RECLAIM,	"__GFP_KSWAPD_RECLAIM"}\
++	{(unsigned long)__GFP_KSWAPD_RECLAIM,	"__GFP_KSWAPD_RECLAIM"},\
++	{(unsigned long)__GFP_NOINIT_ON_ALLOC,	"__GFP_NOINIT_ON_ALLOC"}\
+ 
+ #define show_gfp_flags(flags)						\
+ 	(flags) ? __print_flags(flags, "|",				\
+diff --git a/mm/hugetlb.c b/mm/hugetlb.c
+index fe76f8fd5a73..c60a6726b0be 100644
+--- a/mm/hugetlb.c
++++ b/mm/hugetlb.c
+@@ -1742,6 +1742,13 @@ static struct page *alloc_fresh_huge_page(struct hstate *h,
+ {
+ 	struct page *page;
+ 
++	/*
++	 * Signal the following page allocs to avoid them being cleared
++	 * in allocation time - since HugeTLB pages are *only* used as
++	 * userspace pages, they'll be cleared by default before usage.
++	 */
++	gfp_mask |= __GFP_NOINIT_ON_ALLOC;
++
+ 	if (hstate_is_gigantic(h))
+ 		page = alloc_gigantic_page(h, gfp_mask, nid, nmask);
+ 	else
+diff --git a/tools/perf/builtin-kmem.c b/tools/perf/builtin-kmem.c
+index a50dae2c4ae9..bef90d8bb7f6 100644
+--- a/tools/perf/builtin-kmem.c
++++ b/tools/perf/builtin-kmem.c
+@@ -660,6 +660,7 @@ static const struct {
+ 	{ "__GFP_RECLAIM",		"R" },
+ 	{ "__GFP_DIRECT_RECLAIM",	"DR" },
+ 	{ "__GFP_KSWAPD_RECLAIM",	"KR" },
++	{ "__GFP_NOINIT_ON_ALLOC",	"NIA" },
+ };
+ 
+ static size_t max_gfp_len;
+-- 
+2.28.0
+
