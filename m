@@ -1,23 +1,23 @@
-Return-Path: <SRS0=xpRX=D3=lists.openwall.com=kernel-hardening-return-20231-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=sxml=D3=lists.openwall.com=kernel-hardening-return-20232-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-5.4 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,
+	WEIRD_QUOTING autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B0875C4363A
-	for <kernel-hardening@archiver.kernel.org>; Tue, 20 Oct 2020 19:25:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4CAA0C388F2
+	for <kernel-hardening@archiver.kernel.org>; Tue, 20 Oct 2020 20:08:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7801022251
-	for <kernel-hardening@archiver.kernel.org>; Tue, 20 Oct 2020 19:25:08 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C94CF22283
+	for <kernel-hardening@archiver.kernel.org>; Tue, 20 Oct 2020 20:08:05 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="MD9d7uz3"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7801022251
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20231-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7437 invoked by uid 550); 20 Oct 2020 19:25:00 -0000
+	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="PRthOQ9C"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C94CF22283
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20232-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13659 invoked by uid 550); 20 Oct 2020 20:07:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,156 +25,154 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7411 invoked from network); 20 Oct 2020 19:25:00 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=0aSlO1W7vXD8wpvCCG7wGbAKM67BTQt/FrRx6zZmumc=;
-        b=MD9d7uz3cpra2FJBi9y1hEvF1r4hdy805N/H3qRtjanKJvvmB1oAnplnX1pvJFGw3p
-         u2TpNcRLfU2Z2DTbjohMDHA66MV8G90XBOBS8mILuZVE2Tl1fio+VP73xYJigeFrlIeI
-         thKNSd2wLZ0ZiU7v9+mZ7gKsBuhfO3C5IZPR0QUG037jFS7rG71K9DGNZPifpYw5Zb3j
-         jS/9m7X8sU7ej/VKCctxs5ZOZrMHQSjQz9JjI68haEWvlWCeAR9lPPGbS1DsHCzFD131
-         9coer59bAU/KEvj4fQv6K3nmuab06BfEXpdrDvwZLwzkJFQzfVDZxEo6uSKYeFUMVvag
-         pqMA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=0aSlO1W7vXD8wpvCCG7wGbAKM67BTQt/FrRx6zZmumc=;
-        b=WSOJBj3LZNOMJTy1lF4DkBAvJ8odiT98UJI2ULidWmwUejiNNZMw6VN6y9a+zs4Eiq
-         en+5ZoXXf2/KRhEdMw1cwJUAiwShApAgjrpTM0eajesW7yIoky7Y/bUjzy+Kb2WgQJvS
-         s2f1JaAMuJO/MXO1IzQydu//7K4//srnvnzTtlCDdPwaWfuNkEixneSMzqeE+C6Q4Z+0
-         GL+84IWxIuPVCYJPsiZMCWhdpi2oRVjpLv/fpdmB5zu0WDRge4Pp4THztkGvsQVrpzvu
-         JoK4jGPN8tKb8oLPD1P6+hQTRKBV3nibGr05Mc/4/0f4YI5pgSXzWoqqn+auOw3i0ySi
-         /yAg==
-X-Gm-Message-State: AOAM5331y76e7P4+CYlpvnto1cHADgdMnCKfHFO6tcPrLQu28Q8TP7W/
-	Upt6rtYhkjOtCjwDyRYVZ/PwBgF5cCXyoquHFdFrEw==
-X-Google-Smtp-Source: ABdhPJyMOA23NnvKtSjkOLGiry9VkOkNifOIW4sa6w2YiQX+XkJh8M/nVDkTK78UH1bOaHTG4GNJ1uOJcZ3dDNt12gE=
-X-Received: by 2002:a50:88e5:: with SMTP id d92mr4494054edd.145.1603221888446;
- Tue, 20 Oct 2020 12:24:48 -0700 (PDT)
+Received: (qmail 13639 invoked from network); 20 Oct 2020 20:07:57 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1603224464;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=rECoUX38wV4UB1u3AZx/Q+bh8+4xG8jzkLEcNAmZbr8=;
+	b=PRthOQ9CiPrSdi6Zzzay7usERrnAnfLf4vltLiTDvuETc7pjFbU6QeOZ6pvAKSMoPON4zq
+	ZfSSSh2ck5T6iQ5Bs157AsW8v3aGhTMNd1LQWafxKefSXixWbH3TrLTlF4Ov8iPYf1niI9
+	9NlcRWYsL2VcVXukz+jgClZQUZoBMAs=
+X-MC-Unique: p_lpFeTRO7yWC82aiH9E_A-1
+Subject: Re: [PATCH] mm, hugetlb: Avoid double clearing for hugetlb pages
+To: "Guilherme G. Piccoli" <gpiccoli@canonical.com>,
+ Michal Hocko <mhocko@suse.com>, Mike Kravetz <mike.kravetz@oracle.com>
+Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com,
+ linux-hardening@vger.kernel.org, linux-security-module@vger.kernel.org,
+ kernel@gpiccoli.net, cascardo@canonical.com,
+ Alexander Potapenko <glider@google.com>,
+ James Morris <jamorris@linux.microsoft.com>,
+ Kees Cook <keescook@chromium.org>
+References: <20201019182853.7467-1-gpiccoli@canonical.com>
+ <20201020082022.GL27114@dhcp22.suse.cz>
+ <9cecd9d9-e25c-4495-50e2-8f7cb7497429@canonical.com>
+From: David Hildenbrand <david@redhat.com>
+Organization: Red Hat GmbH
+Message-ID: <5650dc95-4ae2-05d3-c71a-3828d35bd49b@redhat.com>
+Date: Tue, 20 Oct 2020 22:07:33 +0200
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
+ Thunderbird/78.3.1
 MIME-Version: 1.0
-References: <20201013003203.4168817-1-samitolvanen@google.com>
- <20201013003203.4168817-23-samitolvanen@google.com> <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
- <20201015102216.GB2611@hirez.programming.kicks-ass.net> <20201015203942.f3kwcohcwwa6lagd@treble>
- <CABCJKufDLmBCwmgGnfLcBw_B_4U8VY-R-dSNNp86TFfuMobPMw@mail.gmail.com> <20201020185217.ilg6w5l7ujau2246@treble>
-In-Reply-To: <20201020185217.ilg6w5l7ujau2246@treble>
-From: Sami Tolvanen <samitolvanen@google.com>
-Date: Tue, 20 Oct 2020 12:24:37 -0700
-Message-ID: <CABCJKucVjFtrOsw58kn4OnW5kdkUh8G7Zs4s6QU9s6O7soRiAA@mail.gmail.com>
-Subject: Re: [PATCH v6 22/25] x86/asm: annotate indirect jumps
-To: Josh Poimboeuf <jpoimboe@redhat.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Jann Horn <jannh@google.com>, 
-	"the arch/x86 maintainers" <x86@kernel.org>, Masahiro Yamada <masahiroy@kernel.org>, 
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
-	linux-kbuild <linux-kbuild@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, 
-	linux-pci@vger.kernel.org
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <9cecd9d9-e25c-4495-50e2-8f7cb7497429@canonical.com>
+X-Scanned-By: MIMEDefang 2.84 on 10.5.11.22
+Authentication-Results: relay.mimecast.com;
+	auth=pass smtp.auth=CUSA124A263 smtp.mailfrom=david@redhat.com
+X-Mimecast-Spam-Score: 0
+X-Mimecast-Originator: redhat.com
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-On Tue, Oct 20, 2020 at 11:52 AM Josh Poimboeuf <jpoimboe@redhat.com> wrote:
->
-> On Tue, Oct 20, 2020 at 09:45:06AM -0700, Sami Tolvanen wrote:
-> > On Thu, Oct 15, 2020 at 1:39 PM Josh Poimboeuf <jpoimboe@redhat.com> wrote:
-> > >
-> > > On Thu, Oct 15, 2020 at 12:22:16PM +0200, Peter Zijlstra wrote:
-> > > > On Thu, Oct 15, 2020 at 01:23:41AM +0200, Jann Horn wrote:
-> > > >
-> > > > > It would probably be good to keep LTO and non-LTO builds in sync about
-> > > > > which files are subjected to objtool checks. So either you should be
-> > > > > removing the OBJECT_FILES_NON_STANDARD annotations for anything that
-> > > > > is linked into the main kernel (which would be a nice cleanup, if that
-> > > > > is possible),
-> > > >
-> > > > This, I've had to do that for a number of files already for the limited
-> > > > vmlinux.o passes we needed for noinstr validation.
-> > >
-> > > Getting rid of OBJECT_FILES_NON_STANDARD is indeed the end goal, though
-> > > I'm not sure how practical that will be for some of the weirder edge
-> > > case.
-> > >
-> > > On a related note, I have some old crypto cleanups which need dusting
-> > > off.
-> >
-> > Building allyesconfig with this series and LTO enabled, I still see
-> > the following objtool warnings for vmlinux.o, grouped by source file:
-> >
-> > arch/x86/entry/entry_64.S:
-> > __switch_to_asm()+0x0: undefined stack state
-> > .entry.text+0xffd: sibling call from callable instruction with
-> > modified stack frame
-> > .entry.text+0x48: stack state mismatch: cfa1=7-8 cfa2=-1+0
->
-> Not sure what this one's about, there's no OBJECT_FILES_NON_STANDARD?
+On 20.10.20 21:19, Guilherme G. Piccoli wrote:
+> Hi Michal, thanks a lot for your thorough response. I'll address the
+> comments inline, below. Thanks also David and Mike - in fact, I almost
+> don't need to respond here after Mike, he was right to the point I'm
+> going to discuss heh...
+> 
+> 
+> On 20/10/2020 05:20, Michal Hocko wrote:
+>>
+>> Yes zeroying is quite costly and that is to be expected when the feature
+>> is enabled. Hugetlb like other allocator users perform their own
+>> initialization rather than go through __GFP_ZERO path. More on that
+>> below.
+>>
+>> Could you be more specific about why this is a problem. Hugetlb pool is
+>> usualy preallocatd once during early boot. 24s for 65GB of 2MB pages
+>> is non trivial amount of time but it doens't look like a major disaster
+>> either. If the pool is allocated later it can take much more time due to
+>> memory fragmentation.
+>>
+>> I definitely do not want to downplay this but I would like to hear about
+>> the real life examples of the problem.
+> 
+> Indeed, 24s of delay (!) is not so harmful for boot time, but...64G was
+> just my simple test in a guest, the real case is much worse! It aligns
+> with Mike's comment, we have complains of minute-like delays, due to a
+> very big pool of hugepages being allocated.
+> 
+> Users have their own methodology for allocating pages, some would prefer
+> do that "later" for a variety of reasons, so early boot time allocations
+> are not always used, that shouldn't be the only focus of the discussion
+> here.
+> In the specific report I had, the user complains about more than 3
+> minutes to allocate ~542G of 2M hugetlb pages.
+> 
+> Now, you'll ask why in the heck they are using init_on_alloc then -
+> right? So, the Kconfig option "CONFIG_INIT_ON_ALLOC_DEFAULT_ON" is set
+> by default in Ubuntu, for hardening reasons. So, the workaround for the
+> users complaining of delays in allocating hugetlb pages currently is to
+> set "init_on_alloc" to 0. It's a bit lame to ask users to disable such
+> hardening thing just because we have a double initialization in hugetlb...
+> 
+> 
+>>
+>>
+>> This has been discussed already (http://lkml.kernel.org/r/20190514143537.10435-4-glider@google.com.
+>> Previously it has been brought up in SLUB context AFAIR. Your numbers
+>> are quite clear here but do we really need a gfp flag with all the
+>> problems we tend to grow in with them?
+>>
+>> One potential way around this specifically for hugetlb would be to use
+>> __GFP_ZERO when allocating from the allocator and marking the fact in
+>> the struct page while it is sitting in the pool. Page fault handler
+>> could then skip the zeroying phase. Not an act of beauty TBH but it
+>> fits into the existing model of the full control over initialization.
+>> Btw. it would allow to implement init_on_free semantic as well. I
+>> haven't implemented the actual two main methods
+>> hugetlb_test_clear_pre_init_page and hugetlb_mark_pre_init_page because
+>> I am not entirely sure about the current state of hugetlb struct page in
+>> the pool. But there should be a lot of room in there (or in tail pages).
+>> Mike will certainly know much better. But the skeleton of the patch
+>> would look like something like this (not even compile tested).
+>> [code...]
+> 
+> Thanks a lot for pointing the previous discussion for me! I should have
+> done my homework properly and read all versions of the patchset...my
+> bad! I'm glad to see this problem was discussed and considered early in
+> the patch submission, I guess it only missed more real-world numbers.
+> 
+> Your approach seems interesting, but as per Mike's response (which seems
+> to have anticipated all my arguments heheh) your approach is a bit
+> reversed, solving a ""non-existent"" problem (of zeroing hugetlb pages
+> in fault time), whereas the big problem hereby tentatively fixed is the
+> massive delay on allocation time of the hugetlb pages.
+> 
+> I understand that your suggestion has no burden of introducing more GFP
+> flags, and I agree that those are potentially dangerous if misused (and
+> I totally agree with David that __GFP_NOINIT_ON_ALLOC is heinous, I'd
+> rather go with the originally proposed __GFP_NO_AUTOINIT), but...
+> wouldn't it be letting the code just drive a design decision? Like "oh,
+> adding a flag is so bad..better just let this bug/perf issue to stay".
 
-Correct, because with LTO, we won't have an ELF binary to process
-until we compile everything into vmlinux.o, and at that point we can
-no longer skip individual object files.
+The main problem I have is that page alloc code does some internal page
+allocator things ("init_on_alloc" - "Fill newly allocated pages and heap
+objects with zeroes"), and we're allowing users of page alloc code *that
+really shouldn't have to care* to override that behavior, exposing
+unnecessary complexity. Mainly: other allocators.
 
-The sibling call warning is in
-swapgs_restore_regs_and_return_to_usermode and the stack state
-mismatch in entry_SYSCALL_64_after_hwframe.
+"__GFP_NOINIT_ON_ALLOC" - what exactly does it do?
+"__GFP_NO_AUTOINIT" - what exactly does it do?
 
-> > arch/x86/entry/entry_64_compat.S:
-> > .entry.text+0x1754: unsupported instruction in callable function
+__GFP_ZERO set: page always zero.
+__GFP_ZERO not set: page zero with init_on_alloc, page not necessarily
+                    zero without init_on_alloc. Users can find out by 	
+                    looking at init_on_alloc.
 
-This comes from a sysretl instruction in entry_SYSCALL_compat.
+IMHO, even something like __GFP_DONT_ZERO would be clearer. But I still
+somewhat don't like letting users of the buddy override configured
+behavior. Yes, it could be used by other alloactors (like hugetlb) to
+optimize.
 
-> > .entry.text+0x1634: redundant CLD
-> > .entry.text+0x15fd: stack state mismatch: cfa1=7-8 cfa2=-1+0
-> > .entry.text+0x168c: stack state mismatch: cfa1=7-8 cfa2=-1+0
->
-> Ditto.
+But it could also be used by any driver wanting to optimize the
+"init_on_alloc" case, eventually introducing security issues because the
+code tries to be smart.
 
-These are all from entry_SYSENTER_compat_after_hwframe.
+-- 
+Thanks,
 
-> > arch/x86/kernel/head_64.S:
-> > .head.text+0xfb: unsupported instruction in callable function
->
-> Ditto.
+David / dhildenb
 
-This is lretq in secondary_startup_64_no_verify.
-
-> > arch/x86/crypto/camellia-aesni-avx2-asm_64.S:
-> > camellia_cbc_dec_32way()+0xb3: stack state mismatch: cfa1=7+520 cfa2=7+8
-> > camellia_ctr_32way()+0x1a: stack state mismatch: cfa1=7+520 cfa2=7+8
->
-> I can clean off my patches for all the crypto warnings.
-
-Great, sounds good.
-
-> > arch/x86/lib/retpoline.S:
-> > __x86_retpoline_rdi()+0x10: return with modified stack frame
-> > __x86_retpoline_rdi()+0x0: stack state mismatch: cfa1=7+32 cfa2=7+8
-> > __x86_retpoline_rdi()+0x0: stack state mismatch: cfa1=7+32 cfa2=-1+0
->
-> Is this with upstream?  I thought we fixed that with
-> UNWIND_HINT_RET_OFFSET.
-
-Yes, and the UNWIND_HINT_RET_OFFSET is there.
-
-> > Josh, Peter, any thoughts on what would be the preferred way to fix
-> > these, or how to tell objtool to ignore this code?
->
-> One way or another, the patches need to be free of warnings before
-> getting merged.  I can help, though I'm traveling and only have limited
-> bandwidth for at least the rest of the month.
->
-> Ideally we'd want to have objtool understand everything, with no
-> whitelisting, but some cases (e.g. suspend code) can be tricky.
->
-> I wouldn't be opposed to embedding the whitelist in the binary, in a
-> discardable section.  It should be relatively easy, but as I mentioned I
-> may or may not have time to work on it for a bit.  I'm working half
-> days, and now the ocean beckons from the window of my camper.
-
-Something similar to STACK_FRAME_NON_STANDARD()? Using that seems to
-result in "BUG: why am I validating an ignored function?" warnings, so
-I suspect some additional changes are needed.
-
-Sami
