@@ -1,23 +1,23 @@
-Return-Path: <SRS0=8nJX=D5=lists.openwall.com=kernel-hardening-return-20247-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=AM4w=D5=lists.openwall.com=kernel-hardening-return-20248-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C883AC4363A
-	for <kernel-hardening@archiver.kernel.org>; Thu, 22 Oct 2020 00:23:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EA784C388F7
+	for <kernel-hardening@archiver.kernel.org>; Thu, 22 Oct 2020 07:26:28 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6602B2417D
-	for <kernel-hardening@archiver.kernel.org>; Thu, 22 Oct 2020 00:23:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 94E05222E9
+	for <kernel-hardening@archiver.kernel.org>; Thu, 22 Oct 2020 07:26:27 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="CNB4qwF8"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6602B2417D
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20247-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 27879 invoked by uid 550); 22 Oct 2020 00:23:22 -0000
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="aUN68Sfz"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 94E05222E9
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20248-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13402 invoked by uid 550); 22 Oct 2020 07:26:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,188 +25,82 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27850 invoked from network); 22 Oct 2020 00:23:22 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=p8Hwn4AXDi9NRjlCE0oMq1jAIKpEQWx4gCW/kuHDlnE=;
-        b=CNB4qwF8XdN3RdM9KJnNC7kYAWqE3MUa239/vjNlnFSdgbAxXNDSsHdvaAwxfoPYCf
-         9I5uTsOXqOSvDFVdPGNB9kuPiLcCYP+jICpfkw/SnOdN0UwneoOuRjcJRVYvzghyOZgY
-         XvPIaPv94GmuiwvhuOy99hxIOxFWyWcpXlhs/vEB8KesGnOR/boJ2sI/4woeV6i/72q/
-         p2uHWfix+2KfdBMVPBrl7fsMQncBxq0mhjoTIYiPInfd1v8q11VRdJI0fils5s9SxrwC
-         md6xgXZxNLh51IWZJpdkb57XW+oG+EDxRaAKOL98VAQ3pysJjVwuexGYN8bLRDJoVH0/
-         WSmQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=p8Hwn4AXDi9NRjlCE0oMq1jAIKpEQWx4gCW/kuHDlnE=;
-        b=ueQZ7ELXnNCNC7gOIio6T17pvPJxYZvcJkcSzpCcROnhPudpFGfOTW5UlpOC0UCzJt
-         uBxZk2+9ESdJBfTVnodKE/027t7ZcyZlK/j2GU5kB3jyR1yQUKfzpwDuESua8lSBtGb/
-         vdlkpOLvhPbwvFn1QJm+QgCAKorl97NNdqQxzIxiIP7PXBYZdrrw9RQqbt7HTwqGrvpG
-         mNzrR7RJSo76ojtbgVeNvGzWa8NncuslKfxa3PxouZ7O5yx+YoQGe3HnDciSoJ9hMlA0
-         cOlCwcBJzDcWIZwqEmjzgkcyErRgzpbseFibrlTYVvn6P3Ew43SMhubva1u4cIRRvoWq
-         hyOw==
-X-Gm-Message-State: AOAM532yUXAZdYS0bga9TUYoC5DM9NAJ2SM6JHILEsKzyJyFXdRvH5Mi
-	gLcj2uOMRDfXS7PsUgalWHCz2wk0H0rqfff56hJ+rA==
-X-Google-Smtp-Source: ABdhPJzLM1aM6spRLX8pXe/S9QIy6/o0GCiMeSkYufHnU7EzHfprw/1bO/qSLNeYe+3BVe+LcpDtiqX5V8eEHvsaeCo=
-X-Received: by 2002:a17:906:490d:: with SMTP id b13mr5925764ejq.122.1603326190426;
- Wed, 21 Oct 2020 17:23:10 -0700 (PDT)
-MIME-Version: 1.0
-References: <20201013003203.4168817-1-samitolvanen@google.com>
- <20201013003203.4168817-23-samitolvanen@google.com> <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
- <20201015102216.GB2611@hirez.programming.kicks-ass.net> <20201015203942.f3kwcohcwwa6lagd@treble>
- <CABCJKufDLmBCwmgGnfLcBw_B_4U8VY-R-dSNNp86TFfuMobPMw@mail.gmail.com>
- <20201020185217.ilg6w5l7ujau2246@treble> <CABCJKucVjFtrOsw58kn4OnW5kdkUh8G7Zs4s6QU9s6O7soRiAA@mail.gmail.com>
- <20201021085606.GZ2628@hirez.programming.kicks-ass.net>
-In-Reply-To: <20201021085606.GZ2628@hirez.programming.kicks-ass.net>
-From: Sami Tolvanen <samitolvanen@google.com>
-Date: Wed, 21 Oct 2020 17:22:59 -0700
-Message-ID: <CABCJKufL6=FiaeD8T0P+mK4JeR9J80hhjvJ6Z9S-m9UnCESxVA@mail.gmail.com>
-Subject: Re: [PATCH v6 22/25] x86/asm: annotate indirect jumps
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>, 
-	"the arch/x86 maintainers" <x86@kernel.org>, Masahiro Yamada <masahiroy@kernel.org>, 
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
-	linux-kbuild <linux-kbuild@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, 
+Received: (qmail 13379 invoked from network); 22 Oct 2020 07:26:18 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=merlin.20170209; h=In-Reply-To:Content-Type:MIME-Version:
+	References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description;
+	bh=h+rKHFkcR5k6QSt8CeK8lSdFFr+MaETwBr6Mxg4PDmU=; b=aUN68SfzWTPeVbTNit8fy/ZXb0
+	rRAYaTV5InvSpscM+g5V5UNuxxMIOSNNjdTrr9zBJwTDnIr7HB4kAtF5eelSvpZSzfzi0XB65k49y
+	fMhVyhLkrBDvMABUemD6zpOEa+Q8IzTJx4IZksVwvVIaYHLDJx476sb1mRX2HLMmaKAybchSbXO5G
+	h2Y+yNlzpY2780AC98N7ePm2EJ79MCEo33CoAfryNdBPReXIr4iTyNLwA3Ag8rPF1QkdzEXKCnmAv
+	01B8rB6S0TBGhXUXekjoFY4MHksCyJY7O4ahmGFdB9hvjhmJ+hNdIUNrUYqknMjnfiTaSOjgjEbDG
+	qxHU9c4w==;
+Date: Thu, 22 Oct 2020 09:25:53 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+To: Josh Poimboeuf <jpoimboe@redhat.com>
+Cc: Sami Tolvanen <samitolvanen@google.com>, Jann Horn <jannh@google.com>,
+	the arch/x86 maintainers <x86@kernel.org>,
+	Masahiro Yamada <masahiroy@kernel.org>,
+	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Paul E. McKenney" <paulmck@kernel.org>,
+	Kees Cook <keescook@chromium.org>,
+	Nick Desaulniers <ndesaulniers@google.com>,
+	clang-built-linux <clang-built-linux@googlegroups.com>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	linux-arch <linux-arch@vger.kernel.org>,
+	Linux ARM <linux-arm-kernel@lists.infradead.org>,
+	linux-kbuild <linux-kbuild@vger.kernel.org>,
+	kernel list <linux-kernel@vger.kernel.org>,
 	linux-pci@vger.kernel.org
-Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [PATCH v6 22/25] x86/asm: annotate indirect jumps
+Message-ID: <20201022072553.GN2628@hirez.programming.kicks-ass.net>
+References: <20201013003203.4168817-23-samitolvanen@google.com>
+ <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
+ <20201015102216.GB2611@hirez.programming.kicks-ass.net>
+ <20201015203942.f3kwcohcwwa6lagd@treble>
+ <CABCJKufDLmBCwmgGnfLcBw_B_4U8VY-R-dSNNp86TFfuMobPMw@mail.gmail.com>
+ <20201020185217.ilg6w5l7ujau2246@treble>
+ <CABCJKucVjFtrOsw58kn4OnW5kdkUh8G7Zs4s6QU9s6O7soRiAA@mail.gmail.com>
+ <20201021085606.GZ2628@hirez.programming.kicks-ass.net>
+ <20201021093213.GV2651@hirez.programming.kicks-ass.net>
+ <20201021212747.ofk74lugt4hhjdzg@treble>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20201021212747.ofk74lugt4hhjdzg@treble>
 
-On Wed, Oct 21, 2020 at 1:56 AM Peter Zijlstra <peterz@infradead.org> wrote:
->
-> On Tue, Oct 20, 2020 at 12:24:37PM -0700, Sami Tolvanen wrote:
-> > > > Building allyesconfig with this series and LTO enabled, I still see
-> > > > the following objtool warnings for vmlinux.o, grouped by source file:
-> > > >
-> > > > arch/x86/entry/entry_64.S:
-> > > > __switch_to_asm()+0x0: undefined stack state
-> > > > .entry.text+0xffd: sibling call from callable instruction with
-> > > > modified stack frame
-> > > > .entry.text+0x48: stack state mismatch: cfa1=7-8 cfa2=-1+0
-> > >
-> > > Not sure what this one's about, there's no OBJECT_FILES_NON_STANDARD?
-> >
-> > Correct, because with LTO, we won't have an ELF binary to process
-> > until we compile everything into vmlinux.o, and at that point we can
-> > no longer skip individual object files.
->
-> I think what Josh was trying to say is; this file is subject to objtool
-> on a normal build and does not generate warnings. So why would it
-> generate warnings when subject to objtool as result of a vmlinux run
-> (due to LTO or otherwise).
->
-> In fact, when I build a x86_64-defconfig and then run:
->
->   $ objtool check -barf defconfig-build/vmlinux.o
+On Wed, Oct 21, 2020 at 04:27:47PM -0500, Josh Poimboeuf wrote:
+> On Wed, Oct 21, 2020 at 11:32:13AM +0200, Peter Zijlstra wrote:
+> > On Wed, Oct 21, 2020 at 10:56:06AM +0200, Peter Zijlstra wrote:
+> > 
+> > > I do not see these in particular, although I do see a lot of:
+> > > 
+> > >   "sibling call from callable instruction with modified stack frame"
+> > 
+> > defconfig-build/vmlinux.o: warning: objtool: msr_write()+0x10a: sibling call from callable instruction with modified stack frame
+> > defconfig-build/vmlinux.o: warning: objtool:   msr_write()+0x99: (branch)
+> > defconfig-build/vmlinux.o: warning: objtool:   msr_write()+0x3e: (branch)
+> > defconfig-build/vmlinux.o: warning: objtool:   msr_write()+0x0: <=== (sym)
+> > 
+> > $ nm defconfig-build/vmlinux.o | grep msr_write
+> > 0000000000043250 t msr_write
+> > 00000000004289c0 T msr_write
+> > 0000000000003056 t msr_write.cold
+> > 
+> > Below 'fixes' it. So this is also caused by duplicate symbols.
+> 
+> There's a new linker flag for renaming duplicates:
+> 
+>   https://sourceware.org/bugzilla/show_bug.cgi?id=26391
+> 
+> But I guess that doesn't help us now.
 
-Note that I'm passing also --vmlinux and --duplicate to objtool when
-processing vmlinux.o, and this series has a patch to split noinstr
-validation from --vmlinux, so that's skipped.
+Well, depends a bit if clang can do it; we only need this for LTO builds
+for now.
 
-> I do not see these in particular, although I do see a lot of:
->
->   "sibling call from callable instruction with modified stack frame"
->   "falls through to next function"
->
-> that did not show up in the individual objtool runs during the build.
+> I don't have access to GCC 10 at the moment so I can't recreate it.
+> Does this fix it?
 
-I'm able to reproduce these warnings with gcc 9.3 + allyesconfig, with
-KASAN and GCOV_KERNEL disabled, as they are not enabled in LTO builds
-either. This is without the LTO series applied, so we also have the
-retpoline warnings:
-
-$ ./tools/objtool/objtool check -arfld vmlinux.o 2>&1 | grep -vE
-'(sibling|instr)'
-vmlinux.o: warning: objtool: wakeup_long64()+0x61: indirect jump found
-in RETPOLINE build
-vmlinux.o: warning: objtool: .text+0x826308a: indirect jump found in
-RETPOLINE build
-vmlinux.o: warning: objtool: .text+0x82630c5: indirect jump found in
-RETPOLINE build
-vmlinux.o: warning: objtool: .head.text+0x748: indirect jump found in
-RETPOLINE build
-vmlinux.o: warning: objtool:
-set_bringup_idt_handler.constprop.0()+0x0: undefined stack state
-vmlinux.o: warning: objtool: .entry.text+0x1634: redundant CLD
-vmlinux.o: warning: objtool: camellia_cbc_dec_32way()+0xb3: stack
-state mismatch: cfa1=7+520 cfa2=7+8
-vmlinux.o: warning: objtool: camellia_ctr_32way()+0x1a: stack state
-mismatch: cfa1=7+520 cfa2=7+8
-vmlinux.o: warning: objtool: aesni_gcm_init_avx_gen2()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: aesni_gcm_enc_update_avx_gen2()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: aesni_gcm_dec_update_avx_gen2()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: aesni_gcm_finalize_avx_gen2()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: aesni_gcm_init_avx_gen4()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: aesni_gcm_enc_update_avx_gen4()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: aesni_gcm_dec_update_avx_gen4()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: aesni_gcm_finalize_avx_gen4()+0x12:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: sha1_transform_avx2()+0xc: unsupported
-stack pointer realignment
-vmlinux.o: warning: objtool: sha1_ni_transform()+0x7: unsupported
-stack pointer realignment
-vmlinux.o: warning: objtool: sha256_transform_rorx()+0x13: unsupported
-stack pointer realignment
-vmlinux.o: warning: objtool: sha512_transform_ssse3()+0x14:
-unsupported stack pointer realignment
-vmlinux.o: warning: objtool: sha512_transform_avx()+0x14: unsupported
-stack pointer realignment
-vmlinux.o: warning: objtool: sha512_transform_rorx()+0x7: unsupported
-stack pointer realignment
-vmlinux.o: warning: objtool: __x86_retpoline_rdi()+0x10: return with
-modified stack frame
-vmlinux.o: warning: objtool: __x86_retpoline_rdi()+0x0: stack state
-mismatch: cfa1=7+32 cfa2=7+8
-vmlinux.o: warning: objtool: __x86_retpoline_rdi()+0x0: stack state
-mismatch: cfa1=7+32 cfa2=-1+0
-vmlinux.o: warning: objtool: reset_early_page_tables()+0x0: stack
-state mismatch: cfa1=7+8 cfa2=-1+0
-vmlinux.o: warning: objtool: .entry.text+0x48: stack state mismatch:
-cfa1=7-8 cfa2=-1+0
-vmlinux.o: warning: objtool: .entry.text+0x15fd: stack state mismatch:
-cfa1=7-8 cfa2=-1+0
-vmlinux.o: warning: objtool: .entry.text+0x168c: stack state mismatch:
-cfa1=7-8 cfa2=-1+0
-
-There are a couple of differences, like the first "undefined stack
-state" warning pointing to set_bringup_idt_handler.constprop.0()
-instead of __switch_to_asm(). I tried running this with --backtrace,
-but objtool segfaults at the first .entry.text warning:
-
-$ ./tools/objtool/objtool check -barfld vmlinux.o
-...
-vmlinux.o: warning: objtool:
-set_bringup_idt_handler.constprop.0()+0x0: undefined stack state
-vmlinux.o: warning: objtool:   xen_hypercall_set_trap_table()+0x0: <=== (sym)
-...
-vmlinux.o: warning: objtool: .entry.text+0xffd: sibling call from
-callable instruction with modified stack frame
-vmlinux.o: warning: objtool:   .entry.text+0xfcb: (branch)
-Segmentation fault
-
-Going back to the allyesconfig+LTO vmlinux.o, the "undefined stack
-state" warning looks quite similar:
-
-$ ./tools/objtool/objtool check -barlfd vmlinux.o
-vmlinux.o: warning: objtool: __switch_to_asm()+0x0: undefined stack state
-vmlinux.o: warning: objtool:   xen_hypercall_set_trap_table()+0x0: <=== (sym)
-vmlinux.o: warning: objtool: .entry.text+0xffd: sibling call from
-callable instruction with modified stack frame
-vmlinux.o: warning: objtool:   .entry.text+0xfcb: (branch)
-Segmentation fault
-
-Sami
+Doesn't seem to do the trick :/ I'll try and have a poke later.
