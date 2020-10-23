@@ -1,23 +1,23 @@
-Return-Path: <SRS0=Lr2I=D6=lists.openwall.com=kernel-hardening-return-20256-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=3hKw=D6=lists.openwall.com=kernel-hardening-return-20257-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4A436C55179
-	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Oct 2020 17:36:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5A5DBC388F9
+	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Oct 2020 17:48:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 14A4D21527
-	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Oct 2020 17:36:45 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 2C50D2168B
+	for <kernel-hardening@archiver.kernel.org>; Fri, 23 Oct 2020 17:48:48 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Z3Q8f+9R"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 14A4D21527
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="h9H11cgb"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2C50D2168B
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20256-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20258 invoked by uid 550); 23 Oct 2020 17:36:37 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20257-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3594 invoked by uid 550); 23 Oct 2020 17:48:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,35 +25,35 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20235 invoked from network); 23 Oct 2020 17:36:36 -0000
+Received: (qmail 3573 invoked from network); 23 Oct 2020 17:48:41 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=v3oHNxup2Z/X3RcAQV9SdzT2AuZvE2TJPMlTRy4UVdg=;
-        b=Z3Q8f+9RLq4ubmLePTMZVaggismFpKyU9D+I+6AiCOk4KvSVUOSNNZHXKxoPBh7GWY
-         RClqHZm+Nfyudz9TEQyjxZMXOurxVJZX4mhjPfYxWkNyr/cAAEGYBbDAp5v2k6CMHKfq
-         MxenOHLvWzjF6pubORCn8kVCK413lsXyOSsLbJ1trk61ipxsduiT0ok47wFrcNPbCcVG
-         iiwP2bcnvlcv3dbrI1o9h1196320FtFTcf/aywJkmezF05US8O7ooXg0u/bJ/hMpDIr5
-         +3GbzQLq4yHFL0EImfjvXUY3X7MZpkijg/UDpo6v1eWZb+7VchisG+G2qcBvKiNl6iKu
-         Zb3Q==
+        bh=uHs6b4ooy0rgFnXBjoHTZU/MFzwidZAAr9PXWq9UsVk=;
+        b=h9H11cgbsiLIfnCVNg9C63PczJj6klub3nyQOP7k17qHXCkM3+IiRWUf+K8onV/M6f
+         cq6hpYWY5tijhMZOqe4vpxWnGOmq8cRM3qeYtsvRKEgPmJNNtDrmOS532+baO+0nsP5H
+         4oTZzToITDWX/+cRTyYkk0o02ppC4ZW2srP3cde+HPF1A0gWOS7McnJYg5AziS2A8+k5
+         FA/pfx2HXxsJo1PFtx/M/61rAc4BlJZES29IbLZRpqOuPDxsS+IoEvzMCqD9jME5DLTE
+         nrFqzJCCPwXyQB8C7frIf3mqYooXH89m8/kypUCqoZ0QyzM52bhO/vCOCMQcptgtC5Xq
+         D7GQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=v3oHNxup2Z/X3RcAQV9SdzT2AuZvE2TJPMlTRy4UVdg=;
-        b=DbL4cKswpV7v6wZijwQK0H03ochsU1GxyePx+Cie3P2F1ExRq9b7dMpcuqOEN+7HEu
-         UjNXBR1HlpEjQdjmQkfQZBOUSOiF/1WVPdZ7gND/YL6swSEGYOG89VD8miHy9W0LiCSa
-         SqN474ptVVtz/FeWKZlFr8htgxaSc3vOeE7/CaxVS8n4JV9eFSe/G3AcLA/TZ4ZVCKwg
-         VdlYcngE8RCS69rhX0KiDza2KMYsf/lUfDS7mrVj8756RIERxoTH/7OU8Afg2M097Kp9
-         fRq2Nf5RJ8Xy1mhDVr+nvEuIxJU2YEMB3iZMbMwAG7wQfycZpQv0gkU2w7YNi6NPOPTS
-         S9Nw==
-X-Gm-Message-State: AOAM533WZJfXOewM1ZeWF9+TpdpArKheCgYy7XtmVhd2YiANeF7t1W7/
-	YjUCfjjPIaM3ytB56oYGJNexxw==
-X-Google-Smtp-Source: ABdhPJy9hwXaRUl3z4AovIgAs9ZJu1Si99KmTZKm04vtb887MHqVl15EEMpST1nCdQo3PBn3pgvq6Q==
-X-Received: by 2002:a63:370f:: with SMTP id e15mr3039898pga.124.1603474584438;
-        Fri, 23 Oct 2020 10:36:24 -0700 (PDT)
-Date: Fri, 23 Oct 2020 10:36:17 -0700
+        bh=uHs6b4ooy0rgFnXBjoHTZU/MFzwidZAAr9PXWq9UsVk=;
+        b=TgxbPeRNo6aio2fojF8CtZ+AQewT2ylvR5pjRqpiivvHOZTIecF2szjiJI3RuHO4Y0
+         /MMu44jXUals2gHi3R4OQ/Ll3GUg/fWQ2EepDVSaMQRZlXJ8tAirr2pPAjNcrHdVh/ti
+         xfLawokGpeLP/fw98KvVzMtsQld9aEpNqA4Ig3uSs1s1fR6x+0nWMt3YGPmFxtmBmNov
+         bTJ0bzKT24nyNSluRqRXnBD4a/y6UFcwEYETtwX75bq1BMWkSUrE/Vjp8pMfDbZAlwnc
+         9l3VSSgROID6vauhCzHVB3xP7F1Nme+60fjrKmfLozKT/s0PBkWlPvygS83GO/SN/Rf8
+         Lz5g==
+X-Gm-Message-State: AOAM532uEujrC14qz62QTRb24zd8dmQF1kJmEUvaG+Bwp25MIjauHj81
+	rRddg3IAVISEFFjAEnKcGPkZWA==
+X-Google-Smtp-Source: ABdhPJyvkbZhNi51MOK3wMCs4cSy44OvLHixOCI7o3MOo/m8861HBGG5Vdka871MDYa0ozQesghZuQ==
+X-Received: by 2002:a17:90a:450d:: with SMTP id u13mr3848288pjg.148.1603475309279;
+        Fri, 23 Oct 2020 10:48:29 -0700 (PDT)
+Date: Fri, 23 Oct 2020 10:48:22 -0700
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Peter Zijlstra <peterz@infradead.org>
 Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>,
@@ -72,110 +72,52 @@ Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>,
 	kernel list <linux-kernel@vger.kernel.org>,
 	linux-pci@vger.kernel.org
 Subject: Re: [PATCH v6 22/25] x86/asm: annotate indirect jumps
-Message-ID: <20201023173617.GA3021099@google.com>
-References: <20201013003203.4168817-1-samitolvanen@google.com>
- <20201013003203.4168817-23-samitolvanen@google.com>
- <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
+Message-ID: <20201023174822.GA2696347@google.com>
+References: <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
  <20201015102216.GB2611@hirez.programming.kicks-ass.net>
  <20201015203942.f3kwcohcwwa6lagd@treble>
  <CABCJKufDLmBCwmgGnfLcBw_B_4U8VY-R-dSNNp86TFfuMobPMw@mail.gmail.com>
  <20201020185217.ilg6w5l7ujau2246@treble>
  <CABCJKucVjFtrOsw58kn4OnW5kdkUh8G7Zs4s6QU9s6O7soRiAA@mail.gmail.com>
  <20201021085606.GZ2628@hirez.programming.kicks-ass.net>
- <CABCJKufL6=FiaeD8T0P+mK4JeR9J80hhjvJ6Z9S-m9UnCESxVA@mail.gmail.com>
+ <20201021093213.GV2651@hirez.programming.kicks-ass.net>
+ <20201021212747.ofk74lugt4hhjdzg@treble>
+ <20201022072553.GN2628@hirez.programming.kicks-ass.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CABCJKufL6=FiaeD8T0P+mK4JeR9J80hhjvJ6Z9S-m9UnCESxVA@mail.gmail.com>
+In-Reply-To: <20201022072553.GN2628@hirez.programming.kicks-ass.net>
 
-On Wed, Oct 21, 2020 at 05:22:59PM -0700, Sami Tolvanen wrote:
-> There are a couple of differences, like the first "undefined stack
-> state" warning pointing to set_bringup_idt_handler.constprop.0()
-> instead of __switch_to_asm(). I tried running this with --backtrace,
-> but objtool segfaults at the first .entry.text warning:
+On Thu, Oct 22, 2020 at 09:25:53AM +0200, Peter Zijlstra wrote:
+> On Wed, Oct 21, 2020 at 04:27:47PM -0500, Josh Poimboeuf wrote:
+> > On Wed, Oct 21, 2020 at 11:32:13AM +0200, Peter Zijlstra wrote:
+> > > On Wed, Oct 21, 2020 at 10:56:06AM +0200, Peter Zijlstra wrote:
+> > > 
+> > > > I do not see these in particular, although I do see a lot of:
+> > > > 
+> > > >   "sibling call from callable instruction with modified stack frame"
+> > > 
+> > > defconfig-build/vmlinux.o: warning: objtool: msr_write()+0x10a: sibling call from callable instruction with modified stack frame
+> > > defconfig-build/vmlinux.o: warning: objtool:   msr_write()+0x99: (branch)
+> > > defconfig-build/vmlinux.o: warning: objtool:   msr_write()+0x3e: (branch)
+> > > defconfig-build/vmlinux.o: warning: objtool:   msr_write()+0x0: <=== (sym)
+> > > 
+> > > $ nm defconfig-build/vmlinux.o | grep msr_write
+> > > 0000000000043250 t msr_write
+> > > 00000000004289c0 T msr_write
+> > > 0000000000003056 t msr_write.cold
+> > > 
+> > > Below 'fixes' it. So this is also caused by duplicate symbols.
+> > 
+> > There's a new linker flag for renaming duplicates:
+> > 
+> >   https://sourceware.org/bugzilla/show_bug.cgi?id=26391
+> > 
+> > But I guess that doesn't help us now.
+> 
+> Well, depends a bit if clang can do it; we only need this for LTO builds
+> for now.
 
-Looks like it segfaults when calling BT_FUNC() for an instruction that
-doesn't have a section (?). Applying this patch allows objtool to finish
-with --backtrace:
-
-diff --git a/tools/objtool/check.c b/tools/objtool/check.c
-index c216dd4d662c..618b0c4f2890 100644
---- a/tools/objtool/check.c
-+++ b/tools/objtool/check.c
-@@ -2604,7 +2604,7 @@ static int validate_branch(struct objtool_file *file, struct symbol *func,
- 				ret = validate_branch(file, func,
- 						      insn->jump_dest, state);
- 				if (ret) {
--					if (backtrace)
-+					if (backtrace && insn->sec)
- 						BT_FUNC("(branch)", insn);
- 					return ret;
- 				}
-
-
-Running objtool -barfld on an allyesconfig+LTO vmlinux.o prints out the
-following, ignoring the crypto warnings for now:
-
-__switch_to_asm()+0x0: undefined stack state
-  xen_hypercall_set_trap_table()+0x0: <=== (sym)
-.entry.text+0xffd: sibling call from callable instruction with modified stack frame
-  .entry.text+0xfcb: (branch)
-  .entry.text+0xfb5: (alt)
-  .entry.text+0xfb0: (alt)
-  .entry.text+0xf78: (branch)
-  .entry.text+0x9c: (branch)
-  xen_syscall_target()+0x15: (branch)
-  xen_syscall_target()+0x0: <=== (sym)
-.entry.text+0x1754: unsupported instruction in callable function
-  .entry.text+0x171d: (branch)
-  .entry.text+0x1707: (alt)
-  .entry.text+0x1701: (alt)
-  xen_syscall32_target()+0x15: (branch)
-  xen_syscall32_target()+0x0: <=== (sym)
-.entry.text+0x1634: redundant CLD
-do_suspend_lowlevel()+0x116: sibling call from callable instruction with modified stack frame
-  do_suspend_lowlevel()+0x9a: (branch)
-  do_suspend_lowlevel()+0x0: <=== (sym)
-... [skipping crypto stack pointer alignment warnings] ...
-__x86_retpoline_rdi()+0x10: return with modified stack frame
-  __x86_retpoline_rdi()+0x0: (branch)
-  .altinstr_replacement+0x13d: (branch)
-  .text+0xaf4c7: (alt)
-  .text+0xb03b0: (branch)
-  .text+0xaf482: (branch)
-  crc_pcl()+0x10: (branch)
-  crc_pcl()+0x0: <=== (sym)
-__x86_retpoline_rdi()+0x0: stack state mismatch: cfa1=7+32 cfa2=7+8
-  .altinstr_replacement+0x20b: (branch)
-  __x86_indirect_thunk_rdi()+0x0: (alt)
-  __x86_indirect_thunk_rdi()+0x0: <=== (sym)
-.head.text+0xfb: unsupported instruction in callable function
-  .head.text+0x207: (branch)
-  sev_es_play_dead()+0xff: (branch)
-  sev_es_play_dead()+0xd2: (branch)
-  sev_es_play_dead()+0xa8: (alt)
-  sev_es_play_dead()+0x144: (branch)
-  sev_es_play_dead()+0x10b: (branch)
-  sev_es_play_dead()+0x1f: (branch)
-  sev_es_play_dead()+0x0: <=== (sym)
-__x86_retpoline_rdi()+0x0: stack state mismatch: cfa1=7+32 cfa2=-1+0
-  .altinstr_replacement+0x107: (branch)
-  .text+0x2885: (alt)
-  .text+0x2860: <=== (hint)
-.entry.text+0x48: stack state mismatch: cfa1=7-8 cfa2=-1+0
-  .altinstr_replacement+0xffffffffffffffff: (branch)
-  .entry.text+0x21: (alt)
-  .entry.text+0x1c: (alt)
-  .entry.text+0x10: <=== (hint)
-.entry.text+0x15fd: stack state mismatch: cfa1=7-8 cfa2=-1+0
-  .altinstr_replacement+0xffffffffffffffff: (branch)
-  .entry.text+0x15dc: (alt)
-  .entry.text+0x15d7: (alt)
-  .entry.text+0x15d0: <=== (hint)
-.entry.text+0x168c: stack state mismatch: cfa1=7-8 cfa2=-1+0
-  .altinstr_replacement+0xffffffffffffffff: (branch)
-  .entry.text+0x166b: (alt)
-  .entry.text+0x1666: (alt)
-  .entry.text+0x1660: <=== (hint)
+LLD doesn't seem to support -z unique-symbol.
 
 Sami
