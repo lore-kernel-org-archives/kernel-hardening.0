@@ -1,20 +1,22 @@
-Return-Path: <SRS0=o1pz=EB=lists.openwall.com=kernel-hardening-return-20275-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=cMP1=EB=lists.openwall.com=kernel-hardening-return-20276-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.6 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A7EA1C4363A
-	for <kernel-hardening@archiver.kernel.org>; Mon, 26 Oct 2020 17:28:12 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 18858C4363A
+	for <kernel-hardening@archiver.kernel.org>; Mon, 26 Oct 2020 17:28:19 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D87432223C
-	for <kernel-hardening@archiver.kernel.org>; Mon, 26 Oct 2020 17:28:11 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D87432223C
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=arm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20275-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 4093 invoked by uid 550); 26 Oct 2020 17:28:00 -0000
+	by mail.kernel.org (Postfix) with SMTP id D80142223C
+	for <kernel-hardening@archiver.kernel.org>; Mon, 26 Oct 2020 17:28:17 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="n0OeLdOt"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D80142223C
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20276-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5128 invoked by uid 550); 26 Oct 2020 17:28:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,82 +24,79 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11550 invoked from network); 26 Oct 2020 14:53:05 -0000
-Date: Mon, 26 Oct 2020 14:52:46 +0000
-From: Catalin Marinas <catalin.marinas@arm.com>
-To: Topi Miettinen <toiwoton@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>,
-	Szabolcs Nagy <szabolcs.nagy@arm.com>,
-	Jeremy Linton <jeremy.linton@arm.com>,
-	"linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>,
-	libc-alpha@sourceware.org, systemd-devel@lists.freedesktop.org,
-	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
+Received: (qmail 28188 invoked from network); 26 Oct 2020 16:51:42 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1603731089;
+	bh=Xb2UwSkNcM9cbBM3zlY+jbuzH3M6a/pJtoQEPvBsp7k=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=n0OeLdOtic5bPMHrJNTDAZZk8om61ybbk/lRM2morVVr0p0gU5pxKpJ4ky+5XuUFC
+	 Ueqjsz/CimTtIXrSzJ4EsJ+6cFUVL3htTzpmmNkqnHb/PeJeGrvVrRpv50GvRYw3O+
+	 hsZProyK79R1Ngd6rjPchjVWWDcfW2JaFoFrTEA0=
+Date: Mon, 26 Oct 2020 16:51:25 +0000
+From: Mark Brown <broonie@kernel.org>
+To: Dave Martin <Dave.Martin@arm.com>
+Cc: Catalin Marinas <catalin.marinas@arm.com>,
+	Topi Miettinen <toiwoton@gmail.com>,
 	Mark Rutland <mark.rutland@arm.com>,
-	Mark Brown <broonie@kernel.org>, Dave Martin <dave.martin@arm.com>,
-	Will Deacon <will.deacon@arm.com>,
 	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
+	systemd-devel@lists.freedesktop.org,
+	Kees Cook <keescook@chromium.org>,
 	kernel-hardening@lists.openwall.com,
-	linux-hardening@vger.kernel.org
+	Will Deacon <will.deacon@arm.com>,
+	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
+	Jeremy Linton <jeremy.linton@arm.com>,
+	linux-hardening@vger.kernel.org, libc-alpha@sourceware.org,
+	"linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 Subject: Re: BTI interaction between seccomp filters in systemd and glibc
  mprotect calls, causing service failures
-Message-ID: <20201026145245.GD3117@gaia>
+Message-ID: <20201026165125.GF7402@sirena.org.uk>
 References: <8584c14f-5c28-9d70-c054-7c78127d84ea@arm.com>
  <20201022075447.GO3819@arm.com>
  <78464155-f459-773f-d0ee-c5bdbeb39e5d@gmail.com>
  <202010221256.A4F95FD11@keescook>
  <20201023090232.GA25736@gaia>
  <cf655c11-d854-281a-17ae-262ddf0aaa08@gmail.com>
+ <20201026145245.GD3117@gaia>
+ <20201026155628.GA27285@arm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha512;
+	protocol="application/pgp-signature"; boundary="cpvLTH7QU4gwfq3S"
 Content-Disposition: inline
-In-Reply-To: <cf655c11-d854-281a-17ae-262ddf0aaa08@gmail.com>
+In-Reply-To: <20201026155628.GA27285@arm.com>
+X-Cookie: Safety Third.
 User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On Sat, Oct 24, 2020 at 02:01:30PM +0300, Topi Miettinen wrote:
-> On 23.10.2020 12.02, Catalin Marinas wrote:
-> > On Thu, Oct 22, 2020 at 01:02:18PM -0700, Kees Cook wrote:
-> > > Regardless, it makes sense to me to have the kernel load the executable
-> > > itself with BTI enabled by default. I prefer gaining Catalin's suggested
-> > > patch[2]. :)
-> > [...]
-> > > [2] https://lore.kernel.org/linux-arm-kernel/20201022093104.GB1229@gaia/
-> > 
-> > I think I first heard the idea at Mark R ;).
-> > 
-> > It still needs glibc changes to avoid the mprotect(), or at least ignore
-> > the error. Since this is an ABI change and we don't know which kernels
-> > would have it backported, maybe better to still issue the mprotect() but
-> > ignore the failure.
-> 
-> What about kernel adding an auxiliary vector as a flag to indicate that BTI
-> is supported and recommended by the kernel? Then dynamic loader could use
-> that to detect that a) the main executable is BTI protected and there's no
-> need to mprotect() it and b) PROT_BTI flag should be added to all PROT_EXEC
-> pages.
 
-We could add a bit to AT_FLAGS, it's always been 0 for Linux.
+--cpvLTH7QU4gwfq3S
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 
-> In absence of the vector, the dynamic loader might choose to skip doing
-> PROT_BTI at all (since the main executable isn't protected anyway either, or
-> maybe even the kernel is up-to-date but it knows that it's not recommended
-> for some reason, or maybe the kernel is so ancient that it doesn't know
-> about BTI). Optionally it could still read the flag from ELF later (for
-> compatibility with old kernels) and then do the mprotect() dance, which may
-> trip seccomp filters, possibly fatally.
+On Mon, Oct 26, 2020 at 03:56:35PM +0000, Dave Martin wrote:
+> On Mon, Oct 26, 2020 at 02:52:46PM +0000, Catalin Marinas via Libc-alpha wrote:
 
-I think the safest is for the dynamic loader to issue an mprotect() and
-ignore the EPERM error. Not all user deployments have this seccomp
-filter, so they can still benefit, and user can't tell whether the
-kernel change has been backported.
+> > Now, if the dynamic loader silently ignores the mprotect() failure on
+> > the main executable, is there much value in exposing a flag in the aux
+> > vectors? It saves a few (one?) mprotect() calls but I don't think it
+> > matters much. Anyway, I don't mind the flag.
 
-Now, if the dynamic loader silently ignores the mprotect() failure on
-the main executable, is there much value in exposing a flag in the aux
-vectors? It saves a few (one?) mprotect() calls but I don't think it
-matters much. Anyway, I don't mind the flag.
+> I don't see a problem with the aforementioned patch [2] to pre-set BTI
+> on the pages of the main binary.
 
-The only potential risk is if the dynamic loader decides not to turn
-PROT_BTI one because of some mix and match of objects but AFAIK BTI
-allows interworking.
+Me either FWIW.
 
--- 
-Catalin
+--cpvLTH7QU4gwfq3S
+Content-Type: application/pgp-signature; name="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAABCgAdFiEEreZoqmdXGLWf4p/qJNaLcl1Uh9AFAl+W/owACgkQJNaLcl1U
+h9BOigf8CXtljKYe6CrS8pjN5GZ0G4Ck5VOuFDx7E+7wl6HjW0EnIfZJJ+R5GO4N
+PgFC5QZ6B1Owa5cpdGcqRKoY17ZgkD6doR4DTvxdCUrquxRXYQIlOM9MtwGFhd1W
+NzfCPYvUokn9d/y76Arklbzo+pFcrGI1Bo4y78S4mz6JOfsg1+8DQsyrPRqwIIbs
+4xTXIyOfSsQph8bBbkR/BZdy+z40qGNDzw0YQRIwvIcxWDQM1+Tim5uAuZLuEe7M
+V0giL+8RNDUFkBMCYwnlvtdnl/pUfcJ9QlWvSVJokUf3iWuDy1Gynj5Tau+/zzx0
+Ch3k65pQs41XF6BKzS4lhttNnT6Rog==
+=Rtx1
+-----END PGP SIGNATURE-----
+
+--cpvLTH7QU4gwfq3S--
