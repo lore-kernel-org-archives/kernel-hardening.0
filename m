@@ -1,23 +1,24 @@
-Return-Path: <SRS0=8qcx=EE=lists.openwall.com=kernel-hardening-return-20294-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=oiJN=EE=lists.openwall.com=kernel-hardening-return-20295-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-17.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5FA48C4363A
-	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:06:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7B9EFC4363A
+	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:06:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 57E2820790
-	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:06:27 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 0A30C20790
+	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:06:35 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Ug/McNP5"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 57E2820790
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="BDrxX4f+"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0A30C20790
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20294-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 29852 invoked by uid 550); 29 Oct 2020 01:06:18 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20295-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30590 invoked by uid 550); 29 Oct 2020 01:06:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,41 +26,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29820 invoked from network); 29 Oct 2020 01:06:17 -0000
+Received: (qmail 30530 invoked from network); 29 Oct 2020 01:06:26 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc:content-transfer-encoding;
-        bh=GGrU2z1MQIER/cvvO+UmfkeQMG5BianEcYdHiHe9qyQ=;
-        b=Ug/McNP55t1xm6mf6Z65dD0d/4XLutY+oae+4KAHg9dQk7Ug4H28uN0ZtA6M7NgpbT
-         I76xZ2T09J5d7Ybn9ysY9RjSdQylACxpwnNQDr/Whe2xhZiOlFqCT3OIsA9q6zLzDeCR
-         81KtjKOTYR80DEEdXwrEXNgjq/YrpBGqKd9yqxwWPNsE3aR79VfrgmiIiCuvt0LOqp4p
-         g9SdQ3WjkMfuDJcu5J+Ntpja9H+lqlKUJo2zM/NDZEiWEQKPOjO10MeAjoZ8CaD+3oKL
-         C211FUrW1ORwXJZC8XlCmBgNTqf5GZzQLzPlE4Pp9aFCrQeZrd63oWztHdhVhAjJQL1T
-         dF9w==
+        bh=bUbdsznkyssxZQUaGiYFef8NyYzvzo9ihU0AaJ53g/g=;
+        b=BDrxX4f+Wgvz7T2nQLENN+0irWwn/eNDmAKCTDCqH7wbKE23tfFJlUZmPAsdIVT6av
+         1Or1eDLwD4Ua1/VtLB9aLqgums1ThYkU6EoVz66waVy839CCdRQ4/jA5GhhAy7zJx4fP
+         lIOBOse97g1uBe2mm7vsNQdWsRKzB5bSgNBV7JJSa9s1KuspQmNoz02kO+9neBnMrIfH
+         9p9f4n15YsHkpW5CrApshNR4MlYwwrAZ2bcyzIfJFWhzAWKQIqVwpqwuGuD0xVKFI8YG
+         73ZcamzLaX7g3KVQHvBjBMxnmz2K2Y3WZoOLFQ4cjIZQPuTwsIYEU7TMMrzclXdPmFDT
+         MJYA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc:content-transfer-encoding;
-        bh=GGrU2z1MQIER/cvvO+UmfkeQMG5BianEcYdHiHe9qyQ=;
-        b=WcnkPh37xXc4azPlylGK7KBYjraWegKsc+wfUG8vMGUm/rScnrlxvxbShJBwxFJQRd
-         KOoL9YXUq7FYO7TYxmBovEYLmfGchIk71iH51CoJr+pfj9K+FdG/UqT5eYbycnb2ZOAZ
-         4wtvvsZb519gmQyJUBq2eHLifoYMt6Uy4nO0ssIC6F41GhPMg67SnzNp01vz2n1sx0B5
-         1bUyUHz67VsoIwFzeuOY7gaWFMRwsd5Pbyl7athegZq1vD0RaGgXjr2R4Oi69frIB76M
-         B8+aGvauIDS3DD19dVszNLCRbANiw+DnzYAqLEcuecVV0xDL8jj0FqcQin0oO867QM8C
-         nltg==
-X-Gm-Message-State: AOAM530wM/FX1U+W6DMe6uGE7384ZFlSJhMY6O8yC2f93KWsOtyLpttm
-	Y2IuWCMfa8y/ocS9WnWcVNiOHRQlZUBgoSeCT/juEw==
-X-Google-Smtp-Source: ABdhPJwED9L0K+8kxvJCn6lQw5MHjDYLpGe4e16Gh7aY6DgACpmCDb7qbKA88fIn4deadsqcNqBfZ2vFqTocP7vkRyk=
-X-Received: by 2002:a2e:9f13:: with SMTP id u19mr725677ljk.160.1603933566252;
- Wed, 28 Oct 2020 18:06:06 -0700 (PDT)
+        bh=bUbdsznkyssxZQUaGiYFef8NyYzvzo9ihU0AaJ53g/g=;
+        b=Ve0K3YAFLWpSUmMIiL30Mja5uAerdkP/Cp+azZpveOvQugTC4HISFoQXrXxor6ro6v
+         0oqLn153Tyntav3djr2L4G2iLWVahnnnBlLDglE8iFk8Nd9+fKutXGJJ6V9mr0lE7NHo
+         MiJZDw4265KAHEY8JS1P6we4FC9dxlrMC5bxcnMllACSXvtgECB4Xnx9fI1kxy0IxPis
+         bsDgyAUjo5zxneVpX1LU/6q4TcyvEB11ix/smOd4UWoRnOx9guPmJW1D4IQQtfzwATl3
+         jQUSgQ4E7KP32ZgRJIsbE6CxXMcKhLZMIGik8r/+9SGIXDu80YL24wrXo5YaphNX4E6g
+         C7GA==
+X-Gm-Message-State: AOAM533AWtsSDbO3sCdo4bdFFJJ8kTtCrTJyyPNkaN4hXseUOJcjSU1h
+	3vQB/eOOVcfrLV6RLDilM9RjzQwIDHZFuga0aNG5GQ==
+X-Google-Smtp-Source: ABdhPJzcgEeCZDlwnUhahSeOHzAbFOzhL6qDHJsbmuNSbxi7XgpEx/FS/YazDdtI2Qw49nUhEoyWwL1tVaMHgN9tVZA=
+X-Received: by 2002:a05:6512:1054:: with SMTP id c20mr662361lfb.576.1603933574802;
+ Wed, 28 Oct 2020 18:06:14 -0700 (PDT)
 MIME-Version: 1.0
-References: <20201027200358.557003-1-mic@digikod.net>
-In-Reply-To: <20201027200358.557003-1-mic@digikod.net>
+References: <20201027200358.557003-1-mic@digikod.net> <20201027200358.557003-2-mic@digikod.net>
+In-Reply-To: <20201027200358.557003-2-mic@digikod.net>
 From: Jann Horn <jannh@google.com>
-Date: Thu, 29 Oct 2020 02:05:39 +0100
-Message-ID: <CAG48ez31oct9c8fkgFHQVb5u-o5cmwdNe2pJnmitnKcidNgfzw@mail.gmail.com>
-Subject: Re: [PATCH v22 00/12] Landlock LSM
+Date: Thu, 29 Oct 2020 02:05:47 +0100
+Message-ID: <CAG48ez3CKa12SFHjVUPnYzJm2E7OBWnuh3JzVMrsvqdcMS1A8A@mail.gmail.com>
+Subject: Re: [PATCH v22 01/12] landlock: Add object management
 To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
 Cc: James Morris <jmorris@namei.org>, "Serge E . Hallyn" <serge@hallyn.com>, 
 	Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>, 
@@ -74,19 +75,97 @@ Cc: James Morris <jmorris@namei.org>, "Serge E . Hallyn" <serge@hallyn.com>,
 	kernel list <linux-kernel@vger.kernel.org>, 
 	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, 
 	linux-security-module <linux-security-module@vger.kernel.org>, 
-	"the arch/x86 maintainers" <x86@kernel.org>
+	"the arch/x86 maintainers" <x86@kernel.org>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
 On Tue, Oct 27, 2020 at 9:04 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
 wrote:
-> This new patch series improves documentation, cleans up comments,
-> renames ARCH_EPHEMERAL_STATES to ARCH_EPHEMERAL_INODES and removes
-> LANDLOCK_ACCESS_FS_CHROOT.
+> A Landlock object enables to identify a kernel object (e.g. an inode).
+> A Landlock rule is a set of access rights allowed on an object.  Rules
+> are grouped in rulesets that may be tied to a set of processes (i.e.
+> subjects) to enforce a scoped access-control (i.e. a domain).
+>
+> Because Landlock's goal is to empower any process (especially
+> unprivileged ones) to sandbox themselves, we cannot rely on a
+> system-wide object identification such as file extended attributes.
+> Indeed, we need innocuous, composable and modular access-controls.
+>
+> The main challenge with these constraints is to identify kernel objects
+> while this identification is useful (i.e. when a security policy makes
+> use of this object).  But this identification data should be freed once
+> no policy is using it.  This ephemeral tagging should not and may not be
+> written in the filesystem.  We then need to manage the lifetime of a
+> rule according to the lifetime of its objects.  To avoid a global lock,
+> this implementation make use of RCU and counters to safely reference
+> objects.
+>
+> A following commit uses this generic object management for inodes.
+>
+> Cc: James Morris <jmorris@namei.org>
+> Cc: Jann Horn <jannh@google.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Serge E. Hallyn <serge@hallyn.com>
+> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@linux.microsoft.com>
 
-Thanks for continuing to work on this! This is going to be really
-valuable for sandboxing.
+Reviewed-by: Jann Horn <jannh@google.com>
 
-I hadn't looked at this series for a while; but I've now read through
-it, and I don't see any major problems left. :) That said, there still
-are a couple small things...
+except for some minor nits:
+
+[...]
+> diff --git a/security/landlock/object.c b/security/landlock/object.c
+[...]
+> +void landlock_put_object(struct landlock_object *const object)
+> +{
+> +       /*
+> +        * The call to @object->underops->release(object) might sleep e.g=
+.,
+
+s/ e.g.,/, e.g./
+
+> +        * because of iput().
+> +        */
+> +       might_sleep();
+> +       if (!object)
+> +               return;
+[...]
+> +}
+> diff --git a/security/landlock/object.h b/security/landlock/object.h
+[...]
+> +struct landlock_object {
+> +       /**
+> +        * @usage: This counter is used to tie an object to the rules mat=
+ching
+> +        * it or to keep it alive while adding a new rule.  If this count=
+er
+> +        * reaches zero, this struct must not be modified, but this count=
+er can
+> +        * still be read from within an RCU read-side critical section.  =
+When
+> +        * adding a new rule to an object with a usage counter of zero, w=
+e must
+> +        * wait until the pointer to this object is set to NULL (or recyc=
+led).
+> +        */
+> +       refcount_t usage;
+> +       /**
+> +        * @lock: Guards against concurrent modifications.  This lock mus=
+t be
+
+s/must be/must be held/ ?
+
+> +        * from the time @usage drops to zero until any weak references f=
+rom
+> +        * @underobj to this object have been cleaned up.
+> +        *
+> +        * Lock ordering: inode->i_lock nests inside this.
+> +        */
+> +       spinlock_t lock;
+[...]
+> +};
+> +
+> +struct landlock_object *landlock_create_object(
+> +               const struct landlock_object_underops *const underops,
+> +               void *const underojb);
+
+nit: "underobj"
