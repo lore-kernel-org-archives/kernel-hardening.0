@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Fo8R=EE=lists.openwall.com=kernel-hardening-return-20298-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=RuJk=EE=lists.openwall.com=kernel-hardening-return-20299-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-14.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
 	USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E3B1DC388F7
-	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:07:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AEC3CC4363A
+	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:07:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E90AE20790
-	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:07:00 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id C4D532071A
+	for <kernel-hardening@archiver.kernel.org>; Thu, 29 Oct 2020 01:07:09 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="CQS/TTCS"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E90AE20790
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="UDRPLu9m"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C4D532071A
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20298-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1593 invoked by uid 550); 29 Oct 2020 01:06:46 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20299-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3884 invoked by uid 550); 29 Oct 2020 01:07:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,41 +25,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1522 invoked from network); 29 Oct 2020 01:06:45 -0000
+Received: (qmail 3804 invoked from network); 29 Oct 2020 01:06:59 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc:content-transfer-encoding;
-        bh=pn1ECaKgjWXcAj9IGY9xa/P/urhrG9XYha2Ze81haPI=;
-        b=CQS/TTCSV/PXnE8RKTiVdoB9MOH5R7RwtttysBDMDTrgm/gdARB43BDZ0IDwXRbttP
-         ztHZD+0ZqXCLCfwhTBFjTJ/tiDFdE5MfzqiqiGCR+7qo4iT6gbpszW4gnmqQCqcjiJpS
-         2TE6AWWOiPiIHtCacy+jotlH1GyWUK1IMX8yXc8Mz7No8vs/C8JnIaRhweaK8oe5/GL8
-         Jfgwtgs4gp/wo+Iw7O3nmUyVGt/oQ9DoZH/ghQZ47kjp3G1BZkOXJfz4E7+ioxLBPKqf
-         wNABOnStf+0wcuigg1mHsL0KxMLpB2iVoTZoknuLmehB39wLMOwYtSz1o0w4ntAQ9dSd
-         hmXQ==
+        bh=bPMDf0qf5u7i+D1hct4Y8ywTPSNEiqZnANVXp2csHmo=;
+        b=UDRPLu9msJZF3jU3f0cfRMmMUjv4al6mEdH+doXP3CJs1E+meQHwswUn6FfxeU4M7Y
+         mdjF6dlxs/r9X+nsG+jvBBpuJoeemwz7oZzHEH8cu2FuE4WoJMkmPz/Ji0yhM4+WiFtB
+         rhpBehRSmY/cTeZk76/aJgyzXOLL3NJE1/q4NlCTkpqRI97pcMZ+gNtjS3uoF4nuh7W1
+         yw24PiXpzrFEiT3OI82ePRsw7PnnCJjT7Cw+g66nh4wZX1yx+HybJu5UCEhtHD658mi+
+         886WmiZsQzGj6z4/CpD39D+FU4YLDTEf8HsVVyfPaptpyJrsYS5a5QKE4zded/CZpn7z
+         MwYg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc:content-transfer-encoding;
-        bh=pn1ECaKgjWXcAj9IGY9xa/P/urhrG9XYha2Ze81haPI=;
-        b=IiFAp1Y0J4v0qxKfvtea7YWPCoe18nCFIOWQvKuDFzKhxZ4k55/S1yWPiFxj6dDyK1
-         XIklBnvUiHnzLmY2GbLJp4kaB51WA3nG3peQPyX1NzFQWstOIizy8aRGYE9iNxriylgb
-         6g5I5+5XX3dIvKCT/848jj4GFY++BlParKwOXavxJgJlREMDSQ7DOJE2u9ULku4Y+L/Y
-         R/ytfICGyYWTd1S5pFlVxFm/OvLXYYEVEGnJ7HSdbc8+2m+snQ5VcWxVBzpOWJ+SR9El
-         1LMkRWL74LcEhWS6clDVVaRXiCMF4SzZgZAnIW+2Mg56ZPmEpHwswB57aFjmimuCeJGF
-         b4RA==
-X-Gm-Message-State: AOAM533lZYAVU83I2kUYMv6v4aPFi122F7SfKGT6CtCiNtM+Cj76IDyd
-	Z/NGLrxqxIv9BMmE7C/DHtoM4vdYh2u6WsESCgl5aQ==
-X-Google-Smtp-Source: ABdhPJxixA+XOTBfZ3BYWY3Zb24muHdDJFJXA6IB2XijLR/mZHkSGkBIOx58SM+pLP1LMZ2g2O7vRP785516kejacuI=
-X-Received: by 2002:a19:e308:: with SMTP id a8mr562788lfh.573.1603933593718;
- Wed, 28 Oct 2020 18:06:33 -0700 (PDT)
+        bh=bPMDf0qf5u7i+D1hct4Y8ywTPSNEiqZnANVXp2csHmo=;
+        b=RtVZgWrliDnROSGuYQ71rWG7UkU8gwn8wRo/P5rudWT7qwbNLVvAXKo59NyYvuUiaP
+         Ejf9SBUMRV2eMJTDpKtzyxbSpLZkb7iioh/E7qN2+ufBH9OZA4px/dfEpZO6GE6W5LOa
+         paYoxpJN8vSRxJgSS//u2x3+mAk7eGhGVx5KgpofaPf6IOmXJFwXIGOz3WFfGDry5wQB
+         YVWLCDn9o4LPavKketHiCUOsGLvdue5vO/oNi4DXsR5WQY8putpqgQ/0cyI/uK8KSXEb
+         8jFL/BCYgwl82ynsNKb6eDOqVm5Jf581C99MqClLp2lsE3pKrNFBBfThKafUFC8nATl7
+         dHZg==
+X-Gm-Message-State: AOAM531JBoc0LfrD/8BKizmBv2m9LvI2d7r7LGRVFt/qJXfyt7J5U+QY
+	cOOocimClrQR/XYNqWQRCzSBzTUl9XqhId+2hhahIQ==
+X-Google-Smtp-Source: ABdhPJzDdFVnRlhR1ZLyXcR/6gy+QFM2Be7EL54Ws7cTI4I+QtUU5EktO2FmKhpKLEYWon1ieCyZ/uOiqgKG+1NYZAk=
+X-Received: by 2002:a05:6512:1182:: with SMTP id g2mr584148lfr.198.1603933608096;
+ Wed, 28 Oct 2020 18:06:48 -0700 (PDT)
 MIME-Version: 1.0
-References: <20201027200358.557003-1-mic@digikod.net> <20201027200358.557003-5-mic@digikod.net>
-In-Reply-To: <20201027200358.557003-5-mic@digikod.net>
+References: <20201027200358.557003-1-mic@digikod.net> <20201027200358.557003-7-mic@digikod.net>
+In-Reply-To: <20201027200358.557003-7-mic@digikod.net>
 From: Jann Horn <jannh@google.com>
-Date: Thu, 29 Oct 2020 02:06:06 +0100
-Message-ID: <CAG48ez1W2sHBeL4pV4QqUonUJc-snNnxE_jh8FVP=pyhhm0fdg@mail.gmail.com>
-Subject: Re: [PATCH v22 04/12] landlock: Add ptrace restrictions
+Date: Thu, 29 Oct 2020 02:06:21 +0100
+Message-ID: <CAG48ez0venF9OnBG82yc8U+px1LUfUU498f1kJxYMu0hcU0+-A@mail.gmail.com>
+Subject: Re: [PATCH v22 06/12] fs,security: Add sb_delete hook
 To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
 Cc: James Morris <jmorris@namei.org>, "Serge E . Hallyn" <serge@hallyn.com>, 
 	Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>, 
@@ -80,18 +80,15 @@ Content-Transfer-Encoding: quoted-printable
 
 On Tue, Oct 27, 2020 at 9:04 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
 wrote:
-> Using ptrace(2) and related debug features on a target process can lead
-> to a privilege escalation.  Indeed, ptrace(2) can be used by an attacker
-> to impersonate another task and to remain undetected while performing
-> malicious activities.  Thanks to  ptrace_may_access(), various part of
-> the kernel can check if a tracer is more privileged than a tracee.
+> The sb_delete security hook is called when shutting down a superblock,
+> which may be useful to release kernel objects tied to the superblock's
+> lifetime (e.g. inodes).
 >
-> A landlocked process has fewer privileges than a non-landlocked process
-> and must then be subject to additional restrictions when manipulating
-> processes. To be allowed to use ptrace(2) and related syscalls on a
-> target process, a landlocked process must have a subset of the target
-> process's rules (i.e. the tracee must be in a sub-domain of the tracer).
+> This new hook is needed by Landlock to release (ephemerally) tagged
+> struct inodes.  This comes from the unprivileged nature of Landlock
+> described in the next commit.
 >
+> Cc: Al Viro <viro@zeniv.linux.org.uk>
 > Cc: James Morris <jmorris@namei.org>
 > Cc: Jann Horn <jannh@google.com>
 > Cc: Kees Cook <keescook@chromium.org>
