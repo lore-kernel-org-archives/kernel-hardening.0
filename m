@@ -1,4 +1,4 @@
-Return-Path: <SRS0=tsKD=EI=lists.openwall.com=kernel-hardening-return-20313-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=PeOb=EI=lists.openwall.com=kernel-hardening-return-20314-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,15 +8,15 @@ X-Spam-Status: No, score=-12.5 required=3.0 tests=BAYES_00,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1B6F1C00A89
-	for <kernel-hardening@archiver.kernel.org>; Mon,  2 Nov 2020 16:53:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2C739C388F2
+	for <kernel-hardening@archiver.kernel.org>; Mon,  2 Nov 2020 16:53:13 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D475F22268
-	for <kernel-hardening@archiver.kernel.org>; Mon,  2 Nov 2020 16:53:02 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D475F22268
+	by mail.kernel.org (Postfix) with SMTP id 0C36122258
+	for <kernel-hardening@archiver.kernel.org>; Mon,  2 Nov 2020 16:53:11 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0C36122258
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20313-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17413 invoked by uid 550); 2 Nov 2020 16:52:43 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20314-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17548 invoked by uid 550); 2 Nov 2020 16:52:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,7 +24,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16346 invoked from network); 2 Nov 2020 16:52:42 -0000
+Received: (qmail 16305 invoked from network); 2 Nov 2020 16:52:41 -0000
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
 To: LKML <linux-kernel@vger.kernel.org>,
 	Linux Containers <containers@lists.linux-foundation.org>,
@@ -33,378 +33,352 @@ Cc: Alexey Gladkov <legion@kernel.org>,
 	"Eric W . Biederman" <ebiederm@xmission.com>,
 	Kees Cook <keescook@chromium.org>,
 	Christian Brauner <christian@brauner.io>
-Subject: [RFC PATCH v1 4/4] Allow to change the user namespace in which user rlimits are counted
-Date: Mon,  2 Nov 2020 17:50:33 +0100
-Message-Id: <2718f7b13189dfd159414efb68e3533552593140.1604335819.git.gladkov.alexey@gmail.com>
+Subject: [RFC PATCH v1 2/4] Move the user's process counter to ucounts
+Date: Mon,  2 Nov 2020 17:50:31 +0100
+Message-Id: <b6fb149b5884d341ededecc6f99bd1e40939b647.1604335819.git.gladkov.alexey@gmail.com>
 X-Mailer: git-send-email 2.25.4
 In-Reply-To: <cover.1604335819.git.gladkov.alexey@gmail.com>
 References: <cover.1604335819.git.gladkov.alexey@gmail.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Mon, 02 Nov 2020 16:52:31 +0000 (UTC)
+X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Mon, 02 Nov 2020 16:52:30 +0000 (UTC)
 
-Add a new prctl to change the user namespace in which the process
-counter is located. A pointer to the user namespace is in cred struct
-to be inherited by all child processes.
+To count the number of user processes use the counter bound to the user
+in the user namespace.
 
 Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
 ---
- fs/exec.c                  |  2 +-
- fs/io-wq.c                 | 13 ++++++++-----
- fs/io-wq.h                 |  1 +
- fs/io_uring.c              |  1 +
- include/linux/cred.h       |  8 ++++++++
- include/uapi/linux/prctl.h |  5 +++++
- kernel/cred.c              | 35 +++++++++++++++++++++++++++++------
- kernel/exit.c              |  2 +-
- kernel/fork.c              |  4 ++--
- kernel/sys.c               | 22 +++++++++++++++++++++-
- kernel/user_namespace.c    |  3 +++
- 11 files changed, 80 insertions(+), 16 deletions(-)
+ fs/exec.c                      |  7 ++++---
+ fs/io-wq.c                     | 14 +++++++++-----
+ include/linux/sched/user.h     |  1 -
+ include/linux/user_namespace.h |  8 ++++++++
+ kernel/cred.c                  |  8 ++++----
+ kernel/exit.c                  |  2 +-
+ kernel/fork.c                  |  9 +++++----
+ kernel/sys.c                   |  6 ++++--
+ kernel/ucount.c                | 34 ++++++++++++++++++++++++++++++++++
+ kernel/user.c                  |  3 ++-
+ 10 files changed, 71 insertions(+), 21 deletions(-)
 
 diff --git a/fs/exec.c b/fs/exec.c
-index c45dfc716394..574b1381276c 100644
+index e6e8a9a70327..3f2071f7b9c7 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
-@@ -1837,7 +1837,7 @@ static int __do_execve_file(int fd, struct filename *filename,
- 		goto out_ret;
- 	}
+@@ -1826,19 +1826,20 @@ static int __do_execve_file(int fd, struct filename *filename,
+ 	char *pathbuf = NULL;
+ 	struct linux_binprm *bprm;
+ 	struct files_struct *displaced;
+-	int retval;
++	int retval, processes;
  
--	processes = get_rlimit_counter(&init_user_ns, current_euid(), UCOUNT_RLIMIT_NPROC);
-+	processes = get_rlimit_counter(current_rlimit_ns(), current_euid(), UCOUNT_RLIMIT_NPROC);
+ 	if (IS_ERR(filename))
+ 		return PTR_ERR(filename);
  
++	processes = get_rlimit_counter(&init_user_ns, current_euid(), UCOUNT_RLIMIT_NPROC);
++
  	/*
  	 * We move the actual failure in case of RLIMIT_NPROC excess from
+ 	 * set*uid() to execve() because too many poorly written programs
+ 	 * don't check setuid() return code.  Here we additionally recheck
+ 	 * whether NPROC limit is still exceeded.
+ 	 */
+-	if ((current->flags & PF_NPROC_EXCEEDED) &&
+-	    atomic_read(&current_user()->processes) > rlimit(RLIMIT_NPROC)) {
++	if ((current->flags & PF_NPROC_EXCEEDED) && processes > rlimit(RLIMIT_NPROC)) {
+ 		retval = -EAGAIN;
+ 		goto out_ret;
+ 	}
 diff --git a/fs/io-wq.c b/fs/io-wq.c
-index c3b0843abc9b..19e43ec115cb 100644
+index 47c5f3aeb460..6170aee986db 100644
 --- a/fs/io-wq.c
 +++ b/fs/io-wq.c
-@@ -116,6 +116,7 @@ struct io_wq {
+@@ -17,6 +17,7 @@
+ #include <linux/rculist_nulls.h>
+ #include <linux/fs_struct.h>
+ #include <linux/task_work.h>
++#include <linux/user_namespace.h>
  
- 	struct task_struct *manager;
- 	struct user_struct *user;
-+	const struct cred *creds;
- 	refcount_t refs;
- 	struct completion done;
+ #include "io-wq.h"
  
-@@ -217,7 +218,7 @@ static void io_worker_exit(struct io_worker *worker)
+@@ -216,7 +217,7 @@ static void io_worker_exit(struct io_worker *worker)
  	if (worker->flags & IO_WORKER_F_RUNNING)
  		atomic_dec(&acct->nr_running);
  	if (!(worker->flags & IO_WORKER_F_BOUND))
--		dec_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
-+		dec_rlimit_counter(wqe->wq->creds->rlimit_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
+-		atomic_dec(&wqe->wq->user->processes);
++		dec_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
  	worker->flags = 0;
  	preempt_enable();
  
-@@ -350,9 +351,9 @@ static void __io_worker_busy(struct io_wqe *wqe, struct io_worker *worker,
+@@ -349,12 +350,12 @@ static void __io_worker_busy(struct io_wqe *wqe, struct io_worker *worker,
  			worker->flags |= IO_WORKER_F_BOUND;
  			wqe->acct[IO_WQ_ACCT_UNBOUND].nr_workers--;
  			wqe->acct[IO_WQ_ACCT_BOUND].nr_workers++;
--			dec_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
-+			dec_rlimit_counter(wqe->wq->creds->rlimit_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
+-			atomic_dec(&wqe->wq->user->processes);
++			dec_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
  		} else {
--			if (!inc_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC))
-+			if (!inc_rlimit_counter(wqe->wq->creds->rlimit_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC))
- 				return;
  			worker->flags &= ~IO_WORKER_F_BOUND;
  			wqe->acct[IO_WQ_ACCT_UNBOUND].nr_workers++;
-@@ -662,7 +663,7 @@ static bool create_io_worker(struct io_wq *wq, struct io_wqe *wqe, int index)
- 	}
+ 			wqe->acct[IO_WQ_ACCT_BOUND].nr_workers--;
+-			atomic_inc(&wqe->wq->user->processes);
++			inc_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
+ 		}
+ 		io_wqe_inc_running(wqe, worker);
+ 	 }
+@@ -671,7 +672,7 @@ static bool create_io_worker(struct io_wq *wq, struct io_wqe *wqe, int index)
+ 	spin_unlock_irq(&wqe->lock);
  
- 	if (index == IO_WQ_ACCT_UNBOUND &&
--	    !inc_rlimit_counter(&init_user_ns, wq->user->uid, UCOUNT_RLIMIT_NPROC)) {
-+	    !inc_rlimit_counter(wq->creds->rlimit_ns, wq->user->uid, UCOUNT_RLIMIT_NPROC)) {
- 		kfree(worker);
- 		return false;
- 	}
-@@ -772,7 +773,8 @@ static bool io_wq_can_queue(struct io_wqe *wqe, struct io_wqe_acct *acct,
+ 	if (index == IO_WQ_ACCT_UNBOUND)
+-		atomic_inc(&wq->user->processes);
++		inc_rlimit_counter(&init_user_ns, wq->user->uid, UCOUNT_RLIMIT_NPROC);
+ 
+ 	wake_up_process(worker->task);
+ 	return true;
+@@ -754,6 +755,7 @@ static bool io_wq_can_queue(struct io_wqe *wqe, struct io_wqe_acct *acct,
+ 			    struct io_wq_work *work)
+ {
+ 	bool free_worker;
++	int processes;
+ 
+ 	if (!(work->flags & IO_WQ_WORK_UNBOUND))
+ 		return true;
+@@ -766,7 +768,9 @@ static bool io_wq_can_queue(struct io_wqe *wqe, struct io_wqe_acct *acct,
  	if (free_worker)
  		return true;
  
--	processes = get_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
-+	processes = get_rlimit_counter(wqe->wq->creds->rlimit_ns, wqe->wq->user->uid,
-+			UCOUNT_RLIMIT_NPROC);
- 
- 	if (processes >= acct->max_workers &&
- 	    !(capable(CAP_SYS_RESOURCE) || capable(CAP_SYS_ADMIN)))
-@@ -1049,6 +1051,7 @@ struct io_wq *io_wq_create(unsigned bounded, struct io_wq_data *data)
- 
- 	/* caller must already hold a reference to this */
- 	wq->user = data->user;
-+	wq->creds = data->creds;
- 
- 	for_each_node(node) {
- 		struct io_wqe *wqe;
-diff --git a/fs/io-wq.h b/fs/io-wq.h
-index 071f1a997800..6acc3a04c38f 100644
---- a/fs/io-wq.h
-+++ b/fs/io-wq.h
-@@ -105,6 +105,7 @@ typedef void (io_wq_work_fn)(struct io_wq_work **);
- 
- struct io_wq_data {
- 	struct user_struct *user;
-+	const struct cred *creds;
- 
- 	io_wq_work_fn *do_work;
- 	free_work_fn *free_work;
-diff --git a/fs/io_uring.c b/fs/io_uring.c
-index 493e5047e67c..e419923968b3 100644
---- a/fs/io_uring.c
-+++ b/fs/io_uring.c
-@@ -6933,6 +6933,7 @@ static int io_init_wq_offload(struct io_ring_ctx *ctx,
- 	int ret = 0;
- 
- 	data.user = ctx->user;
-+	data.creds = ctx->creds;
- 	data.free_work = io_free_work;
- 	data.do_work = io_wq_submit_work;
- 
-diff --git a/include/linux/cred.h b/include/linux/cred.h
-index 18639c069263..43aee68d117f 100644
---- a/include/linux/cred.h
-+++ b/include/linux/cred.h
-@@ -144,6 +144,7 @@ struct cred {
- #endif
- 	struct user_struct *user;	/* real user ID subscription */
- 	struct user_namespace *user_ns; /* user_ns the caps and keyrings are relative to. */
-+	struct user_namespace *rlimit_ns; /* user_ns in which rlimits is tracked */
- 	struct group_info *group_info;	/* supplementary groups for euid/fsgid */
- 	/* RCU deletion */
- 	union {
-@@ -170,6 +171,7 @@ extern int set_security_override_from_ctx(struct cred *, const char *);
- extern int set_create_files_as(struct cred *, struct inode *);
- extern int cred_fscmp(const struct cred *, const struct cred *);
- extern void __init cred_init(void);
-+extern int set_rlimit_ns(struct user_namespace *ns);
- 
- /*
-  * check for validity of credentials
-@@ -370,6 +372,7 @@ static inline void put_cred(const struct cred *_cred)
- 
- #define task_uid(task)		(task_cred_xxx((task), uid))
- #define task_euid(task)		(task_cred_xxx((task), euid))
-+#define task_rlimit_ns(task)	(task_cred_xxx((task), rlimit_ns))
- 
- #define current_cred_xxx(xxx)			\
- ({						\
-@@ -390,11 +393,16 @@ static inline void put_cred(const struct cred *_cred)
- extern struct user_namespace init_user_ns;
- #ifdef CONFIG_USER_NS
- #define current_user_ns()	(current_cred_xxx(user_ns))
-+#define current_rlimit_ns()	(current_cred_xxx(rlimit_ns))
- #else
- static inline struct user_namespace *current_user_ns(void)
- {
- 	return &init_user_ns;
- }
-+static inline struct user_namespace *current_rlimit_ns(void)
-+{
-+	return &init_user_ns;
-+}
- #endif
- 
- 
-diff --git a/include/uapi/linux/prctl.h b/include/uapi/linux/prctl.h
-index 07b4f8131e36..4f853f903415 100644
---- a/include/uapi/linux/prctl.h
-+++ b/include/uapi/linux/prctl.h
-@@ -238,4 +238,9 @@ struct prctl_mm_map {
- #define PR_SET_IO_FLUSHER		57
- #define PR_GET_IO_FLUSHER		58
- 
-+#define PR_SET_RLIMIT_USER_NAMESPACE	59
-+#define PR_GET_RLIMIT_USER_NAMESPACE	60
-+# define PR_RLIMIT_BIND_GLOBAL_USERNS	(1UL << 0)
-+# define PR_RLIMIT_BIND_CURRENT_USERNS	(1UL << 1)
+-	if (atomic_read(&wqe->wq->user->processes) >= acct->max_workers &&
++	processes = get_rlimit_counter(&init_user_ns, wqe->wq->user->uid, UCOUNT_RLIMIT_NPROC);
 +
- #endif /* _LINUX_PRCTL_H */
-diff --git a/kernel/cred.c b/kernel/cred.c
-index 748704db1f6b..7b90e1ef9c9a 100644
---- a/kernel/cred.c
-+++ b/kernel/cred.c
-@@ -59,6 +59,7 @@ struct cred init_cred = {
- 	.cap_bset		= CAP_FULL_SET,
- 	.user			= INIT_USER,
- 	.user_ns		= &init_user_ns,
-+	.rlimit_ns		= &init_user_ns,
- 	.group_info		= &init_groups,
++	if (processes >= acct->max_workers &&
+ 	    !(capable(CAP_SYS_RESOURCE) || capable(CAP_SYS_ADMIN)))
+ 		return false;
+ 
+diff --git a/include/linux/sched/user.h b/include/linux/sched/user.h
+index 917d88edb7b9..38e122bc3d07 100644
+--- a/include/linux/sched/user.h
++++ b/include/linux/sched/user.h
+@@ -12,7 +12,6 @@
+  */
+ struct user_struct {
+ 	refcount_t __count;	/* reference count */
+-	atomic_t processes;	/* How many processes does this user have? */
+ 	atomic_t sigpending;	/* How many pending signals does this user have? */
+ #ifdef CONFIG_FANOTIFY
+ 	atomic_t fanotify_listeners;
+diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
+index fc75af812d73..6d9d180b2c9d 100644
+--- a/include/linux/user_namespace.h
++++ b/include/linux/user_namespace.h
+@@ -50,9 +50,13 @@ enum ucount_type {
+ 	UCOUNT_INOTIFY_INSTANCES,
+ 	UCOUNT_INOTIFY_WATCHES,
+ #endif
++	UCOUNT_RLIMIT_NPROC,
+ 	UCOUNT_COUNTS,
  };
  
-@@ -120,6 +121,7 @@ static void put_cred_rcu(struct rcu_head *rcu)
- 		put_group_info(cred->group_info);
- 	free_uid(cred->user);
- 	put_user_ns(cred->user_ns);
-+	put_user_ns(cred->rlimit_ns);
- 	kmem_cache_free(cred_jar, cred);
- }
++#define UCOUNT_MIN_RLIMIT UCOUNT_RLIMIT_NPROC
++#define UCOUNT_MAX_RLIMIT UCOUNT_RLIMIT_NPROC
++
+ struct user_namespace {
+ 	struct uid_gid_map	uid_map;
+ 	struct uid_gid_map	gid_map;
+@@ -104,6 +108,10 @@ void retire_userns_sysctls(struct user_namespace *ns);
+ struct ucounts *inc_ucount(struct user_namespace *ns, kuid_t uid, enum ucount_type type);
+ void dec_ucount(struct ucounts *ucounts, enum ucount_type type);
  
-@@ -270,6 +272,7 @@ struct cred *prepare_creds(void)
- 	get_group_info(new->group_info);
- 	get_uid(new->user);
- 	get_user_ns(new->user_ns);
-+	get_user_ns(new->rlimit_ns);
++long get_rlimit_counter(struct user_namespace *ns, kuid_t uid, enum ucount_type type);
++struct ucounts *inc_rlimit_counter(struct user_namespace *ns, kuid_t uid, enum ucount_type type);
++void dec_rlimit_counter(struct user_namespace *ns, kuid_t uid, enum ucount_type type);
++
+ #ifdef CONFIG_USER_NS
  
- #ifdef CONFIG_KEYS
- 	key_get(new->session_keyring);
-@@ -345,7 +348,7 @@ int copy_creds(struct task_struct *p, unsigned long clone_flags)
- #endif
- 		clone_flags & CLONE_THREAD
- 	    ) {
--		if (!inc_rlimit_counter(&init_user_ns, task_euid(p), UCOUNT_RLIMIT_NPROC))
-+		if (!inc_rlimit_counter(task_rlimit_ns(p), task_euid(p), UCOUNT_RLIMIT_NPROC))
- 			return -EACCES;
- 		p->real_cred = get_cred(p->cred);
- 		get_cred(p->cred);
-@@ -385,7 +388,7 @@ int copy_creds(struct task_struct *p, unsigned long clone_flags)
+ static inline struct user_namespace *get_user_ns(struct user_namespace *ns)
+diff --git a/kernel/cred.c b/kernel/cred.c
+index 421b1149c651..b6694700e760 100644
+--- a/kernel/cred.c
++++ b/kernel/cred.c
+@@ -351,7 +351,7 @@ int copy_creds(struct task_struct *p, unsigned long clone_flags)
+ 		kdebug("share_creds(%p{%d,%d})",
+ 		       p->cred, atomic_read(&p->cred->usage),
+ 		       read_cred_subscribers(p->cred));
+-		atomic_inc(&p->cred->user->processes);
++		inc_rlimit_counter(&init_user_ns, task_euid(p), UCOUNT_RLIMIT_NPROC);
+ 		return 0;
+ 	}
+ 
+@@ -384,7 +384,7 @@ int copy_creds(struct task_struct *p, unsigned long clone_flags)
  	}
  #endif
  
--	if (!inc_rlimit_counter(&init_user_ns, new->euid, UCOUNT_RLIMIT_NPROC))
-+	if (!inc_rlimit_counter(new->rlimit_ns, new->euid, UCOUNT_RLIMIT_NPROC))
- 		return -EACCES;
+-	atomic_inc(&new->user->processes);
++	inc_rlimit_counter(&init_user_ns, new->euid, UCOUNT_RLIMIT_NPROC);
  	p->cred = p->real_cred = get_cred(new);
  	alter_cred_subscribers(new, 2);
-@@ -487,13 +490,13 @@ int commit_creds(struct cred *new)
- 	 * perhaps this limit is exceeded in the parent user namespace.
+ 	validate_creds(new);
+@@ -486,11 +486,11 @@ int commit_creds(struct cred *new)
  	 */
  	alter_cred_subscribers(new, 2);
--	if (new->user != old->user &&
--	    !inc_rlimit_counter(&init_user_ns, new->euid, UCOUNT_RLIMIT_NPROC))
-+	if ((new->user != old->user || new->rlimit_ns != old->rlimit_ns) &&
-+	    !inc_rlimit_counter(new->rlimit_ns, new->euid, UCOUNT_RLIMIT_NPROC))
- 		task->flags |= PF_NPROC_UNS_EXCEEDED;
+ 	if (new->user != old->user)
+-		atomic_inc(&new->user->processes);
++		inc_rlimit_counter(&init_user_ns, new->euid, UCOUNT_RLIMIT_NPROC);
  	rcu_assign_pointer(task->real_cred, new);
  	rcu_assign_pointer(task->cred, new);
--	if (new->user != old->user)
--		dec_rlimit_counter(&init_user_ns, old->euid, UCOUNT_RLIMIT_NPROC);
-+	if (new->user != old->user || new->rlimit_ns != old->rlimit_ns)
-+		dec_rlimit_counter(old->rlimit_ns, old->euid, UCOUNT_RLIMIT_NPROC);
+ 	if (new->user != old->user)
+-		atomic_dec(&old->user->processes);
++		dec_rlimit_counter(&init_user_ns, old->euid, UCOUNT_RLIMIT_NPROC);
  	alter_cred_subscribers(old, -2);
  
  	/* send notifications */
-@@ -789,6 +792,26 @@ int set_create_files_as(struct cred *new, struct inode *inode)
- }
- EXPORT_SYMBOL(set_create_files_as);
- 
-+/*
-+ * Change the rlimit user namespace of the current task, replacing the existing
-+ * one. If the given namespace is NULL, then initial user namespace will be
-+ * used.
-+ *
-+ * Return: 0 on success; -errno on failure.
-+ */
-+int set_rlimit_ns(struct user_namespace *ns)
-+{
-+	struct cred *new;
-+
-+	new = prepare_creds();
-+	if (!new)
-+		return -ENOMEM;
-+
-+	new->rlimit_ns = ns ? ns : &init_user_ns;
-+
-+	return commit_creds(new);
-+}
-+
- #ifdef CONFIG_DEBUG_CREDENTIALS
- 
- bool creds_are_invalid(const struct cred *cred)
 diff --git a/kernel/exit.c b/kernel/exit.c
-index 5a0d7dd1ad64..998436d32373 100644
+index 727150f28103..5a0d7dd1ad64 100644
 --- a/kernel/exit.c
 +++ b/kernel/exit.c
 @@ -187,7 +187,7 @@ void release_task(struct task_struct *p)
  	/* don't need to get the RCU readlock here - the process is dead and
  	 * can't be modifying its own credentials. But shut RCU-lockdep up */
  	rcu_read_lock();
--	dec_rlimit_counter(&init_user_ns, task_euid(p), UCOUNT_RLIMIT_NPROC);
-+	dec_rlimit_counter(task_rlimit_ns(p), task_euid(p), UCOUNT_RLIMIT_NPROC);
+-	atomic_dec(&__task_cred(p)->user->processes);
++	dec_rlimit_counter(&init_user_ns, task_euid(p), UCOUNT_RLIMIT_NPROC);
  	rcu_read_unlock();
  
  	cgroup_release(p);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index d2b28634dc8f..43f3c54fe4c6 100644
+index efc5493203ae..2bc8bd45179f 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -1963,7 +1963,7 @@ static __latent_entropy struct task_struct *copy_process(
- 		current->flags &= ~PF_NPROC_UNS_EXCEEDED;
- 		goto bad_fork_free;
- 	}
--	processes = get_rlimit_counter(&init_user_ns, p->real_cred->euid,
-+	processes = get_rlimit_counter(task_rlimit_ns(p), task_euid(p),
- 			UCOUNT_RLIMIT_NPROC);
- 	if (processes >= task_rlimit(p, RLIMIT_NPROC)) {
+@@ -1844,7 +1844,7 @@ static __latent_entropy struct task_struct *copy_process(
+ 					int node,
+ 					struct kernel_clone_args *args)
+ {
+-	int pidfd = -1, retval;
++	int pidfd = -1, retval, processes;
+ 	struct task_struct *p;
+ 	struct multiprocess_signals delayed;
+ 	struct file *pidfile = NULL;
+@@ -1958,9 +1958,10 @@ static __latent_entropy struct task_struct *copy_process(
+ 	DEBUG_LOCKS_WARN_ON(!p->hardirqs_enabled);
+ 	DEBUG_LOCKS_WARN_ON(!p->softirqs_enabled);
+ #endif
++	processes = get_rlimit_counter(&init_user_ns, p->real_cred->euid,
++			UCOUNT_RLIMIT_NPROC);
+ 	retval = -EAGAIN;
+-	if (atomic_read(&p->real_cred->user->processes) >=
+-			task_rlimit(p, RLIMIT_NPROC)) {
++	if (processes >= task_rlimit(p, RLIMIT_NPROC)) {
  		if (p->real_cred->user != INIT_USER &&
-@@ -2366,7 +2366,7 @@ static __latent_entropy struct task_struct *copy_process(
+ 		    !capable(CAP_SYS_RESOURCE) && !capable(CAP_SYS_ADMIN))
+ 			goto bad_fork_free;
+@@ -2361,7 +2362,7 @@ static __latent_entropy struct task_struct *copy_process(
  #endif
  	delayacct_tsk_free(p);
  bad_fork_cleanup_count:
--	dec_rlimit_counter(&init_user_ns, p->cred->euid, UCOUNT_RLIMIT_NPROC);
-+	dec_rlimit_counter(task_rlimit_ns(p), task_euid(p), UCOUNT_RLIMIT_NPROC);
+-	atomic_dec(&p->cred->user->processes);
++	dec_rlimit_counter(&init_user_ns, p->cred->euid, UCOUNT_RLIMIT_NPROC);
  	exit_creds(p);
  bad_fork_free:
  	p->state = TASK_DEAD;
 diff --git a/kernel/sys.c b/kernel/sys.c
-index db780ec32d86..917cbd7fc674 100644
+index 00a96746e28a..db780ec32d86 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
-@@ -467,7 +467,7 @@ static int set_user(struct cred *new)
+@@ -461,11 +461,14 @@ SYSCALL_DEFINE1(setgid, gid_t, gid)
+ static int set_user(struct cred *new)
+ {
+ 	struct user_struct *new_user;
++	int processes;
+ 
+ 	new_user = alloc_uid(new->uid);
  	if (!new_user)
  		return -EAGAIN;
  
--	processes = get_rlimit_counter(&init_user_ns, new_user->uid, UCOUNT_RLIMIT_NPROC);
-+	processes = get_rlimit_counter(new->rlimit_ns, new_user->uid, UCOUNT_RLIMIT_NPROC);
- 
++	processes = get_rlimit_counter(&init_user_ns, new_user->uid, UCOUNT_RLIMIT_NPROC);
++
  	/*
  	 * We don't fail in case of NPROC limit excess here because too many
-@@ -2529,6 +2529,26 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
- 
- 		error = (current->flags & PR_IO_FLUSHER) == PR_IO_FLUSHER;
- 		break;
-+	case PR_SET_RLIMIT_USER_NAMESPACE:
-+		if (!capable(CAP_SYS_RESOURCE))
-+			return -EPERM;
-+
-+		switch (arg2) {
-+		case PR_RLIMIT_BIND_GLOBAL_USERNS:
-+			error = set_rlimit_ns(&init_user_ns);
-+			break;
-+		case PR_RLIMIT_BIND_CURRENT_USERNS:
-+			error = set_rlimit_ns(current_user_ns());
-+			break;
-+		default:
-+			error = -EINVAL;
-+		}
-+		break;
-+	case PR_GET_RLIMIT_USER_NAMESPACE:
-+		error = current_rlimit_ns() == &init_user_ns
-+			? PR_RLIMIT_BIND_GLOBAL_USERNS
-+			: PR_RLIMIT_BIND_CURRENT_USERNS;
-+		break;
- 	default:
- 		error = -EINVAL;
- 		break;
-diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
-index 87804e0371fe..346df35ceba9 100644
---- a/kernel/user_namespace.c
-+++ b/kernel/user_namespace.c
-@@ -56,6 +56,8 @@ static void set_cred_user_ns(struct cred *cred, struct user_namespace *user_ns)
+ 	 * poorly written programs don't check set*uid() return code, assuming
+@@ -473,8 +476,7 @@ static int set_user(struct cred *new)
+ 	 * for programs doing set*uid()+execve() by harmlessly deferring the
+ 	 * failure to the execve() stage.
+ 	 */
+-	if (atomic_read(&new_user->processes) >= rlimit(RLIMIT_NPROC) &&
+-			new_user != INIT_USER)
++	if (processes >= rlimit(RLIMIT_NPROC) && new_user != INIT_USER)
+ 		current->flags |= PF_NPROC_EXCEEDED;
+ 	else
+ 		current->flags &= ~PF_NPROC_EXCEEDED;
+diff --git a/kernel/ucount.c b/kernel/ucount.c
+index 7b2bca8582ef..e00d644e4ca5 100644
+--- a/kernel/ucount.c
++++ b/kernel/ucount.c
+@@ -74,6 +74,7 @@ static struct ctl_table user_table[] = {
+ 	UCOUNT_ENTRY("max_inotify_instances"),
+ 	UCOUNT_ENTRY("max_inotify_watches"),
  #endif
- 	/* tgcred will be cleared in our caller bc CLONE_THREAD won't be set */
- 	cred->user_ns = user_ns;
-+
-+	cred->rlimit_ns = &init_user_ns;
++	{ },
+ 	{ }
+ };
+ #endif /* CONFIG_SYSCTL */
+@@ -222,6 +223,39 @@ void dec_ucount(struct ucounts *ucounts, enum ucount_type type)
+ 	put_ucounts(ucounts);
  }
  
- /*
-@@ -121,6 +123,7 @@ int create_user_ns(struct cred *new)
- 	for (i = 0; i < UCOUNT_COUNTS; i++) {
- 		ns->ucount_max[i] = INT_MAX;
- 	}
-+	ns->ucount_max[UCOUNT_RLIMIT_NPROC] = rlimit(RLIMIT_NPROC);
- 	ns->ucounts = ucounts;
++long get_rlimit_counter(struct user_namespace *ns, kuid_t uid, enum ucount_type type)
++{
++	long v;
++	struct ucounts *ucounts = get_ucounts(ns, uid);
++	if (!ucounts)
++		return LONG_MAX;
++	v = atomic_long_read(&ucounts->ucount[type]);
++	put_ucounts(ucounts);
++	return v;
++}
++
++struct ucounts *inc_rlimit_counter(struct user_namespace *ns, kuid_t uid,
++		enum ucount_type type)
++{
++	if (type < UCOUNT_MIN_RLIMIT || type > UCOUNT_MAX_RLIMIT)
++		return NULL;
++
++	return inc_ucount(ns, uid, type);
++}
++
++void dec_rlimit_counter(struct user_namespace *ns, kuid_t uid, enum ucount_type type)
++{
++	struct ucounts *ucounts;
++
++	if (type < UCOUNT_MIN_RLIMIT || type > UCOUNT_MAX_RLIMIT)
++		return;
++
++	ucounts = get_ucounts(ns, uid);
++
++	if (ucounts)
++		dec_ucount(ucounts, type);
++}
++
+ static __init int user_namespace_sysctl_init(void)
+ {
+ #ifdef CONFIG_SYSCTL
+diff --git a/kernel/user.c b/kernel/user.c
+index b1635d94a1f2..5bb75ebdef4f 100644
+--- a/kernel/user.c
++++ b/kernel/user.c
+@@ -98,7 +98,6 @@ static DEFINE_SPINLOCK(uidhash_lock);
+ /* root_user.__count is 1, for init task cred */
+ struct user_struct root_user = {
+ 	.__count	= REFCOUNT_INIT(1),
+-	.processes	= ATOMIC_INIT(1),
+ 	.sigpending	= ATOMIC_INIT(0),
+ 	.locked_shm     = 0,
+ 	.uid		= GLOBAL_ROOT_UID,
+@@ -224,6 +223,8 @@ static int __init uid_cache_init(void)
+ 	uid_hash_insert(&root_user, uidhashentry(GLOBAL_ROOT_UID));
+ 	spin_unlock_irq(&uidhash_lock);
  
- 	/* Inherit USERNS_SETGROUPS_ALLOWED from our parent */
++	inc_rlimit_counter(&init_user_ns, GLOBAL_ROOT_UID, UCOUNT_RLIMIT_NPROC);
++
+ 	return 0;
+ }
+ subsys_initcall(uid_cache_init);
 -- 
 2.25.4
 
