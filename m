@@ -1,20 +1,22 @@
-Return-Path: <SRS0=YwBu=EJ=lists.openwall.com=kernel-hardening-return-20332-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=OiIb=EJ=lists.openwall.com=kernel-hardening-return-20333-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.6 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 36078C2D0A3
-	for <kernel-hardening@archiver.kernel.org>; Tue,  3 Nov 2020 16:04:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B3E24C2D0A3
+	for <kernel-hardening@archiver.kernel.org>; Tue,  3 Nov 2020 17:35:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 22E8A223EA
-	for <kernel-hardening@archiver.kernel.org>; Tue,  3 Nov 2020 16:04:07 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 22E8A223EA
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20332-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9987 invoked by uid 550); 3 Nov 2020 16:04:00 -0000
+	by mail.kernel.org (Postfix) with SMTP id D063F21D91
+	for <kernel-hardening@archiver.kernel.org>; Tue,  3 Nov 2020 17:35:09 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="Cn6oexGm"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D063F21D91
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20333-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15428 invoked by uid 550); 3 Nov 2020 17:35:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,77 +24,84 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9952 invoked from network); 3 Nov 2020 16:03:59 -0000
-Subject: Re: [PATCH v22 07/12] landlock: Support filesystem access-control
-To: Jann Horn <jannh@google.com>
-Cc: James Morris <jmorris@namei.org>, "Serge E . Hallyn" <serge@hallyn.com>,
- Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>,
- Anton Ivanov <anton.ivanov@cambridgegreys.com>, Arnd Bergmann
- <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
- Jeff Dike <jdike@addtoit.com>, Jonathan Corbet <corbet@lwn.net>,
- Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>,
- Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
- Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- linux-arch <linux-arch@vger.kernel.org>,
- "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
- linux-fsdevel <linux-fsdevel@vger.kernel.org>,
- kernel list <linux-kernel@vger.kernel.org>,
- "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
- linux-security-module <linux-security-module@vger.kernel.org>,
- the arch/x86 maintainers <x86@kernel.org>,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@linux.microsoft.com>
-References: <20201027200358.557003-1-mic@digikod.net>
- <20201027200358.557003-8-mic@digikod.net>
- <CAG48ez1xMfxkwhXK4b1BB4GrTVauNzfwPoCutn9axKt_PFRSVQ@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <056d8f1a-b45f-379f-d81a-8c13a1536c3f@digikod.net>
-Date: Tue, 3 Nov 2020 17:03:45 +0100
-User-Agent:
+Received: (qmail 15394 invoked from network); 3 Nov 2020 17:35:00 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1604424888;
+	bh=ip59U7tSs/uZHMuxCZIR61tmzygdbBHUGZSDre8isGU=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=Cn6oexGmWcUT8AeX1aaNlsnN1iwcegecwZAwfuQYmSOYcoR925weIGH4XuHinqLD9
+	 fmRG+2VDec5XAOclpBvYzjRtyVuq1jMW/vxo83M/BTUE857W1XZVO4eI7PBwLAaiwd
+	 7Ftby+0twuq5orTtU1mBL40JWfOLaTdNJJYs2Hqw=
+Date: Tue, 3 Nov 2020 17:34:38 +0000
+From: Mark Brown <broonie@kernel.org>
+To: Szabolcs Nagy <szabolcs.nagy@arm.com>
+Cc: libc-alpha@sourceware.org, Jeremy Linton <jeremy.linton@arm.com>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Mark Rutland <mark.rutland@arm.com>, Will Deacon <will@kernel.org>,
+	Florian Weimer <fweimer@redhat.com>,
+	Kees Cook <keescook@chromium.org>,
+	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
+	Lennart Poettering <mzxreary@0pointer.de>,
+	Topi Miettinen <toiwoton@gmail.com>, linux-kernel@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org,
+	kernel-hardening@lists.openwall.com,
+	linux-hardening@vger.kernel.org
+Subject: Re: [PATCH 0/4] aarch64: avoid mprotect(PROT_BTI|PROT_EXEC) [BZ
+ #26831]
+Message-ID: <20201103173438.GD5545@sirena.org.uk>
+References: <cover.1604393169.git.szabolcs.nagy@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez1xMfxkwhXK4b1BB4GrTVauNzfwPoCutn9axKt_PFRSVQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+Content-Type: multipart/signed; micalg=pgp-sha512;
+	protocol="application/pgp-signature"; boundary="BRE3mIcgqKzpedwo"
+Content-Disposition: inline
+In-Reply-To: <cover.1604393169.git.szabolcs.nagy@arm.com>
+X-Cookie: I don't get no respect.
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
 
-On 29/10/2020 02:06, Jann Horn wrote:
-> (On Tue, Oct 27, 2020 at 9:04 PM Mickaël Salaün <mic@digikod.net> wrote:
+--BRE3mIcgqKzpedwo
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 
->> diff --git a/security/landlock/fs.c b/security/landlock/fs.c
-> [...]
->> +static inline u32 get_file_access(const struct file *const file)
->> +{
->> +       u32 access = 0;
->> +
->> +       if (file->f_mode & FMODE_READ) {
->> +               /* A directory can only be opened in read mode. */
->> +               if (S_ISDIR(file_inode(file)->i_mode))
->> +                       return LANDLOCK_ACCESS_FS_READ_DIR;
->> +               access = LANDLOCK_ACCESS_FS_READ_FILE;
->> +       }
->> +       /*
->> +        * A LANDLOCK_ACCESS_FS_APPEND could be added but we also need to check
->> +        * fcntl(2).
->> +        */
-> 
-> Once https://lore.kernel.org/linux-api/20200831153207.GO3265@brightrain.aerifal.cx/
-> lands, pwritev2() with RWF_NOAPPEND will also be problematic for
-> classifying "write" vs "append"; you may want to include that in the
-> comment. (Or delete the comment.)
+On Tue, Nov 03, 2020 at 10:25:37AM +0000, Szabolcs Nagy wrote:
 
-Contrary to fcntl(2), pwritev2(2) doesn't seems to modify the file
-description. Otherwise, other LSMs would need to be patched.
-I'll remove this comment anyway.
+> Re-mmap executable segments instead of mprotecting them in
+> case mprotect is seccomp filtered.
 
-> 
->> +       if (file->f_mode & FMODE_WRITE)
->> +               access |= LANDLOCK_ACCESS_FS_WRITE_FILE;
->> +       /* __FMODE_EXEC is indeed part of f_flags, not f_mode. */
->> +       if (file->f_flags & __FMODE_EXEC)
->> +               access |= LANDLOCK_ACCESS_FS_EXECUTE;
->> +       return access;
->> +}
-> [...]
-> 
+> For the kernel mapped main executable we don't have the fd
+> for re-mmap so linux needs to be updated to add BTI. (In the
+> presence of seccomp filters for mprotect(PROT_EXEC) the libc
+> cannot change BTI protection at runtime based on user space
+> policy so it is better if the kernel maps BTI compatible
+> binaries with PROT_BTI by default.)
+
+Given that there were still some ongoing discussions on a more robust
+kernel interface here and there seem to be a few concerns with this
+series should we perhaps just take a step back and disable this seccomp
+filter in systemd on arm64, at least for the time being?  That seems
+safer than rolling out things that set ABI quickly, a big part of the
+reason we went with having the dynamic linker enable PROT_BTI in the
+first place was to give us more flexibility to handle any unforseen
+consequences of enabling BTI that we run into.  We are going to have
+similar issues with other features like MTE so we need to make sure that
+whatever we're doing works with them too.
+
+Also updated to Will's current e-mail address - Will, do you have
+thoughts on what we should do here?
+
+--BRE3mIcgqKzpedwo
+Content-Type: application/pgp-signature; name="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAABCgAdFiEEreZoqmdXGLWf4p/qJNaLcl1Uh9AFAl+hlK4ACgkQJNaLcl1U
+h9DD3gf/WNywQ/sgsuMwVB40sA+4Df/FGYWXM9/N6kUbBvcnoS9DtrP5HUMkJBzB
+XS2taPJPPVpHEm8WJti9lNOLj+5uLwGmPe9tv4APgATbU6xR9tpUaLqVTvnwGH9W
+G3DRggj5ExKwSc0ArcrpLktH2MTraSmlN7OsEnIB2RMRNzkEacr+AlbDxHmnT1Co
+SEbhoFrFKE452ptHVaHckiC6j6LGwDusc8uIOAaSHkNF9IbC+SU8UqnbiTkqbc68
+q9vnCmiSjRFEHZgq/NV+PQVRQqkj2vIzFK3CDN5wotJQ0OGGbK6OmjuyLCYlqX1l
+5S13yMzSMWD5ItabHkNWGMqfdrB0KA==
+=oJHO
+-----END PGP SIGNATURE-----
+
+--BRE3mIcgqKzpedwo--
