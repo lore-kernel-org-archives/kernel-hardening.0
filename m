@@ -1,21 +1,24 @@
-Return-Path: <SRS0=FSCT=EJ=lists.openwall.com=kernel-hardening-return-20346-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=fRHJ=EK=lists.openwall.com=kernel-hardening-return-20347-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.7 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id ED030C2D0A3
-	for <kernel-hardening@archiver.kernel.org>; Tue,  3 Nov 2020 18:23:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0B025C2D0A3
+	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Nov 2020 08:57:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B6DE3206D5
-	for <kernel-hardening@archiver.kernel.org>; Tue,  3 Nov 2020 18:23:42 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B6DE3206D5
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20346-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 8113 invoked by uid 550); 3 Nov 2020 18:21:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id B65BF216C4
+	for <kernel-hardening@archiver.kernel.org>; Wed,  4 Nov 2020 08:57:43 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=armh.onmicrosoft.com header.i=@armh.onmicrosoft.com header.b="w6MgidbL";
+	dkim=pass (1024-bit key) header.d=armh.onmicrosoft.com header.i=@armh.onmicrosoft.com header.b="w6MgidbL"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B65BF216C4
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=arm.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20347-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19800 invoked by uid 550); 4 Nov 2020 08:57:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,485 +26,169 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8063 invoked from network); 3 Nov 2020 18:21:43 -0000
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-To: James Morris <jmorris@namei.org>,
-	"Serge E . Hallyn" <serge@hallyn.com>
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
-	Al Viro <viro@zeniv.linux.org.uk>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Anton Ivanov <anton.ivanov@cambridgegreys.com>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Jann Horn <jannh@google.com>,
-	Jeff Dike <jdike@addtoit.com>,
-	Jonathan Corbet <corbet@lwn.net>,
+Received: (qmail 19777 invoked from network); 4 Nov 2020 08:57:31 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=armh.onmicrosoft.com;
+ s=selector2-armh-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=sbg7ZlkQGrs9mWpDpDnhBnGQgwzsQZ68Hh/dPW1plb4=;
+ b=w6MgidbLJ+bSeTglCo1E+12pzjSHsXwxAmvcgzFBGF/571oVdYB7yJ1C5RjXRhPqyeN9W+PKC0b26qklSoLUVb96eIml8ZARWujHJm9nYGXHYc/XGz8e3tV/Aj0D8GDw1Bxg9t9NF4Gl8re4/m6ZIihSm4kT6PODIWOZze/EN28=
+X-MS-Exchange-Authentication-Results: spf=pass (sender IP is 63.35.35.123)
+ smtp.mailfrom=arm.com; lists.openwall.com; dkim=pass (signature was verified)
+ header.d=armh.onmicrosoft.com;lists.openwall.com; dmarc=pass action=none
+ header.from=arm.com;
+Received-SPF: Pass (protection.outlook.com: domain of arm.com designates
+ 63.35.35.123 as permitted sender) receiver=protection.outlook.com;
+ client-ip=63.35.35.123; helo=64aa7808-outbound-1.mta.getcheckrecipient.com;
+X-CheckRecipientChecked: true
+X-CR-MTA-CID: abf9ad6c60bd9186
+X-CR-MTA-TID: 64aa7808
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=fRzt1Ww7p9tvIHcuY2dmCrbkNjh5ySNjvJ2GO7W70VtWyFYqYltgfCIxvbbW9RVgnQoh08FjVYmX6gKA/ZTWdwL72jTH3nu1aJmoP46+YDAHNSUtVffxDb2Dj6dpmY6C/U18gijs/7rNWD7Jk8U94cgSt53hbQSVPTU2Q6mUEZ+DR8IZz4Sa7M/BZZNxqdH/ny4Mwfny+4MHtGoVI6lgvka5MSaxlsApCMmZY80BuxnTtoELVqOhebTrEJwblMuzjOWwZ5Hu8cD93U8YTN327YHdNdZgXtAUhEb7JOFT2lBGqUagdAkcIThB8fYbaj3fpsV4KYYSxKdWBSlBWt4asA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=sbg7ZlkQGrs9mWpDpDnhBnGQgwzsQZ68Hh/dPW1plb4=;
+ b=FREze/9ehdrHDs7X2VGvVa9vJ+bUF5Bb5CNVav29UVyaaNdghYJxUvmaGMDYrAFsDgUFrggBM1hOF5UubVlTU7Ed55r4Yo2LX6GS0h9Bt3BYaHaCrDQS8GTuaeBOhqajyIEfWQQtVvBU0vgwd6RKruyo+FiNGYOthYr6LxhRPvvEgGk0bDcGkCZu5zsszam8nJ+b2gAWNmiIH2auUY+iJYg0TJ0ngKUXWOBi1do5JPQGzGL4ejwt647F4iT9o4us3OgOHMIDxJGKd5XR18nl42rjlrbQoU4Ays9dlroIPgQkJqqwP9X9sqrJ1iprLpepjl1E+vjOYCEO/BNpp7dfWg==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=arm.com; dmarc=pass action=none header.from=arm.com; dkim=pass
+ header.d=arm.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=armh.onmicrosoft.com;
+ s=selector2-armh-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=sbg7ZlkQGrs9mWpDpDnhBnGQgwzsQZ68Hh/dPW1plb4=;
+ b=w6MgidbLJ+bSeTglCo1E+12pzjSHsXwxAmvcgzFBGF/571oVdYB7yJ1C5RjXRhPqyeN9W+PKC0b26qklSoLUVb96eIml8ZARWujHJm9nYGXHYc/XGz8e3tV/Aj0D8GDw1Bxg9t9NF4Gl8re4/m6ZIihSm4kT6PODIWOZze/EN28=
+Authentication-Results-Original: arm.com; dkim=none (message not signed)
+ header.d=none;arm.com; dmarc=none action=none header.from=arm.com;
+Date: Wed, 4 Nov 2020 08:57:05 +0000
+From: Szabolcs Nagy <szabolcs.nagy@arm.com>
+To: Jeremy Linton <jeremy.linton@arm.com>
+Cc: Mark Brown <broonie@kernel.org>, libc-alpha@sourceware.org,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Mark Rutland <mark.rutland@arm.com>, Will Deacon <will@kernel.org>,
+	Florian Weimer <fweimer@redhat.com>,
 	Kees Cook <keescook@chromium.org>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	Richard Weinberger <richard@nod.at>,
-	Shuah Khan <shuah@kernel.org>,
-	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+	Salvatore Mesoraca <s.mesoraca16@gmail.com>,
+	Lennart Poettering <mzxreary@0pointer.de>,
+	Topi Miettinen <toiwoton@gmail.com>, linux-kernel@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org,
 	kernel-hardening@lists.openwall.com,
-	linux-api@vger.kernel.org,
-	linux-arch@vger.kernel.org,
-	linux-doc@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	linux-kselftest@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	x86@kernel.org,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
-Subject: [PATCH v23 12/12] landlock: Add user and kernel documentation
-Date: Tue,  3 Nov 2020 19:21:09 +0100
-Message-Id: <20201103182109.1014179-13-mic@digikod.net>
-X-Mailer: git-send-email 2.28.0
-In-Reply-To: <20201103182109.1014179-1-mic@digikod.net>
-References: <20201103182109.1014179-1-mic@digikod.net>
+	linux-hardening@vger.kernel.org
+Subject: Re: [PATCH 0/4] aarch64: avoid mprotect(PROT_BTI|PROT_EXEC) [BZ
+ #26831]
+Message-ID: <20201104085704.GB24704@arm.com>
+References: <cover.1604393169.git.szabolcs.nagy@arm.com>
+ <20201103173438.GD5545@sirena.org.uk>
+ <8c99cc8e-41af-d066-b786-53ac13c2af8a@arm.com>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <8c99cc8e-41af-d066-b786-53ac13c2af8a@arm.com>
+User-Agent: Mutt/1.9.4 (2018-02-28)
+X-Originating-IP: [217.140.106.54]
+X-ClientProxiedBy: LO2P265CA0248.GBRP265.PROD.OUTLOOK.COM
+ (2603:10a6:600:8a::20) To PR3PR08MB5564.eurprd08.prod.outlook.com
+ (2603:10a6:102:87::18)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+X-MS-Exchange-MessageSentRepresentingType: 1
+X-MS-PublicTrafficType: Email
+X-MS-Office365-Filtering-HT: Tenant
+X-MS-Office365-Filtering-Correlation-Id: 3ab50e3e-e1a5-4f8e-1349-08d8809fa107
+X-MS-TrafficTypeDiagnostic: PR3PR08MB5564:|DB8PR08MB4153:
+X-MS-Exchange-Transport-Forked: True
+X-Microsoft-Antispam-PRVS:
+	<DB8PR08MB4153A28728751B8BD1C8DFB3EDEF0@DB8PR08MB4153.eurprd08.prod.outlook.com>
+x-checkrecipientrouted: true
+NoDisclaimer: true
+X-MS-Oob-TLC-OOBClassifiers: OLM:8882;OLM:8882;
+X-MS-Exchange-SenderADCheck: 1
+X-Microsoft-Antispam-Untrusted: BCL:0;
+X-Microsoft-Antispam-Message-Info-Original:
+ lJkiyGppbMyn6xQP8zi6Yi6ibBpMVjELjR432SfnFytFUSXEvhxRRX4GMsgmDZZNCb+ZeQx+KwWSiMNu7NS2fb7WNdi9Gt2pqTEl1tnsHqMM98gR0n8rUoBOc8sRD/arBhrw+Q871raUpr6bfGnE5Ba416H/4RM/JjoEthXX7GsB8HndGTf6bow+f6rLWP9hgNpp5RmRxmx3tZ3XSX+891uyxAQjdXA5GHzR7veok0ztRFdHLKx8fRGAXFWs9gy5EQqE0Cov9Ajr5nlRVG1006aCgANzq1nxikXm0wmoZXvMsHktqjMj+dOv7beoTiEHXv5ANT4+DrA4618jrEZSfZGZAaInhf5FomK81Ue+enKB2H/qBUDTorCQBe/XX1cO
+X-Forefront-Antispam-Report-Untrusted:
+ CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:PR3PR08MB5564.eurprd08.prod.outlook.com;PTR:;CAT:NONE;SFS:(4636009)(376002)(136003)(39860400002)(396003)(346002)(366004)(86362001)(186003)(66476007)(66556008)(44832011)(66946007)(5660300002)(4326008)(7696005)(55016002)(16526019)(8676002)(52116002)(83380400001)(36756003)(2906002)(8886007)(1076003)(2616005)(6636002)(6862004)(33656002)(54906003)(7416002)(37006003)(316002)(53546011)(8936002)(956004)(26005)(478600001)(83133001);DIR:OUT;SFP:1101;
+X-MS-Exchange-AntiSpam-MessageData:
+ D46UPxVWWHNfMsRySJMroSbD6x51AOjRT5W2DJTfz0NsOGoBptx4oD5vF9MvkiajZOMI0DNwMnBnpeh+4IyIJDKg3BEk2y6CfIUJwe693NCf9reWxbinx0hnCfzvqK4e+wipchXjbzo1+Zsj8390YvnQ/UiGEMbl15YakcA8aqJuOROvHHbMU5/r46gbAdLmB/oiVNIuQIjkwzVJB/UEMC5ijtytH1giekCkPhbTKHebS6DjDzVGvH9C1RPmt5JM0aDBYpTxyRXlDPsscAnT7wBjYtBf8AndLB2U61pABswfI0109Bt0TAurpBHO2cdjf+jjc6CWOBnH8AUAV10OfwtlkFqEXU5roWcHBLHq0zowPEDqm8Nj7J6KeS7Kv8MDre9w+ssU6u9lbAddXFqTmi+L1g9boIZC0H9g2hIzs8E+AzPpYznGFYjyvR6mkfnbVmFhiS6x4+hWDOTIQJgw2bbM14nchakpu/X/THAkQ8yVKQ5+IsXvOzc/IlpMzVMBUgqzq/jE7aC3hoDb5QH+6uzA7nlJB0OWNUSxr4KYMBodbJASLPYuPE29WFFDPgij6/X9fUwpjE9RdbygkmBqd5roXzOeRumdKCz+B15Xz3pzMx6sMia7mqr4gE8YyOB7zr87DfSZ+NSCGl9bheIelw==
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: PR3PR08MB5564
+Original-Authentication-Results: arm.com; dkim=none (message not signed)
+ header.d=none;arm.com; dmarc=none action=none header.from=arm.com;
+X-EOPAttributedMessage: 0
+X-MS-Exchange-Transport-CrossTenantHeadersStripped:
+ DB5EUR03FT045.eop-EUR03.prod.protection.outlook.com
+X-MS-Office365-Filtering-Correlation-Id-Prvs:
+	062ded2c-a6d6-497b-3f52-08d8809f9bba
+X-Microsoft-Antispam: BCL:0;
+X-Microsoft-Antispam-Message-Info:
+	GlZDUJgFsAxrs5Jgc30dqFxtUi4Lkwh34dTSIUQ3wnTKTAz89Onx8BCmQQOeLqE3igsvaq2e1p5njXywmU3mpYzy3oCqnGwGsz+lgIejWAaOK6jXWFguT1hmj6/WjcuOTp6xFTUifQ53s/UN8OcpHSBTSd1nyxWtPTtQ01i4SE1nD+jxJYClqzv/YE5lpvId0655ImGJ6BAuj7AmC/EQdSh7Ku85oqgEiNAdSRf2KyBDegowdWW7lEWnezQaHBsREIXJP575r2/j4Wi4Tw63leXjPgWKoXdyh7TjnSc3qDj0mgbyuCNML7puPjEWxzXS3uXSxojrPSS4HNEmF9TcylKe6c8IK/T+dvMILYCQOY+sgkFUNig9xymRFYqdakBLUwQV2pjpAOOkt03njz4+7GJJ/tEsEMH1yl8PEaTfLfw=
+X-Forefront-Antispam-Report:
+	CIP:63.35.35.123;CTRY:IE;LANG:en;SCL:1;SRV:;IPV:CAL;SFV:NSPM;H:64aa7808-outbound-1.mta.getcheckrecipient.com;PTR:ec2-63-35-35-123.eu-west-1.compute.amazonaws.com;CAT:NONE;SFS:(4636009)(136003)(396003)(376002)(39860400002)(346002)(46966005)(16526019)(70206006)(336012)(1076003)(5660300002)(2906002)(70586007)(8886007)(478600001)(53546011)(54906003)(956004)(8676002)(8936002)(44832011)(186003)(47076004)(55016002)(26005)(356005)(82740400003)(316002)(36756003)(2616005)(107886003)(86362001)(83380400001)(82310400003)(6636002)(37006003)(6862004)(4326008)(7696005)(33656002)(81166007)(83133001);DIR:OUT;SFP:1101;
+X-OriginatorOrg: arm.com
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 04 Nov 2020 08:57:16.2586
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: 3ab50e3e-e1a5-4f8e-1349-08d8809fa107
+X-MS-Exchange-CrossTenant-Id: f34e5979-57d9-4aaa-ad4d-b122a662184d
+X-MS-Exchange-CrossTenant-OriginalAttributedTenantConnectingIp: TenantId=f34e5979-57d9-4aaa-ad4d-b122a662184d;Ip=[63.35.35.123];Helo=[64aa7808-outbound-1.mta.getcheckrecipient.com]
+X-MS-Exchange-CrossTenant-AuthSource:
+	DB5EUR03FT045.eop-EUR03.prod.protection.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: HybridOnPrem
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DB8PR08MB4153
 
-From: Mickaël Salaün <mic@linux.microsoft.com>
+The 11/03/2020 23:41, Jeremy Linton wrote:
+> On 11/3/20 11:34 AM, Mark Brown wrote:
+> > On Tue, Nov 03, 2020 at 10:25:37AM +0000, Szabolcs Nagy wrote:
+> > 
+> > > Re-mmap executable segments instead of mprotecting them in
+> > > case mprotect is seccomp filtered.
+> > 
+> > > For the kernel mapped main executable we don't have the fd
+> > > for re-mmap so linux needs to be updated to add BTI. (In the
+> > > presence of seccomp filters for mprotect(PROT_EXEC) the libc
+> > > cannot change BTI protection at runtime based on user space
+> > > policy so it is better if the kernel maps BTI compatible
+> > > binaries with PROT_BTI by default.)
+> > 
+> > Given that there were still some ongoing discussions on a more robust
+> > kernel interface here and there seem to be a few concerns with this
+> > series should we perhaps just take a step back and disable this seccomp
+> > filter in systemd on arm64, at least for the time being?  That seems
+> > safer than rolling out things that set ABI quickly, a big part of the
+> 
+> So, that's a bigger hammer than I think is needed and punishes !BTI
+> machines. I'm going to suggest that if we need to carry a temp patch its
+> more like the glibc patch I mentioned in the Fedora defect. That patch
+> simply logs a message, on the mprotect failures rather than aborting. Its
+> fairly non-intrusive.
+> 
+> That leaves seccomp functional, and BTI generally functional except when
+> seccomp is restricting it. I've also been asked that if a patch like that is
+> needed, its (temporary?) merged to the glibc trunk, rather than just being
+> carried by the distro's.
 
-This documentation can be built with the Sphinx framework.
+note that changing mprotect into mmap in glibc works
+even if the kernel or systemd decides to do things
+differently: currently the only wart is that on the
+main exe we have to use mprotect and silently ignore
+the failures. (but e.g. some return to libc attacks
+are reliably prevented since libc.so guaranteed to
+have PROT_BTI this way.)
 
-Cc: James Morris <jmorris@namei.org>
-Cc: Jann Horn <jannh@google.com>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Serge E. Hallyn <serge@hallyn.com>
-Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-Reviewed-by: Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>
----
+the patchset is a bit more intrusive than i hoped
+for, so if we expect to get a new syscall then
+simply ignoring mprotect failures may be a better
+temporary solution. (and i still need to do
+benchmarks to see if the cost of re-mmap is not
+much more than the cost of mprotect.)
 
-Changes since v22:
-* Fix spelling and remove obsolete sentence (spotted by Jann Horn).
-* Bump date.
+changing the seccomp filter in systemd does not
+help if there are other seccomp filters elsewhere
+doing the same. i think we will have to avoid using
+mprotect(PROT_EXEC) or at least ignore the failure.
 
-Changes since v21:
-* Move the user space documentation to userspace-api/landlock.rst and
-  the kernel documentation to security/landlock.rst .
-* Add license headers.
-* Add last update dates.
-* Update MAINTAINERS file.
-* Add (back) links to git.kernel.org .
-* Fix spelling.
-
-Changes since v20:
-* Update examples and documentation with the new syscalls.
-
-Changes since v19:
-* Update examples and documentation with the new syscalls.
-
-Changes since v15:
-* Add current limitations.
-
-Changes since v14:
-* Fix spelling (contributed by Randy Dunlap).
-* Extend documentation about inheritance and explain layer levels.
-* Remove the use of now-removed access rights.
-* Use GitHub links.
-* Improve kernel documentation.
-* Add section for tests.
-* Update example.
-
-Changes since v13:
-* Rewrote the documentation according to the major revamp.
-
-Previous changes:
-https://lore.kernel.org/lkml/20191104172146.30797-8-mic@digikod.net/
----
- Documentation/security/index.rst         |   1 +
- Documentation/security/landlock.rst      |  79 +++++++
- Documentation/userspace-api/index.rst    |   1 +
- Documentation/userspace-api/landlock.rst | 258 +++++++++++++++++++++++
- MAINTAINERS                              |   2 +
- 5 files changed, 341 insertions(+)
- create mode 100644 Documentation/security/landlock.rst
- create mode 100644 Documentation/userspace-api/landlock.rst
-
-diff --git a/Documentation/security/index.rst b/Documentation/security/index.rst
-index 8129405eb2cc..16335de04e8c 100644
---- a/Documentation/security/index.rst
-+++ b/Documentation/security/index.rst
-@@ -16,3 +16,4 @@ Security Documentation
-    siphash
-    tpm/index
-    digsig
-+   landlock
-diff --git a/Documentation/security/landlock.rst b/Documentation/security/landlock.rst
-new file mode 100644
-index 000000000000..4c88a67a6958
---- /dev/null
-+++ b/Documentation/security/landlock.rst
-@@ -0,0 +1,79 @@
-+.. SPDX-License-Identifier: GPL-2.0
-+.. Copyright © 2017-2020 Mickaël Salaün <mic@digikod.net>
-+.. Copyright © 2019-2020 ANSSI
-+
-+==================================
-+Landlock LSM: kernel documentation
-+==================================
-+
-+:Author: Mickaël Salaün
-+:Date: November 2020
-+
-+Landlock's goal is to create scoped access-control (i.e. sandboxing).  To
-+harden a whole system, this feature should be available to any process,
-+including unprivileged ones.  Because such process may be compromised or
-+backdoored (i.e. untrusted), Landlock's features must be safe to use from the
-+kernel and other processes point of view.  Landlock's interface must therefore
-+expose a minimal attack surface.
-+
-+Landlock is designed to be usable by unprivileged processes while following the
-+system security policy enforced by other access control mechanisms (e.g. DAC,
-+LSM).  Indeed, a Landlock rule shall not interfere with other access-controls
-+enforced on the system, only add more restrictions.
-+
-+Any user can enforce Landlock rulesets on their processes.  They are merged and
-+evaluated according to the inherited ones in a way that ensures that only more
-+constraints can be added.
-+
-+User space documentation can be found here: :doc:`/userspace-api/landlock`.
-+
-+Guiding principles for safe access controls
-+===========================================
-+
-+* A Landlock rule shall be focused on access control on kernel objects instead
-+  of syscall filtering (i.e. syscall arguments), which is the purpose of
-+  seccomp-bpf.
-+* To avoid multiple kinds of side-channel attacks (e.g. leak of security
-+  policies, CPU-based attacks), Landlock rules shall not be able to
-+  programmatically communicate with user space.
-+* Kernel access check shall not slow down access request from unsandboxed
-+  processes.
-+* Computation related to Landlock operations (e.g. enforcing a ruleset) shall
-+  only impact the processes requesting them.
-+
-+Tests
-+=====
-+
-+Userspace tests for backward compatibility, ptrace restrictions and filesystem
-+support can be found here: `tools/testing/selftests/landlock/`_.
-+
-+Kernel structures
-+=================
-+
-+Object
-+------
-+
-+.. kernel-doc:: security/landlock/object.h
-+    :identifiers:
-+
-+Ruleset and domain
-+------------------
-+
-+A domain is a read-only ruleset tied to a set of subjects (i.e. tasks'
-+credentials).  Each time a ruleset is enforced on a task, the current domain is
-+duplicated and the ruleset is imported as a new layer of rules in the new
-+domain.  Indeed, once in a domain, each rule is tied to a layer level.  To
-+grant access to an object, at least one rule of each layer must allow the
-+requested action on the object.  A task can then only transit to a new domain
-+which is the intersection of the constraints from the current domain and those
-+of a ruleset provided by the task.
-+
-+The definition of a subject is implicit for a task sandboxing itself, which
-+makes the reasoning much easier and helps avoid pitfalls.
-+
-+.. kernel-doc:: security/landlock/ruleset.h
-+    :identifiers:
-+
-+.. Links
-+.. _tools/testing/selftests/landlock/:
-+   https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/tools/testing/selftests/landlock/
-diff --git a/Documentation/userspace-api/index.rst b/Documentation/userspace-api/index.rst
-index 69fc5167e648..4918fbed5be0 100644
---- a/Documentation/userspace-api/index.rst
-+++ b/Documentation/userspace-api/index.rst
-@@ -18,6 +18,7 @@ place where this information is gathered.
- 
-    no_new_privs
-    seccomp_filter
-+   landlock
-    unshare
-    spec_ctrl
-    accelerators/ocxl
-diff --git a/Documentation/userspace-api/landlock.rst b/Documentation/userspace-api/landlock.rst
-new file mode 100644
-index 000000000000..8f727de20479
---- /dev/null
-+++ b/Documentation/userspace-api/landlock.rst
-@@ -0,0 +1,258 @@
-+.. SPDX-License-Identifier: GPL-2.0
-+.. Copyright © 2017-2020 Mickaël Salaün <mic@digikod.net>
-+.. Copyright © 2019-2020 ANSSI
-+
-+=====================================
-+Landlock: unprivileged access control
-+=====================================
-+
-+:Author: Mickaël Salaün
-+:Date: November 2020
-+
-+The goal of Landlock is to enable to restrict ambient rights (e.g. global
-+filesystem access) for a set of processes.  Because Landlock is a stackable
-+LSM, it makes possible to create safe security sandboxes as new security layers
-+in addition to the existing system-wide access-controls. This kind of sandbox
-+is expected to help mitigate the security impact of bugs or
-+unexpected/malicious behaviors in user space applications.  Landlock empowers
-+any process, including unprivileged ones, to securely restrict themselves.
-+
-+Landlock rules
-+==============
-+
-+A Landlock rule describes an action on an object.  An object is currently a
-+file hierarchy, and the related filesystem actions are defined in `Access
-+rights`_.  A set of rules is aggregated in a ruleset, which can then restrict
-+the thread enforcing it, and its future children.
-+
-+Defining and enforcing a security policy
-+----------------------------------------
-+
-+We first need to create the ruleset that will contain our rules.  For this
-+example, the ruleset will contain rules which only allow read actions, but
-+write actions will be denied.  The ruleset then needs to handle both of these
-+kind of actions.
-+
-+.. code-block:: c
-+
-+    int ruleset_fd;
-+    struct landlock_ruleset_attr ruleset_attr = {
-+        .handled_access_fs =
-+            LANDLOCK_ACCESS_FS_EXECUTE |
-+            LANDLOCK_ACCESS_FS_WRITE_FILE |
-+            LANDLOCK_ACCESS_FS_READ_FILE |
-+            LANDLOCK_ACCESS_FS_READ_DIR |
-+            LANDLOCK_ACCESS_FS_REMOVE_DIR |
-+            LANDLOCK_ACCESS_FS_REMOVE_FILE |
-+            LANDLOCK_ACCESS_FS_MAKE_CHAR |
-+            LANDLOCK_ACCESS_FS_MAKE_DIR |
-+            LANDLOCK_ACCESS_FS_MAKE_REG |
-+            LANDLOCK_ACCESS_FS_MAKE_SOCK |
-+            LANDLOCK_ACCESS_FS_MAKE_FIFO |
-+            LANDLOCK_ACCESS_FS_MAKE_BLOCK |
-+            LANDLOCK_ACCESS_FS_MAKE_SYM,
-+    };
-+
-+    ruleset_fd = landlock_create_ruleset(&ruleset_attr, sizeof(ruleset_attr), 0);
-+    if (ruleset_fd < 0) {
-+        perror("Failed to create a ruleset");
-+        return 1;
-+    }
-+
-+We can now add a new rule to this ruleset thanks to the returned file
-+descriptor referring to this ruleset.  The rule will only allow reading the
-+file hierarchy ``/usr``.  Without another rule, write actions would then be
-+denied by the ruleset.  To add ``/usr`` to the ruleset, we open it with the
-+``O_PATH`` flag and fill the &struct landlock_path_beneath_attr with this file
-+descriptor.
-+
-+.. code-block:: c
-+
-+    int err;
-+    struct landlock_path_beneath_attr path_beneath = {
-+        .allowed_access =
-+            LANDLOCK_ACCESS_FS_EXECUTE |
-+            LANDLOCK_ACCESS_FS_READ_FILE |
-+            LANDLOCK_ACCESS_FS_READ_DIR,
-+    };
-+
-+    path_beneath.parent_fd = open("/usr", O_PATH | O_CLOEXEC);
-+    if (path_beneath.parent_fd < 0) {
-+        perror("Failed to open file");
-+        close(ruleset_fd);
-+        return 1;
-+    }
-+    err = landlock_add_rule(ruleset_fd, LANDLOCK_RULE_PATH_BENEATH,
-+                            &path_beneath, 0);
-+    close(path_beneath.parent_fd);
-+    if (err) {
-+        perror("Failed to update ruleset");
-+        close(ruleset_fd);
-+        return 1;
-+    }
-+
-+We now have a ruleset with one rule allowing read access to ``/usr`` while
-+denying all other handled accesses for the filesystem.  The next step is to
-+restrict the current thread from gaining more privileges (e.g. thanks to a SUID
-+binary).
-+
-+.. code-block:: c
-+
-+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
-+        perror("Failed to restrict privileges");
-+        close(ruleset_fd);
-+        return 1;
-+    }
-+
-+The current thread is now ready to sandbox itself with the ruleset.
-+
-+.. code-block:: c
-+
-+    if (landlock_enforce_ruleset_current(ruleset_fd, 0)) {
-+        perror("Failed to enforce ruleset");
-+        close(ruleset_fd);
-+        return 1;
-+    }
-+    close(ruleset_fd);
-+
-+If the `landlock_enforce_ruleset_current` system call succeeds, the current
-+thread is now restricted and this policy will be enforced on all its
-+subsequently created children as well.  Once a thread is landlocked, there is
-+no way to remove its security policy; only adding more restrictions is allowed.
-+These threads are now in a new Landlock domain, merge of their parent one (if
-+any) with the new ruleset.
-+
-+Full working code can be found in `samples/landlock/sandboxer.c`_.
-+
-+Inheritance
-+-----------
-+
-+Every new thread resulting from a :manpage:`clone(2)` inherits Landlock domain
-+restrictions from its parent.  This is similar to the seccomp inheritance (cf.
-+:doc:`/userspace-api/seccomp_filter`) or any other LSM dealing with task's
-+:manpage:`credentials(7)`.  For instance, one process's thread may apply
-+Landlock rules to itself, but they will not be automatically applied to other
-+sibling threads (unlike POSIX thread credential changes, cf.
-+:manpage:`nptl(7)`).
-+
-+When a thread sandboxes itself, we have the guarantee that the related security
-+policy will stay enforced on all this thread's descendants.  This allows
-+creating standalone and modular security policies per application, which will
-+automatically be composed between themselves according to their runtime parent
-+policies.
-+
-+Ptrace restrictions
-+-------------------
-+
-+A sandboxed process has less privileges than a non-sandboxed process and must
-+then be subject to additional restrictions when manipulating another process.
-+To be allowed to use :manpage:`ptrace(2)` and related syscalls on a target
-+process, a sandboxed process should have a subset of the target process rules,
-+which means the tracee must be in a sub-domain of the tracer.
-+
-+Kernel interface
-+================
-+
-+Access rights
-+-------------
-+
-+.. kernel-doc:: include/uapi/linux/landlock.h
-+    :identifiers: fs_access
-+
-+Creating a new ruleset
-+----------------------
-+
-+.. kernel-doc:: security/landlock/syscall.c
-+    :identifiers: sys_landlock_create_ruleset
-+
-+.. kernel-doc:: include/uapi/linux/landlock.h
-+    :identifiers: landlock_ruleset_attr
-+
-+Extending a ruleset
-+-------------------
-+
-+.. kernel-doc:: security/landlock/syscall.c
-+    :identifiers: sys_landlock_add_rule
-+
-+.. kernel-doc:: include/uapi/linux/landlock.h
-+    :identifiers: landlock_rule_type landlock_path_beneath_attr
-+
-+Enforcing a ruleset
-+-------------------
-+
-+.. kernel-doc:: security/landlock/syscall.c
-+    :identifiers: sys_landlock_enforce_ruleset_current
-+
-+Current limitations
-+===================
-+
-+File renaming and linking
-+-------------------------
-+
-+Because Landlock targets unprivileged access controls, it is needed to properly
-+handle composition of rules.  Such property also implies rules nesting.
-+Properly handling multiple layers of ruleset, each one of them able to restrict
-+access to files, also implies to inherit the ruleset restrictions from a parent
-+to its hierarchy.  Because files are identified and restricted by their
-+hierarchy, moving or linking a file from one directory to another imply to
-+propagate the hierarchy constraints.  To protect against privilege escalations
-+through renaming or linking, and for the sack of simplicity, Landlock currently
-+limits linking and renaming to the same directory.  Future Landlock evolutions
-+will enable more flexibility for renaming and linking, with dedicated ruleset
-+flags.
-+
-+OverlayFS
-+---------
-+
-+An OverlayFS mount point consists of upper and lower layers.  It is currently
-+not possible to reliably infer which underlying file hierarchy matches an
-+OverlayFS path composed of such layers.  It is then not currently possible to
-+track the source of an indirect access request, and then not possible to
-+properly identify and allow an unified OverlayFS hierarchy.  Restricting files
-+in an OverlayFS mount point works, but files allowed in one layer may not be
-+allowed in a related OverlayFS mount point.  A future Landlock evolution will
-+make possible to properly work with OverlayFS, according to a dedicated ruleset
-+flag.
-+
-+
-+Special filesystems
-+-------------------
-+
-+Access to regular files and directories can be restricted by Landlock,
-+according to the handled accesses of a ruleset.  However, files which do not
-+come from a user-visible filesystem (e.g. pipe, socket), but can still be
-+accessed through /proc/self/fd/, cannot currently be restricted.  Likewise,
-+some special kernel filesystems such as nsfs which can be accessed through
-+/proc/self/ns/, cannot currently be restricted.  For now, these kind of special
-+paths are then always allowed.  Future Landlock evolutions will enable to
-+restrict such paths, with dedicated ruleset flags.
-+
-+Questions and answers
-+=====================
-+
-+What about user space sandbox managers?
-+---------------------------------------
-+
-+Using user space process to enforce restrictions on kernel resources can lead
-+to race conditions or inconsistent evaluations (i.e. `Incorrect mirroring of
-+the OS code and state
-+<https://www.ndss-symposium.org/ndss2003/traps-and-pitfalls-practical-problems-system-call-interposition-based-security-tools/>`_).
-+
-+What about namespaces and containers?
-+-------------------------------------
-+
-+Namespaces can help create sandboxes but they are not designed for
-+access-control and then miss useful features for such use case (e.g. no
-+fine-grained restrictions).  Moreover, their complexity can lead to security
-+issues, especially when untrusted processes can manipulate them (cf.
-+`Controlling access to user namespaces <https://lwn.net/Articles/673597/>`_).
-+
-+Additional documentation
-+========================
-+
-+* :doc:`/security/landlock`
-+* https://landlock.io
-+
-+.. Links
-+.. _samples/landlock/sandboxer.c:
-+   https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/samples/landlock/sandboxer.c
-diff --git a/MAINTAINERS b/MAINTAINERS
-index d46066e172a1..3a4eb57222a7 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -9832,6 +9832,8 @@ L:	linux-security-module@vger.kernel.org
- S:	Supported
- W:	https://landlock.io
- T:	git https://github.com/landlock-lsm/linux.git
-+F:	Documentation/security/landlock.rst
-+F:	Documentation/userspace-api/landlock.rst
- F:	include/uapi/linux/landlock.h
- F:	security/landlock/
- K:	landlock
--- 
-2.28.0
-
+> > reason we went with having the dynamic linker enable PROT_BTI in the
+> > first place was to give us more flexibility to handle any unforseen
+> > consequences of enabling BTI that we run into.  We are going to have
+> > similar issues with other features like MTE so we need to make sure that
+> > whatever we're doing works with them too.
+> > 
+> > Also updated to Will's current e-mail address - Will, do you have
+> > thoughts on what we should do here?
+> > 
