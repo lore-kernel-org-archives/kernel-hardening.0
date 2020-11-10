@@ -1,23 +1,23 @@
-Return-Path: <SRS0=E8fd=EQ=lists.openwall.com=kernel-hardening-return-20372-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=prEd=EQ=lists.openwall.com=kernel-hardening-return-20373-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-16.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
+	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0852EC2D0A3
-	for <kernel-hardening@archiver.kernel.org>; Tue, 10 Nov 2020 02:30:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 883B6C388F7
+	for <kernel-hardening@archiver.kernel.org>; Tue, 10 Nov 2020 03:19:26 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 45D7F206D8
-	for <kernel-hardening@archiver.kernel.org>; Tue, 10 Nov 2020 02:30:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 6AEDC206A4
+	for <kernel-hardening@archiver.kernel.org>; Tue, 10 Nov 2020 03:19:25 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="gHoHuVOc"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 45D7F206D8
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20372-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7616 invoked by uid 550); 10 Nov 2020 02:29:57 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="XsFFeqcH"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6AEDC206A4
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20373-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5734 invoked by uid 550); 10 Nov 2020 03:19:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,304 +25,74 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7588 invoked from network); 10 Nov 2020 02:29:57 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1604975385;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=l6N9kLJEZw00t4oEwyOJU5MOUcho0W3yc7yyLi6tWGo=;
-	b=gHoHuVOcUL1RV3SAcLh2OR2oaxIP80efv43jQKwkvXgf5vk2imUZ4OAEuj+c74lYhiJdMr
-	XfodFukhrJqmkFz9ar8IuMXOt/a+sg/HzOmAnyMvCZXs18PK5CqU4Hv293sNJcTjNRg7hR
-	cB2ko1TFFYE9On6J3eGFlp7KIvBun5I=
-X-MC-Unique: czCRQyAWP7G68EG9XekIZA-1
-Date: Mon, 9 Nov 2020 20:29:24 -0600
-From: Josh Poimboeuf <jpoimboe@redhat.com>
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Jann Horn <jannh@google.com>,
-	the arch/x86 maintainers <x86@kernel.org>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	clang-built-linux <clang-built-linux@googlegroups.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	Linux ARM <linux-arm-kernel@lists.infradead.org>,
-	linux-kbuild <linux-kbuild@vger.kernel.org>,
-	kernel list <linux-kernel@vger.kernel.org>,
-	linux-pci@vger.kernel.org
-Subject: Re: [PATCH v6 22/25] x86/asm: annotate indirect jumps
-Message-ID: <20201110022924.tekltjo25wtrao7z@treble>
-References: <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
- <20201015102216.GB2611@hirez.programming.kicks-ass.net>
- <20201015203942.f3kwcohcwwa6lagd@treble>
- <CABCJKufDLmBCwmgGnfLcBw_B_4U8VY-R-dSNNp86TFfuMobPMw@mail.gmail.com>
- <20201020185217.ilg6w5l7ujau2246@treble>
- <CABCJKucVjFtrOsw58kn4OnW5kdkUh8G7Zs4s6QU9s6O7soRiAA@mail.gmail.com>
- <20201021085606.GZ2628@hirez.programming.kicks-ass.net>
- <CABCJKufL6=FiaeD8T0P+mK4JeR9J80hhjvJ6Z9S-m9UnCESxVA@mail.gmail.com>
- <20201023173617.GA3021099@google.com>
- <CABCJKuee7hUQSiksdRMYNNx05bW7pWaDm4fQ__znGQ99z9-dEw@mail.gmail.com>
+Received: (qmail 5706 invoked from network); 10 Nov 2020 03:19:17 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=27ykW6WMBpdjPMmYk+TEkpv4ofG2LVLk39veK8STtAM=;
+        b=XsFFeqcHcwErTDab8bcJJxnRZmdrfwAAmAxnX+0//0jp/RkNoXCmKM8hfyW7U5g8YY
+         wehgfKm1eruNJkdwnQxX/6RNlrNe6CP3uC9uMuIcChKg7gmdAwILZVQXBK3QxQME/vGY
+         n9bBZbqKsp3rUj7gjL3n2idnQJIzZFT2jQDMtCEsHtuxaEBlgAGdozKhGraOM+DNtPKU
+         1TYIu8MdisQa5tafuex26ZLInGgdddCQESLcztFd9caJZ9PszasLRkfq4/Txf1N1n6Z0
+         s8KzSi9dTkyd/sKQMAPCsqQUdj936ITZXkP6f+AREgqbuvxOMRr0Qudq4LaTJaYBzxn8
+         l8Rg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=27ykW6WMBpdjPMmYk+TEkpv4ofG2LVLk39veK8STtAM=;
+        b=ZveqMjyXk/GE97LoWlgU3Ov9P1nT0AR2OrdkyR8heZ6MY9YCrEOfUHPSzYHlSqs94A
+         3fw8Ksb71k8ZGXslPO6uImYonAHr67tpXgIqqhgF59vRjmbKkyWef7ZQ4cvUNPRkZnbu
+         2auxWWNGHHZ8SBbhHKN1o/+0lTIWd+x3IjXezjVZAiHTmc2QVXJ38KjonDlTu/SoyOIT
+         lpgyWeMbH9kOWT3KXBDmweviKrcU1IdskzIKKDcFiDZFbXmb6YGY1Kv+vpI+cRdihNh9
+         3XjNt2Ki67iPZHjvu5drgDA+yQbPb3fmS1u5NAGwM+D4XuoR/QX0k7jtmRFFKSqSRRhs
+         BYzQ==
+X-Gm-Message-State: AOAM533M6ktpgkG5ftiukVUhkyzb7ddW3FAMhrMAo3Fl+bwHBKBSCzQy
+	DVr8mJ47IkVgSMK42lcgr+UdeIIEzD/lHqjBmvRGeA==
+X-Google-Smtp-Source: ABdhPJw1gHS3sV2n+GuuNrA63YxT/QiulRGIL8Dn09J7EAZtkgIEcv7I2sFS4tI7OV3X2dr4+8t654iME8/HuHneKZ4=
+X-Received: by 2002:a17:90a:4881:: with SMTP id b1mr2684359pjh.32.1604978345526;
+ Mon, 09 Nov 2020 19:19:05 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CABCJKuee7hUQSiksdRMYNNx05bW7pWaDm4fQ__znGQ99z9-dEw@mail.gmail.com>
-X-Scanned-By: MIMEDefang 2.84 on 10.5.11.23
+References: <CAG48ez2baAvKDA0wfYLKy-KnM_1CdOwjU873VJGDM=CErjsv_A@mail.gmail.com>
+ <20201015102216.GB2611@hirez.programming.kicks-ass.net> <20201015203942.f3kwcohcwwa6lagd@treble>
+ <CABCJKufDLmBCwmgGnfLcBw_B_4U8VY-R-dSNNp86TFfuMobPMw@mail.gmail.com>
+ <20201020185217.ilg6w5l7ujau2246@treble> <CABCJKucVjFtrOsw58kn4OnW5kdkUh8G7Zs4s6QU9s6O7soRiAA@mail.gmail.com>
+ <20201021085606.GZ2628@hirez.programming.kicks-ass.net> <CABCJKufL6=FiaeD8T0P+mK4JeR9J80hhjvJ6Z9S-m9UnCESxVA@mail.gmail.com>
+ <20201023173617.GA3021099@google.com> <CABCJKuee7hUQSiksdRMYNNx05bW7pWaDm4fQ__znGQ99z9-dEw@mail.gmail.com>
+ <20201110022924.tekltjo25wtrao7z@treble>
+In-Reply-To: <20201110022924.tekltjo25wtrao7z@treble>
+From: Nick Desaulniers <ndesaulniers@google.com>
+Date: Mon, 9 Nov 2020 19:18:54 -0800
+Message-ID: <CAKwvOdnO2tZRcB69yJ+FTj+qGpzCasxecCPQ0c5G9Wwn6Wd12w@mail.gmail.com>
+Subject: Re: [PATCH v6 22/25] x86/asm: annotate indirect jumps
+To: Josh Poimboeuf <jpoimboe@redhat.com>
+Cc: Sami Tolvanen <samitolvanen@google.com>, Peter Zijlstra <peterz@infradead.org>, 
+	Jann Horn <jannh@google.com>, "the arch/x86 maintainers" <x86@kernel.org>, 
+	Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Will Deacon <will@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
+	"Paul E. McKenney" <paulmck@kernel.org>, Kees Cook <keescook@chromium.org>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
+	linux-kbuild <linux-kbuild@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, 
+	linux-pci@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
 
-On Mon, Nov 09, 2020 at 03:11:41PM -0800, Sami Tolvanen wrote:
-> On Fri, Oct 23, 2020 at 10:36 AM Sami Tolvanen <samitolvanen@google.com> wrote:
-> >
-> > On Wed, Oct 21, 2020 at 05:22:59PM -0700, Sami Tolvanen wrote:
-> > > There are a couple of differences, like the first "undefined stack
-> > > state" warning pointing to set_bringup_idt_handler.constprop.0()
-> > > instead of __switch_to_asm(). I tried running this with --backtrace,
-> > > but objtool segfaults at the first .entry.text warning:
-> >
-> > Looks like it segfaults when calling BT_FUNC() for an instruction that
-> > doesn't have a section (?). Applying this patch allows objtool to finish
-> > with --backtrace:
-> >
-> > diff --git a/tools/objtool/check.c b/tools/objtool/check.c
-> > index c216dd4d662c..618b0c4f2890 100644
-> > --- a/tools/objtool/check.c
-> > +++ b/tools/objtool/check.c
-> > @@ -2604,7 +2604,7 @@ static int validate_branch(struct objtool_file *file, struct symbol *func,
-> >                                 ret = validate_branch(file, func,
-> >                                                       insn->jump_dest, state);
-> >                                 if (ret) {
-> > -                                       if (backtrace)
-> > +                                       if (backtrace && insn->sec)
-> >                                                 BT_FUNC("(branch)", insn);
-> >                                         return ret;
-> >                                 }
-> >
-> >
-> > Running objtool -barfld on an allyesconfig+LTO vmlinux.o prints out the
-> > following, ignoring the crypto warnings for now:
-> 
-> OK, I spent some time looking at these warnings and the configs needed
-> to reproduce them without building allyesconfig:
-> 
-> CONFIG_XEN
-> 
-> __switch_to_asm()+0x0: undefined stack state
->   xen_hypercall_set_trap_table()+0x0: <=== (sym)
-> 
-> CONFIG_XEN_PV
-> 
-> .entry.text+0xffd: sibling call from callable instruction with
-> modified stack frame
->   .entry.text+0xfcb: (branch)
->   .entry.text+0xfb5: (alt)
->   .entry.text+0xfb0: (alt)
->   .entry.text+0xf78: (branch)
->   .entry.text+0x9c: (branch)
->   xen_syscall_target()+0x15: (branch)
->   xen_syscall_target()+0x0: <=== (sym)
-> .entry.text+0x1754: unsupported instruction in callable function
->   .entry.text+0x171d: (branch)
->   .entry.text+0x1707: (alt)
->   .entry.text+0x1701: (alt)
->   xen_syscall32_target()+0x15: (branch)
->   xen_syscall32_target()+0x0: <=== (sym)
-> .entry.text+0x1634: redundant CLD
-> 
-> Backtrace doesn’t print out anything useful for the “redundant CLD”
-> error, but it occurs when validate_branch is looking at
-> xen_sysenter_target.
-> 
-> do_suspend_lowlevel()+0x116: sibling call from callable instruction
-> with modified stack frame
->   do_suspend_lowlevel()+0x9a: (branch)
->   do_suspend_lowlevel()+0x0: <=== (sym)
-> 
-> .entry.text+0x48: stack state mismatch: cfa1=7-8 cfa2=-1+0
->   .altinstr_replacement+0xffffffffffffffff: (branch)
->   .entry.text+0x21: (alt)
->   .entry.text+0x1c: (alt)
->   .entry.text+0x10: <=== (hint)
-> .entry.text+0x15fd: stack state mismatch: cfa1=7-8 cfa2=-1+0
->   .altinstr_replacement+0xffffffffffffffff: (branch)
->   .entry.text+0x15dc: (alt)
->   .entry.text+0x15d7: (alt)
->   .entry.text+0x15d0: <=== (hint)
-> .entry.text+0x168c: stack state mismatch: cfa1=7-8 cfa2=-1+0
->   .altinstr_replacement+0xffffffffffffffff: (branch)
->   .entry.text+0x166b: (alt)
->   .entry.text+0x1666: (alt)
->   .entry.text+0x1660: <=== (hint)
+On Mon, Nov 9, 2020 at 6:29 PM Josh Poimboeuf <jpoimboe@redhat.com> wrote:
+>
+> Also, any details on how to build clang would be appreciated, it's been
+> a while since I tried.
 
-I can't make much sense of most of these warnings.  Disassembly would
-help.
-
-(Also, something like the patch below should help objtool show more
-symbol names.)
-
-> It looks like the stack state mismatch warnings can be fixed by adding
-> unwind hints also to entry_SYSCALL_64_after_hwframe,
-> entry_SYSENTER_compat_after_hwframe, and
-> entry_SYSCALL_compat_after_hwframe. Does that sound correct?
-
-No, those code paths should already have the hints they need, unless I'm
-missing something.
-
-> CONFIG_AMD_MEM_ENCRYPT
-> 
-> .head.text+0xfb: unsupported instruction in callable function
->   .head.text+0x207: (branch)
->   sev_es_play_dead()+0xff: (branch)
->   sev_es_play_dead()+0xd2: (branch)
->   sev_es_play_dead()+0xa8: (alt)
->   sev_es_play_dead()+0x144: (branch)
->   sev_es_play_dead()+0x10b: (branch)
->   sev_es_play_dead()+0x1f: (branch)
->   sev_es_play_dead()+0x0: <=== (sym)
-> 
-> This happens because sev_es_play_dead calls start_cpu0. It always has,
-> but objtool hasn’t been able to follow the call when processing only
-> sev-es.o. Any thoughts on the preferred way to fix this one?
-
-Objtool isn't supposed to traverse through call instructions like that.
-Is LTO inlining the call or something?
-
-> CONFIG_CRYPTO_CRC32C_INTEL
-> 
-> __x86_retpoline_rdi()+0x10: return with modified stack frame
->   __x86_retpoline_rdi()+0x0: (branch)
->   .altinstr_replacement+0x147: (branch)
->   .text+0xaf4c7: (alt)
->   .text+0xb03b0: (branch)
->   .text+0xaf482: (branch)
->   crc_pcl()+0x10: (branch)
->   crc_pcl()+0x0: <=== (sym)
-> 
-> __x86_retpoline_rdi()+0x0: stack state mismatch: cfa1=7+32 cfa2=7+8
->   .altinstr_replacement+0x265: (branch)
->   __x86_indirect_thunk_rdi()+0x0: (alt)
->   __x86_indirect_thunk_rdi()+0x0: <=== (sym)
-> 
-> This is different from the warnings in the rest of the arch/x86/crypto
-> code. Do we need some kind of a hint before the JMP_NOSPEC in crc_pcl?
-
-I'll need to look more into that one.
-
-> CONFIG_FUNCTION_TRACER
-> 
-> __x86_retpoline_rdi()+0x0: stack state mismatch: cfa1=7+32 cfa2=-1+0
->   .altinstr_replacement+0x111: (branch)
->   .text+0x28a5: (alt)
->   .text+0x2880: <=== (hint)
-> 
-> This unwind hint is in return_to_handler. Removing it obviously stops
-> the warning and doesn’t seem to result in any other complaints from
-> objtool. Is this hint correct?
-
-The hint is supposed to be there.  I don't understand this one either.
-Did it inline the call to ftrace_return_to_handler()?
-
-> The remaining warnings are all “unsupported stack pointer realignment”
-> issues in the crypto code and can be reproduced with the following
-> configs:
-> 
-> CONFIG_CRYPTO_AES_NI_INTEL
-> CONFIG_CRYPTO_CAMELLIA_AESNI_AVX2_X86_64
-> CONFIG_CRYPTO_SHA1_SSSE3
-> CONFIG_CRYPTO_SHA256_SSSE3
-> CONFIG_CRYPTO_SHA512_SSSE3
-> 
-> Josh, have you had a chance to look at the crypto patches you mentioned earlier?
-
-I've been traveling for several weeks, but now my work schedule is
-getting more normal, so I'll hopefully be able to spend time on this.
-
-How would I recreate all these warnings?
-
-Is it
-
-  https://github.com/samitolvanen/linux.git lto-v6
-
-plus a certain version of clang?
-
-Also, any details on how to build clang would be appreciated, it's been
-a while since I tried.
-
-
-Here's the patch for hopefully making the warnings more helpful:
-
-
-diff --git a/tools/objtool/check.c b/tools/objtool/check.c
-index c6ab44543c92..e5f5cb107664 100644
---- a/tools/objtool/check.c
-+++ b/tools/objtool/check.c
-@@ -2432,6 +2432,9 @@ static int validate_branch(struct objtool_file *file, struct symbol *func,
- 	sec = insn->sec;
- 
- 	while (1) {
-+
-+		if (insn->offset == 0x48)
-+			WARN_FUNC("yo", sec, insn->offset);
- 		next_insn = next_insn_same_sec(file, insn);
- 
- 		if (file->c_file && func && insn->func && func != insn->func->pfunc) {
-diff --git a/tools/objtool/elf.c b/tools/objtool/elf.c
-index 4e1d7460574b..ced7e4754cba 100644
---- a/tools/objtool/elf.c
-+++ b/tools/objtool/elf.c
-@@ -217,6 +217,21 @@ struct symbol *find_func_containing(struct section *sec, unsigned long offset)
- 	return NULL;
- }
- 
-+struct symbol *find_symbol_preceding(struct section *sec, unsigned long offset)
-+{
-+	struct symbol *sym;
-+
-+	/*
-+	 * This is slow, but used for warning messages.
-+	 */
-+	while (1) {
-+		sym = find_symbol_by_offset(sec, offset);
-+		if (sym || !offset)
-+			return sym;
-+		offset--;
-+	}
-+}
-+
- struct symbol *find_symbol_by_name(const struct elf *elf, const char *name)
- {
- 	struct symbol *sym;
-diff --git a/tools/objtool/elf.h b/tools/objtool/elf.h
-index 807f8c670097..841902ed381e 100644
---- a/tools/objtool/elf.h
-+++ b/tools/objtool/elf.h
-@@ -136,10 +136,11 @@ struct symbol *find_func_by_offset(struct section *sec, unsigned long offset);
- struct symbol *find_symbol_by_offset(struct section *sec, unsigned long offset);
- struct symbol *find_symbol_by_name(const struct elf *elf, const char *name);
- struct symbol *find_symbol_containing(const struct section *sec, unsigned long offset);
-+struct symbol *find_func_containing(struct section *sec, unsigned long offset);
-+struct symbol *find_symbol_preceding(struct section *sec, unsigned long offset);
- struct reloc *find_reloc_by_dest(const struct elf *elf, struct section *sec, unsigned long offset);
- struct reloc *find_reloc_by_dest_range(const struct elf *elf, struct section *sec,
- 				     unsigned long offset, unsigned int len);
--struct symbol *find_func_containing(struct section *sec, unsigned long offset);
- int elf_rebuild_reloc_section(struct elf *elf, struct section *sec);
- 
- #define for_each_sec(file, sec)						\
-diff --git a/tools/objtool/warn.h b/tools/objtool/warn.h
-index 7799f60de80a..33da0f2ed9d5 100644
---- a/tools/objtool/warn.h
-+++ b/tools/objtool/warn.h
-@@ -22,6 +22,8 @@ static inline char *offstr(struct section *sec, unsigned long offset)
- 	unsigned long name_off;
- 
- 	func = find_func_containing(sec, offset);
-+	if (!func)
-+		func = find_symbol_preceding(sec, offset);
- 	if (func) {
- 		name = func->name;
- 		name_off = offset - func->offset;
-
+$ git clone https://github.com/llvm/llvm-project.git --depth 1
+$ mkdir llvm-project/llvm/build
+$ cd !$
+$ cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja
+-DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt"
+$ ninja
+$ export PATH=$(pwd)/bin:$PATH
+$ clang --version
+-- 
+Thanks,
+~Nick Desaulniers
