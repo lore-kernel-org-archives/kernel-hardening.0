@@ -1,24 +1,23 @@
-Return-Path: <SRS0=Dcdj=EY=lists.openwall.com=kernel-hardening-return-20423-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=81i9=EY=lists.openwall.com=kernel-hardening-return-20424-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-26.2 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-13.2 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 735D3C56201
-	for <kernel-hardening@archiver.kernel.org>; Wed, 18 Nov 2020 22:10:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ED6CBC56201
+	for <kernel-hardening@archiver.kernel.org>; Wed, 18 Nov 2020 22:43:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 74BCB246DE
-	for <kernel-hardening@archiver.kernel.org>; Wed, 18 Nov 2020 22:10:45 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id CB58420637
+	for <kernel-hardening@archiver.kernel.org>; Wed, 18 Nov 2020 22:43:14 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="n0bp9cJv"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 74BCB246DE
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="wM9aPQLk"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CB58420637
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20423-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7995 invoked by uid 550); 18 Nov 2020 22:08:25 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20424-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3556 invoked by uid 550); 18 Nov 2020 22:43:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,76 +25,69 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7911 invoked from network); 18 Nov 2020 22:08:24 -0000
+Received: (qmail 3524 invoked from network); 18 Nov 2020 22:43:06 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=sender:date:in-reply-to:message-id:mime-version:references:subject
-         :from:to:cc;
-        bh=zNEbBbUjVUwNrqsw9c+UpkNEFF7VA0EYfHLp5cIzntw=;
-        b=n0bp9cJvxDsjt7xTCOt5iMFW1d/2tTomLx5U5GAiKgRUC31U0PGdIlVksp+a0VVrdY
-         g5/MehVGAk5dAFkfZ/0D3/kc0qKP/5ghMg0SX2rzCLQrn7ZzkYIMJRTQA4tAkeENX90q
-         zMfWfxpHMr797C3+ufNsF8n5E2EarI0M+SxfmyYFrfheXFRY/USHp0McDL2ojl4Lgr9c
-         ZSVHHwyxFBuJf6EQIB49Tm2/Idyx3u+mRdPPOBh4ppAaY5/pZ300gTIMAOc0hbNqctmz
-         NshfWwPYJRHHUsUv7bRZJJIdOYMWpv3CBbpJoRLYa/A5uDpHU91hRb4ca8tn+CBC/z2v
-         7wmg==
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=ixC0u6OyfxUYrt6QPqUZ5rujN8BJlqxwPvY/3+nhmXw=;
+        b=wM9aPQLkCBhozlv2tfs90X5CI/Gs7zj3W6yTsPL8ES9kkqjKh9iwLJkDQbSmZNpPLv
+         RkDOiDVBzFOBN7f2DWutl/757ig3/smDTusOtJ0ogOVayqIKQf03FO221+RCzKz0RL1M
+         lIePHojAzGK+lkneSQi3IaBQCGycKs9Is3+G/9FX2LGDtYxarsXwe+NvcRF1w0eD8vc5
+         57UiQ/6QoCU1He2HVP18Mkb6b7FyJI8E4/ztzOoiGFc69FJKJsZkoCUHCpldX1hGS5Bd
+         +qciHnJn+5niJMe/hEyj2WRvIbyvqkFLZwU5jjNk7p7pJ3hoTwMcIaW/78Dt5d4afqBH
+         z88w==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc;
-        bh=zNEbBbUjVUwNrqsw9c+UpkNEFF7VA0EYfHLp5cIzntw=;
-        b=EoC1Bv/dWqZmiULIBhBdEp4zOQFmZUVWdWG2j8WyPIEmTj9GBxENrhbm6rjz5NpF+T
-         gudTZ5aeVXBeAAQubtmIuDJ6ldPpgkeJAYyjwGDpF106iCaSoaDTJ975tSdbfBmciSjY
-         Advd1sXhN5Tn7I9wsWtU4+r8uFDhyNQ2EyyZvjxeyKHg6z86sTLrWjoXsocB5Q8hRNxW
-         sBKTyVeS8+V6yKGnUOgi436Qxn5inDd+UMwY8CHdBKE+5E5yMSc9W52simgIYjmgcCwl
-         rXvfLRa1mR2oRysUUlyrZ0WAcvrtL2f3uoScnTy3KaD15EXRhfKLna97gQIy/WAv1Vvr
-         egfA==
-X-Gm-Message-State: AOAM530ttq69zxl0fg9e+YgE+amYynEVmgH6Is4rn1tdO8kPJGVFCCd1
-	+1Qzh5mDmsbcSBqJ/P33VCr1hofeek+U7Hf2IME=
-X-Google-Smtp-Source: ABdhPJwWbtiTp58G6aNpNqEPufDWDe2zDs+IKNE1XLpICWlrRQN8YWmIrp5YpIBo0gnH6aOzErytNSLLgd+pskDj6ew=
-Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
-X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
- (user=samitolvanen job=sendgmr) by 2002:a25:aa04:: with SMTP id
- s4mr8172287ybi.285.1605737293084; Wed, 18 Nov 2020 14:08:13 -0800 (PST)
-Date: Wed, 18 Nov 2020 14:07:31 -0800
-In-Reply-To: <20201118220731.925424-1-samitolvanen@google.com>
-Message-Id: <20201118220731.925424-18-samitolvanen@google.com>
-Mime-Version: 1.0
-References: <20201118220731.925424-1-samitolvanen@google.com>
-X-Mailer: git-send-email 2.29.2.454.gaff20da3a2-goog
-Subject: [PATCH v7 17/17] arm64: allow LTO_CLANG and THINLTO to be selected
-From: Sami Tolvanen <samitolvanen@google.com>
-To: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
-	Will Deacon <will@kernel.org>
-Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Peter Zijlstra <peterz@infradead.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, 
-	clang-built-linux@googlegroups.com, kernel-hardening@lists.openwall.com, 
-	linux-arch@vger.kernel.org, linux-arm-kernel@lists.infradead.org, 
-	linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, 
-	linux-pci@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=ixC0u6OyfxUYrt6QPqUZ5rujN8BJlqxwPvY/3+nhmXw=;
+        b=i4NCL88q3E1MS4dY1KOuXtiLJWX568LYkHHHnKgezui4SaKDwgIv7k56Kx1i/oSMnu
+         KEVBSByUOmuP5Z7VA0eryc14Yolfd32T0ejiSaQPRl6N6qNOSwNxtCTz2pspnFmUuOl0
+         An4fNMgp9PJJXv8ChorVhT1rkJOlmLk/72ioUM625jJNaayfEoHgmIqW4YgDnxoEqo4j
+         Vdub9lZpvtL7fpHTIN3wW6RWCXol5P0zLQVrGewgBihq5aOuBPzEimImp1TMLPKUnXXD
+         keVswEsbab1uvmBG7rh35ZrLrRY+vt84mNEtfBNdfzV8V9+cqAp0FWG8q3VDVXtrC8bb
+         iKmw==
+X-Gm-Message-State: AOAM532W7vtY4oVVRIqt8BF5+JSttAcZG5wnPbSY5an0Gbe+3Wk1RqkA
+	t6zoBpLeNWgU1heLWqVatF1huY2RahCPO4bkFaSfBw==
+X-Google-Smtp-Source: ABdhPJxl5FB4w+I/3B3Kt/0LDlsbAGvVIt8KjuVNjLyXl4970VrDg0GQ1NlTl543R7gFJlHkLyHKMWM5T6NkljfYu5Q=
+X-Received: by 2002:a05:6512:348e:: with SMTP id v14mr4178858lfr.97.1605739375008;
+ Wed, 18 Nov 2020 14:42:55 -0800 (PST)
+MIME-Version: 1.0
+References: <20201026160518.9212-1-toiwoton@gmail.com> <20201117165455.GN29991@casper.infradead.org>
+In-Reply-To: <20201117165455.GN29991@casper.infradead.org>
+From: Jann Horn <jannh@google.com>
+Date: Wed, 18 Nov 2020 23:42:28 +0100
+Message-ID: <CAG48ez0LyOMnA4Khv9eV1_JpEJhjZy4jJYF=ze3Ha2vSNAfapw@mail.gmail.com>
+Subject: Re: [PATCH v4] mm: Optional full ASLR for mmap() and mremap()
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Topi Miettinen <toiwoton@gmail.com>, linux-hardening@vger.kernel.org, 
+	Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, 
+	kernel list <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, 
+	Mike Rapoport <rppt@kernel.org>, Mateusz Jurczyk <mjurczyk@google.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Allow CONFIG_LTO_CLANG and CONFIG_THINLTO to be enabled.
+On Tue, Nov 17, 2020 at 5:55 PM Matthew Wilcox <willy@infradead.org> wrote:
+> On Mon, Oct 26, 2020 at 06:05:18PM +0200, Topi Miettinen wrote:
+> > Writing a new value of 3 to /proc/sys/kernel/randomize_va_space
+> > enables full randomization of memory mappings created with mmap(NULL,
+> > ...). With 2, the base of the VMA used for such mappings is random,
+> > but the mappings are created in predictable places within the VMA and
+> > in sequential order. With 3, new VMAs are created to fully randomize
+> > the mappings. Also mremap(..., MREMAP_MAYMOVE) will move the mappings
+> > even if not necessary.
+>
+> Is this worth it?
+>
+> https://www.ndss-symposium.org/ndss2017/ndss-2017-programme/aslrcache-practical-cache-attacks-mmu/
 
-Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
----
- arch/arm64/Kconfig | 2 ++
- 1 file changed, 2 insertions(+)
+Yeah, against local attacks (including from JavaScript), ASLR isn't
+very robust; but it should still help against true remote attacks
+(modulo crazyness like NetSpectre).
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index c7f07978f5b6..56bd83a764f4 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -73,6 +73,8 @@ config ARM64
- 	select ARCH_USE_SYM_ANNOTATIONS
- 	select ARCH_SUPPORTS_MEMORY_FAILURE
- 	select ARCH_SUPPORTS_SHADOW_CALL_STACK if CC_HAVE_SHADOW_CALL_STACK
-+	select ARCH_SUPPORTS_LTO_CLANG
-+	select ARCH_SUPPORTS_THINLTO
- 	select ARCH_SUPPORTS_ATOMIC_RMW
- 	select ARCH_SUPPORTS_INT128 if CC_HAS_INT128 && (GCC_VERSION >= 50000 || CC_IS_CLANG)
- 	select ARCH_SUPPORTS_NUMA_BALANCING
--- 
-2.29.2.299.gdc1121823c-goog
-
+E.g. Mateusz Jurczyk's remote Samsung phone exploit via MMS messages
+(https://googleprojectzero.blogspot.com/2020/08/mms-exploit-part-5-defeating-aslr-getting-rce.html)
+would've probably been quite a bit harder to pull off if he hadn't
+been able to rely on having all those memory mappings sandwiched
+together.
