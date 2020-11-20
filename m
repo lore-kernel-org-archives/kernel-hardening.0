@@ -1,23 +1,24 @@
-Return-Path: <SRS0=tng2=E2=lists.openwall.com=kernel-hardening-return-20430-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=OUFW=E2=lists.openwall.com=kernel-hardening-return-20431-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-21.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-23.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7FA42C5519F
-	for <kernel-hardening@archiver.kernel.org>; Fri, 20 Nov 2020 10:30:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AC9FBC6379D
+	for <kernel-hardening@archiver.kernel.org>; Fri, 20 Nov 2020 16:23:45 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 2BCCD22277
-	for <kernel-hardening@archiver.kernel.org>; Fri, 20 Nov 2020 10:30:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 422382240B
+	for <kernel-hardening@archiver.kernel.org>; Fri, 20 Nov 2020 16:23:43 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="SnR3qKLy"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2BCCD22277
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20430-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28582 invoked by uid 550); 20 Nov 2020 10:30:17 -0000
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="BnDD+UEZ"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 422382240B
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20431-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13580 invoked by uid 550); 20 Nov 2020 16:23:35 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,245 +26,214 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28558 invoked from network); 20 Nov 2020 10:30:16 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1605868203;
-	bh=R4qqlo9ybQQpHALTqDaShX23td1huHrJiPzN69McErc=;
-	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=SnR3qKLySWFRIruzomBuZDnTaQEnQH9LMLNVTjpAvibM5jn/7i4Q1X3bOV7n8tXdM
-	 bjQaV/OejDfDwwpl6TmQyCOukPReHlqO0/lbbLOb0E+eO8nW5oen1R0XvyX9QjTMqN
-	 RD7mocgp9rrIxbpEyyku8nBmtb5VHSscycd3UnPI=
-X-Gm-Message-State: AOAM532iq1bDxDS8e+Kvz9P5MW+HfWvW+WR2oCyTdK0VDrkwuWnwTdGZ
-	cRtds9wf3SqTwVEtu/kt5lQaGX5m/jmaUxdVRok=
-X-Google-Smtp-Source: ABdhPJyo1od5y8s3UXvXlpGDBDC/YwS8pW+UvtOnS5PYbG7GW+X/slcudfLbqeiD8uskrebS5/XeZyMUfAreexCHPzg=
-X-Received: by 2002:a05:6830:214c:: with SMTP id r12mr12560072otd.90.1605868202443;
- Fri, 20 Nov 2020 02:30:02 -0800 (PST)
+Received: (qmail 13560 invoked from network); 20 Nov 2020 16:23:35 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=vOo6J2qOaNEsmcSt6ibqCSmyULbkJ5ut9vT5313WIA4=;
+        b=BnDD+UEZp9fE0ahf/zN/kLbG7kjRVUr1faC9KKf98v7DPL1XE0vyh9dxjpCHrS3lNW
+         kKvDMNikzoKSTXwSpuCq2nMSCpe/evgWjYPck5JKJ8+CthvbR0ZNc9v0IupNF+zBlKnE
+         uWG4Vnm7aF8vloRUfGNs1t64C7wzHzCYxkl+1FW8NQnQrHmCwCwd5XrUMJbaJCsjLXkf
+         PDvNljmVdmQyxI1ZTz4Ld366+uXkkI5lh48Nb6TVvQ1syIEF+qmtpYm348qLXzUWJTvt
+         eZGAJVW1RbhW1zWWoyWjl4wJmt5Yp9gZSkDByUKeL3sJfgBeoD9b6u8myXwoWwoCSaXl
+         zRGA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=vOo6J2qOaNEsmcSt6ibqCSmyULbkJ5ut9vT5313WIA4=;
+        b=UX03as32sOQVLl8sDsM2wX9cJcQfTrVpPj/4R9pk9ZoU1kIzhTepfqWevABcLvWSLH
+         8591Twuu8WssCWehX640mam7kSULz+wfN9z5gwJaUrJTrwOEfZ6ZVI2+Bkukx1+6x4V3
+         DScxMZC3IH/kQHot1aI5WBg3ValiQwq7xyTYU42RORmPwy/JMDDomC9CJFSDD6dBWTL9
+         k/Ps6CkTs/JOAhANztzEHock3ZflUbiRwYdGYOwTlibsZ1MXHIAvUDyxe2iwMwdgoAcH
+         iQWmsrWPVhIhugvZ6QdhEAQrblOoTWRc+2zozhLsIfDYy1gdHLTPiC9dBQip/rAWmjxi
+         1pKg==
+X-Gm-Message-State: AOAM5311RR41eoeJcYuYJwmLn0+G9n1CQJGxb2aUeHwh7JDw7bbp8g19
+	MAbZ2OzL7sOoaT8hUl+XDtXZG9behhZJmqNwMB7BCQ==
+X-Google-Smtp-Source: ABdhPJzJbx0o+d/bY6jtwZK7GW+lglt9oYk7o/Vt+a1dboyBqZ3CDfKGfXuk6ql3DjjDQQyhV682LGMMj50jprmokXk=
+X-Received: by 2002:ab0:36db:: with SMTP id v27mr12115443uau.66.1605889402882;
+ Fri, 20 Nov 2020 08:23:22 -0800 (PST)
 MIME-Version: 1.0
-References: <20201118220731.925424-1-samitolvanen@google.com> <CAKwvOd=5PhCTZ-yHr08gPYNEsGEjZa=rDY0-unhkhofjXhqwLQ@mail.gmail.com>
-In-Reply-To: <CAKwvOd=5PhCTZ-yHr08gPYNEsGEjZa=rDY0-unhkhofjXhqwLQ@mail.gmail.com>
-From: Ard Biesheuvel <ardb@kernel.org>
-Date: Fri, 20 Nov 2020 11:29:51 +0100
-X-Gmail-Original-Message-ID: <CAMj1kXEVzDi5=uteUAzG5E=j+aTCHEbMxwDfor-s=DthpREpyw@mail.gmail.com>
-Message-ID: <CAMj1kXEVzDi5=uteUAzG5E=j+aTCHEbMxwDfor-s=DthpREpyw@mail.gmail.com>
-Subject: Re: [PATCH v7 00/17] Add support for Clang LTO
+References: <20201118220731.925424-1-samitolvanen@google.com>
+ <20201118220731.925424-3-samitolvanen@google.com> <CAKwvOdnYTMzaahnBqdNYPz3KMdnkp=jZ4hxiqkTYzM5+BBdezA@mail.gmail.com>
+In-Reply-To: <CAKwvOdnYTMzaahnBqdNYPz3KMdnkp=jZ4hxiqkTYzM5+BBdezA@mail.gmail.com>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Fri, 20 Nov 2020 08:23:11 -0800
+Message-ID: <CABCJKucj_jUwoiLc35R7qFe+cNKTWgT+gsCa5pPiY66+1--3Lg@mail.gmail.com>
+Subject: Re: [PATCH v7 02/17] kbuild: add support for Clang LTO
 To: Nick Desaulniers <ndesaulniers@google.com>
-Cc: Sami Tolvanen <samitolvanen@google.com>, Masahiro Yamada <masahiroy@kernel.org>, 
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>, 
-	Josh Poimboeuf <jpoimboe@redhat.com>, Peter Zijlstra <peterz@infradead.org>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, 
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Will Deacon <will@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, 
+	Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
+	"Paul E. McKenney" <paulmck@kernel.org>, Kees Cook <keescook@chromium.org>, 
 	clang-built-linux <clang-built-linux@googlegroups.com>, 
 	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
 	linux-arch <linux-arch@vger.kernel.org>, 
 	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
 	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
-	PCI <linux-pci@vger.kernel.org>
+	linux-pci@vger.kernel.org
 Content-Type: text/plain; charset="UTF-8"
 
-On Thu, 19 Nov 2020 at 00:42, Nick Desaulniers <ndesaulniers@google.com> wrote:
+On Wed, Nov 18, 2020 at 3:49 PM Nick Desaulniers
+<ndesaulniers@google.com> wrote:
 >
 > On Wed, Nov 18, 2020 at 2:07 PM Sami Tolvanen <samitolvanen@google.com> wrote:
 > >
-> > This patch series adds support for building the kernel with Clang's
-> > Link Time Optimization (LTO). In addition to performance, the primary
-> > motivation for LTO is to allow Clang's Control-Flow Integrity (CFI) to
-> > be used in the kernel. Google has shipped millions of Pixel devices
-> > running three major kernel versions with LTO+CFI since 2018.
+> > This change adds build system support for Clang's Link Time
+> > Optimization (LTO). With -flto, instead of ELF object files, Clang
+> > produces LLVM bitcode, which is compiled into native code at link
+> > time, allowing the final binary to be optimized globally. For more
+> > details, see:
 > >
-> > Most of the patches are build system changes for handling LLVM bitcode,
-> > which Clang produces with LTO instead of ELF object files, postponing
-> > ELF processing until a later stage, and ensuring initcall ordering.
+> >   https://llvm.org/docs/LinkTimeOptimization.html
 > >
-> > Note that v7 brings back arm64 support as Will has now staged the
-> > prerequisite memory ordering patches [1], and drops x86_64 while we work
-> > on fixing the remaining objtool warnings [2].
+> > The Kconfig option CONFIG_LTO_CLANG is implemented as a choice,
+> > which defaults to LTO being disabled. To use LTO, the architecture
+> > must select ARCH_SUPPORTS_LTO_CLANG and support:
 > >
-> > [1] https://git.kernel.org/pub/scm/linux/kernel/git/arm64/linux.git/log/?h=for-next/lto
-> > [2] https://lore.kernel.org/lkml/20201114004911.aip52eimk6c2uxd4@treble/
+> >   - compiling with Clang,
+> >   - compiling inline assembly with Clang's integrated assembler,
+> >   - and linking with LLD.
 > >
-> > You can also pull this series from
+> > While using full LTO results in the best runtime performance, the
+> > compilation is not scalable in time or memory. CONFIG_THINLTO
+> > enables ThinLTO, which allows parallel optimization and faster
+> > incremental builds. ThinLTO is used by default if the architecture
+> > also selects ARCH_SUPPORTS_THINLTO:
 > >
-> >   https://github.com/samitolvanen/linux.git lto-v7
->
-> Thanks for continuing to drive this series Sami.  For the series,
->
-> Tested-by: Nick Desaulniers <ndesaulniers@google.com>
->
-> I did virtualized boot tests with the series applied to aarch64
-> defconfig without CONFIG_LTO, with CONFIG_LTO_CLANG, and a third time
-> with CONFIG_THINLTO.  If you make changes to the series in follow ups,
-> please drop my tested by tag from the modified patches and I'll help
-> re-test.  Some minor feedback on the Kconfig change, but I'll post it
-> off of that patch.
->
-
-When you say 'virtualized" do you mean QEMU on x86? Or actual
-virtualization on an AArch64 KVM host?
-
-The distinction is important here, given the potential impact of LTO
-on things that QEMU simply does not model when it runs in TCG mode on
-a foreign host architecture.
-
+> >   https://clang.llvm.org/docs/ThinLTO.html
 > >
+> > To enable LTO, LLVM tools must be used to handle bitcode files. The
+> > easiest way is to pass the LLVM=1 option to make:
+> >
+> >   $ make LLVM=1 defconfig
+> >   $ scripts/config -e LTO_CLANG
+> >   $ make LLVM=1
+> >
+> > Alternatively, at least the following LLVM tools must be used:
+> >
+> >   CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm
+> >
+> > To prepare for LTO support with other compilers, common parts are
+> > gated behind the CONFIG_LTO option, and LTO can be disabled for
+> > specific files by filtering out CC_FLAGS_LTO.
+> >
+> > Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+> > Reviewed-by: Kees Cook <keescook@chromium.org>
 > > ---
-> > Changes in v7:
+> >  Makefile                          | 19 +++++++-
+> >  arch/Kconfig                      | 75 +++++++++++++++++++++++++++++++
+> >  include/asm-generic/vmlinux.lds.h | 11 +++--
+> >  scripts/Makefile.build            |  9 +++-
+> >  scripts/Makefile.modfinal         |  9 +++-
+> >  scripts/Makefile.modpost          | 21 ++++++++-
+> >  scripts/link-vmlinux.sh           | 32 +++++++++----
+> >  7 files changed, 158 insertions(+), 18 deletions(-)
 > >
-> >   - Rebased to master again.
+> > diff --git a/Makefile b/Makefile
+> > index 8c8feb4245a6..240560e88d69 100644
+> > --- a/Makefile
+> > +++ b/Makefile
+> > @@ -893,6 +893,21 @@ KBUILD_CFLAGS      += $(CC_FLAGS_SCS)
+> >  export CC_FLAGS_SCS
+> >  endif
 > >
-> >   - Added back arm64 patches as the prerequisites are now staged,
-> >     and dropped x86_64 support until the remaining objtool issues
-> >     are resolved.
+> > +ifdef CONFIG_LTO_CLANG
+> > +ifdef CONFIG_THINLTO
+> > +CC_FLAGS_LTO   += -flto=thin -fsplit-lto-unit
+> > +KBUILD_LDFLAGS += --thinlto-cache-dir=$(extmod-prefix).thinlto-cache
+> > +else
+> > +CC_FLAGS_LTO   += -flto
+> > +endif
+> > +CC_FLAGS_LTO   += -fvisibility=default
+> > +endif
+> > +
+> > +ifdef CONFIG_LTO
+> > +KBUILD_CFLAGS  += $(CC_FLAGS_LTO)
+> > +export CC_FLAGS_LTO
+> > +endif
+> > +
+> >  ifdef CONFIG_DEBUG_FORCE_FUNCTION_ALIGN_32B
+> >  KBUILD_CFLAGS += -falign-functions=32
+> >  endif
+> > @@ -1473,7 +1488,7 @@ MRPROPER_FILES += include/config include/generated          \
+> >                   *.spec
 > >
-> >   - Dropped ifdefs from module.lds.S.
+> >  # Directories & files removed with 'make distclean'
+> > -DISTCLEAN_FILES += tags TAGS cscope* GPATH GTAGS GRTAGS GSYMS
+> > +DISTCLEAN_FILES += tags TAGS cscope* GPATH GTAGS GRTAGS GSYMS .thinlto-cache
 > >
-> > Changes in v6:
+> >  # clean - Delete most, but leave enough to build external modules
+> >  #
+> > @@ -1719,7 +1734,7 @@ PHONY += compile_commands.json
 > >
-> >   - Added the missing --mcount flag to patch 5.
+> >  clean-dirs := $(KBUILD_EXTMOD)
+> >  clean: rm-files := $(KBUILD_EXTMOD)/Module.symvers $(KBUILD_EXTMOD)/modules.nsdeps \
+> > -       $(KBUILD_EXTMOD)/compile_commands.json
+> > +       $(KBUILD_EXTMOD)/compile_commands.json $(KBUILD_EXTMOD)/.thinlto-cache
 > >
-> >   - Dropped the arm64 patches from this series and will repost them
-> >     later.
+> >  PHONY += help
+> >  help:
+> > diff --git a/arch/Kconfig b/arch/Kconfig
+> > index 56b6ccc0e32d..a41fcb3ca7c6 100644
+> > --- a/arch/Kconfig
+> > +++ b/arch/Kconfig
+> > @@ -598,6 +598,81 @@ config SHADOW_CALL_STACK
+> >           reading and writing arbitrary memory may be able to locate them
+> >           and hijack control flow by modifying the stacks.
 > >
-> > Changes in v5:
-> >
-> >   - Rebased on top of tip/master.
-> >
-> >   - Changed the command line for objtool to use --vmlinux --duplicate
-> >     to disable warnings about retpoline thunks and to fix .orc_unwind
-> >     generation for vmlinux.o.
-> >
-> >   - Added --noinstr flag to objtool, so we can use --vmlinux without
-> >     also enabling noinstr validation.
-> >
-> >   - Disabled objtool's unreachable instruction warnings with LTO to
-> >     disable false positives for the int3 padding in vmlinux.o.
-> >
-> >   - Added ANNOTATE_RETPOLINE_SAFE annotations to the indirect jumps
-> >     in x86 assembly code to fix objtool warnings with retpoline.
-> >
-> >   - Fixed modpost warnings about missing version information with
-> >     CONFIG_MODVERSIONS.
-> >
-> >   - Included Makefile.lib into Makefile.modpost for ld_flags. Thanks
-> >     to Sedat for pointing this out.
-> >
-> >   - Updated the help text for ThinLTO to better explain the trade-offs.
-> >
-> >   - Updated commit messages with better explanations.
-> >
-> > Changes in v4:
-> >
-> >   - Fixed a typo in Makefile.lib to correctly pass --no-fp to objtool.
-> >
-> >   - Moved ftrace configs related to generating __mcount_loc to Kconfig,
-> >     so they are available also in Makefile.modfinal.
-> >
-> >   - Dropped two prerequisite patches that were merged to Linus' tree.
-> >
-> > Changes in v3:
-> >
-> >   - Added a separate patch to remove the unused DISABLE_LTO treewide,
-> >     as filtering out CC_FLAGS_LTO instead is preferred.
-> >
-> >   - Updated the Kconfig help to explain why LTO is behind a choice
-> >     and disabled by default.
-> >
-> >   - Dropped CC_FLAGS_LTO_CLANG, compiler-specific LTO flags are now
-> >     appended directly to CC_FLAGS_LTO.
-> >
-> >   - Updated $(AR) flags as KBUILD_ARFLAGS was removed earlier.
-> >
-> >   - Fixed ThinLTO cache handling for external module builds.
-> >
-> >   - Rebased on top of Masahiro's patch for preprocessing modules.lds,
-> >     and moved the contents of module-lto.lds to modules.lds.S.
-> >
-> >   - Moved objtool_args to Makefile.lib to avoid duplication of the
-> >     command line parameters in Makefile.modfinal.
-> >
-> >   - Clarified in the commit message for the initcall ordering patch
-> >     that the initcall order remains the same as without LTO.
-> >
-> >   - Changed link-vmlinux.sh to use jobserver-exec to control the
-> >     number of jobs started by generate_initcall_ordering.pl.
-> >
-> >   - Dropped the x86/relocs patch to whitelist L4_PAGE_OFFSET as it's
-> >     no longer needed with ToT kernel.
-> >
-> >   - Disabled LTO for arch/x86/power/cpu.c to work around a Clang bug
-> >     with stack protector attributes.
-> >
-> > Changes in v2:
-> >
-> >   - Fixed -Wmissing-prototypes warnings with W=1.
-> >
-> >   - Dropped cc-option from -fsplit-lto-unit and added .thinlto-cache
-> >     scrubbing to make distclean.
-> >
-> >   - Added a comment about Clang >=11 being required.
-> >
-> >   - Added a patch to disable LTO for the arm64 KVM nVHE code.
-> >
-> >   - Disabled objtool's noinstr validation with LTO unless enabled.
-> >
-> >   - Included Peter's proposed objtool mcount patch in the series
-> >     and replaced recordmcount with the objtool pass to avoid
-> >     whitelisting relocations that are not calls.
-> >
-> >   - Updated several commit messages with better explanations.
-> >
-> >
-> > Sami Tolvanen (17):
-> >   tracing: move function tracer options to Kconfig
-> >   kbuild: add support for Clang LTO
-> >   kbuild: lto: fix module versioning
-> >   kbuild: lto: limit inlining
-> >   kbuild: lto: merge module sections
-> >   kbuild: lto: remove duplicate dependencies from .mod files
-> >   init: lto: ensure initcall ordering
-> >   init: lto: fix PREL32 relocations
-> >   PCI: Fix PREL32 relocations for LTO
-> >   modpost: lto: strip .lto from module names
-> >   scripts/mod: disable LTO for empty.c
-> >   efi/libstub: disable LTO
-> >   drivers/misc/lkdtm: disable LTO for rodata.o
-> >   arm64: vdso: disable LTO
-> >   KVM: arm64: disable LTO for the nVHE directory
-> >   arm64: disable recordmcount with DYNAMIC_FTRACE_WITH_REGS
-> >   arm64: allow LTO_CLANG and THINLTO to be selected
-> >
-> >  .gitignore                            |   1 +
-> >  Makefile                              |  45 +++--
-> >  arch/Kconfig                          |  74 +++++++
-> >  arch/arm64/Kconfig                    |   4 +
-> >  arch/arm64/kernel/vdso/Makefile       |   3 +-
-> >  arch/arm64/kvm/hyp/nvhe/Makefile      |   4 +-
-> >  drivers/firmware/efi/libstub/Makefile |   2 +
-> >  drivers/misc/lkdtm/Makefile           |   1 +
-> >  include/asm-generic/vmlinux.lds.h     |  11 +-
-> >  include/linux/init.h                  |  79 +++++++-
-> >  include/linux/pci.h                   |  19 +-
-> >  kernel/trace/Kconfig                  |  16 ++
-> >  scripts/Makefile.build                |  50 ++++-
-> >  scripts/Makefile.lib                  |   6 +-
-> >  scripts/Makefile.modfinal             |   9 +-
-> >  scripts/Makefile.modpost              |  25 ++-
-> >  scripts/generate_initcall_order.pl    | 270 ++++++++++++++++++++++++++
-> >  scripts/link-vmlinux.sh               |  70 ++++++-
-> >  scripts/mod/Makefile                  |   1 +
-> >  scripts/mod/modpost.c                 |  16 +-
-> >  scripts/mod/modpost.h                 |   9 +
-> >  scripts/mod/sumversion.c              |   6 +-
-> >  scripts/module.lds.S                  |  24 +++
-> >  23 files changed, 677 insertions(+), 68 deletions(-)
-> >  create mode 100755 scripts/generate_initcall_order.pl
-> >
-> >
-> > base-commit: 0fa8ee0d9ab95c9350b8b84574824d9a384a9f7d
-> > --
-> > 2.29.2.299.gdc1121823c-goog
-> >
+> > +config LTO
+> > +       bool
+> > +
+> > +config ARCH_SUPPORTS_LTO_CLANG
+> > +       bool
+> > +       help
+> > +         An architecture should select this option if it supports:
+> > +         - compiling with Clang,
+> > +         - compiling inline assembly with Clang's integrated assembler,
+> > +         - and linking with LLD.
+> > +
+> > +config ARCH_SUPPORTS_THINLTO
+> > +       bool
+> > +       help
+> > +         An architecture should select this option if it supports Clang's
+> > +         ThinLTO.
+> > +
+> > +config THINLTO
+> > +       bool "Clang ThinLTO"
+> > +       depends on LTO_CLANG && ARCH_SUPPORTS_THINLTO
+> > +       default y
+> > +       help
+> > +         This option enables Clang's ThinLTO, which allows for parallel
+> > +         optimization and faster incremental compiles. More information
+> > +         can be found from Clang's documentation:
+> > +
+> > +           https://clang.llvm.org/docs/ThinLTO.html
+> > +
+> > +         If you say N here, the compiler will use full LTO, which may
+> > +         produce faster code, but building the kernel will be significantly
+> > +         slower as the linker won't efficiently utilize multiple threads.
+> > +
+> > +         If unsure, say Y.
 >
+> I think the order of these new configs makes it so that ThinLTO
+> appears above LTO in menuconfig; I don't like that, and wish it came
+> immediately after.  Does `THINLTO` have to be defined _after_ the
+> choice for LTO_NONE/LTO_CLANG, perhaps?
 >
-> --
-> Thanks,
-> ~Nick Desaulniers
+> Secondly, I don't like how ThinLTO is a config and not a choice.  If I
+> don't set ThinLTO, what am I getting?  That's a rhetorical question; I
+> know its full LTO, and I guess the help text does talk about the
+> tradeoffs and what you would get.  I guess what's curious to me is
+> "why does it display ThinLTO? Why not FullLTO?"  I can't help but
+> wonder if a kconfig `choice` rather than a `config` would be better
+> here, that way it's more obvious the user is making a choice between
+> ThinLTO vs Full LTO, rather than the current patches which look like
+> "ThinkLTO on/off."
+
+Changing the ThinLTO config to a choice and moving it after the main
+LTO config sounds like a good idea to me. I'll see if I can change
+this in v8. Thanks!
+
+Sami
