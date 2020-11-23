@@ -1,4 +1,4 @@
-Return-Path: <SRS0=TkE1=E5=lists.openwall.com=kernel-hardening-return-20454-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=YCCc=E5=lists.openwall.com=kernel-hardening-return-20455-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,17 +7,17 @@ X-Spam-Status: No, score=-13.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3A7FEC2D0E4
-	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Nov 2020 10:37:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A2F9EC2D0E4
+	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Nov 2020 18:34:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id F1A2C2075A
-	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Nov 2020 10:37:27 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id A47982078E
+	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Nov 2020 18:34:48 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="TDVt/xqw"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org F1A2C2075A
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="a28npanX"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A47982078E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20454-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9952 invoked by uid 550); 23 Nov 2020 10:37:19 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20455-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23889 invoked by uid 550); 23 Nov 2020 18:34:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -25,67 +25,69 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29715 invoked from network); 23 Nov 2020 10:22:03 -0000
+Received: (qmail 23863 invoked from network); 23 Nov 2020 18:34:39 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=KicNkypOIaNLZNofAMT0/dbRVfdiQb0EG7yDuWE5ulA=;
-        b=TDVt/xqwo7FGjOiB50CURiRd4zX8Glpc/xzed4IR3D50NS0EqlijbKWHNsEmT9A92f
-         opeYzaDlby6Pgpezpy0Z6eYOPQW6ipaIAyEAtip0SZR01YDtd+SICLsxoZ+9krn8s+et
-         lULt1gHvEOthv2285g8UdKxZGn8PuitA3T+FAGLQ/qKxFihLT0OrTedRRYXRz8VblfZD
-         a1sXohEAJiNhEPF+raDuSX6Ta4nQGnI6siEeVnxshXZXFTiwE+mIarl4EbBFaSYp4ZqT
-         zvmMqJJexFfo+5+oFHJeofxyxcmA2hqWZAvCeahk9touSv1o0xYBPyhqFNpgNP0LgZcR
-         CU2Q==
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=ducm/uE+sMkPK2UOgkqYMUQ4ilvqi+LJ419ruam/qFs=;
+        b=a28npanXu2b+2Zm6spF8Xxq67i0FF1mofgAXLZrp9sWLlq5VqELCHg7nNtL/fggxfy
+         4CvQOkS95wisZC5OOhHXgHc7fhFAJxswBiURdiMJ9pvomlaHamPT+ykt9lAJiikZ+dLt
+         osQObvLhHeCEfH726pPrnktuPN+mM05X3eQTo9OM7P951PbVbYXAJtMdKWsW3ZpOJycz
+         Fo60Q7UeI0dsFGaQdho0oc4TBDEtFVDe4gG5sgoLUuJHQYabpl1Mv31/0zpxLkiYJIlP
+         yNiDIkVOpAML5h30am2pinK5OAxNIvR/ui0KubaSslDdw6PBBAOOjQrByts6Koo1ViWx
+         IqJQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=KicNkypOIaNLZNofAMT0/dbRVfdiQb0EG7yDuWE5ulA=;
-        b=ei2MqkpXIBOQabrVQ/bdkq9lRAIhiAakkpxX+YLVLMpmhm0l/TkaSqXNuTUw/TTZkG
-         7FZi6PqbIJI10d3wIZjTAp4sMk67rs60frbqIpf1Lq3L4pmV0SwbrDJ0Sq5zWOYemYCO
-         zADM0ejPDORHNmflbeIOm6PYoQvuOCK8KvhPDfJfsmDivXCEM15j36Vf66fMazFFhf/w
-         SQFSKbaymjJpbPcVM56gkVDJqIJ+XPAnAwH1DRj8d+NJRB7Y36IOFUtWja+vCfSP00vO
-         xaP2ymXmnoPqDI6NfFwxOo9IfAlL2s7idtJQRxElm+nyWDPZTF5zVLrKO7eUyFWDrKuF
-         puBg==
-X-Gm-Message-State: AOAM5321df/zNslDgFas5J0mxCKTC8nqUUc2zb6G9Qop23G3RZfk9viF
-	dRULz7hF9iPM8P2uLZ98wqPZjA==
-X-Google-Smtp-Source: ABdhPJxFSYMYi0puK0drxRNruUpOKNZHKEgE3EPEQ608H69x9iUkj+1IRAw3SWeiVlPLVEVUtEhq+A==
-X-Received: by 2002:a17:906:8058:: with SMTP id x24mr44772875ejw.272.1606126911958;
-        Mon, 23 Nov 2020 02:21:51 -0800 (PST)
-Date: Mon, 23 Nov 2020 10:21:49 +0000
-From: David Brazdil <dbrazdil@google.com>
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Masahiro Yamada <masahiroy@kernel.org>,
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
-	Josh Poimboeuf <jpoimboe@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
-	clang-built-linux@googlegroups.com,
-	kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org,
-	linux-arm-kernel@lists.infradead.org, linux-kbuild@vger.kernel.org,
-	linux-kernel@vger.kernel.org, linux-pci@vger.kernel.org
-Subject: Re: [PATCH v7 15/17] KVM: arm64: disable LTO for the nVHE directory
-Message-ID: <20201123102149.ogl642tw234qod62@google.com>
-References: <20201118220731.925424-1-samitolvanen@google.com>
- <20201118220731.925424-16-samitolvanen@google.com>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=ducm/uE+sMkPK2UOgkqYMUQ4ilvqi+LJ419ruam/qFs=;
+        b=WYCOql6uQFn3LayfwA8JVSgwOsu/KRUz1Fq69lY2cdVDquCstKyX9EPORYv5pMiUs4
+         LHNiTv4+i62BxgD1RXL/fdpp3RxL5gqnmHsUmBQ3eSBjx8xJLDp3DCe22Hk6GPWYtMYM
+         8e7Hgso5D+RRtoSWDasVS+A5HT171iW6vckdAPo6F6ILcBhUminMxOdWQtSXncuSQI/q
+         Vwm6EkOllmGDkyQkamwvmvMLDs7Kn7iQbRccZRl5QM3P+wXk5ILh+afuq4PIQ7KzixGY
+         jC6oRHOd7k9Q/qwwW5FpIsxDsvBGW7gYgg/UtaWl/Edu/MJn7jCzCymnnACdbUmOGh2c
+         HHYA==
+X-Gm-Message-State: AOAM533vRLWkImw9TRCp0dJzn7jXjwbq1HgmaCpw8ixcfQGF7eKT68Y0
+	4N6OXnz0kX9P7iIje8tgZJjhnJOP5mCLXGm+lDv4Vg==
+X-Google-Smtp-Source: ABdhPJzC0vN0JaDRTG9c5TGsH9fkbupHyjbfe084sm69JglMhlEIa99nGJXCtSMl92Ch4dEphBLEyKdnjfaSUw9p8Ug=
+X-Received: by 2002:a1f:b245:: with SMTP id b66mr1161485vkf.3.1606156467081;
+ Mon, 23 Nov 2020 10:34:27 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201118220731.925424-16-samitolvanen@google.com>
+References: <20201118220731.925424-1-samitolvanen@google.com>
+ <20201118220731.925424-16-samitolvanen@google.com> <20201123102149.ogl642tw234qod62@google.com>
+In-Reply-To: <20201123102149.ogl642tw234qod62@google.com>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Mon, 23 Nov 2020 10:34:16 -0800
+Message-ID: <CABCJKudwt6xDUMADRjXU04bxZFFWOFOs_26TJGHV_vnP8Qs5Jw@mail.gmail.com>
+Subject: Re: [PATCH v7 15/17] KVM: arm64: disable LTO for the nVHE directory
+To: David Brazdil <dbrazdil@google.com>
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Will Deacon <will@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, 
+	Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
+	"Paul E. McKenney" <paulmck@kernel.org>, Kees Cook <keescook@chromium.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
+	linux-kbuild <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, 
+	linux-pci@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
 
-Hey Sami,
+On Mon, Nov 23, 2020 at 2:21 AM David Brazdil <dbrazdil@google.com> wrote:
+>
+> Hey Sami,
+>
+> On Wed, Nov 18, 2020 at 02:07:29PM -0800, Sami Tolvanen wrote:
+> > We use objcopy to manipulate ELF binaries for the nVHE code,
+> > which fails with LTO as the compiler produces LLVM bitcode
+> > instead. Disable LTO for this code to allow objcopy to be used.
+>
+> We now partially link the nVHE code (generating machine code) before objcopy,
+> so I think you should be able to drop this patch now. Tried building your
+> branch without it, ran a couple of unit tests and all seems fine.
 
-On Wed, Nov 18, 2020 at 02:07:29PM -0800, Sami Tolvanen wrote:
-> We use objcopy to manipulate ELF binaries for the nVHE code,
-> which fails with LTO as the compiler produces LLVM bitcode
-> instead. Disable LTO for this code to allow objcopy to be used.
+Great, thanks for testing this, David! I'll drop this patch from v8.
 
-We now partially link the nVHE code (generating machine code) before objcopy,
-so I think you should be able to drop this patch now. Tried building your
-branch without it, ran a couple of unit tests and all seems fine.
-
-David
+Sami
