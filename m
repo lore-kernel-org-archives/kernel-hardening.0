@@ -1,24 +1,21 @@
-Return-Path: <SRS0=bcFg=E5=lists.openwall.com=kernel-hardening-return-20458-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=BM+W=E6=lists.openwall.com=kernel-hardening-return-20459-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-23.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=unavailable
+X-Spam-Status: No, score=-10.2 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 86A93C2D0E4
-	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Nov 2020 21:20:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E7678C2D0E4
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Nov 2020 02:38:52 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 511D1206B5
-	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Nov 2020 21:20:18 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="fbC4IE3M"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 511D1206B5
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20458-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3506 invoked by uid 550); 23 Nov 2020 21:20:11 -0000
+	by mail.kernel.org (Postfix) with SMTP id 0924020719
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Nov 2020 02:38:51 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0924020719
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=namei.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20459-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9524 invoked by uid 550); 24 Nov 2020 02:38:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,209 +23,66 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3474 invoked from network); 23 Nov 2020 21:20:11 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc:content-transfer-encoding;
-        bh=D4j9ipcYfkgbYW3IfC3r3VIMquqoN+L6cwpP+cS0BfI=;
-        b=fbC4IE3Ma5k4BEntewlv8v44ErN69EIIdl+LZnfvxK31fInFQJfwmWF2sg7nACKjA9
-         I6b6ZNKtoWl64a5fVPHAmoBsBsZ6nToMj+Obly0NP8Ez97fTOJgdkj7137/mnilNhpEh
-         BqN/AIpYIzPy50MtZSNUjDDXyHutg+qwuyV4uGBbMumFfpKVEfROV/wlL9zO6wHExM4K
-         moZZ3tIvtcR81IIWpQIx6JoA2Jqcw0URh9PDkR4MFHcyap+48kzcU5s1UCS3OtJ7ukUf
-         tIaKNvwoxdNVe3mpc7VFjd4B+mci1IQXbzUjkulToK+KErFEffmZ/hPOqt64fX6Z14DN
-         s4EQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc:content-transfer-encoding;
-        bh=D4j9ipcYfkgbYW3IfC3r3VIMquqoN+L6cwpP+cS0BfI=;
-        b=cmWLScqFS68UcFkkx/uxfns3+iGgwJObOTY82mpUe9gHnpYoHBnr+fqRBvCr+r9/n8
-         jX2Hdm7/Sa7Xw7cSvbFg5ZcfymfBPLi6EwNwBJ+e66hn+FNYIVff9pAud9RPtksDjSu8
-         YHwH9ddnSOvoCmDcgEIoOgThFWM7KpK6TDRiVUgdJ2Az2emnEjrAuqQ0Gza1LVpoMyTh
-         aLlGfD5N4untV68w3CJuEfvi+0YzhwsxzaTLmtQcFA+i13moqb8r7QvRL4iYcjopRbeE
-         l1AFjk3lgVUZ6+vpbIZjYK2pBY5s+zjio32RBoIvrQqvnDv1KmASKTNmDY0O2wt5BioP
-         2ewg==
-X-Gm-Message-State: AOAM533EkVkZNQxqMiHtcbByRIGqaz/mrzvVU9GtIS0zRpbnrsTLJhXF
-	AAJonU7DsKP5hxqSB/5xUl16xCH3RV5W6V4WBtHRqQ==
-X-Google-Smtp-Source: ABdhPJyZNIPvvHuqqE5lpIUT0dScn3UUr49Bfga2lpEazQCiXcQJAC/sc7oZqgLOpkGR6U56kkuVO/8yEnsIFrrECV4=
-X-Received: by 2002:ac2:5a49:: with SMTP id r9mr381970lfn.381.1606166399488;
- Mon, 23 Nov 2020 13:19:59 -0800 (PST)
+Received: (qmail 9485 invoked from network); 24 Nov 2020 02:38:42 -0000
+Date: Tue, 24 Nov 2020 13:38:00 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+To: Jann Horn <jannh@google.com>
+cc: =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>,
+        "Serge E . Hallyn" <serge@hallyn.com>,
+        Al Viro <viro@zeniv.linux.org.uk>,
+        Andy Lutomirski <luto@amacapital.net>,
+        Anton Ivanov <anton.ivanov@cambridgegreys.com>,
+        Arnd Bergmann <arnd@arndb.de>,
+        Casey Schaufler <casey@schaufler-ca.com>,
+        Jeff Dike <jdike@addtoit.com>, Jonathan Corbet <corbet@lwn.net>,
+        Kees Cook <keescook@chromium.org>,
+        Michael Kerrisk <mtk.manpages@gmail.com>,
+        Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
+        Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+        Kernel Hardening <kernel-hardening@lists.openwall.com>,
+        Linux API <linux-api@vger.kernel.org>,
+        linux-arch <linux-arch@vger.kernel.org>,
+        "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+        linux-fsdevel <linux-fsdevel@vger.kernel.org>,
+        kernel list <linux-kernel@vger.kernel.org>,
+        "open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>,
+        linux-security-module <linux-security-module@vger.kernel.org>,
+        the arch/x86 maintainers <x86@kernel.org>,
+        =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>
+Subject: Re: [PATCH v24 12/12] landlock: Add user and kernel documentation
+In-Reply-To: <CAG48ez0S1_jd0YzXZ9tx94gU0sw-WeXgG336d=3YP7+iZvRgaA@mail.gmail.com>
+Message-ID: <alpine.LRH.2.21.2011241337530.26713@namei.org>
+References: <20201112205141.775752-1-mic@digikod.net> <20201112205141.775752-13-mic@digikod.net> <CAG48ez0S1_jd0YzXZ9tx94gU0sw-WeXgG336d=3YP7+iZvRgaA@mail.gmail.com>
+User-Agent: Alpine 2.21 (LRH 202 2017-01-01)
 MIME-Version: 1.0
-References: <20201112205141.775752-1-mic@digikod.net> <20201112205141.775752-8-mic@digikod.net>
- <CAG48ez3HA63CX852LLDFCcNyzRGwAr3x_cvA1-t8tgDxfF1dOQ@mail.gmail.com>
- <1d524ea9-85eb-049c-2156-05cad6d6fcfd@digikod.net> <CAG48ez2cmsrZbUEmQmzPQugJikkvfs_MWmMizxmoyspCeXAXRQ@mail.gmail.com>
- <7831e55d-34ef-cf74-3d47-15e2e1edf96c@digikod.net>
-In-Reply-To: <7831e55d-34ef-cf74-3d47-15e2e1edf96c@digikod.net>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 23 Nov 2020 22:19:32 +0100
-Message-ID: <CAG48ez2V-eSH2+HL9zrYYD4QMpP4a5y8=mTQtk20PB0wUz_4Tw@mail.gmail.com>
-Subject: Re: [PATCH v24 07/12] landlock: Support filesystem access-control
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: Arnd Bergmann <arnd@arndb.de>, James Morris <jmorris@namei.org>, 
-	"Serge E . Hallyn" <serge@hallyn.com>, Al Viro <viro@zeniv.linux.org.uk>, 
-	Andy Lutomirski <luto@amacapital.net>, Anton Ivanov <anton.ivanov@cambridgegreys.com>, 
-	Casey Schaufler <casey@schaufler-ca.com>, Jeff Dike <jdike@addtoit.com>, 
-	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
-	Michael Kerrisk <mtk.manpages@gmail.com>, Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>, 
-	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
-	kernel list <linux-kernel@vger.kernel.org>, 
-	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, 
-	linux-security-module <linux-security-module@vger.kernel.org>, 
-	"the arch/x86 maintainers" <x86@kernel.org>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Content-Type: multipart/mixed; boundary="1665246916-1736655908-1606185482=:26713"
 
-On Mon, Nov 23, 2020 at 10:16 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>=
- wrote:
-> On 23/11/2020 20:44, Jann Horn wrote:
-> > On Sat, Nov 21, 2020 at 11:06 AM Micka=C3=ABl Sala=C3=BCn <mic@digikod.=
-net> wrote:
-> >> On 21/11/2020 08:00, Jann Horn wrote:
-> >>> On Thu, Nov 12, 2020 at 9:52 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod=
-.net> wrote:
-> >>>> Thanks to the Landlock objects and ruleset, it is possible to identi=
-fy
-> >>>> inodes according to a process's domain.  To enable an unprivileged
-> >>>> process to express a file hierarchy, it first needs to open a direct=
-ory
-> >>>> (or a file) and pass this file descriptor to the kernel through
-> >>>> landlock_add_rule(2).  When checking if a file access request is
-> >>>> allowed, we walk from the requested dentry to the real root, followi=
-ng
-> >>>> the different mount layers.  The access to each "tagged" inodes are
-> >>>> collected according to their rule layer level, and ANDed to create
-> >>>> access to the requested file hierarchy.  This makes possible to iden=
-tify
-> >>>> a lot of files without tagging every inodes nor modifying the
-> >>>> filesystem, while still following the view and understanding the use=
-r
-> >>>> has from the filesystem.
-> >>>>
-> >>>> Add a new ARCH_EPHEMERAL_INODES for UML because it currently does no=
-t
-> >>>> keep the same struct inodes for the same inodes whereas these inodes=
- are
-> >>>> in use.
-> >>>>
-> >>>> This commit adds a minimal set of supported filesystem access-contro=
-l
-> >>>> which doesn't enable to restrict all file-related actions.  This is =
-the
-> >>>> result of multiple discussions to minimize the code of Landlock to e=
-ase
-> >>>> review.  Thanks to the Landlock design, extending this access-contro=
-l
-> >>>> without breaking user space will not be a problem.  Moreover, seccom=
-p
-> >>>> filters can be used to restrict the use of syscall families which ma=
-y
-> >>>> not be currently handled by Landlock.
-> >>>>
-> >>>> Cc: Al Viro <viro@zeniv.linux.org.uk>
-> >>>> Cc: Anton Ivanov <anton.ivanov@cambridgegreys.com>
-> >>>> Cc: James Morris <jmorris@namei.org>
-> >>>> Cc: Jann Horn <jannh@google.com>
-> >>>> Cc: Jeff Dike <jdike@addtoit.com>
-> >>>> Cc: Kees Cook <keescook@chromium.org>
-> >>>> Cc: Richard Weinberger <richard@nod.at>
-> >>>> Cc: Serge E. Hallyn <serge@hallyn.com>
-> >>>> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@linux.microsoft.com>
-> >>>> ---
-> >>>>
-> >>>> Changes since v23:
-> >>>> * Enforce deterministic interleaved path rules.  To have consistent
-> >>>>   layered rules, granting access to a path implies that all accesses
-> >>>>   tied to inodes, from the requested file to the real root, must be
-> >>>>   checked.  Otherwise, stacked rules may result to overzealous
-> >>>>   restrictions.  By excluding the ability to add exceptions in the s=
-ame
-> >>>>   layer (e.g. /a allowed, /a/b denied, and /a/b/c allowed), we get
-> >>>>   deterministic interleaved path rules.  This removes an optimizatio=
-n
-> >>>
-> >>> I don't understand the "deterministic interleaved path rules" part.
-> >>
-> >> I explain bellow.
-> >>
-> >>>
-> >>>
-> >>> What if I have a policy like this?
-> >>>
-> >>> /home/user READ
-> >>> /home/user/Downloads READ+WRITE
-> >>>
-> >>> That's a reasonable policy, right?
-> >>
-> >> Definitely, I forgot this, thanks for the outside perspective!
-> >>
-> >>>
-> >>> If I then try to open /home/user/Downloads/foo in WRITE mode, the loo=
-p
-> >>> will first check against the READ+WRITE rule for /home/user, that
-> >>> check will pass, and then it will check against the READ rule for /,
-> >>> which will deny the access, right? That seems bad.
-> >>
-> >> Yes that was the intent.
-> >>
-> >>>
-> >>>
-> >>> The v22 code ensured that for each layer, the most specific rule (the
-> >>> first we encounter on the walk) always wins, right? What's the proble=
-m
-> >>> with that?
-> >>
-> >> This can be explained with the interleaved_masked_accesses test:
-> >> https://github.com/landlock-lsm/linux/blob/landlock-v24/tools/testing/=
-selftests/landlock/fs_test.c#L647
-> >>
-> >> In this case there is 4 stacked layers:
-> >> layer 1: allows s1d1/s1d2/s1d3/file1
-> >> layer 2: allows s1d1/s1d2/s1d3
-> >>          denies s1d1/s1d2
-> >> layer 3: allows s1d1
-> >> layer 4: allows s1d1/s1d2
-> >>
-> >> In the v23, access to file1 would be allowed until layer 3, but layer =
-4
-> >> would merge a new rule for the s1d2 inode. Because we don't record whe=
-re
-> >> exactly the access come from, we can't tell that layer 2 allowed acces=
-s
-> >> thanks to s1d3 and that its s1d2 rule was ignored. I think this behavi=
-or
-> >> doesn't make sense from the user point of view.
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
+
+--1665246916-1736655908-1606185482=:26713
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8BIT
+
+On Sat, 21 Nov 2020, Jann Horn wrote:
+
+> On Thu, Nov 12, 2020 at 9:52 PM Mickaël Salaün <mic@digikod.net> wrote:
+> > This documentation can be built with the Sphinx framework.
 > >
-> > Aah, I think I'm starting to understand the issue now. Basically, with
-> > the current UAPI, the semantics have to be "an access is permitted if,
-> > for each policy layer, at least one rule encountered on the pathwalk
-> > permits the access; rules that deny the access are irrelevant". And if
-> > it turns out that someone needs to be able to deny access to specific
-> > inodes, we'll have to extend struct landlock_path_beneath_attr.
->
-> Right, I'll add this to the documentation (aligned with the new
-> implementation).
->
-> >
-> > That reminds me... if we do need to make such a change in the future,
-> > it would be easier in terms of UAPI compatibility if
-> > landlock_add_rule() used copy_struct_from_user(), which is designed to
-> > create backwards and forwards compatibility with other version of UAPI
-> > headers. So adding that now might save us some headaches later.
->
-> I used copy_struct_from_user() before v21, but Arnd wasn't a fan of
-> having type and size arguments, so we simplified the UAPI in the v21 by
-> removing the size argument. The type argument is enough to extend the
-> structure, but indeed, we lose the forward compatibility. Relying on one
-> syscall per rule type seems too much, though.
+> > Cc: James Morris <jmorris@namei.org>
+> > Cc: Jann Horn <jannh@google.com>
+> > Cc: Kees Cook <keescook@chromium.org>
+> > Cc: Serge E. Hallyn <serge@hallyn.com>
+> > Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
+> > Reviewed-by: Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>
+> 
+> Reviewed-by: Jann Horn <jannh@google.com>
+> 
 
-You have a point there, I guess having a type argument is enough. (And
-if userspace tries to load a ruleset with "deny" rules that isn't
-supported by the current kernel, userspace will have to deal with that
-in some way anyway.)
+Thanks, Jann!
 
-So thinking about it more, I guess the current version is probably
-actually fine, too.
+-- 
+James Morris
+<jmorris@namei.org>
+
+--1665246916-1736655908-1606185482=:26713--
