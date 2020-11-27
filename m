@@ -1,4 +1,4 @@
-Return-Path: <SRS0=oBo2=FB=lists.openwall.com=kernel-hardening-return-20464-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yLi6=FB=lists.openwall.com=kernel-hardening-return-20465-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,18 +7,18 @@ X-Spam-Status: No, score=-11.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0DADDC2D0E4
-	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Nov 2020 13:21:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 50FA6C2D0E4
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Nov 2020 13:21:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C8C762222C
-	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Nov 2020 13:21:30 +0000 (UTC)
+	by mail.kernel.org (Postfix) with SMTP id 1F3FB22242
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Nov 2020 13:21:56 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=armh.onmicrosoft.com header.i=@armh.onmicrosoft.com header.b="v2zbgEDQ";
-	dkim=pass (1024-bit key) header.d=armh.onmicrosoft.com header.i=@armh.onmicrosoft.com header.b="v2zbgEDQ"
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C8C762222C
+	dkim=pass (1024-bit key) header.d=armh.onmicrosoft.com header.i=@armh.onmicrosoft.com header.b="rki/Ir58";
+	dkim=pass (1024-bit key) header.d=armh.onmicrosoft.com header.i=@armh.onmicrosoft.com header.b="rki/Ir58"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1F3FB22242
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=arm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20464-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15920 invoked by uid 550); 27 Nov 2020 13:21:23 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20465-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17769 invoked by uid 550); 27 Nov 2020 13:21:49 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -26,12 +26,12 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15888 invoked from network); 27 Nov 2020 13:21:22 -0000
+Received: (qmail 17737 invoked from network); 27 Nov 2020 13:21:49 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=armh.onmicrosoft.com;
  s=selector2-armh-onmicrosoft-com;
  h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=Q1jU0aMUj4QfK8EyRD8DvcTi5AwkXzK9UGUF9Nf79/g=;
- b=v2zbgEDQfnkZznT5ohEdE1fg1znGlFpYrUJMX6R5umj5T5vE1qTEZnPP+1Ki84gp4RFQ3XcppV0jtzfjnfegC4FpfiIUUlDnLB5FVCuYG0k41GFqPNpiC2D390y13h+gQQhLpR8f5/IpzzJQGI8R2ttVv6rmmJAYIcIDTc5eqRY=
+ bh=nBpOGzKrR218CsAMW7ki/EWPc6Uz5KXS+PBRk1M3+bg=;
+ b=rki/Ir581+lLxNNmGwUMQO05FbHBw8o/NToB3tbMUOuOcnWLlQSZ4QKTtEmstxI4iel3dsaqo74fSa5t0RXgYJWq51fmxDCOIKKLisCResqS2jgR5w6rMJVarLA7ZdqT7MAcDgruswaYiIDeDHhO6b3YPe8cCRQfN+ZHw6TWH9M=
 X-MS-Exchange-Authentication-Results: spf=pass (sender IP is 63.35.35.123)
  smtp.mailfrom=arm.com; lists.openwall.com; dkim=pass (signature was verified)
  header.d=armh.onmicrosoft.com;lists.openwall.com; dmarc=pass action=none
@@ -40,23 +40,23 @@ Received-SPF: Pass (protection.outlook.com: domain of arm.com designates
  63.35.35.123 as permitted sender) receiver=protection.outlook.com;
  client-ip=63.35.35.123; helo=64aa7808-outbound-1.mta.getcheckrecipient.com;
 X-CheckRecipientChecked: true
-X-CR-MTA-CID: ae0120a5a66a482b
+X-CR-MTA-CID: af772a76cb38de87
 X-CR-MTA-TID: 64aa7808
 ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=Epwm4JhQr0QvK1ShXqOrTtIVSSpyD2ikjdRanp1E5C5+eAAfvfgkmXxSD6I477wSRYryU153ejgUrAa0d42RJHH5A5wprF9wLpPAIAM43yfBQgC5Ezc3MpWMRjKhcM7iHm3ubcGymYbrLGZS7DnsoLmjl98MivistEqG+lzA2geX/V/QRxE3oSJpaZwqcNFU57Opa2wC2zNjeFOKVuaCiYzppFevFQaXLytzSc01wfmhPoLNlHpvGJiYHX3ZEJfe0f7TQIJA6eGtVnQNsuAi7u7AuQCeP2uUAeG/hu93vOQwFNMzrnG2tLRiaQypIBf82ogfUqFQlq/2ilFn9kcHFQ==
+ b=ceuY7EflCuKkhAHmQ8DiMeZurh2vyKW7l8xQNd7dvFLnIKaRMZk50LQn5VfWJJRiNgcWt+owWYKQ1iOLuji5KM69XqjRSPZustAl5K60aP0YB5M4Ocmu9wgkrnX2EDJDDqy9xtpqUtAAtwBbF5CPeEM4MeeuQOIuCeWkPitz/yVQ07FzrgtqHlNxgCd3YNTQNf/pgHQsJzIEugNFWKZPT7xBpnLKcqt13ITkpOBjK8bnV752g3suasXbmq2sYILsR+pd68d1zZLT468srgUY48kOzymNHGU2r2v45eJ7KsWvRER1hgzKlkzqW8vfcAgUWsUdE9lb65dbS93JhaaLnQ==
 ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
  s=arcselector9901;
  h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=Q1jU0aMUj4QfK8EyRD8DvcTi5AwkXzK9UGUF9Nf79/g=;
- b=n+Vrzwe2Iu52oJVldbv0ZPmgzJwxVYSocxzTKXfhMsfnB3ypsGjsjirkLfNMCbNtWeQfxVddRk73vhKRzg7XIKmvk1XCVBiSR4SyqvyZ4JdBjZvEG3Mo+dU4wC1FZNG0q3VUMDIXqa0rRE+PJfpLcKFXbPTuccAyDzaJeuSlD+UKm0d7DN5pU5agtPaMDRNHtzQbX7f+/UCnUEI1hqp0drdDsNfEzC432teEpABXOdg6nMPNzP9TWC4zPpKD4Pg5eL7IcZhDH7rv97fUvL/CSlPl48CmWjbiDlQA/2u8zyoS1e58Yb649vXyezH5J+KrvJQCHKxO8rGd9P1QTV+M3w==
+ bh=nBpOGzKrR218CsAMW7ki/EWPc6Uz5KXS+PBRk1M3+bg=;
+ b=hkzJ0so75df+2c/JlJMDolm0XKcgW5A6uZl14v19RWx9+g6n2gPXwa1gukMky8JonTPGyU2DBQEeIAUHnnb92PrSlrvkTumrq2Oh2DivdmwiM1jIvyUl+6/f4YWVzkqqJY6WI0GmBJeBD8R77VBD4OOTmKdSP1U8Nn25r6zzxHbXRuHCifn/ruArMwA6DHcAWj/MWGeSztTqXJ9T27qNh6rjGOuRUuT7LEqaqMFZenbWEp7y1Wdr9S124S8OXFb9/2I6OxDN6c/jfpM5+6K7FGG2wTYbQnQ9PPquv16jCDDdsnV90prQ4bnf4fdu4fF6x6uLYvhls0iQYNassSxFnA==
 ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
  smtp.mailfrom=arm.com; dmarc=pass action=none header.from=arm.com; dkim=pass
  header.d=arm.com; arc=none
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=armh.onmicrosoft.com;
  s=selector2-armh-onmicrosoft-com;
  h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=Q1jU0aMUj4QfK8EyRD8DvcTi5AwkXzK9UGUF9Nf79/g=;
- b=v2zbgEDQfnkZznT5ohEdE1fg1znGlFpYrUJMX6R5umj5T5vE1qTEZnPP+1Ki84gp4RFQ3XcppV0jtzfjnfegC4FpfiIUUlDnLB5FVCuYG0k41GFqPNpiC2D390y13h+gQQhLpR8f5/IpzzJQGI8R2ttVv6rmmJAYIcIDTc5eqRY=
+ bh=nBpOGzKrR218CsAMW7ki/EWPc6Uz5KXS+PBRk1M3+bg=;
+ b=rki/Ir581+lLxNNmGwUMQO05FbHBw8o/NToB3tbMUOuOcnWLlQSZ4QKTtEmstxI4iel3dsaqo74fSa5t0RXgYJWq51fmxDCOIKKLisCResqS2jgR5w6rMJVarLA7ZdqT7MAcDgruswaYiIDeDHhO6b3YPe8cCRQfN+ZHw6TWH9M=
 Authentication-Results-Original: sourceware.org; dkim=none (message not
  signed) header.d=none;sourceware.org; dmarc=none action=none
  header.from=arm.com;
@@ -71,139 +71,237 @@ Cc: Mark Rutland <mark.rutland@arm.com>,
 	kernel-hardening@lists.openwall.com,
 	Topi Miettinen <toiwoton@gmail.com>,
 	linux-arm-kernel@lists.infradead.org
-Subject: [PATCH v2 4/6] elf: Move note processing after l_phdr is updated
-Date: Fri, 27 Nov 2020 13:20:56 +0000
-Message-Id: <36d457074f389740b45afc4f9c6d124046f8352b.1606319495.git.szabolcs.nagy@arm.com>
+Subject: [PATCH v2 5/6] elf: Pass the fd to note processing
+Date: Fri, 27 Nov 2020 13:21:15 +0000
+Message-Id: <a23246987ec0a8b307a9a171193464b74a7cb416.1606319495.git.szabolcs.nagy@arm.com>
 X-Mailer: git-send-email 2.17.1
 In-Reply-To: <cover.1606319495.git.szabolcs.nagy@arm.com>
 References: <cover.1606319495.git.szabolcs.nagy@arm.com>
 Content-Type: text/plain
 X-Originating-IP: [217.140.106.54]
-X-ClientProxiedBy: LO2P265CA0434.GBRP265.PROD.OUTLOOK.COM
- (2603:10a6:600:e::14) To PR3PR08MB5564.eurprd08.prod.outlook.com
- (2603:10a6:102:87::18)
+X-ClientProxiedBy: DM6PR01CA0018.prod.exchangelabs.com (2603:10b6:5:296::23)
+ To PR3PR08MB5564.eurprd08.prod.outlook.com (2603:10a6:102:87::18)
 MIME-Version: 1.0
 X-MS-Exchange-MessageSentRepresentingType: 1
 X-MS-PublicTrafficType: Email
 X-MS-Office365-Filtering-HT: Tenant
-X-MS-Office365-Filtering-Correlation-Id: abeb4e81-36a5-4584-5157-08d892d74e2b
-X-MS-TrafficTypeDiagnostic: PA4PR08MB6014:|AM0PR08MB4276:
+X-MS-Office365-Filtering-Correlation-Id: db359400-eafe-44ab-835b-08d892d75e16
+X-MS-TrafficTypeDiagnostic: PA4PR08MB6014:|DB7PR08MB3065:
 X-MS-Exchange-Transport-Forked: True
 X-Microsoft-Antispam-PRVS:
-	<AM0PR08MB4276537E3D1F36E74D368937EDF80@AM0PR08MB4276.eurprd08.prod.outlook.com>
+	<DB7PR08MB3065556BAC4FB32F3CF7A6C1EDF80@DB7PR08MB3065.eurprd08.prod.outlook.com>
 x-checkrecipientrouted: true
 NoDisclaimer: true
-X-MS-Oob-TLC-OOBClassifiers: OLM:7691;OLM:7691;
+X-MS-Oob-TLC-OOBClassifiers: OLM:9508;OLM:9508;
 X-MS-Exchange-SenderADCheck: 1
 X-Microsoft-Antispam-Untrusted: BCL:0;
 X-Microsoft-Antispam-Message-Info-Original:
- 4qFAq0tSahHcXScZ4dLCssSeJ3HuLehp2jF9u+cjWLCThQAxXvzNPSngtA+/7v7a4a/J6BgRmdPM3NSIRb5AaxbmFaZ+1eovTNMriswmoCO4RqooiK9C8KhlFpK22eoeD9TtMiOig2/H8gYyxB0J5HKzLXUCctteSrX4agThhYQ8Qd6a9+veyqePM58aY8t0DJyIg4KYL60WPdlsEdZLL+pRCmNlgoIkau3Ob9I8OB2DMRNe0+SjDheqwnKDteeYICA6jCYrxxYc0Jz+BxV/c/Gefvs40l9gwEjyUZ9KmHjv2iTE4aaVF18qCouJOf5ChJaogi/AcTZ/r9AqK2wgCW/KZxUw8aYWnYk9Hd0yyNzE1TNJTVWqtPRkOSLM2nsu
+ ChnA9nbTd6Ke9iN2cUb1YDhb9FUR1mjCFjQo3SZXjPaQExKKsKXoQnw0j5zSx7ZRnh69YWuNXagC7yHRgxntr7OO3Vnqe0IpYuspE/taovZrHF2mu+5LrTG6hbX4ilYbLHj1vGQyJsMhpENFCxEiI7enAjdqaHRJCRlIgZPHjD8jqHZha75U7oM7esNBGKzP4aFpD5jVqM1e5ciQehGvo5Rbxe+ZudVcPsBRuRo515daX3VLNyOQIXfYNDEhM1RwBD+gpIPx/Vt5U1jSPaBRE4UloHjswgnagLywQRFvw/DMQnyLnse0KUK/cmL3MT1J76mHOZYPWUxFGlDFWdoEIkJ8Z8Xd/xjH2LkxHPtX5woCQSJJSHjolaApGUKPVHER
 X-Forefront-Antispam-Report-Untrusted:
  CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:PR3PR08MB5564.eurprd08.prod.outlook.com;PTR:;CAT:NONE;SFS:(4636009)(136003)(39860400002)(346002)(376002)(366004)(396003)(4326008)(54906003)(69590400008)(6916009)(6512007)(36756003)(6486002)(6666004)(316002)(478600001)(5660300002)(2616005)(86362001)(44832011)(2906002)(956004)(8936002)(16526019)(186003)(26005)(8676002)(66476007)(66946007)(6506007)(66556008)(52116002)(83380400001);DIR:OUT;SFP:1101;
 X-MS-Exchange-AntiSpam-MessageData:
- =?us-ascii?Q?2sAd3LJe8SPRFyw/KkmDjGjzl+CVO6DqB15QnRoLKp+B8oLgCXE/y3WAWB2Q?=
- =?us-ascii?Q?PfOgm+O8O02cDjhpNAQWYjJfJYLOgNg5NqNGL3by1INuogOPF+r2UciVEa6q?=
- =?us-ascii?Q?bdWISfHx5++E6AzFrQSjJPnWKcwEvTiH5NKGwUqkAgkuI+bt7bsmR1DJbCoh?=
- =?us-ascii?Q?E1lwlEq1dKyT7sV7BqCDAvO7muFBK2YEo4OYc/NxMkYeCqhWqvG6ES3KHRRe?=
- =?us-ascii?Q?xShDqLitDJjYsaBlMXpWMnQ4DoB663yYfBl8XL5H6/jLEVCWDggl1h1bSzl3?=
- =?us-ascii?Q?D+S4rTl/P0PjE/tn0X2eONP0ZYzRCxuvHTeMGvxt02+m8xciaP2e+Ps/Oldl?=
- =?us-ascii?Q?EZrDy3bB6++vZH2IAG2en8FPOkuew0xitatSwyTswjb0BKgq5QE+ZE/ldzZi?=
- =?us-ascii?Q?nKWgVefliS6THEKvZgO4Pyr8+Odgiff+7LauNj3Nv/CmW8EmaCQuKMKDlSZt?=
- =?us-ascii?Q?GopT9cY0ij5KSHL1UWBPJ5lhez7nob93ekRg2/HZ1nUKcYCEbfCtS1SK0cS/?=
- =?us-ascii?Q?3WoL+q1aHcU3gZQYknNU+NJ/OPPooM/+V7poaZy+YKUmxnFICQ1AFOlvpSky?=
- =?us-ascii?Q?TNAI5vKO+iQPXbjczo9KcdkI5fMkrpkOC4tSufGBb+WHIEtLLz/a+Ilohz3w?=
- =?us-ascii?Q?iFo9nOX+3WheY6W49l3ULfVJTXH9wXBrbJE7s/Gj1HD/T+zqKlq1G/3lHevV?=
- =?us-ascii?Q?4iYmCmX3lRh8nIEBASmUcc1E3GzOLh9xEOHQF8Qj0rXqU/Y2cnXnfyPpw/sX?=
- =?us-ascii?Q?2pKkL8RCKxn/38qpy+cihaYE5aMrLqeycHy+pwI99h5B3vKo9Z5svCT4/2MI?=
- =?us-ascii?Q?9CCOyMtBowlwptQFlVNDXhECNk+LdlkMh9ykzuDbSPtAzY7IUFqWMLD/eSfi?=
- =?us-ascii?Q?Eg8RDjxlWvhuzP+hSTNLbJuwAtBWeV1CrLgowH7kwz0hd1Au0PnaqPc3XJNW?=
- =?us-ascii?Q?dxhpqzXd3mrb5/aWvJR1T0ePG+2hhCtNCvaFEqwtVyJFu6tW81jAXyIM2AfI?=
- =?us-ascii?Q?Im5q?=
+ =?us-ascii?Q?steav44q3620kaxrbs7+gVB1Li8QDGoSj0u+0lUpKXbPdZZLw7+t5LGgjwG4?=
+ =?us-ascii?Q?o5OuE70GeRGTPiXu1tU8EezZ4/o34e889NLc1Pc/8vJ1dJXULPz3fJoi6tWD?=
+ =?us-ascii?Q?M2BbTpCjNgdMOvwkVs7Mg/kFc1bIiJLmeKmY57bwiftoJRSj3dnoPIOtwHzF?=
+ =?us-ascii?Q?r8V6uIzDZ+FQP/6/1tvOMt8/UcGuI96CQj6mfrH5FCvIhLWRXWesDRWvWXdX?=
+ =?us-ascii?Q?VG6Zsefugaf03AcmRXDoDiWSyOJUeqFfxSLeAxk4wWuFQNpTN/IXAQWESN32?=
+ =?us-ascii?Q?opiGfomSxjUdAtgyic3ABpEgFQ2NXw95aSj0WDZHHlHmcPqLNeHoNaVPUeeG?=
+ =?us-ascii?Q?V8M+4RDjjQvndaikNiGFsFbQ8VOSckFq3owOoyqgY5BZ14ZuHfdrN7wl0o8E?=
+ =?us-ascii?Q?Ooj7rS8KVacVDFq6U/C3QJUm80ljfn+fUkpCNxeiKITXiwrXbbsj+q18fyus?=
+ =?us-ascii?Q?1RBUiiHoTmfPMIY4MK/GQXVZi0JoqVU/KnS5If9KeDE/JKugeD5ph9tTwqgm?=
+ =?us-ascii?Q?VdiQM8tQ1W5DdZxzDoh0WHsR8qPYe9kMYHr5Uh1q11U27+cl8QcCMS5zMjz7?=
+ =?us-ascii?Q?+reW14tI28ruOTNTi3g9R7ZT49hkE11+5QtSrdB4gPniUnu4QmMcZvFABJ9E?=
+ =?us-ascii?Q?VRtLK8Z2KEFQPesLZ12R42w3I+uI+9cAm4Vb6ESwE/ARCGDpXuXR7XYNfu44?=
+ =?us-ascii?Q?LCCnqLsN1GW4zvo4G8f1ekoFN9Owlt8LX6m7rC7act9JZRtqPUAYIZP0FMqD?=
+ =?us-ascii?Q?mH3Gi0iCqrLAb9a9qC1V34zLuOFcQdmz0XNh3ppTIVUPOoiXzJNRQZtUc3Tz?=
+ =?us-ascii?Q?R5kkL3cuJEyCUBR0NhNOEnz0OaE4/9m33rkpjxp+/qiefhIGD6TwG9ovoGUa?=
+ =?us-ascii?Q?3HUB60jrLgmeDbTFLr7wP5fFYuxEd0hMaAGyW5Pam1uSTRBoEeWDbvqGIclF?=
+ =?us-ascii?Q?HoLSJ2ICHjaEZv8K4sR0FaWwUN2eQzoHRZ0okrd8xor3YQ6A4t5NBnE8B2KC?=
+ =?us-ascii?Q?ft5a?=
 X-MS-Exchange-Transport-CrossTenantHeadersStamped: PA4PR08MB6014
 Original-Authentication-Results: sourceware.org; dkim=none (message not signed)
  header.d=none;sourceware.org; dmarc=none action=none header.from=arm.com;
 X-EOPAttributedMessage: 0
 X-MS-Exchange-Transport-CrossTenantHeadersStripped:
- VE1EUR03FT040.eop-EUR03.prod.protection.outlook.com
+ AM5EUR03FT025.eop-EUR03.prod.protection.outlook.com
 X-MS-Office365-Filtering-Correlation-Id-Prvs:
-	e10275c7-e43e-4b10-7585-08d892d749e5
+	7714e35c-d348-4d9f-6b08-08d892d7592f
 X-Microsoft-Antispam: BCL:0;
 X-Microsoft-Antispam-Message-Info:
-	Pno/A8Xvl+RO5kj2R+u9t0lCPLcSuVPaCcFzsmarDSAztUeKIg89+kBkEHMH7jpTxYaZn50Hte3fOsunEBWmnn5MztDJkwzpCD/R/vI7Wa7p/PZquzqqD9a4KoJ9nlDv8TFxNnfvjfbiQj0G6wdwmVvVg7AEpkXHjdqu07B8cFOpKKnPiS/w64QD2EGgE7Iv6C9Bi58kyBiIAw4vE0oHq92sQPEed59m+Lb1+eD/0zgBd8XerJwvRZj5afOwWAoWF58I84sdDbqmEkn0hRBI8SHf/VFhFbEGkXOzdvI18wovG3ItCRRubIC2/p7q3vblbtf5gBBwSuxxcMhqCwXkcSYLVFoN8ZuRUSGyKekIQbH/qnMH8pS4tpwmy71YmV/on0ECfImTDZSytET/tHDSojhl/Zz8MMHOJ2JutjcZ0lMlObqSbF4pVaCuzQccSB4K
+	QEnTMIoq+56x3H5bXSL0Uhr9YJDQZ4nNQ5wMaJ7DRn4+z3mJJzScwqeXxNUdTKy7KXDfsVxoBwCo4aR6GY5OZsBiBiEeMETZ7ILv0k60AYBuwAdWTjRkCfFSkI4qETMoZBHmgND/BMZn6/+7tjfDpVBvHVNuOjcBIBUIP3+9BQ/mhmL8kvqVOQDta/yEFhuZ3UERazSgDJbTArpXTfSpwjpBtFhVG1n45LRGVnjGhN4r5CUm3vhIxfWoHC6wyZs/IGy4SFh8Lq1IzUFXvw6EdivgdZvK+FdPIRcxWc4nRUO/OdcfedhkADhkfdgW6uocVS83Qj/5qABu03UU7+GlEfTYz3dQ+pDZOeciO760qIPNPOR45W2oCfAhdEyXVm6u7JNgRWuIYwCmu8avVeeOQNeMilKrcHBP63RbILPmknK/qaTySlwNY/7TpU3EGLtw
 X-Forefront-Antispam-Report:
-	CIP:63.35.35.123;CTRY:IE;LANG:en;SCL:1;SRV:;IPV:CAL;SFV:NSPM;H:64aa7808-outbound-1.mta.getcheckrecipient.com;PTR:ec2-63-35-35-123.eu-west-1.compute.amazonaws.com;CAT:NONE;SFS:(4636009)(346002)(396003)(376002)(136003)(39860400002)(46966005)(83380400001)(4326008)(316002)(69590400008)(5660300002)(44832011)(34206002)(82310400003)(107886003)(36756003)(16526019)(186003)(26005)(86362001)(6666004)(956004)(2616005)(6506007)(54906003)(478600001)(336012)(82740400003)(47076004)(2906002)(6512007)(8676002)(70586007)(8936002)(70206006)(81166007)(356005)(6486002);DIR:OUT;SFP:1101;
+	CIP:63.35.35.123;CTRY:IE;LANG:en;SCL:1;SRV:;IPV:CAL;SFV:NSPM;H:64aa7808-outbound-1.mta.getcheckrecipient.com;PTR:ec2-63-35-35-123.eu-west-1.compute.amazonaws.com;CAT:NONE;SFS:(4636009)(136003)(396003)(376002)(39860400002)(346002)(46966005)(2616005)(336012)(54906003)(47076004)(44832011)(316002)(2906002)(81166007)(82740400003)(69590400008)(186003)(356005)(26005)(36906005)(16526019)(83380400001)(8676002)(70206006)(86362001)(82310400003)(6506007)(6512007)(956004)(107886003)(36756003)(478600001)(8936002)(70586007)(34206002)(4326008)(5660300002)(6666004)(6486002);DIR:OUT;SFP:1101;
 X-OriginatorOrg: arm.com
-X-MS-Exchange-CrossTenant-OriginalArrivalTime: 27 Nov 2020 13:21:09.8711
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 27 Nov 2020 13:21:36.6523
  (UTC)
-X-MS-Exchange-CrossTenant-Network-Message-Id: abeb4e81-36a5-4584-5157-08d892d74e2b
+X-MS-Exchange-CrossTenant-Network-Message-Id: db359400-eafe-44ab-835b-08d892d75e16
 X-MS-Exchange-CrossTenant-Id: f34e5979-57d9-4aaa-ad4d-b122a662184d
 X-MS-Exchange-CrossTenant-OriginalAttributedTenantConnectingIp: TenantId=f34e5979-57d9-4aaa-ad4d-b122a662184d;Ip=[63.35.35.123];Helo=[64aa7808-outbound-1.mta.getcheckrecipient.com]
 X-MS-Exchange-CrossTenant-AuthSource:
-	VE1EUR03FT040.eop-EUR03.prod.protection.outlook.com
+	AM5EUR03FT025.eop-EUR03.prod.protection.outlook.com
 X-MS-Exchange-CrossTenant-AuthAs: Anonymous
 X-MS-Exchange-CrossTenant-FromEntityHeader: HybridOnPrem
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: AM0PR08MB4276
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DB7PR08MB3065
 
-Program headers are processed in two pass: after the first pass
-load segments are mmapped so in the second pass target specific
-note processing logic can access the notes.
+To handle GNU property notes on aarch64 some segments need to
+be mmaped again, so the fd of the loaded ELF module is needed.
 
-The second pass is moved later so various link_map fields are
-set up that may be useful for note processing such as l_phdr.
-The second pass should be before the fd is closed so that is
-available.
+When the fd is not available (kernel loaded modules), then -1
+is passed.
+
+The fd is passed to both _dl_process_pt_gnu_property and
+_dl_process_pt_note for consistency. Target specific note
+processing functions are updated accordingly.
 ---
- elf/dl-load.c | 30 +++++++++++++++---------------
- 1 file changed, 15 insertions(+), 15 deletions(-)
+ elf/dl-load.c              | 12 +++++++-----
+ elf/rtld.c                 |  4 ++--
+ sysdeps/aarch64/dl-prop.h  |  6 +++---
+ sysdeps/generic/dl-prop.h  |  6 +++---
+ sysdeps/generic/ldsodefs.h |  5 +++--
+ sysdeps/x86/dl-prop.h      |  6 +++---
+ 6 files changed, 21 insertions(+), 18 deletions(-)
 
 diff --git a/elf/dl-load.c b/elf/dl-load.c
-index 9c71b7562c..b0d65f32cc 100644
+index b0d65f32cc..74039f22a6 100644
 --- a/elf/dl-load.c
 +++ b/elf/dl-load.c
-@@ -1268,21 +1268,6 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
- 	l->l_map_start = l->l_map_end = 0;
- 	goto call_lose;
+@@ -837,10 +837,12 @@ _dl_init_paths (const char *llp, const char *source)
+ 
+ /* Process PT_GNU_PROPERTY program header PH in module L after
+    PT_LOAD segments are mapped.  Only one NT_GNU_PROPERTY_TYPE_0
+-   note is handled which contains processor specific properties.  */
++   note is handled which contains processor specific properties.
++   FD is -1 for the kernel mapped main executable otherwise it is
++   the fd used for loading module L.  */
+ 
+ void
+-_dl_process_pt_gnu_property (struct link_map *l, const ElfW(Phdr) *ph)
++_dl_process_pt_gnu_property (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+ {
+   const ElfW(Nhdr) *note = (const void *) (ph->p_vaddr + l->l_addr);
+   const ElfW(Addr) size = ph->p_memsz;
+@@ -887,7 +889,7 @@ _dl_process_pt_gnu_property (struct link_map *l, const ElfW(Phdr) *ph)
+ 	      last_type = type;
+ 
+ 	      /* Target specific property processing.  */
+-	      if (_dl_process_gnu_property (l, type, datasz, ptr) == 0)
++	      if (_dl_process_gnu_property (l, fd, type, datasz, ptr) == 0)
+ 		return;
+ 
+ 	      /* Check the next property item.  */
+@@ -1379,10 +1381,10 @@ cannot enable executable stack as shared object requires");
+     switch (ph[-1].p_type)
+       {
+       case PT_NOTE:
+-	_dl_process_pt_note (l, &ph[-1]);
++	_dl_process_pt_note (l, fd, &ph[-1]);
+ 	break;
+       case PT_GNU_PROPERTY:
+-	_dl_process_pt_gnu_property (l, &ph[-1]);
++	_dl_process_pt_gnu_property (l, fd, &ph[-1]);
+ 	break;
        }
--
--    /* Process program headers again after load segments are mapped in
--       case processing requires accessing those segments.  Scan program
--       headers backward so that PT_NOTE can be skipped if PT_GNU_PROPERTY
--       exits.  */
--    for (ph = &phdr[l->l_phnum]; ph != phdr; --ph)
--      switch (ph[-1].p_type)
--	{
--	case PT_NOTE:
--	  _dl_process_pt_note (l, &ph[-1]);
--	  break;
--	case PT_GNU_PROPERTY:
--	  _dl_process_pt_gnu_property (l, &ph[-1]);
--	  break;
--	}
-   }
  
-   if (l->l_ld == 0)
-@@ -1386,6 +1371,21 @@ cannot enable executable stack as shared object requires");
-   if (l->l_tls_initimage != NULL)
-     l->l_tls_initimage = (char *) l->l_tls_initimage + l->l_addr;
+diff --git a/elf/rtld.c b/elf/rtld.c
+index c4ffc8d4b7..ec62567580 100644
+--- a/elf/rtld.c
++++ b/elf/rtld.c
+@@ -1540,10 +1540,10 @@ dl_main (const ElfW(Phdr) *phdr,
+     switch (ph[-1].p_type)
+       {
+       case PT_NOTE:
+-	_dl_process_pt_note (main_map, &ph[-1]);
++	_dl_process_pt_note (main_map, -1, &ph[-1]);
+ 	break;
+       case PT_GNU_PROPERTY:
+-	_dl_process_pt_gnu_property (main_map, &ph[-1]);
++	_dl_process_pt_gnu_property (main_map, -1, &ph[-1]);
+ 	break;
+       }
  
-+  /* Process program headers again after load segments are mapped in
-+     case processing requires accessing those segments.  Scan program
-+     headers backward so that PT_NOTE can be skipped if PT_GNU_PROPERTY
-+     exits.  */
-+  for (ph = &l->l_phdr[l->l_phnum]; ph != l->l_phdr; --ph)
-+    switch (ph[-1].p_type)
-+      {
-+      case PT_NOTE:
-+	_dl_process_pt_note (l, &ph[-1]);
-+	break;
-+      case PT_GNU_PROPERTY:
-+	_dl_process_pt_gnu_property (l, &ph[-1]);
-+	break;
-+      }
-+
-   /* We are done mapping in the file.  We no longer need the descriptor.  */
-   if (__glibc_unlikely (__close_nocancel (fd) != 0))
+diff --git a/sysdeps/aarch64/dl-prop.h b/sysdeps/aarch64/dl-prop.h
+index b0785bda83..2016d1472e 100644
+--- a/sysdeps/aarch64/dl-prop.h
++++ b/sysdeps/aarch64/dl-prop.h
+@@ -35,13 +35,13 @@ _dl_open_check (struct link_map *m)
+ }
+ 
+ static inline void __attribute__ ((always_inline))
+-_dl_process_pt_note (struct link_map *l, const ElfW(Phdr) *ph)
++_dl_process_pt_note (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+ {
+ }
+ 
+ static inline int
+-_dl_process_gnu_property (struct link_map *l, uint32_t type, uint32_t datasz,
+-			  void *data)
++_dl_process_gnu_property (struct link_map *l, int fd, uint32_t type,
++			  uint32_t datasz, void *data)
+ {
+   if (type == GNU_PROPERTY_AARCH64_FEATURE_1_AND)
      {
+diff --git a/sysdeps/generic/dl-prop.h b/sysdeps/generic/dl-prop.h
+index f1cf576fe3..df27ff8e6a 100644
+--- a/sysdeps/generic/dl-prop.h
++++ b/sysdeps/generic/dl-prop.h
+@@ -37,15 +37,15 @@ _dl_open_check (struct link_map *m)
+ }
+ 
+ static inline void __attribute__ ((always_inline))
+-_dl_process_pt_note (struct link_map *l, const ElfW(Phdr) *ph)
++_dl_process_pt_note (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+ {
+ }
+ 
+ /* Called for each property in the NT_GNU_PROPERTY_TYPE_0 note of L,
+    processing of the properties continues until this returns 0.  */
+ static inline int __attribute__ ((always_inline))
+-_dl_process_gnu_property (struct link_map *l, uint32_t type, uint32_t datasz,
+-			  void *data)
++_dl_process_gnu_property (struct link_map *l, int fd, uint32_t type,
++			  uint32_t datasz, void *data)
+ {
+   return 0;
+ }
+diff --git a/sysdeps/generic/ldsodefs.h b/sysdeps/generic/ldsodefs.h
+index b1da03cafe..89eab4719d 100644
+--- a/sysdeps/generic/ldsodefs.h
++++ b/sysdeps/generic/ldsodefs.h
+@@ -933,8 +933,9 @@ extern void _dl_rtld_di_serinfo (struct link_map *loader,
+ 				 Dl_serinfo *si, bool counting);
+ 
+ /* Process PT_GNU_PROPERTY program header PH in module L after
+-   PT_LOAD segments are mapped.  */
+-void _dl_process_pt_gnu_property (struct link_map *l, const ElfW(Phdr) *ph);
++   PT_LOAD segments are mapped from file FD.  */
++void _dl_process_pt_gnu_property (struct link_map *l, int fd,
++				  const ElfW(Phdr) *ph);
+ 
+ 
+ /* Search loaded objects' symbol tables for a definition of the symbol
+diff --git a/sysdeps/x86/dl-prop.h b/sysdeps/x86/dl-prop.h
+index 89911e19e2..4eb3b85a7b 100644
+--- a/sysdeps/x86/dl-prop.h
++++ b/sysdeps/x86/dl-prop.h
+@@ -145,15 +145,15 @@ _dl_process_cet_property_note (struct link_map *l,
+ }
+ 
+ static inline void __attribute__ ((unused))
+-_dl_process_pt_note (struct link_map *l, const ElfW(Phdr) *ph)
++_dl_process_pt_note (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+ {
+   const ElfW(Nhdr) *note = (const void *) (ph->p_vaddr + l->l_addr);
+   _dl_process_cet_property_note (l, note, ph->p_memsz, ph->p_align);
+ }
+ 
+ static inline int __attribute__ ((always_inline))
+-_dl_process_gnu_property (struct link_map *l, uint32_t type, uint32_t datasz,
+-			  void *data)
++_dl_process_gnu_property (struct link_map *l, int fd, uint32_t type,
++			  uint32_t datasz, void *data)
+ {
+   return 0;
+ }
 -- 
 2.17.1
 
