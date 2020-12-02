@@ -1,21 +1,21 @@
-Return-Path: <SRS0=VMD5=FG=lists.openwall.com=kernel-hardening-return-20509-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/qY9=FG=lists.openwall.com=kernel-hardening-return-20510-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.2 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A6F1BC64E8A
-	for <kernel-hardening@archiver.kernel.org>; Wed,  2 Dec 2020 05:47:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2DD0AC64E7C
+	for <kernel-hardening@archiver.kernel.org>; Wed,  2 Dec 2020 08:56:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7F179221FE
-	for <kernel-hardening@archiver.kernel.org>; Wed,  2 Dec 2020 05:47:06 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7F179221FE
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20509-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20391 invoked by uid 550); 2 Dec 2020 05:46:58 -0000
+	by mail.kernel.org (Postfix) with SMTP id 8EC50221E9
+	for <kernel-hardening@archiver.kernel.org>; Wed,  2 Dec 2020 08:56:07 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8EC50221E9
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=arm.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20510-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19901 invoked by uid 550); 2 Dec 2020 08:55:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,105 +23,179 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20367 invoked from network); 2 Dec 2020 05:46:57 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=zIYg3wn3IiOAwIUjN3HHnL/xxZ7BzmV6ArGGQCieAHY=;
-        b=bON2yGnfCiyS2deASK7lq7vUUxyZx+TcNqxyx0Y2lzXGXaJk2/GGL6wVTlpf746M17
-         ewSfrj7S9dsZKHz9EXsFml/ZRzW3ibKt2hylTzUrhiQailV3BSYLijuRVIlNThE7Ss7H
-         KnWN0tGzIrPrfvFAOAvf+8FI8ABAECA3BAv1o2Nf8hdcpJnE2U+4ENVHLDfsMJ2syTzS
-         iaGmOfE/X9XwWP/ylcYRN5sQKiXL7/ZHlVEs4e0tCksSkzjQe+RVz9j9FQbs4OUZPc8T
-         CR1MgHpyNAn/FzhGrLr7gcE7qYAYqX3l4Q2HISPXD2rjqVZX7wjj378ggI/rHdDvjDb8
-         F84w==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=zIYg3wn3IiOAwIUjN3HHnL/xxZ7BzmV6ArGGQCieAHY=;
-        b=GgOkz4HRETxotDZSKyQXjpUHaX65XFkzFmH5zYCPLAqSWGXFZXjnA+drbdcRIBSQ5N
-         /zFyrJaxA7nzhTvdshFwMVoOhv2OO2l7aPNe1aNDPWnvLybTr3VoMFMMGhcbFfW1XDOm
-         h/csY29u6e2vdSe1L1ryKUvbjZl/nBo5p/VbDg1Uu9Ih7M7fFPiVPpuoIT41+ECHywBL
-         OhKVcL9opdjBibh6jWdO9EOxr8VEdQ5e+pWksDWIX69neHsGu6Uap/TCcLfJXrlGZLeF
-         1bDLpS7s/e3X9jRHSirpJnVO7PA1GjK8uxOMSurJWHIpM6A3FV35p4gMuWNm85ZcuhIU
-         VdaQ==
-X-Gm-Message-State: AOAM5304RRzPLbfw+XDARDuxaRWlubA4LiC+oazrsQ08Gpht3ZpVS6uI
-	U03TWtKwsbACk60mZ3CgTXMXklXaOglfOua5zWMKzQ==
-X-Google-Smtp-Source: ABdhPJyfTarblbQWXQ2D0gqGJIM068ljJFblRKN2s+iu0HTYtaH2RdablEmO5KmOvdnbvJUKStvPOuGuLcyF9JZVZE8=
-X-Received: by 2002:a1f:36d4:: with SMTP id d203mr580407vka.22.1606888005927;
- Tue, 01 Dec 2020 21:46:45 -0800 (PST)
+Received: (qmail 19859 invoked from network); 2 Dec 2020 08:55:58 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=armh.onmicrosoft.com;
+ s=selector2-armh-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=NXffKCVdJsUjKE9yUrpY+buHuATx7T0FPdE9nZs50nw=;
+ b=vSMTNbXrQU5lwa5eZUsj8zsbVBkCsrSg4o9mnBiB0hyEeAZRDUWimd+2CenBqpwq8XpmL6f0wvcRKveRBBVEEMFoFue4/XI73ekbfeyZwMCHC0w5JAbEBwED8WTrkLeuqLJVnL70cs/vzESWQ2H9ZjUxfKqJSXcV6xfMvyu5+GU=
+X-MS-Exchange-Authentication-Results: spf=pass (sender IP is 63.35.35.123)
+ smtp.mailfrom=arm.com; lists.openwall.com; dkim=pass (signature was verified)
+ header.d=armh.onmicrosoft.com;lists.openwall.com; dmarc=pass action=none
+ header.from=arm.com;
+Received-SPF: Pass (protection.outlook.com: domain of arm.com designates
+ 63.35.35.123 as permitted sender) receiver=protection.outlook.com;
+ client-ip=63.35.35.123; helo=64aa7808-outbound-1.mta.getcheckrecipient.com;
+X-CheckRecipientChecked: true
+X-CR-MTA-CID: cc6684c77939eb35
+X-CR-MTA-TID: 64aa7808
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=E12fujD0czzKZF+/mnx/FUkpEgw6pnYl4yx77VuCXJQIWv/0hD1JLGepDHBN6iRd13QSPrCiv+rjt92W6xR0ruKqmlWvLBNKnQ1j+3t5d30B3lxLVnrzG0aYqGBsE3cWwX2A9DVIliVwfsykyVg6M58IQf6Zxt90g2Hg5kKadYtEx9GCv3DXfIg+uwHx8Dhmmt2PDnEaiV6c/4Bo3AoHtI51+86RXPh7XfjAr8vCkb/3mxR0gb7Ki1OA3zB5JV5xWx7QuZ3aE/boknhPOT1MKj0OcwFZtAsAhBlNOEpokc9N15I733Kzv9LNAX39m40wE6PinyZhaHa+ZZnFxoUGjw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=NXffKCVdJsUjKE9yUrpY+buHuATx7T0FPdE9nZs50nw=;
+ b=Z4eSfQchURAByrWGoERGguHqXjUcbJV/AVExA+U3XTWM+86JEWE8osrzxHezhvL5EWdvYVqTSYzHBjvbiCFzPXCI/6kNQgij3krKVSfB/zjgwo8y8zxFaBHf8WSto7rCyEy7Oh3SjyyfdYpu2OSjdnBQf+hEVjkIhDHLNEudvEX0a0n3h2QqCN/EnxOngHbJEMwkpiyOEOVUOmNJ6uBDeh78pDbVuCfhnrAiTYqWrS0vPZgQ+AgzvM1oyKCJzlV5YF/ApGHWEap5Z6lcisO+0XIRqjq+dz8qFMddI8tcTnLWRBsvfoPuKWFz/jj5yefvOzP5CFUI7TivJRpPw1c8Sw==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=arm.com; dmarc=pass action=none header.from=arm.com; dkim=pass
+ header.d=arm.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=armh.onmicrosoft.com;
+ s=selector2-armh-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=NXffKCVdJsUjKE9yUrpY+buHuATx7T0FPdE9nZs50nw=;
+ b=vSMTNbXrQU5lwa5eZUsj8zsbVBkCsrSg4o9mnBiB0hyEeAZRDUWimd+2CenBqpwq8XpmL6f0wvcRKveRBBVEEMFoFue4/XI73ekbfeyZwMCHC0w5JAbEBwED8WTrkLeuqLJVnL70cs/vzESWQ2H9ZjUxfKqJSXcV6xfMvyu5+GU=
+Authentication-Results-Original: sourceware.org; dkim=none (message not
+ signed) header.d=none;sourceware.org; dmarc=none action=none
+ header.from=arm.com;
+From: Szabolcs Nagy <szabolcs.nagy@arm.com>
+To: libc-alpha@sourceware.org
+Cc: Mark Rutland <mark.rutland@arm.com>,
+	kernel-hardening@lists.openwall.com,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	linux-kernel@vger.kernel.org,
+	Jeremy Linton <jeremy.linton@arm.com>,
+	Mark Brown <broonie@kernel.org>,
+	Topi Miettinen <toiwoton@gmail.com>,
+	Will Deacon <will@kernel.org>,
+	linux-arm-kernel@lists.infradead.org
+Subject: [PATCH v3 1/2] aarch64: align address for BTI protection [BZ #26988]
+Date: Wed,  2 Dec 2020 08:55:14 +0000
+Message-Id: <d460a4f7aa4d70cc205f08896ed50b31fcd992df.1606898457.git.szabolcs.nagy@arm.com>
+X-Mailer: git-send-email 2.17.1
+In-Reply-To: <ebce134991eae4261bbb32572a2062d3ca56e674.1606319495.git.szabolcs.nagy@arm.com>
+References: <ebce134991eae4261bbb32572a2062d3ca56e674.1606319495.git.szabolcs.nagy@arm.com>
+Content-Type: text/plain
+X-Originating-IP: [217.140.106.54]
+X-ClientProxiedBy: SA9PR13CA0048.namprd13.prod.outlook.com
+ (2603:10b6:806:22::23) To PR3PR08MB5564.eurprd08.prod.outlook.com
+ (2603:10a6:102:87::18)
 MIME-Version: 1.0
-References: <20201118220731.925424-1-samitolvanen@google.com>
- <20201130120130.GF24563@willie-the-truck> <202012010929.3788AF5@keescook> <CAK7LNASQPOGohtUyzBM6n54pzpLN35kDXC7VbvWzX8QWUmqq9g@mail.gmail.com>
-In-Reply-To: <CAK7LNASQPOGohtUyzBM6n54pzpLN35kDXC7VbvWzX8QWUmqq9g@mail.gmail.com>
-From: Sami Tolvanen <samitolvanen@google.com>
-Date: Tue, 1 Dec 2020 21:46:33 -0800
-Message-ID: <CABCJKuf6=nqsUFYc5m91x_H44ojBjoE+BqZr81D8T6xRhWTiEg@mail.gmail.com>
-Subject: Re: [PATCH v7 00/17] Add support for Clang LTO
-To: Masahiro Yamada <masahiroy@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Will Deacon <will@kernel.org>, 
-	Steven Rostedt <rostedt@goodmis.org>, Josh Poimboeuf <jpoimboe@redhat.com>, 
-	Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	"Paul E. McKenney" <paulmck@kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, 
-	clang-built-linux <clang-built-linux@googlegroups.com>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	linux-arch <linux-arch@vger.kernel.org>, 
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
-	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, 
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, PCI <linux-pci@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+X-MS-Exchange-MessageSentRepresentingType: 1
+X-MS-PublicTrafficType: Email
+X-MS-Office365-Filtering-HT: Tenant
+X-MS-Office365-Filtering-Correlation-Id: 9914e7d6-618a-41db-9b19-08d896a00e82
+X-MS-TrafficTypeDiagnostic: PR2PR08MB5225:|DB8PR08MB5307:
+X-MS-Exchange-Transport-Forked: True
+X-Microsoft-Antispam-PRVS:
+	<DB8PR08MB53072BF46EF467AE4BC72BF9EDF30@DB8PR08MB5307.eurprd08.prod.outlook.com>
+x-checkrecipientrouted: true
+NoDisclaimer: true
+X-MS-Oob-TLC-OOBClassifiers: OLM:2958;OLM:2958;
+X-MS-Exchange-SenderADCheck: 1
+X-Microsoft-Antispam-Untrusted: BCL:0;
+X-Microsoft-Antispam-Message-Info-Original:
+ XQm/MD2nC9jVAqH51R5remRXNMVEC+ZEC8vuP0FPtPiCjKDYxT4QJtW9W6xRWtUGwXiSBCjFPVgKw3kjSwHWeLeMVieRew979/C4K4+VzaDKfxN7rGstWPMzrUR95VP9qlVztwGR9E7+d9HNirN1YuXK1UmcR4WCRfGs2VtgiP2csdDOmNJ3wngbHEWDqogmIjAqLr+9zFALTCjVdYcLX7Cz4IkYjTOh0S0XkperrBQWCQe+ftzD2Q9zPe8azjoP5OwGyh4upVI7Bc6pBYxX45DSe+GyXPk7hUU8squfCQiUpKEUn8TIGMkyDFKrKPB4wQF5jEA9415q8fTA6jXhJPX2nE87pWMwJsJZz7Qtjb2ORxc3Q9p1jb5Grom5vzdn
+X-Forefront-Antispam-Report-Untrusted:
+ CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:PR3PR08MB5564.eurprd08.prod.outlook.com;PTR:;CAT:NONE;SFS:(4636009)(346002)(136003)(376002)(366004)(39850400004)(396003)(6506007)(6512007)(2616005)(6916009)(2906002)(4326008)(86362001)(36756003)(44832011)(5660300002)(16526019)(316002)(956004)(83380400001)(26005)(52116002)(6666004)(8936002)(186003)(66476007)(478600001)(66946007)(69590400008)(66556008)(6486002)(8676002)(54906003);DIR:OUT;SFP:1101;
+X-MS-Exchange-AntiSpam-MessageData:
+ =?us-ascii?Q?tf69SYnzRWkaNKv0ag04kv0/kv4K4DyvGgFFBvFHiU9lZ1p4dDN7IbD+YVxl?=
+ =?us-ascii?Q?o1MoQfpB+MXuZJg5TkzM8ZaUUkWJrU6aMP21Msq7Sgf7dzi+lrQK9SSHY9H7?=
+ =?us-ascii?Q?G8R3vQyFDXLCu9tZnsu+yR/BBIxjACQjDqprwu5PLf6Mg2YEZqE6FNf5Izas?=
+ =?us-ascii?Q?PQpEKSdv759zyHFHJA/2e6Eq2j4wXcOcOPfImaH0V7/RT6ZhHkHTWkjjno25?=
+ =?us-ascii?Q?SDbf2mPctb2PCC59uYaPL6UUrPdPKh+agt6r21+nt0zvOzR8qCevcY9L6S37?=
+ =?us-ascii?Q?EwoeDXIJ/44A/zrAo521hfTZUK2DUoqZdImSU1Yvomj4/T3mOqaLNexGNiIi?=
+ =?us-ascii?Q?CFJ/sqd/W6JNFvS1hH8RjxuzP1IbuTM89u+5E38I+L/JNNvBWcBUr8C6w9Rp?=
+ =?us-ascii?Q?CSwLwisSke501wtPeN6X+jUhNMA4d+6mlfQVl4losBUKgsC/myANIZms1y4v?=
+ =?us-ascii?Q?6iU/9Ma46PO6IlYFBOmxmScLy4nTOfIlvNcgVtSA/1v5/WVzW8ne/QH+kg6X?=
+ =?us-ascii?Q?BTwVfZytHer0oBmYaGrxrBwFZYaWDb0lOtpbA59X6b1QFUq3nILm+yX+ayxo?=
+ =?us-ascii?Q?YZZnCsF+PvjQ1MqAY+Qyt/7gnmYvjTBvVdbuFO+SLxPYQL28VMbdlMSD4wyu?=
+ =?us-ascii?Q?VCXy5YuPYBdMKikmz8G5+9ckp9OT/GAD4xIoG2EcibtRjPNIlGWHmRnKbwJr?=
+ =?us-ascii?Q?T9jrMEj8Wi6leg3lGnwqcMHbxrxpI+MTwAt7p+OA72VYyCgtgKjX23GlyvMT?=
+ =?us-ascii?Q?HwSWXaEzzv+q77uVFRqlx/zsesjtSMFwLgshg6ai4+EijvRDIuGdvYpG0oB0?=
+ =?us-ascii?Q?CtGPfpUrPnjYNhuihPz1C5Rp2B/Yf6KO9p5QZcxfx0p+lIEPIS3IAlabOuzq?=
+ =?us-ascii?Q?eGcaQQe5AOJfmmdXLIfC8nQBdxYJ4C3PhQOAR6GFP3l4CAU8wcIa7iDw31lI?=
+ =?us-ascii?Q?jW3bVEQerYkqISI3mqWq+iq8Wt5BkmqfcjJoLKaCSlctbPmUDxgCZ5Jt4n4t?=
+ =?us-ascii?Q?tnYO?=
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: PR2PR08MB5225
+Original-Authentication-Results: sourceware.org; dkim=none (message not signed)
+ header.d=none;sourceware.org; dmarc=none action=none header.from=arm.com;
+X-EOPAttributedMessage: 0
+X-MS-Exchange-Transport-CrossTenantHeadersStripped:
+ VE1EUR03FT024.eop-EUR03.prod.protection.outlook.com
+X-MS-Office365-Filtering-Correlation-Id-Prvs:
+	a1bf3ed6-a11e-46b9-875a-08d896a003ba
+X-Microsoft-Antispam: BCL:0;
+X-Microsoft-Antispam-Message-Info:
+	Ee8Jw87jw2qksJ8pH3cO6Go4MX02k1uoH82qAk/jKxdjDParUq2ph0Lv6Mhj5mRD0+2UjFryJcVdv9rfoHLCuGfwkOY5jNwlLyhk1XJPrUdUP4FmipOULyNHEf7jMuUBYus9180WoSwQuHslRcMVe4cyei2TkEGaCl28KrMA4FepCw1ujKAm6Ljn0lD0z7UbjEp32TTCUtIM2w5UtMik7VspR2t09VPiWtmYd66RR55wriTILerpssPQTKBmFJytOg4ZavPepTu2RlW2I9M+jBhvkUKxXNyMk/aXXzAAFpaDY6d+ym09mNbsY0JiKTT0K8fai89qkhWkfLg/8E/vlY+bX5eAdmxie8O7JLYEu/Vj5fszPgJVZcIWFaXj5IMWAlJFZBRrXn3EUA45WiY0aKa6gsNwWkX2NGZvDmaexhT+cJI6eJKf8h9ikq7DAg95
+X-Forefront-Antispam-Report:
+	CIP:63.35.35.123;CTRY:IE;LANG:en;SCL:1;SRV:;IPV:CAL;SFV:NSPM;H:64aa7808-outbound-1.mta.getcheckrecipient.com;PTR:ec2-63-35-35-123.eu-west-1.compute.amazonaws.com;CAT:NONE;SFS:(4636009)(346002)(396003)(39850400004)(136003)(376002)(46966005)(8936002)(86362001)(82740400003)(36756003)(47076004)(4326008)(356005)(81166007)(34206002)(70586007)(70206006)(478600001)(6666004)(69590400008)(83380400001)(82310400003)(6486002)(26005)(8676002)(54906003)(16526019)(5660300002)(186003)(107886003)(2906002)(6512007)(2616005)(316002)(336012)(44832011)(956004)(6506007);DIR:OUT;SFP:1101;
+X-OriginatorOrg: arm.com
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 02 Dec 2020 08:55:45.4029
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: 9914e7d6-618a-41db-9b19-08d896a00e82
+X-MS-Exchange-CrossTenant-Id: f34e5979-57d9-4aaa-ad4d-b122a662184d
+X-MS-Exchange-CrossTenant-OriginalAttributedTenantConnectingIp: TenantId=f34e5979-57d9-4aaa-ad4d-b122a662184d;Ip=[63.35.35.123];Helo=[64aa7808-outbound-1.mta.getcheckrecipient.com]
+X-MS-Exchange-CrossTenant-AuthSource:
+	VE1EUR03FT024.eop-EUR03.prod.protection.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: HybridOnPrem
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DB8PR08MB5307
 
-On Tue, Dec 1, 2020 at 6:43 PM Masahiro Yamada <masahiroy@kernel.org> wrote:
->
-> On Wed, Dec 2, 2020 at 2:31 AM Kees Cook <keescook@chromium.org> wrote:
-> >
-> > On Mon, Nov 30, 2020 at 12:01:31PM +0000, Will Deacon wrote:
-> > > Hi Sami,
-> > >
-> > > On Wed, Nov 18, 2020 at 02:07:14PM -0800, Sami Tolvanen wrote:
-> > > > This patch series adds support for building the kernel with Clang's
-> > > > Link Time Optimization (LTO). In addition to performance, the primary
-> > > > motivation for LTO is to allow Clang's Control-Flow Integrity (CFI) to
-> > > > be used in the kernel. Google has shipped millions of Pixel devices
-> > > > running three major kernel versions with LTO+CFI since 2018.
-> > > >
-> > > > Most of the patches are build system changes for handling LLVM bitcode,
-> > > > which Clang produces with LTO instead of ELF object files, postponing
-> > > > ELF processing until a later stage, and ensuring initcall ordering.
-> > > >
-> > > > Note that v7 brings back arm64 support as Will has now staged the
-> > > > prerequisite memory ordering patches [1], and drops x86_64 while we work
-> > > > on fixing the remaining objtool warnings [2].
-> > >
-> > > Sounds like you're going to post a v8, but that's the plan for merging
-> > > that? The arm64 parts look pretty good to me now.
-> >
-> > I haven't seen Masahiro comment on this in a while, so given the review
-> > history and its use (for years now) in Android, I will carry v8 (assuming
-> > all is fine with it) it in -next unless there are objections.
->
->
-> What I dislike about this implementation is
-> it cannot drop any unreachable function/data.
-> (and it is completely different from GCC LTO)
->
-> This is not real LTO.
+Handle unaligned executable load segments (the bfd linker is not
+expected to produce such binaries, but other linkers may).
 
-I'm not sure I understand your concern. LTO cannot drop functions or
-data from vmlinux.o that may be referenced externally. However, with
-CONFIG_LD_DEAD_CODE_DATA_ELIMINATION, the linker certainly can drop
-unused functions and data when linking vmlinux, and there's no reason
-this option can't be used together with LTO. In fact, Pixel 3 does
-enable this option, but in our experience, there isn't much unused
-code or data to remove, so later devices no longer use it.
+Computing the mapping bounds follows _dl_map_object_from_fd more
+closely now.
 
-There's technically no reason why we couldn't postpone LTO until we
-link vmlinux instead, and thus allow the linker to possibly remove
-more unused code without the help of --gc-sections, but at least with
-the current build process, that would involve performing the slow LTO
-link step multiple times, which isn't worth it when we can get the
-performance benefits (and CFI) already when linking vmlinux.o with
-LTO.
+Fixes bug 26988.
+---
+v3:
+- split the last patch in two so this bug is fixed separately.
+- pushed to nsz/btifix-v3 branch.
 
-Sami
+ sysdeps/aarch64/dl-bti.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/sysdeps/aarch64/dl-bti.c b/sysdeps/aarch64/dl-bti.c
+index 8f4728adce..67d63c8a73 100644
+--- a/sysdeps/aarch64/dl-bti.c
++++ b/sysdeps/aarch64/dl-bti.c
+@@ -20,19 +20,22 @@
+ #include <libintl.h>
+ #include <ldsodefs.h>
+ 
+-static int
++static void
+ enable_bti (struct link_map *map, const char *program)
+ {
++  const size_t pagesz = GLRO(dl_pagesize);
+   const ElfW(Phdr) *phdr;
+-  unsigned prot;
+ 
+   for (phdr = map->l_phdr; phdr < &map->l_phdr[map->l_phnum]; ++phdr)
+     if (phdr->p_type == PT_LOAD && (phdr->p_flags & PF_X))
+       {
+-	void *start = (void *) (phdr->p_vaddr + map->l_addr);
+-	size_t len = phdr->p_memsz;
++	size_t vstart = ALIGN_DOWN (phdr->p_vaddr, pagesz);
++	size_t vend = ALIGN_UP (phdr->p_vaddr + phdr->p_filesz, pagesz);
++	off_t off = ALIGN_DOWN (phdr->p_offset, pagesz);
++	void *start = (void *) (vstart + map->l_addr);
++	size_t len = vend - vstart;
+ 
+-	prot = PROT_EXEC | PROT_BTI;
++	unsigned prot = PROT_EXEC | PROT_BTI;
+ 	if (phdr->p_flags & PF_R)
+ 	  prot |= PROT_READ;
+ 	if (phdr->p_flags & PF_W)
+@@ -48,7 +51,6 @@ enable_bti (struct link_map *map, const char *program)
+ 				N_("mprotect failed to turn on BTI"));
+ 	  }
+       }
+-  return 0;
+ }
+ 
+ /* Enable BTI for MAP and its dependencies.  */
+-- 
+2.17.1
+
