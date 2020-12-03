@@ -1,20 +1,21 @@
-Return-Path: <SRS0=2q8s=FH=lists.openwall.com=kernel-hardening-return-20517-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ZoPX=FH=lists.openwall.com=kernel-hardening-return-20518-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-16.7 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3CB31C433FE
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 17:30:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B3A5C433FE
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 17:31:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 192D6207B3
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 17:30:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 192D6207B3
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=arm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20517-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24003 invoked by uid 550); 3 Dec 2020 17:30:24 -0000
+	by mail.kernel.org (Postfix) with SMTP id EA296207B0
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 17:31:46 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EA296207B0
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20518-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26261 invoked by uid 550); 3 Dec 2020 17:31:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,83 +23,206 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23962 invoked from network); 3 Dec 2020 17:30:23 -0000
-Date: Thu, 3 Dec 2020 17:30:06 +0000
-From: Catalin Marinas <catalin.marinas@arm.com>
-To: Szabolcs Nagy <szabolcs.nagy@arm.com>
-Cc: libc-alpha@sourceware.org, Mark Rutland <mark.rutland@arm.com>,
-	Will Deacon <will@kernel.org>, linux-kernel@vger.kernel.org,
-	Jeremy Linton <jeremy.linton@arm.com>,
-	Mark Brown <broonie@kernel.org>,
+Received: (qmail 26238 invoked from network); 3 Dec 2020 17:31:39 -0000
+From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
+To: Al Viro <viro@zeniv.linux.org.uk>
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
+	Aleksa Sarai <cyphar@cyphar.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@kernel.org>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	Christian Heimes <christian@python.org>,
+	Deven Bowers <deven.desai@linux.microsoft.com>,
+	Dmitry Vyukov <dvyukov@google.com>,
+	Eric Biggers <ebiggers@kernel.org>,
+	Eric Chiang <ericchiang@google.com>,
+	Florian Weimer <fweimer@redhat.com>,
+	Geert Uytterhoeven <geert@linux-m68k.org>,
+	James Morris <jmorris@namei.org>,
+	Jan Kara <jack@suse.cz>,
+	Jann Horn <jannh@google.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
+	Matthew Garrett <mjg59@google.com>,
+	Matthew Wilcox <willy@infradead.org>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	Miklos Szeredi <mszeredi@redhat.com>,
+	Mimi Zohar <zohar@linux.ibm.com>,
+	=?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+	Scott Shell <scottsh@microsoft.com>,
+	Sean Christopherson <sean.j.christopherson@intel.com>,
+	Shuah Khan <shuah@kernel.org>,
+	Steve Dower <steve.dower@python.org>,
+	Steve Grubb <sgrubb@redhat.com>,
+	Thibaut Sautereau <thibaut.sautereau@clip-os.org>,
+	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
 	kernel-hardening@lists.openwall.com,
-	Topi Miettinen <toiwoton@gmail.com>,
-	linux-arm-kernel@lists.infradead.org
-Subject: Re: [PATCH v2 0/6] aarch64: avoid mprotect(PROT_BTI|PROT_EXEC) [BZ
- #26831]
-Message-ID: <20201203173006.GH2830@gaia>
-References: <cover.1606319495.git.szabolcs.nagy@arm.com>
+	linux-api@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-integrity@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org
+Subject: [PATCH v12 0/3] Add trusted_for(2) (was O_MAYEXEC)
+Date: Thu,  3 Dec 2020 18:31:15 +0100
+Message-Id: <20201203173118.379271-1-mic@digikod.net>
+X-Mailer: git-send-email 2.29.2
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <cover.1606319495.git.szabolcs.nagy@arm.com>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
-Hi Szabolcs,
+Hi,
 
-On Fri, Nov 27, 2020 at 01:19:16PM +0000, Szabolcs Nagy wrote:
-> This is v2 of
-> https://sourceware.org/pipermail/libc-alpha/2020-November/119305.html
-> 
-> To enable BTI support, re-mmap executable segments instead of
-> mprotecting them in case mprotect is seccomp filtered.
-> 
-> I would like linux to change to map the main exe with PROT_BTI when
-> that is marked as BTI compatible. From the linux side i heard the
-> following concerns about this:
-> - it's an ABI change so requires some ABI bump. (this is fine with
->   me, i think glibc does not care about backward compat as nothing
->   can reasonably rely on the current behaviour, but if we have a
->   new bit in auxv or similar then we can save one mprotect call.)
+This patch series is a rebase on v5.10-rc6 .  Can you please consider to
+merge this into the tree?
 
-I'm not concerned about the ABI change but there are workarounds like a
-new auxv bit.
+Overview
+========
 
-> - in case we discover compatibility issues with user binaries it's
->   better if userspace can easily disable BTI (e.g. removing the
->   mprotect based on some env var, but if kernel adds PROT_BTI and
->   mprotect is filtered then we have no reliable way to remove that
->   from executables. this problem already exists for static linked
->   exes, although admittedly those are less of a compat concern.)
+The final goal of this patch series is to enable the kernel to be a
+global policy manager by entrusting processes with access control at
+their level.  To reach this goal, two complementary parts are required:
+* user space needs to be able to know if it can trust some file
+  descriptor content for a specific usage;
+* and the kernel needs to make available some part of the policy
+  configured by the system administrator.
 
-This is our main concern. For static binaries, the linker could detect,
-in theory, potential issues when linking and not set the corresponding
-ELF information.
+Primary goal of trusted_for(2)
+==============================
 
-At runtime, a dynamic linker could detect issues and avoid enabling BTI.
-In both cases, it's a (static or dynamic) linker decision that belongs
-in user-space.
+This new syscall enables user space to ask the kernel: is this file
+descriptor's content trusted to be used for this purpose?  The set of
+usage currently only contains "execution", but other may follow (e.g.
+"configuration", "sensitive_data").  If the kernel identifies the file
+descriptor as trustworthy for this usage, user space should then take
+this information into account.  The "execution" usage means that the
+content of the file descriptor is trusted according to the system policy
+to be executed by user space, which means that it interprets the content
+or (try to) maps it as executable memory.
 
-> - ideally PROT_BTI would be added via a new syscall that does not
->   interfere with PROT_EXEC filtering. (this does not conflict with
->   the current patches: even with a new syscall we need a fallback.)
+A simple system-wide security policy can be enforced by the system
+administrator through a sysctl configuration consistent with the mount
+points or the file access rights.  The documentation patch explains the
+prerequisites.
 
-This can be discussed as a long term solution.
+It is important to note that this can only enable to extend access
+control managed by the kernel.  Hence it enables current access control
+mechanism to be extended and become a superset of what they can
+currently control.  Indeed, the security policy could also be delegated
+to an LSM, either a MAC system or an integrity system.  For instance,
+this is required to close a major IMA measurement/appraisal interpreter
+integrity gap by bringing the ability to check the use of scripts [1].
+Other uses are expected, such as for magic-links [2], SGX integration
+[3], bpffs [4].
 
-> - solve it in systemd (e.g. turn off the filter, use better filter):
->   i would prefer not to have aarch64 (or BTI) specific policy in
->   user code. and there was no satisfying way to do this portably.
+Complementary W^X protections can be brought by SELinux, IPE [5] and
+trampfd [6].
 
-I agree. I think the best for now (as a back-portable glibc fix) is to
-ignore the mprotect(PROT_EXEC|PROT_BTI) error that the dynamic loader
-gets. BTI will be disabled if MDWX is enabled.
+Prerequisite of its use
+=======================
 
-In the meantime, we should start (continue) looking at a solution that
-works for both systemd and the kernel and be generic enough for other
-architectures. The stateless nature of the current SECCOMP approach is
-not suitable for this W^X policy. Kees had some suggestions here but the
-thread seems to have died:
+User space needs to adapt to take advantage of this new feature.  For
+example, the PEP 578 [7] (Runtime Audit Hooks) enables Python 3.8 to be
+extended with policy enforcement points related to code interpretation,
+which can be used to align with the PowerShell audit features.
+Additional Python security improvements (e.g. a limited interpreter
+without -c, stdin piping of code) are on their way [8].
 
-https://lore.kernel.org/kernel-hardening/202010221256.A4F95FD11@keescook/
+Examples
+========
 
+The initial idea comes from CLIP OS 4 and the original implementation
+has been used for more than 12 years:
+https://github.com/clipos-archive/clipos4_doc
+Chrome OS has a similar approach:
+https://chromium.googlesource.com/chromiumos/docs/+/master/security/noexec_shell_scripts.md
+
+Userland patches can be found here:
+https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC
+Actually, there is more than the O_MAYEXEC changes (which matches this search)
+e.g., to prevent Python interactive execution. There are patches for
+Bash, Wine, Java (Icedtea), Busybox's ash, Perl and Python. There are
+also some related patches which do not directly rely on O_MAYEXEC but
+which restrict the use of browser plugins and extensions, which may be
+seen as scripts too:
+https://github.com/clipos-archive/clipos4_portage-overlay/tree/master/www-client
+
+An introduction to O_MAYEXEC was given at the Linux Security Summit
+Europe 2018 - Linux Kernel Security Contributions by ANSSI:
+https://www.youtube.com/watch?v=chNjCRtPKQY&t=17m15s
+The "write xor execute" principle was explained at Kernel Recipes 2018 -
+CLIP OS: a defense-in-depth OS:
+https://www.youtube.com/watch?v=PjRE0uBtkHU&t=11m14s
+See also a first LWN article about O_MAYEXEC and a new one about
+trusted_for(2) and its background:
+* https://lwn.net/Articles/820000/
+* https://lwn.net/Articles/832959/
+
+This patch series can be applied on top of v5.10-rc6 .  This can be
+tested with CONFIG_SYSCTL.  I would really appreciate constructive
+comments on this patch series.
+
+Previous series:
+https://lore.kernel.org/lkml/20201019164932.1430614-1-mic@digikod.net/
+
+[1] https://lore.kernel.org/lkml/1544647356.4028.105.camel@linux.ibm.com/
+[2] https://lore.kernel.org/lkml/20190904201933.10736-6-cyphar@cyphar.com/
+[3] https://lore.kernel.org/lkml/CALCETrVovr8XNZSroey7pHF46O=kj_c5D9K8h=z2T_cNrpvMig@mail.gmail.com/
+[4] https://lore.kernel.org/lkml/CALCETrVeZ0eufFXwfhtaG_j+AdvbzEWE0M3wjXMWVEO7pj+xkw@mail.gmail.com/
+[5] https://lore.kernel.org/lkml/20200406221439.1469862-12-deven.desai@linux.microsoft.com/
+[6] https://lore.kernel.org/lkml/20200922215326.4603-1-madvenka@linux.microsoft.com/
+[7] https://www.python.org/dev/peps/pep-0578/
+[8] https://lore.kernel.org/lkml/0c70debd-e79e-d514-06c6-4cd1e021fa8b@python.org/
+
+Regards,
+
+Mickaël Salaün (3):
+  fs: Add trusted_for(2) syscall implementation and related sysctl
+  arch: Wire up trusted_for(2)
+  selftest/interpreter: Add tests for trusted_for(2) policies
+
+ Documentation/admin-guide/sysctl/fs.rst       |  50 +++
+ arch/alpha/kernel/syscalls/syscall.tbl        |   1 +
+ arch/arm/tools/syscall.tbl                    |   1 +
+ arch/arm64/include/asm/unistd.h               |   2 +-
+ arch/arm64/include/asm/unistd32.h             |   2 +
+ arch/ia64/kernel/syscalls/syscall.tbl         |   1 +
+ arch/m68k/kernel/syscalls/syscall.tbl         |   1 +
+ arch/microblaze/kernel/syscalls/syscall.tbl   |   1 +
+ arch/mips/kernel/syscalls/syscall_n32.tbl     |   1 +
+ arch/mips/kernel/syscalls/syscall_n64.tbl     |   1 +
+ arch/mips/kernel/syscalls/syscall_o32.tbl     |   1 +
+ arch/parisc/kernel/syscalls/syscall.tbl       |   1 +
+ arch/powerpc/kernel/syscalls/syscall.tbl      |   1 +
+ arch/s390/kernel/syscalls/syscall.tbl         |   1 +
+ arch/sh/kernel/syscalls/syscall.tbl           |   1 +
+ arch/sparc/kernel/syscalls/syscall.tbl        |   1 +
+ arch/x86/entry/syscalls/syscall_32.tbl        |   1 +
+ arch/x86/entry/syscalls/syscall_64.tbl        |   1 +
+ arch/xtensa/kernel/syscalls/syscall.tbl       |   1 +
+ fs/open.c                                     |  77 ++++
+ include/linux/fs.h                            |   1 +
+ include/linux/syscalls.h                      |   2 +
+ include/uapi/asm-generic/unistd.h             |   4 +-
+ include/uapi/linux/trusted-for.h              |  18 +
+ kernel/sysctl.c                               |  12 +-
+ tools/testing/selftests/Makefile              |   1 +
+ .../testing/selftests/interpreter/.gitignore  |   2 +
+ tools/testing/selftests/interpreter/Makefile  |  21 +
+ tools/testing/selftests/interpreter/config    |   1 +
+ .../selftests/interpreter/trust_policy_test.c | 362 ++++++++++++++++++
+ 30 files changed, 567 insertions(+), 4 deletions(-)
+ create mode 100644 include/uapi/linux/trusted-for.h
+ create mode 100644 tools/testing/selftests/interpreter/.gitignore
+ create mode 100644 tools/testing/selftests/interpreter/Makefile
+ create mode 100644 tools/testing/selftests/interpreter/config
+ create mode 100644 tools/testing/selftests/interpreter/trust_policy_test.c
+
+
+base-commit: b65054597872ce3aefbc6a666385eabdf9e288da
 -- 
-Catalin
+2.29.2
+
