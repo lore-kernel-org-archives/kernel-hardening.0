@@ -1,21 +1,21 @@
-Return-Path: <SRS0=Yv08=FH=lists.openwall.com=kernel-hardening-return-20523-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=tRQK=FH=lists.openwall.com=kernel-hardening-return-20524-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3908BC4361A
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:22:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2941CC4361A
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:23:22 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A4A48207A8
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:22:24 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A4A48207A8
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20523-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20322 invoked by uid 550); 3 Dec 2020 18:22:15 -0000
+	by mail.kernel.org (Postfix) with SMTP id 3FFF7207D0
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:23:21 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3FFF7207D0
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20524-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22481 invoked by uid 550); 3 Dec 2020 18:23:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,39 +23,22 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20296 invoked from network); 3 Dec 2020 18:22:14 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=jSR8ftEy+ZPymQ2+ANnTCIcrdEyC6rgz8i/C+YFDrrs=;
-        b=Ic4QleiYjTsHIMM0On90To1JYUkzfryly4JE00oJVw6xM1knMCPDBhHTFqo48Us3e3
-         MF3QjiQL1yjayz+ETueVi50Cn9wqU1xj9ng0fJUbRI+swr7mmTUxDCH4/w/s1H+CN7nV
-         OMmtIxG/V/PGVXNAQ6+q7qtZP4eFDcBe5sneK8fRhFRpoA6Nvajm1Z7NHt4ZNxR64L+m
-         4StPiEoHrbNTyS5/bdTMBY7TWfxjJGh0p0nIYygOwtneo34JRlkXmRO2GZTSE3KheRhh
-         U93GV8FOoYr6XPNft2A1/QvVK5CEPDl6SJRZHBpQO5yh83pv4jtkzUzrLEyURHK7A70P
-         Dbgg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=jSR8ftEy+ZPymQ2+ANnTCIcrdEyC6rgz8i/C+YFDrrs=;
-        b=tZ5wYdPClgEP+YpQpXHOfcvEHBwzUHhktqATEeIP2R+ZGBKFLxBGabZ0AhA2W9tL7e
-         pRWFLdoNlmgmOpqM0djkNstZw9+x6HTqapFfydBy9noq29jHPlFTh9KxqOiRiMPVwdpU
-         raTjf198/fbVkDbU2ji+YMt5bi6ifLSY4Hn79zZi3ln3QdALX9Ky3LpQtJAgIbMZ1RlJ
-         Tm3JAOqeJ5607pYvT0vAyMF7q6V+5uCfgwCx7rPdjU2kjLPmSVV9DDG2QE9ZRoDu/K7g
-         ORzuitN8k+JoQUx73coV9TfsBO3z0vUDrILIDNGlb6pj77M9zzaz7QgYsqvSNd5GioHG
-         4bAw==
-X-Gm-Message-State: AOAM531FPEcOa+2SwoUJV/pQlcyNtW+bNgNrfw1nm/SNYaWbqxn2zKwi
-	KGCw7lPtDCT5z4dgBOumizs=
-X-Google-Smtp-Source: ABdhPJxLBGQRSAEg/JvKkC/BNSVvgOhlpSDC2EIcQCGCOFwysswuak0jbyXtVU7AXdFmRsqK6IIjeA==
-X-Received: by 2002:a05:620a:1489:: with SMTP id w9mr4240006qkj.43.1607019722685;
-        Thu, 03 Dec 2020 10:22:02 -0800 (PST)
-Date: Thu, 3 Dec 2020 11:21:59 -0700
-From: Nathan Chancellor <natechancellor@gmail.com>
+Received: (qmail 22458 invoked from network); 3 Dec 2020 18:23:12 -0000
+Date: Thu, 3 Dec 2020 18:22:53 +0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=k20201202; t=1607019780;
+	bh=5a8ME2oAXsKqPoeqJfEFvJGi2qwglFd3HcH42x+ZJqE=;
+	h=From:To:Cc:Subject:References:In-Reply-To:From;
+	b=j4tuv3canVKeGWPc00whrPf+yMo+rCeJBSSu9hQ8JKopGOeh22g/l4jLBxki+Q3S4
+	 GSy6xiQfH2GEr5ORIucdbbEVNr0+FmT1NytvINuFt62ibIHSwQQe+XYxmKQbFUBoQm
+	 Pe3O1nyWoKMJPEEb4rf10UT8GM0TMsNCoKs0CA1Y6VDqMD3Fa15DWO2+8KzDpouaH/
+	 jk1NY9n6DPz7lGFPTSZZ3NhJoqHMrLxT9UBGdtIKfzs7C+/Z/dfeNnE5pmTpJgadKr
+	 WuTbKHZQrQHeug6qVN5E7eo5w7WLqpt9nlELvChtCWZI3JyjnMxiQXEC4zYRHhnct0
+	 /Nj+EdgBLhJYA==
+From: Will Deacon <will@kernel.org>
 To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Will Deacon <will@kernel.org>,
-	Nick Desaulniers <ndesaulniers@google.com>,
+Cc: Nick Desaulniers <ndesaulniers@google.com>,
+	Nathan Chancellor <natechancellor@gmail.com>,
 	Masahiro Yamada <masahiroy@kernel.org>,
 	Steven Rostedt <rostedt@goodmis.org>,
 	Josh Poimboeuf <jpoimboe@redhat.com>,
@@ -71,7 +54,7 @@ Cc: Will Deacon <will@kernel.org>,
 	LKML <linux-kernel@vger.kernel.org>,
 	PCI <linux-pci@vger.kernel.org>
 Subject: Re: [PATCH v8 00/16] Add support for Clang LTO
-Message-ID: <20201203182159.GA2104680@ubuntu-m3-large-x86>
+Message-ID: <20201203182252.GA32011@willie-the-truck>
 References: <20201201213707.541432-1-samitolvanen@google.com>
  <20201203112622.GA31188@willie-the-truck>
  <CABCJKueby8pUoN7f5=6RoyLSt4PgWNx8idUej0sNwAi0F3Xqzw@mail.gmail.com>
@@ -79,12 +62,10 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <CABCJKueby8pUoN7f5=6RoyLSt4PgWNx8idUej0sNwAi0F3Xqzw@mail.gmail.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
 On Thu, Dec 03, 2020 at 09:07:30AM -0800, Sami Tolvanen wrote:
 > On Thu, Dec 3, 2020 at 3:26 AM Will Deacon <will@kernel.org> wrote:
-> >
-> > Hi Sami,
-> >
 > > On Tue, Dec 01, 2020 at 01:36:51PM -0800, Sami Tolvanen wrote:
 > > > This patch series adds support for building the kernel with Clang's
 > > > Link Time Optimization (LTO). In addition to performance, the primary
@@ -115,10 +96,16 @@ On Thu, Dec 03, 2020 at 09:07:30AM -0800, Sami Tolvanen wrote:
 > 
 > What does running clang --version and ld.lld --version tell you?
 
-11.0.5 is AOSP's clang, which is behind the upstream 11.0.0 release so
-it is most likely the case that it is missing the patch that added rcpc.
-I think that a version based on the development branch (12.0.0) is in
-the works but I am not sure.
+I'm using some Android prebuilts I had kicking around:
+
+Android (6875598, based on r399163b) clang version 11.0.5 (https://android.googlesource.com/toolchain/llvm-project 87f1315dfbea7c137aa2e6d362dbb457e388158d)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /usr/local/google/home/willdeacon/work/android/repo/android-kernel/prebuilts-master/clang/host/linux-x86/clang-r399163b/bin
+
+and:
+
+LLD 11.0.5 (/buildbot/tmp/tmpx1DlI_ 87f1315dfbea7c137aa2e6d362dbb457e388158d) (compatible with GNU linkers)
 
 > > We actually check that this extension is available before using it in
 > > the arm64 Kconfig:
@@ -142,12 +129,8 @@ the works but I am not sure.
 > I agree that it would reduce confusion in future if we just always
 > enabled IAS with LTO. Nick, Nathan, any thoughts about this?
 
-I am personally fine with that. As far as I am aware, we are in a fairly
-good spot on arm64 and x86_64 when it comes to the integrated assembler.
-Should we make it so that the user has to pass LLVM_IAS=1 explicitly or
-we just make adding the no integrated assembler flag to CLANG_FLAGS
-depend on not LTO (although that will require extra handling because
-Kconfig is not available at that stage I think)?
+That works for me, although I'm happy with anything which means that the
+assembler checks via as-instr apply to the assembler which will ultimately
+be used.
 
-Cheers,
-Nathan
+Will
