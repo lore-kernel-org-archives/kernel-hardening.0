@@ -1,21 +1,21 @@
-Return-Path: <SRS0=tRQK=FH=lists.openwall.com=kernel-hardening-return-20524-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=QSZ5=FH=lists.openwall.com=kernel-hardening-return-20525-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-18.2 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2941CC4361A
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:23:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 907A2C433FE
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:48:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3FFF7207D0
-	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:23:21 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3FFF7207D0
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20524-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22481 invoked by uid 550); 3 Dec 2020 18:23:13 -0000
+	by mail.kernel.org (Postfix) with SMTP id 50B8F207B6
+	for <kernel-hardening@archiver.kernel.org>; Thu,  3 Dec 2020 18:48:20 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 50B8F207B6
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20525-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 31996 invoked by uid 550); 3 Dec 2020 18:48:12 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,114 +23,91 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22458 invoked from network); 3 Dec 2020 18:23:12 -0000
-Date: Thu, 3 Dec 2020 18:22:53 +0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1607019780;
-	bh=5a8ME2oAXsKqPoeqJfEFvJGi2qwglFd3HcH42x+ZJqE=;
-	h=From:To:Cc:Subject:References:In-Reply-To:From;
-	b=j4tuv3canVKeGWPc00whrPf+yMo+rCeJBSSu9hQ8JKopGOeh22g/l4jLBxki+Q3S4
-	 GSy6xiQfH2GEr5ORIucdbbEVNr0+FmT1NytvINuFt62ibIHSwQQe+XYxmKQbFUBoQm
-	 Pe3O1nyWoKMJPEEb4rf10UT8GM0TMsNCoKs0CA1Y6VDqMD3Fa15DWO2+8KzDpouaH/
-	 jk1NY9n6DPz7lGFPTSZZ3NhJoqHMrLxT9UBGdtIKfzs7C+/Z/dfeNnE5pmTpJgadKr
-	 WuTbKHZQrQHeug6qVN5E7eo5w7WLqpt9nlELvChtCWZI3JyjnMxiQXEC4zYRHhnct0
-	 /Nj+EdgBLhJYA==
-From: Will Deacon <will@kernel.org>
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Nick Desaulniers <ndesaulniers@google.com>,
-	Nathan Chancellor <natechancellor@gmail.com>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Josh Poimboeuf <jpoimboe@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	clang-built-linux <clang-built-linux@googlegroups.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
-	linux-kbuild <linux-kbuild@vger.kernel.org>,
-	LKML <linux-kernel@vger.kernel.org>,
-	PCI <linux-pci@vger.kernel.org>
-Subject: Re: [PATCH v8 00/16] Add support for Clang LTO
-Message-ID: <20201203182252.GA32011@willie-the-truck>
-References: <20201201213707.541432-1-samitolvanen@google.com>
- <20201203112622.GA31188@willie-the-truck>
- <CABCJKueby8pUoN7f5=6RoyLSt4PgWNx8idUej0sNwAi0F3Xqzw@mail.gmail.com>
+Received: (qmail 31943 invoked from network); 3 Dec 2020 18:48:11 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=Ah+rD4wk+k3lncQwfhIaQxiXkvEJG1Frpy4Nqe+0q0U=;
+        b=SKhZH7li060XYzleaCahQbBQsMynLjFbQa3EhTv77mq3GHRmSi61KzLCOLC1Z4ksaj
+         pSJDPGDFnV9Yx/X3ETP86ugtkVzY02GZAgoZstjnPNK8KrdI1fjRRRcqwKuLoZ+iGFnw
+         Mfp9TStTmlP08QQnKRNmpPAPNNvtn/NE5MsBi6vL6DIXPVYtfI8exjpC70eIc1jAi6hr
+         IWUJKbfX69GJkb8hVQ58bQnKSKy9x1UkfpKRekYoEUXT0JpoySwIrh8/YFahuMWMIznf
+         +OWbSKuFcovO+Pj5wPAfXa07brxfPV5prt3FbyqI8tm/0XTPi+MmqG20rvrPzlHjF8XG
+         lj8w==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=Ah+rD4wk+k3lncQwfhIaQxiXkvEJG1Frpy4Nqe+0q0U=;
+        b=JDWkFywDP0WYV2Uxj7PjJmK9FA+Ugeq6Dax/I5v60GPGqDjUdQ6OJ6L418z8lrjfVj
+         V8tOEqPk07MovhTCvRa8YCMPqhbbKuIMBdWIR5YP8aeAowU7JRABdV8GcflxQCp70xAR
+         4U6SwOfMgPELH0iLGrDbtVRHlizFvMkXDK4wBN7t1mg5HmpzrtQR/sLTk0e6rftw96xJ
+         LfqJc0t/PDionpcahimEXEMHwqE7FdZ+fYGLv/GKOZORMQRw0C6TCs4jhoF24UMvPPLK
+         u7tS2MVbArDqC8lFYNCxUTaifx1GozQ76Q25FX+rHKlJWpOdKUKmltGAFsADJh1gZntX
+         +LfA==
+X-Gm-Message-State: AOAM531UGvjA5jv3+ySG4Xa0jF98yFIotvdM737UfMVX3ybrcfmP/dfR
+	2Ea6EU92MBiRN/5USayB+pciCl4Skt+4vpqm0STxRA==
+X-Google-Smtp-Source: ABdhPJwWZ3eYDNgK+tyHhs3o/e9jTvYAkoSVCUaRgclpcuqt9dH748zpq6nj5Jt+rgjXHu/FF8NKz82dnl1j7RfAePA=
+X-Received: by 2002:a67:f74f:: with SMTP id w15mr696164vso.54.1607021279552;
+ Thu, 03 Dec 2020 10:47:59 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CABCJKueby8pUoN7f5=6RoyLSt4PgWNx8idUej0sNwAi0F3Xqzw@mail.gmail.com>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+References: <20201013003203.4168817-1-samitolvanen@google.com>
+ <20201013003203.4168817-15-samitolvanen@google.com> <202010141549.412F2BF0@keescook>
+ <CAK7LNAT350QjusoYCQEHDdoxAfTZjj82xp86O1qoNF=0u0PN-g@mail.gmail.com>
+In-Reply-To: <CAK7LNAT350QjusoYCQEHDdoxAfTZjj82xp86O1qoNF=0u0PN-g@mail.gmail.com>
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Thu, 3 Dec 2020 10:47:48 -0800
+Message-ID: <CABCJKue4Gg7gGA3cgpP-uiThxR=5Qh2Pq+KctGJN_GtStpf9Fg@mail.gmail.com>
+Subject: Re: [PATCH v6 14/25] kbuild: lto: remove duplicate dependencies from
+ .mod files
+To: Masahiro Yamada <masahiroy@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Will Deacon <will@kernel.org>, Peter Zijlstra <peterz@infradead.org>, 
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, 
+	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, 
+	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, PCI <linux-pci@vger.kernel.org>, 
+	X86 ML <x86@kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On Thu, Dec 03, 2020 at 09:07:30AM -0800, Sami Tolvanen wrote:
-> On Thu, Dec 3, 2020 at 3:26 AM Will Deacon <will@kernel.org> wrote:
-> > On Tue, Dec 01, 2020 at 01:36:51PM -0800, Sami Tolvanen wrote:
-> > > This patch series adds support for building the kernel with Clang's
-> > > Link Time Optimization (LTO). In addition to performance, the primary
-> > > motivation for LTO is to allow Clang's Control-Flow Integrity (CFI)
-> > > to be used in the kernel. Google has shipped millions of Pixel
-> > > devices running three major kernel versions with LTO+CFI since 2018.
+On Thu, Dec 3, 2020 at 10:00 AM Masahiro Yamada <masahiroy@kernel.org> wrote:
+>
+> On Thu, Oct 15, 2020 at 7:50 AM Kees Cook <keescook@chromium.org> wrote:
+> >
+> > On Mon, Oct 12, 2020 at 05:31:52PM -0700, Sami Tolvanen wrote:
+> > > With LTO, llvm-nm prints out symbols for each archive member
+> > > separately, which results in a lot of duplicate dependencies in the
+> > > .mod file when CONFIG_TRIM_UNUSED_SYMS is enabled. When a module
+> > > consists of several compilation units, the output can exceed the
+> > > default xargs command size limit and split the dependency list to
+> > > multiple lines, which results in used symbols getting trimmed.
 > > >
-> > > Most of the patches are build system changes for handling LLVM
-> > > bitcode, which Clang produces with LTO instead of ELF object files,
-> > > postponing ELF processing until a later stage, and ensuring initcall
-> > > ordering.
+> > > This change removes duplicate dependencies, which will reduce the
+> > > probability of this happening and makes .mod files smaller and
+> > > easier to read.
 > > >
-> > > Note that arm64 support depends on Will's memory ordering patches
-> > > [1]. I will post x86_64 patches separately after we have fixed the
-> > > remaining objtool warnings [2][3].
+> > > Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
+> > > Reviewed-by: Kees Cook <keescook@chromium.org>
 > >
-> > I took this series for a spin, with my for-next/lto branch merged in but
-> > I see a failure during the LTO stage with clang 11.0.5 because it doesn't
-> > understand the '.arch_extension rcpc' directive we throw out in READ_ONCE().
-> 
-> I just tested this with Clang 11.0.0, which I believe is the latest
-> 11.x version, and the current Clang 12 development branch, and both
-> work for me. Godbolt confirms that '.arch_extension rcpc' is supported
-> by the integrated assembler starting with Clang 11 (the example fails
-> with 10.0.1):
-> 
-> https://godbolt.org/z/1csGcT
-> 
-> What does running clang --version and ld.lld --version tell you?
-
-I'm using some Android prebuilts I had kicking around:
-
-Android (6875598, based on r399163b) clang version 11.0.5 (https://android.googlesource.com/toolchain/llvm-project 87f1315dfbea7c137aa2e6d362dbb457e388158d)
-Target: x86_64-unknown-linux-gnu
-Thread model: posix
-InstalledDir: /usr/local/google/home/willdeacon/work/android/repo/android-kernel/prebuilts-master/clang/host/linux-x86/clang-r399163b/bin
-
-and:
-
-LLD 11.0.5 (/buildbot/tmp/tmpx1DlI_ 87f1315dfbea7c137aa2e6d362dbb457e388158d) (compatible with GNU linkers)
-
-> > We actually check that this extension is available before using it in
-> > the arm64 Kconfig:
+> > Hi Masahiro,
 > >
-> >         config AS_HAS_LDAPR
-> >                 def_bool $(as-instr,.arch_extension rcpc)
-> >
-> > so this shouldn't happen. I then realised, I wasn't passing LLVM_IAS=1
-> > on my Make command line; with that, then the detection works correctly
-> > and the LTO step succeeds.
-> >
-> > Why is it necessary to pass LLVM_IAS=1 if LTO is enabled? I think it
-> > would be _much_ better if this was implicit (or if LTO depended on it).
-> 
-> Without LLVM_IAS=1, Clang uses two different assemblers when LTO is
-> enabled: the external GNU assembler for stand-alone assembly, and
-> LLVM's integrated assembler for inline assembly. as-instr tests the
-> external assembler and makes an admittedly reasonable assumption that
-> the test is also valid for inline assembly.
-> 
-> I agree that it would reduce confusion in future if we just always
-> enabled IAS with LTO. Nick, Nathan, any thoughts about this?
+> > This appears to be a general improvement as well. This looks like it can
+> > land without depending on the rest of the series.
+>
+> It cannot.
+> Adding "sort -u" is pointless without the rest of the series
+> since the symbol duplication happens only with Clang LTO.
+>
+> This is not a solution.
+> "reduce the probability of this happening" well describes it.
+>
+> I wrote a different patch.
 
-That works for me, although I'm happy with anything which means that the
-assembler checks via as-instr apply to the assembler which will ultimately
-be used.
+Great, thanks for looking into this. I'll drop this patch from the next version.
 
-Will
+Sami
