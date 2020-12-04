@@ -1,20 +1,21 @@
-Return-Path: <SRS0=+MyA=FI=lists.openwall.com=kernel-hardening-return-20529-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=zGQs=FI=lists.openwall.com=kernel-hardening-return-20530-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.3 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
+	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C63BDC4361A
-	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 09:36:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 11072C4361B
+	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 11:54:54 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A8273227C3
-	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 09:36:05 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A8273227C3
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20529-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9464 invoked by uid 550); 4 Dec 2020 09:35:56 -0000
+	by mail.kernel.org (Postfix) with SMTP id DF4482251F
+	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 11:54:52 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DF4482251F
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20530-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7821 invoked by uid 550); 4 Dec 2020 11:54:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,87 +23,92 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9437 invoked from network); 4 Dec 2020 09:35:55 -0000
-Date: Fri, 4 Dec 2020 09:35:36 +0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1607074543;
-	bh=KiPYOwivri/c/ItidAb+vtLMDjOCyhBGcMSitc7cncU=;
-	h=From:To:Cc:Subject:References:In-Reply-To:From;
-	b=GjN8UC0To43FRm/tsZr8kvb4HKDZZt6WfrVN1DsurESfPe+l2A94uzzhu1vPpsxIE
-	 SWXV209qIxN9vnROEFL2hbNTbFoFDX2aTz789bdBU7n8IEYjja66swjjuutShEenPk
-	 HdAj42XjCW4qxd/vLG1PP2j/ZzWjMZOk5uAeayL+wv+giLCOA8bxFRjVaGRHLozHTh
-	 YlQwRVBgo7c4uojoeCTTzDC1zQLC8umPbJxt9odbBalrhfUgV5LSzI9t2Ue27J/55s
-	 xclSHIhMn7kaICKKuX/AMEWHc4UQCP5TBXKhUl7az+NuJaijbxMdBxQnu8hmWKcpH/
-	 GkZxlHDT8oL8A==
-From: Will Deacon <will@kernel.org>
-To: Nick Desaulniers <ndesaulniers@google.com>
-Cc: Sami Tolvanen <samitolvanen@google.com>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Nathan Chancellor <natechancellor@gmail.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Josh Poimboeuf <jpoimboe@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	clang-built-linux <clang-built-linux@googlegroups.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
-	linux-kbuild <linux-kbuild@vger.kernel.org>,
-	LKML <linux-kernel@vger.kernel.org>,
-	PCI <linux-pci@vger.kernel.org>, Jian Cai <jiancai@google.com>,
-	Kristof Beyls <Kristof.Beyls@arm.com>
-Subject: Re: [PATCH v8 00/16] Add support for Clang LTO
-Message-ID: <20201204093535.GB461@willie-the-truck>
-References: <20201201213707.541432-1-samitolvanen@google.com>
- <20201203112622.GA31188@willie-the-truck>
- <CABCJKueby8pUoN7f5=6RoyLSt4PgWNx8idUej0sNwAi0F3Xqzw@mail.gmail.com>
- <20201203182252.GA32011@willie-the-truck>
- <CAKwvOdnvq=L=gQMv9MHaStmKMOuD5jvffzMedhp3gytYB6R7TQ@mail.gmail.com>
+Received: (qmail 7792 invoked from network); 4 Dec 2020 11:54:44 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:reply-to:subject:to:cc:references:from
+         :message-id:date:user-agent:mime-version:in-reply-to
+         :content-language:content-transfer-encoding;
+        bh=wHqmBeW2IFxVt4oHJizfcV3fQQX4Hgdaz39Wp4K7c0A=;
+        b=AUMJiZNZ7IQtC1gTuyAedC965swkHGJmVQaBMQbxRkpdVlwlom8VTvTeJU7Z43xVjP
+         Uq1HpO4EG51DhLD6G2UH+XSWMYo0Pt0k4q8UsWZr3pdXxk5kwmHxvDrSEwj0B7ZSVLq2
+         h+LFv2D/aOyNJ+GtqMgMpbNJxZBO4TF0oFXxPZSX+bZjTyPSSaE4Oy0Q8r0Y3O+Kpmvn
+         w7hOmIMQD1VJZ/9UAuWYyuidnoSRG7gU/O7xorCHdWeqNCjXDaN0AjTSwKPjwR6h2xUM
+         sQZM+vFXFHGZAMJ/spJdJPeUMQE4skDckp5qmkcoxrDFKlbCVHP37+6OQBFRp5NTvpTa
+         sCaw==
+X-Gm-Message-State: AOAM531y8iAQGYhPmGWR0e54536Mit83pWYViH4mDhHZiul9ARRN/r7h
+	1dioWWMnuvrLX+KG+Myfz/o=
+X-Google-Smtp-Source: ABdhPJz3k3/M4l7ovBWHXv3cerqd8tc5RbeKIr8k7pXjJ8RslEzOgI+FhEYt0rRwwhaYS4XH6t8M9g==
+X-Received: by 2002:a7b:c087:: with SMTP id r7mr3791014wmh.153.1607082872591;
+        Fri, 04 Dec 2020 03:54:32 -0800 (PST)
+Subject: Re: [PATCH RFC v2 2/6] mm/slab: Perform init_on_free earlier
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Alexander Potapenko <glider@google.com>, Kees Cook
+ <keescook@chromium.org>, Jann Horn <jannh@google.com>,
+ Will Deacon <will@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>,
+ Dmitry Vyukov <dvyukov@google.com>, Christoph Lameter <cl@linux.com>,
+ Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>,
+ Joonsoo Kim <iamjoonsoo.kim@lge.com>, Masahiro Yamada
+ <masahiroy@kernel.org>, Masami Hiramatsu <mhiramat@kernel.org>,
+ Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>,
+ Krzysztof Kozlowski <krzk@kernel.org>,
+ Patrick Bellasi <patrick.bellasi@arm.com>,
+ David Howells <dhowells@redhat.com>, Eric Biederman <ebiederm@xmission.com>,
+ Johannes Weiner <hannes@cmpxchg.org>, Laura Abbott <labbott@redhat.com>,
+ Arnd Bergmann <arnd@arndb.de>,
+ Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Daniel Micay <danielmicay@gmail.com>,
+ Andrey Konovalov <andreyknvl@google.com>,
+ Matthew Wilcox <willy@infradead.org>, Pavel Machek <pavel@denx.de>,
+ Valentin Schneider <valentin.schneider@arm.com>,
+ kasan-dev <kasan-dev@googlegroups.com>,
+ Linux Memory Management List <linux-mm@kvack.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ LKML <linux-kernel@vger.kernel.org>, notify@kernel.org
+References: <20200929183513.380760-1-alex.popov@linux.com>
+ <20200929183513.380760-3-alex.popov@linux.com>
+ <CAG_fn=WY9OFKuy6utMHOgyr+1DYNsuzVruGCGHMDnEnaLY6s9g@mail.gmail.com>
+ <1772bc7d-e87f-0f62-52a8-e9d9ac99f5e3@linux.com>
+ <20201203124914.25e63b013e9c69c79d481831@linux-foundation.org>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <9b9861c0-4c94-a51f-bbac-bd5e9b77d9e0@linux.com>
+Date: Fri, 4 Dec 2020 14:54:26 +0300
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
+ Thunderbird/78.3.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKwvOdnvq=L=gQMv9MHaStmKMOuD5jvffzMedhp3gytYB6R7TQ@mail.gmail.com>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+In-Reply-To: <20201203124914.25e63b013e9c69c79d481831@linux-foundation.org>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-On Thu, Dec 03, 2020 at 02:32:13PM -0800, Nick Desaulniers wrote:
-> On Thu, Dec 3, 2020 at 10:23 AM Will Deacon <will@kernel.org> wrote:
-> > On Thu, Dec 03, 2020 at 09:07:30AM -0800, Sami Tolvanen wrote:
-> > > Without LLVM_IAS=1, Clang uses two different assemblers when LTO is
-> > > enabled: the external GNU assembler for stand-alone assembly, and
-> > > LLVM's integrated assembler for inline assembly. as-instr tests the
-> > > external assembler and makes an admittedly reasonable assumption that
-> > > the test is also valid for inline assembly.
-> > >
-> > > I agree that it would reduce confusion in future if we just always
-> > > enabled IAS with LTO. Nick, Nathan, any thoughts about this?
-> >
-> > That works for me, although I'm happy with anything which means that the
-> > assembler checks via as-instr apply to the assembler which will ultimately
-> > be used.
+On 03.12.2020 23:49, Andrew Morton wrote:
+> On Thu, 3 Dec 2020 22:50:27 +0300 Alexander Popov <alex.popov@linux.com> wrote:
 > 
-> I agree with Will.
-
-[...]
-
-> So I'd recommend to Sami to simply make the Kconfig also depend on
-> clang's integrated assembler (not just llvm-nm and llvm-ar).  If
-> someone cares about LTO with Clang as the compiler but GAS as the
-> assembler, then we can revisit supporting that combination (and the
-> changes to KCONFIG), but it shouldn't be something we consider Tier 1
-> supported or a combination that need be supported in a minimum viable
-> product. And at that point we should make it avoid clang's integrated
-> assembler entirely (I suspect LTO won't work at all in that case, so
-> maybe even considering it is a waste of time).
+>> On 30.09.2020 15:50, Alexander Potapenko wrote:
+>>> On Tue, Sep 29, 2020 at 8:35 PM Alexander Popov <alex.popov@linux.com> wrote:
+>>>>
+>>>> Currently in CONFIG_SLAB init_on_free happens too late, and heap
+>>>> objects go to the heap quarantine being dirty. Lets move memory
+>>>> clearing before calling kasan_slab_free() to fix that.
+>>>>
+>>>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+>>> Reviewed-by: Alexander Potapenko <glider@google.com>
+>>
+>> Hello!
+>>
+>> Can this particular patch be considered for the mainline kernel?
 > 
-> One question I have to Will; if for aarch64 LTO will depend on RCpc,
-> but RCpc is an ARMv8.3 extension, what are the implications for LTO on
-> pre-ARMv8.3 aarch64 processors?
+> All patches are considered ;) And merged if they're reviewed, tested,
+> judged useful, etc.
+> 
+> If you think this particular patch should be fast-tracked then please
+> send it as a non-RFC, standalone patch.  Please also enhance the
+> changelog so that it actually explains what goes wrong.  Presumably
+> "objects go to the heap quarantine being dirty" causes some
+> user-visible problem?  What is that problem?
 
-It doesn't depend on RCpc -- we just emit a more expensive instruction
-(an RCsc acquire) if the RCpc one is not supported by both the toolchain
-and the CPU. So the implication for those processors is that READ_ONCE()
-may be more expensive.
+Ok, thanks!
+I'll improve the commit message and send the patch separately.
 
-Will
+Best regards,
+Alexander
