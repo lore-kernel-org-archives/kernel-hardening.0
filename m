@@ -1,21 +1,21 @@
-Return-Path: <SRS0=zGQs=FI=lists.openwall.com=kernel-hardening-return-20530-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=85Xh=FI=lists.openwall.com=kernel-hardening-return-20531-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.3 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
-	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 11072C4361B
-	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 11:54:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2D0D7C4361A
+	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 15:38:27 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DF4482251F
-	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 11:54:52 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DF4482251F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20530-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 7821 invoked by uid 550); 4 Dec 2020 11:54:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id 91EED22BF5
+	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Dec 2020 15:38:25 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 91EED22BF5
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20531-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27678 invoked by uid 550); 4 Dec 2020 15:38:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,92 +23,994 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7792 invoked from network); 4 Dec 2020 11:54:44 -0000
+Received: (qmail 26613 invoked from network); 4 Dec 2020 15:38:15 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=om2Du56AEf2eShdFtozG7cw47pdY9/tn/wij1om46c4=;
+        b=cYoVFSPihQFzPXibubKNb2ys3wEkNTLne3gUCeY/GLUOm/7GynUlhnZZ+qHU7BwAj9
+         OwNbalJgiyBxybionqw/nDTW/IBEJJN6GRC0wOsEH4kE5sGyW8suB1vABkTRsVq//OoI
+         rYYsYiKSKNJigNVH4W9XCFuran3a94sVfONlIQ2UMbFgWXwpgzPIxyey2Kkg0aQ7XWN2
+         TWj/81xP6vK73FBiYWjxYPecrJQ9nogXzVjd82Y+4rNQ5saaee6ITofitQCyYIFy979g
+         aVjiXTT7jf1amjpvxAqgZJZ5rl2DXQNpakIRBIo9lOe0cMiDcpf0GqaxmqnAOXW7h79Y
+         P1ug==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:reply-to:subject:to:cc:references:from
-         :message-id:date:user-agent:mime-version:in-reply-to
-         :content-language:content-transfer-encoding;
-        bh=wHqmBeW2IFxVt4oHJizfcV3fQQX4Hgdaz39Wp4K7c0A=;
-        b=AUMJiZNZ7IQtC1gTuyAedC965swkHGJmVQaBMQbxRkpdVlwlom8VTvTeJU7Z43xVjP
-         Uq1HpO4EG51DhLD6G2UH+XSWMYo0Pt0k4q8UsWZr3pdXxk5kwmHxvDrSEwj0B7ZSVLq2
-         h+LFv2D/aOyNJ+GtqMgMpbNJxZBO4TF0oFXxPZSX+bZjTyPSSaE4Oy0Q8r0Y3O+Kpmvn
-         w7hOmIMQD1VJZ/9UAuWYyuidnoSRG7gU/O7xorCHdWeqNCjXDaN0AjTSwKPjwR6h2xUM
-         sQZM+vFXFHGZAMJ/spJdJPeUMQE4skDckp5qmkcoxrDFKlbCVHP37+6OQBFRp5NTvpTa
-         sCaw==
-X-Gm-Message-State: AOAM531y8iAQGYhPmGWR0e54536Mit83pWYViH4mDhHZiul9ARRN/r7h
-	1dioWWMnuvrLX+KG+Myfz/o=
-X-Google-Smtp-Source: ABdhPJz3k3/M4l7ovBWHXv3cerqd8tc5RbeKIr8k7pXjJ8RslEzOgI+FhEYt0rRwwhaYS4XH6t8M9g==
-X-Received: by 2002:a7b:c087:: with SMTP id r7mr3791014wmh.153.1607082872591;
-        Fri, 04 Dec 2020 03:54:32 -0800 (PST)
-Subject: Re: [PATCH RFC v2 2/6] mm/slab: Perform init_on_free earlier
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Alexander Potapenko <glider@google.com>, Kees Cook
- <keescook@chromium.org>, Jann Horn <jannh@google.com>,
- Will Deacon <will@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>,
- Dmitry Vyukov <dvyukov@google.com>, Christoph Lameter <cl@linux.com>,
- Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>,
- Joonsoo Kim <iamjoonsoo.kim@lge.com>, Masahiro Yamada
- <masahiroy@kernel.org>, Masami Hiramatsu <mhiramat@kernel.org>,
- Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>,
- Krzysztof Kozlowski <krzk@kernel.org>,
- Patrick Bellasi <patrick.bellasi@arm.com>,
- David Howells <dhowells@redhat.com>, Eric Biederman <ebiederm@xmission.com>,
- Johannes Weiner <hannes@cmpxchg.org>, Laura Abbott <labbott@redhat.com>,
- Arnd Bergmann <arnd@arndb.de>,
- Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
- Daniel Micay <danielmicay@gmail.com>,
- Andrey Konovalov <andreyknvl@google.com>,
- Matthew Wilcox <willy@infradead.org>, Pavel Machek <pavel@denx.de>,
- Valentin Schneider <valentin.schneider@arm.com>,
- kasan-dev <kasan-dev@googlegroups.com>,
- Linux Memory Management List <linux-mm@kvack.org>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
- LKML <linux-kernel@vger.kernel.org>, notify@kernel.org
-References: <20200929183513.380760-1-alex.popov@linux.com>
- <20200929183513.380760-3-alex.popov@linux.com>
- <CAG_fn=WY9OFKuy6utMHOgyr+1DYNsuzVruGCGHMDnEnaLY6s9g@mail.gmail.com>
- <1772bc7d-e87f-0f62-52a8-e9d9ac99f5e3@linux.com>
- <20201203124914.25e63b013e9c69c79d481831@linux-foundation.org>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <9b9861c0-4c94-a51f-bbac-bd5e9b77d9e0@linux.com>
-Date: Fri, 4 Dec 2020 14:54:26 +0300
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
- Thunderbird/78.3.1
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
+         :content-transfer-encoding;
+        bh=om2Du56AEf2eShdFtozG7cw47pdY9/tn/wij1om46c4=;
+        b=lCi77zetzXYhTeqXPCE807UVXXyzTs0g0P9nVN5y+caIkg2xLVrmHJhNbe8G3/wWYH
+         MtBeeOygIG5M7owwtBENly1lqtI80e7Q7F00AjgvcXElLuQ6M/3Ykm8wy/S+FPZBAe/m
+         +86aBphaLbJEL/EiYn+DO9oiFbQTHnXRtAXru6kVFt7gQCOjfFnp6MbQMqNoOSG8HuPh
+         riTkl7KpItx0Nwd/+TlbkMNgCpfs+BveN8v/aXwN822a7LvNkIsZOpxfF0+g5G6jNwAJ
+         O3rnqJAv3GDYoxIINnWwV4HchIYKojKi5S8Wk7XzKatLXkcy8Q683fQEJN9rWjXrJcnv
+         XQkQ==
+X-Gm-Message-State: AOAM533P+3H7ReH/0UKB0AxYbDkTvJpC7S9vD+lfV0h1Gq+DyYCl81B3
+	aWZ1+tJ+sR/z3J9JBpTiag0=
+X-Google-Smtp-Source: ABdhPJy2oSQtRWtOoH902MC8ooPv8ObAdS86oYkhDrqqDlXzrFe96y9x+qmsPotGoU0wm/hLzlJN6w==
+X-Received: by 2002:a1c:c907:: with SMTP id f7mr4925589wmb.165.1607096283000;
+        Fri, 04 Dec 2020 07:38:03 -0800 (PST)
+From: Romain Perier <romain.perier@gmail.com>
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>,
+	Romain Perier <romain.perier@gmail.com>
+Subject: [PRE-REVIEW PATCH 0/2] Remove all strlcpy in favor of strscpy
+Date: Fri,  4 Dec 2020 16:37:52 +0100
+Message-Id: <20201204153754.7941-1-romain.perier@gmail.com>
+X-Mailer: git-send-email 2.29.2
 MIME-Version: 1.0
-In-Reply-To: <20201203124914.25e63b013e9c69c79d481831@linux-foundation.org>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 
-On 03.12.2020 23:49, Andrew Morton wrote:
-> On Thu, 3 Dec 2020 22:50:27 +0300 Alexander Popov <alex.popov@linux.com> wrote:
-> 
->> On 30.09.2020 15:50, Alexander Potapenko wrote:
->>> On Tue, Sep 29, 2020 at 8:35 PM Alexander Popov <alex.popov@linux.com> wrote:
->>>>
->>>> Currently in CONFIG_SLAB init_on_free happens too late, and heap
->>>> objects go to the heap quarantine being dirty. Lets move memory
->>>> clearing before calling kasan_slab_free() to fix that.
->>>>
->>>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
->>> Reviewed-by: Alexander Potapenko <glider@google.com>
->>
->> Hello!
->>
->> Can this particular patch be considered for the mainline kernel?
-> 
-> All patches are considered ;) And merged if they're reviewed, tested,
-> judged useful, etc.
-> 
-> If you think this particular patch should be fast-tracked then please
-> send it as a non-RFC, standalone patch.  Please also enhance the
-> changelog so that it actually explains what goes wrong.  Presumably
-> "objects go to the heap quarantine being dirty" causes some
-> user-visible problem?  What is that problem?
+strlcpy() copy a C-String into a sized buffer, the result is always a
+valid NULL-terminated that fits in the buffer, howerver it has severals
+issues. It reads the source buffer first, which is dangerous if it is non
+NULL-terminated or if the corresponding buffer is unbounded. Its safe
+replacement is strscpy(), as suggested in the deprecated interface [1].
 
-Ok, thanks!
-I'll improve the commit message and send the patch separately.
+This series replaces all occurences of strlcpy in two steps, firsly all
+cases of strlcpy's return value are manually replaced by the
+corresponding calls of strscpy() with the new handling of the return
+value (as the return code is different in case of error). Then all other
+cases are automatically replaced by using coccinelle.
 
-Best regards,
-Alexander
+
+[1] https://www.kernel.org/doc/html/latest/process/deprecated.html#strlcpy
+
+Romain Perier (2):
+  Manual replacement of the deprecated strlcpy() with return values
+  Automated replacement of all other deprecated strlcpy()
+
+ arch/alpha/kernel/setup.c                     |  5 +-
+ arch/arm/kernel/atags_parse.c                 |  4 +-
+ arch/arm/kernel/setup.c                       |  2 +-
+ arch/arm/kernel/vdso.c                        |  2 +-
+ arch/arm/mach-s3c/mach-mini2440.c             |  2 +-
+ arch/arm/mach-s3c/mach-mini6410.c             |  2 +-
+ arch/arm/mach-s3c/mach-real6410.c             |  2 +-
+ arch/hexagon/kernel/setup.c                   |  6 +-
+ arch/ia64/kernel/setup.c                      |  2 +-
+ arch/m68k/emu/natfeat.c                       |  6 +-
+ arch/m68k/kernel/setup_mm.c                   |  2 +-
+ arch/microblaze/kernel/prom.c                 |  2 +-
+ arch/mips/bcm47xx/board.c                     |  2 +-
+ arch/mips/kernel/prom.c                       |  6 +-
+ arch/mips/kernel/relocate.c                   |  2 +-
+ arch/mips/kernel/setup.c                      |  6 +-
+ arch/mips/pic32/pic32mzda/init.c              |  2 +-
+ arch/nios2/kernel/cpuinfo.c                   |  2 +-
+ arch/nios2/kernel/setup.c                     |  6 +-
+ arch/parisc/kernel/drivers.c                  |  2 +-
+ arch/parisc/kernel/setup.c                    |  2 +-
+ arch/powerpc/kernel/dt_cpu_ftrs.c             |  2 +-
+ arch/powerpc/kernel/vdso.c                    |  4 +-
+ arch/powerpc/platforms/pasemi/misc.c          |  3 +-
+ arch/powerpc/platforms/powermac/bootx_init.c  |  2 +-
+ arch/powerpc/platforms/powernv/idle.c         |  2 +-
+ arch/powerpc/platforms/powernv/pci-ioda.c     |  2 +-
+ arch/powerpc/platforms/pseries/hvcserver.c    |  2 +-
+ arch/riscv/kernel/setup.c                     |  2 +-
+ arch/s390/kernel/debug.c                      |  2 +-
+ arch/s390/kernel/early.c                      |  2 +-
+ arch/sh/drivers/dma/dma-api.c                 |  2 +-
+ arch/sh/kernel/setup.c                        |  4 +-
+ arch/sparc/kernel/ioport.c                    |  2 +-
+ arch/sparc/kernel/setup_32.c                  |  2 +-
+ arch/sparc/kernel/setup_64.c                  |  2 +-
+ arch/sparc/prom/bootstr_32.c                  |  3 +-
+ arch/um/drivers/net_kern.c                    |  2 +-
+ arch/um/drivers/vector_kern.c                 |  2 +-
+ arch/um/kernel/um_arch.c                      |  2 +-
+ arch/um/os-Linux/drivers/tuntap_user.c        |  2 +-
+ arch/um/os-Linux/umid.c                       |  6 +-
+ arch/x86/kernel/setup.c                       |  6 +-
+ arch/xtensa/kernel/setup.c                    |  8 +--
+ arch/xtensa/platforms/iss/network.c           |  4 +-
+ block/elevator.c                              |  2 +-
+ block/genhd.c                                 |  2 +-
+ crypto/api.c                                  |  2 +-
+ crypto/essiv.c                                |  2 +-
+ crypto/lrw.c                                  |  6 +-
+ crypto/xts.c                                  |  6 +-
+ drivers/acpi/bus.c                            |  4 +-
+ drivers/acpi/processor_idle.c                 |  8 +--
+ drivers/acpi/utils.c                          |  6 +-
+ drivers/base/dd.c                             |  2 +-
+ drivers/block/drbd/drbd_nl.c                  |  3 +-
+ drivers/block/mtip32xx/mtip32xx.c             | 20 +++---
+ drivers/block/ps3vram.c                       |  2 +-
+ drivers/block/rnbd/rnbd-clt-sysfs.c           |  6 +-
+ drivers/block/rnbd/rnbd-clt.c                 |  6 +-
+ drivers/block/rnbd/rnbd-srv.c                 |  6 +-
+ drivers/block/zram/zram_drv.c                 |  7 +-
+ drivers/char/ipmi/ipmi_ssif.c                 |  2 +-
+ drivers/char/tpm/tpm_ppi.c                    |  2 +-
+ drivers/clk/clkdev.c                          |  2 +-
+ drivers/clk/mvebu/dove-divider.c              |  2 +-
+ drivers/clk/tegra/clk-bpmp.c                  |  2 +-
+ drivers/cpuidle/cpuidle-powernv.c             |  4 +-
+ .../crypto/marvell/octeontx/otx_cptpf_ucode.c |  6 +-
+ drivers/crypto/qat/qat_common/adf_cfg.c       |  6 +-
+ drivers/crypto/qat/qat_common/adf_ctl_drv.c   |  3 +-
+ .../qat/qat_common/adf_transport_debug.c      |  2 +-
+ drivers/dma-buf/dma-buf.c                     |  4 +-
+ drivers/dma-buf/sw_sync.c                     |  2 +-
+ drivers/dma-buf/sync_file.c                   |  8 +--
+ drivers/dma/dmatest.c                         | 12 ++--
+ drivers/dma/xilinx/xilinx_dpdma.c             |  2 +-
+ drivers/eisa/eisa-bus.c                       |  3 +-
+ drivers/firmware/arm_scmi/base.c              |  2 +-
+ drivers/firmware/arm_scmi/clock.c             |  2 +-
+ drivers/firmware/arm_scmi/perf.c              |  2 +-
+ drivers/firmware/arm_scmi/power.c             |  2 +-
+ drivers/firmware/arm_scmi/reset.c             |  2 +-
+ drivers/firmware/arm_scmi/sensors.c           |  3 +-
+ drivers/gpu/drm/amd/amdgpu/atom.c             |  2 +-
+ drivers/gpu/drm/amd/pm/amdgpu_dpm.c           |  2 +-
+ .../drm/bridge/synopsys/dw-hdmi-ahb-audio.c   |  6 +-
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi.c     |  2 +-
+ drivers/gpu/drm/drm_dp_helper.c               |  2 +-
+ drivers/gpu/drm/drm_dp_mst_topology.c         |  2 +-
+ drivers/gpu/drm/drm_mipi_dsi.c                |  2 +-
+ drivers/gpu/drm/i2c/tda998x_drv.c             |  2 +-
+ drivers/gpu/drm/i915/selftests/i915_perf.c    |  2 +-
+ drivers/gpu/drm/mediatek/mtk_hdmi_ddc.c       |  2 +-
+ drivers/gpu/drm/msm/disp/dpu1/dpu_io_util.c   |  2 +-
+ drivers/gpu/drm/msm/dp/dp_parser.c            |  9 ++-
+ drivers/gpu/drm/radeon/radeon_atombios.c      |  4 +-
+ drivers/gpu/drm/radeon/radeon_combios.c       |  4 +-
+ drivers/gpu/drm/rockchip/inno_hdmi.c          |  2 +-
+ drivers/gpu/drm/rockchip/rk3066_hdmi.c        |  2 +-
+ drivers/gpu/drm/sun4i/sun4i_hdmi_i2c.c        |  2 +-
+ drivers/hid/hid-steam.c                       | 12 ++--
+ drivers/hid/i2c-hid/i2c-hid-core.c            |  2 +-
+ drivers/hid/usbhid/hid-core.c                 |  2 +-
+ drivers/hid/usbhid/usbkbd.c                   |  2 +-
+ drivers/hid/usbhid/usbmouse.c                 |  2 +-
+ drivers/hid/wacom_sys.c                       |  6 +-
+ drivers/hwmon/adc128d818.c                    |  2 +-
+ drivers/hwmon/adm1021.c                       |  2 +-
+ drivers/hwmon/adm1025.c                       |  2 +-
+ drivers/hwmon/adm1026.c                       |  2 +-
+ drivers/hwmon/adm1029.c                       |  2 +-
+ drivers/hwmon/adm1031.c                       |  2 +-
+ drivers/hwmon/adm9240.c                       |  2 +-
+ drivers/hwmon/adt7411.c                       |  2 +-
+ drivers/hwmon/adt7462.c                       |  2 +-
+ drivers/hwmon/adt7470.c                       |  2 +-
+ drivers/hwmon/adt7475.c                       |  2 +-
+ drivers/hwmon/amc6821.c                       |  2 +-
+ drivers/hwmon/asb100.c                        |  2 +-
+ drivers/hwmon/asc7621.c                       |  2 +-
+ drivers/hwmon/dell-smm-hwmon.c                |  6 +-
+ drivers/hwmon/dme1737.c                       |  2 +-
+ drivers/hwmon/emc1403.c                       | 12 ++--
+ drivers/hwmon/emc2103.c                       |  2 +-
+ drivers/hwmon/emc6w201.c                      |  2 +-
+ drivers/hwmon/f75375s.c                       |  2 +-
+ drivers/hwmon/fschmd.c                        |  2 +-
+ drivers/hwmon/ftsteutates.c                   |  2 +-
+ drivers/hwmon/gl518sm.c                       |  2 +-
+ drivers/hwmon/gl520sm.c                       |  2 +-
+ drivers/hwmon/jc42.c                          |  2 +-
+ drivers/hwmon/lm63.c                          |  6 +-
+ drivers/hwmon/lm73.c                          |  2 +-
+ drivers/hwmon/lm75.c                          |  2 +-
+ drivers/hwmon/lm77.c                          |  2 +-
+ drivers/hwmon/lm78.c                          |  2 +-
+ drivers/hwmon/lm80.c                          |  2 +-
+ drivers/hwmon/lm83.c                          |  2 +-
+ drivers/hwmon/lm85.c                          |  2 +-
+ drivers/hwmon/lm87.c                          |  2 +-
+ drivers/hwmon/lm90.c                          |  2 +-
+ drivers/hwmon/lm92.c                          |  2 +-
+ drivers/hwmon/lm93.c                          |  2 +-
+ drivers/hwmon/lm95234.c                       |  2 +-
+ drivers/hwmon/lm95241.c                       |  2 +-
+ drivers/hwmon/lm95245.c                       |  2 +-
+ drivers/hwmon/max1619.c                       |  2 +-
+ drivers/hwmon/max1668.c                       |  2 +-
+ drivers/hwmon/max31730.c                      |  2 +-
+ drivers/hwmon/max6639.c                       |  2 +-
+ drivers/hwmon/max6642.c                       |  2 +-
+ drivers/hwmon/nct7802.c                       |  2 +-
+ drivers/hwmon/nct7904.c                       |  2 +-
+ drivers/hwmon/pmbus/max20730.c                | 66 ++++++++++---------
+ drivers/hwmon/sch56xx-common.c                |  2 +-
+ drivers/hwmon/smsc47m192.c                    |  2 +-
+ drivers/hwmon/stts751.c                       |  2 +-
+ drivers/hwmon/thmc50.c                        |  2 +-
+ drivers/hwmon/tmp401.c                        |  2 +-
+ drivers/hwmon/tmp421.c                        |  2 +-
+ drivers/hwmon/w83781d.c                       |  2 +-
+ drivers/hwmon/w83791d.c                       |  2 +-
+ drivers/hwmon/w83792d.c                       |  2 +-
+ drivers/hwmon/w83793.c                        |  2 +-
+ drivers/hwmon/w83795.c                        |  2 +-
+ drivers/hwmon/w83l785ts.c                     |  2 +-
+ drivers/hwmon/w83l786ng.c                     |  2 +-
+ drivers/i2c/busses/i2c-altera.c               |  2 +-
+ drivers/i2c/busses/i2c-aspeed.c               |  2 +-
+ drivers/i2c/busses/i2c-au1550.c               |  2 +-
+ drivers/i2c/busses/i2c-axxia.c                |  2 +-
+ drivers/i2c/busses/i2c-bcm-kona.c             |  2 +-
+ drivers/i2c/busses/i2c-brcmstb.c              |  2 +-
+ drivers/i2c/busses/i2c-cbus-gpio.c            |  2 +-
+ drivers/i2c/busses/i2c-cht-wc.c               |  2 +-
+ drivers/i2c/busses/i2c-cros-ec-tunnel.c       |  2 +-
+ drivers/i2c/busses/i2c-davinci.c              |  2 +-
+ drivers/i2c/busses/i2c-digicolor.c            |  2 +-
+ drivers/i2c/busses/i2c-efm32.c                |  2 +-
+ drivers/i2c/busses/i2c-eg20t.c                |  3 +-
+ drivers/i2c/busses/i2c-emev2.c                |  2 +-
+ drivers/i2c/busses/i2c-exynos5.c              |  2 +-
+ drivers/i2c/busses/i2c-gpio.c                 |  2 +-
+ drivers/i2c/busses/i2c-highlander.c           |  2 +-
+ drivers/i2c/busses/i2c-hix5hd2.c              |  2 +-
+ drivers/i2c/busses/i2c-i801.c                 |  6 +-
+ drivers/i2c/busses/i2c-ibm_iic.c              |  2 +-
+ drivers/i2c/busses/i2c-icy.c                  |  2 +-
+ drivers/i2c/busses/i2c-imx-lpi2c.c            |  2 +-
+ drivers/i2c/busses/i2c-imx.c                  |  3 +-
+ drivers/i2c/busses/i2c-lpc2k.c                |  2 +-
+ drivers/i2c/busses/i2c-meson.c                |  3 +-
+ drivers/i2c/busses/i2c-mt65xx.c               |  2 +-
+ drivers/i2c/busses/i2c-mt7621.c               |  2 +-
+ drivers/i2c/busses/i2c-mv64xxx.c              |  2 +-
+ drivers/i2c/busses/i2c-mxs.c                  |  2 +-
+ drivers/i2c/busses/i2c-nvidia-gpu.c           |  4 +-
+ drivers/i2c/busses/i2c-omap.c                 |  2 +-
+ drivers/i2c/busses/i2c-opal.c                 |  4 +-
+ drivers/i2c/busses/i2c-parport.c              |  2 +-
+ drivers/i2c/busses/i2c-pxa.c                  |  2 +-
+ drivers/i2c/busses/i2c-qcom-geni.c            |  2 +-
+ drivers/i2c/busses/i2c-qup.c                  |  2 +-
+ drivers/i2c/busses/i2c-rcar.c                 |  2 +-
+ drivers/i2c/busses/i2c-riic.c                 |  2 +-
+ drivers/i2c/busses/i2c-rk3x.c                 |  2 +-
+ drivers/i2c/busses/i2c-s3c2410.c              |  2 +-
+ drivers/i2c/busses/i2c-sh_mobile.c            |  2 +-
+ drivers/i2c/busses/i2c-simtec.c               |  2 +-
+ drivers/i2c/busses/i2c-sirf.c                 |  2 +-
+ drivers/i2c/busses/i2c-stu300.c               |  2 +-
+ drivers/i2c/busses/i2c-sun6i-p2wi.c           |  2 +-
+ drivers/i2c/busses/i2c-taos-evm.c             |  2 +-
+ drivers/i2c/busses/i2c-tegra-bpmp.c           |  2 +-
+ drivers/i2c/busses/i2c-tegra.c                |  2 +-
+ drivers/i2c/busses/i2c-uniphier-f.c           |  2 +-
+ drivers/i2c/busses/i2c-uniphier.c             |  2 +-
+ drivers/i2c/busses/i2c-versatile.c            |  3 +-
+ drivers/i2c/busses/i2c-wmt.c                  |  2 +-
+ drivers/i2c/busses/i2c-zx2967.c               |  3 +-
+ drivers/i2c/i2c-core-base.c                   |  2 +-
+ drivers/i2c/i2c-smbus.c                       |  2 +-
+ drivers/idle/intel_idle.c                     |  2 +-
+ .../iio/common/st_sensors/st_sensors_core.c   |  2 +-
+ drivers/iio/imu/inv_mpu6050/inv_mpu_acpi.c    |  4 +-
+ drivers/infiniband/core/cma_configfs.c        |  2 +-
+ drivers/infiniband/core/device.c              |  4 +-
+ drivers/infiniband/hw/bnxt_re/main.c          |  2 +-
+ drivers/infiniband/hw/efa/efa_main.c          |  4 +-
+ drivers/infiniband/hw/hfi1/file_ops.c         |  2 +-
+ drivers/infiniband/hw/hfi1/verbs.c            |  2 +-
+ drivers/infiniband/hw/mthca/mthca_cmd.c       |  3 +-
+ drivers/infiniband/hw/ocrdma/ocrdma_hw.c      |  2 +-
+ drivers/infiniband/hw/qib/qib_file_ops.c      |  2 +-
+ drivers/infiniband/hw/qib/qib_iba7322.c       |  2 +-
+ drivers/infiniband/sw/rxe/rxe_verbs.c         |  2 +-
+ drivers/infiniband/ulp/ipoib/ipoib_ethtool.c  |  4 +-
+ .../ulp/opa_vnic/opa_vnic_ethtool.c           |  5 +-
+ drivers/infiniband/ulp/rtrs/rtrs-clt.c        |  6 +-
+ drivers/infiniband/ulp/rtrs/rtrs-srv.c        |  6 +-
+ drivers/infiniband/ulp/srpt/ib_srpt.c         |  2 +-
+ drivers/input/keyboard/lkkbd.c                |  8 +--
+ drivers/input/misc/keyspan_remote.c           |  3 +-
+ drivers/input/mouse/hgpk.c                    |  2 +-
+ drivers/input/mouse/synaptics.c               |  4 +-
+ drivers/input/mouse/synaptics_usb.c           |  2 +-
+ drivers/input/mouse/vsxxxaa.c                 |  4 +-
+ drivers/input/rmi4/rmi_f03.c                  |  2 +-
+ drivers/input/rmi4/rmi_f54.c                  |  8 +--
+ drivers/input/serio/altera_ps2.c              |  4 +-
+ drivers/input/serio/ambakmi.c                 |  4 +-
+ drivers/input/serio/ams_delta_serio.c         |  5 +-
+ drivers/input/serio/apbps2.c                  |  2 +-
+ drivers/input/serio/ct82c710.c                |  2 +-
+ drivers/input/serio/gscps2.c                  |  2 +-
+ drivers/input/serio/hyperv-keyboard.c         |  4 +-
+ drivers/input/serio/i8042-x86ia64io.h         |  6 +-
+ drivers/input/serio/i8042.c                   | 14 ++--
+ drivers/input/serio/olpc_apsp.c               |  8 +--
+ drivers/input/serio/parkbd.c                  |  3 +-
+ drivers/input/serio/pcips2.c                  |  4 +-
+ drivers/input/serio/ps2-gpio.c                |  4 +-
+ drivers/input/serio/ps2mult.c                 |  2 +-
+ drivers/input/serio/q40kbd.c                  |  4 +-
+ drivers/input/serio/rpckbd.c                  |  4 +-
+ drivers/input/serio/sa1111ps2.c               |  4 +-
+ drivers/input/serio/serport.c                 |  2 +-
+ drivers/input/serio/sun4i-ps2.c               |  4 +-
+ drivers/input/tablet/acecad.c                 |  2 +-
+ drivers/input/tablet/hanwang.c                |  2 +-
+ drivers/input/tablet/pegasus_notetaker.c      |  2 +-
+ drivers/input/touchscreen/atmel_mxt_ts.c      |  8 +--
+ drivers/input/touchscreen/edt-ft5x06.c        | 12 ++--
+ drivers/input/touchscreen/exc3000.c           |  4 +-
+ drivers/input/touchscreen/sur40.c             |  6 +-
+ drivers/input/touchscreen/usbtouchscreen.c    |  3 +-
+ drivers/input/touchscreen/wacom_w8001.c       |  7 +-
+ drivers/isdn/capi/kcapi.c                     |  4 +-
+ drivers/leds/led-class.c                      |  2 +-
+ drivers/leds/leds-aat1290.c                   |  2 +-
+ drivers/leds/leds-as3645a.c                   |  4 +-
+ drivers/leds/leds-blinkm.c                    |  2 +-
+ drivers/leds/leds-spi-byte.c                  |  2 +-
+ drivers/lightnvm/core.c                       |  6 +-
+ drivers/macintosh/therm_windtunnel.c          |  4 +-
+ drivers/md/dm-ioctl.c                         |  4 +-
+ drivers/md/md-bitmap.c                        |  6 +-
+ drivers/md/md-cluster.c                       |  2 +-
+ drivers/md/md.c                               |  6 +-
+ drivers/message/fusion/mptbase.c              |  6 +-
+ drivers/message/fusion/mptctl.c               |  5 +-
+ drivers/mfd/htc-i2cpld.c                      |  2 +-
+ drivers/mfd/lpc_ich.c                         |  2 +-
+ drivers/mfd/mfd-core.c                        |  2 +-
+ drivers/misc/altera-stapl/altera.c            | 15 ++---
+ drivers/misc/eeprom/eeprom.c                  |  2 +-
+ drivers/misc/eeprom/idt_89hpesx.c             |  2 +-
+ drivers/misc/habanalabs/common/device.c       |  2 +-
+ drivers/misc/ics932s401.c                     |  2 +-
+ drivers/misc/mei/bus-fixup.c                  |  2 +-
+ drivers/most/configfs.c                       |  8 +--
+ drivers/mtd/devices/block2mtd.c               |  2 +-
+ drivers/mtd/parsers/cmdlinepart.c             |  4 +-
+ drivers/net/bonding/bond_main.c               |  2 +-
+ drivers/net/can/sja1000/peak_pcmcia.c         |  2 +-
+ drivers/net/can/usb/peak_usb/pcan_usb_core.c  |  2 +-
+ drivers/net/dsa/b53/b53_common.c              |  4 +-
+ drivers/net/dsa/bcm_sf2_cfp.c                 |  4 +-
+ drivers/net/dsa/mv88e6xxx/chip.c              |  5 +-
+ drivers/net/dsa/sja1105/sja1105_ethtool.c     |  4 +-
+ drivers/net/dummy.c                           |  2 +-
+ drivers/net/ethernet/3com/3c509.c             |  2 +-
+ drivers/net/ethernet/3com/3c515.c             |  2 +-
+ drivers/net/ethernet/3com/3c589_cs.c          |  2 +-
+ drivers/net/ethernet/3com/3c59x.c             |  6 +-
+ drivers/net/ethernet/3com/typhoon.c           |  8 +--
+ drivers/net/ethernet/8390/ax88796.c           |  6 +-
+ drivers/net/ethernet/8390/etherh.c            |  6 +-
+ drivers/net/ethernet/adaptec/starfire.c       |  4 +-
+ drivers/net/ethernet/aeroflex/greth.c         |  4 +-
+ drivers/net/ethernet/agere/et131x.c           |  4 +-
+ drivers/net/ethernet/alacritech/slicoss.c     |  4 +-
+ drivers/net/ethernet/allwinner/sun4i-emac.c   |  4 +-
+ drivers/net/ethernet/alteon/acenic.c          |  6 +-
+ drivers/net/ethernet/amazon/ena/ena_ethtool.c |  4 +-
+ drivers/net/ethernet/amazon/ena/ena_netdev.c  |  2 +-
+ drivers/net/ethernet/amd/amd8111e.c           |  4 +-
+ drivers/net/ethernet/amd/au1000_eth.c         |  2 +-
+ drivers/net/ethernet/amd/nmclan_cs.c          |  2 +-
+ drivers/net/ethernet/amd/pcnet32.c            |  6 +-
+ drivers/net/ethernet/amd/sunlance.c           |  2 +-
+ drivers/net/ethernet/amd/xgbe/xgbe-ethtool.c  |  4 +-
+ .../ethernet/aquantia/atlantic/aq_ethtool.c   |  2 +-
+ drivers/net/ethernet/arc/emac_main.c          |  2 +-
+ drivers/net/ethernet/atheros/ag71xx.c         |  4 +-
+ .../ethernet/atheros/atl1c/atl1c_ethtool.c    |  4 +-
+ .../ethernet/atheros/atl1e/atl1e_ethtool.c    |  6 +-
+ drivers/net/ethernet/atheros/atlx/atl1.c      |  4 +-
+ drivers/net/ethernet/atheros/atlx/atl2.c      |  6 +-
+ drivers/net/ethernet/broadcom/b44.c           |  7 +-
+ drivers/net/ethernet/broadcom/bcm63xx_enet.c  |  5 +-
+ drivers/net/ethernet/broadcom/bcmsysport.c    |  4 +-
+ drivers/net/ethernet/broadcom/bgmac.c         |  8 +--
+ drivers/net/ethernet/broadcom/bnx2.c          |  6 +-
+ .../net/ethernet/broadcom/bnx2x/bnx2x_cmn.c   |  2 +-
+ .../ethernet/broadcom/bnx2x/bnx2x_ethtool.c   |  6 +-
+ .../net/ethernet/broadcom/bnx2x/bnx2x_main.c  |  2 +-
+ .../net/ethernet/broadcom/bnx2x/bnx2x_sriov.h |  2 +-
+ .../net/ethernet/broadcom/bnx2x/bnx2x_vfpf.c  |  2 +-
+ .../net/ethernet/broadcom/bnxt/bnxt_ethtool.c | 12 ++--
+ drivers/net/ethernet/broadcom/bnxt/bnxt_vfr.c |  2 +-
+ .../net/ethernet/broadcom/genet/bcmgenet.c    |  2 +-
+ drivers/net/ethernet/broadcom/tg3.c           |  6 +-
+ .../net/ethernet/brocade/bna/bnad_ethtool.c   |  6 +-
+ .../net/ethernet/cavium/octeon/octeon_mgmt.c  |  2 +-
+ .../ethernet/cavium/thunder/nicvf_ethtool.c   |  4 +-
+ drivers/net/ethernet/chelsio/cxgb/cxgb2.c     |  4 +-
+ .../net/ethernet/chelsio/cxgb3/cxgb3_main.c   |  4 +-
+ .../ethernet/chelsio/cxgb4/cxgb4_ethtool.c    |  4 +-
+ .../net/ethernet/chelsio/cxgb4/cxgb4_main.c   |  4 +-
+ .../ethernet/chelsio/cxgb4vf/cxgb4vf_main.c   |  4 +-
+ .../chelsio/inline_crypto/chtls/chtls_main.c  |  2 +-
+ drivers/net/ethernet/cirrus/ep93xx_eth.c      |  2 +-
+ .../net/ethernet/cisco/enic/enic_ethtool.c    |  6 +-
+ drivers/net/ethernet/davicom/dm9000.c         |  4 +-
+ drivers/net/ethernet/dec/tulip/de2104x.c      |  4 +-
+ drivers/net/ethernet/dec/tulip/dmfe.c         |  4 +-
+ drivers/net/ethernet/dec/tulip/tulip_core.c   |  4 +-
+ drivers/net/ethernet/dec/tulip/uli526x.c      |  4 +-
+ drivers/net/ethernet/dec/tulip/winbond-840.c  |  4 +-
+ drivers/net/ethernet/dlink/dl2k.c             |  4 +-
+ drivers/net/ethernet/dlink/sundance.c         |  4 +-
+ drivers/net/ethernet/dnet.c                   |  4 +-
+ drivers/net/ethernet/emulex/benet/be_cmds.c   | 16 +++--
+ .../net/ethernet/emulex/benet/be_ethtool.c    |  6 +-
+ drivers/net/ethernet/faraday/ftgmac100.c      |  5 +-
+ drivers/net/ethernet/faraday/ftmac100.c       |  5 +-
+ drivers/net/ethernet/fealnx.c                 |  4 +-
+ .../ethernet/freescale/dpaa/dpaa_ethtool.c    |  5 +-
+ .../ethernet/freescale/dpaa2/dpaa2-ethtool.c  |  8 +--
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  |  2 +-
+ .../ethernet/freescale/enetc/enetc_ethtool.c  |  4 +-
+ drivers/net/ethernet/freescale/fec_main.c     |  9 +--
+ drivers/net/ethernet/freescale/fec_ptp.c      |  2 +-
+ .../ethernet/freescale/fs_enet/fs_enet-main.c |  2 +-
+ .../net/ethernet/freescale/gianfar_ethtool.c  |  2 +-
+ .../net/ethernet/freescale/ucc_geth_ethtool.c |  4 +-
+ drivers/net/ethernet/fujitsu/fmvj18x_cs.c     |  4 +-
+ drivers/net/ethernet/google/gve/gve_ethtool.c |  6 +-
+ drivers/net/ethernet/hisilicon/hip04_eth.c    |  4 +-
+ .../net/ethernet/huawei/hinic/hinic_ethtool.c |  4 +-
+ drivers/net/ethernet/ibm/ehea/ehea_ethtool.c  |  4 +-
+ drivers/net/ethernet/ibm/emac/core.c          |  4 +-
+ drivers/net/ethernet/ibm/ibmveth.c            |  4 +-
+ drivers/net/ethernet/ibm/ibmvnic.c            |  6 +-
+ drivers/net/ethernet/intel/e100.c             |  5 +-
+ .../net/ethernet/intel/e1000/e1000_ethtool.c  |  5 +-
+ drivers/net/ethernet/intel/e1000e/ethtool.c   |  4 +-
+ drivers/net/ethernet/intel/e1000e/netdev.c    |  6 +-
+ .../net/ethernet/intel/i40e/i40e_ethtool.c    |  6 +-
+ drivers/net/ethernet/intel/i40e/i40e_main.c   | 16 ++---
+ drivers/net/ethernet/intel/i40e/i40e_ptp.c    |  2 +-
+ .../net/ethernet/intel/iavf/iavf_ethtool.c    |  6 +-
+ drivers/net/ethernet/intel/igb/igb_ethtool.c  |  6 +-
+ drivers/net/ethernet/intel/igb/igb_main.c     |  2 +-
+ drivers/net/ethernet/intel/igbvf/ethtool.c    |  4 +-
+ drivers/net/ethernet/intel/igc/igc_ethtool.c  |  4 +-
+ .../net/ethernet/intel/ixgb/ixgb_ethtool.c    |  5 +-
+ .../net/ethernet/intel/ixgbe/ixgbe_ethtool.c  |  6 +-
+ drivers/net/ethernet/intel/ixgbe/ixgbe_fcoe.c |  2 +-
+ drivers/net/ethernet/intel/ixgbe/ixgbe_main.c |  4 +-
+ drivers/net/ethernet/intel/ixgbevf/ethtool.c  |  4 +-
+ drivers/net/ethernet/jme.c                    |  6 +-
+ drivers/net/ethernet/korina.c                 |  6 +-
+ drivers/net/ethernet/lantiq_etop.c            |  6 +-
+ drivers/net/ethernet/marvell/mv643xx_eth.c    |  8 +--
+ drivers/net/ethernet/marvell/mvneta.c         |  7 +-
+ .../net/ethernet/marvell/mvpp2/mvpp2_main.c   |  7 +-
+ .../marvell/octeontx2/nic/otx2_ethtool.c      |  8 +--
+ .../marvell/prestera/prestera_ethtool.c       |  4 +-
+ drivers/net/ethernet/marvell/pxa168_eth.c     |  8 +--
+ drivers/net/ethernet/marvell/skge.c           |  6 +-
+ drivers/net/ethernet/marvell/sky2.c           |  6 +-
+ drivers/net/ethernet/mediatek/mtk_eth_soc.c   |  6 +-
+ drivers/net/ethernet/mediatek/mtk_star_emac.c |  2 +-
+ .../net/ethernet/mellanox/mlx4/en_ethtool.c   |  7 +-
+ drivers/net/ethernet/mellanox/mlx4/fw.c       |  3 +-
+ .../ethernet/mellanox/mlx5/core/en_ethtool.c  |  7 +-
+ .../net/ethernet/mellanox/mlx5/core/en_rep.c  |  6 +-
+ .../mellanox/mlx5/core/ipoib/ethtool.c        |  2 +-
+ drivers/net/ethernet/mellanox/mlxsw/core.c    |  2 +-
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c |  4 +-
+ .../mellanox/mlxsw/spectrum_ethtool.c         |  6 +-
+ .../net/ethernet/mellanox/mlxsw/switchx2.c    |  7 +-
+ drivers/net/ethernet/micrel/ks8851_common.c   |  6 +-
+ drivers/net/ethernet/micrel/ksz884x.c         |  6 +-
+ drivers/net/ethernet/microchip/enc28j60.c     |  8 +--
+ drivers/net/ethernet/microchip/encx24j600.c   |  6 +-
+ .../net/ethernet/microchip/lan743x_ethtool.c  |  6 +-
+ .../net/ethernet/myricom/myri10ge/myri10ge.c  |  8 +--
+ drivers/net/ethernet/natsemi/natsemi.c        |  6 +-
+ drivers/net/ethernet/natsemi/ns83820.c        |  7 +-
+ drivers/net/ethernet/neterion/s2io.c          |  6 +-
+ .../net/ethernet/neterion/vxge/vxge-ethtool.c |  8 +--
+ .../net/ethernet/neterion/vxge/vxge-main.c    |  2 +-
+ .../ethernet/netronome/nfp/nfp_net_ethtool.c  |  6 +-
+ drivers/net/ethernet/ni/nixge.c               |  4 +-
+ drivers/net/ethernet/nvidia/forcedeth.c       |  6 +-
+ drivers/net/ethernet/nxp/lpc_eth.c            |  6 +-
+ .../oki-semi/pch_gbe/pch_gbe_ethtool.c        |  7 +-
+ drivers/net/ethernet/packetengines/hamachi.c  |  6 +-
+ .../net/ethernet/packetengines/yellowfin.c    |  6 +-
+ .../ethernet/pensando/ionic/ionic_ethtool.c   |  6 +-
+ .../net/ethernet/pensando/ionic/ionic_lif.c   |  2 +-
+ .../qlogic/netxen/netxen_nic_ethtool.c        |  6 +-
+ drivers/net/ethernet/qlogic/qed/qed_int.c     |  2 +-
+ drivers/net/ethernet/qlogic/qed/qed_main.c    |  2 +-
+ .../net/ethernet/qlogic/qede/qede_ethtool.c   |  4 +-
+ drivers/net/ethernet/qlogic/qede/qede_main.c  |  2 +-
+ drivers/net/ethernet/qlogic/qla3xxx.c         |  6 +-
+ .../ethernet/qlogic/qlcnic/qlcnic_ethtool.c   |  6 +-
+ .../net/ethernet/qualcomm/emac/emac-ethtool.c |  2 +-
+ drivers/net/ethernet/qualcomm/qca_debug.c     |  8 +--
+ drivers/net/ethernet/rdc/r6040.c              |  6 +-
+ drivers/net/ethernet/realtek/8139cp.c         |  6 +-
+ drivers/net/ethernet/realtek/8139too.c        |  6 +-
+ drivers/net/ethernet/realtek/r8169_main.c     |  8 +--
+ drivers/net/ethernet/rocker/rocker_main.c     |  4 +-
+ .../ethernet/samsung/sxgbe/sxgbe_ethtool.c    |  4 +-
+ drivers/net/ethernet/sfc/efx.c                |  2 +-
+ drivers/net/ethernet/sfc/efx_common.c         |  2 +-
+ drivers/net/ethernet/sfc/ethtool_common.c     |  7 +-
+ drivers/net/ethernet/sfc/falcon/efx.c         |  4 +-
+ drivers/net/ethernet/sfc/falcon/ethtool.c     |  9 +--
+ drivers/net/ethernet/sfc/falcon/falcon.c      |  2 +-
+ drivers/net/ethernet/sfc/falcon/nic.c         |  2 +-
+ drivers/net/ethernet/sfc/mcdi_mon.c           |  2 +-
+ drivers/net/ethernet/sfc/nic.c                |  2 +-
+ drivers/net/ethernet/sgi/ioc3-eth.c           |  6 +-
+ drivers/net/ethernet/sis/sis190.c             |  7 +-
+ drivers/net/ethernet/sis/sis900.c             |  6 +-
+ drivers/net/ethernet/smsc/epic100.c           |  6 +-
+ drivers/net/ethernet/smsc/smc911x.c           |  6 +-
+ drivers/net/ethernet/smsc/smc91c92_cs.c       |  4 +-
+ drivers/net/ethernet/smsc/smc91x.c            |  6 +-
+ drivers/net/ethernet/smsc/smsc911x.c          |  6 +-
+ drivers/net/ethernet/smsc/smsc9420.c          |  6 +-
+ drivers/net/ethernet/socionext/netsec.c       |  4 +-
+ drivers/net/ethernet/socionext/sni_ave.c      |  4 +-
+ .../ethernet/stmicro/stmmac/stmmac_ethtool.c  |  9 +--
+ drivers/net/ethernet/sun/cassini.c            |  6 +-
+ drivers/net/ethernet/sun/ldmvsw.c             |  4 +-
+ drivers/net/ethernet/sun/niu.c                |  8 +--
+ drivers/net/ethernet/sun/sunbmac.c            |  4 +-
+ drivers/net/ethernet/sun/sungem.c             |  6 +-
+ drivers/net/ethernet/sun/sunhme.c             |  7 +-
+ drivers/net/ethernet/sun/sunqe.c              |  4 +-
+ drivers/net/ethernet/sun/sunvnet.c            |  4 +-
+ .../net/ethernet/synopsys/dwc-xlgmac-common.c |  4 +-
+ .../ethernet/synopsys/dwc-xlgmac-ethtool.c    |  6 +-
+ drivers/net/ethernet/tehuti/tehuti.c          |  8 +--
+ drivers/net/ethernet/ti/am65-cpsw-ethtool.c   |  4 +-
+ drivers/net/ethernet/ti/cpmac.c               |  4 +-
+ drivers/net/ethernet/ti/cpsw.c                |  6 +-
+ drivers/net/ethernet/ti/cpsw_new.c            |  6 +-
+ drivers/net/ethernet/ti/davinci_emac.c        |  4 +-
+ drivers/net/ethernet/ti/tlan.c                |  8 +--
+ drivers/net/ethernet/toshiba/ps3_gelic_net.c  |  4 +-
+ .../net/ethernet/toshiba/spider_net_ethtool.c |  8 +--
+ drivers/net/ethernet/toshiba/tc35815.c        |  6 +-
+ drivers/net/ethernet/via/via-rhine.c          |  4 +-
+ drivers/net/ethernet/via/via-velocity.c       | 10 +--
+ drivers/net/ethernet/wiznet/w5100.c           |  6 +-
+ drivers/net/ethernet/wiznet/w5300.c           |  6 +-
+ .../net/ethernet/xilinx/xilinx_axienet_main.c |  4 +-
+ drivers/net/ethernet/xilinx/xilinx_emaclite.c |  2 +-
+ drivers/net/ethernet/xircom/xirc2ps_cs.c      |  2 +-
+ drivers/net/ethernet/xscale/ixp4xx_eth.c      |  4 +-
+ drivers/net/fjes/fjes_ethtool.c               |  6 +-
+ drivers/net/geneve.c                          |  4 +-
+ drivers/net/hyperv/netvsc_drv.c               |  4 +-
+ drivers/net/ipvlan/ipvlan_main.c              |  4 +-
+ drivers/net/macvlan.c                         |  4 +-
+ drivers/net/net_failover.c                    |  4 +-
+ drivers/net/netconsole.c                      | 10 +--
+ drivers/net/ntb_netdev.c                      |  6 +-
+ drivers/net/phy/adin.c                        |  4 +-
+ drivers/net/phy/bcm-phy-lib.c                 |  4 +-
+ drivers/net/phy/marvell.c                     |  2 +-
+ drivers/net/phy/micrel.c                      |  4 +-
+ drivers/net/phy/mscc/mscc_main.c              |  4 +-
+ drivers/net/phy/phy_device.c                  |  2 +-
+ drivers/net/rionet.c                          |  8 +--
+ drivers/net/team/team.c                       |  4 +-
+ drivers/net/tun.c                             |  8 +--
+ drivers/net/usb/aqc111.c                      |  2 +-
+ drivers/net/usb/asix_common.c                 |  4 +-
+ drivers/net/usb/catc.c                        |  4 +-
+ drivers/net/usb/pegasus.c                     |  4 +-
+ drivers/net/usb/r8152.c                       |  8 +--
+ drivers/net/usb/rtl8150.c                     |  4 +-
+ drivers/net/usb/sierra_net.c                  |  4 +-
+ drivers/net/usb/usbnet.c                      |  4 +-
+ drivers/net/veth.c                            |  4 +-
+ drivers/net/virtio_net.c                      |  6 +-
+ drivers/net/vmxnet3/vmxnet3_ethtool.c         |  6 +-
+ drivers/net/vrf.c                             |  4 +-
+ drivers/net/vxlan.c                           |  4 +-
+ drivers/net/wimax/i2400m/netdev.c             |  8 +--
+ drivers/net/wimax/i2400m/usb.c                |  4 +-
+ drivers/net/wireless/ath/ath10k/coredump.c    |  6 +-
+ drivers/net/wireless/ath/ath10k/qmi.c         |  5 +-
+ drivers/net/wireless/ath/ath11k/qmi.c         |  6 +-
+ drivers/net/wireless/ath/ath6kl/init.c        |  4 +-
+ drivers/net/wireless/ath/carl9170/fw.c        |  2 +-
+ drivers/net/wireless/ath/wil6210/main.c       |  2 +-
+ drivers/net/wireless/ath/wil6210/netdev.c     |  2 +-
+ drivers/net/wireless/ath/wil6210/wmi.c        |  2 +-
+ drivers/net/wireless/atmel/atmel.c            |  3 +-
+ drivers/net/wireless/broadcom/b43/leds.c      |  2 +-
+ .../net/wireless/broadcom/b43legacy/leds.c    |  2 +-
+ .../broadcom/brcm80211/brcmfmac/common.c      |  8 +--
+ .../broadcom/brcm80211/brcmfmac/core.c        |  8 +--
+ .../broadcom/brcm80211/brcmfmac/firmware.c    |  5 +-
+ .../broadcom/brcm80211/brcmfmac/fwsignal.c    |  2 +-
+ drivers/net/wireless/intel/ipw2x00/ipw2100.c  |  6 +-
+ drivers/net/wireless/intel/ipw2x00/ipw2200.c  |  7 +-
+ .../net/wireless/intel/iwlegacy/3945-mac.c    |  2 +-
+ .../wireless/intersil/hostap/hostap_ioctl.c   |  2 +-
+ .../wireless/intersil/prism54/islpci_dev.c    |  4 +-
+ .../net/wireless/marvell/libertas/ethtool.c   |  4 +-
+ drivers/net/wireless/marvell/mwifiex/main.c   |  3 +-
+ .../mediatek/mt76/mt7615/mt7615_trace.h       |  2 +-
+ .../wireless/mediatek/mt76/mt76x02_trace.h    |  2 +-
+ drivers/net/wireless/mediatek/mt76/trace.h    |  2 +-
+ .../net/wireless/mediatek/mt76/usb_trace.h    |  2 +-
+ drivers/net/wireless/mediatek/mt7601u/trace.h |  2 +-
+ drivers/net/wireless/microchip/wilc1000/mon.c |  2 +-
+ .../net/wireless/quantenna/qtnfmac/cfg80211.c |  2 +-
+ .../net/wireless/quantenna/qtnfmac/commands.c |  2 +-
+ .../wireless/realtek/rtl818x/rtl8187/leds.c   |  2 +-
+ drivers/net/wireless/wl3501_cs.c              |  8 +--
+ drivers/nvme/host/core.c                      |  2 +-
+ drivers/nvme/host/fabrics.c                   |  2 +-
+ drivers/nvme/target/admin-cmd.c               |  2 +-
+ drivers/nvme/target/discovery.c               |  2 +-
+ drivers/of/base.c                             |  2 +-
+ drivers/of/fdt.c                              |  6 +-
+ drivers/of/unittest.c                         |  2 +-
+ drivers/parisc/led.c                          |  2 +-
+ drivers/phy/allwinner/phy-sun4i-usb.c         |  2 +-
+ drivers/platform/x86/i2c-multi-instantiate.c  |  2 +-
+ .../platform/x86/intel_cht_int33fe_typec.c    |  6 +-
+ drivers/platform/x86/surface3_power.c         |  2 +-
+ drivers/platform/x86/thinkpad_acpi.c          |  5 +-
+ drivers/remoteproc/qcom_sysmon.c              |  2 +-
+ drivers/rpmsg/qcom_glink_ssr.c                |  2 +-
+ drivers/s390/block/dasd_devmap.c              |  2 +-
+ drivers/s390/block/dasd_eer.c                 |  4 +-
+ drivers/s390/block/dcssblk.c                  |  2 +-
+ drivers/s390/char/diag_ftp.c                  |  4 +-
+ drivers/s390/char/hmcdrv_cache.c              |  2 +-
+ drivers/s390/char/sclp_ftp.c                  |  6 +-
+ drivers/s390/char/tape_class.c                |  4 +-
+ drivers/s390/cio/qdio_debug.c                 |  2 +-
+ drivers/s390/net/ctcm_main.c                  |  2 +-
+ drivers/s390/net/fsm.c                        |  2 +-
+ drivers/s390/net/qeth_ethtool.c               |  4 +-
+ drivers/s390/scsi/zfcp_aux.c                  |  2 +-
+ drivers/s390/scsi/zfcp_fc.c                   | 10 +--
+ drivers/scsi/3w-9xxx.c                        |  2 +-
+ drivers/scsi/aacraid/aachba.c                 |  4 +-
+ drivers/scsi/bfa/bfa_fcbuild.c                |  4 +-
+ drivers/scsi/bfa/bfa_fcs.c                    |  6 +-
+ drivers/scsi/bfa/bfa_fcs_lport.c              | 25 ++++---
+ drivers/scsi/bfa/bfa_ioc.c                    |  2 +-
+ drivers/scsi/bfa/bfa_svc.c                    |  2 +-
+ drivers/scsi/bfa/bfad.c                       | 10 +--
+ drivers/scsi/bfa/bfad_attr.c                  |  4 +-
+ drivers/scsi/bfa/bfad_bsg.c                   |  6 +-
+ drivers/scsi/bfa/bfad_im.c                    |  2 +-
+ drivers/scsi/bnx2i/bnx2i_init.c               |  2 +-
+ drivers/scsi/fcoe/fcoe_transport.c            |  2 +-
+ drivers/scsi/gdth.c                           |  6 +-
+ drivers/scsi/ibmvscsi/ibmvscsi.c              |  8 +--
+ drivers/scsi/lpfc/lpfc_attr.c                 |  6 +-
+ drivers/scsi/lpfc/lpfc_hbadisc.c              |  2 +-
+ drivers/scsi/ncr53c8xx.c                      |  2 +-
+ drivers/scsi/qedi/qedi_main.c                 |  2 +-
+ drivers/scsi/qla2xxx/qla_init.c               | 16 ++---
+ drivers/scsi/qla2xxx/qla_mr.c                 | 20 +++---
+ drivers/scsi/qla4xxx/ql4_mbx.c                |  8 +--
+ drivers/scsi/qla4xxx/ql4_os.c                 | 14 ++--
+ drivers/scsi/smartpqi/smartpqi_init.c         |  2 +-
+ drivers/scsi/sym53c8xx_2/sym_glue.c           |  2 +-
+ drivers/scsi/ufs/ufs-qcom.c                   |  2 +-
+ drivers/soc/fsl/qe/qe.c                       |  5 +-
+ drivers/soc/qcom/smp2p.c                      |  2 +-
+ drivers/spi/spi.c                             |  4 +-
+ drivers/staging/comedi/comedi_fops.c          |  4 +-
+ .../staging/fsl-dpaa2/ethsw/ethsw-ethtool.c   |  6 +-
+ drivers/staging/greybus/audio_helper.c        |  2 +-
+ drivers/staging/greybus/audio_module.c        |  2 +-
+ drivers/staging/greybus/audio_topology.c      |  6 +-
+ drivers/staging/greybus/power_supply.c        |  2 +-
+ drivers/staging/greybus/spilib.c              |  4 +-
+ drivers/staging/most/sound/sound.c            |  2 +-
+ drivers/staging/most/video/video.c            |  6 +-
+ drivers/staging/nvec/nvec_ps2.c               |  4 +-
+ drivers/staging/octeon/ethernet-mdio.c        |  6 +-
+ drivers/staging/olpc_dcon/olpc_dcon.c         |  2 +-
+ drivers/staging/qlge/qlge_ethtool.c           |  6 +-
+ .../staging/rtl8188eu/os_dep/ioctl_linux.c    |  2 +-
+ .../staging/rtl8192e/rtl8192e/rtl_ethtool.c   |  6 +-
+ .../rtl8192u/ieee80211/ieee80211_softmac_wx.c |  2 +-
+ drivers/staging/rtl8712/rtl871x_ioctl_linux.c |  2 +-
+ drivers/staging/sm750fb/sm750.c               |  2 +-
+ .../target/iscsi/iscsi_target_parameters.c    |  4 +-
+ drivers/target/iscsi/iscsi_target_util.c      | 12 ++--
+ drivers/target/target_core_configfs.c         | 44 +++++--------
+ drivers/target/target_core_device.c           |  6 +-
+ drivers/target/target_core_user.c             |  4 +-
+ drivers/thermal/thermal_core.c                |  4 +-
+ drivers/thermal/thermal_hwmon.c               |  2 +-
+ drivers/tty/hvc/hvcs.c                        |  2 +-
+ drivers/tty/serial/earlycon.c                 |  6 +-
+ drivers/tty/serial/serial_core.c              |  2 +-
+ drivers/tty/serial/sunsu.c                    |  6 +-
+ drivers/tty/serial/sunzilog.c                 |  9 ++-
+ drivers/tty/vt/keyboard.c                     |  7 +-
+ drivers/usb/atm/usbatm.c                      |  2 +-
+ drivers/usb/core/devio.c                      |  3 +-
+ drivers/usb/gadget/function/f_fs.c            |  2 +-
+ drivers/usb/gadget/function/f_midi.c          |  4 +-
+ drivers/usb/gadget/function/f_printer.c       |  8 +--
+ drivers/usb/gadget/function/f_uvc.c           |  2 +-
+ drivers/usb/gadget/function/u_audio.c         |  6 +-
+ drivers/usb/gadget/function/u_ether.c         |  8 +--
+ drivers/usb/gadget/function/uvc_v4l2.c        |  6 +-
+ drivers/usb/gadget/udc/omap_udc.c             |  2 +-
+ drivers/usb/misc/usb251xb.c                   |  6 +-
+ drivers/usb/storage/onetouch.c                |  2 +-
+ drivers/usb/typec/tcpm/fusb302.c              |  2 +-
+ drivers/usb/usbip/stub_main.c                 |  8 +--
+ drivers/video/console/sticore.c               |  2 +-
+ drivers/video/fbdev/aty/atyfb_base.c          |  2 +-
+ drivers/video/fbdev/aty/radeon_base.c         |  2 +-
+ drivers/video/fbdev/bw2.c                     |  2 +-
+ drivers/video/fbdev/cirrusfb.c                |  2 +-
+ drivers/video/fbdev/clps711x-fb.c             |  2 +-
+ drivers/video/fbdev/core/fbcon.c              |  2 +-
+ drivers/video/fbdev/cyber2000fb.c             |  8 +--
+ drivers/video/fbdev/ffb.c                     |  2 +-
+ drivers/video/fbdev/geode/gx1fb_core.c        |  8 ++-
+ drivers/video/fbdev/gxt4500.c                 |  2 +-
+ drivers/video/fbdev/i740fb.c                  |  2 +-
+ drivers/video/fbdev/imxfb.c                   |  2 +-
+ drivers/video/fbdev/matrox/matroxfb_base.c    |  7 +-
+ .../video/fbdev/omap2/omapfb/omapfb-main.c    |  2 +-
+ drivers/video/fbdev/pxa168fb.c                |  2 +-
+ drivers/video/fbdev/pxafb.c                   |  2 +-
+ drivers/video/fbdev/s3fb.c                    |  2 +-
+ drivers/video/fbdev/simplefb.c                |  2 +-
+ drivers/video/fbdev/sis/sis_main.c            |  4 +-
+ drivers/video/fbdev/sm501fb.c                 |  2 +-
+ drivers/video/fbdev/sstfb.c                   |  2 +-
+ drivers/video/fbdev/sunxvr1000.c              |  2 +-
+ drivers/video/fbdev/sunxvr2500.c              |  2 +-
+ drivers/video/fbdev/sunxvr500.c               |  2 +-
+ drivers/video/fbdev/tcx.c                     |  2 +-
+ drivers/video/fbdev/tdfxfb.c                  |  4 +-
+ drivers/video/fbdev/tgafb.c                   |  2 +-
+ drivers/video/fbdev/tridentfb.c               |  2 +-
+ drivers/virt/vboxguest/vboxguest_core.c       |  3 +-
+ drivers/w1/masters/sgi_w1.c                   |  2 +-
+ drivers/watchdog/diag288_wdt.c                | 12 ++--
+ drivers/xen/xen-scsiback.c                    |  2 +-
+ drivers/xen/xenbus/xenbus_probe_frontend.c    |  2 +-
+ fs/9p/vfs_inode.c                             |  4 +-
+ fs/affs/super.c                               |  2 +-
+ fs/befs/btree.c                               |  2 +-
+ fs/befs/linuxvfs.c                            |  2 +-
+ fs/btrfs/check-integrity.c                    |  2 +-
+ fs/char_dev.c                                 |  2 +-
+ fs/cifs/cifs_unicode.c                        |  2 +-
+ fs/cifs/cifsroot.c                            |  2 +-
+ fs/cifs/connect.c                             |  2 +-
+ fs/cifs/smb2pdu.c                             |  2 +-
+ fs/dlm/config.c                               |  6 +-
+ fs/exec.c                                     |  2 +-
+ fs/ext4/file.c                                |  2 +-
+ fs/gfs2/ops_fstype.c                          | 10 +--
+ fs/hostfs/hostfs_kern.c                       |  2 +-
+ fs/kernfs/dir.c                               | 27 ++++----
+ fs/lockd/host.c                               |  2 +-
+ fs/nfs/nfs4client.c                           |  2 +-
+ fs/nfs/nfsroot.c                              |  4 +-
+ fs/nfsd/nfs4idmap.c                           |  8 +--
+ fs/nfsd/nfssvc.c                              |  3 +-
+ fs/ocfs2/dlmfs/dlmfs.c                        |  2 +-
+ fs/ocfs2/stackglue.c                          |  4 +-
+ fs/ocfs2/super.c                              | 10 +--
+ fs/proc/kcore.c                               |  2 +-
+ fs/reiserfs/procfs.c                          |  4 +-
+ fs/super.c                                    |  4 +-
+ fs/vboxsf/super.c                             |  2 +-
+ include/linux/gameport.h                      |  2 +-
+ include/linux/suspend.h                       |  2 +-
+ include/rdma/rdma_vt.h                        |  2 +-
+ include/trace/events/kyber.h                  |  8 +--
+ include/trace/events/task.h                   |  2 +-
+ include/trace/events/wbt.h                    |  8 +--
+ init/do_mounts.c                              |  2 +-
+ init/main.c                                   |  4 +-
+ kernel/acct.c                                 |  2 +-
+ kernel/cgroup/cgroup-v1.c                     |  4 +-
+ kernel/cgroup/cgroup.c                        |  2 +-
+ kernel/events/core.c                          |  6 +-
+ kernel/kallsyms.c                             |  4 +-
+ kernel/kprobes.c                              |  2 +-
+ kernel/module.c                               | 17 +++--
+ kernel/params.c                               |  2 +-
+ kernel/printk/printk.c                        |  2 +-
+ kernel/relay.c                                |  4 +-
+ kernel/sched/fair.c                           |  6 +-
+ kernel/time/clocksource.c                     |  2 +-
+ kernel/trace/ftrace.c                         | 19 +++---
+ kernel/trace/trace.c                          |  8 +--
+ kernel/trace/trace_boot.c                     |  8 +--
+ kernel/trace/trace_events.c                   |  2 +-
+ kernel/trace/trace_events_inject.c            |  6 +-
+ kernel/trace/trace_kprobe.c                   |  2 +-
+ kernel/trace/trace_probe.c                    |  2 +-
+ kernel/trace/trace_uprobe.c                   | 11 ++--
+ lib/dynamic_debug.c                           |  2 +-
+ lib/earlycpio.c                               |  2 +-
+ lib/kobject_uevent.c                          |  6 +-
+ mm/dmapool.c                                  |  2 +-
+ mm/kasan/report.c                             |  2 +-
+ mm/zswap.c                                    |  2 +-
+ net/8021q/vlan_dev.c                          |  6 +-
+ net/ax25/af_ax25.c                            |  2 +-
+ net/bluetooth/hidp/core.c                     |  6 +-
+ net/bridge/br_device.c                        |  8 +--
+ net/bridge/br_sysfs_if.c                      |  4 +-
+ net/bridge/netfilter/ebtables.c               |  2 +-
+ net/caif/caif_dev.c                           |  3 +-
+ net/caif/caif_usb.c                           |  2 +-
+ net/caif/cfcnfg.c                             |  4 +-
+ net/caif/cfctrl.c                             |  2 +-
+ net/core/dev.c                                |  6 +-
+ net/core/devlink.c                            |  6 +-
+ net/core/drop_monitor.c                       |  2 +-
+ net/core/netpoll.c                            |  4 +-
+ net/dsa/master.c                              |  2 +-
+ net/dsa/slave.c                               |  6 +-
+ net/ethtool/ioctl.c                           |  6 +-
+ net/ieee802154/trace.h                        |  2 +-
+ net/ipv4/arp.c                                |  2 +-
+ net/ipv4/ip_tunnel.c                          |  4 +-
+ net/ipv4/ipconfig.c                           | 10 +--
+ net/ipv6/ip6_gre.c                            |  2 +-
+ net/ipv6/ip6_tunnel.c                         |  2 +-
+ net/ipv6/ip6_vti.c                            |  2 +-
+ net/ipv6/sit.c                                |  2 +-
+ net/l2tp/l2tp_eth.c                           |  4 +-
+ net/mac80211/iface.c                          |  2 +-
+ net/mac80211/trace.h                          |  2 +-
+ net/mac802154/trace.h                         |  2 +-
+ net/netfilter/ipset/ip_set_core.c             |  4 +-
+ net/netfilter/ipset/ip_set_hash_netiface.c    |  2 +-
+ net/netfilter/ipvs/ip_vs_ctl.c                |  8 +--
+ net/netfilter/nf_log.c                        |  4 +-
+ net/netfilter/nf_tables_api.c                 |  2 +-
+ net/netfilter/nft_osf.c                       |  2 +-
+ net/netfilter/x_tables.c                      | 20 +++---
+ net/netfilter/xt_RATEEST.c                    |  2 +-
+ net/openvswitch/vport-internal_dev.c          |  2 +-
+ net/packet/af_packet.c                        |  4 +-
+ net/sched/act_api.c                           |  2 +-
+ net/sched/sch_api.c                           |  2 +-
+ net/sched/sch_teql.c                          |  2 +-
+ net/sunrpc/clnt.c                             |  6 +-
+ net/sunrpc/svc.c                              |  8 +--
+ net/sunrpc/xprtsock.c                         |  2 +-
+ net/wireless/ethtool.c                        | 12 ++--
+ net/wireless/trace.h                          |  2 +-
+ samples/trace_events/trace-events-sample.h    |  2 +-
+ samples/v4l/v4l2-pci-skeleton.c               | 10 +--
+ security/integrity/ima/ima_api.c              |  2 +-
+ security/integrity/ima/ima_policy.c           |  8 ++-
+ security/keys/request_key_auth.c              |  2 +-
+ sound/aoa/codecs/onyx.c                       |  2 +-
+ sound/aoa/codecs/tas.c                        |  2 +-
+ sound/aoa/codecs/toonie.c                     |  2 +-
+ sound/aoa/core/alsa.c                         |  9 +--
+ sound/aoa/fabrics/layout.c                    |  8 +--
+ sound/aoa/soundbus/sysfs.c                    |  2 +-
+ sound/arm/aaci.c                              |  7 +-
+ sound/arm/pxa2xx-ac97.c                       |  2 +-
+ sound/core/compress_offload.c                 |  2 +-
+ sound/core/control.c                          | 16 ++---
+ sound/core/ctljack.c                          |  2 +-
+ sound/core/hwdep.c                            |  6 +-
+ sound/core/init.c                             |  4 +-
+ sound/core/oss/mixer_oss.c                    | 19 ++++--
+ sound/core/pcm.c                              |  2 +-
+ sound/core/pcm_native.c                       |  6 +-
+ sound/core/rawmidi.c                          |  2 +-
+ sound/core/seq/oss/seq_oss_midi.c             |  4 +-
+ sound/core/seq/oss/seq_oss_synth.c            |  6 +-
+ sound/core/seq/seq_clientmgr.c                |  2 +-
+ sound/core/seq/seq_ports.c                    |  6 +-
+ sound/core/timer.c                            | 10 +--
+ sound/core/timer_compat.c                     |  4 +-
+ sound/drivers/opl3/opl3_oss.c                 |  2 +-
+ sound/drivers/opl3/opl3_synth.c               |  2 +-
+ sound/firewire/bebob/bebob_hwdep.c            |  2 +-
+ sound/firewire/dice/dice-hwdep.c              |  2 +-
+ sound/firewire/digi00x/digi00x-hwdep.c        |  2 +-
+ sound/firewire/fireface/ff-hwdep.c            |  2 +-
+ sound/firewire/fireworks/fireworks_hwdep.c    |  2 +-
+ sound/firewire/motu/motu-hwdep.c              |  2 +-
+ sound/firewire/oxfw/oxfw-hwdep.c              |  2 +-
+ sound/firewire/tascam/tascam-hwdep.c          |  2 +-
+ sound/i2c/i2c.c                               |  4 +-
+ sound/isa/ad1848/ad1848.c                     |  4 +-
+ sound/isa/cs423x/cs4231.c                     |  4 +-
+ sound/isa/cs423x/cs4236.c                     |  4 +-
+ sound/isa/es1688/es1688.c                     |  4 +-
+ sound/isa/sb/sb16_csp.c                       |  3 +-
+ sound/isa/sb/sb_mixer.c                       |  2 +-
+ sound/oss/dmasound/dmasound_core.c            |  4 +-
+ sound/pci/cs5535audio/cs5535audio_olpc.c      |  4 +-
+ sound/pci/ctxfi/ctpcm.c                       |  2 +-
+ sound/pci/emu10k1/emu10k1.c                   |  4 +-
+ sound/pci/emu10k1/emu10k1_main.c              |  2 +-
+ sound/pci/emu10k1/emufx.c                     |  7 +-
+ sound/pci/es1968.c                            |  2 +-
+ sound/pci/fm801.c                             |  2 +-
+ sound/pci/hda/hda_auto_parser.c               |  2 +-
+ sound/pci/hda/hda_codec.c                     |  2 +-
+ sound/pci/hda/hda_controller.c                |  2 +-
+ sound/pci/hda/hda_eld.c                       |  2 +-
+ sound/pci/hda/hda_generic.c                   |  2 +-
+ sound/pci/hda/hda_intel.c                     |  2 +-
+ sound/pci/hda/hda_jack.c                      |  2 +-
+ sound/pci/ice1712/juli.c                      |  2 +-
+ sound/pci/ice1712/psc724.c                    |  8 +--
+ sound/pci/ice1712/quartet.c                   |  2 +-
+ sound/pci/ice1712/wm8776.c                    |  2 +-
+ sound/pci/lola/lola.c                         |  2 +-
+ sound/pci/lola/lola_pcm.c                     |  2 +-
+ sound/pci/rme9652/hdspm.c                     |  4 +-
+ sound/ppc/keywest.c                           |  2 +-
+ sound/soc/qcom/qdsp6/q6afe.c                  |  4 +-
+ sound/soc/sh/rcar/core.c                      |  2 +-
+ sound/usb/bcd2000/bcd2000.c                   |  2 +-
+ sound/usb/caiaq/audio.c                       |  2 +-
+ sound/usb/caiaq/device.c                      |  6 +-
+ sound/usb/caiaq/midi.c                        |  2 +-
+ sound/usb/card.c                              |  8 +--
+ sound/usb/hiface/chip.c                       |  8 ++-
+ sound/usb/hiface/pcm.c                        |  2 +-
+ sound/usb/mixer.c                             | 19 +++---
+ sound/usb/mixer_quirks.c                      |  3 +-
+ sound/usb/mixer_scarlett.c                    |  2 +-
+ sound/usb/mixer_scarlett_gen2.c               |  2 +-
+ sound/usb/mixer_us16x08.c                     |  2 +-
+ sound/x86/intel_hdmi_audio.c                  |  2 +-
+ sound/xen/xen_snd_front_cfg.c                 |  2 +-
+ tools/perf/arch/x86/util/event.c              |  2 +-
+ tools/perf/arch/x86/util/machine.c            |  2 +-
+ tools/perf/builtin-buildid-cache.c            |  6 +-
+ tools/perf/jvmti/libjvmti.c                   |  2 +-
+ tools/perf/ui/tui/helpline.c                  |  2 +-
+ tools/perf/util/annotate.c                    |  2 +-
+ tools/perf/util/auxtrace.c                    |  2 +-
+ tools/perf/util/dso.c                         |  2 +-
+ .../util/intel-pt-decoder/intel-pt-decoder.c  |  2 +-
+ tools/perf/util/llvm-utils.c                  |  4 +-
+ tools/perf/util/machine.c                     |  6 +-
+ tools/perf/util/parse-events.c                |  2 +-
+ tools/perf/util/probe-file.c                  |  2 +-
+ tools/perf/util/svghelper.c                   |  2 +-
+ tools/perf/util/symbol.c                      |  2 +-
+ tools/perf/util/synthetic-events.c            |  4 +-
+ 928 files changed, 1904 insertions(+), 1860 deletions(-)
+
+-- 
+2.29.2
+
