@@ -1,21 +1,21 @@
-Return-Path: <SRS0=MPbh=FM=lists.openwall.com=kernel-hardening-return-20539-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=5htq=FM=lists.openwall.com=kernel-hardening-return-20540-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 61114C4361B
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Dec 2020 00:47:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 384A2C4361B
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Dec 2020 12:25:06 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6E2A323A04
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Dec 2020 00:47:22 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6E2A323A04
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20539-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16293 invoked by uid 550); 8 Dec 2020 00:47:14 -0000
+	by mail.kernel.org (Postfix) with SMTP id 54040239D0
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Dec 2020 12:25:04 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 54040239D0
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20540-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3506 invoked by uid 550); 8 Dec 2020 12:24:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,77 +23,139 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16272 invoked from network); 8 Dec 2020 00:47:14 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=VZHUufd0g6UdJFDVTYdblkgbgMRwbf0Y/fHI7mLRtWU=;
-        b=l8tTsbTg21o1/hkJDil01QyPt1S+hNNQArxmXVMWZl+14KG3cwUPD9yhA9zz5er/OS
-         WYmStLyhnHG81FxqOu7c5y430buEHIvhm1Kow/NQKRBzNLmEZELihteVRg5vdXuLfAHG
-         rCoL22aDgnYFYdg61Z5cuWrNOH2SbjzbnuSM9xLI1c/BWw55NcLnaGoD4ziICgb+XXXK
-         ZeF6QVt5WjFDXfuParnupBwgMVJIt4Nk49/ME1JGFmKbptXtgpSroyIdGE0tbGMqLfhi
-         B0JM0p8wI/gGSE0p8C1IQpscG2TL91p7V58n7vS9habhu8GuNnQ8wlQktv+vR8fmUA6f
-         4RyQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=VZHUufd0g6UdJFDVTYdblkgbgMRwbf0Y/fHI7mLRtWU=;
-        b=O+0c7H3q96SDBncSNOCIqczt9AqY8pvsGmPGyhknConxtiKoWUywEDQKhMsTcdeGXZ
-         Ue8OZBB9Is1pPgKkP8myXAEaAPXdLsA6BfSrGdSNIzhxRcl62O3dM9lJDYwxO5JmUKW8
-         fPthhm7csk95zyt1xkH6AOZ9cWttJuZsIkf1rDRi2ip4JiUCYc0l88Le3/LEPL3clme6
-         Jy0CF3eyRm4Y5aiTjLbEuS8LKpfXmPSghYUxJcloH8xtIjZ6R/7WHI/EMr0mt84VtT30
-         2+ZPgSynwq8qrHZouJOM3e0ro/j4LNJYNifOwqcA18BBVW5IrPJKzoPSjerYrIiT5Glk
-         1eQQ==
-X-Gm-Message-State: AOAM532YIICVmrtGRr+HzgpdofawU8dbB6eeUlVcG51K9AaAjCL4DMii
-	aBWvmhkj1cM1DNMiRSNvQ58=
-X-Google-Smtp-Source: ABdhPJxkqh2BZJT/hzS1hsNzGm89wAIBgMDItnp0jBYXVFcXuYuBQBr+FGcdnMvIwDpLuGTDZMUazw==
-X-Received: by 2002:ac8:51d8:: with SMTP id d24mr14423965qtn.73.1607388422238;
-        Mon, 07 Dec 2020 16:47:02 -0800 (PST)
-Date: Mon, 7 Dec 2020 17:46:59 -0700
-From: Nathan Chancellor <natechancellor@gmail.com>
-To: Sami Tolvanen <samitolvanen@google.com>
-Cc: Nick Desaulniers <ndesaulniers@google.com>,
-	Will Deacon <will@kernel.org>,
-	Masahiro Yamada <masahiroy@kernel.org>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Josh Poimboeuf <jpoimboe@redhat.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Paul E. McKenney" <paulmck@kernel.org>,
-	Kees Cook <keescook@chromium.org>,
-	clang-built-linux <clang-built-linux@googlegroups.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	linux-arm-kernel <linux-arm-kernel@lists.infradead.org>,
-	linux-kbuild <linux-kbuild@vger.kernel.org>,
-	LKML <linux-kernel@vger.kernel.org>,
-	PCI <linux-pci@vger.kernel.org>, Jian Cai <jiancai@google.com>,
-	Kristof Beyls <Kristof.Beyls@arm.com>
-Subject: Re: [PATCH v8 00/16] Add support for Clang LTO
-Message-ID: <20201208004659.GA587492@ubuntu-m3-large-x86>
-References: <20201201213707.541432-1-samitolvanen@google.com>
- <20201203112622.GA31188@willie-the-truck>
- <CABCJKueby8pUoN7f5=6RoyLSt4PgWNx8idUej0sNwAi0F3Xqzw@mail.gmail.com>
- <20201203182252.GA32011@willie-the-truck>
- <CAKwvOdnvq=L=gQMv9MHaStmKMOuD5jvffzMedhp3gytYB6R7TQ@mail.gmail.com>
- <CABCJKufgkq+k0DeYaXrzjXniy=T_N4sN1bxoK9=cUxTZN5xSVQ@mail.gmail.com>
- <20201206065028.GA2819096@ubuntu-m3-large-x86>
- <CABCJKue9TJnhge6TVPj9vfZXPGD4RW2JYiN3kNwVKNovTCq8ZA@mail.gmail.com>
+Received: (qmail 28251 invoked from network); 8 Dec 2020 12:16:01 -0000
+X-Gm-Message-State: AOAM533JozTTD8YD/wy3iXMqL5LWCe3geaiVJnCkPIQhR/kU/+zuMMWK
+	HMR2F6ChGNOTEEMmFTs6R80LrV2+HbnNfOT9XYY=
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=k20201202; t=1607429749;
+	bh=K94MQ6q50UGiEvhj+VB0lG6N0jZujxUWTttppsr8gwM=;
+	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
+	b=Ns4p/v7H7ScAMGSZF+uiL0GLrzuK92X4fsakgAnSLuAme/K5fEsEi38bY3jw803Wy
+	 audkXq/WYB7RTMZ3yOuTK6onrxqVBtnoYqkkvLnvpNRPrQxrYcO6XAo70lbZp3Wa4T
+	 9qu4teHx4OR4D7tI19aZUR6LPG7nQ4wU5rtl2vcxyqBk81XPqwKBpVKsGaiwHXIJuy
+	 PuNNq9XDDyWTO1GKhaqTq1XoK2qrf9wdaOmxVotAI6FaDwC0nVzQIN5BYHWvkh+7Pl
+	 TIDC46XqhgPtl/QkCcf02gs7jdiOHkHzlufEr692R+gOJKVmFAwvvzdy3POnIF8teL
+	 9TV0RUdUG0tPw==
+X-Google-Smtp-Source: ABdhPJwYXzEbw5wojirREdrWvTDFdS68u6lSRc1TxQHV80oZ08BdPpLLWGJpTl+WAoAqOweiNLoKVC/CXI7Rr5nYmRU=
+X-Received: by 2002:a05:6808:9a9:: with SMTP id e9mr2451121oig.4.1607429748222;
+ Tue, 08 Dec 2020 04:15:48 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CABCJKue9TJnhge6TVPj9vfZXPGD4RW2JYiN3kNwVKNovTCq8ZA@mail.gmail.com>
+References: <20201201213707.541432-1-samitolvanen@google.com>
+In-Reply-To: <20201201213707.541432-1-samitolvanen@google.com>
+From: Arnd Bergmann <arnd@kernel.org>
+Date: Tue, 8 Dec 2020 13:15:31 +0100
+X-Gmail-Original-Message-ID: <CAK8P3a1WEAo2SEgKUEs3SB7n7QeeHa0=cx_nO==rDK0jjDArow@mail.gmail.com>
+Message-ID: <CAK8P3a1WEAo2SEgKUEs3SB7n7QeeHa0=cx_nO==rDK0jjDArow@mail.gmail.com>
+Subject: Re: [PATCH v8 00/16] Add support for Clang LTO
+To: Sami Tolvanen <samitolvanen@google.com>
+Cc: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Will Deacon <will@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, 
+	Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
+	"Paul E. McKenney" <paulmck@kernel.org>, Kees Cook <keescook@chromium.org>, 
+	Nick Desaulniers <ndesaulniers@google.com>, 
+	clang-built-linux <clang-built-linux@googlegroups.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
+	Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, 
+	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-pci <linux-pci@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-On Sun, Dec 06, 2020 at 12:09:31PM -0800, Sami Tolvanen wrote:
-> Sure, looks good to me. However, I think we should also test for
-> LLVM=1 to avoid possible further issues with mismatched toolchains
-> instead of only checking for llvm-nm and llvm-ar.
+On Tue, Dec 1, 2020 at 10:37 PM 'Sami Tolvanen' via Clang Built Linux
+<clang-built-linux@googlegroups.com> wrote:
+>
+> This patch series adds support for building the kernel with Clang's
+> Link Time Optimization (LTO). In addition to performance, the primary
+> motivation for LTO is to allow Clang's Control-Flow Integrity (CFI)
+> to be used in the kernel. Google has shipped millions of Pixel
+> devices running three major kernel versions with LTO+CFI since 2018.
+>
+> Most of the patches are build system changes for handling LLVM
+> bitcode, which Clang produces with LTO instead of ELF object files,
+> postponing ELF processing until a later stage, and ensuring initcall
+> ordering.
+>
+> Note that arm64 support depends on Will's memory ordering patches
+> [1]. I will post x86_64 patches separately after we have fixed the
+> remaining objtool warnings [2][3].
+>
+> [1] https://git.kernel.org/pub/scm/linux/kernel/git/arm64/linux.git/log/?h=for-next/lto
+> [2] https://lore.kernel.org/lkml/20201120040424.a3wctajzft4ufoiw@treble/
+> [3] https://git.kernel.org/pub/scm/linux/kernel/git/jpoimboe/linux.git/log/?h=objtool-vmlinux
+>
+> You can also pull this series from
+>
+>   https://github.com/samitolvanen/linux.git lto-v8
 
-It might still be worth testing for $(AR) and $(NM) because in theory, a
-user could say 'make AR=ar LLVM=1'. Highly unlikely I suppose but worth
-considering.
+I've tried pull this into my randconfig test tree to give it a spin.
+So far I have
+not managed to get a working build out of it, the main problem so far being
+that it is really slow to build because the link stage only uses one CPU.
+These are the other issues I've seen so far:
 
-Cheers,
-Nathan
+- one build seems to take even longer to link. It's currently at 35GB RAM
+  usage and 40 minutes into the final link, but I'm worried it might
+not complete
+  before it runs out of memory.  I only have 128GB installed, and google-chrome
+  uses another 30GB of that, and I'm also doing some other builds in parallel.
+  Is there a minimum recommended amount of memory for doing LTO builds?
+
+- One build failed with
+ ld.lld -EL -maarch64elf -mllvm -import-instr-limit=5 -r -o vmlinux.o
+-T .tmp_initcalls.lds --whole-archive arch/arm64/kernel/head.o
+init/built-in.a usr/built-in.a arch/arm64/built-in.a kernel/built-in.a
+certs/built-in.a mm/built-in.a fs/built-in.a ipc/built-in.a
+security/built-in.a crypto/built-in.a block/built-in.a
+arch/arm64/lib/built-in.a lib/built-in.a drivers/built-in.a
+sound/built-in.a net/built-in.a virt/built-in.a --no-whole-archive
+--start-group arch/arm64/lib/lib.a lib/lib.a
+./drivers/firmware/efi/libstub/lib.a --end-group
+  "ld.lld: error: arch/arm64/kernel/head.o: invalid symbol index"
+  after about 30 minutes
+
+- CONFIG_CPU_BIG_ENDIAN doesn't seem to work with lld, and LTO
+  doesn't work with ld.bfd.
+  I've added a CPU_LITTLE_ENDIAN dependency to
+  ARCH_SUPPORTS_LTO_CLANG{,THIN}
+
+- one build failed with
+  "ld.lld: error: Never resolved function from blockaddress (Producer:
+'LLVM12.0.0' Reader: 'LLVM 12.0.0')"
+  Not sure how to debug this
+
+- one build seems to have dropped all symbols the string operations
+from vmlinux,
+  so while the link goes through, modules cannot be loaded:
+ ERROR: modpost: "memmove" [drivers/media/rc/rc-core.ko] undefined!
+ ERROR: modpost: "memcpy" [net/wireless/cfg80211.ko] undefined!
+ ERROR: modpost: "memcpy" [net/8021q/8021q.ko] undefined!
+ ERROR: modpost: "memset" [net/8021q/8021q.ko] undefined!
+ ERROR: modpost: "memcpy" [net/unix/unix.ko] undefined!
+ ERROR: modpost: "memset" [net/sched/cls_u32.ko] undefined!
+ ERROR: modpost: "memcpy" [net/sched/cls_u32.ko] undefined!
+ ERROR: modpost: "memset" [net/sched/sch_skbprio.ko] undefined!
+ ERROR: modpost: "memcpy" [net/802/garp.ko] undefined!
+ I first thought this was related to a clang-12 bug I saw the other day, but
+ this also happens with clang-11
+
+- many builds complain about thousands of duplicate symbols in the kernel, e.g.
+  ld.lld: error: duplicate symbol: qrtr_endpoint_post
+ >>> defined in net/qrtr/qrtr.lto.o
+ >>> defined in net/qrtr/qrtr.o
+ ld.lld: error: duplicate symbol: init_module
+ >>> defined in crypto/842.lto.o
+ >>> defined in crypto/842.o
+ ld.lld: error: duplicate symbol: init_module
+ >>> defined in net/netfilter/nfnetlink_log.lto.o
+ >>> defined in net/netfilter/nfnetlink_log.o
+ ld.lld: error: duplicate symbol: vli_from_be64
+ >>> defined in crypto/ecc.lto.o
+ >>> defined in crypto/ecc.o
+ ld.lld: error: duplicate symbol: __mod_of__plldig_clk_id_device_table
+ >>> defined in drivers/clk/clk-plldig.lto.o
+ >>> defined in drivers/clk/clk-plldig.o
+
+Not sure if these are all known issues. If there is one you'd like me try
+take a closer look at for finding which config options break it, I can try
+
+     Arnd
