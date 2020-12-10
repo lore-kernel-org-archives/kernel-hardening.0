@@ -1,4 +1,4 @@
-Return-Path: <SRS0=MZK1=FO=lists.openwall.com=kernel-hardening-return-20574-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=TnQU=FO=lists.openwall.com=kernel-hardening-return-20575-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-12.3 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 846ECC4361B
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 17:54:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9BB09C4361B
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 18:35:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4A03823D57
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 17:54:44 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4A03823D57
+	by mail.kernel.org (Postfix) with SMTP id 7501323E1E
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 18:35:48 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7501323E1E
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linaro.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20574-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24487 invoked by uid 550); 10 Dec 2020 17:54:36 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20575-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9228 invoked by uid 550); 10 Dec 2020 18:35:41 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,35 +23,37 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23630 invoked from network); 10 Dec 2020 17:51:41 -0000
+Received: (qmail 5420 invoked from network); 10 Dec 2020 18:25:29 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=linaro.org; s=google;
-        h=to:cc:references:from:autocrypt:subject:message-id:date:user-agent
+        h=subject:to:cc:references:from:autocrypt:message-id:date:user-agent
          :mime-version:in-reply-to:content-language:content-transfer-encoding;
-        bh=yr+7PimI5SX8gLaBBIeyUIA4tybpzSbAPxDoOmcjcnQ=;
-        b=vrWaP2BghzgXVAXO8/4fJFu+YdAr3B+p9Y+yw0FoUavRxTv6Vgpv6B6ve24ci/I1bY
-         KzbWww4N/yd8SBZg1ELjrsQywJXvvNBT8fq0UzGe6T+mQWJ2sKgqmvSY6vkjnutYBs+A
-         lc26FKPJzeVoMGlpqvRxeTYq5N7i0FbV/ExJXqwutN5WherqgHNH3tm5bGlJbVd0DJ8k
-         HLko3AlKteVVWqTHTvjn1I+oUmK8WFmnCXehpVMEeD43khvbDOJHW92FmfMP6HHiDo0I
-         3Zw1DQAJ7sOUs6LyU7PBOBhD383A0OQ/wRZ/LJNFq3Krjz2AaA1hXC3jzKH7u1ThBaKG
-         CI9g==
+        bh=uluB0mD/174B1JmgSMgZuinmmEBxrt4PIkK2KNEJKOo=;
+        b=tOSj+o+rtLHr0mYnk2x0/AptMtOoigAm7gugCwxIsv6z5PruF3gIGNzLQkTclvyxu+
+         tzzt9elwfPh/fydidEQ9Sk/0KDXVkJq2YzIrINmta1HzTS0f7DN90YQ7EVbGx2u+F5Gy
+         QFfSAgTWgHQXjC28gQzETma55aB54KfSbc/v8XSTON+5jtkkFk8UQR/KC6JIRUxSuWbo
+         1+0fOohfIACX2KFZkI3ThD6bmvskDs9CEQqGojqRXDPpI0ASIPUA0O4tzZvRm/ExPjHy
+         BqevTbUKSKy+cP8+ucu2KiXzxfK1OvzxNeJKTCyV89cjB3G6XVLC8vR7cFihsH4bT+G0
+         YU+Q==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:to:cc:references:from:autocrypt:subject
+        h=x-gm-message-state:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=yr+7PimI5SX8gLaBBIeyUIA4tybpzSbAPxDoOmcjcnQ=;
-        b=gKlC3bCQta1M64uNcBa8pJO+FO8bbRXzb9giy/LJ5eNvkER86TMc4BOAlpaCNtYcyf
-         iFXhmRf+FBbkZDNoI/bETkcOVfiQk6JtcoU1BYwFthdL44xNR3bXTDMjALUNG+RZ9zig
-         4C6yj6Fq5tWITC1DqdD8WD8xetVujSOwzKvdO4peGRS3YuvmkvioM6tH0KlPkTbNp1NE
-         ro1TqLW2T+4PVrWWI7/RGz3d7zYn8BltzUOAGIO/kttcfnJY2wxiyr1EugJtEbUxH2ap
-         G5YQXD/536RirEqVdezA8/KOCXFRabjnDHKJac/EsvT/2x6/6B4pn4UhnLw/Z+4nNWqJ
-         /rOw==
-X-Gm-Message-State: AOAM5338ZEknIgXDs8ySIKlMZ56LSEd4ttJaYHlU3+9eg0Bje5lpPplC
-	40/o+VMxTe1GpmqfoEmBdDLNBw==
-X-Google-Smtp-Source: ABdhPJy4NrwnP0SI2nGAyQth/Air8lGqX6RZ0P4Sr9jMNykIeP0a0LiI38tsRCcZ3ZP/BPqN/jn0sg==
-X-Received: by 2002:a05:622a:14:: with SMTP id x20mr10611188qtw.58.1607622689364;
-        Thu, 10 Dec 2020 09:51:29 -0800 (PST)
+        bh=uluB0mD/174B1JmgSMgZuinmmEBxrt4PIkK2KNEJKOo=;
+        b=nRkn1qP0i6Sml8M9wHh5xzBTDDJy9BxyLTdxA4CF0LCbJD+2HZIdGVggGZnS7mgD7V
+         oq5L5X3Iuc83PSrUoX40pwwIshVu8ZAZ4kXyXHxYFlyrcEdpwH+BClnTDtMvuC7n3gCp
+         w8BDvCzUN9PAr71Txg+I3eUTkFA7OyfxGeWUQfGIVC48c2a604C5zbdXEpQCnib6QBSM
+         N7BoKkI/kLEisn7SxyA6PMhrevSpIKw31qoNoWCfAjydrYb6bpqkcwvzSCT0636T5Zk8
+         7Wlp17P1zsfDkPK3X3RvxqSW4nxs7ZBrxSauiqP0BWD1uOEBdt7m8HSfvNzxof1gxj6e
+         G+Mg==
+X-Gm-Message-State: AOAM531ago2AwNuj4svdfvIxl457Mi7Hzcsh6bXL1nm/LB0hshuHKYTH
+	D6jRZkfmG4wjfuMSmwzquRFg9w==
+X-Google-Smtp-Source: ABdhPJx/Do5bA91lE6f8apE3WArvcwbgH/dVUZItW3VPJqbV0nihvwAd9PJeh1M6rqlwzTkyl7gprw==
+X-Received: by 2002:aed:2f67:: with SMTP id l94mr6124949qtd.201.1607624717743;
+        Thu, 10 Dec 2020 10:25:17 -0800 (PST)
+Subject: Re: [PATCH v2 3/6] elf: Fix failure handling in
+ _dl_map_object_from_fd
 To: Szabolcs Nagy <szabolcs.nagy@arm.com>, libc-alpha@sourceware.org
 Cc: Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com,
  Catalin Marinas <catalin.marinas@arm.com>, linux-kernel@vger.kernel.org,
@@ -59,7 +61,7 @@ Cc: Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com,
  Topi Miettinen <toiwoton@gmail.com>, Will Deacon <will@kernel.org>,
  linux-arm-kernel@lists.infradead.org
 References: <cover.1606319495.git.szabolcs.nagy@arm.com>
- <8756cc1083eb4cd93d3766cd39b2f34b6623bbcb.1606319495.git.szabolcs.nagy@arm.com>
+ <8ebf571196dd499c61983dbf53c94c68ebd458cc.1606319495.git.szabolcs.nagy@arm.com>
 From: Adhemerval Zanella <adhemerval.zanella@linaro.org>
 Autocrypt: addr=adhemerval.zanella@linaro.org; prefer-encrypt=mutual; keydata=
  mQINBFcVGkoBEADiQU2x/cBBmAVf5C2d1xgz6zCnlCefbqaflUBw4hB/bEME40QsrVzWZ5Nq
@@ -104,75 +106,94 @@ Autocrypt: addr=adhemerval.zanella@linaro.org; prefer-encrypt=mutual; keydata=
  7vJwKcyHJGxsCLU+Et0mryX8qZwqibJIzu7kUJQdQDljbRPDFd/xmGUFCQiQAncSilYOcxNU
  EMVCXPAQTteqkvA+gNqSaK1NM9tY0eQ4iJpo+aoX8HAcn4sZzt2pfUB9vQMTBJ2d4+m/qO6+
  cFTAceXmIoFsN8+gFN3i8Is3u12u8xGudcBPvpoy4OoG
-Subject: Re: [PATCH v2 1/6] aarch64: Fix missing BTI protection from
- dependencies [BZ #26926]
-Message-ID: <f077a6d5-082c-c3a5-ce07-71b87a70dc12@linaro.org>
-Date: Thu, 10 Dec 2020 14:51:23 -0300
+Message-ID: <1525639f-560f-2677-b1cb-f904b3552c71@linaro.org>
+Date: Thu, 10 Dec 2020 15:25:12 -0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <8756cc1083eb4cd93d3766cd39b2f34b6623bbcb.1606319495.git.szabolcs.nagy@arm.com>
+In-Reply-To: <8ebf571196dd499c61983dbf53c94c68ebd458cc.1606319495.git.szabolcs.nagy@arm.com>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+Content-Transfer-Encoding: 7bit
 
 
 
-On 27/11/2020 10:19, Szabolcs Nagy via Libc-alpha wrote:
-> The _dl_open_check and _rtld_main_check hooks are not called on the
-> dependencies of a loaded module, so BTI protection was missed on
-> every module other than the main executable and directly dlopened
-> libraries.
+On 27/11/2020 10:20, Szabolcs Nagy via Libc-alpha wrote:
+> There are many failure paths that call lose to do local cleanups
+> in _dl_map_object_from_fd, but it did not clean everything.
 > 
-> The fix just iterates over dependencies to enable BTI.
+> Handle l_phdr, l_libname and mapped segments in the common failure
+> handling code.
 > 
-> Fixes bug 26926.
-
-LGTM, modulus the argument name change.
-
-I also think it would be better to add a testcase, for both DT_NEEDED
-and dlopen case.
-
+> There are various bits that may not be cleaned properly on failure
+> (e.g. executable stack, tlsid, incomplete dl_map_segments).
 > ---
->  sysdeps/aarch64/dl-bti.c | 21 +++++++++++++++++----
->  1 file changed, 17 insertions(+), 4 deletions(-)
+>  elf/dl-load.c | 24 +++++++++++++++---------
+>  1 file changed, 15 insertions(+), 9 deletions(-)
 > 
-> diff --git a/sysdeps/aarch64/dl-bti.c b/sysdeps/aarch64/dl-bti.c
-> index 196e462520..8f4728adce 100644
-> --- a/sysdeps/aarch64/dl-bti.c
-> +++ b/sysdeps/aarch64/dl-bti.c
-> @@ -51,11 +51,24 @@ enable_bti (struct link_map *map, const char *program)
->    return 0;
->  }
->  
-> -/* Enable BTI for L if required.  */
-> +/* Enable BTI for MAP and its dependencies.  */
->  
->  void
-> -_dl_bti_check (struct link_map *l, const char *program)
-> +_dl_bti_check (struct link_map *map, const char *program)
-
-I don't see much gain changing the argument name.
-
->  {
-> -  if (GLRO(dl_aarch64_cpu_features).bti && l->l_mach.bti)
-> -    enable_bti (l, program);
-> +  if (!GLRO(dl_aarch64_cpu_features).bti)
-> +    return;
+> diff --git a/elf/dl-load.c b/elf/dl-load.c
+> index 21e55deb19..9c71b7562c 100644
+> --- a/elf/dl-load.c
+> +++ b/elf/dl-load.c
+> @@ -914,8 +914,15 @@ lose (int code, int fd, const char *name, char *realname, struct link_map *l,
+>    /* The file might already be closed.  */
+>    if (fd != -1)
+>      (void) __close_nocancel (fd);
+> +  if (l != NULL && l->l_map_start != 0)
+> +    _dl_unmap_segments (l);
+>    if (l != NULL && l->l_origin != (char *) -1l)
+>      free ((char *) l->l_origin);
+> +  if (l != NULL && !l->l_libname->dont_free)
+> +    free (l->l_libname);
+> +  if (l != NULL && l->l_phdr_allocated)
+> +    free ((void *) l->l_phdr);
 > +
-> +  if (map->l_mach.bti)
-> +    enable_bti (map, program);
+>    free (l);
+>    free (realname);
+>  
+> @@ -1256,7 +1263,11 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
+>      errstring = _dl_map_segments (l, fd, header, type, loadcmds, nloadcmds,
+>  				  maplength, has_holes, loader);
+>      if (__glibc_unlikely (errstring != NULL))
+> -      goto call_lose;
+> +      {
+> +	/* Mappings can be in an inconsistent state: avoid unmap.  */
+> +	l->l_map_start = l->l_map_end = 0;
+> +	goto call_lose;
+> +      }
+>  
+>      /* Process program headers again after load segments are mapped in
+>         case processing requires accessing those segments.  Scan program
+
+In this case I am failing to see who would be responsible to unmap 
+l_map_start int the type == ET_DYN where first mmap succeeds but
+with a later mmap failure in any load command.
+
+> @@ -1294,14 +1305,6 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
+>        || (__glibc_unlikely (l->l_flags_1 & DF_1_PIE)
+>  	  && __glibc_unlikely ((mode & __RTLD_OPENEXEC) == 0)))
+>      {
+> -      /* We are not supposed to load this object.  Free all resources.  */
+> -      _dl_unmap_segments (l);
+> -
+> -      if (!l->l_libname->dont_free)
+> -	free (l->l_libname);
+> -
+> -      if (l->l_phdr_allocated)
+> -	free ((void *) l->l_phdr);
+>  
+>        if (l->l_flags_1 & DF_1_PIE)
+>  	errstring
+> @@ -1392,6 +1395,9 @@ cannot enable executable stack as shared object requires");
+>    /* Signal that we closed the file.  */
+>    fd = -1;
+>  
+> +  /* Failures before this point are handled locally via lose.
+> +     No more failures are allowed in this function until return.  */
 > +
-> +  unsigned int i = map->l_searchlist.r_nlist;
-> +  while (i-- > 0)
-> +    {
-> +      struct link_map *l = map->l_initfini[i];
-> +      if (l->l_init_called)
-> +	continue;
-> +      if (l->l_mach.bti)
-> +	enable_bti (l, program);
-> +    }
->  }
+>    /* If this is ET_EXEC, we should have loaded it as lt_executable.  */
+>    assert (type != ET_EXEC || l->l_type == lt_executable);
+>  
 > 
 
 Ok.
