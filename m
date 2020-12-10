@@ -1,21 +1,21 @@
-Return-Path: <SRS0=TnQU=FO=lists.openwall.com=kernel-hardening-return-20575-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=5MvO=FO=lists.openwall.com=kernel-hardening-return-20576-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.3 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-17.2 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9BB09C4361B
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 18:35:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 81094C433FE
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 18:36:08 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7501323E1E
-	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 18:35:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7501323E1E
+	by mail.kernel.org (Postfix) with SMTP id 31E7B23DE3
+	for <kernel-hardening@archiver.kernel.org>; Thu, 10 Dec 2020 18:36:06 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 31E7B23DE3
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linaro.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20575-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9228 invoked by uid 550); 10 Dec 2020 18:35:41 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20576-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 10019 invoked by uid 550); 10 Dec 2020 18:36:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,37 +23,36 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5420 invoked from network); 10 Dec 2020 18:25:29 -0000
+Received: (qmail 8116 invoked from network); 10 Dec 2020 18:35:27 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=linaro.org; s=google;
         h=subject:to:cc:references:from:autocrypt:message-id:date:user-agent
          :mime-version:in-reply-to:content-language:content-transfer-encoding;
-        bh=uluB0mD/174B1JmgSMgZuinmmEBxrt4PIkK2KNEJKOo=;
-        b=tOSj+o+rtLHr0mYnk2x0/AptMtOoigAm7gugCwxIsv6z5PruF3gIGNzLQkTclvyxu+
-         tzzt9elwfPh/fydidEQ9Sk/0KDXVkJq2YzIrINmta1HzTS0f7DN90YQ7EVbGx2u+F5Gy
-         QFfSAgTWgHQXjC28gQzETma55aB54KfSbc/v8XSTON+5jtkkFk8UQR/KC6JIRUxSuWbo
-         1+0fOohfIACX2KFZkI3ThD6bmvskDs9CEQqGojqRXDPpI0ASIPUA0O4tzZvRm/ExPjHy
-         BqevTbUKSKy+cP8+ucu2KiXzxfK1OvzxNeJKTCyV89cjB3G6XVLC8vR7cFihsH4bT+G0
-         YU+Q==
+        bh=5PiNXGPvjp1H9H98zDqeQBFeXQnqdDfXRHVZjyB+efE=;
+        b=qRoQLn2GUkkHS6tPTSnxlu1nNMXmHESP+Una9cbIwi93bCDk0TJxcP1pJhFY/c6Vk5
+         cI+PWb4Fz3282Y4VGM8+SaFGY57uYFiaCyKJ2ZJ3DSX9tKlPsY+CCtZTKHB2snleezve
+         9Dr5aToy7Yb2fE3ekY27E0DR3MBhoU5d1bIv7//4MBUJdBFXBYC6ampIDPlP8lGTc2am
+         yUqd1eGH4nHyWgVm91x8el6CwqQW5IQmBfWiHy3aLtww5WzDdpB8Dd/w5ohMkZRljfSo
+         hzIlu4eQoH7i8gPLLEN7YdGsiMbzC9y7N0eJEr3QZNcATKhGPq1Gc5tiMQW/xpLS7RC9
+         kkUQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:subject:to:cc:references:from:autocrypt
          :message-id:date:user-agent:mime-version:in-reply-to
          :content-language:content-transfer-encoding;
-        bh=uluB0mD/174B1JmgSMgZuinmmEBxrt4PIkK2KNEJKOo=;
-        b=nRkn1qP0i6Sml8M9wHh5xzBTDDJy9BxyLTdxA4CF0LCbJD+2HZIdGVggGZnS7mgD7V
-         oq5L5X3Iuc83PSrUoX40pwwIshVu8ZAZ4kXyXHxYFlyrcEdpwH+BClnTDtMvuC7n3gCp
-         w8BDvCzUN9PAr71Txg+I3eUTkFA7OyfxGeWUQfGIVC48c2a604C5zbdXEpQCnib6QBSM
-         N7BoKkI/kLEisn7SxyA6PMhrevSpIKw31qoNoWCfAjydrYb6bpqkcwvzSCT0636T5Zk8
-         7Wlp17P1zsfDkPK3X3RvxqSW4nxs7ZBrxSauiqP0BWD1uOEBdt7m8HSfvNzxof1gxj6e
-         G+Mg==
-X-Gm-Message-State: AOAM531ago2AwNuj4svdfvIxl457Mi7Hzcsh6bXL1nm/LB0hshuHKYTH
-	D6jRZkfmG4wjfuMSmwzquRFg9w==
-X-Google-Smtp-Source: ABdhPJx/Do5bA91lE6f8apE3WArvcwbgH/dVUZItW3VPJqbV0nihvwAd9PJeh1M6rqlwzTkyl7gprw==
-X-Received: by 2002:aed:2f67:: with SMTP id l94mr6124949qtd.201.1607624717743;
-        Thu, 10 Dec 2020 10:25:17 -0800 (PST)
-Subject: Re: [PATCH v2 3/6] elf: Fix failure handling in
- _dl_map_object_from_fd
+        bh=5PiNXGPvjp1H9H98zDqeQBFeXQnqdDfXRHVZjyB+efE=;
+        b=CGBGdsz1kU1RYaZY4jhBWTaOGsZ/+/6yxY3MKt1a/HbGK4pI/nRxhEjQdIZ1MHvRxl
+         wIrzfxAYAC+wDyjaeU4V9HXQviSkgjYlc5w8pT06Qhrz/p7EOjuViWCoq8btlJrKLUn2
+         sDnx+62MEtQTrN+Vh4xTB6jkOzAdJu5QNzTHpjfkaKQzgsjK9/ws64Vv+1eN9/XvPEFQ
+         v9Xcy6zQh68c3soFiK+jsN8nVI3BA7nYNs+VjFYAWUq1qvonKakdRl3UxS7SDTnXolSz
+         ZU4RrLF15Bwq2hlHoLmUnwjg3NB3bcelMR+eeFJ3ttf8F3/clbYLeVWlphElYMUpY+Wm
+         iTIQ==
+X-Gm-Message-State: AOAM532iQjEdFm5a/t8KlGIwz7us6MqhJ3euLUJhTyX59NP2bEsQEM1u
+	VPmuiwg8FjEHlfo/DGAugpoXYw==
+X-Google-Smtp-Source: ABdhPJyl91FWeoYV4M61IhQNfdeXj8gDsykP2dx+DeHBAm29ujKRDIjxprZyNlmYiFcPvo1zbpXeZQ==
+X-Received: by 2002:a37:8943:: with SMTP id l64mr10272404qkd.212.1607625315915;
+        Thu, 10 Dec 2020 10:35:15 -0800 (PST)
+Subject: Re: [PATCH v2 5/6] elf: Pass the fd to note processing
 To: Szabolcs Nagy <szabolcs.nagy@arm.com>, libc-alpha@sourceware.org
 Cc: Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com,
  Catalin Marinas <catalin.marinas@arm.com>, linux-kernel@vger.kernel.org,
@@ -61,7 +60,7 @@ Cc: Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com,
  Topi Miettinen <toiwoton@gmail.com>, Will Deacon <will@kernel.org>,
  linux-arm-kernel@lists.infradead.org
 References: <cover.1606319495.git.szabolcs.nagy@arm.com>
- <8ebf571196dd499c61983dbf53c94c68ebd458cc.1606319495.git.szabolcs.nagy@arm.com>
+ <a23246987ec0a8b307a9a171193464b74a7cb416.1606319495.git.szabolcs.nagy@arm.com>
 From: Adhemerval Zanella <adhemerval.zanella@linaro.org>
 Autocrypt: addr=adhemerval.zanella@linaro.org; prefer-encrypt=mutual; keydata=
  mQINBFcVGkoBEADiQU2x/cBBmAVf5C2d1xgz6zCnlCefbqaflUBw4hB/bEME40QsrVzWZ5Nq
@@ -106,94 +105,204 @@ Autocrypt: addr=adhemerval.zanella@linaro.org; prefer-encrypt=mutual; keydata=
  7vJwKcyHJGxsCLU+Et0mryX8qZwqibJIzu7kUJQdQDljbRPDFd/xmGUFCQiQAncSilYOcxNU
  EMVCXPAQTteqkvA+gNqSaK1NM9tY0eQ4iJpo+aoX8HAcn4sZzt2pfUB9vQMTBJ2d4+m/qO6+
  cFTAceXmIoFsN8+gFN3i8Is3u12u8xGudcBPvpoy4OoG
-Message-ID: <1525639f-560f-2677-b1cb-f904b3552c71@linaro.org>
-Date: Thu, 10 Dec 2020 15:25:12 -0300
+Message-ID: <f181ee98-152a-7555-f883-b179e88aeadd@linaro.org>
+Date: Thu, 10 Dec 2020 15:35:10 -0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <8ebf571196dd499c61983dbf53c94c68ebd458cc.1606319495.git.szabolcs.nagy@arm.com>
+In-Reply-To: <a23246987ec0a8b307a9a171193464b74a7cb416.1606319495.git.szabolcs.nagy@arm.com>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
 
 
-On 27/11/2020 10:20, Szabolcs Nagy via Libc-alpha wrote:
-> There are many failure paths that call lose to do local cleanups
-> in _dl_map_object_from_fd, but it did not clean everything.
+On 27/11/2020 10:21, Szabolcs Nagy via Libc-alpha wrote:
+> To handle GNU property notes on aarch64 some segments need to
+> be mmaped again, so the fd of the loaded ELF module is needed.
 > 
-> Handle l_phdr, l_libname and mapped segments in the common failure
-> handling code.
+> When the fd is not available (kernel loaded modules), then -1
+> is passed.
 > 
-> There are various bits that may not be cleaned properly on failure
-> (e.g. executable stack, tlsid, incomplete dl_map_segments).
+> The fd is passed to both _dl_process_pt_gnu_property and
+> _dl_process_pt_note for consistency. Target specific note
+> processing functions are updated accordingly.
+
+LGTM, thanks.
+
+Reviewed-by: Adhemerval Zanella  <adhemerval.zanella@linaro.org>
+
 > ---
->  elf/dl-load.c | 24 +++++++++++++++---------
->  1 file changed, 15 insertions(+), 9 deletions(-)
+>  elf/dl-load.c              | 12 +++++++-----
+>  elf/rtld.c                 |  4 ++--
+>  sysdeps/aarch64/dl-prop.h  |  6 +++---
+>  sysdeps/generic/dl-prop.h  |  6 +++---
+>  sysdeps/generic/ldsodefs.h |  5 +++--
+>  sysdeps/x86/dl-prop.h      |  6 +++---
+>  6 files changed, 21 insertions(+), 18 deletions(-)
 > 
 > diff --git a/elf/dl-load.c b/elf/dl-load.c
-> index 21e55deb19..9c71b7562c 100644
+> index b0d65f32cc..74039f22a6 100644
 > --- a/elf/dl-load.c
 > +++ b/elf/dl-load.c
-> @@ -914,8 +914,15 @@ lose (int code, int fd, const char *name, char *realname, struct link_map *l,
->    /* The file might already be closed.  */
->    if (fd != -1)
->      (void) __close_nocancel (fd);
-> +  if (l != NULL && l->l_map_start != 0)
-> +    _dl_unmap_segments (l);
->    if (l != NULL && l->l_origin != (char *) -1l)
->      free ((char *) l->l_origin);
-> +  if (l != NULL && !l->l_libname->dont_free)
-> +    free (l->l_libname);
-> +  if (l != NULL && l->l_phdr_allocated)
-> +    free ((void *) l->l_phdr);
-> +
->    free (l);
->    free (realname);
+> @@ -837,10 +837,12 @@ _dl_init_paths (const char *llp, const char *source)
 >  
-> @@ -1256,7 +1263,11 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
->      errstring = _dl_map_segments (l, fd, header, type, loadcmds, nloadcmds,
->  				  maplength, has_holes, loader);
->      if (__glibc_unlikely (errstring != NULL))
-> -      goto call_lose;
-> +      {
-> +	/* Mappings can be in an inconsistent state: avoid unmap.  */
-> +	l->l_map_start = l->l_map_end = 0;
-> +	goto call_lose;
-> +      }
+>  /* Process PT_GNU_PROPERTY program header PH in module L after
+>     PT_LOAD segments are mapped.  Only one NT_GNU_PROPERTY_TYPE_0
+> -   note is handled which contains processor specific properties.  */
+> +   note is handled which contains processor specific properties.
+> +   FD is -1 for the kernel mapped main executable otherwise it is
+> +   the fd used for loading module L.  */
 >  
->      /* Process program headers again after load segments are mapped in
->         case processing requires accessing those segments.  Scan program
+>  void
+> -_dl_process_pt_gnu_property (struct link_map *l, const ElfW(Phdr) *ph)
+> +_dl_process_pt_gnu_property (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+>  {
+>    const ElfW(Nhdr) *note = (const void *) (ph->p_vaddr + l->l_addr);
+>    const ElfW(Addr) size = ph->p_memsz;
 
-In this case I am failing to see who would be responsible to unmap 
-l_map_start int the type == ET_DYN where first mmap succeeds but
-with a later mmap failure in any load command.
+Ok.
 
-> @@ -1294,14 +1305,6 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
->        || (__glibc_unlikely (l->l_flags_1 & DF_1_PIE)
->  	  && __glibc_unlikely ((mode & __RTLD_OPENEXEC) == 0)))
+> @@ -887,7 +889,7 @@ _dl_process_pt_gnu_property (struct link_map *l, const ElfW(Phdr) *ph)
+>  	      last_type = type;
+>  
+>  	      /* Target specific property processing.  */
+> -	      if (_dl_process_gnu_property (l, type, datasz, ptr) == 0)
+> +	      if (_dl_process_gnu_property (l, fd, type, datasz, ptr) == 0)
+>  		return;
+>  
+>  	      /* Check the next property item.  */
+
+Ok.
+
+> @@ -1379,10 +1381,10 @@ cannot enable executable stack as shared object requires");
+>      switch (ph[-1].p_type)
+>        {
+>        case PT_NOTE:
+> -	_dl_process_pt_note (l, &ph[-1]);
+> +	_dl_process_pt_note (l, fd, &ph[-1]);
+>  	break;
+>        case PT_GNU_PROPERTY:
+> -	_dl_process_pt_gnu_property (l, &ph[-1]);
+> +	_dl_process_pt_gnu_property (l, fd, &ph[-1]);
+>  	break;
+>        }
+>  
+
+Ok.
+
+> diff --git a/elf/rtld.c b/elf/rtld.c
+> index c4ffc8d4b7..ec62567580 100644
+> --- a/elf/rtld.c
+> +++ b/elf/rtld.c
+> @@ -1540,10 +1540,10 @@ dl_main (const ElfW(Phdr) *phdr,
+>      switch (ph[-1].p_type)
+>        {
+>        case PT_NOTE:
+> -	_dl_process_pt_note (main_map, &ph[-1]);
+> +	_dl_process_pt_note (main_map, -1, &ph[-1]);
+>  	break;
+>        case PT_GNU_PROPERTY:
+> -	_dl_process_pt_gnu_property (main_map, &ph[-1]);
+> +	_dl_process_pt_gnu_property (main_map, -1, &ph[-1]);
+>  	break;
+>        }
+>  
+
+Ok.
+
+> diff --git a/sysdeps/aarch64/dl-prop.h b/sysdeps/aarch64/dl-prop.h
+> index b0785bda83..2016d1472e 100644
+> --- a/sysdeps/aarch64/dl-prop.h
+> +++ b/sysdeps/aarch64/dl-prop.h
+> @@ -35,13 +35,13 @@ _dl_open_check (struct link_map *m)
+>  }
+>  
+>  static inline void __attribute__ ((always_inline))
+> -_dl_process_pt_note (struct link_map *l, const ElfW(Phdr) *ph)
+> +_dl_process_pt_note (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+>  {
+>  }
+>  
+>  static inline int
+> -_dl_process_gnu_property (struct link_map *l, uint32_t type, uint32_t datasz,
+> -			  void *data)
+> +_dl_process_gnu_property (struct link_map *l, int fd, uint32_t type,
+> +			  uint32_t datasz, void *data)
+>  {
+>    if (type == GNU_PROPERTY_AARCH64_FEATURE_1_AND)
 >      {
-> -      /* We are not supposed to load this object.  Free all resources.  */
-> -      _dl_unmap_segments (l);
-> -
-> -      if (!l->l_libname->dont_free)
-> -	free (l->l_libname);
-> -
-> -      if (l->l_phdr_allocated)
-> -	free ((void *) l->l_phdr);
+
+Ok.
+
+> diff --git a/sysdeps/generic/dl-prop.h b/sysdeps/generic/dl-prop.h
+> index f1cf576fe3..df27ff8e6a 100644
+> --- a/sysdeps/generic/dl-prop.h
+> +++ b/sysdeps/generic/dl-prop.h
+> @@ -37,15 +37,15 @@ _dl_open_check (struct link_map *m)
+>  }
 >  
->        if (l->l_flags_1 & DF_1_PIE)
->  	errstring
-> @@ -1392,6 +1395,9 @@ cannot enable executable stack as shared object requires");
->    /* Signal that we closed the file.  */
->    fd = -1;
+>  static inline void __attribute__ ((always_inline))
+> -_dl_process_pt_note (struct link_map *l, const ElfW(Phdr) *ph)
+> +_dl_process_pt_note (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+>  {
+>  }
 >  
-> +  /* Failures before this point are handled locally via lose.
-> +     No more failures are allowed in this function until return.  */
-> +
->    /* If this is ET_EXEC, we should have loaded it as lt_executable.  */
->    assert (type != ET_EXEC || l->l_type == lt_executable);
+>  /* Called for each property in the NT_GNU_PROPERTY_TYPE_0 note of L,
+>     processing of the properties continues until this returns 0.  */
+>  static inline int __attribute__ ((always_inline))
+> -_dl_process_gnu_property (struct link_map *l, uint32_t type, uint32_t datasz,
+> -			  void *data)
+> +_dl_process_gnu_property (struct link_map *l, int fd, uint32_t type,
+> +			  uint32_t datasz, void *data)
+>  {
+>    return 0;
+>  }
+
+Ok.
+
+> diff --git a/sysdeps/generic/ldsodefs.h b/sysdeps/generic/ldsodefs.h
+> index b1da03cafe..89eab4719d 100644
+> --- a/sysdeps/generic/ldsodefs.h
+> +++ b/sysdeps/generic/ldsodefs.h
+> @@ -933,8 +933,9 @@ extern void _dl_rtld_di_serinfo (struct link_map *loader,
+>  				 Dl_serinfo *si, bool counting);
 >  
+>  /* Process PT_GNU_PROPERTY program header PH in module L after
+> -   PT_LOAD segments are mapped.  */
+> -void _dl_process_pt_gnu_property (struct link_map *l, const ElfW(Phdr) *ph);
+> +   PT_LOAD segments are mapped from file FD.  */
+> +void _dl_process_pt_gnu_property (struct link_map *l, int fd,
+> +				  const ElfW(Phdr) *ph);
+>  
+>  
+>  /* Search loaded objects' symbol tables for a definition of the symbol
+
+Ok.
+
+> diff --git a/sysdeps/x86/dl-prop.h b/sysdeps/x86/dl-prop.h
+> index 89911e19e2..4eb3b85a7b 100644
+> --- a/sysdeps/x86/dl-prop.h
+> +++ b/sysdeps/x86/dl-prop.h
+> @@ -145,15 +145,15 @@ _dl_process_cet_property_note (struct link_map *l,
+>  }
+>  
+>  static inline void __attribute__ ((unused))
+> -_dl_process_pt_note (struct link_map *l, const ElfW(Phdr) *ph)
+> +_dl_process_pt_note (struct link_map *l, int fd, const ElfW(Phdr) *ph)
+>  {
+>    const ElfW(Nhdr) *note = (const void *) (ph->p_vaddr + l->l_addr);
+>    _dl_process_cet_property_note (l, note, ph->p_memsz, ph->p_align);
+>  }
+>  
+>  static inline int __attribute__ ((always_inline))
+> -_dl_process_gnu_property (struct link_map *l, uint32_t type, uint32_t datasz,
+> -			  void *data)
+> +_dl_process_gnu_property (struct link_map *l, int fd, uint32_t type,
+> +			  uint32_t datasz, void *data)
+>  {
+>    return 0;
+>  }
 > 
 
 Ok.
