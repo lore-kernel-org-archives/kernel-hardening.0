@@ -1,20 +1,22 @@
-Return-Path: <SRS0=hhCK=FP=lists.openwall.com=kernel-hardening-return-20581-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=AOUM=FP=lists.openwall.com=kernel-hardening-return-20582-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.2 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-26.2 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4385BC433FE
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 17:46:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 23BE5C4361B
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:46:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 514CF22D06
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 17:46:41 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 514CF22D06
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=arm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20581-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1248 invoked by uid 550); 11 Dec 2020 17:46:33 -0000
+	by mail.kernel.org (Postfix) with SMTP id 0E0D423F37
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:46:56 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0E0D423F37
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20582-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 4050 invoked by uid 550); 11 Dec 2020 18:46:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,173 +24,258 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1216 invoked from network); 11 Dec 2020 17:46:32 -0000
-Date: Fri, 11 Dec 2020 17:46:16 +0000
-From: Catalin Marinas <catalin.marinas@arm.com>
-To: Szabolcs Nagy <szabolcs.nagy@arm.com>
-Cc: libc-alpha@sourceware.org, Mark Rutland <mark.rutland@arm.com>,
-	Will Deacon <will@kernel.org>, linux-kernel@vger.kernel.org,
-	Jeremy Linton <jeremy.linton@arm.com>,
-	Mark Brown <broonie@kernel.org>,
-	kernel-hardening@lists.openwall.com,
-	Topi Miettinen <toiwoton@gmail.com>,
-	linux-arm-kernel@lists.infradead.org
-Subject: Re: [PATCH v2 0/6] aarch64: avoid mprotect(PROT_BTI|PROT_EXEC) [BZ
- #26831]
-Message-ID: <20201211174615.GB17458@gaia>
-References: <cover.1606319495.git.szabolcs.nagy@arm.com>
- <20201203173006.GH2830@gaia>
- <20201207200338.GB24625@arm.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201207200338.GB24625@arm.com>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+Received: (qmail 4025 invoked from network); 11 Dec 2020 18:46:47 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:message-id:mime-version:subject:from:to:cc;
+        bh=9znxVvQ/9PAVTHgEOV292+fDBKHMlDcfsU9d9H/6O4k=;
+        b=dDPDz2owZCXqbcbTzyDFDHaLvLysHx0+EojIIsUxOE+4+nVDQN3cySzJWf+v38GzE6
+         itt4delaGLVPa1agOcoLlx6yvf8/Rvpbx90SpVAfQWw4Gienn1eBmn3U01FJOI8ozMIr
+         oMwqy/QUN545CHIweR5daxLHf67HQMOOpqjFZBTDMYiIgeSPbYC+HR2Mp72lyQexsgH2
+         le8MqKN1R49giFoPdbvq5e2AAwJFmKDPhtJK56jSZ1yU84DMqlwnkKWfajf4PJtMFRlg
+         MB4gCztbRGqrOceiEJjc4NYhFy6Vpnx8PltpWjcUUixEZtuM8A1KmPcSyof8U8uYsIsl
+         LJDA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:message-id:mime-version:subject:from
+         :to:cc;
+        bh=9znxVvQ/9PAVTHgEOV292+fDBKHMlDcfsU9d9H/6O4k=;
+        b=emIqFBcNTcUOc9piiEZ9Zu08IWX8XHyzxeL1SuOMR4ue7omqAUKb/t3cVU+/ElNRSI
+         DW4hS3iI9n2QcjWta/S3Ot6b8nHRaoIwNBALZ4zmKl6pVS09gsrPuE3TyyQQanlzbVlR
+         hfZFC2mLrjfchcQ8rGnO1gHzRxj1vcsDSWDPbL3HLS9NT42iM5KvSG2qbtbE4u/LWb6p
+         I0JipfbV7SxYXpGEweL/VhJ4kwpZt36+sAKEhs/pWnLg81T0Zwd080NqN8jG0q8p/0wz
+         cLIqeU0/llf5fnALCMpdFYNspAX8eLD3FJP3OmkcNlSv+0ZsusTOx1xi1ud6drIzryvv
+         N6ow==
+X-Gm-Message-State: AOAM531kVCXx/ByxlQCbrdguTnaws6mATtS0sa+tZyUD2RNSDeVeN8+D
+	nKM4uqwvKlYzwrVAmZnwk59tcyaI9LSTQgYieyw=
+X-Google-Smtp-Source: ABdhPJz0ek2SN2U3fjfWQhqwMXyCIcZwDvklDVCCSVaJyxuiJlfb7KJJKz1h/PtZ4xu/S0R9tK22wDIg3yDTEgQwy4E=
+Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
+X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
+ (user=samitolvanen job=sendgmr) by 2002:a25:22d5:: with SMTP id
+ i204mr22729999ybi.0.1607712395089; Fri, 11 Dec 2020 10:46:35 -0800 (PST)
+Date: Fri, 11 Dec 2020 10:46:17 -0800
+Message-Id: <20201211184633.3213045-1-samitolvanen@google.com>
+Mime-Version: 1.0
+X-Mailer: git-send-email 2.29.2.576.ga3fc446d84-goog
+Subject: [PATCH v9 00/16] Add support for Clang LTO
+From: Sami Tolvanen <samitolvanen@google.com>
+To: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
+	Will Deacon <will@kernel.org>
+Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Peter Zijlstra <peterz@infradead.org>, 
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Paul E. McKenney" <paulmck@kernel.org>, 
+	Kees Cook <keescook@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, 
+	clang-built-linux@googlegroups.com, kernel-hardening@lists.openwall.com, 
+	linux-arch@vger.kernel.org, linux-arm-kernel@lists.infradead.org, 
+	linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, 
+	linux-pci@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
+Content-Type: text/plain; charset="UTF-8"
 
-On Mon, Dec 07, 2020 at 08:03:38PM +0000, Szabolcs Nagy wrote:
-> The 12/03/2020 17:30, Catalin Marinas wrote:
-> > On Fri, Nov 27, 2020 at 01:19:16PM +0000, Szabolcs Nagy wrote:
-> > > This is v2 of
-> > > https://sourceware.org/pipermail/libc-alpha/2020-November/119305.html
-> > > 
-> > > To enable BTI support, re-mmap executable segments instead of
-> > > mprotecting them in case mprotect is seccomp filtered.
-> > > 
-> > > I would like linux to change to map the main exe with PROT_BTI when
-> > > that is marked as BTI compatible. From the linux side i heard the
-> > > following concerns about this:
-> > > - it's an ABI change so requires some ABI bump. (this is fine with
-> > >   me, i think glibc does not care about backward compat as nothing
-> > >   can reasonably rely on the current behaviour, but if we have a
-> > >   new bit in auxv or similar then we can save one mprotect call.)
-> > 
-> > I'm not concerned about the ABI change but there are workarounds like a
-> > new auxv bit.
-> > 
-> > > - in case we discover compatibility issues with user binaries it's
-> > >   better if userspace can easily disable BTI (e.g. removing the
-> > >   mprotect based on some env var, but if kernel adds PROT_BTI and
-> > >   mprotect is filtered then we have no reliable way to remove that
-> > >   from executables. this problem already exists for static linked
-> > >   exes, although admittedly those are less of a compat concern.)
-> > 
-> > This is our main concern. For static binaries, the linker could detect,
-> > in theory, potential issues when linking and not set the corresponding
-> > ELF information.
-> > 
-> > At runtime, a dynamic linker could detect issues and avoid enabling BTI.
-> > In both cases, it's a (static or dynamic) linker decision that belongs
-> > in user-space.
-> 
-> note that the marking is tied to an elf module: if the static
-> linker can be trusted to produce correct marking then both the
-> static and dynamic linking cases work, otherwise neither works.
-> (the dynamic linker cannot detect bti issues, just apply user
-> supplied policy.)
+This patch series adds support for building the kernel with Clang's
+Link Time Optimization (LTO). In addition to performance, the primary
+motivation for LTO is to allow Clang's Control-Flow Integrity (CFI)
+to be used in the kernel. Google has shipped millions of Pixel
+devices running three major kernel versions with LTO+CFI since 2018.
 
-My assumption is that the dynamic linker may become smarter and detect
-BTI issues, if necessary.
+Most of the patches are build system changes for handling LLVM
+bitcode, which Clang produces with LTO instead of ELF object files,
+postponing ELF processing until a later stage, and ensuring initcall
+ordering.
 
-Let's say we link together multiple objects, some of them with BTI
-instructions, others without. Does the static linker generate a
-.note.gnu.property section with GNU_PROPERTY_AARCH64_FEATURE_1_BTI? I
-guess not, otherwise the .text section would have a mixture of functions
-with and without landing pads.
+Note that arm64 support depends on Will's memory ordering patches
+[1]. I will post x86_64 patches separately after we have fixed the
+remaining objtool warnings [2][3].
 
-In the dynamic linker case, if there are multiple shared objects where
-some are missing BTI, I guess the dynamic linker currently invokes
-mprotect(PROT_BTI) (or mmap()) on all objects with the corresponding
-GNU_PROPERTY.
+[1] https://git.kernel.org/pub/scm/linux/kernel/git/arm64/linux.git/log/?h=for-next/lto
+[2] https://lore.kernel.org/lkml/20201120040424.a3wctajzft4ufoiw@treble/
+[3] https://git.kernel.org/pub/scm/linux/kernel/git/jpoimboe/linux.git/log/?h=objtool-vmlinux
 
-While I don't immediately see an issue with the dynamic loader always
-turning on PROT_BTI based solely on the shared object it is linking in,
-the static linker takes a more conservative approach. The dynamic linker
-may not have a similar choice in the future if the kernel forced
-PROT_BTI on the main executable. In both cases it was a user choice.
+You can also pull this series from
 
-The dynamic loader itself is statically linked, so any potential
-mismatch would have been detected at build time and the corresponding
-GNU_PROPERTY unset.
+  https://github.com/samitolvanen/linux.git lto-v9
 
-> 1) if we consider bti part of the semantics of a marked module
-> then it should be always on if the system supports it and
-> ideally the loader of the module should deal with PROT_BTI.
-> (and if the marking is wrong then the binary is wrong.)
-> 
-> 2) if we consider the marking to be a compatibility indicator
-> and let userspace policy to decide what to do with it then the
-> static exe and vdso cases should be handled by that policy too.
+---
+Changes in v9:
 
-For static exe, we assume that the compatibility was checked at link
-time. However, you are right on the vdso, we always turn BTI on. So it
-can indeed be argued that the kernel already made the decision for (some
-of) the user modules.
+  - Added HAS_LTO_CLANG dependencies to LLVM=1 and LLVM_IAS=1 to avoid
+    issues with mismatched toolchains.
 
-> (this makes sense if we expect that there are reasons to turn
-> bti off for a process independently of markings. this requires
-> the static linking startup code to do the policy decision and
-> self-apply PROT_BTI early.)
+  - Dropped the .mod patch as Masahiro landed a better solution to
+    the split line issue in commit 7d32358be8ac ("kbuild: avoid split
+    lines in .mod files").
 
-We currently left this policy decision to the dynamic loader (mostly,
-apart from vdso).
+  - Updated CC_FLAGS_LTO to use -fvisibility=hidden to avoid weak symbol
+    visibility issues with ThinLTO on x86.
 
-> the current code does not fit either case well, but i was
-> planning to do (1). and ideally PROT_BTI would be added
-> reliably, but a best effort only PROT_BTI works too, however
-> it limits our ability to report real mprotect failures.
+  - Changed LTO_CLANG_FULL to depend on !COMPILE_TEST to prevent
+    timeouts in automated testing.
 
-If we (kernel people) agree to set PROT_BTI on for the main executable,
-we can expose a bit (in AT_FLAGS or somewhere) to tell the dynamic
-loader that PROT_BTI is already on. I presume subsequent objects will be
-mapped with mmap().
+  - Added a dependency to CPU_LITTLE_ENDIAN to ARCH_SUPPORTS_LTO_CLANG
+    in arch/arm64/Kconfig.
 
-> > > - ideally PROT_BTI would be added via a new syscall that does not
-> > >   interfere with PROT_EXEC filtering. (this does not conflict with
-> > >   the current patches: even with a new syscall we need a fallback.)
-> > 
-> > This can be discussed as a long term solution.
-> > 
-> > > - solve it in systemd (e.g. turn off the filter, use better filter):
-> > >   i would prefer not to have aarch64 (or BTI) specific policy in
-> > >   user code. and there was no satisfying way to do this portably.
-> > 
-> > I agree. I think the best for now (as a back-portable glibc fix) is to
-> > ignore the mprotect(PROT_EXEC|PROT_BTI) error that the dynamic loader
-> > gets. BTI will be disabled if MDWX is enabled.
-> 
-> ok.
-> 
-> we got back to the original proposal: silently ignore mprotect
-> failures. i'm still considering the mmap solution for libraries
-> only: at least then libraries are handled reliably on current
-> setups, but i will have to think about whether attack targets
-> are mainly in libraries like libc or in executables.
+  - Added a default symbol list to fix an issue with TRIM_UNUSED_KSYMS.
 
-I think ignoring the mprotect() error is the best we can do now. If we
-add a kernel patch to turn PROT_BTI on together with an AT_FLAGS bit,
-the user mprotect() would no longer be necessary.
+  Changes in v8:
 
-In the absence of an AT_FLAGS bit, we could add PROT_BTI on the main exe
-and backport the fix to when we first added BTI support. This way the
-dynamic loader may just ignore the mprotect() altogether on the main
-exe, assuming that people run latest stable kernels.
+  - Cleaned up the LTO Kconfig options based on suggestions from
+    Nick and Kees.
 
-> > In the meantime, we should start (continue) looking at a solution that
-> > works for both systemd and the kernel and be generic enough for other
-> > architectures. The stateless nature of the current SECCOMP approach is
-> > not suitable for this W^X policy. Kees had some suggestions here but the
-> > thread seems to have died:
-> >
-> > https://lore.kernel.org/kernel-hardening/202010221256.A4F95FD11@keescook/
-> 
-> it sounded like better W^X enforcement won't happen any time soon.
+  - Dropped the patch to disable LTO for the arm64 nVHE KVM code as
+    David pointed out it's not needed anymore.
 
-Unfortunately, I think you are right here.
+Changes in v7:
 
-Anyway, looking for any other input from the kernel and systemd people.
-If not, I'll post a patch at 5.11-rc1 turning PROT_BTI on for the main
-exe and take it from there. I think such discussion shouldn't disrupt
-the glibc fixes/improvements.
+  - Rebased to master again.
 
+  - Added back arm64 patches as the prerequisites are now staged,
+    and dropped x86_64 support until the remaining objtool issues
+    are resolved.
+
+  - Dropped ifdefs from module.lds.S.
+
+Changes in v6:
+
+  - Added the missing --mcount flag to patch 5.
+
+  - Dropped the arm64 patches from this series and will repost them
+    later.
+
+Changes in v5:
+
+  - Rebased on top of tip/master.
+
+  - Changed the command line for objtool to use --vmlinux --duplicate
+    to disable warnings about retpoline thunks and to fix .orc_unwind
+    generation for vmlinux.o.
+
+  - Added --noinstr flag to objtool, so we can use --vmlinux without
+    also enabling noinstr validation.
+
+  - Disabled objtool's unreachable instruction warnings with LTO to
+    disable false positives for the int3 padding in vmlinux.o.
+
+  - Added ANNOTATE_RETPOLINE_SAFE annotations to the indirect jumps
+    in x86 assembly code to fix objtool warnings with retpoline.
+
+  - Fixed modpost warnings about missing version information with
+    CONFIG_MODVERSIONS.
+
+  - Included Makefile.lib into Makefile.modpost for ld_flags. Thanks
+    to Sedat for pointing this out.
+
+  - Updated the help text for ThinLTO to better explain the trade-offs.
+
+  - Updated commit messages with better explanations.
+
+Changes in v4:
+
+  - Fixed a typo in Makefile.lib to correctly pass --no-fp to objtool.
+
+  - Moved ftrace configs related to generating __mcount_loc to Kconfig,
+    so they are available also in Makefile.modfinal.
+
+  - Dropped two prerequisite patches that were merged to Linus' tree.
+
+Changes in v3:
+
+  - Added a separate patch to remove the unused DISABLE_LTO treewide,
+    as filtering out CC_FLAGS_LTO instead is preferred.
+
+  - Updated the Kconfig help to explain why LTO is behind a choice
+    and disabled by default.
+
+  - Dropped CC_FLAGS_LTO_CLANG, compiler-specific LTO flags are now
+    appended directly to CC_FLAGS_LTO.
+
+  - Updated $(AR) flags as KBUILD_ARFLAGS was removed earlier.
+
+  - Fixed ThinLTO cache handling for external module builds.
+
+  - Rebased on top of Masahiro's patch for preprocessing modules.lds,
+    and moved the contents of module-lto.lds to modules.lds.S.
+
+  - Moved objtool_args to Makefile.lib to avoid duplication of the
+    command line parameters in Makefile.modfinal.
+
+  - Clarified in the commit message for the initcall ordering patch
+    that the initcall order remains the same as without LTO.
+
+  - Changed link-vmlinux.sh to use jobserver-exec to control the
+    number of jobs started by generate_initcall_ordering.pl.
+
+  - Dropped the x86/relocs patch to whitelist L4_PAGE_OFFSET as it's
+    no longer needed with ToT kernel.
+
+  - Disabled LTO for arch/x86/power/cpu.c to work around a Clang bug
+    with stack protector attributes.
+
+Changes in v2:
+
+  - Fixed -Wmissing-prototypes warnings with W=1.
+
+  - Dropped cc-option from -fsplit-lto-unit and added .thinlto-cache
+    scrubbing to make distclean.
+
+  - Added a comment about Clang >=11 being required.
+
+  - Added a patch to disable LTO for the arm64 KVM nVHE code.
+
+  - Disabled objtool's noinstr validation with LTO unless enabled.
+
+  - Included Peter's proposed objtool mcount patch in the series
+    and replaced recordmcount with the objtool pass to avoid
+    whitelisting relocations that are not calls.
+
+  - Updated several commit messages with better explanations.
+
+
+Sami Tolvanen (16):
+  tracing: move function tracer options to Kconfig
+  kbuild: add support for Clang LTO
+  kbuild: lto: fix module versioning
+  kbuild: lto: limit inlining
+  kbuild: lto: merge module sections
+  kbuild: lto: add a default list of used symbols
+  init: lto: ensure initcall ordering
+  init: lto: fix PREL32 relocations
+  PCI: Fix PREL32 relocations for LTO
+  modpost: lto: strip .lto from module names
+  scripts/mod: disable LTO for empty.c
+  efi/libstub: disable LTO
+  drivers/misc/lkdtm: disable LTO for rodata.o
+  arm64: vdso: disable LTO
+  arm64: disable recordmcount with DYNAMIC_FTRACE_WITH_REGS
+  arm64: allow LTO to be selected
+
+ .gitignore                            |   1 +
+ Makefile                              |  45 +++--
+ arch/Kconfig                          |  90 +++++++++
+ arch/arm64/Kconfig                    |   4 +
+ arch/arm64/kernel/vdso/Makefile       |   3 +-
+ drivers/firmware/efi/libstub/Makefile |   2 +
+ drivers/misc/lkdtm/Makefile           |   1 +
+ include/asm-generic/vmlinux.lds.h     |  11 +-
+ include/linux/init.h                  |  79 +++++++-
+ include/linux/pci.h                   |  19 +-
+ init/Kconfig                          |   1 +
+ kernel/trace/Kconfig                  |  16 ++
+ scripts/Makefile.build                |  48 ++++-
+ scripts/Makefile.lib                  |   6 +-
+ scripts/Makefile.modfinal             |   9 +-
+ scripts/Makefile.modpost              |  25 ++-
+ scripts/generate_initcall_order.pl    | 270 ++++++++++++++++++++++++++
+ scripts/link-vmlinux.sh               |  70 ++++++-
+ scripts/lto-used-symbollist           |   5 +
+ scripts/mod/Makefile                  |   1 +
+ scripts/mod/modpost.c                 |  16 +-
+ scripts/mod/modpost.h                 |   9 +
+ scripts/mod/sumversion.c              |   6 +-
+ scripts/module.lds.S                  |  24 +++
+ 24 files changed, 696 insertions(+), 65 deletions(-)
+ create mode 100755 scripts/generate_initcall_order.pl
+ create mode 100644 scripts/lto-used-symbollist
+
+
+base-commit: 33dc9614dc208291d0c4bcdeb5d30d481dcd2c4c
 -- 
-Catalin
+2.29.2.576.ga3fc446d84-goog
+
