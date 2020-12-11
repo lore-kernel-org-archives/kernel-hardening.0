@@ -1,4 +1,4 @@
-Return-Path: <SRS0=sj7i=FP=lists.openwall.com=kernel-hardening-return-20595-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=CLob=FP=lists.openwall.com=kernel-hardening-return-20596-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,15 +8,15 @@ X-Spam-Status: No, score=-26.2 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7F437C4361B
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:48:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 736D9C433FE
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:49:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B6AB722248
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:48:54 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B6AB722248
+	by mail.kernel.org (Postfix) with SMTP id BA26523F2A
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:49:04 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BA26523F2A
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20595-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9740 invoked by uid 550); 11 Dec 2020 18:47:14 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20596-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9871 invoked by uid 550); 11 Dec 2020 18:47:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,43 +24,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9661 invoked from network); 11 Dec 2020 18:47:13 -0000
+Received: (qmail 9831 invoked from network); 11 Dec 2020 18:47:15 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=sender:date:in-reply-to:message-id:mime-version:references:subject
          :from:to:cc;
-        bh=aPTc8wYkBIIZS9XLhaJqPHrVGew/rHRzWtLqs6SwnEk=;
-        b=E+U0sSuZCC6dC6kicRnG1UaOFnx0iJfVyKRNQUtLjfW4hBBe8OQHaAuEWS9h6JwKDx
-         nx6Zu83awRxikbvdB79vty/SByEvJivxVql9gf2LMdRTfeqEVv6ipQ1QsF9J7PWYP4ci
-         xFn+wn1LX/1iDg9jO4eVqOOQ4FreP1QjK0OhIyps0vVvKsrGxhaOt0uJ7F7usCg/jpLp
-         gwWhvDGGPcYg2A/8emqAajS7l0RY+zs0C+//CZq5Gur4DDUAlFbFqzlQpajQdqS8M9Zx
-         v1gv/9kwRgkR9BQVqOJaPgZ90khLPqENshOnYY+glZxACDE1KVCQlvqrVGtAtOTfVdje
-         HG9A==
+        bh=D9wH7plBpsyKB7z0MJo6lESfcO9at50jK7OVp+0NdAo=;
+        b=o9YQ2WaCNG8K0/fs9UJt8tjJkZt2V+zu8nGyyzGv31aRlZwzdERkcEEzcsjJzK7Khh
+         Fk/jL/s8l2hJliwPNQGXJKzeEfZAhZNL3N7YQubgkjL3MBt3ZaOHRNJKHKyKgl7rzP3r
+         CbLCHOiTVvpx23P8dNWk0S8pTKQys5/iAUXEqkbZkIdXP67EvijrZ7suaxN5SM1AiGUg
+         Czctp/iCgtSTfOnV6MNPNWCT9Gw6yx2WXcKk+pz2gFHpPVleQlFs2WHsbthps4QXwlxm
+         5FQuFyoHqaAxpIDOc7NISukhUKz44T2F+pYRZntubJg1eb5X5qyK7NUJ7/Bfmj3XKKx9
+         8T1w==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=aPTc8wYkBIIZS9XLhaJqPHrVGew/rHRzWtLqs6SwnEk=;
-        b=aXDJR5FvW5166dzfwBdQ/TwaTfHnnyVA2Lz9Gumyck/W31CA0o5MWR66Y+eVAgATKl
-         D6WGOu3Xcn662LG8/xpdbcTcP/mGihEu7FQX3GR9cKwSoVN9HOQ9iokLS9cZ1Ht9clZp
-         1XaFdMg1R4uuyKs5P5YGThNYTFez1nTMJgMHfsIMVc9q3791UvHbZvDP70kX77vJZitZ
-         qepX3yvNZWqOrJ/ztAO7Ae5MdkttjxKq2nJ3LqxBKhZ7cLJpElyVfkkqA9gydObqiFj5
-         NPV/qkdu8BYFMdH/7IZna8K1x8Pf+ECv2Lq3OnVrN4lGnxhFRK25h4ALq0Dv6+4Gfq7L
-         2Qsw==
-X-Gm-Message-State: AOAM531i/DFfW0LpVo0CVm1yLVjiCAazNYQprB5dniX4hRR0Hzb+Q7Uw
-	Xqk/+859Ti+N4CUDe2P9Lbm6FiMwfPDHugtcp98=
-X-Google-Smtp-Source: ABdhPJxd+bMesTAWKmvtUqjomdCAHsA1n3+h09FJfVuePnPbd9mL5SpzLXlx8lDAG4fdUSPHIEIQBY9z8nx1PVd0SrU=
+        bh=D9wH7plBpsyKB7z0MJo6lESfcO9at50jK7OVp+0NdAo=;
+        b=EDuqo/n7It7SdWxZleEXfsmF9QEoW5UE+oGU0aXfn7vezadDP4/3VWuChKRnTjLVW6
+         TFgpsbA3x7VyA7+8KeCgeh+L4SJ0ivWSc2sFaXLm6RkvFbQ/XYchjmV5J9qJW2U7rf5c
+         +YdLOP2t0nqiFmVBLus3qHF+A5Tz8iqDfTPqP2tvmGeZDhJ4FnVX6wJfUFvfstzUL1SW
+         1dRjdju14tJW+idXhEynwUTYbl4tcImo3xgwlcNStEAz7QLULC2SpZaASIGpiwBKbulO
+         +2pA1Yo1wWOQp/7NWLFIvFpUeFSWDfTEv1a1jVhbJXkqfE/7ZkVL2nJB+u6SWwcBSkXc
+         RUwQ==
+X-Gm-Message-State: AOAM531zJnEtIPoYyyEtFbqD6tLs8JWfi1rsaB4BDUC6fLlrfpFnJ0Zx
+	b3w/z6k09jNLQEMCNJXwmIu8Gvw8engE7Jmbm6o=
+X-Google-Smtp-Source: ABdhPJznzuiVO4idqxJMtdzoCHbXvL/GitFw7UhsVnJ6x3E9oWq6Kdg+IUkD+jO4kIRIFWgi1U7nyXaq6VyburgAblw=
 Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
 X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
- (user=samitolvanen job=sendgmr) by 2002:a17:90a:a24:: with SMTP id
- o33mr10805536pjo.191.1607712421542; Fri, 11 Dec 2020 10:47:01 -0800 (PST)
-Date: Fri, 11 Dec 2020 10:46:30 -0800
+ (user=samitolvanen job=sendgmr) by 2002:a25:6405:: with SMTP id
+ y5mr12176868ybb.328.1607712423523; Fri, 11 Dec 2020 10:47:03 -0800 (PST)
+Date: Fri, 11 Dec 2020 10:46:31 -0800
 In-Reply-To: <20201211184633.3213045-1-samitolvanen@google.com>
-Message-Id: <20201211184633.3213045-14-samitolvanen@google.com>
+Message-Id: <20201211184633.3213045-15-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20201211184633.3213045-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.29.2.576.ga3fc446d84-goog
-Subject: [PATCH v9 13/16] drivers/misc/lkdtm: disable LTO for rodata.o
+Subject: [PATCH v9 14/16] arm64: vdso: disable LTO
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
 	Will Deacon <will@kernel.org>
@@ -73,27 +73,30 @@ Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Peter Zijlstra <peterz@infradead.org>,
 	linux-pci@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-Disable LTO for rodata.o to allow objcopy to be used to
-manipulate sections.
+Disable LTO for the vDSO by filtering out CC_FLAGS_LTO, as there's no
+point in using link-time optimization for the small amount of C code.
 
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
-Acked-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Acked-by: Will Deacon <will@kernel.org>
 ---
- drivers/misc/lkdtm/Makefile | 1 +
- 1 file changed, 1 insertion(+)
+ arch/arm64/kernel/vdso/Makefile | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/misc/lkdtm/Makefile b/drivers/misc/lkdtm/Makefile
-index c70b3822013f..dd4c936d4d73 100644
---- a/drivers/misc/lkdtm/Makefile
-+++ b/drivers/misc/lkdtm/Makefile
-@@ -13,6 +13,7 @@ lkdtm-$(CONFIG_LKDTM)		+= cfi.o
+diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
+index d65f52264aba..50fe49fb4d95 100644
+--- a/arch/arm64/kernel/vdso/Makefile
++++ b/arch/arm64/kernel/vdso/Makefile
+@@ -30,7 +30,8 @@ ldflags-y := -shared -nostdlib -soname=linux-vdso.so.1 --hash-style=sysv	\
+ ccflags-y := -fno-common -fno-builtin -fno-stack-protector -ffixed-x18
+ ccflags-y += -DDISABLE_BRANCH_PROFILING
  
- KASAN_SANITIZE_stackleak.o	:= n
- KCOV_INSTRUMENT_rodata.o	:= n
-+CFLAGS_REMOVE_rodata.o		+= $(CC_FLAGS_LTO)
- 
- OBJCOPYFLAGS :=
- OBJCOPYFLAGS_rodata_objcopy.o	:= \
+-CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS) $(GCC_PLUGINS_CFLAGS)
++CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS) $(GCC_PLUGINS_CFLAGS) \
++				$(CC_FLAGS_LTO)
+ KASAN_SANITIZE			:= n
+ UBSAN_SANITIZE			:= n
+ OBJECT_FILES_NON_STANDARD	:= y
 -- 
 2.29.2.576.ga3fc446d84-goog
 
