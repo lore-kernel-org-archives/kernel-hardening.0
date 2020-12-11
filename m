@@ -1,4 +1,4 @@
-Return-Path: <SRS0=I9f5=FP=lists.openwall.com=kernel-hardening-return-20586-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=W6SJ=FP=lists.openwall.com=kernel-hardening-return-20587-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,15 +8,15 @@ X-Spam-Status: No, score=-26.2 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	URIBL_BLOCKED,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8E845C4361B
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:47:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B27D9C4361B
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:47:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id B999F23F37
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:47:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B999F23F37
+	by mail.kernel.org (Postfix) with SMTP id D725923F59
+	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Dec 2020 18:47:39 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D725923F59
 Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20586-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 5854 invoked by uid 550); 11 Dec 2020 18:46:55 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20587-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 6139 invoked by uid 550); 11 Dec 2020 18:46:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,43 +24,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5784 invoked from network); 11 Dec 2020 18:46:54 -0000
+Received: (qmail 6060 invoked from network); 11 Dec 2020 18:46:57 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=sender:date:in-reply-to:message-id:mime-version:references:subject
          :from:to:cc;
-        bh=6mEKvNeY3wq0rs7jAFLZaZQm6yt6Fm86WJ405HnCM0w=;
-        b=F3+ZlsJ4J/cRnUap6emR8N4b+Xouboife2S7UkAulyFopMjE2taVk9b7ehRGq4lP6n
-         TWsU42g66xrNtUHSwJP7KHpC9+dzh6DjSzVNB4ihF3HNbGrWLATePQMHxzMsDj13lrQP
-         azC/S2KiPkBzTIoYgS+nAssox204PVtPACYv3/zBjhusnbk5UjStmi3SxWetk5Rg2kzv
-         z8nqf6A2Nm0mG//A4/l4+LYdtA+F++wU6dqyimvIcOKEyC4WJMPShNvMtY4e0/LfP4ix
-         QdZ5G0gBeKAaM4Af5u8Kd8vvAtx6eHRH3G4aF6b+OJSo0XA9zUkdzMJPMR2eih4tOekj
-         Yqmg==
+        bh=IWPxRCPjFejanLxpgRG3fapg45p9YOPZWT66lZNPqfI=;
+        b=NmW10Ys2Tgg9pvNOzRC87vTxzQN/QNTXAjHd7AFTV8ok00h9tGhhYMLsRuxKeNhXDl
+         iMPagwzzegEY0NAWkP8VdeyEnPICgOM5AE4FTcCbPPAinuDjGz68sbCLgXPYhkRq1Pep
+         /oDzt2sWciOe12Hb0BMOoaCF9qAfZgz+jdivhEhkTAz3ohV7gcdM13QrPXPixLmDjCSe
+         nTPKcCoKQq0gq3xcii2Dkj1W1xDXw/X3VKykyVsM1VgUoEe62p+1hemZShAFUHpH1Tsi
+         8OfLqN3hCowWbgVvrwWk8fm6stKJ1NblXBwjNE+NVf/Ofnn3fkAOASnNgDC94IzGVftK
+         2nnw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=6mEKvNeY3wq0rs7jAFLZaZQm6yt6Fm86WJ405HnCM0w=;
-        b=dxZFLyTR9h1Qs6zfIerZPzX/CApM0qbGWf2JzdDw7zXXL6aN97LHFdYD1b/8KxB8Ma
-         2QKQ7I4lZcgexYa4k3OK6DOt7c/4GrdPZmnYhhcnPVyX3tuPDwD/gx01E1RZTtAZP9H7
-         FBkuiQcV9nukrjy9OWA6kU78tCwt9syw8MZpojRBEaX+5UwQ2PMOl74u11D7270TLBU9
-         4tmumX5nmmFq+mUyP5ecYDvBbY//U3eJf/HbFIv0JE0EmiL4jnq3+yxPQlIrwgFdqMjR
-         t+G0m/fnshVYpMfR31fzkl4hvMIsM13BKsFoPbQroUj08B4kHmKHuWsaFksEnsPwMZc0
-         C/kA==
-X-Gm-Message-State: AOAM531XHjsN5iLpRIxoFlxGdkteyWVxDGND12VHyPKuv4hD+Gbvafyq
-	v/di4xQ4Kgu35b1JxyJxqu4FXKwe9bspCSg8P2U=
-X-Google-Smtp-Source: ABdhPJztdLpOmb8z2bOpx13eLpmFbg1IRTYkNtur403j5lUtJlMBrXobhq6mew9nU+bYggfLn4Aj28+KN30Fe9rq1PM=
+        bh=IWPxRCPjFejanLxpgRG3fapg45p9YOPZWT66lZNPqfI=;
+        b=n860g/hg8XvFhaseVCYkfPQY+xbyPeTNd8+WskloZcjIekSbXtvMVxZ5ioSUwo0P7u
+         wlzHhXxzvZgpcB8R19kYfhTSdqSk8P9Etk0bJ5GCZLeVsM4kczQogmwxS5ezXj/1d8DR
+         IuupaAk15BtLoUIIqMVxFKlYMrhRB0tjdFu5onB7bhk7av5gdRGN5mcC+KEfjimcRll+
+         j/VR9gWv3LB57y/A38FwFrRI8G+N+Mm+/ymzokoVi5o+zVR73XB9xNV7zPQXPU7fp+KJ
+         HW7VT+o7eGNAy/s6wyyufjAgkEAax6soZhhAR5LCwcASJBClwXX3rrpO088YOnt3U/Gg
+         BdbQ==
+X-Gm-Message-State: AOAM531gWjg1gcDhEdp0droqfvMAeZsO6mnuDXDBYa2W1DXoyxEMNZ0y
+	pt+n7RVfWsgSb6oGIDKnWf+/kUyyrKSCXKAYK1U=
+X-Google-Smtp-Source: ABdhPJzm7bBo2qDvtUgK6v6rrLGQ/0dJj/ATzhcF3Fgu3P9N3k/LVow1+5c7Y8w8YkEUkh1r4Djckvq7KIZM8TNXHU4=
 Sender: "samitolvanen via sendgmr" <samitolvanen@samitolvanen1.mtv.corp.google.com>
 X-Received: from samitolvanen1.mtv.corp.google.com ([2620:15c:201:2:f693:9fff:fef4:1b6d])
- (user=samitolvanen job=sendgmr) by 2002:a25:7d04:: with SMTP id
- y4mr20471824ybc.110.1607712403064; Fri, 11 Dec 2020 10:46:43 -0800 (PST)
-Date: Fri, 11 Dec 2020 10:46:21 -0800
+ (user=samitolvanen job=sendgmr) by 2002:a17:90a:8b94:: with SMTP id
+ z20mr136813pjn.1.1607712405109; Fri, 11 Dec 2020 10:46:45 -0800 (PST)
+Date: Fri, 11 Dec 2020 10:46:22 -0800
 In-Reply-To: <20201211184633.3213045-1-samitolvanen@google.com>
-Message-Id: <20201211184633.3213045-5-samitolvanen@google.com>
+Message-Id: <20201211184633.3213045-6-samitolvanen@google.com>
 Mime-Version: 1.0
 References: <20201211184633.3213045-1-samitolvanen@google.com>
 X-Mailer: git-send-email 2.29.2.576.ga3fc446d84-goog
-Subject: [PATCH v9 04/16] kbuild: lto: limit inlining
+Subject: [PATCH v9 05/16] kbuild: lto: merge module sections
 From: Sami Tolvanen <samitolvanen@google.com>
 To: Masahiro Yamada <masahiroy@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, 
 	Will Deacon <will@kernel.org>
@@ -73,36 +73,52 @@ Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Peter Zijlstra <peterz@infradead.org>,
 	linux-pci@vger.kernel.org, Sami Tolvanen <samitolvanen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 
-This change limits function inlining across translation unit boundaries
-in order to reduce the binary size with LTO. The -import-instr-limit
-flag defines a size limit, as the number of LLVM IR instructions, for
-importing functions from other TUs, defaulting to 100.
+LLD always splits sections with LTO, which increases module sizes. This
+change adds linker script rules to merge the split sections in the final
+module.
 
-Based on testing with arm64 defconfig, we found that a limit of 5 is a
-reasonable compromise between performance and binary size, reducing the
-size of a stripped vmlinux by 11%.
-
-Suggested-by: George Burgess IV <gbiv@google.com>
+Suggested-by: Nick Desaulniers <ndesaulniers@google.com>
 Signed-off-by: Sami Tolvanen <samitolvanen@google.com>
 Reviewed-by: Kees Cook <keescook@chromium.org>
 ---
- Makefile | 3 +++
- 1 file changed, 3 insertions(+)
+ scripts/module.lds.S | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
 
-diff --git a/Makefile b/Makefile
-index a07e3909e5d0..84c60f38ee3e 100644
---- a/Makefile
-+++ b/Makefile
-@@ -901,6 +901,9 @@ else
- CC_FLAGS_LTO	+= -flto
- endif
- CC_FLAGS_LTO	+= -fvisibility=hidden
-+
-+# Limit inlining across translation units to reduce binary size
-+KBUILD_LDFLAGS += -mllvm -import-instr-limit=5
- endif
+diff --git a/scripts/module.lds.S b/scripts/module.lds.S
+index 69b9b71a6a47..18d5b8423635 100644
+--- a/scripts/module.lds.S
++++ b/scripts/module.lds.S
+@@ -23,6 +23,30 @@ SECTIONS {
+ 	.init_array		0 : ALIGN(8) { *(SORT(.init_array.*)) *(.init_array) }
  
- ifdef CONFIG_LTO
+ 	__jump_table		0 : ALIGN(8) { KEEP(*(__jump_table)) }
++
++	__patchable_function_entries : { *(__patchable_function_entries) }
++
++	/*
++	 * With CONFIG_LTO_CLANG, LLD always enables -fdata-sections and
++	 * -ffunction-sections, which increases the size of the final module.
++	 * Merge the split sections in the final binary.
++	 */
++	.bss : {
++		*(.bss .bss.[0-9a-zA-Z_]*)
++		*(.bss..L*)
++	}
++
++	.data : {
++		*(.data .data.[0-9a-zA-Z_]*)
++		*(.data..L*)
++	}
++
++	.rodata : {
++		*(.rodata .rodata.[0-9a-zA-Z_]*)
++		*(.rodata..L*)
++	}
++
++	.text : { *(.text .text.[0-9a-zA-Z_]*) }
+ }
+ 
+ /* bring in arch-specific sections */
 -- 
 2.29.2.576.ga3fc446d84-goog
 
