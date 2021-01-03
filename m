@@ -1,21 +1,20 @@
-Return-Path: <SRS0=P52c=GA=lists.openwall.com=kernel-hardening-return-20609-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=afZs=GG=lists.openwall.com=kernel-hardening-return-20610-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.9 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D7D40C433DB
-	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Dec 2020 10:30:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 84A80C433DB
+	for <kernel-hardening@archiver.kernel.org>; Sun,  3 Jan 2021 14:39:54 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C8D1E207C9
-	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Dec 2020 10:30:37 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C8D1E207C9
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.alibaba.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20609-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26103 invoked by uid 550); 28 Dec 2020 10:30:29 -0000
+	by mail.kernel.org (Postfix) with SMTP id 6CE2220720
+	for <kernel-hardening@archiver.kernel.org>; Sun,  3 Jan 2021 14:39:53 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6CE2220720
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=daurnimator.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20610-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20071 invoked by uid 550); 3 Jan 2021 14:39:43 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,592 +22,49 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11667 invoked from network); 28 Dec 2020 07:24:53 -0000
-X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R721e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=e01e04400;MF=wetp.zy@linux.alibaba.com;NM=1;PH=DS;RN=12;SR=0;TI=SMTPD_---0UJxtgu7_1609140278;
-Subject: Re: [PATCH 04/13] x86/extable: Introduce _ASM_EXTABLE_UA for uaccess
- fixups
-To: Jann Horn <jannh@google.com>, Thomas Gleixner <tglx@linutronix.de>,
- Andy Lutomirski <luto@kernel.org>, kernel-hardening@lists.openwall.com,
- dvyukov@google.com, Masami Hiramatsu <mhiramat@kernel.org>,
- "Naveen N. Rao" <naveen.n.rao@linux.vnet.ibm.com>,
- Anil S Keshavamurthy <anil.s.keshavamurthy@intel.com>,
- "David S. Miller" <davem@davemloft.net>,
- Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org,
- Borislav Petkov <bp@alien8.de>
-References: <1609139095-26337-1-git-send-email-wetp.zy@linux.alibaba.com>
- <1609139095-26337-5-git-send-email-wetp.zy@linux.alibaba.com>
-From: wetp <wetp.zy@linux.alibaba.com>
-Message-ID: <095aa9a0-ef05-86a6-48f3-0a3208447654@linux.alibaba.com>
-Date: Mon, 28 Dec 2020 15:24:38 +0800
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:78.0)
- Gecko/20100101 Thunderbird/78.6.0
+Received: (qmail 16056 invoked from network); 3 Jan 2021 14:27:03 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=daurnimator.com; s=daurnimator;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=cdyQdxurFTWyieFqx40CmBAoJaRWHmu1pRJJqDh4s5U=;
+        b=JHNprKCEMlJgPWrm5Lf8OKHrWDbu4cEkVI6wyETQU0N7Fi8v5Ypp/+nkY/AH2GR/xs
+         03HCcW+FEV5VDByHaCH5AKFMjTu24gF7Gq4q8kPosYWDGBO0gm97o3VYffDbTGaInjOZ
+         Sa8FL0FLEOy5wkVQ2SJe2vxdz1vPL9rcg8DYE=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=cdyQdxurFTWyieFqx40CmBAoJaRWHmu1pRJJqDh4s5U=;
+        b=XEEok4jkROoqNCsyBaqCG032WNWXxgaF0vxi9XbTGbfKBh7W+wkFsIMmvSOUqVwGfj
+         2LkcAx5ZiwUB6CYLxf7AWWFqD+cmNaHfNE8SEQ2zAeciHIkKVFhOPLbFhwFT8IiMym1U
+         RlVt7QsTGyzagJUM/IyBzO5Z3soAlAj46y9D2RM4q2oKkuFFH8rY4GDbL3YSjPhTMLaT
+         t9ZSodfF/6y2KdrpDvqVzeGhwHsMoI6U3jvsJIhhitR9Ea7V/OPJl6+VfpsrgZ4nfR5R
+         gHTC/9nqjO45AA5VZ2h/Dvai4GRNoUg9R+HDLdgktJPGWOVv9lFbQ0ftIprCq24aWpIN
+         iSrg==
+X-Gm-Message-State: AOAM530I5YJb63SmB0/Wg2CQnkjNJE3beBtw4/VLjLfDqPw9Bq/H+m4N
+	P+8yPIR94xoTA+FXAG0Ji17kR++NlLzFGkvlZuauXQ==
+X-Google-Smtp-Source: ABdhPJwFlghKT98/Z0lh6E4GwRePMZJ+jb52otf0aNEGyGaXkWUSRiOfpQxV7ZsIBGH2niNmnsTYvIahv/eJODbOWn0=
+X-Received: by 2002:a7b:c8da:: with SMTP id f26mr23264936wml.50.1609684012066;
+ Sun, 03 Jan 2021 06:26:52 -0800 (PST)
 MIME-Version: 1.0
-In-Reply-To: <1609139095-26337-5-git-send-email-wetp.zy@linux.alibaba.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
+References: <20200827145831.95189-1-sgarzare@redhat.com> <20200827145831.95189-3-sgarzare@redhat.com>
+In-Reply-To: <20200827145831.95189-3-sgarzare@redhat.com>
+From: Daurnimator <quae@daurnimator.com>
+Date: Mon, 4 Jan 2021 01:26:41 +1100
+Message-ID: <CAEnbY+fS8FXVeouOxN3uohTvo7fBi5r7TQCGBZUmG3MGJhBrYg@mail.gmail.com>
+Subject: Re: [PATCH v6 2/3] io_uring: add IOURING_REGISTER_RESTRICTIONS opcode
+To: Stefano Garzarella <sgarzare@redhat.com>
+Cc: Jens Axboe <axboe@kernel.dk>, Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	Christian Brauner <christian.brauner@ubuntu.com>, io-uring <io-uring@vger.kernel.org>, 
+	Alexander Viro <viro@zeniv.linux.org.uk>, Stefan Hajnoczi <stefanha@redhat.com>, 
+	Jann Horn <jannh@google.com>, Jeff Moyer <jmoyer@redhat.com>, Aleksa Sarai <asarai@suse.de>, 
+	Sargun Dhillon <sargun@sargun.me>, linux-kernel@vger.kernel.org, 
+	Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset="UTF-8"
 
-Please ingore this, so sorry to boring you.
+On Fri, 28 Aug 2020 at 00:59, Stefano Garzarella <sgarzare@redhat.com> wrote:
+> +               __u8 register_op; /* IORING_RESTRICTION_REGISTER_OP */
 
-On 2020/12/28 下午3:04, Wetp Zhang wrote:
-> From: Jann Horn <jannh@google.com>
->
-> fix #31317281
->
-> commit 75045f77f7a73e617494d7a1fcf4e9c1849cec39 upstream
-> Backport summary: Backport to kernel 4.19.57 to enhance MCA-R for copyin
->
-> Currently, most fixups for attempting to access userspace memory are
-> handled using _ASM_EXTABLE, which is also used for various other types of
-> fixups (e.g. safe MSR access, IRET failures, and a bunch of other things).
-> In order to make it possible to add special safety checks to uaccess fixups
-> (in particular, checking whether the fault address is actually in
-> userspace), introduce a new exception table handler ex_handler_uaccess()
-> and wire it up to all the user access fixups (excluding ones that
-> already use _ASM_EXTABLE_EX).
->
-> Signed-off-by: Jann Horn <jannh@google.com>
-> Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-> Tested-by: Kees Cook <keescook@chromium.org>
-> Cc: Andy Lutomirski <luto@kernel.org>
-> Cc: kernel-hardening@lists.openwall.com
-> Cc: dvyukov@google.com
-> Cc: Masami Hiramatsu <mhiramat@kernel.org>
-> Cc: "Naveen N. Rao" <naveen.n.rao@linux.vnet.ibm.com>
-> Cc: Anil S Keshavamurthy <anil.s.keshavamurthy@intel.com>
-> Cc: "David S. Miller" <davem@davemloft.net>
-> Cc: Alexander Viro <viro@zeniv.linux.org.uk>
-> Cc: linux-fsdevel@vger.kernel.org
-> Cc: Borislav Petkov <bp@alien8.de>
-> Link: https://lkml.kernel.org/r/20180828201421.157735-5-jannh@google.com
-> Signed-off-by: Youquan Song <youquan.song@intel.com>
-> Signed-off-by: Wetp Zhang <wetp.zy@linux.alibaba.com>
-> ---
->   arch/x86/include/asm/asm.h     |   6 ++
->   arch/x86/include/asm/futex.h   |   6 +-
->   arch/x86/include/asm/uaccess.h |  16 +++---
->   arch/x86/lib/checksum_32.S     |   4 +-
->   arch/x86/lib/copy_user_64.S    |  90 ++++++++++++++---------------
->   arch/x86/lib/csum-copy_64.S    |   8 ++-
->   arch/x86/lib/getuser.S         |  12 ++--
->   arch/x86/lib/putuser.S         |  10 ++--
->   arch/x86/lib/usercopy_32.c     | 126 ++++++++++++++++++++---------------------
->   arch/x86/lib/usercopy_64.c     |   4 +-
->   arch/x86/mm/extable.c          |   8 +++
->   11 files changed, 154 insertions(+), 136 deletions(-)
->
-> diff --git a/arch/x86/include/asm/asm.h b/arch/x86/include/asm/asm.h
-> index 990770f..13fe8d6 100644
-> --- a/arch/x86/include/asm/asm.h
-> +++ b/arch/x86/include/asm/asm.h
-> @@ -130,6 +130,9 @@
->   # define _ASM_EXTABLE(from, to)					\
->   	_ASM_EXTABLE_HANDLE(from, to, ex_handler_default)
->   
-> +# define _ASM_EXTABLE_UA(from, to)				\
-> +	_ASM_EXTABLE_HANDLE(from, to, ex_handler_uaccess)
-> +
->   # define _ASM_EXTABLE_FAULT(from, to)				\
->   	_ASM_EXTABLE_HANDLE(from, to, ex_handler_fault)
->   
-> @@ -182,6 +185,9 @@
->   # define _ASM_EXTABLE(from, to)					\
->   	_ASM_EXTABLE_HANDLE(from, to, ex_handler_default)
->   
-> +# define _ASM_EXTABLE_UA(from, to)				\
-> +	_ASM_EXTABLE_HANDLE(from, to, ex_handler_uaccess)
-> +
->   # define _ASM_EXTABLE_FAULT(from, to)				\
->   	_ASM_EXTABLE_HANDLE(from, to, ex_handler_fault)
->   
-> diff --git a/arch/x86/include/asm/futex.h b/arch/x86/include/asm/futex.h
-> index de4d688..13c83fe 100644
-> --- a/arch/x86/include/asm/futex.h
-> +++ b/arch/x86/include/asm/futex.h
-> @@ -20,7 +20,7 @@
->   		     "3:\tmov\t%3, %1\n"			\
->   		     "\tjmp\t2b\n"				\
->   		     "\t.previous\n"				\
-> -		     _ASM_EXTABLE(1b, 3b)			\
-> +		     _ASM_EXTABLE_UA(1b, 3b)			\
->   		     : "=r" (oldval), "=r" (ret), "+m" (*uaddr)	\
->   		     : "i" (-EFAULT), "0" (oparg), "1" (0))
->   
-> @@ -36,8 +36,8 @@
->   		     "4:\tmov\t%5, %1\n"			\
->   		     "\tjmp\t3b\n"				\
->   		     "\t.previous\n"				\
-> -		     _ASM_EXTABLE(1b, 4b)			\
-> -		     _ASM_EXTABLE(2b, 4b)			\
-> +		     _ASM_EXTABLE_UA(1b, 4b)			\
-> +		     _ASM_EXTABLE_UA(2b, 4b)			\
->   		     : "=&a" (oldval), "=&r" (ret),		\
->   		       "+m" (*uaddr), "=&r" (tem)		\
->   		     : "r" (oparg), "i" (-EFAULT), "1" (0))
-> diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
-> index d7ccff5..58929cf 100644
-> --- a/arch/x86/include/asm/uaccess.h
-> +++ b/arch/x86/include/asm/uaccess.h
-> @@ -198,8 +198,8 @@ static inline bool __chk_range_not_ok(unsigned long addr, unsigned long size, un
->   		     "4:	movl %3,%0\n"				\
->   		     "	jmp 3b\n"					\
->   		     ".previous\n"					\
-> -		     _ASM_EXTABLE(1b, 4b)				\
-> -		     _ASM_EXTABLE(2b, 4b)				\
-> +		     _ASM_EXTABLE_UA(1b, 4b)				\
-> +		     _ASM_EXTABLE_UA(2b, 4b)				\
->   		     : "=r" (err)					\
->   		     : "A" (x), "r" (addr), "i" (errret), "0" (err))
->   
-> @@ -385,7 +385,7 @@ static inline bool __chk_range_not_ok(unsigned long addr, unsigned long size, un
->   		     "	xor"itype" %"rtype"1,%"rtype"1\n"		\
->   		     "	jmp 2b\n"					\
->   		     ".previous\n"					\
-> -		     _ASM_EXTABLE(1b, 3b)				\
-> +		     _ASM_EXTABLE_UA(1b, 3b)				\
->   		     : "=r" (err), ltype(x)				\
->   		     : "m" (__m(addr)), "i" (errret), "0" (err))
->   
-> @@ -477,7 +477,7 @@ static inline bool __chk_range_not_ok(unsigned long addr, unsigned long size, un
->   		     "3:	mov %3,%0\n"				\
->   		     "	jmp 2b\n"					\
->   		     ".previous\n"					\
-> -		     _ASM_EXTABLE(1b, 3b)				\
-> +		     _ASM_EXTABLE_UA(1b, 3b)				\
->   		     : "=r"(err)					\
->   		     : ltype(x), "m" (__m(addr)), "i" (errret), "0" (err))
->   
-> @@ -605,7 +605,7 @@ extern void __cmpxchg_wrong_size(void)
->   			"3:\tmov     %3, %0\n"				\
->   			"\tjmp     2b\n"				\
->   			"\t.previous\n"					\
-> -			_ASM_EXTABLE(1b, 3b)				\
-> +			_ASM_EXTABLE_UA(1b, 3b)				\
->   			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
->   			: "i" (-EFAULT), "q" (__new), "1" (__old)	\
->   			: "memory"					\
-> @@ -621,7 +621,7 @@ extern void __cmpxchg_wrong_size(void)
->   			"3:\tmov     %3, %0\n"				\
->   			"\tjmp     2b\n"				\
->   			"\t.previous\n"					\
-> -			_ASM_EXTABLE(1b, 3b)				\
-> +			_ASM_EXTABLE_UA(1b, 3b)				\
->   			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
->   			: "i" (-EFAULT), "r" (__new), "1" (__old)	\
->   			: "memory"					\
-> @@ -637,7 +637,7 @@ extern void __cmpxchg_wrong_size(void)
->   			"3:\tmov     %3, %0\n"				\
->   			"\tjmp     2b\n"				\
->   			"\t.previous\n"					\
-> -			_ASM_EXTABLE(1b, 3b)				\
-> +			_ASM_EXTABLE_UA(1b, 3b)				\
->   			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
->   			: "i" (-EFAULT), "r" (__new), "1" (__old)	\
->   			: "memory"					\
-> @@ -656,7 +656,7 @@ extern void __cmpxchg_wrong_size(void)
->   			"3:\tmov     %3, %0\n"				\
->   			"\tjmp     2b\n"				\
->   			"\t.previous\n"					\
-> -			_ASM_EXTABLE(1b, 3b)				\
-> +			_ASM_EXTABLE_UA(1b, 3b)				\
->   			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
->   			: "i" (-EFAULT), "r" (__new), "1" (__old)	\
->   			: "memory"					\
-> diff --git a/arch/x86/lib/checksum_32.S b/arch/x86/lib/checksum_32.S
-> index 46e71a7..ad8e090 100644
-> --- a/arch/x86/lib/checksum_32.S
-> +++ b/arch/x86/lib/checksum_32.S
-> @@ -273,11 +273,11 @@ unsigned int csum_partial_copy_generic (const char *src, char *dst,
->   
->   #define SRC(y...)			\
->   	9999: y;			\
-> -	_ASM_EXTABLE(9999b, 6001f)
-> +	_ASM_EXTABLE_UA(9999b, 6001f)
->   
->   #define DST(y...)			\
->   	9999: y;			\
-> -	_ASM_EXTABLE(9999b, 6002f)
-> +	_ASM_EXTABLE_UA(9999b, 6002f)
->   
->   #ifndef CONFIG_X86_USE_PPRO_CHECKSUM
->   
-> diff --git a/arch/x86/lib/copy_user_64.S b/arch/x86/lib/copy_user_64.S
-> index 020f75c..80cfad6 100644
-> --- a/arch/x86/lib/copy_user_64.S
-> +++ b/arch/x86/lib/copy_user_64.S
-> @@ -92,26 +92,26 @@ ENTRY(copy_user_generic_unrolled)
->   60:	jmp copy_user_handle_tail /* ecx is zerorest also */
->   	.previous
->   
-> -	_ASM_EXTABLE(1b,30b)
-> -	_ASM_EXTABLE(2b,30b)
-> -	_ASM_EXTABLE(3b,30b)
-> -	_ASM_EXTABLE(4b,30b)
-> -	_ASM_EXTABLE(5b,30b)
-> -	_ASM_EXTABLE(6b,30b)
-> -	_ASM_EXTABLE(7b,30b)
-> -	_ASM_EXTABLE(8b,30b)
-> -	_ASM_EXTABLE(9b,30b)
-> -	_ASM_EXTABLE(10b,30b)
-> -	_ASM_EXTABLE(11b,30b)
-> -	_ASM_EXTABLE(12b,30b)
-> -	_ASM_EXTABLE(13b,30b)
-> -	_ASM_EXTABLE(14b,30b)
-> -	_ASM_EXTABLE(15b,30b)
-> -	_ASM_EXTABLE(16b,30b)
-> -	_ASM_EXTABLE(18b,40b)
-> -	_ASM_EXTABLE(19b,40b)
-> -	_ASM_EXTABLE(21b,50b)
-> -	_ASM_EXTABLE(22b,50b)
-> +	_ASM_EXTABLE_UA(1b,30b)
-> +	_ASM_EXTABLE_UA(2b,30b)
-> +	_ASM_EXTABLE_UA(3b,30b)
-> +	_ASM_EXTABLE_UA(4b,30b)
-> +	_ASM_EXTABLE_UA(5b,30b)
-> +	_ASM_EXTABLE_UA(6b,30b)
-> +	_ASM_EXTABLE_UA(7b,30b)
-> +	_ASM_EXTABLE_UA(8b,30b)
-> +	_ASM_EXTABLE_UA(9b,30b)
-> +	_ASM_EXTABLE_UA(10b,30b)
-> +	_ASM_EXTABLE_UA(11b,30b)
-> +	_ASM_EXTABLE_UA(12b,30b)
-> +	_ASM_EXTABLE_UA(13b,30b)
-> +	_ASM_EXTABLE_UA(14b,30b)
-> +	_ASM_EXTABLE_UA(15b,30b)
-> +	_ASM_EXTABLE_UA(16b,30b)
-> +	_ASM_EXTABLE_UA(18b,40b)
-> +	_ASM_EXTABLE_UA(19b,40b)
-> +	_ASM_EXTABLE_UA(21b,50b)
-> +	_ASM_EXTABLE_UA(22b,50b)
->   ENDPROC(copy_user_generic_unrolled)
->   EXPORT_SYMBOL(copy_user_generic_unrolled)
->   
-> @@ -156,8 +156,8 @@ ENTRY(copy_user_generic_string)
->   	jmp copy_user_handle_tail
->   	.previous
->   
-> -	_ASM_EXTABLE(1b,11b)
-> -	_ASM_EXTABLE(3b,12b)
-> +	_ASM_EXTABLE_UA(1b,11b)
-> +	_ASM_EXTABLE_UA(3b,12b)
->   ENDPROC(copy_user_generic_string)
->   EXPORT_SYMBOL(copy_user_generic_string)
->   
-> @@ -189,7 +189,7 @@ ENTRY(copy_user_enhanced_fast_string)
->   	jmp copy_user_handle_tail
->   	.previous
->   
-> -	_ASM_EXTABLE(1b,12b)
-> +	_ASM_EXTABLE_UA(1b,12b)
->   ENDPROC(copy_user_enhanced_fast_string)
->   EXPORT_SYMBOL(copy_user_enhanced_fast_string)
->   
-> @@ -319,27 +319,27 @@ ENTRY(__copy_user_nocache)
->   	jmp copy_user_handle_tail
->   	.previous
->   
-> -	_ASM_EXTABLE(1b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(2b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(3b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(4b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(5b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(6b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(7b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(8b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(9b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(10b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(11b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(12b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(13b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(14b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(15b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(16b,.L_fixup_4x8b_copy)
-> -	_ASM_EXTABLE(20b,.L_fixup_8b_copy)
-> -	_ASM_EXTABLE(21b,.L_fixup_8b_copy)
-> -	_ASM_EXTABLE(30b,.L_fixup_4b_copy)
-> -	_ASM_EXTABLE(31b,.L_fixup_4b_copy)
-> -	_ASM_EXTABLE(40b,.L_fixup_1b_copy)
-> -	_ASM_EXTABLE(41b,.L_fixup_1b_copy)
-> +	_ASM_EXTABLE_UA(1b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(2b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(3b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(4b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(5b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(6b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(7b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(8b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(9b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(10b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(11b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(12b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(13b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(14b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(15b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(16b,.L_fixup_4x8b_copy)
-> +	_ASM_EXTABLE_UA(20b,.L_fixup_8b_copy)
-> +	_ASM_EXTABLE_UA(21b,.L_fixup_8b_copy)
-> +	_ASM_EXTABLE_UA(30b,.L_fixup_4b_copy)
-> +	_ASM_EXTABLE_UA(31b,.L_fixup_4b_copy)
-> +	_ASM_EXTABLE_UA(40b,.L_fixup_1b_copy)
-> +	_ASM_EXTABLE_UA(41b,.L_fixup_1b_copy)
->   ENDPROC(__copy_user_nocache)
->   EXPORT_SYMBOL(__copy_user_nocache)
-> diff --git a/arch/x86/lib/csum-copy_64.S b/arch/x86/lib/csum-copy_64.S
-> index 45a53df..a4a379e 100644
-> --- a/arch/x86/lib/csum-copy_64.S
-> +++ b/arch/x86/lib/csum-copy_64.S
-> @@ -31,14 +31,18 @@
->   
->   	.macro source
->   10:
-> -	_ASM_EXTABLE(10b, .Lbad_source)
-> +	_ASM_EXTABLE_UA(10b, .Lbad_source)
->   	.endm
->   
->   	.macro dest
->   20:
-> -	_ASM_EXTABLE(20b, .Lbad_dest)
-> +	_ASM_EXTABLE_UA(20b, .Lbad_dest)
->   	.endm
->   
-> +	/*
-> +	 * No _ASM_EXTABLE_UA; this is used for intentional prefetch on a
-> +	 * potentially unmapped kernel address.
-> +	 */
->   	.macro ignore L=.Lignore
->   30:
->   	_ASM_EXTABLE(30b, \L)
-> diff --git a/arch/x86/lib/getuser.S b/arch/x86/lib/getuser.S
-> index 49b167f..74fdff9 100644
-> --- a/arch/x86/lib/getuser.S
-> +++ b/arch/x86/lib/getuser.S
-> @@ -132,12 +132,12 @@ bad_get_user_8:
->   END(bad_get_user_8)
->   #endif
->   
-> -	_ASM_EXTABLE(1b,bad_get_user)
-> -	_ASM_EXTABLE(2b,bad_get_user)
-> -	_ASM_EXTABLE(3b,bad_get_user)
-> +	_ASM_EXTABLE_UA(1b, bad_get_user)
-> +	_ASM_EXTABLE_UA(2b, bad_get_user)
-> +	_ASM_EXTABLE_UA(3b, bad_get_user)
->   #ifdef CONFIG_X86_64
-> -	_ASM_EXTABLE(4b,bad_get_user)
-> +	_ASM_EXTABLE_UA(4b, bad_get_user)
->   #else
-> -	_ASM_EXTABLE(4b,bad_get_user_8)
-> -	_ASM_EXTABLE(5b,bad_get_user_8)
-> +	_ASM_EXTABLE_UA(4b, bad_get_user_8)
-> +	_ASM_EXTABLE_UA(5b, bad_get_user_8)
->   #endif
-> diff --git a/arch/x86/lib/putuser.S b/arch/x86/lib/putuser.S
-> index 96dce5fe..d2e5c9c 100644
-> --- a/arch/x86/lib/putuser.S
-> +++ b/arch/x86/lib/putuser.S
-> @@ -94,10 +94,10 @@ bad_put_user:
->   	EXIT
->   END(bad_put_user)
->   
-> -	_ASM_EXTABLE(1b,bad_put_user)
-> -	_ASM_EXTABLE(2b,bad_put_user)
-> -	_ASM_EXTABLE(3b,bad_put_user)
-> -	_ASM_EXTABLE(4b,bad_put_user)
-> +	_ASM_EXTABLE_UA(1b, bad_put_user)
-> +	_ASM_EXTABLE_UA(2b, bad_put_user)
-> +	_ASM_EXTABLE_UA(3b, bad_put_user)
-> +	_ASM_EXTABLE_UA(4b, bad_put_user)
->   #ifdef CONFIG_X86_32
-> -	_ASM_EXTABLE(5b,bad_put_user)
-> +	_ASM_EXTABLE_UA(5b, bad_put_user)
->   #endif
-> diff --git a/arch/x86/lib/usercopy_32.c b/arch/x86/lib/usercopy_32.c
-> index 7add8ba..71fb58d 100644
-> --- a/arch/x86/lib/usercopy_32.c
-> +++ b/arch/x86/lib/usercopy_32.c
-> @@ -47,8 +47,8 @@ static inline int __movsl_is_ok(unsigned long a1, unsigned long a2, unsigned lon
->   		"3:	lea 0(%2,%0,4),%0\n"				\
->   		"	jmp 2b\n"					\
->   		".previous\n"						\
-> -		_ASM_EXTABLE(0b,3b)					\
-> -		_ASM_EXTABLE(1b,2b)					\
-> +		_ASM_EXTABLE_UA(0b, 3b)					\
-> +		_ASM_EXTABLE_UA(1b, 2b)					\
->   		: "=&c"(size), "=&D" (__d0)				\
->   		: "r"(size & 3), "0"(size / 4), "1"(addr), "a"(0));	\
->   } while (0)
-> @@ -153,44 +153,44 @@ static inline int __movsl_is_ok(unsigned long a1, unsigned long a2, unsigned lon
->   		       "101:   lea 0(%%eax,%0,4),%0\n"
->   		       "       jmp 100b\n"
->   		       ".previous\n"
-> -		       _ASM_EXTABLE(1b,100b)
-> -		       _ASM_EXTABLE(2b,100b)
-> -		       _ASM_EXTABLE(3b,100b)
-> -		       _ASM_EXTABLE(4b,100b)
-> -		       _ASM_EXTABLE(5b,100b)
-> -		       _ASM_EXTABLE(6b,100b)
-> -		       _ASM_EXTABLE(7b,100b)
-> -		       _ASM_EXTABLE(8b,100b)
-> -		       _ASM_EXTABLE(9b,100b)
-> -		       _ASM_EXTABLE(10b,100b)
-> -		       _ASM_EXTABLE(11b,100b)
-> -		       _ASM_EXTABLE(12b,100b)
-> -		       _ASM_EXTABLE(13b,100b)
-> -		       _ASM_EXTABLE(14b,100b)
-> -		       _ASM_EXTABLE(15b,100b)
-> -		       _ASM_EXTABLE(16b,100b)
-> -		       _ASM_EXTABLE(17b,100b)
-> -		       _ASM_EXTABLE(18b,100b)
-> -		       _ASM_EXTABLE(19b,100b)
-> -		       _ASM_EXTABLE(20b,100b)
-> -		       _ASM_EXTABLE(21b,100b)
-> -		       _ASM_EXTABLE(22b,100b)
-> -		       _ASM_EXTABLE(23b,100b)
-> -		       _ASM_EXTABLE(24b,100b)
-> -		       _ASM_EXTABLE(25b,100b)
-> -		       _ASM_EXTABLE(26b,100b)
-> -		       _ASM_EXTABLE(27b,100b)
-> -		       _ASM_EXTABLE(28b,100b)
-> -		       _ASM_EXTABLE(29b,100b)
-> -		       _ASM_EXTABLE(30b,100b)
-> -		       _ASM_EXTABLE(31b,100b)
-> -		       _ASM_EXTABLE(32b,100b)
-> -		       _ASM_EXTABLE(33b,100b)
-> -		       _ASM_EXTABLE(34b,100b)
-> -		       _ASM_EXTABLE(35b,100b)
-> -		       _ASM_EXTABLE(36b,100b)
-> -		       _ASM_EXTABLE(37b,100b)
-> -		       _ASM_EXTABLE(99b,101b)
-> +		       _ASM_EXTABLE_UA(1b, 100b)
-> +		       _ASM_EXTABLE_UA(2b, 100b)
-> +		       _ASM_EXTABLE_UA(3b, 100b)
-> +		       _ASM_EXTABLE_UA(4b, 100b)
-> +		       _ASM_EXTABLE_UA(5b, 100b)
-> +		       _ASM_EXTABLE_UA(6b, 100b)
-> +		       _ASM_EXTABLE_UA(7b, 100b)
-> +		       _ASM_EXTABLE_UA(8b, 100b)
-> +		       _ASM_EXTABLE_UA(9b, 100b)
-> +		       _ASM_EXTABLE_UA(10b, 100b)
-> +		       _ASM_EXTABLE_UA(11b, 100b)
-> +		       _ASM_EXTABLE_UA(12b, 100b)
-> +		       _ASM_EXTABLE_UA(13b, 100b)
-> +		       _ASM_EXTABLE_UA(14b, 100b)
-> +		       _ASM_EXTABLE_UA(15b, 100b)
-> +		       _ASM_EXTABLE_UA(16b, 100b)
-> +		       _ASM_EXTABLE_UA(17b, 100b)
-> +		       _ASM_EXTABLE_UA(18b, 100b)
-> +		       _ASM_EXTABLE_UA(19b, 100b)
-> +		       _ASM_EXTABLE_UA(20b, 100b)
-> +		       _ASM_EXTABLE_UA(21b, 100b)
-> +		       _ASM_EXTABLE_UA(22b, 100b)
-> +		       _ASM_EXTABLE_UA(23b, 100b)
-> +		       _ASM_EXTABLE_UA(24b, 100b)
-> +		       _ASM_EXTABLE_UA(25b, 100b)
-> +		       _ASM_EXTABLE_UA(26b, 100b)
-> +		       _ASM_EXTABLE_UA(27b, 100b)
-> +		       _ASM_EXTABLE_UA(28b, 100b)
-> +		       _ASM_EXTABLE_UA(29b, 100b)
-> +		       _ASM_EXTABLE_UA(30b, 100b)
-> +		       _ASM_EXTABLE_UA(31b, 100b)
-> +		       _ASM_EXTABLE_UA(32b, 100b)
-> +		       _ASM_EXTABLE_UA(33b, 100b)
-> +		       _ASM_EXTABLE_UA(34b, 100b)
-> +		       _ASM_EXTABLE_UA(35b, 100b)
-> +		       _ASM_EXTABLE_UA(36b, 100b)
-> +		       _ASM_EXTABLE_UA(37b, 100b)
-> +		       _ASM_EXTABLE_UA(99b, 101b)
->   		       : "=&c"(size), "=&D" (d0), "=&S" (d1)
->   		       :  "1"(to), "2"(from), "0"(size)
->   		       : "eax", "edx", "memory");
-> @@ -259,26 +259,26 @@ static unsigned long __copy_user_intel_nocache(void *to,
->   	       "9:      lea 0(%%eax,%0,4),%0\n"
->   	       "16:     jmp 8b\n"
->   	       ".previous\n"
-> -	       _ASM_EXTABLE(0b,16b)
-> -	       _ASM_EXTABLE(1b,16b)
-> -	       _ASM_EXTABLE(2b,16b)
-> -	       _ASM_EXTABLE(21b,16b)
-> -	       _ASM_EXTABLE(3b,16b)
-> -	       _ASM_EXTABLE(31b,16b)
-> -	       _ASM_EXTABLE(4b,16b)
-> -	       _ASM_EXTABLE(41b,16b)
-> -	       _ASM_EXTABLE(10b,16b)
-> -	       _ASM_EXTABLE(51b,16b)
-> -	       _ASM_EXTABLE(11b,16b)
-> -	       _ASM_EXTABLE(61b,16b)
-> -	       _ASM_EXTABLE(12b,16b)
-> -	       _ASM_EXTABLE(71b,16b)
-> -	       _ASM_EXTABLE(13b,16b)
-> -	       _ASM_EXTABLE(81b,16b)
-> -	       _ASM_EXTABLE(14b,16b)
-> -	       _ASM_EXTABLE(91b,16b)
-> -	       _ASM_EXTABLE(6b,9b)
-> -	       _ASM_EXTABLE(7b,16b)
-> +	       _ASM_EXTABLE_UA(0b, 16b)
-> +	       _ASM_EXTABLE_UA(1b, 16b)
-> +	       _ASM_EXTABLE_UA(2b, 16b)
-> +	       _ASM_EXTABLE_UA(21b, 16b)
-> +	       _ASM_EXTABLE_UA(3b, 16b)
-> +	       _ASM_EXTABLE_UA(31b, 16b)
-> +	       _ASM_EXTABLE_UA(4b, 16b)
-> +	       _ASM_EXTABLE_UA(41b, 16b)
-> +	       _ASM_EXTABLE_UA(10b, 16b)
-> +	       _ASM_EXTABLE_UA(51b, 16b)
-> +	       _ASM_EXTABLE_UA(11b, 16b)
-> +	       _ASM_EXTABLE_UA(61b, 16b)
-> +	       _ASM_EXTABLE_UA(12b, 16b)
-> +	       _ASM_EXTABLE_UA(71b, 16b)
-> +	       _ASM_EXTABLE_UA(13b, 16b)
-> +	       _ASM_EXTABLE_UA(81b, 16b)
-> +	       _ASM_EXTABLE_UA(14b, 16b)
-> +	       _ASM_EXTABLE_UA(91b, 16b)
-> +	       _ASM_EXTABLE_UA(6b, 9b)
-> +	       _ASM_EXTABLE_UA(7b, 16b)
->   	       : "=&c"(size), "=&D" (d0), "=&S" (d1)
->   	       :  "1"(to), "2"(from), "0"(size)
->   	       : "eax", "edx", "memory");
-> @@ -321,9 +321,9 @@ unsigned long __copy_user_intel(void __user *to, const void *from,
->   		"3:	lea 0(%3,%0,4),%0\n"				\
->   		"	jmp 2b\n"					\
->   		".previous\n"						\
-> -		_ASM_EXTABLE(4b,5b)					\
-> -		_ASM_EXTABLE(0b,3b)					\
-> -		_ASM_EXTABLE(1b,2b)					\
-> +		_ASM_EXTABLE_UA(4b, 5b)					\
-> +		_ASM_EXTABLE_UA(0b, 3b)					\
-> +		_ASM_EXTABLE_UA(1b, 2b)					\
->   		: "=&c"(size), "=&D" (__d0), "=&S" (__d1), "=r"(__d2)	\
->   		: "3"(size), "0"(size), "1"(to), "2"(from)		\
->   		: "memory");						\
-> diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
-> index 9c5606d..fefe6443 100644
-> --- a/arch/x86/lib/usercopy_64.c
-> +++ b/arch/x86/lib/usercopy_64.c
-> @@ -37,8 +37,8 @@ unsigned long __clear_user(void __user *addr, unsigned long size)
->   		"3:	lea 0(%[size1],%[size8],8),%[size8]\n"
->   		"	jmp 2b\n"
->   		".previous\n"
-> -		_ASM_EXTABLE(0b,3b)
-> -		_ASM_EXTABLE(1b,2b)
-> +		_ASM_EXTABLE_UA(0b, 3b)
-> +		_ASM_EXTABLE_UA(1b, 2b)
->   		: [size8] "=&c"(size), [dst] "=&D" (__d0)
->   		: [size1] "r"(size & 7), "[size8]" (size / 8), "[dst]"(addr));
->   	clac();
-> diff --git a/arch/x86/mm/extable.c b/arch/x86/mm/extable.c
-> index 45f5d6c..dc72b2d 100644
-> --- a/arch/x86/mm/extable.c
-> +++ b/arch/x86/mm/extable.c
-> @@ -108,6 +108,14 @@ __visible bool ex_handler_fprestore(const struct exception_table_entry *fixup,
->   }
->   EXPORT_SYMBOL_GPL(ex_handler_fprestore);
->   
-> +bool ex_handler_uaccess(const struct exception_table_entry *fixup,
-> +				  struct pt_regs *regs, int trapnr)
-> +{
-> +	regs->ip = ex_fixup_addr(fixup);
-> +	return true;
-> +}
-> +EXPORT_SYMBOL(ex_handler_uaccess);
-> +
->   __visible bool ex_handler_ext(const struct exception_table_entry *fixup,
->   			      struct pt_regs *regs, int trapnr)
->   {
+Can you confirm that this intentionally limited the future range of
+IORING_REGISTER opcodes to 0-255?
