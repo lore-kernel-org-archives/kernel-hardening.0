@@ -1,4 +1,4 @@
-Return-Path: <SRS0=SL8+=GN=lists.openwall.com=kernel-hardening-return-20632-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=TrnC=GN=lists.openwall.com=kernel-hardening-return-20633-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,15 +8,15 @@ X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 410F4C433DB
-	for <kernel-hardening@archiver.kernel.org>; Sun, 10 Jan 2021 17:36:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 355C9C433E0
+	for <kernel-hardening@archiver.kernel.org>; Sun, 10 Jan 2021 17:36:33 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5D7FA221E5
-	for <kernel-hardening@archiver.kernel.org>; Sun, 10 Jan 2021 17:36:22 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5D7FA221E5
+	by mail.kernel.org (Postfix) with SMTP id 7AEA5221E7
+	for <kernel-hardening@archiver.kernel.org>; Sun, 10 Jan 2021 17:36:32 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7AEA5221E7
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20632-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13319 invoked by uid 550); 10 Jan 2021 17:35:16 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20633-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13359 invoked by uid 550); 10 Jan 2021 17:35:17 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,7 +24,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12118 invoked from network); 10 Jan 2021 17:35:14 -0000
+Received: (qmail 12135 invoked from network); 10 Jan 2021 17:35:14 -0000
 From: Alexey Gladkov <gladkov.alexey@gmail.com>
 To: LKML <linux-kernel@vger.kernel.org>,
 	Linux Containers <containers@lists.linux-foundation.org>,
@@ -34,206 +34,86 @@ Cc: Alexey Gladkov <legion@kernel.org>,
 	Kees Cook <keescook@chromium.org>,
 	Christian Brauner <christian@brauner.io>,
 	Linus Torvalds <torvalds@linux-foundation.org>
-Subject: [RFC PATCH v2 5/8] Move RLIMIT_MSGQUEUE counter to ucounts
-Date: Sun, 10 Jan 2021 18:33:44 +0100
-Message-Id: <7e2f9debd5e84a137874ffa8e5e042fa1b93ebfa.1610299857.git.gladkov.alexey@gmail.com>
+Subject: [RFC PATCH v2 8/8] Move RLIMIT_NPROC check to the place where we increment the counter
+Date: Sun, 10 Jan 2021 18:33:47 +0100
+Message-Id: <54b0cf752c2c275a164aa980e2d8e4e464797ca1.1610299858.git.gladkov.alexey@gmail.com>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <cover.1610299857.git.gladkov.alexey@gmail.com>
 References: <cover.1610299857.git.gladkov.alexey@gmail.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Sun, 10 Jan 2021 17:34:52 +0000 (UTC)
+X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Sun, 10 Jan 2021 17:34:53 +0000 (UTC)
+
+After calling set_user(), we always have to call commit_creds() to apply
+new credentials upon the current task. There is no need to separate
+limit check and counter incrementing.
 
 Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
 ---
- include/linux/sched/user.h     |  4 ----
- include/linux/user_namespace.h |  8 ++++++++
- ipc/mqueue.c                   | 29 +++++++++++++++--------------
- kernel/fork.c                  |  1 +
- kernel/ucount.c                |  1 +
- kernel/user_namespace.c        |  1 +
- 6 files changed, 26 insertions(+), 18 deletions(-)
+ kernel/cred.c | 22 +++++++++++++++++-----
+ kernel/sys.c  | 13 -------------
+ 2 files changed, 17 insertions(+), 18 deletions(-)
 
-diff --git a/include/linux/sched/user.h b/include/linux/sched/user.h
-index d33d867ad6c1..8a34446681aa 100644
---- a/include/linux/sched/user.h
-+++ b/include/linux/sched/user.h
-@@ -18,10 +18,6 @@ struct user_struct {
- #endif
- #ifdef CONFIG_EPOLL
- 	atomic_long_t epoll_watches; /* The number of file descriptors currently watched */
--#endif
--#ifdef CONFIG_POSIX_MQUEUE
--	/* protected by mq_lock	*/
--	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
- #endif
- 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
- 	unsigned long unix_inflight;	/* How many files in flight in unix sockets */
-diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
-index 43c83ed2fc61..2980afed6fb7 100644
---- a/include/linux/user_namespace.h
-+++ b/include/linux/user_namespace.h
-@@ -51,6 +51,7 @@ enum ucount_type {
- 	UCOUNT_INOTIFY_WATCHES,
- #endif
- 	UCOUNT_RLIMIT_NPROC,
-+	UCOUNT_RLIMIT_MSGQUEUE,
- 	UCOUNT_COUNTS,
- };
+diff --git a/kernel/cred.c b/kernel/cred.c
+index 89a945571533..770447b4f4de 100644
+--- a/kernel/cred.c
++++ b/kernel/cred.c
+@@ -488,14 +488,26 @@ int commit_creds(struct cred *new)
+ 	if (!gid_eq(new->fsgid, old->fsgid))
+ 		key_fsgid_changed(new);
  
-@@ -113,6 +114,13 @@ static inline long get_ucounts_value(struct ucounts *ucounts, enum ucount_type t
- 	return atomic_long_read(&ucounts->ucount[type]);
- }
- 
-+static inline struct ucounts *get_ucount(struct ucounts *ucounts)
-+{
-+	if (ucounts)
-+		atomic_inc(&ucounts->count);
-+	return ucounts;
-+}
-+
- bool inc_rlimit_ucounts(struct ucounts *ucounts, enum ucount_type type, long v);
- bool inc_rlimit_ucounts_and_test(struct ucounts *ucounts, enum ucount_type type, long v, long max);
- void dec_rlimit_ucounts(struct ucounts *ucounts, enum ucount_type type, long v);
-diff --git a/ipc/mqueue.c b/ipc/mqueue.c
-index beff0cfcd1e8..67088f1aa6b0 100644
---- a/ipc/mqueue.c
-+++ b/ipc/mqueue.c
-@@ -144,7 +144,7 @@ struct mqueue_inode_info {
- 	struct pid *notify_owner;
- 	u32 notify_self_exec_id;
- 	struct user_namespace *notify_user_ns;
--	struct user_struct *user;	/* user who created, for accounting */
-+	struct ucounts *ucounts;	/* user who created, for accounting */
- 	struct sock *notify_sock;
- 	struct sk_buff *notify_cookie;
- 
-@@ -292,7 +292,6 @@ static struct inode *mqueue_get_inode(struct super_block *sb,
- 		struct ipc_namespace *ipc_ns, umode_t mode,
- 		struct mq_attr *attr)
- {
--	struct user_struct *u = current_user();
- 	struct inode *inode;
- 	int ret = -ENOMEM;
- 
-@@ -309,6 +308,8 @@ static struct inode *mqueue_get_inode(struct super_block *sb,
- 	if (S_ISREG(mode)) {
- 		struct mqueue_inode_info *info;
- 		unsigned long mq_bytes, mq_treesize;
-+		struct ucounts *ucounts;
+-	/* do it
+-	 * RLIMIT_NPROC limits on user->processes have already been checked
+-	 * in set_user().
+-	 */
+ 	alter_cred_subscribers(new, 2);
+ 	if (new->user != old->user || new->user_ns != old->user_ns) {
 +		bool overlimit;
++
+ 		set_cred_ucounts(new, new->user_ns, new->euid);
+-		inc_rlimit_ucounts(new->ucounts, UCOUNT_RLIMIT_NPROC, 1);
++
++		overlimit = inc_rlimit_ucounts_and_test(new->ucounts, UCOUNT_RLIMIT_NPROC,
++				1, rlimit(RLIMIT_NPROC));
++
++		/*
++		 * We don't fail in case of NPROC limit excess here because too many
++		 * poorly written programs don't check set*uid() return code, assuming
++		 * it never fails if called by root.  We may still enforce NPROC limit
++		 * for programs doing set*uid()+execve() by harmlessly deferring the
++		 * failure to the execve() stage.
++		 */
++		if (overlimit && new->user != INIT_USER)
++			current->flags |= PF_NPROC_EXCEEDED;
++		else
++			current->flags &= ~PF_NPROC_EXCEEDED;
+ 	}
+ 	rcu_assign_pointer(task->real_cred, new);
+ 	rcu_assign_pointer(task->cred, new);
+diff --git a/kernel/sys.c b/kernel/sys.c
+index c2734ab9474e..180c4e06064f 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -467,19 +467,6 @@ static int set_user(struct cred *new)
+ 	if (!new_user)
+ 		return -EAGAIN;
  
- 		inode->i_fop = &mqueue_file_operations;
- 		inode->i_size = FILENT_SIZE;
-@@ -321,7 +322,7 @@ static struct inode *mqueue_get_inode(struct super_block *sb,
- 		info->notify_owner = NULL;
- 		info->notify_user_ns = NULL;
- 		info->qsize = 0;
--		info->user = NULL;	/* set when all is ok */
-+		info->ucounts = NULL;	/* set when all is ok */
- 		info->msg_tree = RB_ROOT;
- 		info->msg_tree_rightmost = NULL;
- 		info->node_cache = NULL;
-@@ -371,19 +372,19 @@ static struct inode *mqueue_get_inode(struct super_block *sb,
- 		if (mq_bytes + mq_treesize < mq_bytes)
- 			goto out_inode;
- 		mq_bytes += mq_treesize;
-+		ucounts = current_ucounts();
- 		spin_lock(&mq_lock);
--		if (u->mq_bytes + mq_bytes < u->mq_bytes ||
--		    u->mq_bytes + mq_bytes > rlimit(RLIMIT_MSGQUEUE)) {
-+		overlimit = inc_rlimit_ucounts_and_test(ucounts, UCOUNT_RLIMIT_MSGQUEUE,
-+				mq_bytes, rlimit(RLIMIT_MSGQUEUE));
-+		if (overlimit) {
-+			dec_rlimit_ucounts(ucounts, UCOUNT_RLIMIT_MSGQUEUE, mq_bytes);
- 			spin_unlock(&mq_lock);
- 			/* mqueue_evict_inode() releases info->messages */
- 			ret = -EMFILE;
- 			goto out_inode;
- 		}
--		u->mq_bytes += mq_bytes;
- 		spin_unlock(&mq_lock);
+-	/*
+-	 * We don't fail in case of NPROC limit excess here because too many
+-	 * poorly written programs don't check set*uid() return code, assuming
+-	 * it never fails if called by root.  We may still enforce NPROC limit
+-	 * for programs doing set*uid()+execve() by harmlessly deferring the
+-	 * failure to the execve() stage.
+-	 */
+-	if (is_ucounts_overlimit(new->ucounts, UCOUNT_RLIMIT_NPROC, rlimit(RLIMIT_NPROC)) &&
+-			new_user != INIT_USER)
+-		current->flags |= PF_NPROC_EXCEEDED;
+-	else
+-		current->flags &= ~PF_NPROC_EXCEEDED;
 -
--		/* all is ok */
--		info->user = get_uid(u);
-+		info->ucounts = get_ucount(ucounts);
- 	} else if (S_ISDIR(mode)) {
- 		inc_nlink(inode);
- 		/* Some things misbehave if size == 0 on a directory */
-@@ -497,7 +498,7 @@ static void mqueue_free_inode(struct inode *inode)
- static void mqueue_evict_inode(struct inode *inode)
- {
- 	struct mqueue_inode_info *info;
--	struct user_struct *user;
-+	struct ucounts *ucounts;
- 	struct ipc_namespace *ipc_ns;
- 	struct msg_msg *msg, *nmsg;
- 	LIST_HEAD(tmp_msg);
-@@ -520,8 +521,8 @@ static void mqueue_evict_inode(struct inode *inode)
- 		free_msg(msg);
- 	}
- 
--	user = info->user;
--	if (user) {
-+	ucounts = info->ucounts;
-+	if (ucounts) {
- 		unsigned long mq_bytes, mq_treesize;
- 
- 		/* Total amount of bytes accounted for the mqueue */
-@@ -533,7 +534,7 @@ static void mqueue_evict_inode(struct inode *inode)
- 					  info->attr.mq_msgsize);
- 
- 		spin_lock(&mq_lock);
--		user->mq_bytes -= mq_bytes;
-+		dec_rlimit_ucounts(ucounts, UCOUNT_RLIMIT_MSGQUEUE, mq_bytes);
- 		/*
- 		 * get_ns_from_inode() ensures that the
- 		 * (ipc_ns = sb->s_fs_info) is either a valid ipc_ns
-@@ -543,7 +544,7 @@ static void mqueue_evict_inode(struct inode *inode)
- 		if (ipc_ns)
- 			ipc_ns->mq_queues_count--;
- 		spin_unlock(&mq_lock);
--		free_uid(user);
-+		put_ucounts(ucounts);
- 	}
- 	if (ipc_ns)
- 		put_ipc_ns(ipc_ns);
-diff --git a/kernel/fork.c b/kernel/fork.c
-index ef7936daeeda..f61a5a3dc02f 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -824,6 +824,7 @@ void __init fork_init(void)
- 	}
- 
- 	init_user_ns.ucount_max[UCOUNT_RLIMIT_NPROC] = task_rlimit(&init_task, RLIMIT_NPROC);
-+	init_user_ns.ucount_max[UCOUNT_RLIMIT_MSGQUEUE] = task_rlimit(&init_task, RLIMIT_MSGQUEUE);
- 
- #ifdef CONFIG_VMAP_STACK
- 	cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vm_stack_cache",
-diff --git a/kernel/ucount.c b/kernel/ucount.c
-index 4222470ca0d1..865fd66c48c4 100644
---- a/kernel/ucount.c
-+++ b/kernel/ucount.c
-@@ -75,6 +75,7 @@ static struct ctl_table user_table[] = {
- 	UCOUNT_ENTRY("max_inotify_instances"),
- 	UCOUNT_ENTRY("max_inotify_watches"),
- #endif
-+	{ },
- 	{ },
- 	{ }
- };
-diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
-index 974f10da072c..9ace2a45a25d 100644
---- a/kernel/user_namespace.c
-+++ b/kernel/user_namespace.c
-@@ -122,6 +122,7 @@ int create_user_ns(struct cred *new)
- 		ns->ucount_max[i] = INT_MAX;
- 	}
- 	ns->ucount_max[UCOUNT_RLIMIT_NPROC] = rlimit(RLIMIT_NPROC);
-+	ns->ucount_max[UCOUNT_RLIMIT_MSGQUEUE] = rlimit(RLIMIT_MSGQUEUE);
- 	ns->ucounts = ucounts;
- 
- 	/* Inherit USERNS_SETGROUPS_ALLOWED from our parent */
+ 	free_uid(new->user);
+ 	new->user = new_user;
+ 	return 0;
 -- 
 2.29.2
 
