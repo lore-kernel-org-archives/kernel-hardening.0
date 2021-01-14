@@ -1,21 +1,21 @@
-Return-Path: <SRS0=YhYk=GQ=lists.openwall.com=kernel-hardening-return-20640-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=N7C7=GR=lists.openwall.com=kernel-hardening-return-20641-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-16.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-23.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=ham autolearn_force=no version=3.4.0
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0AC75C433DB
-	for <kernel-hardening@archiver.kernel.org>; Wed, 13 Jan 2021 18:02:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BC21AC433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 14 Jan 2021 03:22:17 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0B0E521534
-	for <kernel-hardening@archiver.kernel.org>; Wed, 13 Jan 2021 18:02:16 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0B0E521534
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20640-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11582 invoked by uid 550); 13 Jan 2021 18:02:10 -0000
+	by mail.kernel.org (Postfix) with SMTP id B181D235FA
+	for <kernel-hardening@archiver.kernel.org>; Thu, 14 Jan 2021 03:22:16 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B181D235FA
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20641-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28279 invoked by uid 550); 14 Jan 2021 03:22:08 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,133 +23,133 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11550 invoked from network); 13 Jan 2021 18:02:09 -0000
+Received: (qmail 28245 invoked from network); 14 Jan 2021 03:22:08 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=2yOASqLXCFmH8rHiDFY5aK5IF9dZ2OI5aQ21Vbh1eP8=;
-        b=gHtUHzUPG5nr4qeM6RqXwHoa31eiMAo2G3XbBdMPhPetpWhM+8FxJcVQrQckAjJOts
-         a+PuAK+iIngRm+Yp1MRDCVK0BKRkRO9ogHvQh8O/VHesI2z8n5+VeisZVKsjgEqjLV5k
-         U3cHR0de4KgfDQBMl4Uj4g9/NyiGrIcwhViN8=
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc:content-transfer-encoding;
+        bh=vBKhWUt1LhGAbz4nnRDMUBnzWjuIyMjEZqvvewkWv1c=;
+        b=NaIVV7JM8xDZ1C/WCKEpyacKuGqEWPxP6vpebXWTWTzzL1T6CKyVM2e5z2n7D/dkwY
+         0shB76+ANbIpUlcIUeIlgXWuxwBl4Dyl25ILehT0lz0wm7yTqX9ZIbQXm/DJfYRSCTQq
+         /sA0p0frlZZqD8gLu4OIEuYj/VZyM0tLnHmDr5eYJQShu0NvHJqDf+OBxKv13kzaAZYX
+         BKPcpiI95E7gIXeB67td0Oc3RAzsdxKmv69JEPxyF4yL8cUJ9eCfNPAIO3k+pEHxYnVm
+         SlUg67QRFzYrVnG54RRpwBYMbN+Hw0PAn/grXz5aewJztLd/C/Rs7zXzpbzCt6BKz28m
+         3tgw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=2yOASqLXCFmH8rHiDFY5aK5IF9dZ2OI5aQ21Vbh1eP8=;
-        b=L5Xj8Mr0H0UHzm1fiK7JIBglX5yjWuxiDyQDWJKBReq+oVHHyAVG4rZYz/nrx6HAkX
-         +zutx2gBIS7qbDS2Wkk8LuAhA4tEiFPjXSlWSgSdR9SzSMasmiWbdVAPewI65aBm7EEd
-         VDmo5vr5mbZgdi39QIzgvag2Y1HnuGmgzwgPIhXhQ9+5ujUcT61V9bQQWl9BIgHZqoxA
-         uemkh/bSm0tnUbD4Cz81TaWUY38xhSnzj4doHXuIhcpcpUmUU3GGKvMakAMMrqCYTPag
-         IXLNjdfn0x7988uCkgulOT8qNNMZOtKbE4VMH+eSXgBz81LedSl7c7gDwtIaenDyzB+7
-         irfg==
-X-Gm-Message-State: AOAM533RHJM98ALhpcnm1fqWPruQpCvZ90S/q1B9ScEb6X6LyDwzgaF2
-	c3QcDSUKiszIDKBZFiHd39SGAg==
-X-Google-Smtp-Source: ABdhPJy/l5JCoFPdFR12hWOnKrP/lLjwYszhjP/WNJBh99XAQ0ifkW1xWHqHas6EDvPBSGX8HpJRMQ==
-X-Received: by 2002:a63:8f19:: with SMTP id n25mr3154262pgd.17.1610560917380;
-        Wed, 13 Jan 2021 10:01:57 -0800 (PST)
-Date: Wed, 13 Jan 2021 10:01:55 -0800
-From: Kees Cook <keescook@chromium.org>
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Alexey Gladkov <gladkov.alexey@gmail.com>,
-	LKML <linux-kernel@vger.kernel.org>,
-	Linux Containers <containers@lists.linux-foundation.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Alexey Gladkov <legion@kernel.org>,
-	Christian Brauner <christian@brauner.io>,
-	Linus Torvalds <torvalds@linux-foundation.org>
-Subject: Re: [RFC PATCH v2 1/8] Use atomic type for ucounts reference counting
-Message-ID: <202101131001.BF1108F90@keescook>
-References: <cover.1610299857.git.gladkov.alexey@gmail.com>
- <447547b12bba1894d3f1f79d6408dfc60b219b0c.1610299857.git.gladkov.alexey@gmail.com>
- <878s8wdcib.fsf@x220.int.ebiederm.org>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=vBKhWUt1LhGAbz4nnRDMUBnzWjuIyMjEZqvvewkWv1c=;
+        b=etYCSOWg7CJU/H5YQpLHgjWHnNhlt7guWBugV4obgE7RTbdaNO5zsZPI8RuOuzNIl7
+         TWXhdd75TJDAAZXdhy4gBmZdNaKknE7J4lU3lQBw+dyc/tlFmJfgLSfSLdtMWiDPRkyH
+         cUFx2lRjZNs9YAwfStpQCwvVSJE4eizzK0GPitOavSoh624FM1LVx28pa9NkPtQR6+k7
+         qE5sdJBsFKMgrHCAqPkLjxhlAor83hzgWQOu3F7f07ipUiEtiD0kWaTa65+Ddhtz2JVN
+         JHGGr7Cq/FvLMXcsYdhgNGEuo45qygDEsVOs7k3QcMH/lLBd/fCZF/BLD3SglpmgK+Jk
+         cc5w==
+X-Gm-Message-State: AOAM53187xvsPyaOlEs2YtHJ29zsTpz9uerTBTFb3+AkfInrM+u0JGqM
+	I4muhnIF6K7zxVQnBx5kXQ5pweJSoecYVuw/Pxanpw==
+X-Google-Smtp-Source: ABdhPJyC/YkIU5Vr2XJQiVDPrgVLFbaYhJ6+pm2t5TLIpN9FVFsVdXVKpsifVVwckoCM1Y2ngeh/f+jtPiuasry3Q0U=
+X-Received: by 2002:a19:8053:: with SMTP id b80mr2516185lfd.74.1610594516694;
+ Wed, 13 Jan 2021 19:21:56 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <878s8wdcib.fsf@x220.int.ebiederm.org>
+References: <20201209192839.1396820-1-mic@digikod.net> <20201209192839.1396820-12-mic@digikod.net>
+In-Reply-To: <20201209192839.1396820-12-mic@digikod.net>
+From: Jann Horn <jannh@google.com>
+Date: Thu, 14 Jan 2021 04:21:30 +0100
+Message-ID: <CAG48ez2yQNvcCrmCCBZKy_cxoZzNgremxWMia1YHsgaj4edqrA@mail.gmail.com>
+Subject: Re: [PATCH v26 11/12] samples/landlock: Add a sandbox manager example
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: James Morris <jmorris@namei.org>, "Serge E . Hallyn" <serge@hallyn.com>, 
+	Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@amacapital.net>, 
+	Anton Ivanov <anton.ivanov@cambridgegreys.com>, Arnd Bergmann <arnd@arndb.de>, 
+	Casey Schaufler <casey@schaufler-ca.com>, Jeff Dike <jdike@addtoit.com>, 
+	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
+	Michael Kerrisk <mtk.manpages@gmail.com>, Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>, 
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
+	kernel list <linux-kernel@vger.kernel.org>, 
+	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, 
+	linux-security-module <linux-security-module@vger.kernel.org>, 
+	"the arch/x86 maintainers" <x86@kernel.org>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-On Wed, Jan 13, 2021 at 10:31:40AM -0600, Eric W. Biederman wrote:
-> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
-> 
-> We might want to use refcount_t instead of atomic_t.  Not a big deal
-> either way.
+On Wed, Dec 9, 2020 at 8:29 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> w=
+rote:
+> Add a basic sandbox tool to launch a command which can only access a
+> whitelist of file hierarchies in a read-only or read-write way.
 
-Yes, please use refcount_t, and don't use _read() since that introduces
-races.
+I have to admit that I didn't really look at this closely before
+because it's just sample code... but I guess I should. You can add
 
--Kees
+Reviewed-by: Jann Horn <jannh@google.com>
 
-> 
-> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
-> > ---
-> >  include/linux/user_namespace.h |  2 +-
-> >  kernel/ucount.c                | 10 +++++-----
-> >  2 files changed, 6 insertions(+), 6 deletions(-)
-> >
-> > diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
-> > index 64cf8ebdc4ec..84fefa9247c4 100644
-> > --- a/include/linux/user_namespace.h
-> > +++ b/include/linux/user_namespace.h
-> > @@ -92,7 +92,7 @@ struct ucounts {
-> >  	struct hlist_node node;
-> >  	struct user_namespace *ns;
-> >  	kuid_t uid;
-> > -	int count;
-> > +	atomic_t count;
-> >  	atomic_t ucount[UCOUNT_COUNTS];
-> >  };
-> >  
-> > diff --git a/kernel/ucount.c b/kernel/ucount.c
-> > index 11b1596e2542..0f2c7c11df19 100644
-> > --- a/kernel/ucount.c
-> > +++ b/kernel/ucount.c
-> > @@ -141,7 +141,8 @@ static struct ucounts *get_ucounts(struct user_namespace *ns, kuid_t uid)
-> >  
-> >  		new->ns = ns;
-> >  		new->uid = uid;
-> > -		new->count = 0;
-> > +
-> > +		atomic_set(&new->count, 0);
-> >  
-> >  		spin_lock_irq(&ucounts_lock);
-> >  		ucounts = find_ucounts(ns, uid, hashent);
-> > @@ -152,10 +153,10 @@ static struct ucounts *get_ucounts(struct user_namespace *ns, kuid_t uid)
-> >  			ucounts = new;
-> >  		}
-> >  	}
-> > -	if (ucounts->count == INT_MAX)
-> > +	if (atomic_read(&ucounts->count) == INT_MAX)
-> >  		ucounts = NULL;
-> >  	else
-> > -		ucounts->count += 1;
-> > +		atomic_inc(&ucounts->count);
-> >  	spin_unlock_irq(&ucounts_lock);
-> >  	return ucounts;
-> >  }
-> > @@ -165,8 +166,7 @@ static void put_ucounts(struct ucounts *ucounts)
-> >  	unsigned long flags;
-> >  
-> >  	spin_lock_irqsave(&ucounts_lock, flags);
-> > -	ucounts->count -= 1;
-> > -	if (!ucounts->count)
-> > +	if (atomic_dec_and_test(&ucounts->count))
-> >  		hlist_del_init(&ucounts->node);
-> >  	else
-> >  		ucounts = NULL;
-> 
-> 
-> This can become:
-> static void put_ucounts(struct ucounts *ucounts)
-> {
-> 	unsigned long flags;
-> 
->         if (atomic_dec_and_lock_irqsave(&ucounts->count, &ucounts_lock, flags)) {
->         	hlist_del_init(&ucounts->node);
->                 spin_unlock_irqrestore(&ucounts_lock);
->                 kfree(ucounts);
->         }
-> }
-> 
+if you fix the following nits:
 
--- 
-Kees Cook
+[...]
+> diff --git a/samples/Kconfig b/samples/Kconfig
+[...]
+> +config SAMPLE_LANDLOCK
+> +       bool "Build Landlock sample code"
+> +       depends on HEADERS_INSTALL
+> +       help
+> +         Build a simple Landlock sandbox manager able to launch a proces=
+s
+> +         restricted by a user-defined filesystem access control.
+
+nit: s/filesystem access control/filesystem access control policy/
+
+[...]
+> diff --git a/samples/landlock/sandboxer.c b/samples/landlock/sandboxer.c
+[...]
+> +/*
+> + * Simple Landlock sandbox manager able to launch a process restricted b=
+y a
+> + * user-defined filesystem access control.
+
+nit: s/filesystem access control/filesystem access control policy/
+
+[...]
+> +int main(const int argc, char *const argv[], char *const *const envp)
+> +{
+[...]
+> +       if (argc < 2) {
+[...]
+> +               fprintf(stderr, "* %s: list of paths allowed to be used i=
+n a read-only way.\n",
+> +                               ENV_FS_RO_NAME);
+> +               fprintf(stderr, "* %s: list of paths allowed to be used i=
+n a read-write way.\n",
+> +                               ENV_FS_RO_NAME);
+
+s/ENV_FS_RO_NAME/ENV_FS_RW_NAME/
+
+> +               fprintf(stderr, "\nexample:\n"
+> +                               "%s=3D\"/bin:/lib:/usr:/proc:/etc:/dev/ur=
+andom\" "
+> +                               "%s=3D\"/dev/null:/dev/full:/dev/zero:/de=
+v/pts:/tmp\" "
+> +                               "%s bash -i\n",
+> +                               ENV_FS_RO_NAME, ENV_FS_RW_NAME, argv[0]);
+> +               return 1;
+> +       }
+> +
+> +       ruleset_fd =3D landlock_create_ruleset(&ruleset_attr, sizeof(rule=
+set_attr), 0);
+> +       if (ruleset_fd < 0) {
+> +               perror("Failed to create a ruleset");
+> +               switch (errno) {
+
+(Just as a note: In theory perror() can change the value of errno, as
+far as I know - so AFAIK you'd theoretically have to do something
+like:
+
+int errno_ =3D errno;
+perror("...");
+switch (errno_) {
+ ...
+}
+
+I'll almost certainly work fine as-is in practice though.)
