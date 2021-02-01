@@ -1,22 +1,20 @@
-Return-Path: <SRS0=NC/E=HD=lists.openwall.com=kernel-hardening-return-20710-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=9e1i=HD=lists.openwall.com=kernel-hardening-return-20711-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,
-	DKIM_ADSP_CUSTOM_MED,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4940CC433DB
-	for <kernel-hardening@archiver.kernel.org>; Mon,  1 Feb 2021 14:22:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4F2F8C433DB
+	for <kernel-hardening@archiver.kernel.org>; Mon,  1 Feb 2021 17:47:51 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3BA9B64DDE
-	for <kernel-hardening@archiver.kernel.org>; Mon,  1 Feb 2021 14:22:35 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3BA9B64DDE
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20710-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28154 invoked by uid 550); 1 Feb 2021 14:21:24 -0000
+	by mail.kernel.org (Postfix) with SMTP id 6551E64E2A
+	for <kernel-hardening@archiver.kernel.org>; Mon,  1 Feb 2021 17:47:50 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6551E64E2A
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=zx2c4.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20711-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20292 invoked by uid 550); 1 Feb 2021 17:47:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,254 +22,89 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28063 invoked from network); 1 Feb 2021 14:21:23 -0000
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: LKML <linux-kernel@vger.kernel.org>,
-	io-uring@vger.kernel.org,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux Containers <containers@lists.linux-foundation.org>,
-	linux-mm@kvack.org
-Cc: Alexey Gladkov <legion@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	Jann Horn <jannh@google.com>,
-	Jens Axboe <axboe@kernel.dk>,
-	Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>
-Subject: [PATCH v5 7/7] kselftests: Add test to check for rlimit changes in different user namespaces
-Date: Mon,  1 Feb 2021 15:18:35 +0100
-Message-Id: <b6c26cea0d74e321fdded286905708a3dba741c0.1612188590.git.gladkov.alexey@gmail.com>
-X-Mailer: git-send-email 2.29.2
-In-Reply-To: <cover.1612188590.git.gladkov.alexey@gmail.com>
-References: <cover.1612188590.git.gladkov.alexey@gmail.com>
+Received: (qmail 20260 invoked from network); 1 Feb 2021 17:47:42 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=zx2c4.com; s=20210105;
+	t=1612201649;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
+	bh=KsSWLRNvHtqLZ/lu/iHPVGBawnROqG20zNGdQaCD7HA=;
+	b=LSy9GJGCzYrRoSMuVVM/GJi6MpdSJ1QNNhr9PsJrFW/ef/fU1dWkZZVHz+x1zOX9mWjImO
+	7fa4UoekmQH48i/JMwtiCTSUo8QCLOoCZ0twAhOkv99hSitWmLrm4RbHJRKnxvDYYSZaj1
+	x5gNcOF3By4OgUc9HktJln1B/TUhnqE=
+X-Gm-Message-State: AOAM530kLjR96z14jktb0gV+XBqN1t550x/TnIRkhe3YTYEdv3eHpHMx
+	7+Eo0O7JVojpurup/qNiot0KWfzH5VXnQyZuLkc=
+X-Google-Smtp-Source: ABdhPJzjKgTkuZkwBCx6W8tj6h7g7/av3LQr5hFaREKuh9kX5C89k0fD079sPfHEeqZVP8Za9VEEhpkh0G/am9b5mjI=
+X-Received: by 2002:a25:cc3:: with SMTP id 186mr25452179ybm.306.1612201648057;
+ Mon, 01 Feb 2021 09:47:28 -0800 (PST)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.1 (raptor.unsafe.ru [5.9.43.93]); Mon, 01 Feb 2021 14:21:03 +0000 (UTC)
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Mon, 1 Feb 2021 18:47:17 +0100
+X-Gmail-Original-Message-ID: <CAHmME9oHBtR4fBBUY8E_Oi7av-=OjOGkSNhQuMJMHhafCjazBw@mail.gmail.com>
+Message-ID: <CAHmME9oHBtR4fBBUY8E_Oi7av-=OjOGkSNhQuMJMHhafCjazBw@mail.gmail.com>
+Subject: forkat(int pidfd), execveat(int pidfd), other awful things?
+To: Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	Andy Lutomirski <luto@amacapital.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Jann Horn <jann@thejh.net>, 
+	Christian Brauner <christian.brauner@canonical.com>
+Content-Type: text/plain; charset="UTF-8"
 
-The testcase runs few instances of the program with RLIMIT_NPROC=1 from
-user uid=60000, in different user namespaces.
+Hi Andy & others,
 
-Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
----
- tools/testing/selftests/Makefile              |   1 +
- tools/testing/selftests/rlimits/.gitignore    |   2 +
- tools/testing/selftests/rlimits/Makefile      |   6 +
- tools/testing/selftests/rlimits/config        |   1 +
- .../selftests/rlimits/rlimits-per-userns.c    | 161 ++++++++++++++++++
- 5 files changed, 171 insertions(+)
- create mode 100644 tools/testing/selftests/rlimits/.gitignore
- create mode 100644 tools/testing/selftests/rlimits/Makefile
- create mode 100644 tools/testing/selftests/rlimits/config
- create mode 100644 tools/testing/selftests/rlimits/rlimits-per-userns.c
+I was reversing some NT stuff recently and marveling over how wild and
+crazy things are over in Windows-land. A few things related to process
+creation caught my interest:
 
-diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
-index afbab4aeef3c..4dbeb5686f7b 100644
---- a/tools/testing/selftests/Makefile
-+++ b/tools/testing/selftests/Makefile
-@@ -46,6 +46,7 @@ TARGETS += proc
- TARGETS += pstore
- TARGETS += ptrace
- TARGETS += openat2
-+TARGETS += rlimits
- TARGETS += rseq
- TARGETS += rtc
- TARGETS += seccomp
-diff --git a/tools/testing/selftests/rlimits/.gitignore b/tools/testing/selftests/rlimits/.gitignore
-new file mode 100644
-index 000000000000..091021f255b3
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/.gitignore
-@@ -0,0 +1,2 @@
-+# SPDX-License-Identifier: GPL-2.0-only
-+rlimits-per-userns
-diff --git a/tools/testing/selftests/rlimits/Makefile b/tools/testing/selftests/rlimits/Makefile
-new file mode 100644
-index 000000000000..03aadb406212
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/Makefile
-@@ -0,0 +1,6 @@
-+# SPDX-License-Identifier: GPL-2.0-or-later
-+
-+CFLAGS += -Wall -O2 -g
-+TEST_GEN_PROGS := rlimits-per-userns
-+
-+include ../lib.mk
-diff --git a/tools/testing/selftests/rlimits/config b/tools/testing/selftests/rlimits/config
-new file mode 100644
-index 000000000000..416bd53ce982
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/config
-@@ -0,0 +1 @@
-+CONFIG_USER_NS=y
-diff --git a/tools/testing/selftests/rlimits/rlimits-per-userns.c b/tools/testing/selftests/rlimits/rlimits-per-userns.c
-new file mode 100644
-index 000000000000..26dc949e93ea
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/rlimits-per-userns.c
-@@ -0,0 +1,161 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/*
-+ * Author: Alexey Gladkov <gladkov.alexey@gmail.com>
-+ */
-+#define _GNU_SOURCE
-+#include <sys/types.h>
-+#include <sys/wait.h>
-+#include <sys/time.h>
-+#include <sys/resource.h>
-+#include <sys/prctl.h>
-+#include <sys/stat.h>
-+
-+#include <unistd.h>
-+#include <stdlib.h>
-+#include <stdio.h>
-+#include <string.h>
-+#include <sched.h>
-+#include <signal.h>
-+#include <limits.h>
-+#include <fcntl.h>
-+#include <errno.h>
-+#include <err.h>
-+
-+#define NR_CHILDS 2
-+
-+static char *service_prog;
-+static uid_t user   = 60000;
-+static uid_t group  = 60000;
-+
-+static void setrlimit_nproc(rlim_t n)
-+{
-+	pid_t pid = getpid();
-+	struct rlimit limit = {
-+		.rlim_cur = n,
-+		.rlim_max = n
-+	};
-+
-+	warnx("(pid=%d): Setting RLIMIT_NPROC=%ld", pid, n);
-+
-+	if (setrlimit(RLIMIT_NPROC, &limit) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): setrlimit(RLIMIT_NPROC)", pid);
-+}
-+
-+static pid_t fork_child(void)
-+{
-+	pid_t pid = fork();
-+
-+	if (pid < 0)
-+		err(EXIT_FAILURE, "fork");
-+
-+	if (pid > 0)
-+		return pid;
-+
-+	pid = getpid();
-+
-+	warnx("(pid=%d): New process starting ...", pid);
-+
-+	if (prctl(PR_SET_PDEATHSIG, SIGKILL) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): prctl(PR_SET_PDEATHSIG)", pid);
-+
-+	signal(SIGUSR1, SIG_DFL);
-+
-+	warnx("(pid=%d): Changing to uid=%d, gid=%d", pid, user, group);
-+
-+	if (setgid(group) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): setgid(%d)", pid, group);
-+	if (setuid(user) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): setuid(%d)", pid, user);
-+
-+	warnx("(pid=%d): Service running ...", pid);
-+
-+	warnx("(pid=%d): Unshare user namespace", pid);
-+	if (unshare(CLONE_NEWUSER) < 0)
-+		err(EXIT_FAILURE, "unshare(CLONE_NEWUSER)");
-+
-+	char *const argv[] = { "service", NULL };
-+	char *const envp[] = { "I_AM_SERVICE=1", NULL };
-+
-+	warnx("(pid=%d): Executing real service ...", pid);
-+
-+	execve(service_prog, argv, envp);
-+	err(EXIT_FAILURE, "(pid=%d): execve", pid);
-+}
-+
-+int main(int argc, char **argv)
-+{
-+	size_t i;
-+	pid_t child[NR_CHILDS];
-+	int wstatus[NR_CHILDS];
-+	int childs = NR_CHILDS;
-+	pid_t pid;
-+
-+	if (getenv("I_AM_SERVICE")) {
-+		pause();
-+		exit(EXIT_SUCCESS);
-+	}
-+
-+	service_prog = argv[0];
-+	pid = getpid();
-+
-+	warnx("(pid=%d) Starting testcase", pid);
-+
-+	/*
-+	 * This rlimit is not a problem for root because it can be exceeded.
-+	 */
-+	setrlimit_nproc(1);
-+
-+	for (i = 0; i < NR_CHILDS; i++) {
-+		child[i] = fork_child();
-+		wstatus[i] = 0;
-+		usleep(250000);
-+	}
-+
-+	while (1) {
-+		for (i = 0; i < NR_CHILDS; i++) {
-+			if (child[i] <= 0)
-+				continue;
-+
-+			errno = 0;
-+			pid_t ret = waitpid(child[i], &wstatus[i], WNOHANG);
-+
-+			if (!ret || (!WIFEXITED(wstatus[i]) && !WIFSIGNALED(wstatus[i])))
-+				continue;
-+
-+			if (ret < 0 && errno != ECHILD)
-+				warn("(pid=%d): waitpid(%d)", pid, child[i]);
-+
-+			child[i] *= -1;
-+			childs -= 1;
-+		}
-+
-+		if (!childs)
-+			break;
-+
-+		usleep(250000);
-+
-+		for (i = 0; i < NR_CHILDS; i++) {
-+			if (child[i] <= 0)
-+				continue;
-+			kill(child[i], SIGUSR1);
-+		}
-+	}
-+
-+	for (i = 0; i < NR_CHILDS; i++) {
-+		if (WIFEXITED(wstatus[i]))
-+			warnx("(pid=%d): pid %d exited, status=%d",
-+				pid, -child[i], WEXITSTATUS(wstatus[i]));
-+		else if (WIFSIGNALED(wstatus[i]))
-+			warnx("(pid=%d): pid %d killed by signal %d",
-+				pid, -child[i], WTERMSIG(wstatus[i]));
-+
-+		if (WIFSIGNALED(wstatus[i]) && WTERMSIG(wstatus[i]) == SIGUSR1)
-+			continue;
-+
-+		warnx("(pid=%d): Test failed", pid);
-+		exit(EXIT_FAILURE);
-+	}
-+
-+	warnx("(pid=%d): Test passed", pid);
-+	exit(EXIT_SUCCESS);
-+}
--- 
-2.29.2
+- It's possible to create a new process with an *arbitrary parent
+process*, which means it'll then inherit various things like handles
+and security attributes and tokens from that new parent process.
 
+- It's possible to create a new process with the memory space handle
+of a different process. Consider this on Linux, and you have some
+abomination like `forkat(int pidfd)`.
+
+The big question is "why!?" At first I was just amused by its presence
+in NT. Everything is an object and you can usually freely mix and
+match things, and it's very flexible, which is cool. But this is NT,
+not Linux.
+
+Jann and I were discussing, though, that maybe some variant of these
+features might be useful to get rid of setuid executables. Imagine
+something like `systemd-sudod`, forked off of PID 1 very early.
+Subsequently all new processes on the system run with
+PR_SET_NO_NEW_PRIVS or similar policies to prevent non-root->root
+transition. Then, if you want to transition, you ask systemd-sudod (or
+polkitd, or whatever else you have in mind) to make you a new process,
+and it then does the various policy checks, and executes a new process
+for you as the parent of the requesting process.
+
+So how would that work? Well, executing processes with arbitrary
+parents would be part of it, as above. But we'd probably want to more
+carefully control that new process. Which chroot is it in? How do
+cgroups work? And so on. And ultimately this design leads to something
+like ZwCreateProcess, where you have several arguments, each to a
+handle to some part of the new process state, or null to be inherited
+from its parent.
+
+int execve_parent(int parent_pidfd, int root_dirfd, int cgroup_fd, int
+namespace_fd, const char *pathname, char *const argv[], char *const
+envp[]);
+
+One could imagine this growing pretty unwieldy. There's also this
+other design aspect of Linux that's worth considering. Namespaces and
+other process-inherited resources are generally hierarchical, with
+children getting the resource from their parent. This makes sense and
+is simple to conceptualize. Everytime we add a new thing_fd as a
+pointer to one of these resources, and allow it to be used outside of
+that hierarchy, it introduces a kind of "escape hatch". That might be
+considered "bad design" by some; it might not be by others. Seen this
+way, NT is one massive escape hatch, with pretty much everything being
+an object with a handle.
+
+But! Maybe this is nonetheless an interesting design avenue to
+explore. The introduction of pidfd is sort of just the "beginning" of
+that kind of design.
+
+Is any of this interesting to you as a future of privilege escalation
+and management on Linux?
+
+Jason
