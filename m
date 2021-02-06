@@ -1,21 +1,21 @@
-Return-Path: <SRS0=JYkn=HH=lists.openwall.com=kernel-hardening-return-20743-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=nDpD=HI=lists.openwall.com=kernel-hardening-return-20744-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=0.3 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-16.3 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,TRACKER_ID,URIBL_BLOCKED
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8CFB2C433E0
-	for <kernel-hardening@archiver.kernel.org>; Fri,  5 Feb 2021 20:27:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 02B07C433DB
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Feb 2021 08:10:55 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7A4E164E02
-	for <kernel-hardening@archiver.kernel.org>; Fri,  5 Feb 2021 20:27:35 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7A4E164E02
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20743-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 1867 invoked by uid 550); 5 Feb 2021 20:27:28 -0000
+	by mail.kernel.org (Postfix) with SMTP id 20B1F64FC5
+	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Feb 2021 08:10:53 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 20B1F64FC5
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20744-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28103 invoked by uid 550); 6 Feb 2021 08:10:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,62 +23,109 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9688 invoked from network); 5 Feb 2021 17:32:21 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:from:date:message-id:subject:to:cc;
-        bh=dvsHRpyK2gR2E6CYrUqJHJLD6y3LObxnDnnFh4piZn0=;
-        b=RVfxAZVuYfXiaTz4s66/6u1/MWxVNlUBcPhriYGi5Qklme6jdP3WJFXckKJJkYgVIO
-         L4NRZhP8q+11pW8ORIx62QBbwcqNSL0WuBlh3aiFcL8O3Ldkk51MJtDfU8piHpnPVtKb
-         BBQa2teS6LNklCTl+7AF6Q1KkqrFwy2njj0Z7EnDGH/k8uj5ues9ADZu70TgMMQThwVQ
-         EczAzktjAlZnd9ZYTAfeHoiosfTe4dP7Us+rigfjUrnz0vqCoGvf7IjVHYgrceFR9JOi
-         7bK9QUwvD4ubGSDrQ2pRpGdJNkhSq6cIWAte5dPFbrneO9RUF/ZztD2sLakm12Zq5Lix
-         +5LQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:from:date:message-id:subject:to:cc;
-        bh=dvsHRpyK2gR2E6CYrUqJHJLD6y3LObxnDnnFh4piZn0=;
-        b=JFCRp4AjdLXSMAPFmyZemq21f2iaRrwHydGA6KhUjImC7suH8W9rht8uczdXR6k4o9
-         WcQ+/JPxuy3safCi7CHhCwljD5ZNKsrl3hHq063Bi2YJoe6izjjPSPhMZcQCABEROWg9
-         XlhZH4xyH2cwBhQEkCK/4tTnUja94IG7lM3Qbf3486z6ui5wnh7sRmug9JuudxpYEQQH
-         Dpb3VQI0ESdKtKpkr4RPnT3izrp4gL5YapDS/31XbQLuSKjj4qid5uUdDlmseZEdnkWz
-         zwow8kVmpSPkegoi9O988SGJOSVZzMaTJ9xH8hcK8hYxiTnXo5S/4wjXkvr/IAvCwXTV
-         NjdQ==
-X-Gm-Message-State: AOAM530FXb+deqgAaf/jJnqA1ynCxfZgUjT/BMw5nBIqV9sXYp3Fii8Z
-	lA1J+AMYGRXR7Xr+sYXXbn6GNDQHxlA/QvhlZOOJDZoR
-X-Google-Smtp-Source: ABdhPJwu68e3wQqh39vfIxnYWMIxdpPl4B8mYzQZeqxfSx11c6GIrPS4s6wctHVAr4AqgNY3PeXXLpwpGLL6z9zefXo=
-X-Received: by 2002:aa7:d304:: with SMTP id p4mr4429495edq.144.1612546329474;
- Fri, 05 Feb 2021 09:32:09 -0800 (PST)
+Received: (qmail 28066 invoked from network); 6 Feb 2021 08:10:44 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=k20201202; t=1612599032;
+	bh=/BF/s61QDvT4oGsaXBL7qxBGoPv1gu0wNk6KP39BBvU=;
+	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
+	b=MAPIgso2qJJ5tqqxtliaY6VdwIlivhDJ+jUGr0ZkR6sWEHeYy25TIS6vhFzM/5BIZ
+	 0xOu4OH+CWb4FDysxnbRJsGi34QRN3WmGt1kfqXXThCQgwI11t7PltnYHkOEhYY5Bj
+	 qfh0aSNScqyd5zDcg2RS+rbHDb/e48Vx7me7mDM9AByqtMMnga5ekp1VmGV5+WCRsL
+	 h0j0EFWLlM9XU133vzA0yqLRnTVGBp38PFPBjidT92EJOx7RpwUImddmInCGKjSNHC
+	 cijAHphYs+rtNSvQfFxybORTjsBqC8pclLWAbgInF2YK/MQmJ1tE1MAzdq1LuaiK5u
+	 P+IIu0sz4qhMQ==
+X-Gm-Message-State: AOAM533Qrs9olixxodGHc3m5L2wbGuskbBMdDe8ukhQihM0M8kCA6UAN
+	CNsrDmomXk8k59QEJ0KI0J/7x5rya1KrN7o8+sg=
+X-Google-Smtp-Source: ABdhPJwAaCLSqHaW66O9yAzs2WLP+cDwtnC1zOLfF+9sbsnLezO5f5YYWBIcDZocwo6NAJ6w+emwDsxRl0aGdzF2JZo=
+X-Received: by 2002:a05:6830:1e2a:: with SMTP id t10mr6170595otr.90.1612599031222;
+ Sat, 06 Feb 2021 00:10:31 -0800 (PST)
 MIME-Version: 1.0
-From: Guy L <guylevanon1@gmail.com>
-Date: Fri, 5 Feb 2021 19:31:57 +0200
-Message-ID: <CAGefsGhQxR-f5pgMnqDNYBE627F05WYaQAqH6fVjdyQz3k55rw@mail.gmail.com>
-Subject: Joining the general Linux kernel hardening mailing list
-To: kernel-hardening@lists.openwall.com
-Cc: linux-hardening@vger.kernel.org
-Content-Type: multipart/alternative; boundary="00000000000026fa2005ba9a33d8"
-
---00000000000026fa2005ba9a33d8
+References: <20200626155832.2323789-1-ardb@kernel.org> <20200626155832.2323789-3-ardb@kernel.org>
+ <20210206031145.GA27503@dragon>
+In-Reply-To: <20210206031145.GA27503@dragon>
+From: Ard Biesheuvel <ardb@kernel.org>
+Date: Sat, 6 Feb 2021 09:10:19 +0100
+X-Gmail-Original-Message-ID: <CAMj1kXHSkBcSDuHbsFMJjC89JrO8TxYUoabDmWerNp27s45Ngw@mail.gmail.com>
+Message-ID: <CAMj1kXHSkBcSDuHbsFMJjC89JrO8TxYUoabDmWerNp27s45Ngw@mail.gmail.com>
+Subject: Re: [PATCH v3 2/2] arm64/acpi: disallow writeable AML opregion
+ mapping for EFI code regions
+To: Shawn Guo <shawn.guo@linaro.org>
+Cc: Linux ARM <linux-arm-kernel@lists.infradead.org>, 
+	Lorenzo Pieralisi <lorenzo.pieralisi@arm.com>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
+	Catalin Marinas <catalin.marinas@arm.com>, 
+	ACPI Devel Maling List <linux-acpi@vger.kernel.org>, Sudeep Holla <sudeep.holla@arm.com>, 
+	Will Deacon <will@kernel.org>, linux-arm-msm@vger.kernel.org
 Content-Type: text/plain; charset="UTF-8"
 
-Hi,
-I am a security researcher looking to learn more about the linux kernel in
-general and its security subsystems in general.
-I am a bit familiar with the kernel's code and would like to get to the
-level of submitting patches to the kernel.
+On Sat, 6 Feb 2021 at 04:11, Shawn Guo <shawn.guo@linaro.org> wrote:
+>
+> Hi Ard,
+>
+> On Fri, Jun 26, 2020 at 05:58:32PM +0200, Ard Biesheuvel wrote:
+> > Given that the contents of EFI runtime code and data regions are
+> > provided by the firmware, as well as the DSDT, it is not unimaginable
+> > that AML code exists today that accesses EFI runtime code regions using
+> > a SystemMemory OpRegion. There is nothing fundamentally wrong with that,
+> > but since we take great care to ensure that executable code is never
+> > mapped writeable and executable at the same time, we should not permit
+> > AML to create writable mapping.
+> >
+> > Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
+>
+> I'm booting Lenovo Flex 5G laptop with ACPI, and seeing this change
+> causes a memory abort[1] when upgrading ACPI tables via initrd[2].
+> Dropping this change seems to fix the issue for me.  But does that
+> looks like a correct fix to you?
+>
+> Shawn
+>
+> [1] https://fileserver.linaro.org/s/iDe9SaZeNNkyNxG
+> [2] Documentation/admin-guide/acpi/initrd_table_override.rst
+>
 
-Thanks a lot,
-Guy
+Can you check whether reverting
 
---00000000000026fa2005ba9a33d8
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+32cf1a12cad43358e47dac8014379c2f33dfbed4
 
-<div dir=3D"auto">Hi,<div dir=3D"auto">I am a security researcher looking t=
-o learn more about the linux kernel in general and its security subsystems =
-in general.</div><div dir=3D"auto">I am a bit familiar with the kernel&#39;=
-s code and would like to get to the level of submitting patches to the kern=
-el.</div><div dir=3D"auto"><br></div><div dir=3D"auto">Thanks a lot,</div><=
-div dir=3D"auto">Guy</div></div>
+fixes the issue too?
 
---00000000000026fa2005ba9a33d8--
+If it does, please report this as a regression. The OS should not
+modify firmware provided tables in-place, regardless of how they were
+delivered.
+
+BTW I recently started using my Yoga C630 with Debian, and I am quite
+happy with it! Thanks a lot for spending the time on the installer
+etc.
+
+I have observed some issues while using mine - I'm happy to share
+them, on a mailing list or anywhere else.
+
+
+
+> > ---
+> >  arch/arm64/kernel/acpi.c | 9 +++++++++
+> >  1 file changed, 9 insertions(+)
+> >
+> > diff --git a/arch/arm64/kernel/acpi.c b/arch/arm64/kernel/acpi.c
+> > index 01b861e225b0..455966401102 100644
+> > --- a/arch/arm64/kernel/acpi.c
+> > +++ b/arch/arm64/kernel/acpi.c
+> > @@ -301,6 +301,15 @@ void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size)
+> >                       pr_warn(FW_BUG "requested region covers kernel memory @ %pa\n", &phys);
+> >                       return NULL;
+> >
+> > +             case EFI_RUNTIME_SERVICES_CODE:
+> > +                     /*
+> > +                      * This would be unusual, but not problematic per se,
+> > +                      * as long as we take care not to create a writable
+> > +                      * mapping for executable code.
+> > +                      */
+> > +                     prot = PAGE_KERNEL_RO;
+> > +                     break;
+> > +
+> >               case EFI_ACPI_RECLAIM_MEMORY:
+> >                       /*
+> >                        * ACPI reclaim memory is used to pass firmware tables
+> > --
+> > 2.27.0
