@@ -1,21 +1,21 @@
-Return-Path: <SRS0=QwvU=HI=lists.openwall.com=kernel-hardening-return-20747-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=r60Z=HJ=lists.openwall.com=kernel-hardening-return-20748-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.2 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-15.2 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C9E3CC433E0
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Feb 2021 11:54:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 12879C433DB
+	for <kernel-hardening@archiver.kernel.org>; Sun,  7 Feb 2021 04:18:36 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D050E64EBE
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 Feb 2021 11:54:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D050E64EBE
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linaro.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20747-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 4091 invoked by uid 550); 6 Feb 2021 11:54:37 -0000
+	by mail.kernel.org (Postfix) with SMTP id D0F2664E8A
+	for <kernel-hardening@archiver.kernel.org>; Sun,  7 Feb 2021 04:18:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D0F2664E8A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=hallyn.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20748-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9933 invoked by uid 550); 7 Feb 2021 04:18:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,100 +23,165 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16234 invoked from network); 6 Feb 2021 10:45:34 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linaro.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to:user-agent;
-        bh=v7g6iYD4a+ldej/OxPdZv/D/jsDtfKWVskL7H6xJ7L8=;
-        b=ZM+MIrBaMZDpFDE0Gjxs0SIg1PXAeHyZjLbzSwXSG9nqRU9vcb9EfYU8pMtWjDlylO
-         BFck0Ub8PbEilo4FvdeWi//vADcwcGeUyDUsyiHKH8Fz9486bnSoKqVLpTLzTaScSV4D
-         MC8RpDFFP0yb2FcPjBBJ4gJhkh9HVUGt/TO2P/p3aoTgBvT7v6GfmX8sL1uapVN/9FOl
-         OuOCPmqEeMccarFnuMok5e6Ry4sorp+Nk2HTKEagJ8Dq/iGlNr2h6qlDXdY+sIfHAj2A
-         Zv6TNEPg4lLu3lj0+uN81u903gZE7pebPqx7krtxLh4doVprIsARF+z6Uqvxr/F4+SrM
-         dqQg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to:user-agent;
-        bh=v7g6iYD4a+ldej/OxPdZv/D/jsDtfKWVskL7H6xJ7L8=;
-        b=N5FfMXl5w0wyIsnjKwMTt9W7FgyMkKC/WI1/AgI2xnS99U89XTMF09U1lu/b/g8MBe
-         +5lEKXJ6pANvEFhy5bP4X1RASv7sm5rSPUB98Tw1aTN7ni4AdgC6inwHKUqWB969AuJc
-         p+UNFh9+ib7Gb8OYF/OLUuixZYiC779GdfwPvSpaTPnUXSNumrqLFRjMtgoK/kupW0gH
-         dLMtU5YLZmEWLnE0brGcEHwwXS+c3WlmDN32jgxowCT2Om9ccLS7UJlNzPuRPuW9wclK
-         zCqPwVSAkkx6LXjlR2whaOn3xG4ECFd13V25cjh8AbA5zvc0MSiuncobo4az7JxelyXQ
-         Ss+A==
-X-Gm-Message-State: AOAM533ZGVGWfT2EwwppChHECFNvO129LJ/3l6WV1JDnZwbmpll0wI/f
-	ZT9evVDZAhceGS1tDgJbjHqreQ==
-X-Google-Smtp-Source: ABdhPJykQdePL2I4KeC4QoO1pgMj2lxWrgcUC7yiajkjRBul0O9o6VUQ0GgumH4TVAz6NtbK4IDXBQ==
-X-Received: by 2002:a62:ee09:0:b029:1c0:ba8c:fcea with SMTP id e9-20020a62ee090000b02901c0ba8cfceamr8751330pfi.7.1612608322484;
-        Sat, 06 Feb 2021 02:45:22 -0800 (PST)
-Date: Sat, 6 Feb 2021 18:45:15 +0800
-From: Shawn Guo <shawn.guo@linaro.org>
-To: Ard Biesheuvel <ardb@kernel.org>
-Cc: Linux ARM <linux-arm-kernel@lists.infradead.org>,
-	Lorenzo Pieralisi <lorenzo.pieralisi@arm.com>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	ACPI Devel Maling List <linux-acpi@vger.kernel.org>,
-	Sudeep Holla <sudeep.holla@arm.com>, Will Deacon <will@kernel.org>,
-	linux-arm-msm@vger.kernel.org
-Subject: Re: [PATCH v3 2/2] arm64/acpi: disallow writeable AML opregion
- mapping for EFI code regions
-Message-ID: <20210206104514.GB27503@dragon>
-References: <20200626155832.2323789-1-ardb@kernel.org>
- <20200626155832.2323789-3-ardb@kernel.org>
- <20210206031145.GA27503@dragon>
- <CAMj1kXHSkBcSDuHbsFMJjC89JrO8TxYUoabDmWerNp27s45Ngw@mail.gmail.com>
+Received: (qmail 9898 invoked from network); 7 Feb 2021 04:18:25 -0000
+Date: Sat, 6 Feb 2021 22:18:14 -0600
+From: "Serge E. Hallyn" <serge@hallyn.com>
+To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, James Morris <jmorris@namei.org>,
+	Jann Horn <jannh@google.com>, Al Viro <viro@zeniv.linux.org.uk>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@amacapital.net>,
+	Anton Ivanov <anton.ivanov@cambridgegreys.com>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	Jeff Dike <jdike@addtoit.com>, Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+	linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	linux-security-module@vger.kernel.org, x86@kernel.org,
+	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>
+Subject: Re: [PATCH v28 06/12] fs,security: Add sb_delete hook
+Message-ID: <20210207041814.GA7955@mail.hallyn.com>
+References: <20210202162710.657398-1-mic@digikod.net>
+ <20210202162710.657398-7-mic@digikod.net>
+ <20210205142143.GA18451@mail.hallyn.com>
+ <92e6a8a6-19da-0b1f-c1cf-01dc0af61299@digikod.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
-In-Reply-To: <CAMj1kXHSkBcSDuHbsFMJjC89JrO8TxYUoabDmWerNp27s45Ngw@mail.gmail.com>
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <92e6a8a6-19da-0b1f-c1cf-01dc0af61299@digikod.net>
 User-Agent: Mutt/1.9.4 (2018-02-28)
 
-On Sat, Feb 06, 2021 at 09:10:19AM +0100, Ard Biesheuvel wrote:
-> On Sat, 6 Feb 2021 at 04:11, Shawn Guo <shawn.guo@linaro.org> wrote:
-> >
-> > Hi Ard,
-> >
-> > On Fri, Jun 26, 2020 at 05:58:32PM +0200, Ard Biesheuvel wrote:
-> > > Given that the contents of EFI runtime code and data regions are
-> > > provided by the firmware, as well as the DSDT, it is not unimaginable
-> > > that AML code exists today that accesses EFI runtime code regions using
-> > > a SystemMemory OpRegion. There is nothing fundamentally wrong with that,
-> > > but since we take great care to ensure that executable code is never
-> > > mapped writeable and executable at the same time, we should not permit
-> > > AML to create writable mapping.
-> > >
-> > > Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
-> >
-> > I'm booting Lenovo Flex 5G laptop with ACPI, and seeing this change
-> > causes a memory abort[1] when upgrading ACPI tables via initrd[2].
-> > Dropping this change seems to fix the issue for me.  But does that
-> > looks like a correct fix to you?
-> >
-> > Shawn
-> >
-> > [1] https://fileserver.linaro.org/s/iDe9SaZeNNkyNxG
-> > [2] Documentation/admin-guide/acpi/initrd_table_override.rst
-> >
+On Fri, Feb 05, 2021 at 03:57:37PM +0100, Mickaël Salaün wrote:
 > 
-> Can you check whether reverting
+> On 05/02/2021 15:21, Serge E. Hallyn wrote:
+> > On Tue, Feb 02, 2021 at 05:27:04PM +0100, Mickaël Salaün wrote:
+> >> From: Mickaël Salaün <mic@linux.microsoft.com>
+> >>
+> >> The sb_delete security hook is called when shutting down a superblock,
+> >> which may be useful to release kernel objects tied to the superblock's
+> >> lifetime (e.g. inodes).
+> >>
+> >> This new hook is needed by Landlock to release (ephemerally) tagged
+> >> struct inodes.  This comes from the unprivileged nature of Landlock
+> >> described in the next commit.
+> >>
+> >> Cc: Al Viro <viro@zeniv.linux.org.uk>
+> >> Cc: James Morris <jmorris@namei.org>
+> >> Cc: Kees Cook <keescook@chromium.org>
+> >> Cc: Serge E. Hallyn <serge@hallyn.com>
+> > 
+> > One note below, but
+> > 
+> > Acked-by: Serge Hallyn <serge@hallyn.com>
+> > 
+> >> Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
+> >> Reviewed-by: Jann Horn <jannh@google.com>
+> >> ---
+> >>
+> >> Changes since v22:
+> >> * Add Reviewed-by: Jann Horn <jannh@google.com>
+> >>
+> >> Changes since v17:
+> >> * Initial patch to replace the direct call to landlock_release_inodes()
+> >>   (requested by James Morris).
+> >>   https://lore.kernel.org/lkml/alpine.LRH.2.21.2005150536440.7929@namei.org/
+> >> ---
+> >>  fs/super.c                    | 1 +
+> >>  include/linux/lsm_hook_defs.h | 1 +
+> >>  include/linux/lsm_hooks.h     | 2 ++
+> >>  include/linux/security.h      | 4 ++++
+> >>  security/security.c           | 5 +++++
+> >>  5 files changed, 13 insertions(+)
+> >>
+> >> diff --git a/fs/super.c b/fs/super.c
+> >> index 2c6cdea2ab2d..c3c5178cde65 100644
+> >> --- a/fs/super.c
+> >> +++ b/fs/super.c
+> >> @@ -454,6 +454,7 @@ void generic_shutdown_super(struct super_block *sb)
+> >>  		evict_inodes(sb);
+> >>  		/* only nonzero refcount inodes can have marks */
+> >>  		fsnotify_sb_delete(sb);
+> >> +		security_sb_delete(sb);
+> >>  
+> >>  		if (sb->s_dio_done_wq) {
+> >>  			destroy_workqueue(sb->s_dio_done_wq);
+> >> diff --git a/include/linux/lsm_hook_defs.h b/include/linux/lsm_hook_defs.h
+> >> index 7aaa753b8608..32472b3849bc 100644
+> >> --- a/include/linux/lsm_hook_defs.h
+> >> +++ b/include/linux/lsm_hook_defs.h
+> >> @@ -59,6 +59,7 @@ LSM_HOOK(int, 0, fs_context_dup, struct fs_context *fc,
+> >>  LSM_HOOK(int, -ENOPARAM, fs_context_parse_param, struct fs_context *fc,
+> >>  	 struct fs_parameter *param)
+> >>  LSM_HOOK(int, 0, sb_alloc_security, struct super_block *sb)
+> >> +LSM_HOOK(void, LSM_RET_VOID, sb_delete, struct super_block *sb)
+> >>  LSM_HOOK(void, LSM_RET_VOID, sb_free_security, struct super_block *sb)
+> >>  LSM_HOOK(void, LSM_RET_VOID, sb_free_mnt_opts, void *mnt_opts)
+> >>  LSM_HOOK(int, 0, sb_eat_lsm_opts, char *orig, void **mnt_opts)
+> >> diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+> >> index 970106d98306..e339b201f79b 100644
+> >> --- a/include/linux/lsm_hooks.h
+> >> +++ b/include/linux/lsm_hooks.h
+> >> @@ -108,6 +108,8 @@
+> >>   *	allocated.
+> >>   *	@sb contains the super_block structure to be modified.
+> >>   *	Return 0 if operation was successful.
+> >> + * @sb_delete:
+> >> + *	Release objects tied to a superblock (e.g. inodes).
+> > 
+> > It's customary here to add the line detailing the @sb argument.
 > 
-> 32cf1a12cad43358e47dac8014379c2f33dfbed4
-> 
-> fixes the issue too?
+> What about "@sb contains the super_block structure being released."?
 
-Yes, it does.
+That's good.  Thanks.
 
-> If it does, please report this as a regression. The OS should not
-> modify firmware provided tables in-place, regardless of how they were
-> delivered.
-> 
-> BTW I recently started using my Yoga C630 with Debian, and I am quite
-> happy with it! Thanks a lot for spending the time on the installer
-> etc.
-
-Cool, glad to hear that!
-
-Shawn
+> > 
+> >>   * @sb_free_security:
+> >>   *	Deallocate and clear the sb->s_security field.
+> >>   *	@sb contains the super_block structure to be modified.
+> >> diff --git a/include/linux/security.h b/include/linux/security.h
+> >> index c35ea0ffccd9..c41a94e29b62 100644
+> >> --- a/include/linux/security.h
+> >> +++ b/include/linux/security.h
+> >> @@ -288,6 +288,7 @@ void security_bprm_committed_creds(struct linux_binprm *bprm);
+> >>  int security_fs_context_dup(struct fs_context *fc, struct fs_context *src_fc);
+> >>  int security_fs_context_parse_param(struct fs_context *fc, struct fs_parameter *param);
+> >>  int security_sb_alloc(struct super_block *sb);
+> >> +void security_sb_delete(struct super_block *sb);
+> >>  void security_sb_free(struct super_block *sb);
+> >>  void security_free_mnt_opts(void **mnt_opts);
+> >>  int security_sb_eat_lsm_opts(char *options, void **mnt_opts);
+> >> @@ -620,6 +621,9 @@ static inline int security_sb_alloc(struct super_block *sb)
+> >>  	return 0;
+> >>  }
+> >>  
+> >> +static inline void security_sb_delete(struct super_block *sb)
+> >> +{ }
+> >> +
+> >>  static inline void security_sb_free(struct super_block *sb)
+> >>  { }
+> >>  
+> >> diff --git a/security/security.c b/security/security.c
+> >> index 9f979d4afe6c..1b4a73b2549a 100644
+> >> --- a/security/security.c
+> >> +++ b/security/security.c
+> >> @@ -900,6 +900,11 @@ int security_sb_alloc(struct super_block *sb)
+> >>  	return rc;
+> >>  }
+> >>  
+> >> +void security_sb_delete(struct super_block *sb)
+> >> +{
+> >> +	call_void_hook(sb_delete, sb);
+> >> +}
+> >> +
+> >>  void security_sb_free(struct super_block *sb)
+> >>  {
+> >>  	call_void_hook(sb_free_security, sb);
+> >> -- 
+> >> 2.30.0
