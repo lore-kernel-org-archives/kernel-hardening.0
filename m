@@ -1,4 +1,4 @@
-Return-Path: <SRS0=J4PA=HY=lists.openwall.com=kernel-hardening-return-20786-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=qoz8=HY=lists.openwall.com=kernel-hardening-return-20787-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,15 +8,15 @@ X-Spam-Status: No, score=-15.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E0543C433DB
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 15:14:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B5593C433E0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 15:14:47 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 12CAB64E83
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 15:14:28 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 12CAB64E83
+	by mail.kernel.org (Postfix) with SMTP id B675564EC3
+	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 15:14:46 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B675564EC3
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20786-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 23595 invoked by uid 550); 22 Feb 2021 15:13:02 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20787-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23652 invoked by uid 550); 22 Feb 2021 15:13:03 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,45 +24,45 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22450 invoked from network); 22 Feb 2021 15:13:00 -0000
+Received: (qmail 22489 invoked from network); 22 Feb 2021 15:13:02 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=LLkuX0+ITGWZ/iVnAzMULSxwtPPckweuLMISePt9ssw=;
-        b=BPykAZVvUp4icbQV3I8OKq3dgj9xE7I0bXvTLRa+lLFvT2T9S46GpK5rzpalk0vka7
-         EMAebBc4xNncmRW0iYtFoKILmLT9xpNRKjXNkKgGb+RdrBDYrM86Ih0zaynkmOTCb5LP
-         NaKo4wGex24T0J5JuUZcwofRPEBZMW4HusebFD6CYD7Muei1Q9Ep+FX3tFJoNNyi6fQ4
-         vE8B0dAximKDBpReNOj1/mEWaFJRZGAdbJ6d3RmzX4lwPElZ4tQbzdIkzl+VgYesDdXm
-         1qtG97aM1OEtTOrV6g9qGUbFcX4kZio/WjmW8dJAY8W54ikoDB+MgxYkLUCWt2nF9F/v
-         xpkQ==
+        bh=65uTl/DL0ujA6C8p6tAwX4+93DKKilnR81zX6h8q1v8=;
+        b=b1r1t7/9FkfFvI8NzbPsWItaj3Vp8C1YOhKzqWDv/cIeky/XuHH9lL48rVM1yGCDQM
+         rYYwTs+SOxYhOfw5Z+59Gn+navsY/NfttlX1NbrQUYk/Qc68NddzJFdzbuDTX8GpQLTB
+         wBhgKXIFZug2leJR1e8TkH+md11czHNCQqs3jqi6qv/eTwSfES1On6EUG6wqwVsDiUix
+         Arv9gm7BT3V09ls3cWgJky4r8RyyC5tqLKw9aJDFkjVJrMUgDoc1sjDc5ACqVM5Up1wS
+         KWkZfPcFZM7K4Dxoj66LfT6arTk1SvQk5+ZkE9/v9Ipd9E7sGPqzMMaStGYWCyqNPQSI
+         YxaQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=LLkuX0+ITGWZ/iVnAzMULSxwtPPckweuLMISePt9ssw=;
-        b=LdPNVkEL2hZuPqWYjUmpis3fO+TDt4MYmoMcKsrjPN6wrxbs+KwsBYkzTJp/QV19rN
-         8ugG4BzaHGSrIAoSFU269N7xJptJNsMB48Pkaswuzv56cuD29PZTK3/UMz8eiiTEIgTI
-         ZYI2F7TS0Tr6kIB9BBjZB3NsknO59oCE+E9K+Dnu/dAFtQ0PBqxMfMkNygyIvGTrE9g9
-         BsNQfTh5zYlMvmYNe8KgUilEbaog51+o1bNrasbC6VWAysgaOEvJSBL4rP1rZFVgWF4L
-         ifNT7XLS4pE9JSYFITvHqMGlwIONT3MxoWVUJJc2+mCyxKuvQulnlydcrAKp+qBd/dN2
-         c1Gg==
-X-Gm-Message-State: AOAM532AkKck16+WpI1KAxYSX6My1THGgyG9t1ywM4MhWsbSQTO5qbSg
-	T1QfPa5rwjCbLoaS6HplrL8=
-X-Google-Smtp-Source: ABdhPJxc30UcYQVY9SrjO7shc//rXjLfBfc8tuVxMSyonaZSmDzTDDA/bQLZBQpXRC/u5O+PvGH7Xw==
-X-Received: by 2002:a1c:2094:: with SMTP id g142mr20921780wmg.101.1614006769655;
-        Mon, 22 Feb 2021 07:12:49 -0800 (PST)
+        bh=65uTl/DL0ujA6C8p6tAwX4+93DKKilnR81zX6h8q1v8=;
+        b=rLphuBhXouQZaSBjok7L//ESS3sn4NV/5rpAhHWNW7UqAfTBC2Ze9viWj2ZFQV5rhQ
+         RxPyMb9nnTEv2cPf+2Y9cnKrAmh2JPv3t0sbTiIMCOo3aktOjEpmVtJmvNXXOz7ynHXf
+         jdc1sl2ip/O7dnkZBuOBf2WqKV5yZJJn40MBdeZ0GMkiP12k8QMgQ/Uh3xjh22dW0ug9
+         2BGXwc2f0LDP/IGbn33QbCQv3sj62P3QaV7+6ZVSB8BqQe0+tqwTDQ2AwgajZqTxJLVD
+         36dCi2WqU534hoO8dQIgrPLplEQS9jEqL1Pm8bSCf2YMrehI/pp+JmXkrQqrsGxKdK9O
+         HrQg==
+X-Gm-Message-State: AOAM5330YLLJqKDIm3jfYNpvzPY0xSRiB2MH9UlHDONyhOY8nSOHRWJk
+	z76PgnFIHNwqpCwhn3LbxoY=
+X-Google-Smtp-Source: ABdhPJyr+0yYY214oKEDBI29fhzZwAOghMQnhkDW+SagA7DHVRiuybGQ/ITWc05OdOmwnuyzlppXNA==
+X-Received: by 2002:a1c:ac86:: with SMTP id v128mr20718184wme.175.1614006770799;
+        Mon, 22 Feb 2021 07:12:50 -0800 (PST)
 From: Romain Perier <romain.perier@gmail.com>
 To: Kees Cook <keescook@chromium.org>,
 	kernel-hardening@lists.openwall.com,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	Dmitry Kasatkin <dmitry.kasatkin@gmail.com>
+	"J. Bruce Fields" <bfields@fieldses.org>,
+	Chuck Lever <chuck.lever@oracle.com>
 Cc: Romain Perier <romain.perier@gmail.com>,
-	linux-integrity@vger.kernel.org,
+	linux-nfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH 06/20] ima: Manual replacement of the deprecated strlcpy() with return values
-Date: Mon, 22 Feb 2021 16:12:17 +0100
-Message-Id: <20210222151231.22572-7-romain.perier@gmail.com>
+Subject: [PATCH 07/20] SUNRPC: Manual replacement of the deprecated strlcpy() with return values
+Date: Mon, 22 Feb 2021 16:12:18 +0100
+Message-Id: <20210222151231.22572-8-romain.perier@gmail.com>
 X-Mailer: git-send-email 2.20.1
 In-Reply-To: <20210222151231.22572-1-romain.perier@gmail.com>
 References: <20210222151231.22572-1-romain.perier@gmail.com>
@@ -84,27 +84,31 @@ values (as it is quite different between the two functions).
 
 Signed-off-by: Romain Perier <romain.perier@gmail.com>
 ---
- security/integrity/ima/ima_policy.c |    8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+ net/sunrpc/clnt.c |    6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
 
-diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
-index 9b45d064a87d..1a905b8b064f 100644
---- a/security/integrity/ima/ima_policy.c
-+++ b/security/integrity/ima/ima_policy.c
-@@ -790,8 +790,14 @@ static int __init ima_init_arch_policy(void)
- 	for (rules = arch_rules, i = 0; *rules != NULL; rules++) {
- 		char rule[255];
- 		int result;
-+		ssize_t len;
+diff --git a/net/sunrpc/clnt.c b/net/sunrpc/clnt.c
+index 612f0a641f4c..3c5c4ad8a808 100644
+--- a/net/sunrpc/clnt.c
++++ b/net/sunrpc/clnt.c
+@@ -282,7 +282,7 @@ static struct rpc_xprt *rpc_clnt_set_transport(struct rpc_clnt *clnt,
  
--		result = strlcpy(rule, *rules, sizeof(rule));
-+		len = strscpy(rule, *rules, sizeof(rule));
-+		if (len == -E2BIG) {
-+			pr_warn("Internal copy of architecture policy rule '%s' "
-+				"failed. Skipping.\n", *rules);
-+			continue;
-+		}
+ static void rpc_clnt_set_nodename(struct rpc_clnt *clnt, const char *nodename)
+ {
+-	clnt->cl_nodelen = strlcpy(clnt->cl_nodename,
++	clnt->cl_nodelen = strscpy(clnt->cl_nodename,
+ 			nodename, sizeof(clnt->cl_nodename));
+ }
  
- 		INIT_LIST_HEAD(&arch_policy_entry[i].list);
- 		result = ima_parse_rule(rule, &arch_policy_entry[i]);
+@@ -422,6 +422,10 @@ static struct rpc_clnt * rpc_new_client(const struct rpc_create_args *args,
+ 		nodename = utsname()->nodename;
+ 	/* save the nodename */
+ 	rpc_clnt_set_nodename(clnt, nodename);
++	if (clnt->cl_nodelen == -E2BIG) {
++		err = -ENOMEM;
++		goto out_no_path;
++	}
+ 
+ 	err = rpc_client_register(clnt, args->authflavor, args->client_name);
+ 	if (err)
 
