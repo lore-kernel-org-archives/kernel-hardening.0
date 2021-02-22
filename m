@@ -1,21 +1,22 @@
-Return-Path: <SRS0=6aB+=HY=lists.openwall.com=kernel-hardening-return-20805-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=uCk+=HY=lists.openwall.com=kernel-hardening-return-20806-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
+X-Spam-Status: No, score=-17.3 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,NICE_REPLY_A,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5595BC433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 17:23:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6CEF6C433E0
+	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 17:23:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7B6CB64DE9
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 17:23:45 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7B6CB64DE9
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20805-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9445 invoked by uid 550); 22 Feb 2021 17:22:27 -0000
+	by mail.kernel.org (Postfix) with SMTP id AC55564E00
+	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Feb 2021 17:23:57 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AC55564E00
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linuxfoundation.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20806-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 9490 invoked by uid 550); 22 Feb 2021 17:22:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,43 +24,54 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22145 invoked from network); 22 Feb 2021 16:09:52 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=date : from : to : cc :
- subject : message-id : references : mime-version : content-type :
- content-transfer-encoding : in-reply-to : sender; s=pp1;
- bh=e10sRKXrRQP/yyKgNz/7fjY2pJYcOYdrb1QU5xWU+X8=;
- b=AWekrGFUH8yq/xRHBanJ81XgiKOGe8NYXEaf+zqaZ1cFsDTYPqCs5S39EWaJWAdBKC9/
- hlhcc51lsIf38Qp5rSUlQIVD1F3j43vKp7ohzX5R3kQHztAFqWEGg+kp2umlZ/WT+yeI
- 7HDjsRvlr3Hk94AaeTH4UjCtUWcezsXNUwY7MczAz9lpcD6U/PFeUZ1mA9I4sjwm/imE
- XFBMlqNucHdOpFk+WgR1Ughlxnue8nCrME6U7V0BCu+aTqX/Ls8QdTF9NbbUzSfQL/fq
- GSMixXvQ95h4XWm5NlQip1ojxXgrfz6y15OrIPlToiPsMG8sOEtVrQIsSD/rsWNGCIKI CA== 
-Date: Mon, 22 Feb 2021 17:04:29 +0100
-From: Benjamin Block <bblock@linux.ibm.com>
-To: Romain Perier <romain.perier@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com,
-        Steffen Maier <maier@linux.ibm.com>, linux-s390@vger.kernel.org,
-        linux-kernel@vger.kernel.org
-Subject: Re: [PATCH 13/20] scsi: zfcp: Manual replacement of the deprecated
- strlcpy() with return values
-Message-ID: <YDPWDU7iVTY7aY2h@t480-pf1aa2c2.linux.ibm.com>
+Received: (qmail 28247 invoked from network); 22 Feb 2021 16:22:03 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=linuxfoundation.org; s=google;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-language:content-transfer-encoding;
+        bh=O2UdjypR4W3iDVOy5hnKP5de6BTPFEvlQ6oGQr/tzUY=;
+        b=QWYr4qA6Wc1K2uzDRbRDKEFJU9VggdyiFbE9noSMExFmpSB/WSH/g2hR2wobF0KpKU
+         aVmWFkaH9gj8GcMoYdDsRvYawy/kizivt/PojhfqMjCVxWyJwyMAmuZjBr0OPFcPerai
+         XoppCFZUi/lHoq1JIO0Y7Bw+vx/Vb9gdiubmc=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
+         :content-transfer-encoding;
+        bh=O2UdjypR4W3iDVOy5hnKP5de6BTPFEvlQ6oGQr/tzUY=;
+        b=HDkoVRGn/mjD+NPMxI+fpyTOqxu5lbrsUfpEcUUT7ffxhDtPV0Ttbn19edQE1kIsye
+         GZINIhAX2ogd0h3OQWxWc8aO/3SUQDDMYnc94daEy9tW/yAO9HjNG7xMsI+eBH0gaLWI
+         C0LgBwwqjbYV15934NYjoFmX7a3SbquvIeVbAd75nrUbbzVmJBk9xSn+DptSD27Ov1Dm
+         fDNCJVJGf/cBibFPL97evggIS4f1HcbSvFRB3ZQYBhYP1Czh+qgKfUn2VtI6J2dEJMvv
+         RXnehzyoQvISZG36OXzRU2cHcsxZCFBnqcgeTaWGKsj7/iBRHLQ7UgDEJB4STXGpFffG
+         zyUA==
+X-Gm-Message-State: AOAM531YUy7XccZYxRpNG6oIyPWq3p5hyIcHF31tmjD0jPBtt+UwHZcw
+	H0KwNMUVwYQ6Msu6iOv3n296uQ==
+X-Google-Smtp-Source: ABdhPJwFg4oQJS2b8UUSE1H4Y8Chs7Kox5qlda5aF9f45HJogdaR2sWCL7VTfnIvoEcooK4vehk05A==
+X-Received: by 2002:a92:1312:: with SMTP id 18mr15099286ilt.92.1614010911339;
+        Mon, 22 Feb 2021 08:21:51 -0800 (PST)
+Subject: Re: [PATCH 19/20] usbip: usbip_host: Manual replacement of the
+ deprecated strlcpy() with return values
+To: Romain Perier <romain.perier@gmail.com>, Kees Cook
+ <keescook@chromium.org>, kernel-hardening@lists.openwall.com,
+ Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Valentina Manea <valentina.manea.m@gmail.com>, Shuah Khan <shuah@kernel.org>
+Cc: linux-usb@vger.kernel.org, linux-kernel@vger.kernel.org,
+ Shuah Khan <skhan@linuxfoundation.org>
 References: <20210222151231.22572-1-romain.perier@gmail.com>
- <20210222151231.22572-14-romain.perier@gmail.com>
+ <20210222151231.22572-20-romain.perier@gmail.com>
+From: Shuah Khan <skhan@linuxfoundation.org>
+Message-ID: <0323dcb2-726c-7ea2-8e8b-dba81090b571@linuxfoundation.org>
+Date: Mon, 22 Feb 2021 09:21:50 -0700
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
+ Thunderbird/78.6.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20210222151231.22572-14-romain.perier@gmail.com>
-Sender: Benjamin Block <bblock@linux.ibm.com>
-X-TM-AS-GCONF: 00
-X-Proofpoint-Virus-Version: vendor=fsecure engine=2.50.10434:6.0.369,18.0.761
- definitions=2021-02-22_03:2021-02-22,2021-02-22 signatures=0
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 lowpriorityscore=0
- malwarescore=0 bulkscore=0 suspectscore=0 clxscore=1011 mlxlogscore=999
- adultscore=0 phishscore=0 impostorscore=0 mlxscore=0 spamscore=0
- priorityscore=1501 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2009150000 definitions=main-2102220147
+In-Reply-To: <20210222151231.22572-20-romain.perier@gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-On Mon, Feb 22, 2021 at 04:12:24PM +0100, Romain Perier wrote:
+On 2/22/21 8:12 AM, Romain Perier wrote:
 > The strlcpy() reads the entire source buffer first, it is dangerous if
 > the source buffer lenght is unbounded or possibility non NULL-terminated.
 > It can lead to linear read overflows, crashes, etc...
@@ -75,47 +87,38 @@ On Mon, Feb 22, 2021 at 04:12:24PM +0100, Romain Perier wrote:
 > 
 > Signed-off-by: Romain Perier <romain.perier@gmail.com>
 > ---
->  drivers/s390/scsi/zfcp_fc.c |    8 +++++---
->  1 file changed, 5 insertions(+), 3 deletions(-)
+>   drivers/usb/usbip/stub_main.c |    6 +++---
+>   1 file changed, 3 insertions(+), 3 deletions(-)
 > 
-> diff --git a/drivers/s390/scsi/zfcp_fc.c b/drivers/s390/scsi/zfcp_fc.c
-> index d24cafe02708..8a65241011b9 100644
-> --- a/drivers/s390/scsi/zfcp_fc.c
-> +++ b/drivers/s390/scsi/zfcp_fc.c
-> @@ -877,14 +877,16 @@ static void zfcp_fc_rspn(struct zfcp_adapter *adapter,
->  	struct zfcp_fsf_ct_els *ct_els = &fc_req->ct_els;
->  	struct zfcp_fc_rspn_req *rspn_req = &fc_req->u.rspn.req;
->  	struct fc_ct_hdr *rspn_rsp = &fc_req->u.rspn.rsp;
-> -	int ret, len;
-> +	int ret;
+> diff --git a/drivers/usb/usbip/stub_main.c b/drivers/usb/usbip/stub_main.c
+> index 77a5b3f8736a..5bc2c09c0d10 100644
+> --- a/drivers/usb/usbip/stub_main.c
+> +++ b/drivers/usb/usbip/stub_main.c
+> @@ -167,15 +167,15 @@ static ssize_t match_busid_show(struct device_driver *drv, char *buf)
+>   static ssize_t match_busid_store(struct device_driver *dev, const char *buf,
+>   				 size_t count)
+>   {
+> -	int len;
 > +	ssize_t len;
->  
->  	zfcp_fc_ct_ns_init(&rspn_req->ct_hdr, FC_NS_RSPN_ID,
->  			   FC_SYMBOLIC_NAME_SIZE);
->  	hton24(rspn_req->rspn.fr_fid.fp_fid, fc_host_port_id(shost));
-> -	len = strlcpy(rspn_req->rspn.fr_name, fc_host_symbolic_name(shost),
-> +	len = strscpy(rspn_req->rspn.fr_name, fc_host_symbolic_name(shost),
->  		      FC_SYMBOLIC_NAME_SIZE);
-> -	rspn_req->rspn.fr_name_len = len;
-> +	if (len != -E2BIG)
-> +		rspn_req->rspn.fr_name_len = len;
-
-That is a bug. Leaving `rspn.fr_name_len` uninitialized defeats the
-purpose of sending a RSPN.
-
-How about:
-	if (len == -E2BIG)
-		rspn_req->rspn.fr_name_len = FC_SYMBOLIC_NAME_SIZE - 1;
-	else
-		rspn_req->rspn.fr_name_len = len;
-
->  
->  	sg_init_one(&fc_req->sg_req, rspn_req, sizeof(*rspn_req));
->  	sg_init_one(&fc_req->sg_rsp, rspn_rsp, sizeof(*rspn_rsp));
+>   	char busid[BUSID_SIZE];
+>   
+>   	if (count < 5)
+>   		return -EINVAL;
+>   
+>   	/* busid needs to include \0 termination */
+> -	len = strlcpy(busid, buf + 4, BUSID_SIZE);
+> -	if (sizeof(busid) <= len)
+> +	len = strscpy(busid, buf + 4, BUSID_SIZE);
+> +	if (len == -E2BIG)
+>   		return -EINVAL;
+>   
+>   	if (!strncmp(buf, "add ", 4)) {
 > 
 
--- 
-Best Regards, Benjamin Block  / Linux on IBM Z Kernel Development / IBM Systems
-IBM Deutschland Research & Development GmbH    /    https://www.ibm.com/privacy
-Vorsitz. AufsR.: Gregor Pillen         /        Geschäftsführung: Dirk Wittkopp
-Sitz der Gesellschaft: Böblingen / Registergericht: AmtsG Stuttgart, HRB 243294
+
+Looks good to me. Thank you.
+
+Acked-by: Shuah Khan <skhan@linuxfoundation.org>
+
+thanks,
+-- Shuah
