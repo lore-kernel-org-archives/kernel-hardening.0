@@ -1,22 +1,22 @@
-Return-Path: <SRS0=7oTy=H4=lists.openwall.com=kernel-hardening-return-20847-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=rJm9=H5=lists.openwall.com=kernel-hardening-return-20848-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 77431C433E0
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Feb 2021 15:10:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EF53FC433E0
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 15:10:54 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id EB94E64D9A
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Feb 2021 15:10:21 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EB94E64D9A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20847-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25742 invoked by uid 550); 26 Feb 2021 15:10:12 -0000
+	by mail.kernel.org (Postfix) with SMTP id C60C564D79
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 15:10:53 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C60C564D79
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20848-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28293 invoked by uid 550); 27 Feb 2021 15:10:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,280 +24,228 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25691 invoked from network); 26 Feb 2021 15:10:12 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=srkt/FPsH3OiGFJtktFAUPTRgoTtQPRHr/QhjT3o/S0=;
-        b=cjOLAK1Eoo1gzcmRQR60aP3UxSlJM3roQgFfK1tHNhQbyA/DfbPth4K/JCpskVu5qf
-         bo5LoICpewNX5nEfy8I+wGzxPfgVtPm7yy/8VcnmlQO7/kqf/y/qj0XonhSu1I2Xe43S
-         9SopWlbmkblOqWIGLAM0ukihTU+TmZd4DzAoSDEHRGBBxGqRdb9i/jQCw2e45Vx5bqvg
-         6NIyUSo5OokdMOUed3QJrwBbwoy9QO6R6TJHcKHEvR/tV9tBKrBEhtgMIu0xq5we/rOD
-         h1VkBoa7fPlJI78CEN3LdMmGGwQS9PErRauUttQZ8rhQ9XFszHTQXYE4Fulh6SfAzJtz
-         Qtxg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=srkt/FPsH3OiGFJtktFAUPTRgoTtQPRHr/QhjT3o/S0=;
-        b=q+8b0DNkcJUBwuCNTwqUD9kgqd8un27SyEv+b4C2oIiFOBkKb11IqYFAaQuPZUK/gb
-         RgO0ScJR/0EvZ54yUY+IIrkBSQU1narPgdyNWZNbTH0QKhFvd1ZHKNh9R8g/k5TD/MpD
-         zd4dgMB/S7PR3JcQoTA/UgX7H3GvdQL2jpB2034SXvBdjAntCl8ntcC1+5NvJv4q5Xzl
-         5M0Jyd9AuVyqHHkcgN9qfSAHSlNX1jMnztogrvKytiQYkF8dALBtFkKuW+j8rBZ4T33M
-         Vfz5ahE+9epQ23Ep0nzHxC7FMOthdICvDaC7nTX5INhYVDhzVzeyikYivNoDKutyPqP8
-         xOsw==
-X-Gm-Message-State: AOAM5305g3zbPHEgI2T+1ZsCP/N1tXpXzCJcsHedJiuQzxEFVoFP0e3B
-	//nqGZLiumHjqbJ10KQxDftc+zIPiDxxpsn1nPw=
-X-Google-Smtp-Source: ABdhPJwrfIN/KbkCc0txTnEv61sTiLyPTUtdImDzL256ivkAQjkZmS4vSsEebZEMdY7Q947kyHX9b7IUdMOygmW7K7o=
-X-Received: by 2002:a05:6830:1402:: with SMTP id v2mr2578977otp.161.1614352200053;
- Fri, 26 Feb 2021 07:10:00 -0800 (PST)
+Received: (qmail 28261 invoked from network); 27 Feb 2021 15:10:43 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1614438619;
+	bh=e+NzEQ0zUqFHpSiO6bYhm/QEn9aj/OszjJyG6A3hpJo=;
+	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
+	b=Dk5GBllLvbfhkEUcK/ofWBH8eKcQ3rBr9gKQqSyih1p5DUMl4KveCghi0qbvOfyV9
+	 2lAWq6ET3V6jP+RlQEi6iJJCx80sYdMrb3NGfutO0W/g4xBv0quM/F79qh+p+w2zbD
+	 F8vBpgmgksK8EcZF7bZvTy6QZ8TPP+NjdZXgJXxo=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+From: John Wood <john.wood@gmx.com>
+To: Kees Cook <keescook@chromium.org>,
+	Jann Horn <jannh@google.com>,
+	Randy Dunlap <rdunlap@infradead.org>,
+	Jonathan Corbet <corbet@lwn.net>,
+	James Morris <jmorris@namei.org>,
+	Shuah Khan <shuah@kernel.org>
+Cc: John Wood <john.wood@gmx.com>,
+	"Serge E. Hallyn" <serge@hallyn.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	linux-doc@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: [PATCH v4 0/8] Fork brute force attack mitigation
+Date: Sat, 27 Feb 2021 16:09:48 +0100
+Message-Id: <20210227150956.6022-1-john.wood@gmx.com>
+X-Mailer: git-send-email 2.25.1
 MIME-Version: 1.0
-References: <20210222151231.22572-1-romain.perier@gmail.com>
- <20210222151231.22572-18-romain.perier@gmail.com> <a9f26339-c366-40c4-1cd6-c7ae1838e2b6@kernel.org>
-In-Reply-To: <a9f26339-c366-40c4-1cd6-c7ae1838e2b6@kernel.org>
-From: Romain Perier <romain.perier@gmail.com>
-Date: Fri, 26 Feb 2021 16:09:48 +0100
-Message-ID: <CABgxDoJK01n+MbfEJOOz6+QoHzLEamooR_mz91nfqH5i0ok8fw@mail.gmail.com>
-Subject: Re: [PATCH 17/20] vt: Manual replacement of the deprecated strlcpy()
- with return values
-To: Jiri Slaby <jirislaby@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>, 
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
-Content-Type: multipart/alternative; boundary="0000000000006d390e05bc3ea9d4"
-
---0000000000006d390e05bc3ea9d4
-Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
+X-Provags-ID: V03:K1:JUDWVnh+062iEY4yBjLXziakNvl1rxXf20M4ttvZZLbM8Fh8LzW
+ 7Z1lgLNMD2zhexjJUex72ZQDux/N6pbSie9AHjJ6fFjLrgKVDGuK79Ym/Bgebxq0HFWW54x
+ /MzwRP/2sndoF4DJz9GWplztRp+uxp2U7N47EzXMjYbuYo4QFiQFX/GnBDVhae4EJHf8Q64
+ iFT5IusG50HN+0pOsQBxQ==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:M2qAs66kCN0=:6UREdrllMK1XmD2NwllGwg
+ n4GTD9SFTibaAH47paVJ/BPBydQasPzXcdNg1ciyy/E1Z9N0gsfQ17WYsK5gk668XR5FuPmyK
+ kt9HWgIK9zZTRkwGj0Y2lPxiu/4KRHS8VuJgLbFrl86eNKeaozvIkV+NGRsKVYQSpHH/1PJx+
+ gF8k8VtDb7yslEvbvSP/wIjNS3LvzyGUswLAFCQC/fLsg7TX62R5u9BoBSI9cWHZefp9JOglS
+ ICV5BMm+QQR4tCcIwR/dpyCza7EET4VqkgDBMlL26syVd3fbhjg+ZYyjAtSxQdUIgkEAjHUXY
+ mv6JyC1pZmD+uXKriRm5OinDc1oTk0Npg4v1jsyAa+4EcZwiRMQxm8w9rEYCTqg1JMwi7gvgT
+ lVt5Femwg/hFr/8AIQaT3+COmecsHukN0xuQbJOT5Nhdl6rm6bpVDlwHmh8qVqsYJvwYidNZO
+ fp3Tg/7xlfxTi3vgmOGC6wwss6PQovkbfrOuZ1voOYQ468syHKCVMXD4CUsA7Nv72K3jsFCCM
+ jALkNWWSpWmUem7cVdltcU7pmFE4MrEInPWlavmuf4T+eJuiefZ5N34Prdw5x2DO+mbI5BGBr
+ V9tGHrOzUQdnxlGI32EwUSckfmiXxLwHWIL0SHDCamqAbT9kkrOJGIcB0L1Bx4LgyBKuO5rxV
+ VeKKmh3cUp9iAbuyWt8gOygV1nw2YrmWaTH2CHQMVeRS1ug9FRHLPwlQvmANKGzmEQ+X+YV8K
+ EqHgXhuYRKxn3BTNPAxnyvFK/M/dYZDCKRZ9lII9vJJC+Q04BYcGAGRGuFB3g+RbWFhf8DzVI
+ 5V8fOYL47VjJKfX3oFB41qlxXWlyJC53S8MIkejk3DR3+vl+OoKuvrQhhwSE9bxLb/AoLrQfV
+ hn6IxJwmOPY5SH2PLOig==
 
-Le ven. 26 f=C3=A9vr. 2021 =C3=A0 10:49, Jiri Slaby <jirislaby@kernel.org> =
-a =C3=A9crit :
+Attacks against vulnerable userspace applications with the purpose to brea=
+k
+ASLR or bypass canaries traditionally use some level of brute force with
+the help of the fork system call. This is possible since when creating a
+new process using fork its memory contents are the same as those of the
+parent process (the process that called the fork system call). So, the
+attacker can test the memory infinite times to find the correct memory
+values or the correct memory addresses without worrying about crashing the
+application.
 
-> On 22. 02. 21, 16:12, Romain Perier wrote:
-> > The strlcpy() reads the entire source buffer first, it is dangerous if
-> > the source buffer lenght is unbounded or possibility non NULL-terminate=
-d.
->
-> "length" and it's NUL, not NULL in this case.
->
-> > It can lead to linear read overflows, crashes, etc...
-> >
-> > As recommended in the deprecated interfaces [1], it should be replaced
-> > by strscpy.
-> >
-> > This commit replaces all calls to strlcpy that handle the return values
->
-> s/that/which/ ?
-> "handles"
-> "value"
->
-> > by the corresponding strscpy calls with new handling of the return
-> > values (as it is quite different between the two functions).
->
-> Sorry, I have hard times understand the whole sentence. Could you
-> rephrase a bit?
->
-> > [1]
-> https://www.kernel.org/doc/html/latest/process/deprecated.html#strlcpy
-> >
-> > Signed-off-by: Romain Perier <romain.perier@gmail.com>
-> > ---
-> >   drivers/tty/vt/keyboard.c |    5 ++++-
-> >   1 file changed, 4 insertions(+), 1 deletion(-)
-> >
-> > diff --git a/drivers/tty/vt/keyboard.c b/drivers/tty/vt/keyboard.c
-> > index 77638629c562..5e20c6c307e0 100644
-> > --- a/drivers/tty/vt/keyboard.c
-> > +++ b/drivers/tty/vt/keyboard.c
-> > @@ -2067,9 +2067,12 @@ int vt_do_kdgkb_ioctl(int cmd, struct kbsentry
-> __user *user_kdgkb, int perm)
-> >                       return -ENOMEM;
-> >
-> >               spin_lock_irqsave(&func_buf_lock, flags);
-> > -             len =3D strlcpy(kbs, func_table[kb_func] ? : "", len);
-> > +             len =3D strscpy(kbs, func_table[kb_func] ? : "", len);
->
-> func_table[kb_func] is NUL-terminated and kbs is of length len anyway,
-> so this is only cosmetical.
->
-> >               spin_unlock_irqrestore(&func_buf_lock, flags);
-> >
-> > +             if (len =3D=3D -E2BIG)
-> > +                     return -E2BIG;
-> > +
->
-> This can never happen, right?
->
-> >               ret =3D copy_to_user(user_kdgkb->kb_string, kbs, len + 1)=
- ?
-> >                       -EFAULT : 0;
-> >
-> >
->
->
-Hello,
+Based on the above scenario it would be nice to have this detected and
+mitigated, and this is the goal of this patch serie. Specifically the
+following attacks are expected to be detected:
 
-Yeah I will reword the commit message, I have realized that it might be
-confusing in some cases. No it is
-not only cosmetic, see my new commit message below (does it help ?):
+1.- Launching (fork()/exec()) a setuid/setgid process repeatedly until a
+    desirable memory layout is got (e.g. Stack Clash).
+2.- Connecting to an exec()ing network daemon (e.g. xinetd) repeatedly
+    until a desirable memory layout is got (e.g. what CTFs do for simple
+    network service).
+3.- Launching processes without exec() (e.g. Android Zygote) and exposing
+    state to attack a sibling.
+4.- Connecting to a fork()ing network daemon (e.g. apache) repeatedly unti=
+l
+    the previously shared memory layout of all the other children is
+    exposed (e.g. kind of related to HeartBleed).
 
-"
+In each case, a privilege boundary has been crossed:
 
-Nowadays, strings copies are common in the kernel and strlcpy() is
-widely used for this purpose. While being a very helpful function, this
-has several problems:
+Case 1: setuid/setgid process
+Case 2: network to local
+Case 3: privilege changes
+Case 4: network to local
 
-- strlcpy() reads the entire source buffer first (since the return value
-is meant to match that of strlen()). This read may exceed the destination
-size limit. This can lead to linear read overflows if a source string is
-not NUL-terminated.
+So, what will really be detected are fork/exec brute force attacks that
+cross any of the commented bounds.
 
-- This is inefficient as it does not check for unaligned accesses,
-copies the source into the destination with a simple byte copy and reads
-the source buffer twice (even if the cache helps).
+The implementation details and comparison against other existing
+implementations can be found in the "Documentation" patch.
 
-- Even when the use of strlcpy() is correct and its source buffer is
-NUL-terminated, it might be an attack vector: a possible future security
-breach could give the opportunity to modify the source buffer.
+This v4 version has changed a lot from the v2. Basically the application
+crash period is now compute on an on-going basis using an exponential
+moving average (EMA), a detection of a brute force attack through the
+"execve" system call has been added and the crossing of the commented
+privilege bounds are taken into account. Also, the fine tune has also been
+removed and now, all this kind of attacks are detected without
+administrator intervention.
 
-strscpy() instead checks for alignment constraints and, when the
-conditions are met, copies word by word the sources into the destination
-(while checking that it does not exceed both buffers). Its use should be
-reasonably performant on all platforms since it uses the
-asm/world-at-a-time.h API ranther than simple byte copy.
+In the v2 version Kees Cook suggested to study if the statistical data
+shared by all the fork hierarchy processes can be tracked in some other
+way. Specifically the question was if this info can be hold by the family
+hierarchy of the mm struct. After studying this hierarchy I think it is no=
+t
+suitable for the Brute LSM since they are totally copied on fork() and in
+this case we want that they are shared. So I leave this road.
 
-This commit replaces all calls to strlcpy() which handles error codes by
-the corresponding call to strscpy(), while adjusting the error handling
-(as it is quite different between the two functions).
+So, knowing all this information I will explain now the different patches:
 
-[1] https://www.kernel.org/doc/html/latest/process/deprecated.html#strlcpy
+The 1/8 patch defines a new LSM hook to get the fatal signal of a task.
+This will be useful during the attack detection phase.
 
-"
+The 2/8 patch defines a new LSM and manages the statistical data shared by
+all the fork hierarchy processes.
 
-Regards,
-Romain
+The 3/8 patch detects a fork/exec brute force attack.
 
---0000000000006d390e05bc3ea9d4
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+The 4/8 patch narrows the detection taken into account the privilege
+boundary crossing.
 
-<div dir=3D"ltr"><div dir=3D"ltr"><br></div><br><div class=3D"gmail_quote">=
-<div dir=3D"ltr" class=3D"gmail_attr">Le=C2=A0ven. 26 f=C3=A9vr. 2021 =C3=
-=A0=C2=A010:49, Jiri Slaby &lt;<a href=3D"mailto:jirislaby@kernel.org">jiri=
-slaby@kernel.org</a>&gt; a =C3=A9crit=C2=A0:<br></div><blockquote class=3D"=
-gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(20=
-4,204,204);padding-left:1ex">On 22. 02. 21, 16:12, Romain Perier wrote:<br>
-&gt; The strlcpy() reads the entire source buffer first, it is dangerous if=
-<br>
-&gt; the source buffer lenght is unbounded or possibility non NULL-terminat=
-ed.<br>
-<br>
-&quot;length&quot; and it&#39;s NUL, not NULL in this case.<br>
-<br>
-&gt; It can lead to linear read overflows, crashes, etc...<br>
-&gt; <br>
-&gt; As recommended in the deprecated interfaces [1], it should be replaced=
-<br>
-&gt; by strscpy.<br>
-&gt; <br>
-&gt; This commit replaces all calls to strlcpy that handle the return value=
-s<br>
-<br>
-s/that/which/ ?<br>
-&quot;handles&quot;<br>
-&quot;value&quot;<br>
-<br>
-&gt; by the corresponding strscpy calls with new handling of the return<br>
-&gt; values (as it is quite different between the two functions).<br>
-<br>
-Sorry, I have hard times understand the whole sentence. Could you <br>
-rephrase a bit?<br>
-<br>
-&gt; [1] <a href=3D"https://www.kernel.org/doc/html/latest/process/deprecat=
-ed.html#strlcpy" rel=3D"noreferrer" target=3D"_blank">https://www.kernel.or=
-g/doc/html/latest/process/deprecated.html#strlcpy</a><br>
-&gt; <br>
-&gt; Signed-off-by: Romain Perier &lt;<a href=3D"mailto:romain.perier@gmail=
-.com" target=3D"_blank">romain.perier@gmail.com</a>&gt;<br>
-&gt; ---<br>
-&gt;=C2=A0 =C2=A0drivers/tty/vt/keyboard.c |=C2=A0 =C2=A0 5 ++++-<br>
-&gt;=C2=A0 =C2=A01 file changed, 4 insertions(+), 1 deletion(-)<br>
-&gt; <br>
-&gt; diff --git a/drivers/tty/vt/keyboard.c b/drivers/tty/vt/keyboard.c<br>
-&gt; index 77638629c562..5e20c6c307e0 100644<br>
-&gt; --- a/drivers/tty/vt/keyboard.c<br>
-&gt; +++ b/drivers/tty/vt/keyboard.c<br>
-&gt; @@ -2067,9 +2067,12 @@ int vt_do_kdgkb_ioctl(int cmd, struct kbsentry =
-__user *user_kdgkb, int perm)<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0return -ENOMEM;<br>
-&gt;=C2=A0 =C2=A0<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0spin_lock_irqsav=
-e(&amp;func_buf_lock, flags);<br>
-&gt; -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0len =3D strlcpy(kbs, =
-func_table[kb_func] ? : &quot;&quot;, len);<br>
-&gt; +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0len =3D strscpy(kbs, =
-func_table[kb_func] ? : &quot;&quot;, len);<br>
-<br>
-func_table[kb_func] is NUL-terminated and kbs is of length len anyway, <br>
-so this is only cosmetical.<br>
-<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0spin_unlock_irqr=
-estore(&amp;func_buf_lock, flags);<br>
-&gt;=C2=A0 =C2=A0<br>
-&gt; +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (len =3D=3D -E2BIG=
-)<br>
-&gt; +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0=
- =C2=A0return -E2BIG;<br>
-&gt; +<br>
-<br>
-This can never happen, right?<br>
-<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0ret =3D copy_to_=
-user(user_kdgkb-&gt;kb_string, kbs, len + 1) ?<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0-EFAULT : 0;<br>
-&gt;=C2=A0 =C2=A0<br>
-&gt; <br>
-<br></blockquote><div><br></div><div>
-<div>Hello,</div><div><br></div><div>Yeah I will reword the commit message,=
- I have realized that it might be confusing in some cases. No it is</div><d=
-iv>not only cosmetic, see my new commit message below (does it help ?):</di=
-v><div><br></div><div>&quot;</div><div>
-<pre class=3D"gmail-commit-description">Nowadays, strings copies are common=
- in the kernel and strlcpy() is
-widely used for this purpose. While being a very helpful function, this
-has several problems:
+The 5/8 patch mitigates a brute force attack.
 
-- strlcpy() reads the entire source buffer first (since the return value
-is meant to match that of strlen()). This read may exceed the destination
-size limit. This can lead to linear read overflows if a source string is
-not NUL-terminated.
+The 6/8 patch adds self-tests to validate the Brute LSM expectations.
 
-- This is inefficient as it does not check for unaligned accesses,
-copies the source into the destination with a simple byte copy and reads
-the source buffer twice (even if the cache helps).
+The 7/8 patch adds the documentation to explain this implementation.
 
-- Even when the use of strlcpy() is correct and its source buffer is
-NUL-terminated, it might be an attack vector: a possible future security
-breach could give the opportunity to modify the source buffer.
+The 8/8 patch updates the maintainers file.
 
-strscpy() instead checks for alignment constraints and, when the
-conditions are met, copies word by word the sources into the destination
-(while checking that it does not exceed both buffers). Its use should be
-reasonably performant on all platforms since it uses the
-asm/world-at-a-time.h API ranther than simple byte copy.
+This patch serie is a task of the KSPP [1] and can also be accessed from m=
+y
+github tree [2] in the "brute_v4" branch.
 
-This commit replaces all calls to strlcpy() which handles error codes by
-the corresponding call to strscpy(), while adjusting the error handling
-(as it is quite different between the two functions).
+[1] https://github.com/KSPP/linux/issues/39
+[2] https://github.com/johwood/linux/
 
-[1] <a href=3D"https://www.kernel.org/doc/html/latest/process/deprecated.ht=
-ml#strlcpy" rel=3D"nofollow noreferrer noopener" target=3D"_blank">https://=
-www.kernel.org/doc/html/latest/process/deprecated.html#strlcpy</a></pre>&qu=
-ot;</div><div><br></div><div>Regards,</div><div>Romain<br></div>=C2=A0 <br>=
-</div></div></div>
+The previous versions can be found in:
 
---0000000000006d390e05bc3ea9d4--
+RFC
+https://lore.kernel.org/kernel-hardening/20200910202107.3799376-1-keescook=
+@chromium.org/
+
+Version 2
+https://lore.kernel.org/kernel-hardening/20201025134540.3770-1-john.wood@g=
+mx.com/
+
+Version 3
+https://lore.kernel.org/lkml/20210221154919.68050-1-john.wood@gmx.com/
+
+Changelog RFC -> v2
+=2D------------------
+- Rename this feature with a more suitable name (Jann Horn, Kees Cook).
+- Convert the code to an LSM (Kees Cook).
+- Add locking  to avoid data races (Jann Horn).
+- Add a new LSM hook to get the fatal signal of a task (Jann Horn, Kees
+  Cook).
+- Add the last crashes timestamps list to avoid false positives in the
+  attack detection (Jann Horn).
+- Use "period" instead of "rate" (Jann Horn).
+- Other minor changes suggested (Jann Horn, Kees Cook).
+
+Changelog v2 -> v3
+=2D-----------------
+- Compute the application crash period on an on-going basis (Kees Cook).
+- Detect a brute force attack through the execve system call (Kees Cook).
+- Detect an slow brute force attack (Randy Dunlap).
+- Fine tuning the detection taken into account privilege boundary crossing
+  (Kees Cook).
+- Taken into account only fatal signals delivered by the kernel (Kees
+  Cook).
+- Remove the sysctl attributes to fine tuning the detection (Kees Cook).
+- Remove the prctls to allow per process enabling/disabling (Kees Cook).
+- Improve the documentation (Kees Cook).
+- Fix some typos in the documentation (Randy Dunlap).
+- Add self-test to validate the expectations (Kees Cook).
+
+Changelog v3 -> v4
+=2D-----------------
+- Fix all the warnings shown by the tool "scripts/kernel-doc" (Randy
+  Dunlap).
+
+Any constructive comments are welcome.
+Thanks.
+
+John Wood (8):
+  security: Add LSM hook at the point where a task gets a fatal signal
+  security/brute: Define a LSM and manage statistical data
+  securtiy/brute: Detect a brute force attack
+  security/brute: Fine tuning the attack detection
+  security/brute: Mitigate a brute force attack
+  selftests/brute: Add tests for the Brute LSM
+  Documentation: Add documentation for the Brute LSM
+  MAINTAINERS: Add a new entry for the Brute LSM
+
+ Documentation/admin-guide/LSM/Brute.rst  |  224 +++++
+ Documentation/admin-guide/LSM/index.rst  |    1 +
+ MAINTAINERS                              |    7 +
+ include/linux/lsm_hook_defs.h            |    1 +
+ include/linux/lsm_hooks.h                |    4 +
+ include/linux/security.h                 |    4 +
+ kernel/signal.c                          |    1 +
+ security/Kconfig                         |   11 +-
+ security/Makefile                        |    4 +
+ security/brute/Kconfig                   |   13 +
+ security/brute/Makefile                  |    2 +
+ security/brute/brute.c                   | 1102 ++++++++++++++++++++++
+ security/security.c                      |    5 +
+ tools/testing/selftests/Makefile         |    1 +
+ tools/testing/selftests/brute/.gitignore |    2 +
+ tools/testing/selftests/brute/Makefile   |    5 +
+ tools/testing/selftests/brute/config     |    1 +
+ tools/testing/selftests/brute/exec.c     |   44 +
+ tools/testing/selftests/brute/test.c     |  507 ++++++++++
+ tools/testing/selftests/brute/test.sh    |  226 +++++
+ 20 files changed, 2160 insertions(+), 5 deletions(-)
+ create mode 100644 Documentation/admin-guide/LSM/Brute.rst
+ create mode 100644 security/brute/Kconfig
+ create mode 100644 security/brute/Makefile
+ create mode 100644 security/brute/brute.c
+ create mode 100644 tools/testing/selftests/brute/.gitignore
+ create mode 100644 tools/testing/selftests/brute/Makefile
+ create mode 100644 tools/testing/selftests/brute/config
+ create mode 100644 tools/testing/selftests/brute/exec.c
+ create mode 100644 tools/testing/selftests/brute/test.c
+ create mode 100755 tools/testing/selftests/brute/test.sh
+
+=2D-
+2.25.1
+
