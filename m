@@ -1,4 +1,4 @@
-Return-Path: <SRS0=rJm9=H5=lists.openwall.com=kernel-hardening-return-20848-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=kZLx=H5=lists.openwall.com=kernel-hardening-return-20849-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,15 +8,15 @@ X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EF53FC433E0
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 15:10:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CD818C433DB
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 15:31:02 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id C60C564D79
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 15:10:53 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C60C564D79
+	by mail.kernel.org (Postfix) with SMTP id 90F8064D73
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 15:31:01 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 90F8064D73
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20848-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28293 invoked by uid 550); 27 Feb 2021 15:10:44 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20849-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7370 invoked by uid 550); 27 Feb 2021 15:30:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,14 +24,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28261 invoked from network); 27 Feb 2021 15:10:43 -0000
+Received: (qmail 7334 invoked from network); 27 Feb 2021 15:30:53 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1614438619;
-	bh=e+NzEQ0zUqFHpSiO6bYhm/QEn9aj/OszjJyG6A3hpJo=;
+	s=badeba3b8450; t=1614439829;
+	bh=uIGfW6v/62M3V75jNuVAjgL4pUU6vkmUTZjc5Ez9qXk=;
 	h=X-UI-Sender-Class:From:To:Cc:Subject:Date;
-	b=Dk5GBllLvbfhkEUcK/ofWBH8eKcQ3rBr9gKQqSyih1p5DUMl4KveCghi0qbvOfyV9
-	 2lAWq6ET3V6jP+RlQEi6iJJCx80sYdMrb3NGfutO0W/g4xBv0quM/F79qh+p+w2zbD
-	 F8vBpgmgksK8EcZF7bZvTy6QZ8TPP+NjdZXgJXxo=
+	b=XyYxKRu/SJkpLvm2gqQMHgwmUZtnfWb0VA6+RzBVLAaAW5Jqx2+p8KXOPX7Gwl48Z
+	 lcvsvccVgi+uKqCBlnwcGCu+pMyFT4t1aVqDQlpIj6IOLgossDYqI1vbDTPvY4yfks
+	 Y6i83EiX3ws19lBFVecjfrC+BJd/tR0V3EaJ1AQc=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
 From: John Wood <john.wood@gmx.com>
 To: Kees Cook <keescook@chromium.org>,
@@ -48,30 +48,30 @@ Cc: John Wood <john.wood@gmx.com>,
 	linux-security-module@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
-Subject: [PATCH v4 0/8] Fork brute force attack mitigation
-Date: Sat, 27 Feb 2021 16:09:48 +0100
-Message-Id: <20210227150956.6022-1-john.wood@gmx.com>
+Subject: [PATCH v5 0/8] Fork brute force attack mitigation
+Date: Sat, 27 Feb 2021 16:30:05 +0100
+Message-Id: <20210227153013.6747-1-john.wood@gmx.com>
 X-Mailer: git-send-email 2.25.1
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:JUDWVnh+062iEY4yBjLXziakNvl1rxXf20M4ttvZZLbM8Fh8LzW
- 7Z1lgLNMD2zhexjJUex72ZQDux/N6pbSie9AHjJ6fFjLrgKVDGuK79Ym/Bgebxq0HFWW54x
- /MzwRP/2sndoF4DJz9GWplztRp+uxp2U7N47EzXMjYbuYo4QFiQFX/GnBDVhae4EJHf8Q64
- iFT5IusG50HN+0pOsQBxQ==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:M2qAs66kCN0=:6UREdrllMK1XmD2NwllGwg
- n4GTD9SFTibaAH47paVJ/BPBydQasPzXcdNg1ciyy/E1Z9N0gsfQ17WYsK5gk668XR5FuPmyK
- kt9HWgIK9zZTRkwGj0Y2lPxiu/4KRHS8VuJgLbFrl86eNKeaozvIkV+NGRsKVYQSpHH/1PJx+
- gF8k8VtDb7yslEvbvSP/wIjNS3LvzyGUswLAFCQC/fLsg7TX62R5u9BoBSI9cWHZefp9JOglS
- ICV5BMm+QQR4tCcIwR/dpyCza7EET4VqkgDBMlL26syVd3fbhjg+ZYyjAtSxQdUIgkEAjHUXY
- mv6JyC1pZmD+uXKriRm5OinDc1oTk0Npg4v1jsyAa+4EcZwiRMQxm8w9rEYCTqg1JMwi7gvgT
- lVt5Femwg/hFr/8AIQaT3+COmecsHukN0xuQbJOT5Nhdl6rm6bpVDlwHmh8qVqsYJvwYidNZO
- fp3Tg/7xlfxTi3vgmOGC6wwss6PQovkbfrOuZ1voOYQ468syHKCVMXD4CUsA7Nv72K3jsFCCM
- jALkNWWSpWmUem7cVdltcU7pmFE4MrEInPWlavmuf4T+eJuiefZ5N34Prdw5x2DO+mbI5BGBr
- V9tGHrOzUQdnxlGI32EwUSckfmiXxLwHWIL0SHDCamqAbT9kkrOJGIcB0L1Bx4LgyBKuO5rxV
- VeKKmh3cUp9iAbuyWt8gOygV1nw2YrmWaTH2CHQMVeRS1ug9FRHLPwlQvmANKGzmEQ+X+YV8K
- EqHgXhuYRKxn3BTNPAxnyvFK/M/dYZDCKRZ9lII9vJJC+Q04BYcGAGRGuFB3g+RbWFhf8DzVI
- 5V8fOYL47VjJKfX3oFB41qlxXWlyJC53S8MIkejk3DR3+vl+OoKuvrQhhwSE9bxLb/AoLrQfV
- hn6IxJwmOPY5SH2PLOig==
+X-Provags-ID: V03:K1:dyxRqyvivCNpow/94EJRuQjd1fD4g/kwOCLTCLIIsD9iaeW+tWt
+ bXetiYBbijKl3X2dXEvBzyS4VzlJREeIsadRJl6SuLOpSSalf/9znEMVkD1SZgQLUtqCA/n
+ 0jNMdRVyg+mvyl4TZ51DajR0DP3t3GOaR/SCCAKQlpx4joqNA3OugoY793Cryhk9cajxRRM
+ VFcbLTRSgJXD/fGUaWikw==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:/1bWpCycnXs=:Eips6YumXLkHQS0WPq1kMR
+ a3FrdqH8WAMX8xAcuZQe7cEZJ5533wVqcF1m5h3OAQdhkV4qMpcM7wzSrjNjoMIl+5DXg3iRz
+ iY/EUEUvewBNGsgN9BmanEFf7GMNa5FOOzXITU/pWSm2a+yIpYLiOX2jx+qWXclgUm3bgilaS
+ ufgMBTHAGJz94TjmAWbUIFbbBgOadTLPkzmYfwIExem20BybvCfRF0awx7Hva4Ny66jvYXIeT
+ 7fqfjWQC2Z/M77aIJcTZ3aUUU7scqqKPm3Ac9Ec74Z+9Fx29rq42ApYj31/Gt6Qg4CzOXfYDj
+ 00wEkciOCgNifbRxGDkBdR79997wLq8vyytmN67tsyN6nySZGYSAgJyO6iYDOyeQ+sguIvCuf
+ BydSe49pnNbOlUFQjRzY1tKEmc9UImXVyEOy6Qh/nW8PXs8Azgb4ROD9gJBycpGvvkXBngBYr
+ FHlyOcyPGpAMEGVuAxzCmmNeE0iT6YXTulGsz7vwgKb92JMpB8NnjuK2R+3Nza+ICslK2pYrH
+ muh8E7m4lQw2CZaoOTmfPeNY1LVpQsAtQHdrtejajZ/OEp5aRjQl172Py1t2/++QrIkJvKJM4
+ m7y7M0sQJQsV2PTbPBtl0PEO0oLQb+Jt7Z1Dv/bCAG/J29/p7GgkjOGDZuQIeIDI13S6TwcyP
+ dP9gmbyLuOA8/eq4pC6xbP5zJv4EGxj/O0EgahxnZrd5uMgraW4FlKQj76S+dYaf8SZdC3kGf
+ GZszzqvKLScTRpCqUJ8QVeBrDgdIDQBEDSIq+PAw09wpDHvY2rA/zmWMtBkOaG/MFTk/ZiHGn
+ 0y500J0FhCEGH+t2RTKKpo7ddbBl4W9Po4zrRo9apYSR76bMv3ZLrAFmb8rODcxZs8EvB+KCt
+ ORNKP4EL9tVmQa5qS7NQ==
 
 Attacks against vulnerable userspace applications with the purpose to brea=
 k
@@ -112,7 +112,7 @@ cross any of the commented bounds.
 The implementation details and comparison against other existing
 implementations can be found in the "Documentation" patch.
 
-This v4 version has changed a lot from the v2. Basically the application
+This v5 version has changed a lot from the v2. Basically the application
 crash period is now compute on an on-going basis using an exponential
 moving average (EMA), a detection of a brute force attack through the
 "execve" system call has been added and the crossing of the commented
@@ -169,6 +169,9 @@ mx.com/
 Version 3
 https://lore.kernel.org/lkml/20210221154919.68050-1-john.wood@gmx.com/
 
+Version 4
+https://lore.kernel.org/lkml/20210227150956.6022-1-john.wood@gmx.com/
+
 Changelog RFC -> v2
 =2D------------------
 - Rename this feature with a more suitable name (Jann Horn, Kees Cook).
@@ -200,6 +203,10 @@ Changelog v3 -> v4
 =2D-----------------
 - Fix all the warnings shown by the tool "scripts/kernel-doc" (Randy
   Dunlap).
+
+Changelog v4 -> v5
+=2D-----------------
+- Fix some typos (Randy Dunlap).
 
 Any constructive comments are welcome.
 Thanks.
