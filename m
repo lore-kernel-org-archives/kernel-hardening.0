@@ -1,22 +1,22 @@
-Return-Path: <SRS0=o8O8=H5=lists.openwall.com=kernel-hardening-return-20854-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=wn+D=H5=lists.openwall.com=kernel-hardening-return-20855-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
 	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=ham autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7E0CBC433E0
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 17:19:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E61AAC433DB
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 17:41:17 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 87E0F64E84
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 17:19:34 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 87E0F64E84
+	by mail.kernel.org (Postfix) with SMTP id B1BF764E01
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 17:41:16 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B1BF764E01
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20854-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32707 invoked by uid 550); 27 Feb 2021 17:19:27 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20855-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11811 invoked by uid 550); 27 Feb 2021 17:41:08 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,14 +24,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32674 invoked from network); 27 Feb 2021 17:19:26 -0000
+Received: (qmail 11776 invoked from network); 27 Feb 2021 17:41:08 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1614446351;
-	bh=f9979xLEL4tmv6pKlArL8pZAWWrdLIZBJP+PfwGW+EA=;
+	s=badeba3b8450; t=1614447654;
+	bh=yBo7hGCSzN1cx8Cw6x+gmnMXafaZYnF6cZpWUcCnFjw=;
 	h=X-UI-Sender-Class:From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=T3kumE5gYLo5QzBPFZQcwh7tzNIsDWpTas1Qg1qFxEPS9RQc2BC9KsO2WOD4pP5Ju
-	 ob7lYgT8hsIkERwxAFrpSFyDjoWJC8iZ+QVGqa4M8TYrgOPqE2qGsAo0SBQfPBVkQr
-	 /HuPIdPM/nNbfb6Z5sS3AxuDx2aD0fQdQiiF3mWg=
+	b=LOB+bdqWpVZzv5Lx88TMnZZDOCBBxp6nVXQWgOMKOjHP8/cdzJBoaKDllEGHLdk+A
+	 blwiqxfHZ2w0EqFh7/eq0pyX3UhDRNn2/7zjJbV4w2G4d29fKAXyyOxmWm0rzqynZe
+	 4Gj+IOImMtrupN3M7id5lS+IG32/Qe/Su+cqrKyY=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
 From: John Wood <john.wood@gmx.com>
 To: Kees Cook <keescook@chromium.org>,
@@ -48,280 +48,913 @@ Cc: John Wood <john.wood@gmx.com>,
 	linux-security-module@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
-Subject: [PATCH v5 5/8] security/brute: Mitigate a brute force attack
-Date: Sat, 27 Feb 2021 16:30:10 +0100
-Message-Id: <20210227153013.6747-6-john.wood@gmx.com>
+Subject: [PATCH v5 6/8] selftests/brute: Add tests for the Brute LSM
+Date: Sat, 27 Feb 2021 16:30:11 +0100
+Message-Id: <20210227153013.6747-7-john.wood@gmx.com>
 X-Mailer: git-send-email 2.25.1
 In-Reply-To: <20210227153013.6747-1-john.wood@gmx.com>
 References: <20210227153013.6747-1-john.wood@gmx.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:N9BKOY8hiGdBPHnQMaciOAbJcMHRrfanbEh/6b//IXbA/ZK30Qt
- GWzzwDIpksnfdMGLROP0Qf+owHixm9rLyGW74QMTaex4gWWyZjhWKmwR4tu9Flz8A7R6iZA
- zzyRVmqA5xFj6Wy4pIEYA4iNGQF5Wg1U6IDEm9x4hxidxG/nGRHMauakmZWTaOlgCY0KyC0
- 0j9kLkRX8qItyZF2WBicQ==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:kSdF3TXhtH8=:9SQpwjKK38trO/Q6Wq4i0P
- 1RYb5ygdlQo/huv4F5I2cWU1m7kdTD3s04IEf62MeM9Nh4dy/FC7yYw3/N92PCyUnoEMWF6Ln
- AWmmVjhXtSCjxZ0ZAqGtAjgvaGke203UeLnCLANXPRX3Fv9X/qfU/SXMA7HTbksKyn9VaKYp5
- r9iORiEnE9FxjYnEXj6zwwSJTnTayLUTNn7fgqSV9qwVb+4mtt8dOD/iTqk7G7k/dLbFOSDST
- BU3+AFoeUilaOCIetT64xoeIynNEWNcqSqn2QQ/kEkF9kRYpKkj7bzjHbSkO0Plmq2cTEZ3pB
- 6Wgj6v5m+PdtBCSA+LWmdQlY/c/oG0YrHLn2VqcWHodxWl89WLe03/AoKEtO7QMoS3VvOOSqA
- DrL15NWaGtfyYqxp6+YC6jLih+hdaqe6rARcuDdAqXTGmL3yKN5yxiwG9F7zxXQsQEyTxm63Q
- lWZSlYWvRoV8U8z1l+O5B244cHuyN1TKOag2sUuOsaA4iG4KoXU8diPEtDW9HmotTRrzHD+Pk
- Di6lYLpyW/urOlXZmEhwqX9i3XfWTkhrxhrZowglIQi2vqXxbg6/RLYJvuJW+QPf7twapHVJ1
- EsTHP4Ke3+7HYV/0CPUdUOcLLkFX4xqx5Y7YgkV/5N3moFEbriJnFn63cvUcV2caBzXU3fMhb
- 8zNp/Bpqj14Wa3PCNBh3hpQXVFkee3B7jfzuTLsv1d1UNWxTbkmIMv/H5QUCJ55Af4bhOtdFW
- kBcn4nw0BwVt/hm/rcM4nLGUgiqfZ8cuVNEcFSZYO1sIsjS8A95U2XTkbfYgkuulOaEsiNYbX
- nIp2TP3PpI4CUV4aPnRSs5//obp57eJzjnbJna4zaDJNSnidtwmsuMd2jnWTQJ0oooYRfhxSk
- Bg0+iS09JAaEkCm3Cd5w==
+X-Provags-ID: V03:K1:iXUppKi478uD0uWbI4kLCErlz4b37yMe5AwqSWF8+iw0/bHMMp/
+ zgwUagiOedoswNDcWaj5Dn2rX9o0/UWz5isglBYI4+tayok24CXd3Ff9V0Abyu5pHfgca1v
+ K3+JXnA4D4547GtKgm/BKeG1ws8x1K2MDNg99WpIA78gaI8eA/o1nwctYDHw7tUNSqxPpW7
+ JvDMnJPxUf+p0i4mnOGcg==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:Zj30vQKz7dI=:N7eC44adQljBpJVGl4nfXc
+ VoaIFxJwtUG6wBufJRKDhbbYlEsIjaXvUEOji7ZR8D4I4q47TDeHezNaGKcFo8fJOEtnYHxRI
+ uU8G4qR1TwPlrhegi8X7NfF/9ML04UWzAG395kP/p1Ye5nliFin5LQQDOZ0r4AXF52hjd5Ux7
+ VfW80TqqzU4e46ZkNHlLM17iSA2IWIZ2SveGhr9VNs3Z+dHrIIpChp7WQm8cF9bRyYbNv9OSV
+ Y4vdpJ5rIfAVi4e094Gy5SQS5HQ/+r85281mRnGG6nLmO/tmuU0rOwa9C8v8BIl7QRhZpRFJ7
+ tQXumNKFMOqDOHIQeUKjhbNtgOGsZzdpHgTEUBoOTEzOboUUZ+f+P9rK36SP1SsGx7oR++pFR
+ 0yzfxs0dIPnD0Im8v4nS0n1iKB6Yb9s6v19Z/lfChkTLCiszrZ2nNanAn9JaKPSFOUQJFr7sv
+ lYP520nwcdspfYJSMiqIz9PoEZbGIUpSdSQR+CzTP/pNro/Fk4nGt1m3yAW5QpKpN5xgyJqDS
+ IuY7U6/3wJouXJnnhI/hq73dq2n2SCCzOLTKLDqxFj1k7D33AR8WbMDcZLW10rg2xM1jaXXKU
+ ob0aDzLyODhTtAtWOtZhUWdKa0ZgZAaCVPEBcWzQDXCsK8JCetz1nWrr8Xrgy2Crr177YYFIE
+ ZE40Z8HTsnWO/zhBu/unrZQq7bVggiAH29DOrPexnpqjJfhsWK5/5uUOShzlitYwUaGFn3R3s
+ 4N+0pfnNRoFKa4Hb1kUpyMpIX+yntXme9qf4B0vX79fL8ArgozahGMouZ9iEQh6kdekMEXEH3
+ lPW3d/g5UupptdOCRQLnhD4ZhYFLiQ0+f5cw+jRxGZZbRCFzkvI6KNhYT1VlmAJ5XCHEB6w2G
+ HRvZDvtlL0anohxv8rwA==
 
-In order to mitigate a brute force attack all the offending tasks involved
-in the attack must be killed. In other words, it is necessary to kill all
-the tasks that share the fork and/or exec statistical data related to the
-attack. Moreover, if the attack happens through the fork system call, the
-processes that have the same group_leader that the current task (the task
-that has crashed) must be avoided since they are in the path to be killed.
+Add tests to check the brute LSM functionality and cover fork/exec brute
+force attacks crossing the following privilege boundaries:
 
-When the SIGKILL signal is sent to the offending tasks, the function
-"brute_kill_offending_tasks" will be called in a recursive way from the
-task_fatal_signal LSM hook due to a small crash period. So, to avoid kill
-again the same tasks due to a recursive call of this function, it is
-necessary to disable the attack detection for the involved hierarchies.
+1.- setuid process
+2.- privilege changes
+3.- network to local
 
-To disable the attack detection, set to zero the last crash timestamp and
-avoid to compute the application crash period in this case.
+Also, as a first step check that fork/exec brute force attacks without
+crossing any privilege boundariy already commented doesn't trigger the
+detection and mitigation stage.
+
+All the fork brute force attacks are carried out via the "exec" app to
+avoid the triggering of the "brute" LSM over the shell script running
+the tests.
 
 Signed-off-by: John Wood <john.wood@gmx.com>
 =2D--
- security/brute/brute.c | 141 ++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 132 insertions(+), 9 deletions(-)
+ tools/testing/selftests/Makefile         |   1 +
+ tools/testing/selftests/brute/.gitignore |   2 +
+ tools/testing/selftests/brute/Makefile   |   5 +
+ tools/testing/selftests/brute/config     |   1 +
+ tools/testing/selftests/brute/exec.c     |  44 ++
+ tools/testing/selftests/brute/test.c     | 507 +++++++++++++++++++++++
+ tools/testing/selftests/brute/test.sh    | 226 ++++++++++
+ 7 files changed, 786 insertions(+)
+ create mode 100644 tools/testing/selftests/brute/.gitignore
+ create mode 100644 tools/testing/selftests/brute/Makefile
+ create mode 100644 tools/testing/selftests/brute/config
+ create mode 100644 tools/testing/selftests/brute/exec.c
+ create mode 100644 tools/testing/selftests/brute/test.c
+ create mode 100755 tools/testing/selftests/brute/test.sh
 
-diff --git a/security/brute/brute.c b/security/brute/brute.c
-index 0a99cd4c3303..48b07d923ec7 100644
-=2D-- a/security/brute/brute.c
-+++ b/security/brute/brute.c
-@@ -22,6 +22,7 @@
- #include <linux/math64.h>
- #include <linux/netdevice.h>
- #include <linux/path.h>
-+#include <linux/pid.h>
- #include <linux/printk.h>
- #include <linux/refcount.h>
- #include <linux/rwlock.h>
-@@ -64,7 +65,7 @@ struct brute_cred {
-  * @lock: Lock to protect the brute_stats structure.
-  * @refc: Reference counter.
-  * @faults: Number of crashes.
-- * @jiffies: Last crash timestamp.
-+ * @jiffies: Last crash timestamp. If zero, the attack detection is disab=
-led.
-  * @period: Crash period's moving average.
-  * @saved_cred: Saved credentials.
-  * @network: Network activity flag.
-@@ -566,6 +567,125 @@ static inline void print_fork_attack_running(void)
- 	pr_warn("Fork brute force attack detected [%s]\n", current->comm);
- }
-
-+/**
-+ * brute_disabled() - Test if the brute force attack detection is disable=
-d.
-+ * @stats: Statistical data shared by all the fork hierarchy processes.
-+ *
-+ * The brute force attack detection enabling/disabling is based on the la=
-st
-+ * crash timestamp. A zero timestamp indicates that this feature is disab=
-led. A
-+ * timestamp greater than zero indicates that the attack detection is ena=
-bled.
-+ *
-+ * The statistical data shared by all the fork hierarchy processes cannot=
- be
-+ * NULL.
-+ *
-+ * It's mandatory to disable interrupts before acquiring the brute_stats:=
-:lock
-+ * since the task_free hook can be called from an IRQ context during the
-+ * execution of the task_fatal_signal hook.
-+ *
-+ * Context: Must be called with interrupts disabled and brute_stats_ptr_l=
-ock
-+ *          held.
-+ * Return: True if the brute force attack detection is disabled. False
-+ *         otherwise.
-+ */
-+static bool brute_disabled(struct brute_stats *stats)
+diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Ma=
+kefile
+index 6c575cf34a71..d4cf9e1c0a6d 100644
+=2D-- a/tools/testing/selftests/Makefile
++++ b/tools/testing/selftests/Makefile
+@@ -2,6 +2,7 @@
+ TARGETS =3D arm64
+ TARGETS +=3D bpf
+ TARGETS +=3D breakpoints
++TARGETS +=3D brute
+ TARGETS +=3D capabilities
+ TARGETS +=3D cgroup
+ TARGETS +=3D clone3
+diff --git a/tools/testing/selftests/brute/.gitignore b/tools/testing/self=
+tests/brute/.gitignore
+new file mode 100644
+index 000000000000..1ccc45251a1b
+=2D-- /dev/null
++++ b/tools/testing/selftests/brute/.gitignore
+@@ -0,0 +1,2 @@
++exec
++test
+diff --git a/tools/testing/selftests/brute/Makefile b/tools/testing/selfte=
+sts/brute/Makefile
+new file mode 100644
+index 000000000000..52662d0b484c
+=2D-- /dev/null
++++ b/tools/testing/selftests/brute/Makefile
+@@ -0,0 +1,5 @@
++# SPDX-License-Identifier: GPL-2.0
++CFLAGS +=3D -Wall -O2
++TEST_PROGS :=3D test.sh
++TEST_GEN_FILES :=3D exec test
++include ../lib.mk
+diff --git a/tools/testing/selftests/brute/config b/tools/testing/selftest=
+s/brute/config
+new file mode 100644
+index 000000000000..3587b7bf6c23
+=2D-- /dev/null
++++ b/tools/testing/selftests/brute/config
+@@ -0,0 +1 @@
++CONFIG_SECURITY_FORK_BRUTE=3Dy
+diff --git a/tools/testing/selftests/brute/exec.c b/tools/testing/selftest=
+s/brute/exec.c
+new file mode 100644
+index 000000000000..1bbe72f6e4bd
+=2D-- /dev/null
++++ b/tools/testing/selftests/brute/exec.c
+@@ -0,0 +1,44 @@
++// SPDX-License-Identifier: GPL-2.0
++
++#include <libgen.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <sys/wait.h>
++#include <unistd.h>
++
++static __attribute__((noreturn)) void error_failure(const char *message)
 +{
-+	bool disabled;
-+
-+	spin_lock(&stats->lock);
-+	disabled =3D !stats->jiffies;
-+	spin_unlock(&stats->lock);
-+
-+	return disabled;
++	perror(message);
++	exit(EXIT_FAILURE);
 +}
 +
-+/**
-+ * brute_disable() - Disable the brute force attack detection.
-+ * @stats: Statistical data shared by all the fork hierarchy processes.
-+ *
-+ * To disable the brute force attack detection it is only necessary to se=
-t the
-+ * last crash timestamp to zero. A zero timestamp indicates that this fea=
-ture is
-+ * disabled. A timestamp greater than zero indicates that the attack dete=
-ction
-+ * is enabled.
-+ *
-+ * The statistical data shared by all the fork hierarchy processes cannot=
- be
-+ * NULL.
-+ *
-+ * Context: Must be called with interrupts disabled and brute_stats_ptr_l=
-ock
-+ *          and brute_stats::lock held.
-+ */
-+static inline void brute_disable(struct brute_stats *stats)
-+{
-+	stats->jiffies =3D 0;
-+}
++#define PROG_NAME basename(argv[0])
 +
-+/**
-+ * enum brute_attack_type - Brute force attack type.
-+ * @BRUTE_ATTACK_TYPE_FORK: Attack that happens through the fork system c=
-all.
-+ * @BRUTE_ATTACK_TYPE_EXEC: Attack that happens through the execve system=
- call.
-+ */
-+enum brute_attack_type {
-+	BRUTE_ATTACK_TYPE_FORK,
-+	BRUTE_ATTACK_TYPE_EXEC,
++int main(int argc, char **argv)
++{
++	pid_t pid;
++	int status;
++
++	if (argc < 2) {
++		printf("Usage: %s <EXECUTABLE>\n", PROG_NAME);
++		exit(EXIT_FAILURE);
++	}
++
++	pid =3D fork();
++	if (pid < 0)
++		error_failure("fork");
++
++	/* Child process */
++	if (!pid) {
++		execve(argv[1], &argv[1], NULL);
++		error_failure("execve");
++	}
++
++	/* Parent process */
++	pid =3D waitpid(pid, &status, 0);
++	if (pid < 0)
++		error_failure("waitpid");
++
++	return EXIT_SUCCESS;
++}
+diff --git a/tools/testing/selftests/brute/test.c b/tools/testing/selftest=
+s/brute/test.c
+new file mode 100644
+index 000000000000..44c32f446dca
+=2D-- /dev/null
++++ b/tools/testing/selftests/brute/test.c
+@@ -0,0 +1,507 @@
++// SPDX-License-Identifier: GPL-2.0
++
++#include <arpa/inet.h>
++#include <errno.h>
++#include <libgen.h>
++#include <pwd.h>
++#include <signal.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/socket.h>
++#include <sys/time.h>
++#include <sys/types.h>
++#include <sys/wait.h>
++#include <unistd.h>
++
++static const char *message =3D "message";
++
++enum mode {
++	MODE_NONE,
++	MODE_CRASH,
++	MODE_SERVER_CRASH,
++	MODE_CLIENT,
 +};
 +
-+/**
-+ * brute_kill_offending_tasks() - Kill the offending tasks.
-+ * @attack_type: Brute force attack type.
-+ * @stats: Statistical data shared by all the fork hierarchy processes.
-+ *
-+ * When a brute force attack is detected all the offending tasks involved=
- in the
-+ * attack must be killed. In other words, it is necessary to kill all the=
- tasks
-+ * that share the same statistical data. Moreover, if the attack happens =
-through
-+ * the fork system call, the processes that have the same group_leader th=
-at the
-+ * current task must be avoided since they are in the path to be killed.
-+ *
-+ * When the SIGKILL signal is sent to the offending tasks, this function =
-will be
-+ * called again from the task_fatal_signal hook due to a small crash peri=
-od. So,
-+ * to avoid kill again the same tasks due to a recursive call of this fun=
-ction,
-+ * it is necessary to disable the attack detection for this fork hierarch=
-y.
-+ *
-+ * The statistical data shared by all the fork hierarchy processes cannot=
- be
-+ * NULL.
-+ *
-+ * It's mandatory to disable interrupts before acquiring the brute_stats:=
-:lock
-+ * since the task_free hook can be called from an IRQ context during the
-+ * execution of the task_fatal_signal hook.
-+ *
-+ * Context: Must be called with interrupts disabled and tasklist_lock and
-+ *          brute_stats_ptr_lock held.
-+ */
-+static void brute_kill_offending_tasks(enum brute_attack_type attack_type=
-,
-+				       struct brute_stats *stats)
++enum crash_after {
++	CRASH_AFTER_NONE,
++	CRASH_AFTER_FORK,
++	CRASH_AFTER_EXEC,
++};
++
++enum signal_from {
++	SIGNAL_FROM_NONE,
++	SIGNAL_FROM_USER,
++	SIGNAL_FROM_KERNEL,
++};
++
++struct args {
++	uint32_t ip;
++	uint16_t port;
++	int counter;
++	long timeout;
++	enum mode mode;
++	enum crash_after crash_after;
++	enum signal_from signal_from;
++	unsigned char has_counter : 1;
++	unsigned char has_change_priv : 1;
++	unsigned char has_ip : 1;
++	unsigned char has_port : 1;
++	unsigned char has_timeout : 1;
++};
++
++#define OPT_STRING "hm:c:s:n:Ca:p:t:"
++
++static void usage(const char *prog)
 +{
-+	struct task_struct *p;
-+	struct brute_stats **p_stats;
++	printf("Usage: %s <OPTIONS>\n", prog);
++	printf("OPTIONS:\n");
++	printf("  -h: Show this help and exit. Optional.\n");
++	printf("  -m (crash | server_crash | client): Mode. Required.\n");
++	printf("Options for crash mode:\n");
++	printf("  -c (fork | exec): Crash after. Optional.\n");
++	printf("  -s (user | kernel): Signal from. Required.\n");
++	printf("  -n counter: Number of crashes.\n");
++	printf("              Required if the option -c is used.\n");
++	printf("              Not used without the option -c.\n");
++	printf("              Range from 1 to INT_MAX.\n");
++	printf("  -C: Change privileges before crash. Optional.\n");
++	printf("Options for server_crash mode:\n");
++	printf("  -a ip: Ip v4 address to accept. Required.\n");
++	printf("  -p port: Port number. Required.\n");
++	printf("           Range from 1 to UINT16_MAX.\n");
++	printf("  -t secs: Accept timeout. Required.\n");
++	printf("           Range from 1 to LONG_MAX.\n");
++	printf("  -c (fork | exec): Crash after. Required.\n");
++	printf("  -s (user | kernel): Signal from. Required.\n");
++	printf("  -n counter: Number of crashes. Required.\n");
++	printf("              Range from 1 to INT_MAX.\n");
++	printf("Options for client mode:\n");
++	printf("  -a ip: Ip v4 address to connect. Required.\n");
++	printf("  -p port: Port number. Required.\n");
++	printf("           Range from 1 to UINT16_MAX.\n");
++	printf("  -t secs: Connect timeout. Required.\n");
++	printf("           Range from 1 to LONG_MAX.\n");
++}
 +
-+	spin_lock(&stats->lock);
++static __attribute__((noreturn)) void info_failure(const char *message,
++						   const char *prog)
++{
++	printf("%s\n", message);
++	usage(prog);
++	exit(EXIT_FAILURE);
++}
 +
-+	if (attack_type =3D=3D BRUTE_ATTACK_TYPE_FORK &&
-+	    refcount_read(&stats->refc) =3D=3D 1) {
-+		spin_unlock(&stats->lock);
++static enum mode get_mode(const char *text, const char *prog)
++{
++	if (!strcmp(text, "crash"))
++		return MODE_CRASH;
++
++	if (!strcmp(text, "server_crash"))
++		return MODE_SERVER_CRASH;
++
++	if (!strcmp(text, "client"))
++		return MODE_CLIENT;
++
++	info_failure("Invalid mode option [-m].", prog);
++}
++
++static enum crash_after get_crash_after(const char *text, const char *pro=
+g)
++{
++	if (!strcmp(text, "fork"))
++		return CRASH_AFTER_FORK;
++
++	if (!strcmp(text, "exec"))
++		return CRASH_AFTER_EXEC;
++
++	info_failure("Invalid crash after option [-c].", prog);
++}
++
++static enum signal_from get_signal_from(const char *text, const char *pro=
+g)
++{
++	if (!strcmp(text, "user"))
++		return SIGNAL_FROM_USER;
++
++	if (!strcmp(text, "kernel"))
++		return SIGNAL_FROM_KERNEL;
++
++	info_failure("Invalid signal from option [-s]", prog);
++}
++
++static int get_counter(const char *text, const char *prog)
++{
++	int counter;
++
++	counter =3D atoi(text);
++	if (counter > 0)
++		return counter;
++
++	info_failure("Invalid counter option [-n].", prog);
++}
++
++static __attribute__((noreturn)) void error_failure(const char *message)
++{
++	perror(message);
++	exit(EXIT_FAILURE);
++}
++
++static uint32_t get_ip(const char *text, const char *prog)
++{
++	int ret;
++	uint32_t ip;
++
++	ret =3D inet_pton(AF_INET, text, &ip);
++	if (!ret)
++		info_failure("Invalid ip option [-a].", prog);
++	else if (ret < 0)
++		error_failure("inet_pton");
++
++	return ip;
++}
++
++static uint16_t get_port(const char *text, const char *prog)
++{
++	long port;
++
++	port =3D atol(text);
++	if ((port > 0) && (port <=3D UINT16_MAX))
++		return htons(port);
++
++	info_failure("Invalid port option [-p].", prog);
++}
++
++static long get_timeout(const char *text, const char *prog)
++{
++	long timeout;
++
++	timeout =3D atol(text);
++	if (timeout > 0)
++		return timeout;
++
++	info_failure("Invalid timeout option [-t].", prog);
++}
++
++static void check_args(const struct args *args, const char *prog)
++{
++	if (args->mode =3D=3D MODE_CRASH && args->crash_after !=3D CRASH_AFTER_N=
+ONE &&
++	    args->signal_from !=3D SIGNAL_FROM_NONE && args->has_counter &&
++	    !args->has_ip && !args->has_port && !args->has_timeout)
 +		return;
++
++	if (args->mode =3D=3D MODE_CRASH && args->signal_from !=3D SIGNAL_FROM_N=
+ONE &&
++	    args->crash_after =3D=3D CRASH_AFTER_NONE && !args->has_counter &&
++	    !args->has_ip && !args->has_port && !args->has_timeout)
++		return;
++
++	if (args->mode =3D=3D MODE_SERVER_CRASH && args->has_ip && args->has_por=
+t &&
++	    args->has_timeout && args->crash_after !=3D CRASH_AFTER_NONE &&
++	    args->signal_from !=3D SIGNAL_FROM_NONE && args->has_counter &&
++	    !args->has_change_priv)
++		return;
++
++	if (args->mode =3D=3D MODE_CLIENT && args->has_ip && args->has_port &&
++	    args->has_timeout && args->crash_after =3D=3D CRASH_AFTER_NONE &&
++	    args->signal_from =3D=3D SIGNAL_FROM_NONE && !args->has_counter &&
++	    !args->has_change_priv)
++		return;
++
++	info_failure("Invalid use of options.", prog);
++}
++
++static uid_t get_non_root_uid(void)
++{
++	struct passwd *pwent;
++	uid_t uid;
++
++	while (true) {
++		errno =3D 0;
++		pwent =3D getpwent();
++		if (!pwent) {
++			if (errno) {
++				perror("getpwent");
++				endpwent();
++				exit(EXIT_FAILURE);
++			}
++			break;
++		}
++
++		if (pwent->pw_uid) {
++			uid =3D pwent->pw_uid;
++			endpwent();
++			return uid;
++		}
 +	}
 +
-+	brute_disable(stats);
-+	spin_unlock(&stats->lock);
++	endpwent();
++	printf("A user different of root is needed.\n");
++	exit(EXIT_FAILURE);
++}
 +
-+	for_each_process(p) {
-+		if (attack_type =3D=3D BRUTE_ATTACK_TYPE_FORK &&
-+		    p->group_leader =3D=3D current->group_leader)
-+			continue;
++static inline void do_sigsegv(void)
++{
++	int *p =3D NULL;
++	*p =3D 0;
++}
 +
-+		p_stats =3D brute_stats_ptr(p);
-+		if (*p_stats !=3D stats)
-+			continue;
++static void do_sigkill(void)
++{
++	int ret;
 +
-+		do_send_sig_info(SIGKILL, SEND_SIG_PRIV, p, PIDTYPE_PID);
-+		pr_warn_ratelimited("Offending process %d [%s] killed\n",
-+				    p->pid, p->comm);
++	ret =3D kill(getpid(), SIGKILL);
++	if (ret)
++		error_failure("kill");
++}
++
++static void crash(enum signal_from signal_from, bool change_priv)
++{
++	int ret;
++
++	if (change_priv) {
++		ret =3D setuid(get_non_root_uid());
++		if (ret)
++			error_failure("setuid");
++	}
++
++	if (signal_from =3D=3D SIGNAL_FROM_KERNEL)
++		do_sigsegv();
++
++	do_sigkill();
++}
++
++static void execve_crash(char *const argv[])
++{
++	execve(argv[0], argv, NULL);
++	error_failure("execve");
++}
++
++static void exec_crash_user(void)
++{
++	char *const argv[] =3D {
++		"./test", "-m", "crash", "-s", "user", NULL,
++	};
++
++	execve_crash(argv);
++}
++
++static void exec_crash_user_change_priv(void)
++{
++	char *const argv[] =3D {
++		"./test", "-m", "crash", "-s", "user", "-C", NULL,
++	};
++
++	execve_crash(argv);
++}
++
++static void exec_crash_kernel(void)
++{
++	char *const argv[] =3D {
++		"./test", "-m", "crash", "-s", "kernel", NULL,
++	};
++
++	execve_crash(argv);
++}
++
++static void exec_crash_kernel_change_priv(void)
++{
++	char *const argv[] =3D {
++		"./test", "-m", "crash", "-s", "kernel", "-C", NULL,
++	};
++
++	execve_crash(argv);
++}
++
++static void exec_crash(enum signal_from signal_from, bool change_priv)
++{
++	if (signal_from =3D=3D SIGNAL_FROM_USER && !change_priv)
++		exec_crash_user();
++	if (signal_from =3D=3D SIGNAL_FROM_USER && change_priv)
++		exec_crash_user_change_priv();
++	if (signal_from =3D=3D SIGNAL_FROM_KERNEL && !change_priv)
++		exec_crash_kernel();
++	if (signal_from =3D=3D SIGNAL_FROM_KERNEL && change_priv)
++		exec_crash_kernel_change_priv();
++}
++
++static void do_crash(enum crash_after crash_after, enum signal_from signa=
+l_from,
++		     int counter, bool change_priv)
++{
++	pid_t pid;
++	int status;
++
++	if (crash_after =3D=3D CRASH_AFTER_NONE)
++		crash(signal_from, change_priv);
++
++	while (counter > 0) {
++		pid =3D fork();
++		if (pid < 0)
++			error_failure("fork");
++
++		/* Child process */
++		if (!pid) {
++			if (crash_after =3D=3D CRASH_AFTER_FORK)
++				crash(signal_from, change_priv);
++
++			exec_crash(signal_from, change_priv);
++		}
++
++		/* Parent process */
++		counter -=3D 1;
++		pid =3D waitpid(pid, &status, 0);
++		if (pid < 0)
++			error_failure("waitpid");
 +	}
 +}
 +
- /**
-  * brute_manage_fork_attack() - Manage a fork brute force attack.
-  * @stats: Statistical data shared by all the fork hierarchy processes.
-@@ -581,8 +701,8 @@ static inline void print_fork_attack_running(void)
-  * since the task_free hook can be called from an IRQ context during the
-  * execution of the task_fatal_signal hook.
-  *
-- * Context: Must be called with interrupts disabled and brute_stats_ptr_l=
-ock
-- *          held.
-+ * Context: Must be called with interrupts disabled and tasklist_lock and
-+ *          brute_stats_ptr_lock held.
-  * Return: The last crash timestamp before updating it.
-  */
- static u64 brute_manage_fork_attack(struct brute_stats *stats, u64 now)
-@@ -590,8 +710,10 @@ static u64 brute_manage_fork_attack(struct brute_stat=
-s *stats, u64 now)
- 	u64 last_fork_crash;
-
- 	last_fork_crash =3D brute_update_crash_period(stats, now);
--	if (brute_attack_running(stats))
-+	if (brute_attack_running(stats)) {
- 		print_fork_attack_running();
-+		brute_kill_offending_tasks(BRUTE_ATTACK_TYPE_FORK, stats);
++static __attribute__((noreturn)) void error_close_failure(const char *mes=
+sage,
++							  int fd)
++{
++	perror(message);
++	close(fd);
++	exit(EXIT_FAILURE);
++}
++
++static void do_server(uint32_t ip, uint16_t port, long accept_timeout)
++{
++	int sockfd;
++	int ret;
++	struct sockaddr_in address;
++	struct timeval timeout;
++	int newsockfd;
++
++	sockfd =3D socket(AF_INET, SOCK_STREAM, 0);
++	if (sockfd < 0)
++		error_failure("socket");
++
++	address.sin_family =3D AF_INET;
++	address.sin_addr.s_addr =3D ip;
++	address.sin_port =3D port;
++
++	ret =3D bind(sockfd, (const struct sockaddr *)&address, sizeof(address))=
+;
++	if (ret)
++		error_close_failure("bind", sockfd);
++
++	ret =3D listen(sockfd, 1);
++	if (ret)
++		error_close_failure("listen", sockfd);
++
++	timeout.tv_sec =3D accept_timeout;
++	timeout.tv_usec =3D 0;
++	ret =3D setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,
++			 (const struct timeval *)&timeout, sizeof(timeout));
++	if (ret)
++		error_close_failure("setsockopt", sockfd);
++
++	newsockfd =3D accept(sockfd, NULL, NULL);
++	if (newsockfd < 0)
++		error_close_failure("accept", sockfd);
++
++	close(sockfd);
++	close(newsockfd);
++}
++
++static void do_client(uint32_t ip, uint16_t port, long connect_timeout)
++{
++	int sockfd;
++	int ret;
++	struct timeval timeout;
++	struct sockaddr_in address;
++
++	sockfd =3D socket(AF_INET, SOCK_STREAM, 0);
++	if (sockfd < 0)
++		error_failure("socket");
++
++	timeout.tv_sec =3D connect_timeout;
++	timeout.tv_usec =3D 0;
++	ret =3D setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO,
++			 (const struct timeval *)&timeout, sizeof(timeout));
++	if (ret)
++		error_close_failure("setsockopt", sockfd);
++
++	address.sin_family =3D AF_INET;
++	address.sin_addr.s_addr =3D ip;
++	address.sin_port =3D port;
++
++	ret =3D connect(sockfd, (const struct sockaddr *)&address,
++		      sizeof(address));
++	if (ret)
++		error_close_failure("connect", sockfd);
++
++	ret =3D write(sockfd, message, strlen(message));
++	if (ret < 0)
++		error_close_failure("write", sockfd);
++
++	close(sockfd);
++}
++
++#define PROG_NAME basename(argv[0])
++
++int main(int argc, char **argv)
++{
++	int opt;
++	struct args args =3D {
++		.mode =3D MODE_NONE,
++		.crash_after =3D CRASH_AFTER_NONE,
++		.signal_from =3D SIGNAL_FROM_NONE,
++		.has_counter =3D false,
++		.has_change_priv =3D false,
++		.has_ip =3D false,
++		.has_port =3D false,
++		.has_timeout =3D false,
++	};
++
++	while ((opt =3D getopt(argc, argv, OPT_STRING)) !=3D -1) {
++		switch (opt) {
++		case 'h':
++			usage(PROG_NAME);
++			return EXIT_SUCCESS;
++		case 'm':
++			args.mode =3D get_mode(optarg, PROG_NAME);
++			break;
++		case 'c':
++			args.crash_after =3D get_crash_after(optarg, PROG_NAME);
++			break;
++		case 's':
++			args.signal_from =3D get_signal_from(optarg, PROG_NAME);
++			break;
++		case 'n':
++			args.counter =3D get_counter(optarg, PROG_NAME);
++			args.has_counter =3D true;
++			break;
++		case 'C':
++			args.has_change_priv =3D true;
++			break;
++		case 'a':
++			args.ip =3D get_ip(optarg, PROG_NAME);
++			args.has_ip =3D true;
++			break;
++		case 'p':
++			args.port =3D get_port(optarg, PROG_NAME);
++			args.has_port =3D true;
++			break;
++		case 't':
++			args.timeout =3D get_timeout(optarg, PROG_NAME);
++			args.has_timeout =3D true;
++			break;
++		default:
++			usage(PROG_NAME);
++			return EXIT_FAILURE;
++		}
 +	}
-
- 	return last_fork_crash;
- }
-@@ -778,8 +900,10 @@ static void brute_manage_exec_attack(struct brute_sta=
-ts *stats, u64 now,
- 	if (fork_period =3D=3D exec_period)
- 		return;
-
--	if (brute_attack_running(exec_stats))
-+	if (brute_attack_running(exec_stats)) {
- 		print_exec_attack_running(exec_stats);
-+		brute_kill_offending_tasks(BRUTE_ATTACK_TYPE_EXEC, exec_stats);
++
++	check_args(&args, PROG_NAME);
++
++	if (args.mode =3D=3D MODE_CRASH) {
++		do_crash(args.crash_after, args.signal_from, args.counter,
++			 args.has_change_priv);
++	} else if (args.mode =3D=3D MODE_SERVER_CRASH) {
++		do_server(args.ip, args.port, args.timeout);
++		do_crash(args.crash_after, args.signal_from, args.counter,
++			 false);
++	} else if (args.mode =3D=3D MODE_CLIENT) {
++		do_client(args.ip, args.port, args.timeout);
 +	}
- }
-
- /**
-@@ -895,10 +1019,9 @@ static void brute_task_fatal_signal(const kernel_sig=
-info_t *siginfo)
- 	read_lock(&tasklist_lock);
- 	read_lock_irqsave(&brute_stats_ptr_lock, flags);
-
--	if (WARN(!*stats, "No statistical data\n"))
--		goto unlock;
--
--	if (!brute_threat_model_supported(siginfo, *stats))
-+	if (WARN(!*stats, "No statistical data\n") ||
-+	    brute_disabled(*stats) ||
-+	    !brute_threat_model_supported(siginfo, *stats))
- 		goto unlock;
-
- 	last_fork_crash =3D brute_manage_fork_attack(*stats, now);
++
++	return EXIT_SUCCESS;
++}
+diff --git a/tools/testing/selftests/brute/test.sh b/tools/testing/selftes=
+ts/brute/test.sh
+new file mode 100755
+index 000000000000..f53f26ae5b96
+=2D-- /dev/null
++++ b/tools/testing/selftests/brute/test.sh
+@@ -0,0 +1,226 @@
++#!/bin/sh
++# SPDX-License-Identifier: GPL-2.0
++
++TCID=3D"test.sh"
++
++KSFT_PASS=3D0
++KSFT_FAIL=3D1
++KSFT_SKIP=3D4
++
++errno=3D$KSFT_PASS
++
++check_root()
++{
++	local uid=3D$(id -u)
++	if [ $uid -ne 0 ]; then
++		echo $TCID: must be run as root >&2
++		exit $KSFT_SKIP
++	fi
++}
++
++count_fork_matches()
++{
++	dmesg | grep "brute: Fork brute force attack detected" | wc -l
++}
++
++assert_equal()
++{
++	local val1=3D$1
++	local val2=3D$2
++
++	if [ $val1 -eq $val2 ]; then
++		echo "$TCID: $message [PASS]"
++	else
++		echo "$TCID: $message [FAIL]"
++		errno=3D$KSFT_FAIL
++	fi
++}
++
++test_fork_user()
++{
++	COUNTER=3D20
++
++	old_count=3D$(count_fork_matches)
++	./exec test -m crash -c fork -s user -n $COUNTER
++	new_count=3D$(count_fork_matches)
++
++	message=3D"Fork attack (user signals, no bounds crossed)"
++	assert_equal $old_count $new_count
++}
++
++test_fork_kernel()
++{
++	old_count=3D$(count_fork_matches)
++	./exec test -m crash -c fork -s kernel -n $COUNTER
++	new_count=3D$(count_fork_matches)
++
++	message=3D"Fork attack (kernel signals, no bounds crossed)"
++	assert_equal $old_count $new_count
++}
++
++count_exec_matches()
++{
++	dmesg | grep "brute: Exec brute force attack detected" | wc -l
++}
++
++test_exec_user()
++{
++	old_count=3D$(count_exec_matches)
++	./test -m crash -c exec -s user -n $COUNTER
++	new_count=3D$(count_exec_matches)
++
++	message=3D"Exec attack (user signals, no bounds crossed)"
++	assert_equal $old_count $new_count
++}
++
++test_exec_kernel()
++{
++	old_count=3D$(count_exec_matches)
++	./test -m crash -c exec -s kernel -n $COUNTER
++	new_count=3D$(count_exec_matches)
++
++	message=3D"Exec attack (kernel signals, no bounds crossed)"
++	assert_equal $old_count $new_count
++}
++
++assert_not_equal()
++{
++	local val1=3D$1
++	local val2=3D$2
++
++	if [ $val1 -ne $val2 ]; then
++		echo $TCID: $message [PASS]
++	else
++		echo $TCID: $message [FAIL]
++		errno=3D$KSFT_FAIL
++	fi
++}
++
++test_fork_kernel_setuid()
++{
++	old_count=3D$(count_fork_matches)
++	chmod u+s test
++	./exec test -m crash -c fork -s kernel -n $COUNTER
++	chmod u-s test
++	new_count=3D$(count_fork_matches)
++
++	message=3D"Fork attack (kernel signals, setuid binary)"
++	assert_not_equal $old_count $new_count
++}
++
++test_exec_kernel_setuid()
++{
++	old_count=3D$(count_exec_matches)
++	chmod u+s test
++	./test -m crash -c exec -s kernel -n $COUNTER
++	chmod u-s test
++	new_count=3D$(count_exec_matches)
++
++	message=3D"Exec attack (kernel signals, setuid binary)"
++	assert_not_equal $old_count $new_count
++}
++
++test_fork_kernel_change_priv()
++{
++	old_count=3D$(count_fork_matches)
++	./exec test -m crash -c fork -s kernel -n $COUNTER -C
++	new_count=3D$(count_fork_matches)
++
++	message=3D"Fork attack (kernel signals, change privileges)"
++	assert_not_equal $old_count $new_count
++}
++
++test_exec_kernel_change_priv()
++{
++	old_count=3D$(count_exec_matches)
++	./test -m crash -c exec -s kernel -n $COUNTER -C
++	new_count=3D$(count_exec_matches)
++
++	message=3D"Exec attack (kernel signals, change privileges)"
++	assert_not_equal $old_count $new_count
++}
++
++network_ns_setup()
++{
++	local vnet_name=3D$1
++	local veth_name=3D$2
++	local ip_src=3D$3
++	local ip_dst=3D$4
++
++	ip netns add $vnet_name
++	ip link set $veth_name netns $vnet_name
++	ip -n $vnet_name addr add $ip_src/24 dev $veth_name
++	ip -n $vnet_name link set $veth_name up
++	ip -n $vnet_name route add $ip_dst/24 dev $veth_name
++}
++
++network_setup()
++{
++	VETH0_NAME=3Dveth0
++	VNET0_NAME=3Dvnet0
++	VNET0_IP=3D10.0.1.0
++	VETH1_NAME=3Dveth1
++	VNET1_NAME=3Dvnet1
++	VNET1_IP=3D10.0.2.0
++
++	ip link add $VETH0_NAME type veth peer name $VETH1_NAME
++	network_ns_setup $VNET0_NAME $VETH0_NAME $VNET0_IP $VNET1_IP
++	network_ns_setup $VNET1_NAME $VETH1_NAME $VNET1_IP $VNET0_IP
++}
++
++test_fork_kernel_network_to_local()
++{
++	INADDR_ANY=3D0.0.0.0
++	PORT=3D65535
++	TIMEOUT=3D5
++
++	old_count=3D$(count_fork_matches)
++	ip netns exec $VNET0_NAME ./exec test -m server_crash -a $INADDR_ANY \
++		-p $PORT -t $TIMEOUT -c fork -s kernel -n $COUNTER &
++	sleep 1
++	ip netns exec $VNET1_NAME ./test -m client -a $VNET0_IP -p $PORT \
++		-t $TIMEOUT
++	sleep 1
++	new_count=3D$(count_fork_matches)
++
++	message=3D"Fork attack (kernel signals, network to local)"
++	assert_not_equal $old_count $new_count
++}
++
++test_exec_kernel_network_to_local()
++{
++	old_count=3D$(count_exec_matches)
++	ip netns exec $VNET0_NAME ./test -m server_crash -a $INADDR_ANY \
++		-p $PORT -t $TIMEOUT -c exec -s kernel -n $COUNTER &
++	sleep 1
++	ip netns exec $VNET1_NAME ./test -m client -a $VNET0_IP -p $PORT \
++		-t $TIMEOUT
++	sleep 1
++	new_count=3D$(count_exec_matches)
++
++	message=3D"Exec attack (kernel signals, network to local)"
++	assert_not_equal $old_count $new_count
++}
++
++network_cleanup()
++{
++	ip netns del $VNET0_NAME >/dev/null 2>&1
++	ip netns del $VNET1_NAME >/dev/null 2>&1
++	ip link delete $VETH0_NAME >/dev/null 2>&1
++	ip link delete $VETH1_NAME >/dev/null 2>&1
++}
++
++check_root
++test_fork_user
++test_fork_kernel
++test_exec_user
++test_exec_kernel
++test_fork_kernel_setuid
++test_exec_kernel_setuid
++test_fork_kernel_change_priv
++test_exec_kernel_change_priv
++network_setup
++test_fork_kernel_network_to_local
++test_exec_kernel_network_to_local
++network_cleanup
++exit $errno
 =2D-
 2.25.1
 
