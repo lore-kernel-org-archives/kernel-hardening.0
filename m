@@ -1,21 +1,21 @@
-Return-Path: <SRS0=opZy=H5=lists.openwall.com=kernel-hardening-return-20858-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=2ZoG=H5=lists.openwall.com=kernel-hardening-return-20859-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+X-Spam-Status: No, score=-0.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id ED78EC433E0
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 18:45:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9B939C433E0
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 18:47:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 13D83614A7
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 18:45:08 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 13D83614A7
+	by mail.kernel.org (Postfix) with SMTP id 9AD0E64E76
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Feb 2021 18:47:09 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9AD0E64E76
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20858-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 12263 invoked by uid 550); 27 Feb 2021 18:45:02 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20859-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15421 invoked by uid 550); 27 Feb 2021 18:47:03 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,16 +23,16 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12231 invoked from network); 27 Feb 2021 18:45:01 -0000
+Received: (qmail 15389 invoked from network); 27 Feb 2021 18:47:03 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1614451481;
-	bh=15q3zwQ7cXEwZeNdqHUiaEAspocOc5rXPvRSWa6sL0I=;
+	s=badeba3b8450; t=1614451609;
+	bh=J/2b6NEYhEHBGcmytB/YTbgIH5/VXzloVXnWUStq1M4=;
 	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=GqjcLDSZuVJIlH8V10wsmypH7mdJN7DsaNa9PWZdywDW/WSY9s385W5Uhotb4ZEpY
-	 zmBmiUx6s7ydAjj8aRv/AXNoZojSUVdnIQHF6/087w6lj/2+SEL4h1aOwLdvMF8IBd
-	 VI6EpZ6Wgf0LrL1lN+LxvO5oHg0XcQ7P/MSaafLA=
+	b=As5Uu47gsXR4tZZ/erDuXq1HoXroXexuc0bzMPjp3SRoSnF2xg6b4VtERW6j56FXD
+	 bTAuRqTXtaWYCpoRoe1jXRPa2fki1tRn4WfOKhnFx/OnqN+9zPGEmTBwoq6or2LJXj
+	 NTRLbXC8asAWglMxFpX4/tu129ohhO++8Ff87ki4=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Sat, 27 Feb 2021 19:44:28 +0100
+Date: Sat, 27 Feb 2021 19:46:46 +0100
 From: John Wood <john.wood@gmx.com>
 To: Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
 	Randy Dunlap <rdunlap@infradead.org>,
@@ -44,44 +44,33 @@ Cc: John Wood <john.wood@gmx.com>, "Serge E. Hallyn" <serge@hallyn.com>,
 	linux-security-module@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v5 0/8] Fork brute force attack mitigation
-Message-ID: <20210227184428.GA9641@ubuntu>
-References: <20210227153013.6747-1-john.wood@gmx.com>
+Subject: Re: [PATCH v4 0/8] Fork brute force attack mitigation
+Message-ID: <20210227184646.GB9641@ubuntu>
+References: <20210227150956.6022-1-john.wood@gmx.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20210227153013.6747-1-john.wood@gmx.com>
-X-Provags-ID: V03:K1:RoCE3t5+RrvW/W5eGj27hzaWflBslhjVVtsFIKNqkbkQmcLC2L/
- JKPCs+sCtzvo1yQ7WkQ4O2ZuFVdkW17mFu2Spbbz666AzrOelM+keM36YiUDKplAQIjHuTA
- XY1JJAh7Fq45WPG/mvy/uwa8V5dxooxqEasasLp8UpEErZUX5mD5jy8CUK7ccBc6t/oNuzg
- N4cn3mIAUoKYCHRl5cp6w==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:H1SqB/m8Fz0=:MV6jGMgavPZGgJlR+YHYNE
- YfkE53PFuIg6og8pJvKwLVJtbP+6ajscZ4GWZW5xUU7toarjg+RkfgzUe9A4UBnuIkZqER/hY
- 2ahputXjZEggdiLozJArcHU2KLkurD59GUqwM5mB2UP5p5Fu5lZpb/NfuJ4inqVQOF/ek+t/U
- mAQ06S6THWxbqWI4R+aGf3JBuBsGq2qlcSVc6Lpi/QjJ+yXsmgYwbpNUlRRmJISoPW+oUrIIq
- YeBDYh+zm6IC2ZoAlSzc4y9KDjDHEZdjKe5x7FrWhZcAJ4ETP8VOgIA/OZeJEdok29dCpOjcs
- Bvzff6soW2RDio/kNLrm8OhMeCKr3T/V8bNTyKseLTuAnvg0oZNvC3sM7d6sXbtxOhSfqIqJU
- z5o8qPQXVGb7jxfLfgduRzFKwDZ/ia9q1XASb9qFNB+SofBgbwlA0cUgAnpEXfwEwnfWd7hEK
- 68vNGsb6RyVlZrG964dOdTqoVWKtEj5uLsHFXzrHRHD7txd/EOObvMFEPB+c5FVe2qRsIG3KE
- MD8NpC2TqWRu3ZWxMfuEKZRPRVLEFI3D0KT5fLrFCFhkMn91mGh5VktVUWp0BrZldftt3jYts
- e20BzJYhtVnjeFVr2+TuxREplAYpAskY+KQUK14g/2CIpUgD60MB+FaYcssvXvu2c0dZxM6JA
- V1//sMgJuuGbRMNF0PVmTNUkHzTF8HkAcfnpNNRrKGVCfyWwflLP2bHCltT6T8jrKXIc3IzN0
- 7ai1j9Tpv2ltVN7IvieYZPpx8MEeOkAQH50jlrIt+UhYweyfG1A3416pYPrNo7O7/9CNsUJhy
- U6vYboqtSZYlFW4NGo3y4xwacpHMKWaoFyzDdGZXQpOCRKOHjnWndtiN3SC1D0IzO/issNrB5
- Z9il+GbiAQc4cZm2nOdg==
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20210227150956.6022-1-john.wood@gmx.com>
+X-Provags-ID: V03:K1:SJwNcWrWbYXbNCBYNMBy4exbK5hFoif3xaEWjQVjyL073jTJhl6
+ WObAEsvgABv/Fhh2/eqdE2Yj1+f2Sy4NaFZy9u+weiugOqPHWEGwcKC+oeGiaTxa7v9oUYO
+ efv+ggc3tpOSjd0Ukjo8zJ3YkoQKxlkeiHGMxOBpik+G1FmYnsHevV7VSVwLtvtSqLVsHcb
+ NGHwE8ljEiVLTL2jngk0w==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:ShESOMNlNjI=:naVNAx9F4lNCq5p0LzpgrA
+ P5Ojg/56wmthBB1B8JsfIbPJwp+GQJzKgoOU0zDkT+88VXLssYwLL28EYy5CwQsikmEN6b5Kp
+ xY0lyyTp6W+vBVkwMtZPcfhOMCSXno4vviqRkpNhouohAW9sbN5Eu33UvkMqmKE74LIiNJI7+
+ GqdTQfbeVQLttM6tTWJV69qQVfcTEKddPAA/FR5MzuHmCj+2iDTnf0e956bd6FZkawxOhawa+
+ YSJPE8dG4yHLIx5QpEeBTkU62xMPsFVuykAKu+lF+7fagY0UA9RL9WAe/3zASzqj+T7VBbPFX
+ OkxqCW11Uwky5kR+/RUH19WbTTG0FUGVfGEbQKpo5Uw5yHZt7kGZO7dnBcJqnsmGNkWNqV2xl
+ ljoQCnL3aqx+JBtNF9e6wwbGOM52yh65C53kR+shnuhCo6wW7cgft3SYlvyz0dVliOeZglm9J
+ xdSS0M6o5iAUAyRtU7VW+wOEmGZTxj90YssvM41LutFqADVscf3ttkoBLck5j4P1ypbhhJqhH
+ PjinG64J/eQJiKGxFB+HeUl3J0AEXfQSghKMEIHoq/+05i/BPQ9+rjx8+3tJO5g0oAXpF7wvN
+ 5OI8LlsgMLH3jsqvqLaCl9ua/XFizmAnngrAznO0YY6rNbuOuifgXYV6/um1+9xxoJEKtJQXN
+ mAf7goEq62024sRaQO01Qnnu6TbGG9JKUXtineSquDDuu9FZno9AXvVTH20bGGWCPkRRpmKJH
+ H4k6bQ1dzuLXSguZ99a7dS3M4U/EYnND7QrfUGe0d2tdo89zNZhk7T0QDKAtIEbX+5NE7DQin
+ ixcbhgpya7o75m1xch2fy97K1xu/of92BHukKUaQT6eabYfOZAqOhm6MiQ/rcmnVfysl0VJKy
+ 9JwtKnOzt0io9AsCnWVA==
 
-On Sat, Feb 27, 2021 at 04:30:05PM +0100, John Wood wrote:
->
-> This patch serie is a task of the KSPP [1] and can also be accessed from=
- my
-> github tree [2] in the "brute_v4" branch.
+Sorry. Drop this patch serie.
 
-Sorry. The correct branch is "brute_v5".
-Apologies.
-
+Thanks,
 John Wood
->
-> [1] https://github.com/KSPP/linux/issues/39
-> [2] https://github.com/johwood/linux/
->
