@@ -1,22 +1,21 @@
-Return-Path: <SRS0=o0io=IA=lists.openwall.com=kernel-hardening-return-20871-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=KtzW=IC=lists.openwall.com=kernel-hardening-return-20872-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
+X-Spam-Status: No, score=-10.2 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 58781C433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue,  2 Mar 2021 18:40:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E68D6C433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu,  4 Mar 2021 04:37:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7C7CB64F1E
-	for <kernel-hardening@archiver.kernel.org>; Tue,  2 Mar 2021 18:40:03 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7C7CB64F1E
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20871-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 22032 invoked by uid 550); 2 Mar 2021 18:39:56 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9AD0164EF6
+	for <kernel-hardening@archiver.kernel.org>; Thu,  4 Mar 2021 04:37:40 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9AD0164EF6
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=gondor.apana.org.au
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20872-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1301 invoked by uid 550); 4 Mar 2021 04:37:30 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,117 +23,46 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21995 invoked from network); 2 Mar 2021 18:39:56 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1614710365;
-	bh=yCkaUQfVe3q+lFu5gCVoEdjBCOmBnrzmeMXvU+zyOWI=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=Z93Ueahc/J52n8dNsCcueRlcuBftsHsUHJESjn3E/XsL8c9NqhJZVkpi1r0yMs7Ty
-	 /EyV+IWxCptf271B8cJjp6cYk2xUsaiybR42mtsGGr/P32nDzBJFoTO1FkZjcQ8M48
-	 YyhJIF0KGm/H5XxVOof62fsn+Re4h5jPUx8UkmVk=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Tue, 2 Mar 2021 19:39:20 +0100
-From: John Wood <john.wood@gmx.com>
-To: kernel test robot <oliver.sang@intel.com>
-Cc: John Wood <john.wood@gmx.com>, 0day robot <lkp@intel.com>,
-	LKML <linux-kernel@vger.kernel.org>, lkp@lists.01.org,
-	Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	Jonathan Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>,
-	Shuah Khan <shuah@kernel.org>, "Serge E. Hallyn" <serge@hallyn.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	linux-doc@vger.kernel.org, linux-security-module@vger.kernel.org,
-	linux-kselftest@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [security/brute]  cfe92ab6a3: WARNING:inconsistent_lock_state
-Message-ID: <20210302183920.GB3049@ubuntu>
-References: <20210227153013.6747-3-john.wood@gmx.com>
- <20210302054941.GA23892@xsang-OptiPlex-9020>
+Received: (qmail 1269 invoked from network); 4 Mar 2021 04:37:29 -0000
+Date: Thu, 4 Mar 2021 15:37:11 +1100
+From: Herbert Xu <herbert@gondor.apana.org.au>
+To: Romain Perier <romain.perier@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com,
+	"David S. Miller" <davem@davemloft.net>,
+	linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH 02/20] crypto: Manual replacement of the deprecated
+ strlcpy() with return values
+Message-ID: <20210304043711.GA25928@gondor.apana.org.au>
+References: <20210222151231.22572-1-romain.perier@gmail.com>
+ <20210222151231.22572-3-romain.perier@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20210302054941.GA23892@xsang-OptiPlex-9020>
-X-Provags-ID: V03:K1:SMulKwKZ5mn8riOEfhU3TLcHfPC51QPIxJU6Nfk+e0ZTxy1gycj
- +pT1PyxKfSDHUS6yRCkNlhBhTK2i7ym2vK5iAwPAciZnAvrsX6yXN2LY3ccnJX9nKTSHOwm
- R5GsWhjSxYj4gmMdQEIhwmuPSFdxYdK+IqDsgRy6DokG0ZwpDAUbx+jy+XTZ7BNBGcJPJXK
- KP4CxRu/NsTu5nFs4ahiw==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:MsUK9Gbt9OA=:WKsNNDYEj3dj2C0laVyeAx
- nygW/4H8c59CitOYyDWkw2sJYb9+fhSmH4WrpskkbVbKVoq2aLhJA/0684c+0H36N3T6lB66Y
- mzYVzk/cgmbIqKbghIWm8aqf3klcTbgQ45PFTUFs3egqWSXwjfdNiV+BS7bkoWFZI2qYbFpRy
- 9co0WFmV3KzSrWF5fU0vvZrTLlfoUbFqPc8wfTAFG+0zyT2HRGSf/uztnX3CvyQp25Ja8yGRT
- DaCOrwNBlHujIyS3zPi85zZFbKEQuzeTL8aB7W1pA34paXW6dT7gnyc7P68hD6Uqd/0Jvp8R8
- A6rUYlV17FwX7vqCNHzqVyMnAOOntEVdkaD62uCRDzWZQfaIDYqvXtaQu2/nQveWJugyrPL0y
- XDxVe9jRya37FCn4asRTLyw05WM2YrBRRhBRvRc0cJIIErUoMzY+10C5/rus+ByeACJvJvFa7
- zacbiCXqyXAdjnDYmzy6W2l/38bYGRWIOGYJnAegZ0lGLr7CIVDuKnPtZQOm/GUCwVPVy1pxA
- TmqNpFQyynwAWCkBvqKFK+WFSb4eSEFXa/XXsRK5c7wpw8OPFgYqCdsUKgR6O0UTXMSuJC6pu
- ErTOlWlXnOPRch8v+d63AAtO9Tt4K/kRG6xkhO5j7Lg+KxVviXtNk7Qf94jQPl6BSwJpYeNCw
- q4aXm6MwAaIggA2O5PSpx0wn6AlmYmBRjPIbY6V04JjFOFywt8lT4NRD/S9DiZlSyWtJafDh2
- jMVm+OFCG07wOE3YHelm6FsTeq+KBCz/NO47Go4cZ0tEastaew43AOGHJAFM/13pgZTQLj9tW
- NuAd5J4EqCqABX/X/5/vHBzDZucpJqVcGw+80Wz5guyCgs5FRI9wGwMvgmFzVT2iFWqoRJ4bM
- mwkDtxx9Iyj/R2jOFSeg==
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20210222151231.22572-3-romain.perier@gmail.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 
-On Tue, Mar 02, 2021 at 01:49:41PM +0800, kernel test robot wrote:
+On Mon, Feb 22, 2021 at 04:12:13PM +0100, Romain Perier wrote:
 >
->
-> Greeting,
->
-> FYI, we noticed the following commit (built with gcc-9):
->
-> commit: cfe92ab6a3ea700c08ba673b46822d51f38d6b40 ("[PATCH v5 2/8] securi=
-ty/brute: Define a LSM and manage statistical data")
-> url: https://github.com/0day-ci/linux/commits/John-Wood/Fork-brute-force=
--attack-mitigation/20210228-022911
-> base: https://git.kernel.org/cgit/linux/kernel/git/shuah/linux-kselftest=
-.git next
->
-> in testcase: trinity
-> version: trinity-static-i386-x86_64-f93256fb_2019-08-28
-> with following parameters:
->
-> 	group: ["group-00", "group-01", "group-02", "group-03", "group-04"]
->
-> test-description: Trinity is a linux system call fuzz tester.
-> test-url: http://codemonkey.org.uk/projects/trinity/
->
->
-> on test machine: qemu-system-i386 -enable-kvm -cpu SandyBridge -smp 2 -m=
- 8G
->
-> caused below changes (please refer to attached dmesg/kmsg for entire log=
-/backtrace):
->
->
-> +-----------------------------------------------------------------------=
---+------------+------------+
-> |                                                                       =
-  | 1d53b7aac6 | cfe92ab6a3 |
-> +-----------------------------------------------------------------------=
---+------------+------------+
-> | WARNING:inconsistent_lock_state                                       =
-  | 0          | 6          |
-> | inconsistent{IN-SOFTIRQ-W}->{SOFTIRQ-ON-W}usage                       =
-  | 0          | 6          |
-> +-----------------------------------------------------------------------=
---+------------+------------+
->
->
-> If you fix the issue, kindly add following tag
-> Reported-by: kernel test robot <oliver.sang@intel.com>
->
->
-> [  116.852721] =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
-> [  116.853120] WARNING: inconsistent lock state
-> [  116.853120] 5.11.0-rc7-00013-gcfe92ab6a3ea #1 Tainted: G S
-> [  116.853120] --------------------------------
->
-> [...]
+> diff --git a/crypto/lrw.c b/crypto/lrw.c
+> index bcf09fbc750a..4d35f4439012 100644
+> --- a/crypto/lrw.c
+> +++ b/crypto/lrw.c
+> @@ -357,10 +357,10 @@ static int lrw_create(struct crypto_template *tmpl, struct rtattr **tb)
+>  	 * cipher name.
+>  	 */
+>  	if (!strncmp(cipher_name, "ecb(", 4)) {
+> -		unsigned len;
+> +		ssize_t len;
+>  
+> -		len = strlcpy(ecb_name, cipher_name + 4, sizeof(ecb_name));
+> -		if (len < 2 || len >= sizeof(ecb_name))
+> +		len = strscpy(ecb_name, cipher_name + 4, sizeof(ecb_name));
+> +		if (len == -E2BIG || len < 2)
 
-Thanks for the report. I will work on this for the next version.
-
-> Thanks,
-> Oliver Sang
+len == -E2BIG is superfluous as len < 2 will catch it anyway.
 
 Thanks,
-John Wood
+-- 
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
