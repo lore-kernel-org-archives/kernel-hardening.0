@@ -1,22 +1,21 @@
-Return-Path: <SRS0=TcgQ=IC=lists.openwall.com=kernel-hardening-return-20873-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Lbwl=ID=lists.openwall.com=kernel-hardening-return-20874-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
+X-Spam-Status: No, score=-8.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 570E4C433E0
-	for <kernel-hardening@archiver.kernel.org>; Thu,  4 Mar 2021 10:09:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A5964C433DB
+	for <kernel-hardening@archiver.kernel.org>; Fri,  5 Mar 2021 17:57:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9767064F0A
-	for <kernel-hardening@archiver.kernel.org>; Thu,  4 Mar 2021 10:09:10 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9767064F0A
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20873-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9660 invoked by uid 550); 4 Mar 2021 10:09:02 -0000
+	by mail.kernel.org (Postfix) with SMTP id BFC54650A3
+	for <kernel-hardening@archiver.kernel.org>; Fri,  5 Mar 2021 17:57:08 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BFC54650A3
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20874-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 17892 invoked by uid 550); 5 Mar 2021 17:57:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,129 +23,101 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9627 invoked from network); 4 Mar 2021 10:09:02 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=OEUiKzYCcawIW7E6XaqnAykbSQ9VcOEA92FGbPakSRw=;
-        b=Q63TEOOre7PLkYiCsEe1OXSE1ePYw66J2FVoCmVfxuW6VnfXmTlli6IETqw6NOY1Q3
-         426tiXz/yuPKGm2BOSy3KnvLaVjsB6cNhSq3JQUo+ZYBXftZwZbZHufiCpPva9sBq35J
-         gy9AVmQiVi/cECYE9poLB8hEDXfV9K8aYoWRp/GSqIjk/XFdR1XES3hfojulsgjDgHQO
-         02zwEdJdeLVFMEoRK1uvJP7RwWEqVfPe4ykvgo2a1qIiU1CCg0O5udkfcrD06wj2eP1z
-         IozKi7ALHjLgbP4UbFYRoqYJfueo11Uf3Dbv+GxYIIW4YMit3lidnJzYnpM1RdFTNa6D
-         gVTQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=OEUiKzYCcawIW7E6XaqnAykbSQ9VcOEA92FGbPakSRw=;
-        b=tr2TblmNj1/hAqC2JCmN9GmErpaHSRJCKsvNB30Sxt9Zfkfj3/vQ7/934PAO+eUSYS
-         wNGQwjlScdsSPzzbR+M8rsOpOmoNmix/xHdA44pUpERP42AQvebEBND/7GmC5Ib2GGvP
-         h+M8GvfhY6Q1MKc3AYHqeyPaZR2ejDR75fcpe/d15bHSCkkuNL8AeEm8MD9E59C0rqqG
-         j5eda3MM+14at0VLmS1Lch/MV1tbobO+lOyfnxjOfdVShHjNjyJsLUnn1/WcBCIiOjjt
-         C0K2mzEmi+MCNozvj3DIi0t2Dc5H4t2JVcxqWnxdnIoHSefRbI2TMS5kED2XVZNC2uOz
-         3t3w==
-X-Gm-Message-State: AOAM5327tx7TvjkmqOpLPnuvH/3vTj3yZIdr7jo+wmVO2EHUf+XijnMc
-	FkPSr9cnEkE5e0XQSoFLsgK1vZNKwjnNxHYMPl4=
-X-Google-Smtp-Source: ABdhPJzAkei7GZVyieltReSS3+sM6gow6EuNpbrLFRMOtEN+mbkZSZvuWos4YHPdqpBwgqyaTagceqyXJ74oA5UJF8k=
-X-Received: by 2002:a05:6820:58:: with SMTP id v24mr2690378oob.55.1614852530317;
- Thu, 04 Mar 2021 02:08:50 -0800 (PST)
+Received: (qmail 17871 invoked from network); 5 Mar 2021 17:57:00 -0000
+From: ebiederm@xmission.com (Eric W. Biederman)
+To: Alexey Gladkov <gladkov.alexey@gmail.com>
+Cc: kernel test robot <oliver.sang@intel.com>,  0day robot <lkp@intel.com>,  LKML <linux-kernel@vger.kernel.org>,  lkp@lists.01.org,  ying.huang@intel.com,  feng.tang@intel.com,  zhengjun.xing@intel.com,  io-uring@vger.kernel.org,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux Containers <containers@lists.linux-foundation.org>,  linux-mm@kvack.org,  Andrew Morton <akpm@linux-foundation.org>,  Christian Brauner <christian.brauner@ubuntu.com>,  Jann Horn <jannh@google.com>,  Jens Axboe <axboe@kernel.dk>,  Kees Cook <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,  Oleg Nesterov <oleg@redhat.com>
+References: <20210224051845.GB6114@xsang-OptiPlex-9020>
+	<m1czwpl83q.fsf@fess.ebiederm.org>
+	<20210224183828.j6uut6sholeo2fzh@example.org>
+	<m17dmxl2qa.fsf@fess.ebiederm.org>
+	<20210225203657.mjhaqnj5vszna5xw@example.org>
+Date: Fri, 05 Mar 2021 11:56:44 -0600
+In-Reply-To: <20210225203657.mjhaqnj5vszna5xw@example.org> (Alexey Gladkov's
+	message of "Thu, 25 Feb 2021 21:36:57 +0100")
+Message-ID: <m1czwd32n7.fsf@fess.ebiederm.org>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
-References: <20210222151231.22572-1-romain.perier@gmail.com>
- <20210222151231.22572-3-romain.perier@gmail.com> <20210304043711.GA25928@gondor.apana.org.au>
-In-Reply-To: <20210304043711.GA25928@gondor.apana.org.au>
-From: Romain Perier <romain.perier@gmail.com>
-Date: Thu, 4 Mar 2021 11:08:39 +0100
-Message-ID: <CABgxDo+puf5P__TDXP5kG6mgCLejxuEwWY0yt-+kPUj2qmCFrQ@mail.gmail.com>
-Subject: Re: [PATCH 02/20] crypto: Manual replacement of the deprecated
- strlcpy() with return values
-To: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: Kees Cook <keescook@chromium.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	"David S. Miller" <davem@davemloft.net>, linux-crypto@vger.kernel.org, 
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
-Content-Type: multipart/alternative; boundary="0000000000006f2fe505bcb327fe"
+Content-Type: text/plain
+X-XM-SPF: eid=1lIEgt-004li8-IX;;;mid=<m1czwd32n7.fsf@fess.ebiederm.org>;;;hst=in02.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX1+QpJmPwGjQCYsOz8d21ibu8x9BhUmL7YA=
+X-SA-Exim-Connect-IP: 68.227.160.95
+X-SA-Exim-Mail-From: ebiederm@xmission.com
+Subject: Re: d28296d248:  stress-ng.sigsegv.ops_per_sec -82.7% regression
+X-SA-Exim-Version: 4.2.1 (built Sat, 08 Feb 2020 21:53:50 +0000)
+X-SA-Exim-Scanned: Yes (on in02.mta.xmission.com)
 
---0000000000006f2fe505bcb327fe
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Alexey Gladkov <gladkov.alexey@gmail.com> writes:
 
-Le jeu. 4 mars 2021 =C3=A0 05:37, Herbert Xu <herbert@gondor.apana.org.au> =
-a
-=C3=A9crit :
-
-> On Mon, Feb 22, 2021 at 04:12:13PM +0100, Romain Perier wrote:
-> >
-> > diff --git a/crypto/lrw.c b/crypto/lrw.c
-> > index bcf09fbc750a..4d35f4439012 100644
-> > --- a/crypto/lrw.c
-> > +++ b/crypto/lrw.c
-> > @@ -357,10 +357,10 @@ static int lrw_create(struct crypto_template
-> *tmpl, struct rtattr **tb)
-> >        * cipher name.
-> >        */
-> >       if (!strncmp(cipher_name, "ecb(", 4)) {
-> > -             unsigned len;
-> > +             ssize_t len;
-> >
-> > -             len =3D strlcpy(ecb_name, cipher_name + 4, sizeof(ecb_nam=
-e));
-> > -             if (len < 2 || len >=3D sizeof(ecb_name))
-> > +             len =3D strscpy(ecb_name, cipher_name + 4, sizeof(ecb_nam=
-e));
-> > +             if (len =3D=3D -E2BIG || len < 2)
+> On Wed, Feb 24, 2021 at 12:50:21PM -0600, Eric W. Biederman wrote:
+>> Alexey Gladkov <gladkov.alexey@gmail.com> writes:
+>> 
+>> > On Wed, Feb 24, 2021 at 10:54:17AM -0600, Eric W. Biederman wrote:
+>> >> kernel test robot <oliver.sang@intel.com> writes:
+>> >> 
+>> >> > Greeting,
+>> >> >
+>> >> > FYI, we noticed a -82.7% regression of stress-ng.sigsegv.ops_per_sec due to commit:
+>> >> >
+>> >> >
+>> >> > commit: d28296d2484fa11e94dff65e93eb25802a443d47 ("[PATCH v7 5/7] Reimplement RLIMIT_SIGPENDING on top of ucounts")
+>> >> > url: https://github.com/0day-ci/linux/commits/Alexey-Gladkov/Count-rlimits-in-each-user-namespace/20210222-175836
+>> >> > base: https://git.kernel.org/cgit/linux/kernel/git/shuah/linux-kselftest.git next
+>> >> >
+>> >> > in testcase: stress-ng
+>> >> > on test machine: 48 threads Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz with 112G memory
+>> >> > with following parameters:
+>> >> >
+>> >> > 	nr_threads: 100%
+>> >> > 	disk: 1HDD
+>> >> > 	testtime: 60s
+>> >> > 	class: interrupt
+>> >> > 	test: sigsegv
+>> >> > 	cpufreq_governor: performance
+>> >> > 	ucode: 0x42e
+>> >> >
+>> >> >
+>> >> > In addition to that, the commit also has significant impact on the
+>> >> > following tests:
+>> >> 
+>> >> Thank you.  Now we have a sense of where we need to test the performance
+>> >> of these changes carefully.
+>> >
+>> > One of the reasons for this is that I rolled back the patch that changed
+>> > the ucounts.count type to atomic_t. Now get_ucounts() is forced to use a
+>> > spin_lock to increase the reference count.
+>> 
+>> Which given the hickups with getting a working version seems justified.
+>> 
+>> Now we can add incremental patches on top to improve the performance.
 >
-> len =3D=3D -E2BIG is superfluous as len < 2 will catch it anyway.
+> I'm not sure that get_ucounts() should be used in __sigqueue_alloc() [1].
+> I tried removing it and running KASAN tests that were failing before. So
+> far, I have not found any problems.
 >
-> Thanks,
->
->
-Hello,
+> [1]
+> https://git.kernel.org/pub/scm/linux/kernel/git/legion/linux.git/tree/kernel/signal.c?h=patchset/per-userspace-rlimit/v7.1&id=2d4a2e2be7db42c95acb98abfc2a9b370ddd0604#n428
 
-Yeah that's fixed in v2.
+Hmm.  The code you posted still seems to include the get_ucounts.
 
-Thanks,
-Romain
+I like the idea of not needing to increment and decrement the ucount
+reference count every time a signal is sent, unfortunately there is a
+problem.  The way we have implemented setresuid allows different threads
+in a threaded application to have different cred->user values.
 
---0000000000006f2fe505bcb327fe
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+That is actually an extension of what posix supports and pthreads will
+keep the creds of a process in sync.  Still I recall looking into this a
+few years ago and there were a few applications that take advantage of
+the linux behavior.
 
-<div dir=3D"ltr"><div dir=3D"ltr"><br></div><br><div class=3D"gmail_quote">=
-<div dir=3D"ltr" class=3D"gmail_attr">Le=C2=A0jeu. 4 mars 2021 =C3=A0=C2=A0=
-05:37, Herbert Xu &lt;<a href=3D"mailto:herbert@gondor.apana.org.au">herber=
-t@gondor.apana.org.au</a>&gt; a =C3=A9crit=C2=A0:<br></div><blockquote clas=
-s=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1px solid r=
-gb(204,204,204);padding-left:1ex">On Mon, Feb 22, 2021 at 04:12:13PM +0100,=
- Romain Perier wrote:<br>
-&gt;<br>
-&gt; diff --git a/crypto/lrw.c b/crypto/lrw.c<br>
-&gt; index bcf09fbc750a..4d35f4439012 100644<br>
-&gt; --- a/crypto/lrw.c<br>
-&gt; +++ b/crypto/lrw.c<br>
-&gt; @@ -357,10 +357,10 @@ static int lrw_create(struct crypto_template *tm=
-pl, struct rtattr **tb)<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0 * cipher name.<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0 */<br>
-&gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0if (!strncmp(cipher_name, &quot;ecb(&quot;, =
-4)) {<br>
-&gt; -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0unsigned len;<br>
-&gt; +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0ssize_t len;<br>
-&gt;=C2=A0 <br>
-&gt; -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0len =3D strlcpy(ecb_n=
-ame, cipher_name + 4, sizeof(ecb_name));<br>
-&gt; -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (len &lt; 2 || len=
- &gt;=3D sizeof(ecb_name))<br>
-&gt; +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0len =3D strscpy(ecb_n=
-ame, cipher_name + 4, sizeof(ecb_name));<br>
-&gt; +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (len =3D=3D -E2BIG=
- || len &lt; 2)<br>
-<br>
-len =3D=3D -E2BIG is superfluous as len &lt; 2 will catch it anyway.<br>
-<br>
-Thanks,<br><br></blockquote><div><br></div><div>Hello,</div><div><br></div>=
-<div>Yeah that&#39;s fixed in v2.</div><div><br></div><div>Thanks,</div><di=
-v>Romain<br></div></div></div>
+In principle I think it is possible to hold a ucount reference in
+somewhere such as task->signal.  In practice there are enough
+complicating factors I don't immediately see how to implement that.
 
---0000000000006f2fe505bcb327fe--
+If the creds were stored in signal_struct instead of in task_struct
+we could simply move the sigpending counts in set_user, when the uid
+of a process changed.
+
+With the current state I don't know how to pick which is the real user.
+
+Eric
