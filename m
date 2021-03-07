@@ -1,4 +1,4 @@
-Return-Path: <SRS0=Uwlp=IF=lists.openwall.com=kernel-hardening-return-20876-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=TTMU=IF=lists.openwall.com=kernel-hardening-return-20877-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -8,15 +8,15 @@ X-Spam-Status: No, score=-13.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 18BC0C433DB
-	for <kernel-hardening@archiver.kernel.org>; Sun,  7 Mar 2021 11:53:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 717B0C433E0
+	for <kernel-hardening@archiver.kernel.org>; Sun,  7 Mar 2021 12:15:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id E34DF6501D
-	for <kernel-hardening@archiver.kernel.org>; Sun,  7 Mar 2021 11:53:52 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E34DF6501D
+	by mail.kernel.org (Postfix) with SMTP id 0BE1D64D9F
+	for <kernel-hardening@archiver.kernel.org>; Sun,  7 Mar 2021 12:15:30 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0BE1D64D9F
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20876-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28046 invoked by uid 550); 7 Mar 2021 11:53:45 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20877-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5441 invoked by uid 550); 7 Mar 2021 12:15:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,14 +24,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28013 invoked from network); 7 Mar 2021 11:53:45 -0000
+Received: (qmail 5406 invoked from network); 7 Mar 2021 12:15:22 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1615117999;
-	bh=0mOFH/whRcxwCCNf1FaCVfPgq3zuoVr5XMs4msmzXEk=;
+	s=badeba3b8450; t=1615119302;
+	bh=HBg6nwzMK9rUlr84ocCvFvuMxv6lgyd43Gr97J+P9q0=;
 	h=X-UI-Sender-Class:From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=fP/89F57Uvd6wz+HXrnrALfcyL2tIGkyzmhTNPThCqx+itY8xekbKfuA28nl94+TQ
-	 E5HlyuaL6bc6hTgQWg3oBN0itIesNWk+9gUA+8Bl8N5foEjA7HbrrX+LCBZQ1eMIV1
-	 /x1QkIefOuiI/1UK1JssrmXh+Pn6WpbsAbswIJqI=
+	b=KehiecDsqXGSV2TEZH7RSNp/Gb/KZIMF882moAJ4+MD4SDBd9mwrZIr8nRn/yo7Cm
+	 O5cCHPd4ycI+0+3T+wEewDuMQUi7wX+GKha+gtD/P/x6vHjGIbcQareKy3ta+cHXgb
+	 088+GT4Jhze+H4MZR9alaZ6EnbrWF0jTBOLNV93g=
 X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
 From: John Wood <john.wood@gmx.com>
 To: Kees Cook <keescook@chromium.org>,
@@ -50,133 +50,447 @@ Cc: John Wood <john.wood@gmx.com>,
 	linux-security-module@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
-Subject: [PATCH v6 1/8] security: Add LSM hook at the point where a task gets a fatal signal
-Date: Sun,  7 Mar 2021 12:30:24 +0100
-Message-Id: <20210307113031.11671-2-john.wood@gmx.com>
+Subject: [PATCH v6 2/8] security/brute: Define a LSM and manage statistical data
+Date: Sun,  7 Mar 2021 12:30:25 +0100
+Message-Id: <20210307113031.11671-3-john.wood@gmx.com>
 X-Mailer: git-send-email 2.25.1
 In-Reply-To: <20210307113031.11671-1-john.wood@gmx.com>
 References: <20210307113031.11671-1-john.wood@gmx.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
-X-Provags-ID: V03:K1:gjW1lxsS4O/k5Sf+wMA+VJHoZ1qM11KXQETBYwid34I0oYBNmr2
- C/OqkV5z9INlzUtp7FYtQoLqydzU9bhhstzt50l8ENfqMYH+YOzd2coK6Ju4El8FUXOa3jk
- xoXo4At48nMaIfEd8BXPlo1qQgeF1V41qKMoF/n8RLOOh1DVoHmG7gmpe0GuFxNDdSnwhOf
- IPMxaFSEsnB5la6LeBgQg==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:ekdqLgRPggU=:Ry3SJ1lEftaEQFRP1dW004
- uegRYmgq1qD2F4CQCDaE7r+J9EhwabNP4PICLFAgl6soYo+l8mXoPmdC9ekLhwasJtBdrvAGY
- b+e/6RctVObiuiI4ZFxtV1ZdKulXUTfx7HYTSyz3JCom9/bUK8KADSdusoYMeQcEyHCu8na33
- Ztv+Ii532DUvsRg+m/90I/m9WjYZyB5oBqQn67wPVvlcG2Na4j6uy9kw55JIu5b+21o2BCMkl
- jnG2shzC9TKnKrLlLkNeYe2om9jDscUubUB8K5p4PIcGRKoN4n2z1eSJTzDIcJHyrKv2V71oQ
- b03jo20VqZf1P7BQ/p4af0PK8YtH/Hilxit2mALEEzuqvXZSeGpnv9FANijUJdvtwisKc+zqk
- 13ni2mxgVi6k20SjoEkm5xC64NAcjjfpty9bTjPGLErpO59llY6SD2MGPbXv1YcTTzxYi186+
- 9Wm0kkoJWYYXtwxm9WdHkiY4VkQi6qDCU42rON5ZK9vHPaVv243kxc1CNLfipEVH7BUhUAEJx
- tvE81noKEfMRsGDCCX5miAuQM2Ic/OhogDViU9idzkMXmu3wct8fmtTjBmaN+kXAkxkRgt/Ck
- 30nNbmaqPxoyuPDbXVhFR2zEXekxCfNbQtyPddaDuLFr1n1/kUH8pppjEmzd9O1MNK/1RaNzj
- wjsPh0SUprrbiirIbd1svYdTKGDFgPZ5zNvVaMlslBFmmJHT0NUdrhf8xMKn02NspdFE5Qx0F
- LNtJWPrMLw3QJVsIcQAbtT3IIS1IgcF3zyfa+dWHjk6xQRGbiUqmgOcqJYZn1RFiEyA7H5Nro
- QMuBa0NKqhuJpdfukUba3qGp6zdR7ZO9p5mvD6nog76zbwIOx+3dBzUELxh98zNG0AegAMska
- +x8XVkaPzKh9hILDyJVA==
+X-Provags-ID: V03:K1:FAIaqHKd9DFkeVPKuFxziNufcLTrbdDB19dh73Z1IY7KMJVJLxv
+ w+bDRZncVD9Knjg6A5DyP/+Rs2i2YC78YJYisYJCWFndaH79FEEGTssoTdi890yEmwDwzpV
+ jFlTGqNsA2oCvPlIMwMa/FjlL2b23oBggMO2aXR7b+XSLAQ5U8x1Q3TiUBlhdcUl0uHSWrn
+ 3PdpuzznoOawKttsl38Pg==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:mRU4VFHySEI=:5DtJl+hYwWLLbgz5L07ygH
+ 5rWJhdBrIS7b45E2DWoojd07JOLlquTXs+k/qcDL81J2oLEXs4T0CGNJnD1RYhFDeUYvnXuVS
+ m8mxEruz5tWhlfNX+By1X4wC9Pkx1TH2Og8dW0eEs1B1a61731uagrA5TQflfeHYCwT2i8Pzh
+ JU+nmf/hXkefkHqbYuhkP8dGMm6G2TBhTStfqt0KJ9+k6fuD1cCLPCH8fOHCif5nx+LsUrWoQ
+ +irmDxnkrsWNAq32vO9cT3jSv+9XPUOd3v7ws5Eke7Wn1aLh8y+FH+SNUWSiBToz2kGhzoAjz
+ 9XmpW5W+TkVhPNMsLytN0dhHWJXlIQuRgtOINNIHoFyORmLnjnxm/a1GgFRtOadymDVCkG6oo
+ 2gN7pA+9ju8Tz4J3vjxI3aw1WSMRnEl9lKYFK/6Q2mNwfsjLiVOx2g2lEm6N1+sZi5w6JQL6i
+ 2OilvV1n+g8bMWI4NNztam5q2hrm1SK0Kb8G3Mac6uEbwyCeyb6MnuY1zhFKSfLYiGFchx2eV
+ Z2WAQep6X3r01zytueZiqostH+l5+U0ISTkMitpI7MfAZ11pDS6baBveGYh5o5i7rcyuV2FYq
+ tEaO3Muec04dIleI+y7EXeohWKS1R5N/kAYYcV+f/vXvVlL0BrXn0ef0baa44F5L4edldHvP1
+ Zb2jJRFzeb8PIvkiAM7zWRtFyXNz71Tn1NQL+ZE4Jf8dovOialjXTMuGPohnfHJHdBqoJw8Ex
+ Ce/6DsAIeZTJbrQCSdSNL2E1iHfN+NBl240hBus5GkKJ4ricx2nTB0o8wUSuUAcdvCLCYRFc+
+ Kcp/TZbRJaHvXBGtAfqsd6nd/6FG6W6gigGv6AvezkLNa/6nInc3GPsEnMQRTGMoKkuzKU4FU
+ EZpAgibuEtb1auR0KOKA==
 
-Add a security hook that allows a LSM to be notified when a task gets a
-fatal signal. This patch is a previous step on the way to compute the
-task crash period by the "brute" LSM (linux security module to detect
-and mitigate fork brute force attack against vulnerable userspace
-processes).
+Add a new Kconfig file to define a menu entry under "Security options"
+to enable the "Fork brute force attack detection and mitigation"
+feature.
+
+For a correct management of a fork brute force attack it is necessary
+that all the tasks hold statistical data. The same statistical data
+needs to be shared between all the tasks that hold the same memory
+contents or in other words, between all the tasks that have been forked
+without any execve call. So, define a statistical data structure to hold
+all the necessary information shared by all the fork hierarchy
+processes. This info is basically the number of crashes, the last crash
+timestamp and the crash period's moving average.
+
+When a forked task calls the execve system call, the memory contents are
+set with new values. So, in this scenario the parent's statistical data
+no need to be shared. Instead, a new statistical data structure must be
+allocated to start a new hierarchy.
+
+The statistical data that is shared between all the fork hierarchy
+processes needs to be freed when this hierarchy disappears.
+
+So, based in all the previous information define a LSM with three hooks
+to manage all the commented cases. These hooks are "task_alloc" to do
+the fork management, "bprm_committing_creds" to do the execve management
+and "task_free" to release the resources.
+
+Also, add to the task_struct's security blob the pointer to the
+statistical data. This way, all the tasks will have access to this
+information.
 
 Signed-off-by: John Wood <john.wood@gmx.com>
 =2D--
- include/linux/lsm_hook_defs.h | 1 +
- include/linux/lsm_hooks.h     | 4 ++++
- include/linux/security.h      | 4 ++++
- kernel/signal.c               | 1 +
- security/security.c           | 5 +++++
- 5 files changed, 15 insertions(+)
+ security/Kconfig        |  11 +-
+ security/Makefile       |   4 +
+ security/brute/Kconfig  |  12 ++
+ security/brute/Makefile |   2 +
+ security/brute/brute.c  | 257 ++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 281 insertions(+), 5 deletions(-)
+ create mode 100644 security/brute/Kconfig
+ create mode 100644 security/brute/Makefile
+ create mode 100644 security/brute/brute.c
 
-diff --git a/include/linux/lsm_hook_defs.h b/include/linux/lsm_hook_defs.h
-index 477a597db013..0208df0955fa 100644
-=2D-- a/include/linux/lsm_hook_defs.h
-+++ b/include/linux/lsm_hook_defs.h
-@@ -220,6 +220,7 @@ LSM_HOOK(int, -ENOSYS, task_prctl, int option, unsigne=
-d long arg2,
- 	 unsigned long arg3, unsigned long arg4, unsigned long arg5)
- LSM_HOOK(void, LSM_RET_VOID, task_to_inode, struct task_struct *p,
- 	 struct inode *inode)
-+LSM_HOOK(void, LSM_RET_VOID, task_fatal_signal, const kernel_siginfo_t *s=
-iginfo)
- LSM_HOOK(int, 0, ipc_permission, struct kern_ipc_perm *ipcp, short flag)
- LSM_HOOK(void, LSM_RET_VOID, ipc_getsecid, struct kern_ipc_perm *ipcp,
- 	 u32 *secid)
-diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
-index fb7f3193753d..beedaa6ee745 100644
-=2D-- a/include/linux/lsm_hooks.h
-+++ b/include/linux/lsm_hooks.h
-@@ -784,6 +784,10 @@
-  *	security attributes, e.g. for /proc/pid inodes.
-  *	@p contains the task_struct for the task.
-  *	@inode contains the inode structure for the inode.
-+ * @task_fatal_signal:
-+ *	This hook allows security modules to be notified when a task gets a
-+ *	fatal signal.
-+ *	@siginfo contains the signal information.
-  *
-  * Security hooks for Netlink messaging.
-  *
-diff --git a/include/linux/security.h b/include/linux/security.h
-index 8aeebd6646dc..e4025a13630f 100644
-=2D-- a/include/linux/security.h
-+++ b/include/linux/security.h
-@@ -430,6 +430,7 @@ int security_task_kill(struct task_struct *p, struct k=
-ernel_siginfo *info,
- int security_task_prctl(int option, unsigned long arg2, unsigned long arg=
-3,
- 			unsigned long arg4, unsigned long arg5);
- void security_task_to_inode(struct task_struct *p, struct inode *inode);
-+void security_task_fatal_signal(const kernel_siginfo_t *siginfo);
- int security_ipc_permission(struct kern_ipc_perm *ipcp, short flag);
- void security_ipc_getsecid(struct kern_ipc_perm *ipcp, u32 *secid);
- int security_msg_msg_alloc(struct msg_msg *msg);
-@@ -1165,6 +1166,9 @@ static inline int security_task_prctl(int option, un=
-signed long arg2,
- static inline void security_task_to_inode(struct task_struct *p, struct i=
-node *inode)
- { }
+diff --git a/security/Kconfig b/security/Kconfig
+index 7561f6f99f1d..204bb311b1f1 100644
+=2D-- a/security/Kconfig
++++ b/security/Kconfig
+@@ -240,6 +240,7 @@ source "security/safesetid/Kconfig"
+ source "security/lockdown/Kconfig"
 
-+static inline void security_task_fatal_signal(const kernel_siginfo_t *sig=
-info)
-+{ }
+ source "security/integrity/Kconfig"
++source "security/brute/Kconfig"
+
+ choice
+ 	prompt "First legacy 'major LSM' to be initialized"
+@@ -277,11 +278,11 @@ endchoice
+
+ config LSM
+ 	string "Ordered list of enabled LSMs"
+-	default "lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,=
+apparmor,bpf" if DEFAULT_SECURITY_SMACK
+-	default "lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smac=
+k,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
+-	default "lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAUL=
+T_SECURITY_TOMOYO
+-	default "lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT_SECUR=
+ITY_DAC
+-	default "lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,=
+apparmor,bpf"
++	default "brute,lockdown,yama,loadpin,safesetid,integrity,smack,selinux,t=
+omoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
++	default "brute,lockdown,yama,loadpin,safesetid,integrity,apparmor,selinu=
+x,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
++	default "brute,lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if =
+DEFAULT_SECURITY_TOMOYO
++	default "brute,lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT=
+_SECURITY_DAC
++	default "brute,lockdown,yama,loadpin,safesetid,integrity,selinux,smack,t=
+omoyo,apparmor,bpf"
+ 	help
+ 	  A comma-separated list of LSMs, in initialization order.
+ 	  Any LSMs left off this list will be ignored. This can be
+diff --git a/security/Makefile b/security/Makefile
+index 3baf435de541..1236864876da 100644
+=2D-- a/security/Makefile
++++ b/security/Makefile
+@@ -36,3 +36,7 @@ obj-$(CONFIG_BPF_LSM)			+=3D bpf/
+ # Object integrity file lists
+ subdir-$(CONFIG_INTEGRITY)		+=3D integrity
+ obj-$(CONFIG_INTEGRITY)			+=3D integrity/
 +
- static inline int security_ipc_permission(struct kern_ipc_perm *ipcp,
- 					  short flag)
- {
-diff --git a/kernel/signal.c b/kernel/signal.c
-index ba4d1ef39a9e..d279df338f45 100644
-=2D-- a/kernel/signal.c
-+++ b/kernel/signal.c
-@@ -2750,6 +2750,7 @@ bool get_signal(struct ksignal *ksig)
- 		/*
- 		 * Anything else is fatal, maybe with a core dump.
- 		 */
-+		security_task_fatal_signal(&ksig->info);
- 		current->flags |=3D PF_SIGNALED;
-
- 		if (sig_kernel_coredump(signr)) {
-diff --git a/security/security.c b/security/security.c
-index 5ac96b16f8fa..d9cf653a4e70 100644
-=2D-- a/security/security.c
-+++ b/security/security.c
-@@ -1840,6 +1840,11 @@ void security_task_to_inode(struct task_struct *p, =
-struct inode *inode)
- 	call_void_hook(task_to_inode, p, inode);
- }
-
-+void security_task_fatal_signal(const kernel_siginfo_t *siginfo)
++# Object brute file lists
++subdir-$(CONFIG_SECURITY_FORK_BRUTE)	+=3D brute
++obj-$(CONFIG_SECURITY_FORK_BRUTE)	+=3D brute/
+diff --git a/security/brute/Kconfig b/security/brute/Kconfig
+new file mode 100644
+index 000000000000..1bd2df1e2dec
+=2D-- /dev/null
++++ b/security/brute/Kconfig
+@@ -0,0 +1,12 @@
++# SPDX-License-Identifier: GPL-2.0
++config SECURITY_FORK_BRUTE
++	bool "Fork brute force attack detection and mitigation"
++	depends on SECURITY
++	help
++	  This is an LSM that stops any fork brute force attack against
++	  vulnerable userspace processes. The detection method is based on
++	  the application crash period and as a mitigation procedure all the
++	  offending tasks are killed. Like capabilities, this security module
++	  stacks with other LSMs.
++
++	  If you are unsure how to answer this question, answer N.
+diff --git a/security/brute/Makefile b/security/brute/Makefile
+new file mode 100644
+index 000000000000..d3f233a132a9
+=2D-- /dev/null
++++ b/security/brute/Makefile
+@@ -0,0 +1,2 @@
++# SPDX-License-Identifier: GPL-2.0
++obj-$(CONFIG_SECURITY_FORK_BRUTE) +=3D brute.o
+diff --git a/security/brute/brute.c b/security/brute/brute.c
+new file mode 100644
+index 000000000000..99d099e45112
+=2D-- /dev/null
++++ b/security/brute/brute.c
+@@ -0,0 +1,257 @@
++// SPDX-License-Identifier: GPL-2.0
++
++#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
++
++#include <asm/current.h>
++#include <linux/bug.h>
++#include <linux/compiler.h>
++#include <linux/errno.h>
++#include <linux/gfp.h>
++#include <linux/init.h>
++#include <linux/jiffies.h>
++#include <linux/kernel.h>
++#include <linux/lsm_hooks.h>
++#include <linux/printk.h>
++#include <linux/refcount.h>
++#include <linux/sched.h>
++#include <linux/slab.h>
++#include <linux/spinlock.h>
++#include <linux/types.h>
++
++/**
++ * struct brute_stats - Fork brute force attack statistics.
++ * @lock: Lock to protect the brute_stats structure.
++ * @refc: Reference counter.
++ * @faults: Number of crashes.
++ * @jiffies: Last crash timestamp.
++ * @period: Crash period's moving average.
++ *
++ * This structure holds the statistical data shared by all the fork hiera=
+rchy
++ * processes.
++ */
++struct brute_stats {
++	spinlock_t lock;
++	refcount_t refc;
++	unsigned char faults;
++	u64 jiffies;
++	u64 period;
++};
++
++/*
++ * brute_blob_sizes - LSM blob sizes.
++ *
++ * To share statistical data among all the fork hierarchy processes, defi=
+ne a
++ * pointer to the brute_stats structure as a part of the task_struct's se=
+curity
++ * blob.
++ */
++static struct lsm_blob_sizes brute_blob_sizes __lsm_ro_after_init =3D {
++	.lbs_task =3D sizeof(struct brute_stats *),
++};
++
++/**
++ * brute_stats_ptr() - Get the pointer to the brute_stats structure.
++ * @task: Task that holds the statistical data.
++ *
++ * Return: A pointer to a pointer to the brute_stats structure.
++ */
++static inline struct brute_stats **brute_stats_ptr(struct task_struct *ta=
+sk)
 +{
-+	call_void_hook(task_fatal_signal, siginfo);
++	return task->security + brute_blob_sizes.lbs_task;
 +}
 +
- int security_ipc_permission(struct kern_ipc_perm *ipcp, short flag)
- {
- 	return call_int_hook(ipc_permission, 0, ipcp, flag);
++/**
++ * brute_new_stats() - Allocate a new statistics structure.
++ *
++ * If the allocation is successful the reference counter is set to one to
++ * indicate that there will be one task that points to this structure. Al=
+so, the
++ * last crash timestamp is set to now. This way, it is possible to comput=
+e the
++ * application crash period at the first fault.
++ *
++ * Return: NULL if the allocation fails. A pointer to the new allocated
++ *         statistics structure if it success.
++ */
++static struct brute_stats *brute_new_stats(void)
++{
++	struct brute_stats *stats;
++
++	stats =3D kmalloc(sizeof(struct brute_stats), GFP_KERNEL);
++	if (!stats)
++		return NULL;
++
++	spin_lock_init(&stats->lock);
++	refcount_set(&stats->refc, 1);
++	stats->faults =3D 0;
++	stats->jiffies =3D get_jiffies_64();
++	stats->period =3D 0;
++
++	return stats;
++}
++
++/**
++ * brute_share_stats() - Share the statistical data between processes.
++ * @src: Source of statistics to be shared.
++ * @dst: Destination of statistics to be shared.
++ *
++ * Copy the src's pointer to the statistical data structure to the dst's =
+pointer
++ * to the same structure. Since there is a new process that shares the sa=
+me
++ * data, increase the reference counter. The src's pointer cannot be NULL=
+.
++ *
++ * It's mandatory to disable interrupts before acquiring the brute_stats:=
+:lock
++ * since the task_free hook can be called from an IRQ context during the
++ * execution of the task_alloc hook.
++ */
++static void brute_share_stats(struct brute_stats *src,
++			      struct brute_stats **dst)
++{
++	unsigned long flags;
++
++	spin_lock_irqsave(&src->lock, flags);
++	refcount_inc(&src->refc);
++	*dst =3D src;
++	spin_unlock_irqrestore(&src->lock, flags);
++}
++
++/**
++ * brute_task_alloc() - Target for the task_alloc hook.
++ * @task: Task being allocated.
++ * @clone_flags: Contains the flags indicating what should be shared.
++ *
++ * For a correct management of a fork brute force attack it is necessary =
+that
++ * all the tasks hold statistical data. The same statistical data needs t=
+o be
++ * shared between all the tasks that hold the same memory contents or in =
+other
++ * words, between all the tasks that have been forked without any execve =
+call.
++ *
++ * To ensure this, if the current task doesn't have statistical data when=
+ forks,
++ * it is mandatory to allocate a new statistics structure and share it be=
+tween
++ * this task and the new one being allocated. Otherwise, share the statis=
+tics
++ * that the current task already has.
++ *
++ * Return: -ENOMEM if the allocation of the new statistics structure fail=
+s. Zero
++ *         otherwise.
++ */
++static int brute_task_alloc(struct task_struct *task, unsigned long clone=
+_flags)
++{
++	struct brute_stats **stats, **p_stats;
++
++	stats =3D brute_stats_ptr(task);
++	p_stats =3D brute_stats_ptr(current);
++
++	if (likely(*p_stats)) {
++		brute_share_stats(*p_stats, stats);
++		return 0;
++	}
++
++	*stats =3D brute_new_stats();
++	if (!*stats)
++		return -ENOMEM;
++
++	brute_share_stats(*stats, p_stats);
++	return 0;
++}
++
++/**
++ * brute_task_execve() - Target for the bprm_committing_creds hook.
++ * @bprm: Points to the linux_binprm structure.
++ *
++ * When a forked task calls the execve system call, the memory contents a=
+re set
++ * with new values. So, in this scenario the parent's statistical data no=
+ need
++ * to be shared. Instead, a new statistical data structure must be alloca=
+ted to
++ * start a new hierarchy. This condition is detected when the statistics
++ * reference counter holds a value greater than or equal to two (a fork a=
+lways
++ * sets the statistics reference counter to a minimum of two since the pa=
+rent
++ * and the child task are sharing the same data).
++ *
++ * However, if the execve function is called immediately after another ex=
+ecve
++ * call, althought the memory contents are reset, there is no need to all=
+ocate
++ * a new statistical data structure. This is possible because at this mom=
+ent
++ * only one task (the task that calls the execve function) points to the =
+data.
++ * In this case, the previous allocation is used but the statistics are r=
+eset.
++ *
++ * It's mandatory to disable interrupts before acquiring the brute_stats:=
+:lock
++ * since the task_free hook can be called from an IRQ context during the
++ * execution of the bprm_committing_creds hook.
++ */
++static void brute_task_execve(struct linux_binprm *bprm)
++{
++	struct brute_stats **stats;
++	unsigned long flags;
++
++	stats =3D brute_stats_ptr(current);
++	if (WARN(!*stats, "No statistical data\n"))
++		return;
++
++	spin_lock_irqsave(&(*stats)->lock, flags);
++
++	if (!refcount_dec_not_one(&(*stats)->refc)) {
++		/* execve call after an execve call */
++		(*stats)->faults =3D 0;
++		(*stats)->jiffies =3D get_jiffies_64();
++		(*stats)->period =3D 0;
++		spin_unlock_irqrestore(&(*stats)->lock, flags);
++		return;
++	}
++
++	/* execve call after a fork call */
++	spin_unlock_irqrestore(&(*stats)->lock, flags);
++	*stats =3D brute_new_stats();
++	WARN(!*stats, "Cannot allocate statistical data\n");
++}
++
++/**
++ * brute_task_free() - Target for the task_free hook.
++ * @task: Task about to be freed.
++ *
++ * The statistical data that is shared between all the fork hierarchy pro=
+cesses
++ * needs to be freed when this hierarchy disappears.
++ *
++ * It's mandatory to disable interrupts before acquiring the brute_stats:=
+:lock
++ * since the task_free hook can be called from an IRQ context during the
++ * execution of the task_free hook.
++ */
++static void brute_task_free(struct task_struct *task)
++{
++	struct brute_stats **stats;
++	unsigned long flags;
++	bool refc_is_zero;
++
++	stats =3D brute_stats_ptr(task);
++	if (WARN(!*stats, "No statistical data\n"))
++		return;
++
++	spin_lock_irqsave(&(*stats)->lock, flags);
++	refc_is_zero =3D refcount_dec_and_test(&(*stats)->refc);
++	spin_unlock_irqrestore(&(*stats)->lock, flags);
++
++	if (refc_is_zero) {
++		kfree(*stats);
++		*stats =3D NULL;
++	}
++}
++
++/*
++ * brute_hooks - Targets for the LSM's hooks.
++ */
++static struct security_hook_list brute_hooks[] __lsm_ro_after_init =3D {
++	LSM_HOOK_INIT(task_alloc, brute_task_alloc),
++	LSM_HOOK_INIT(bprm_committing_creds, brute_task_execve),
++	LSM_HOOK_INIT(task_free, brute_task_free),
++};
++
++/**
++ * brute_init() - Initialize the brute LSM.
++ *
++ * Return: Always returns zero.
++ */
++static int __init brute_init(void)
++{
++	pr_info("Brute initialized\n");
++	security_add_hooks(brute_hooks, ARRAY_SIZE(brute_hooks),
++			   KBUILD_MODNAME);
++	return 0;
++}
++
++DEFINE_LSM(brute) =3D {
++	.name =3D KBUILD_MODNAME,
++	.init =3D brute_init,
++	.blobs =3D &brute_blob_sizes,
++};
 =2D-
 2.25.1
 
