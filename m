@@ -1,21 +1,21 @@
-Return-Path: <SRS0=yzdW=IH=lists.openwall.com=kernel-hardening-return-20895-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=yPdh=IH=lists.openwall.com=kernel-hardening-return-20896-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F29C0C433DB
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:44:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B937C433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:44:30 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 40BAC64FC4
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:44:19 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 40BAC64FC4
+	by mail.kernel.org (Postfix) with SMTP id 6A34064FC6
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:44:29 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6A34064FC6
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20895-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15953 invoked by uid 550); 9 Mar 2021 21:43:27 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20896-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15999 invoked by uid 550); 9 Mar 2021 21:43:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,31 +23,31 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15695 invoked from network); 9 Mar 2021 21:43:24 -0000
+Received: (qmail 15862 invoked from network); 9 Mar 2021 21:43:25 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
-        h=from:to:cc:subject:date:message-id:mime-version
-         :content-transfer-encoding;
-        bh=Ir1++GyLBl5f/Xqi2kq3Ks3S4B0/Ta3jdChtS1vi2CQ=;
-        b=PQpY2pYxmPsNBXFkbbyfqSO75eYKbfp34/QOywDWc25NjIe3QuTej3PxF3gjC7fxze
-         b8opA6Cs0pOw/2dA2QtI0IzU+nm/QM09KbOo00JckZNnZste6/TcuqqsPb8jccMu1wnJ
-         hD7dA1q1g2DBqkhqSXzb6rBpP319jcb+bS9hk=
+        h=from:to:cc:subject:date:message-id:in-reply-to:references
+         :mime-version:content-transfer-encoding;
+        bh=uk0/1LocoDticB91SF6FsgWpOKPsEr1Pb6N+E6L28KI=;
+        b=fXCfvnU3D4wVS2gnx4R+6sEkANTA5C4Qx8s+R2Snvl4CfYrjd711MJmnMdXeC6GL/I
+         PCoEcCoP0iSQ5ydymCVNPBPt0drSoZzLLX1BF0oLBizNtnX90NKPXVxlmNQlaA8fAIoj
+         ryM7dBfe4KsBcn46bv7w6H7Idv2DnikOzytCY=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:mime-version
-         :content-transfer-encoding;
-        bh=Ir1++GyLBl5f/Xqi2kq3Ks3S4B0/Ta3jdChtS1vi2CQ=;
-        b=tzr81UWXjuZZRuNmIp3+wo4LkS7+NsTGvWPnXaQJmw9YwAT5yFBqB+Pk5vwe4omy0+
-         GN44AZUxbEl4dSHe1BYZ0S19GaSBiuA171xifDCJJY9+cCdVcaBdBKLKUxRO7hhjDxqN
-         s0eEReeSMct0rQJD/Ry1ytq+ZcrXWneP29e1JhNPQM1cIp9o7p0nNzPJMszRF0ewnheG
-         oGukHzZDlExpEz2xAASUEvwCvUXk3A685ISQW7tCb7HaYIdH5ank7bCgtVJBaNN0kBPp
-         2ZfZDRpX2vnwWSUjUUyTyg2brpVKGpYBHXGeqNMUj9Foy7/SCdSjxHn1vgIcJqI+0/sz
-         AJdQ==
-X-Gm-Message-State: AOAM5326+MkQIJEFnfmAiCT06/jfTycqnLhfmdLM8wjg7VRwGYPmL+Ka
-	5C7TpSEH+9YgY2VCQkUwVBGORg==
-X-Google-Smtp-Source: ABdhPJwPbX2CP08JIvGDKPgOsOudkdGoKPD7zbVHSsyKSWs27JHzaot43YDrMLue1TNE7gbMQ141PA==
-X-Received: by 2002:a17:90a:cb12:: with SMTP id z18mr6430185pjt.132.1615326191909;
-        Tue, 09 Mar 2021 13:43:11 -0800 (PST)
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=uk0/1LocoDticB91SF6FsgWpOKPsEr1Pb6N+E6L28KI=;
+        b=RH+sbHSco+VYVbnecBFBJdfCd/G8rs9sxVX310gQNm2rTw4qHia+fTxbQ5xhV9Ykeu
+         n0EjqQlFjuLM9qzbiJ0LYKbwAdyToCWYtKpqiwyz0DOI6OOHgTyiKbUpbnzASOy518hX
+         Ip9epu0WinueXQqiWNXUkTqGCz/mzotE6IYs3MuTbRjMqO0oRIGK/8uqGzKbxe3azoVw
+         MpCFLdTawLHx4ipXIaN0AIT0VghHSjZ9+DY/gzNJ206CeqOqOWxMNzM8pVhvxaZqGYHD
+         gTbbG8PzSbNFCNZJVSNeIY0DeWKxo/zkYrRlTeaxk7VRrbqZN3qnJRFReN2qaBJE4QYP
+         oWZw==
+X-Gm-Message-State: AOAM530uDP6L1HvcbAtRnzo/WF+YfLWTnwxWlG2gLihwtuawQ9uQxuZS
+	2XaB+2wA3TXS8bP4Vyz+rFoh+w==
+X-Google-Smtp-Source: ABdhPJwMAeJop9UPtI3jZOkzjoT12RbrdsqpFgJGTkl99HdMDta1V57qg5ZxtpfVe+IAGkz4ensuyA==
+X-Received: by 2002:a17:902:6ac1:b029:e3:dbc0:bc44 with SMTP id i1-20020a1709026ac1b02900e3dbc0bc44mr27861641plt.15.1615326193986;
+        Tue, 09 Mar 2021 13:43:13 -0800 (PST)
 From: Kees Cook <keescook@chromium.org>
 To: Thomas Gleixner <tglx@linutronix.de>
 Cc: Kees Cook <keescook@chromium.org>,
@@ -73,90 +73,85 @@ Cc: Kees Cook <keescook@chromium.org>,
 	Andrew Morton <akpm@linux-foundation.org>,
 	Jonathan Corbet <corbet@lwn.net>,
 	Randy Dunlap <rdunlap@infradead.org>
-Subject: [PATCH v5 0/7] Optionally randomize kernel stack offset each syscall
-Date: Tue,  9 Mar 2021 13:42:54 -0800
-Message-Id: <20210309214301.678739-1-keescook@chromium.org>
+Subject: [PATCH v5 7/7] lkdtm: Add REPORT_STACK for checking stack offsets
+Date: Tue,  9 Mar 2021 13:43:01 -0800
+Message-Id: <20210309214301.678739-8-keescook@chromium.org>
 X-Mailer: git-send-email 2.25.1
+In-Reply-To: <20210309214301.678739-1-keescook@chromium.org>
+References: <20210309214301.678739-1-keescook@chromium.org>
 MIME-Version: 1.0
+X-Patch-Hashes: v=1; h=sha256; g=fb815901a1ccc1d9c4ca5c3e3cd3729b7f382fe2; i=b69wRsxT78r/3tM1mGa7N6ME6+rlXyFg15giRWRwPAQ=; m=aFqgiEE+nAZdug79A1F+fVTg9ZceUb0WPE8cbHqssVg=; p=ZQ32/kILkW5AD3nBZHO0VMTp4prIPkm7+DdhCHX8KdA=
+X-Patch-Sig: m=pgp; i=keescook@chromium.org; s=0x0x8972F4DFDC6DC026; b=iQIzBAABCgAdFiEEpcP2jyKd1g9yPm4TiXL039xtwCYFAmBH6+QACgkQiXL039xtwCY9qhAAhOW Jji3ZCJ3RnoaGRrD0g0EhW5yFisz4YxnlNFMM7jo9oEkkaEIg5Cms4k2RvZrJ99lKsWQwbBhzNuM+ rCDNkeT8iaL2KUsW7Wo7+6szheXR5qMdUTHKKX/nOd1uPS8zHdnMNBkOts94EJQ/Zi4WoE4M380XF 47N+kZ8mPuzp9vyHEVUuPre4Dc7Tqmg2bzpBi8tjTrZBVBXul/7Plp2Wbry/KX3lrUl/vq3VaNypY MhHZhQnufm5Nkx93kwAL/aB7zoIZppUx8G4GrqzgT8InUwgfWD/KaX6atmi0FiMIzyFRKfANnk/rG gm0DClhml0R0e5xMPFHy/aDTZxyjkarc66p/PSUfKCRWOfQ9mOA6HxIcpO8phsZ176kf1Ge+nrt0D vT+mGYXOznFNK8yNioU8/h3F6A/IUtFoK0BN1KTG5azbjperev/mix3MNVLHWQn64+OmoknnIZKKf boW/jcOs+FV/7/e11Atvz5H2BQyEer7KZmWnyoc+WZi//J69k8JN11FgMyMttnfU8h5qT3YzzT4F0 sEpmlrNFTfMHnL42Lq2rKO2uVjXqqzti1VNVAPVtpBgNCWdzhlBvF4VC+Y28uivtgwCovRhH4lKaO EcmyX88q25Tn95RBx7Y7EcFqRvubjTsJTcq3Dw9W08iqQrjt+/8Lnfz7XVUtGeJQ=
 Content-Transfer-Encoding: 8bit
 
-v5:
-- rebase to v5.12-rc2
-- clean up static branch issues introduced since v4 series
-- adjust comments (Mark Rutland)
-- update kernel-parameters.txt (Randy Dunlap)
-v4: https://lore.kernel.org/lkml/20200622193146.2985288-1-keescook@chromium.org/
-v3: https://lore.kernel.org/lkml/20200406231606.37619-1-keescook@chromium.org/
-v2: https://lore.kernel.org/lkml/20200324203231.64324-1-keescook@chromium.org/
-rfc: https://lore.kernel.org/kernel-hardening/20190329081358.30497-1-elena.reshetova@intel.com/
+For validating the stack offset behavior, report the offset from a given
+process's first seen stack address. A quick way to measure the entropy:
 
-Hi,
+for i in $(seq 1 1000); do
+	echo "REPORT_STACK" >/sys/kernel/debug/provoke-crash/DIRECT
+done
+offsets=$(dmesg | grep 'Stack offset' | cut -d: -f3 | sort | uniq -c | sort -n | wc -l)
+echo "$(uname -m) bits of stack entropy: $(echo "obase=2; $offsets" | bc | wc -L)"
 
-This is a continuation and refactoring of Elena's earlier effort to add
-kernel stack base offset randomization. In the time since the earlier
-discussions, two attacks[1][2] were made public that depended on stack
-determinism, so we're no longer in the position of "this is a good idea
-but we have no examples of attacks". :)
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ drivers/misc/lkdtm/bugs.c  | 17 +++++++++++++++++
+ drivers/misc/lkdtm/core.c  |  1 +
+ drivers/misc/lkdtm/lkdtm.h |  1 +
+ 3 files changed, 19 insertions(+)
 
-Earlier discussions also devolved into debates on entropy sources, which
-is mostly a red herring, given the already low entropy available due
-to stack size. Regardless, entropy can be changed/improved separately
-from this series as needed.
-
-Earlier discussions also got stuck debating how much syscall overhead
-was too much, but this is also a red herring since the feature itself
-needs to be selectable at boot with no cost for those that don't want it:
-this is solved here with static branches.
-
-So, here is the latest improved version, made as arch-agnostic as
-possible, with usage added for x86 and arm64. It also includes some small
-static branch clean ups, and addresses some surprise performance issues
-due to the stack canary[3].
-
-At the very least, the first three patches should land ASAP, the first
-is a minor bug fix for v5.11. The next two are optimizations for static
-branch usage that Peter already Acked.
-
-If I can get an Ack from an arm64 maintainer, I think this could all
-land via -tip to make merging easiest.
-
-Thanks!
-
--Kees
-
-[1] https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
-[2] https://repositorio-aberto.up.pt/bitstream/10216/125357/2/374717.pdf
-[3] https://lore.kernel.org/lkml/202003281520.A9BFF461@keescook/
-
-Kees Cook (7):
-  mm: Restore init_on_* static branch defaults
-  jump_label: Provide CONFIG-driven build state defaults
-  init_on_alloc: Unpessimize default-on builds
-  stack: Optionally randomize kernel stack offset each syscall
-  x86/entry: Enable random_kstack_offset support
-  arm64: entry: Enable random_kstack_offset support
-  lkdtm: Add REPORT_STACK for checking stack offsets
-
- .../admin-guide/kernel-parameters.txt         | 11 +++++
- Makefile                                      |  4 ++
- arch/Kconfig                                  | 23 ++++++++++
- arch/arm64/Kconfig                            |  1 +
- arch/arm64/kernel/Makefile                    |  5 +++
- arch/arm64/kernel/syscall.c                   | 10 +++++
- arch/x86/Kconfig                              |  1 +
- arch/x86/entry/common.c                       |  3 ++
- arch/x86/include/asm/entry-common.h           |  8 ++++
- drivers/misc/lkdtm/bugs.c                     | 17 ++++++++
- drivers/misc/lkdtm/core.c                     |  1 +
- drivers/misc/lkdtm/lkdtm.h                    |  1 +
- include/linux/jump_label.h                    | 19 +++++++++
- include/linux/mm.h                            | 10 +++--
- include/linux/randomize_kstack.h              | 42 +++++++++++++++++++
- init/main.c                                   | 23 ++++++++++
- mm/page_alloc.c                               |  4 +-
- 17 files changed, 177 insertions(+), 6 deletions(-)
- create mode 100644 include/linux/randomize_kstack.h
-
+diff --git a/drivers/misc/lkdtm/bugs.c b/drivers/misc/lkdtm/bugs.c
+index 110f5a8538e9..0e8254d0cf0b 100644
+--- a/drivers/misc/lkdtm/bugs.c
++++ b/drivers/misc/lkdtm/bugs.c
+@@ -134,6 +134,23 @@ noinline void lkdtm_CORRUPT_STACK_STRONG(void)
+ 	__lkdtm_CORRUPT_STACK((void *)&data);
+ }
+ 
++static pid_t stack_pid;
++static unsigned long stack_addr;
++
++void lkdtm_REPORT_STACK(void)
++{
++	volatile uintptr_t magic;
++	pid_t pid = task_pid_nr(current);
++
++	if (pid != stack_pid) {
++		pr_info("Starting stack offset tracking for pid %d\n", pid);
++		stack_pid = pid;
++		stack_addr = (uintptr_t)&magic;
++	}
++
++	pr_info("Stack offset: %d\n", (int)(stack_addr - (uintptr_t)&magic));
++}
++
+ void lkdtm_UNALIGNED_LOAD_STORE_WRITE(void)
+ {
+ 	static u8 data[5] __attribute__((aligned(4))) = {1, 2, 3, 4, 5};
+diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
+index b2aff4d87c01..8024b6a5cc7f 100644
+--- a/drivers/misc/lkdtm/core.c
++++ b/drivers/misc/lkdtm/core.c
+@@ -110,6 +110,7 @@ static const struct crashtype crashtypes[] = {
+ 	CRASHTYPE(EXHAUST_STACK),
+ 	CRASHTYPE(CORRUPT_STACK),
+ 	CRASHTYPE(CORRUPT_STACK_STRONG),
++	CRASHTYPE(REPORT_STACK),
+ 	CRASHTYPE(CORRUPT_LIST_ADD),
+ 	CRASHTYPE(CORRUPT_LIST_DEL),
+ 	CRASHTYPE(STACK_GUARD_PAGE_LEADING),
+diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
+index 5ae48c64df24..99f90d3e5e9c 100644
+--- a/drivers/misc/lkdtm/lkdtm.h
++++ b/drivers/misc/lkdtm/lkdtm.h
+@@ -17,6 +17,7 @@ void lkdtm_LOOP(void);
+ void lkdtm_EXHAUST_STACK(void);
+ void lkdtm_CORRUPT_STACK(void);
+ void lkdtm_CORRUPT_STACK_STRONG(void);
++void lkdtm_REPORT_STACK(void);
+ void lkdtm_UNALIGNED_LOAD_STORE_WRITE(void);
+ void lkdtm_SOFTLOCKUP(void);
+ void lkdtm_HARDLOCKUP(void);
 -- 
 2.25.1
 
