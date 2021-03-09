@@ -1,21 +1,21 @@
-Return-Path: <SRS0=M2/6=IH=lists.openwall.com=kernel-hardening-return-20889-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=qc9/=IH=lists.openwall.com=kernel-hardening-return-20890-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CF6A5C433DB
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 18:41:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7092DC433DB
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:43:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BD47665100
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 18:41:49 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BD47665100
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20889-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18296 invoked by uid 550); 9 Mar 2021 18:41:40 -0000
+	by mail.kernel.org (Postfix) with SMTP id 7607B64FC7
+	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:43:36 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 7607B64FC7
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20890-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 15648 invoked by uid 550); 9 Mar 2021 21:43:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,248 +23,133 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18261 invoked from network); 9 Mar 2021 18:41:39 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1615315267;
-	bh=KzFmPAXJ1zDKRM2mxpYfcPPElqy1VrJmd3MBZSmX/PU=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=VC87++wuAkCxnzJdXTGwljUEJMFJl77UpPZEj7NMTrg+QaSRIDxNyop0e4onuj9cO
-	 LAAHCcJc1HH/85O2x6aM7FZJJQ4lz8BWYJiPM8J/QNIxUZjmSZBEgEInxE8yrkzzWi
-	 E1SwhOKgt6xT5/1LyZcmHplGDIIkHX+ViN3Vd0bM=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Tue, 9 Mar 2021 19:40:54 +0100
-From: John Wood <john.wood@gmx.com>
-To: Andi Kleen <ak@linux.intel.com>
-Cc: John Wood <john.wood@gmx.com>, Kees Cook <keescook@chromium.org>,
-	Jann Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>,
-	Jonathan Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>,
-	Shuah Khan <shuah@kernel.org>, "Serge E. Hallyn" <serge@hallyn.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-kselftest@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v5 7/8] Documentation: Add documentation for the Brute LSM
-Message-ID: <20210309184054.GA3058@ubuntu>
-References: <20210227153013.6747-1-john.wood@gmx.com>
- <20210227153013.6747-8-john.wood@gmx.com>
- <878s78dnrm.fsf@linux.intel.com>
- <20210302183032.GA3049@ubuntu>
- <20210307151920.GR472138@tassilo.jf.intel.com>
- <20210307164520.GA16296@ubuntu>
- <20210307172540.GS472138@tassilo.jf.intel.com>
- <20210307180541.GA17108@ubuntu>
- <20210307224927.GT472138@tassilo.jf.intel.com>
+Received: (qmail 15624 invoked from network); 9 Mar 2021 21:43:22 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=from:to:cc:subject:date:message-id:in-reply-to:references
+         :mime-version:content-transfer-encoding;
+        bh=uJhcYxfyQggjoFPfbV3IBwgqNX6derqJ/0OIfES3kng=;
+        b=jL8KGxLZpq6kPeT9F+1qoL3DOavcSq+bJ2zvXDYPWXl+6YiuZBCwwRfCE7vfScpXYo
+         JLjeD2AAKSyeha5oGCTqtO44VFZbSaDU8csNlwFLUVsaobMtQxYqvBKu4ZTMPr3ykAR6
+         o5hUKHMrDsMF1SIVJQ8Kd1W1dLLgNv1pQqr3M=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=uJhcYxfyQggjoFPfbV3IBwgqNX6derqJ/0OIfES3kng=;
+        b=asnswikLGMVzU6Duf4GQXNOw6xSVE+lCGyUGCin0JTFb4Dunoi6EmE0WNhUTeFy806
+         0huk/RYaZHva2RD3r8Xk+w6u3u1jQwZu8cshNBshnU1KJ91NicOc/lLDw60mee696ErO
+         6of/thJAhZhvnohIfFh9KZGSa154az0+9l/9OjVCCNVOk1NqswwlGraXhRyLlN+v28iL
+         cAD9ySkf10FpJRw2VNTpdIfT15P1G2pLyyxicY1EntALR7uZnVPb8vv/i9yNyooNvx/X
+         t/C4jW9Lg9y9K0bcP+tF6ZgkEQ/KetmcRrj1C0vhFNbR5FRZS6Rceconcng/xDP+76nu
+         brkA==
+X-Gm-Message-State: AOAM533YEVpkBntKM5NzLrb5c1MKD77ILnYjx+60faSYZLpa0PZbVUtI
+	YwHEeK/iXIvIcM/0iWaRBxGepw==
+X-Google-Smtp-Source: ABdhPJzbrDwJvtujX+Yvv98LI2Jlt3lOh8R9CznfILmERfEu/fMLAFatr8X7tXLsHQfwfaOl+hu6bQ==
+X-Received: by 2002:a17:902:ec83:b029:e3:ec1f:9def with SMTP id x3-20020a170902ec83b02900e3ec1f9defmr107248plg.11.1615326189697;
+        Tue, 09 Mar 2021 13:43:09 -0800 (PST)
+From: Kees Cook <keescook@chromium.org>
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: Kees Cook <keescook@chromium.org>,
+	stable@vger.kernel.org,
+	Elena Reshetova <elena.reshetova@intel.com>,
+	x86@kernel.org,
+	Andy Lutomirski <luto@kernel.org>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Catalin Marinas <catalin.marinas@arm.com>,
+	Will Deacon <will@kernel.org>,
+	Mark Rutland <mark.rutland@arm.com>,
+	Alexander Potapenko <glider@google.com>,
+	Alexander Popov <alex.popov@linux.com>,
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
+	Jann Horn <jannh@google.com>,
+	kernel-hardening@lists.openwall.com,
+	linux-hardening@vger.kernel.org,
+	linux-arm-kernel@lists.infradead.org,
+	linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org,
+	Vlastimil Babka <vbabka@suse.cz>,
+	David Hildenbrand <david@redhat.com>,
+	Mike Rapoport <rppt@linux.ibm.com>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Randy Dunlap <rdunlap@infradead.org>
+Subject: [PATCH v5 1/7] mm: Restore init_on_* static branch defaults
+Date: Tue,  9 Mar 2021 13:42:55 -0800
+Message-Id: <20210309214301.678739-2-keescook@chromium.org>
+X-Mailer: git-send-email 2.25.1
+In-Reply-To: <20210309214301.678739-1-keescook@chromium.org>
+References: <20210309214301.678739-1-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20210307224927.GT472138@tassilo.jf.intel.com>
-X-Provags-ID: V03:K1:HfpvfEEiAP4shApLpqTyApLPQZeFliyub0f4Ir5fFC3RtuHsJJM
- Fj3lpm4nRiqKO0S+Sk7Cjb6osIJGmtNTHj9uiBSy4OQFFzCKqBQVHU/7KwMn9eGUFjiWRCb
- bI6lrJ5rcVUUze4r+0u6uFzlwlB4zNWU/l7lM1BRrugsgjp5H6cZpCeQrxNpg0bV5gcqTDP
- N/ldbPLlzIqloeJC/btSA==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:YJmaCsKdOZI=:3wNHcDtg5j0QtDsVdhsHVu
- Y8K8xN5Y0jd88ggw4qX4lTA9Tq//EKjwYdACWWdyyjsbdRf+WnmQpoJAqCqNtoCgAwKIvDYlO
- Nzw++1xvfI+dPYDtdpU5lPQgiXMxyJA1dqHvmofWV+QFtYH3veALmNVwZkwkNLdt9Min91FVk
- tCDP7JBMw6TqcULmOIvokxFphiqCW7b05eGjuJ2PUdXyVB4HVCy1KYZMotj1e0CU0QhqFyoaw
- hWy961+XECjaPHLX49NwfCwmxJPjDBZHXFQzr8bNFdTOyazvjuV679vtk1qYt14FNn0Fg6yOd
- NxNm0piakn6Z9myQCmh/i9K8HqBAoiNJTAN8zIoVOJxpYDFDhU67WqcLqbew4dH/CjDihvZFW
- XB2l20iA6VzkGBQJIQvU+FeMReGm5hT/QWnjWMvx9nTDvwZJ/3TU8EbkLfayQSZEPjdyQq77J
- eRirBoXWuMVvthAuMfLaBdtp4zSDvjUoGj0Uy0Gw+FYTW5Zgc16bQd4mXLhgza5h3xDjcyDvG
- dHK/RXJkduhUOP6hcmbb+XLd6uh29g5/LvKsK4DWyv8gf120rpfhKcOZJZDAqtNMr/2ATbTzZ
- aThnhhyKoQVO8rYaveiMMcevD3fRqeta+N8FG/NdEQ9bfVLO+5EilTXxukZpphZFKf+paAjum
- LDL/LVhV+xdYHh7coRn25UTbBnoT/ThkTyo2SHfIwlsyBBtcutC5nhG2exg03HadZlr+Ihxnh
- S1dthiB1E3GjPGzs4G6BiYOEalKSfhCiu5dtt859qGukz1BIw+r80A5US4ecke8Fwe7hldiwt
- FdwpJCF3kPS+styCE+F84u8fj2V3jvaYF8nRM2Pk2XdyUG6X9TVL0mpayJXp/WN50IRJyxYKX
- 5IuY0e9Aq18GHE6p5D5w==
-Content-Transfer-Encoding: quoted-printable
+X-Patch-Hashes: v=1; h=sha256; g=28f3f839c24b05670130f4ff25d00e52971fd524; i=F1m1wEnux/IiRlF/sb2Zhr2mAPnBBAdImHuXCXK/7kg=; m=obdLQlMNg29JMC3GLL05bs7+HEYTRXfdcOPcqLYs1G0=; p=5DbOxVDVK+l3oSqEiw8KVTN/ODiEU3l6O/gw4X79jro=
+X-Patch-Sig: m=pgp; i=keescook@chromium.org; s=0x0x8972F4DFDC6DC026; b=iQIzBAABCgAdFiEEpcP2jyKd1g9yPm4TiXL039xtwCYFAmBH6+MACgkQiXL039xtwCZfHA//cAa PLXroyUxGbCfvAX2WTtwU6C5LPDtgM2cyDkhcMFkbY7jpjetZH58AgmsDVICQO5Gr1o6pcLanTaCu g9wn5kl+oYBuX+AM6N/RBjx2uuFb9H8vxS1sbup+S68TfmMPoa+8iLJYnDdQ5FeUCLzgIgdIoWyGC 1ebqyiytd8kEuZ54soVilY8JhdJ9Uyy2lj2CNuLncTdTZpB30J86I1fpIp8kG/1EqzwfOsrfK5WNE PlLp/tQYnPZw2LAxJg4fxq1OPvdXYXjOY6kVcx/tCaY3k4sEZjf+CA+N5ubqNZNQrcPo6yoUCuP34 iJpjSPR6EpsPimnEBVqI5dOnKcRbrQO/B96RbgbSqdGJckEiZk+/3x98oHJ7x0ZtQW/IDK82joRRf ZufV3KvwN1iLF2M0I1POqcKAk+9OF8mG/RA6pVK16vJmCA1iHTfLbz2JDUfWSu5rhFOYPCYs806V7 K8BpUEJz//Q38t6OXtzd/NuChkoMeEokmktZlFzmzLlk9qbAIWUrFHp8ECIbjYPNmaQ16YtU79tl6 qyAIlTkn5odVmnJxSTIKCZr7RwyszaDRBqPdPFSymmS/YdTKm+85L4N+AFtvX4V0NSjnSsYd5F0K3 q/LmHpjXj0aH6bVSWXXL2ifyidh60bHGGtZiwcWsIgkXi2mW0iYpkirvlgZc3gz4=
+Content-Transfer-Encoding: 8bit
 
-Hi,
+Choosing the initial state of static branches changes the assembly layout
+(if the condition is expected to be likely, inline, or unlikely, out of
+line via a jump). The _TRUE/_FALSE defines for CONFIG_INIT_ON_*_DEFAULT_ON
+were accidentally removed. These need to stay so that the CONFIG controls
+the pessimization of the resulting static branch NOP/JMP locations.
 
-On Sun, Mar 07, 2021 at 02:49:27PM -0800, Andi Kleen wrote:
-> On Sun, Mar 07, 2021 at 07:05:41PM +0100, John Wood wrote:
-> > On Sun, Mar 07, 2021 at 09:25:40AM -0800, Andi Kleen wrote:
-> > > > processes created from it will be killed. If the systemd restart t=
-he network
-> > > > daemon and it will crash again, then the systemd will be killed. I=
- think this
-> > > > way the attack is fully mitigated.
-> > >
-> > > Wouldn't that panic the system? Killing init is usually a panic.
-> >
-> > The mitigation acts only over the process that crashes (network daemon=
-) and the
-> > process that exec() it (systemd). This mitigation don't go up in the p=
-rocesses
-> > tree until reach the init process.
->
-> Most daemons have some supervisor that respawns them when they crash.
-> (maybe read up on "supervisor trees" if you haven't, it's a standard con=
-cept)
->
-> That's usually (but not) always init, as in systemd. There might be some=
-thing
-> inbetween it and init, but likely init would respawn the something in be=
-tween
-> it it. One of the main tasks of init is to respawn things under it.
->
-> If you have a supervisor tree starting from init the kill should eventua=
-lly
-> travel up to init.
+Fixes: 04013513cc84 ("mm, page_alloc: do not rely on the order of page_poison and init_on_alloc/free parameters")
+Cc: stable@vger.kernel.org
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ include/linux/mm.h | 8 ++++++++
+ mm/page_alloc.c    | 8 ++++++++
+ 2 files changed, 16 insertions(+)
 
-I will try to demostrate that the mitigation don't travel up to init. To d=
-o so I
-will use the following scenario (brute force attack through the execve sys=
-tem
-call):
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 77e64e3eac80..b3317d91ee8e 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -2871,7 +2871,11 @@ static inline void kernel_poison_pages(struct page *page, int numpages) { }
+ static inline void kernel_unpoison_pages(struct page *page, int numpages) { }
+ #endif
+ 
++#ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
++DECLARE_STATIC_KEY_TRUE(init_on_alloc);
++#else
+ DECLARE_STATIC_KEY_FALSE(init_on_alloc);
++#endif
+ static inline bool want_init_on_alloc(gfp_t flags)
+ {
+ 	if (static_branch_unlikely(&init_on_alloc))
+@@ -2879,7 +2883,11 @@ static inline bool want_init_on_alloc(gfp_t flags)
+ 	return flags & __GFP_ZERO;
+ }
+ 
++#ifdef CONFIG_INIT_ON_FREE_DEFAULT_ON
++DECLARE_STATIC_KEY_TRUE(init_on_free);
++#else
+ DECLARE_STATIC_KEY_FALSE(init_on_free);
++#endif
+ static inline bool want_init_on_free(void)
+ {
+ 	return static_branch_unlikely(&init_on_free);
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index 3e4b29ee2b1e..f2d474a844cf 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -167,10 +167,18 @@ unsigned long totalcma_pages __read_mostly;
+ 
+ int percpu_pagelist_fraction;
+ gfp_t gfp_allowed_mask __read_mostly = GFP_BOOT_MASK;
++#ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
++DEFINE_STATIC_KEY_TRUE(init_on_alloc);
++#else
+ DEFINE_STATIC_KEY_FALSE(init_on_alloc);
++#endif
+ EXPORT_SYMBOL(init_on_alloc);
+ 
++#ifdef CONFIG_INIT_ON_FREE_DEFAULT_ON
++DEFINE_STATIC_KEY_TRUE(init_on_free);
++#else
+ DEFINE_STATIC_KEY_FALSE(init_on_free);
++#endif
+ EXPORT_SYMBOL(init_on_free);
+ 
+ static bool _init_on_alloc_enabled_early __read_mostly
+-- 
+2.25.1
 
-init -------exec()-------> supervisor -------exec()-----> network daemon
-faults =3D 0                 faults =3D 0                     faults =3D 0
-period =3D ---               period =3D ---                   period =3D -=
---
-
-Now the network daemon crashes (its stats an updated and also the supervis=
-or
-stats):
-
-init --------------------> supervisor ------------------> network daemon
-faults =3D 0                 faults =3D 1                     faults =3D 1
-period =3D ---               period =3D 10ms                  period =3D 1=
-0ms
-
-Then the network daemon is freed and its stats are removed:
-
-init --------------------> supervisor
-faults =3D 0                 faults =3D 1
-period =3D ---               period =3D 10ms
-
-Now the supervisor respawns the daemon (the stats are initialized):
-
-init --------------------> supervisor ------------------> network daemon
-faults =3D 0                 faults =3D 1                     faults =3D 0
-period =3D ---               period =3D 10ms                  period =3D -=
---
-
-The network daemon crashes again:
-
-init --------------------> supervisor ------------------> network daemon
-faults =3D 0                 faults =3D 2                     faults =3D 1
-period =3D ---               period =3D 11ms                  period =3D 1=
-2ms
-
-The network daemon is freed again:
-
-init --------------------> supervisor
-faults =3D 0                 faults =3D 2
-period =3D ---               period =3D 11ms
-
-The supervisor respawns again the daemon:
-
-init --------------------> supervisor ------------------> network daemon
-faults =3D 0                 faults =3D 2                     faults =3D 0
-period =3D ---               period =3D 11ms                  period =3D -=
---
-
-This steps are repeated x number of times until a minimum number of faults
-triggers the brute force attack mitigation. At this moment:
-
-init --------------------> supervisor ------------------> network daemon
-faults =3D 0                 faults =3D 5                     faults =3D 1
-period =3D ---               period =3D 13ms                  period =3D 1=
-5ms
-
-Now the network daemon is freed and the supervisor is killed by the mitiga=
-tion
-method. At this point is importart to note that before send the kill signa=
-l to
-the supervisor its stats are disabled. This means that when the supervisor=
- is
-killed its stats are now not updated. So the init stats are also not updat=
-ed.
-
-init
-faults =3D 0
-period =3D ---
-
-=46rom the point of view of the init process nothing has happened.
-
-> At least that's the theory. Do you have some experiments that show
-> this doesn't happen?
-
-Yes. The kernel selftest try to emulate some scenarios. Basically brute fo=
-rce
-attacks through the execve system call (like the case exposed) and also br=
-ute
-force attacks through the fork system call. Playing with the crossing of s=
-ome
-privilege boundaries.
-
-For example:
-
-In the tests an application execs() another application that crashes. Then
-respawn the application that has crashed and this last crashes again. The
-respawn is executed until the brute force attack through the execve system=
- call
-and then the application that execs() is killed. But any other application=
-s are
-killed. Only the tasks involved in the attack.
->
-> >
-> > Note: I am a kernel newbie and I don't know if the systemd is init. So=
-rry if it
-> > is a stupid question. AFAIK systemd is not the init process (the first=
- process
-> > that is executed) but I am not sure.
->
-> At least the part of systemd that respawns is often (but not always) ini=
-t.
-
-Thanks for the clarification.
-
-> > So, you suggest that the mitigation method for the brute force attack =
-through
-> > the execve system call should be different (not kill the process that =
-exec).
-> > Any suggestions would be welcome to improve this feature.
->
-> If the system is part of some cluster, then panicing on attack or failur=
-e
-> could be a reasonable reaction. Some other system in the cluster should
-> take over. There's also a risk that all the systems get taken
-> out quickly one by one, in this case you might still need something
-> like the below.
->
-> But it's something that would need to be very carefully considered
-> for the environment.
->
-> The other case is when there isn't some fallback, as in a standalone
-> machine.
->
-> It could be only used when the supervisor daemons are aware of it.
-> Often they already have respawn limits, but would need to make sure they
-> trigger before your algorithm trigger. Or maybe some way to opt-out
-> per process.  Then the DoS would be only against that process, but
-> not everything on the machine.
-
-Thanks for the suggestions.
-
-> So I think it needs more work on the user space side for most usages.
->
-
-Anyway, in the case that the supervisor is init then the system will panic=
-. So,
-I think that we can add a prctl to avoid kill the parent task (the task th=
-at
-exec) and only block new fork system calls from this task. When this boole=
-an is
-set, any parent task that is involved in the attack will not be killed. In=
- this
-case, any following forks will be blocked. This way the system will not cr=
-ash.
-
-What do you think?
-
-> -Andi
-
-Thanks for your time and patience.
-John Wood
