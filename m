@@ -1,22 +1,22 @@
-Return-Path: <SRS0=kBLz=II=lists.openwall.com=kernel-hardening-return-20906-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ydbm=II=lists.openwall.com=kernel-hardening-return-20907-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,
-	DKIM_ADSP_CUSTOM_MED,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-23.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 58471C433DB
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Mar 2021 12:03:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AF02EC433DB
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Mar 2021 12:52:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4FD7A64FE8
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Mar 2021 12:03:30 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4FD7A64FE8
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20906-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9500 invoked by uid 550); 10 Mar 2021 12:02:09 -0000
+	by mail.kernel.org (Postfix) with SMTP id CA7D864FE0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Mar 2021 12:52:36 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org CA7D864FE0
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20907-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 30315 invoked by uid 550); 10 Mar 2021 12:52:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,254 +24,92 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9218 invoked from network); 10 Mar 2021 12:02:05 -0000
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: LKML <linux-kernel@vger.kernel.org>,
-	io-uring@vger.kernel.org,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux Containers <containers@lists.linux-foundation.org>,
-	linux-mm@kvack.org
-Cc: Alexey Gladkov <legion@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	Jann Horn <jannh@google.com>,
-	Jens Axboe <axboe@kernel.dk>,
-	Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>
-Subject: [PATCH v8 8/8] kselftests: Add test to check for rlimit changes in different user namespaces
-Date: Wed, 10 Mar 2021 13:01:33 +0100
-Message-Id: <21887637e95a1fca848c4df5da4a2a58ed45da85.1615372955.git.gladkov.alexey@gmail.com>
-X-Mailer: git-send-email 2.29.2
-In-Reply-To: <cover.1615372955.git.gladkov.alexey@gmail.com>
-References: <cover.1615372955.git.gladkov.alexey@gmail.com>
+Received: (qmail 30290 invoked from network); 10 Mar 2021 12:52:28 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=/BK42rEfZDnxMm7tn7QJoRMRkMDyVR3i3bNbcPekdIg=;
+        b=h3fEZUkobZr1jCHE1WazBNRG4q6cvgfOa2N+PfxLN8F7RZJkzgxy8/c570n7v1gsgE
+         wSVCeFTC/83l9s7h3AlU7OrKC5RGtvsuxScUqY6IJhXjcghZQ8EL07clpakh4MTYsG7o
+         6KoC27yoGboGzxYaB+5W8my72cxKXJZYwPWTh6e8c4ZfV+hRQj3DRwvP3l72LQhNw298
+         sOkfAxTRzwbtQwEezjar0b8cKncz7NqR60/GEO5Od0xr52s3xXhE73SXrE4cXBPxJIlS
+         lmmdDl8v0ikLdUjBpWCTlgfWxaqXztaooul2c927TtNy00/RKZdi/4PbDlNVnuRV13n1
+         rroQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=/BK42rEfZDnxMm7tn7QJoRMRkMDyVR3i3bNbcPekdIg=;
+        b=raC68YxtpVXTvYeuMf7S+BUN37mLw+/GfilfkPcyIx7tEryksgH+T9AwsfA/bexRoj
+         9sX4u+9cgSvQ32zvxKDH3+LWckdOIH7STOQeCM9FmZOUXoydfn6TR8eJHJfFzhDlk9QL
+         u6iCq6WI5a6ASuH16Lv7w9Ty1+kzYCR+p2iEHS5OyRzxP0VrN63SO1+q/la5WaKvkJpt
+         cqnzF2CYE31UoXYgjaPe8WoJkO/Xu3aTazZ4DK9+ItHiuV7n6R2Eq2d7I3LiSf6p7dPb
+         3p60dxDOj5dqsBLp1kKe46KpePP/QO85CyngFfmacRHVMfH1QjYOo/sWtx99PSZsDSxb
+         xorw==
+X-Gm-Message-State: AOAM533HA5LNHiA9zPPf2/Db438x7MhrJcCpOMSR4MR5DGz2deRdR7Wb
+	MP7Qb0vMlmQfjettU5mCx3MEUqQr6xvdBiSSaDhcUQ==
+X-Google-Smtp-Source: ABdhPJz6Al6cQ9o2Jkic0AM6aT+uI8HXaIO3FGRdEqDpDV6bZgYd+QRynVKdHFUIi1JAN2QCB/oYogOY84k0cBj6NyQ=
+X-Received: by 2002:a63:455d:: with SMTP id u29mr2647321pgk.286.1615380735994;
+ Wed, 10 Mar 2021 04:52:15 -0800 (PST)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.4 (raptor.unsafe.ru [0.0.0.0]); Wed, 10 Mar 2021 12:01:46 +0000 (UTC)
+References: <20210309214301.678739-1-keescook@chromium.org> <20210309214301.678739-4-keescook@chromium.org>
+In-Reply-To: <20210309214301.678739-4-keescook@chromium.org>
+From: Andrey Konovalov <andreyknvl@google.com>
+Date: Wed, 10 Mar 2021 13:52:04 +0100
+Message-ID: <CAAeHK+xog8-DP1o=1qqKgSP7Hii2Yjah6oyowNE3zSNVW5pRSw@mail.gmail.com>
+Subject: Re: [PATCH v5 3/7] init_on_alloc: Unpessimize default-on builds
+To: Kees Cook <keescook@chromium.org>, Alexander Potapenko <glider@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Elena Reshetova <elena.reshetova@intel.com>, 
+	"the arch/x86 maintainers" <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, 
+	Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will@kernel.org>, 
+	Mark Rutland <mark.rutland@arm.com>, Alexander Popov <alex.popov@linux.com>, 
+	Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jann Horn <jannh@google.com>, 
+	kernel-hardening@lists.openwall.com, linux-hardening@vger.kernel.org, 
+	Linux ARM <linux-arm-kernel@lists.infradead.org>, 
+	Linux Memory Management List <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, 
+	Vlastimil Babka <vbabka@suse.cz>, David Hildenbrand <david@redhat.com>, Mike Rapoport <rppt@linux.ibm.com>, 
+	Andrew Morton <akpm@linux-foundation.org>, Jonathan Corbet <corbet@lwn.net>, 
+	Randy Dunlap <rdunlap@infradead.org>
+Content-Type: text/plain; charset="UTF-8"
 
-The testcase runs few instances of the program with RLIMIT_NPROC=1 from
-user uid=60000, in different user namespaces.
+On Tue, Mar 9, 2021 at 10:43 PM Kees Cook <keescook@chromium.org> wrote:
+>
+> Right now, the state of CONFIG_INIT_ON_ALLOC_DEFAULT_ON (and
+> ...ON_FREE...) did not change the assembly ordering of the static branch
+> tests. Use the new jump_label macro to check CONFIG settings to default
+> to the "expected" state, unpessimizes the resulting assembly code.
+>
+> Reviewed-by: Alexander Potapenko <glider@google.com>
+> Link: https://lore.kernel.org/lkml/CAG_fn=X0DVwqLaHJTO6Jw7TGcMSm77GKHinrd0m_6y0SzWOrFA@mail.gmail.com/
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  include/linux/mm.h | 6 ++++--
+>  1 file changed, 4 insertions(+), 2 deletions(-)
+>
+> diff --git a/include/linux/mm.h b/include/linux/mm.h
+> index bf341a9bfe46..2ccd856ac0d1 100644
+> --- a/include/linux/mm.h
+> +++ b/include/linux/mm.h
+> @@ -2874,7 +2874,8 @@ static inline void kernel_unpoison_pages(struct page *page, int numpages) { }
+>  DECLARE_STATIC_KEY_MAYBE(CONFIG_INIT_ON_ALLOC_DEFAULT_ON, init_on_alloc);
+>  static inline bool want_init_on_alloc(gfp_t flags)
+>  {
+> -       if (static_branch_unlikely(&init_on_alloc))
+> +       if (static_branch_maybe(CONFIG_INIT_ON_ALLOC_DEFAULT_ON,
+> +                               &init_on_alloc))
+>                 return true;
+>         return flags & __GFP_ZERO;
+>  }
+> @@ -2882,7 +2883,8 @@ static inline bool want_init_on_alloc(gfp_t flags)
+>  DECLARE_STATIC_KEY_MAYBE(CONFIG_INIT_ON_FREE_DEFAULT_ON, init_on_free);
+>  static inline bool want_init_on_free(void)
+>  {
+> -       return static_branch_unlikely(&init_on_free);
+> +       return static_branch_maybe(CONFIG_INIT_ON_FREE_DEFAULT_ON,
+> +                                  &init_on_free);
+>  }
+>
+>  extern bool _debug_pagealloc_enabled_early;
 
-Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
----
- tools/testing/selftests/Makefile              |   1 +
- tools/testing/selftests/rlimits/.gitignore    |   2 +
- tools/testing/selftests/rlimits/Makefile      |   6 +
- tools/testing/selftests/rlimits/config        |   1 +
- .../selftests/rlimits/rlimits-per-userns.c    | 161 ++++++++++++++++++
- 5 files changed, 171 insertions(+)
- create mode 100644 tools/testing/selftests/rlimits/.gitignore
- create mode 100644 tools/testing/selftests/rlimits/Makefile
- create mode 100644 tools/testing/selftests/rlimits/config
- create mode 100644 tools/testing/selftests/rlimits/rlimits-per-userns.c
-
-diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
-index 8a917cb4426a..a6d3fde4a617 100644
---- a/tools/testing/selftests/Makefile
-+++ b/tools/testing/selftests/Makefile
-@@ -46,6 +46,7 @@ TARGETS += proc
- TARGETS += pstore
- TARGETS += ptrace
- TARGETS += openat2
-+TARGETS += rlimits
- TARGETS += rseq
- TARGETS += rtc
- TARGETS += seccomp
-diff --git a/tools/testing/selftests/rlimits/.gitignore b/tools/testing/selftests/rlimits/.gitignore
-new file mode 100644
-index 000000000000..091021f255b3
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/.gitignore
-@@ -0,0 +1,2 @@
-+# SPDX-License-Identifier: GPL-2.0-only
-+rlimits-per-userns
-diff --git a/tools/testing/selftests/rlimits/Makefile b/tools/testing/selftests/rlimits/Makefile
-new file mode 100644
-index 000000000000..03aadb406212
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/Makefile
-@@ -0,0 +1,6 @@
-+# SPDX-License-Identifier: GPL-2.0-or-later
-+
-+CFLAGS += -Wall -O2 -g
-+TEST_GEN_PROGS := rlimits-per-userns
-+
-+include ../lib.mk
-diff --git a/tools/testing/selftests/rlimits/config b/tools/testing/selftests/rlimits/config
-new file mode 100644
-index 000000000000..416bd53ce982
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/config
-@@ -0,0 +1 @@
-+CONFIG_USER_NS=y
-diff --git a/tools/testing/selftests/rlimits/rlimits-per-userns.c b/tools/testing/selftests/rlimits/rlimits-per-userns.c
-new file mode 100644
-index 000000000000..26dc949e93ea
---- /dev/null
-+++ b/tools/testing/selftests/rlimits/rlimits-per-userns.c
-@@ -0,0 +1,161 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/*
-+ * Author: Alexey Gladkov <gladkov.alexey@gmail.com>
-+ */
-+#define _GNU_SOURCE
-+#include <sys/types.h>
-+#include <sys/wait.h>
-+#include <sys/time.h>
-+#include <sys/resource.h>
-+#include <sys/prctl.h>
-+#include <sys/stat.h>
-+
-+#include <unistd.h>
-+#include <stdlib.h>
-+#include <stdio.h>
-+#include <string.h>
-+#include <sched.h>
-+#include <signal.h>
-+#include <limits.h>
-+#include <fcntl.h>
-+#include <errno.h>
-+#include <err.h>
-+
-+#define NR_CHILDS 2
-+
-+static char *service_prog;
-+static uid_t user   = 60000;
-+static uid_t group  = 60000;
-+
-+static void setrlimit_nproc(rlim_t n)
-+{
-+	pid_t pid = getpid();
-+	struct rlimit limit = {
-+		.rlim_cur = n,
-+		.rlim_max = n
-+	};
-+
-+	warnx("(pid=%d): Setting RLIMIT_NPROC=%ld", pid, n);
-+
-+	if (setrlimit(RLIMIT_NPROC, &limit) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): setrlimit(RLIMIT_NPROC)", pid);
-+}
-+
-+static pid_t fork_child(void)
-+{
-+	pid_t pid = fork();
-+
-+	if (pid < 0)
-+		err(EXIT_FAILURE, "fork");
-+
-+	if (pid > 0)
-+		return pid;
-+
-+	pid = getpid();
-+
-+	warnx("(pid=%d): New process starting ...", pid);
-+
-+	if (prctl(PR_SET_PDEATHSIG, SIGKILL) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): prctl(PR_SET_PDEATHSIG)", pid);
-+
-+	signal(SIGUSR1, SIG_DFL);
-+
-+	warnx("(pid=%d): Changing to uid=%d, gid=%d", pid, user, group);
-+
-+	if (setgid(group) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): setgid(%d)", pid, group);
-+	if (setuid(user) < 0)
-+		err(EXIT_FAILURE, "(pid=%d): setuid(%d)", pid, user);
-+
-+	warnx("(pid=%d): Service running ...", pid);
-+
-+	warnx("(pid=%d): Unshare user namespace", pid);
-+	if (unshare(CLONE_NEWUSER) < 0)
-+		err(EXIT_FAILURE, "unshare(CLONE_NEWUSER)");
-+
-+	char *const argv[] = { "service", NULL };
-+	char *const envp[] = { "I_AM_SERVICE=1", NULL };
-+
-+	warnx("(pid=%d): Executing real service ...", pid);
-+
-+	execve(service_prog, argv, envp);
-+	err(EXIT_FAILURE, "(pid=%d): execve", pid);
-+}
-+
-+int main(int argc, char **argv)
-+{
-+	size_t i;
-+	pid_t child[NR_CHILDS];
-+	int wstatus[NR_CHILDS];
-+	int childs = NR_CHILDS;
-+	pid_t pid;
-+
-+	if (getenv("I_AM_SERVICE")) {
-+		pause();
-+		exit(EXIT_SUCCESS);
-+	}
-+
-+	service_prog = argv[0];
-+	pid = getpid();
-+
-+	warnx("(pid=%d) Starting testcase", pid);
-+
-+	/*
-+	 * This rlimit is not a problem for root because it can be exceeded.
-+	 */
-+	setrlimit_nproc(1);
-+
-+	for (i = 0; i < NR_CHILDS; i++) {
-+		child[i] = fork_child();
-+		wstatus[i] = 0;
-+		usleep(250000);
-+	}
-+
-+	while (1) {
-+		for (i = 0; i < NR_CHILDS; i++) {
-+			if (child[i] <= 0)
-+				continue;
-+
-+			errno = 0;
-+			pid_t ret = waitpid(child[i], &wstatus[i], WNOHANG);
-+
-+			if (!ret || (!WIFEXITED(wstatus[i]) && !WIFSIGNALED(wstatus[i])))
-+				continue;
-+
-+			if (ret < 0 && errno != ECHILD)
-+				warn("(pid=%d): waitpid(%d)", pid, child[i]);
-+
-+			child[i] *= -1;
-+			childs -= 1;
-+		}
-+
-+		if (!childs)
-+			break;
-+
-+		usleep(250000);
-+
-+		for (i = 0; i < NR_CHILDS; i++) {
-+			if (child[i] <= 0)
-+				continue;
-+			kill(child[i], SIGUSR1);
-+		}
-+	}
-+
-+	for (i = 0; i < NR_CHILDS; i++) {
-+		if (WIFEXITED(wstatus[i]))
-+			warnx("(pid=%d): pid %d exited, status=%d",
-+				pid, -child[i], WEXITSTATUS(wstatus[i]));
-+		else if (WIFSIGNALED(wstatus[i]))
-+			warnx("(pid=%d): pid %d killed by signal %d",
-+				pid, -child[i], WTERMSIG(wstatus[i]));
-+
-+		if (WIFSIGNALED(wstatus[i]) && WTERMSIG(wstatus[i]) == SIGUSR1)
-+			continue;
-+
-+		warnx("(pid=%d): Test failed", pid);
-+		exit(EXIT_FAILURE);
-+	}
-+
-+	warnx("(pid=%d): Test passed", pid);
-+	exit(EXIT_SUCCESS);
-+}
--- 
-2.29.2
-
+Should we also update slab_want_init_on_alloc() and slab_want_init_on_free()?
