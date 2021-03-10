@@ -1,21 +1,22 @@
-Return-Path: <SRS0=pxJu=IH=lists.openwall.com=kernel-hardening-return-20897-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=aT5R=II=lists.openwall.com=kernel-hardening-return-20898-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,
+	DKIM_ADSP_CUSTOM_MED,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B071DC433DB
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:44:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DEBF7C433E0
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Mar 2021 12:02:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9391864FD1
-	for <kernel-hardening@archiver.kernel.org>; Tue,  9 Mar 2021 21:44:41 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9391864FD1
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20897-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16032 invoked by uid 550); 9 Mar 2021 21:43:29 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9B71164FD7
+	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Mar 2021 12:02:08 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9B71164FD7
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20898-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 7305 invoked by uid 550); 10 Mar 2021 12:01:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,374 +24,175 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15927 invoked from network); 9 Mar 2021 21:43:26 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=8RR/gKm83SIV1ashXcsFL/lRx7PJhODu8ZSMn6SRrJQ=;
-        b=Aa3aRs4OJPwblM5njJZhnEgcytwXidQByjYa9Ay6CSQY4T61mreRXkEIfUuJk4kW7V
-         +SLSgbpCymc8I1YZCygo9ETUz9nK6SsozbQgbB/9c4IouQIbXj4TNJksDzJKw3cuGJl/
-         KrVvzIjE9iyZn7H8MJwRXZuySati6yJN0RMhI=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=8RR/gKm83SIV1ashXcsFL/lRx7PJhODu8ZSMn6SRrJQ=;
-        b=kmt/QMmwbJxr1JyBg1t207zs1jcFioLz+ivAGUrNEa9bhq8rhPIRXSRZ8QkwrMyXN0
-         OUSI+9OQFUIhI6jVEqaqamzCi1g5M0dwr7M19q73IlRk72g8otAJQi+xJvuog8WvCIC5
-         mMowzm1NO/9JnSpO0+tejR1hQoxgCSy1jxEx1uqP8z1FVfL6URUKAj4c/809d5pPbxTf
-         N8rKQu+mF4DIyARKs+H9zEuJauEHN7DWaepp3Wj44yfG1EDDC8Iam9EL5p+TKzZyYurU
-         0L0EcEGceJCL+6t6Z4Dcw2B0KebVURhhgoUTxFWjWoZHyELWaNK9mcQOhLq2LgwMJEZd
-         nfaw==
-X-Gm-Message-State: AOAM532vynIJr8STpdPOmKyDCQpcoU1QBvU+K70uwMPvrNwUv2o4HcvE
-	7Ofz7dWAzn9omELH+Jp1f+Wh2w==
-X-Google-Smtp-Source: ABdhPJybP/9TJUD7D2FkuRFBUCYyX6YkmGRAq9gsWFwEjp+OFZfSYratNXF5gBKSQlHH8qnkVl7yvA==
-X-Received: by 2002:a17:90a:c249:: with SMTP id d9mr6828303pjx.104.1615326194695;
-        Tue, 09 Mar 2021 13:43:14 -0800 (PST)
-From: Kees Cook <keescook@chromium.org>
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Kees Cook <keescook@chromium.org>,
-	Elena Reshetova <elena.reshetova@intel.com>,
-	x86@kernel.org,
-	Andy Lutomirski <luto@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Will Deacon <will@kernel.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Alexander Potapenko <glider@google.com>,
-	Alexander Popov <alex.popov@linux.com>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Jann Horn <jannh@google.com>,
-	kernel-hardening@lists.openwall.com,
-	linux-hardening@vger.kernel.org,
-	linux-arm-kernel@lists.infradead.org,
-	linux-mm@kvack.org,
-	linux-kernel@vger.kernel.org,
-	Vlastimil Babka <vbabka@suse.cz>,
-	David Hildenbrand <david@redhat.com>,
-	Mike Rapoport <rppt@linux.ibm.com>,
+Received: (qmail 7277 invoked from network); 10 Mar 2021 12:01:53 -0000
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: LKML <linux-kernel@vger.kernel.org>,
+	io-uring@vger.kernel.org,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux Containers <containers@lists.linux-foundation.org>,
+	linux-mm@kvack.org
+Cc: Alexey Gladkov <legion@kernel.org>,
 	Andrew Morton <akpm@linux-foundation.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Randy Dunlap <rdunlap@infradead.org>
-Subject: [PATCH v5 4/7] stack: Optionally randomize kernel stack offset each syscall
-Date: Tue,  9 Mar 2021 13:42:58 -0800
-Message-Id: <20210309214301.678739-5-keescook@chromium.org>
-X-Mailer: git-send-email 2.25.1
-In-Reply-To: <20210309214301.678739-1-keescook@chromium.org>
-References: <20210309214301.678739-1-keescook@chromium.org>
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	"Eric W . Biederman" <ebiederm@xmission.com>,
+	Jann Horn <jannh@google.com>,
+	Jens Axboe <axboe@kernel.dk>,
+	Kees Cook <keescook@chromium.org>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Oleg Nesterov <oleg@redhat.com>
+Subject: [PATCH v8 0/8] Count rlimits in each user namespace
+Date: Wed, 10 Mar 2021 13:01:25 +0100
+Message-Id: <cover.1615372955.git.gladkov.alexey@gmail.com>
+X-Mailer: git-send-email 2.29.2
 MIME-Version: 1.0
-X-Patch-Hashes: v=1; h=sha256; g=4a65f719103e0800c3c67a72875df15eff769bc7; i=R0fcIKmEUh8zot7Dpk8JcJdIeXVfXkVsg5oQI7Df8iY=; m=MAP5vDRMDqR2Ss+UnPKNUGFW/8cuHmj3fGsgmrr5dWA=; p=FEZkCJfgrReOcdjubtlCDCLRXPUj5jJvx3leLrrKn8I=
-X-Patch-Sig: m=pgp; i=keescook@chromium.org; s=0x0x8972F4DFDC6DC026; b=iQIzBAABCgAdFiEEpcP2jyKd1g9yPm4TiXL039xtwCYFAmBH6+QACgkQiXL039xtwCYt/A//ZpW xIrPYTNqy9sJdKRbFSzhEskkhjw9aomRWQn/jYttnfZ4rtdHNQHHpeclAZFgY22YwhHqtQGw+n5hO XysR3g3QUyJDpHmdk2cOC7f9hQGr8nZmLutiw6eJshqxWlcLeK1kkXdvy09dASoExLEaO7WGVI2fV AuEg1C/N/DQSBcPG4F3RnjLvrhO4mKRAAMh5vQI16POw2F4DMtdDt6D4i59WyMf9b/18S5XuJacEz g0KJXCxHkLhm0t749F4I9OLhlWMVrev6z84lLnIEvrtGWIFDph68bz1LcwARlpBZQPmw2hQZWNpNj qyAobPazh6XAZLnWFjnhf6HtzR4I9a6efBEGig5QgQLFAoEavmWP6frgRESxXVZCTuaxPWqFU8UHc LS1mdbmBh+VepFNQ3ILtuZfZ4n0Kb9ri0jmjsxtOHU8vf5bphCXY7kstoSf0CjCvnn12SfPYBFYxU FgCatXZ1IfFzOpFD5jmqswppdv4BZkm8Lpgd7j1HhqMx785XkbkjHxjN9+Fe6VfjDiUtMa8TduRed R/TSmTcMzP6YBxXs+f/2smfORgho7h6a9mn6WsJ6n9yYPWATd3duVP+Hotd7wghl3DNlfcKbop1h3 NBc6ALYGrdHlh5oQWnmmmhR6kTp+a7nZJrAsgkEy1JY/bSQqZMlPcRUWLVydNK8g=
 Content-Transfer-Encoding: 8bit
+X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.4 (raptor.unsafe.ru [0.0.0.0]); Wed, 10 Mar 2021 12:01:42 +0000 (UTC)
 
-This provides the ability for architectures to enable kernel stack base
-address offset randomization. This feature is controlled by the boot
-param "randomize_kstack_offset=on/off", with its default value set by
-CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT.
+Preface
+-------
+These patches are for binding the rlimit counters to a user in user namespace.
+This patch set can be applied on top of:
 
-This feature is based on the original idea from the last public release
-of PaX's RANDKSTACK feature: https://pax.grsecurity.net/docs/randkstack.txt
-All the credit for the original idea goes to the PaX team. Note that
-the design and implementation of this upstream randomize_kstack_offset
-feature differs greatly from the RANDKSTACK feature (see below).
+git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git v5.11
 
-Reasoning for the feature:
+Problem
+-------
+The RLIMIT_NPROC, RLIMIT_MEMLOCK, RLIMIT_SIGPENDING, RLIMIT_MSGQUEUE rlimits
+implementation places the counters in user_struct [1]. These limits are global
+between processes and persists for the lifetime of the process, even if
+processes are in different user namespaces.
 
-This feature aims to make harder the various stack-based attacks that
-rely on deterministic stack structure. We have had many such attacks in
-past (just to name few):
+To illustrate the impact of rlimits, let's say there is a program that does not
+fork. Some service-A wants to run this program as user X in multiple containers.
+Since the program never fork the service wants to set RLIMIT_NPROC=1.
 
-https://jon.oberheide.org/files/infiltrate12-thestackisback.pdf
-https://jon.oberheide.org/files/stackjacking-infiltrate11.pdf
-https://googleprojectzero.blogspot.com/2016/06/exploiting-recursion-in-linux-kernel_20.html
+service-A
+ \- program (uid=1000, container1, rlimit_nproc=1)
+ \- program (uid=1000, container2, rlimit_nproc=1)
 
-As Linux kernel stack protections have been constantly improving
-(vmap-based stack allocation with guard pages, removal of thread_info,
-STACKLEAK), attackers have had to find new ways for their exploits
-to work. They have done so, continuing to rely on the kernel's stack
-determinism, in situations where VMAP_STACK and THREAD_INFO_IN_TASK_STRUCT
-were not relevant. For example, the following recent attacks would have
-been hampered if the stack offset was non-deterministic between syscalls:
+The service-A sets RLIMIT_NPROC=1 and runs the program in container1. When the
+service-A tries to run a program with RLIMIT_NPROC=1 in container2 it fails
+since user X already has one running process.
 
-https://repositorio-aberto.up.pt/bitstream/10216/125357/2/374717.pdf
-(page 70: targeting the pt_regs copy with linear stack overflow)
+The problem is not that the limit from container1 affects container2. The
+problem is that limit is verified against the global counter that reflects
+the number of processes in all containers.
 
-https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
-(leaked stack address from one syscall as a target during next syscall)
+This problem can be worked around by using different users for each container
+but in this case we face a different problem of uid mapping when transferring
+files from one container to another.
 
-The main idea is that since the stack offset is randomized on each system
-call, it is harder for an attack to reliably land in any particular place
-on the thread stack, even with address exposures, as the stack base will
-change on the next syscall. Also, since randomization is performed after
-placing pt_regs, the ptrace-based approach[1] to discover the randomized
-offset during a long-running syscall should not be possible.
+Eric W. Biederman mentioned this issue [2][3].
 
-Design description:
+Introduced changes
+------------------
+To address the problem, we bind rlimit counters to user namespace. Each counter
+reflects the number of processes in a given uid in a given user namespace. The
+result is a tree of rlimit counters with the biggest value at the root (aka
+init_user_ns). The limit is considered exceeded if it's exceeded up in the tree.
 
-During most of the kernel's execution, it runs on the "thread stack",
-which is pretty deterministic in its structure: it is fixed in size,
-and on every entry from userspace to kernel on a syscall the thread
-stack starts construction from an address fetched from the per-cpu
-cpu_current_top_of_stack variable. The first element to be pushed to the
-thread stack is the pt_regs struct that stores all required CPU registers
-and syscall parameters. Finally the specific syscall function is called,
-with the stack being used as the kernel executes the resulting request.
+[1]: https://lore.kernel.org/containers/87imd2incs.fsf@x220.int.ebiederm.org/
+[2]: https://lists.linuxfoundation.org/pipermail/containers/2020-August/042096.html
+[3]: https://lists.linuxfoundation.org/pipermail/containers/2020-October/042524.html
 
-The goal of randomize_kstack_offset feature is to add a random offset
-after the pt_regs has been pushed to the stack and before the rest of the
-thread stack is used during the syscall processing, and to change it every
-time a process issues a syscall. The source of randomness is currently
-architecture-defined (but x86 is using the low byte of rdtsc()). Future
-improvements for different entropy sources is possible, but out of scope
-for this patch. As suggested by Andy Lutomirski, the offset is added
-using alloca() and an empty asm() statement with an output constraint,
-since it avoid changes to assembly syscall entry code, to the unwinder,
-and provides correct stack alignment as defined by the compiler.
+Changelog
+---------
+v8:
+* Used atomic_t for ucounts reference counting. Also added counter overflow
+  check (thanks to Linus Torvalds for the idea).
+* Fixed other issues found by lkp-tests project in the patch that Reimplements
+  RLIMIT_MEMLOCK on top of ucounts.
 
-In order to make this available by default with zero performance impact
-for those that don't want it, it is boot-time selectable with static
-branches. This way, if the overhead is not wanted, it can just be
-left turned off with no performance impact.
+v7:
+* Fixed issues found by lkp-tests project in the patch that Reimplements
+  RLIMIT_MEMLOCK on top of ucounts.
 
-The generated assembly for x86_64 with GCC looks like this:
+v6:
+* Fixed issues found by lkp-tests project.
+* Rebased onto v5.11.
 
-...
-ffffffff81003977: 65 8b 05 02 ea 00 7f  mov %gs:0x7f00ea02(%rip),%eax
-					    # 12380 <kstack_offset>
-ffffffff8100397e: 25 ff 03 00 00        and $0x3ff,%eax
-ffffffff81003983: 48 83 c0 0f           add $0xf,%rax
-ffffffff81003987: 25 f8 07 00 00        and $0x7f8,%eax
-ffffffff8100398c: 48 29 c4              sub %rax,%rsp
-ffffffff8100398f: 48 8d 44 24 0f        lea 0xf(%rsp),%rax
-ffffffff81003994: 48 83 e0 f0           and $0xfffffffffffffff0,%rax
-...
+v5:
+* Split the first commit into two commits: change ucounts.count type to atomic_long_t
+  and add ucounts to cred. These commits were merged by mistake during the rebase.
+* The __get_ucounts() renamed to alloc_ucounts().
+* The cred.ucounts update has been moved from commit_creds() as it did not allow
+  to handle errors.
+* Added error handling of set_cred_ucounts().
 
-As a result of the above stack alignment, this patch introduces about
-5 bits of randomness after pt_regs is spilled to the thread stack on
-x86_64, and 6 bits on x86_32 (since its has 1 fewer bit required for
-stack alignment). The amount of entropy could be adjusted based on how
-much of the stack space we wish to trade for security.
+v4:
+* Reverted the type change of ucounts.count to refcount_t.
+* Fixed typo in the kernel/cred.c
 
-My measure of syscall performance overhead (on x86_64):
+v3:
+* Added get_ucounts() function to increase the reference count. The existing
+  get_counts() function renamed to __get_ucounts().
+* The type of ucounts.count changed from atomic_t to refcount_t.
+* Dropped 'const' from set_cred_ucounts() arguments.
+* Fixed a bug with freeing the cred structure after calling cred_alloc_blank().
+* Commit messages have been updated.
+* Added selftest.
 
-lmbench: /usr/lib/lmbench/bin/x86_64-linux-gnu/lat_syscall -N 10000 null
-    randomize_kstack_offset=y	Simple syscall: 0.7082 microseconds
-    randomize_kstack_offset=n	Simple syscall: 0.7016 microseconds
+v2:
+* RLIMIT_MEMLOCK, RLIMIT_SIGPENDING and RLIMIT_MSGQUEUE are migrated to ucounts.
+* Added ucounts for pair uid and user namespace into cred.
+* Added the ability to increase ucount by more than 1.
 
-So, roughly 0.9% overhead growth for a no-op syscall, which is very
-manageable. And for people that don't want this, it's off by default.
+v1:
+* After discussion with Eric W. Biederman, I increased the size of ucounts to
+  atomic_long_t.
+* Added ucount_max to avoid the fork bomb.
 
-There are two gotchas with using the alloca() trick. First,
-compilers that have Stack Clash protection (-fstack-clash-protection)
-enabled by default (e.g. Ubuntu[3]) add pagesize stack probes to
-any dynamic stack allocations. While the randomization offset is
-always less than a page, the resulting assembly would still contain
-(unreachable!) probing routines, bloating the resulting assembly. To
-avoid this, -fno-stack-clash-protection is unconditionally added to
-the kernel Makefile since this is the only dynamic stack allocation in
-the kernel (now that VLAs have been removed) and it is provably safe
-from Stack Clash style attacks.
+--
 
-The second gotcha with alloca() is a negative interaction with
--fstack-protector*, in that it sees the alloca() as an array allocation,
-which triggers the unconditional addition of the stack canary function
-pre/post-amble which slows down syscalls regardless of the static
-branch. In order to avoid adding this unneeded check and its associated
-performance impact, architectures need to carefully remove uses of
--fstack-protector-strong (or -fstack-protector) in the compilation units
-that use the add_random_kstack() macro and to audit the resulting stack
-mitigation coverage (to make sure no desired coverage disappears). No
-change is visible for this on x86 because the stack protector is already
-unconditionally disabled for the compilation unit, but the change is
-required on arm64. There is, unfortunately, no attribute that can be
-used to disable stack protector for specific functions.
+Alexey Gladkov (8):
+  Increase size of ucounts to atomic_long_t
+  Add a reference to ucounts for each cred
+  Use atomic_t for ucounts reference counting
+  Reimplement RLIMIT_NPROC on top of ucounts
+  Reimplement RLIMIT_MSGQUEUE on top of ucounts
+  Reimplement RLIMIT_SIGPENDING on top of ucounts
+  Reimplement RLIMIT_MEMLOCK on top of ucounts
+  kselftests: Add test to check for rlimit changes in different user
+    namespaces
 
-Comparison to PaX RANDKSTACK feature:
+ fs/exec.c                                     |   6 +-
+ fs/hugetlbfs/inode.c                          |  16 +-
+ fs/io-wq.c                                    |  22 ++-
+ fs/io-wq.h                                    |   2 +-
+ fs/io_uring.c                                 |   2 +-
+ fs/proc/array.c                               |   2 +-
+ include/linux/cred.h                          |   4 +
+ include/linux/hugetlb.h                       |   4 +-
+ include/linux/mm.h                            |   4 +-
+ include/linux/sched/user.h                    |   7 -
+ include/linux/shmem_fs.h                      |   2 +-
+ include/linux/signal_types.h                  |   4 +-
+ include/linux/user_namespace.h                |  26 ++-
+ ipc/mqueue.c                                  |  41 ++---
+ ipc/shm.c                                     |  26 +--
+ kernel/cred.c                                 |  50 +++++-
+ kernel/exit.c                                 |   2 +-
+ kernel/fork.c                                 |  18 +-
+ kernel/signal.c                               |  57 +++----
+ kernel/sys.c                                  |  14 +-
+ kernel/ucount.c                               | 140 ++++++++++++---
+ kernel/user.c                                 |   3 -
+ kernel/user_namespace.c                       |   9 +-
+ mm/memfd.c                                    |   4 +-
+ mm/mlock.c                                    |  23 ++-
+ mm/mmap.c                                     |   4 +-
+ mm/shmem.c                                    |   8 +-
+ tools/testing/selftests/Makefile              |   1 +
+ tools/testing/selftests/rlimits/.gitignore    |   2 +
+ tools/testing/selftests/rlimits/Makefile      |   6 +
+ tools/testing/selftests/rlimits/config        |   1 +
+ .../selftests/rlimits/rlimits-per-userns.c    | 161 ++++++++++++++++++
+ 32 files changed, 512 insertions(+), 159 deletions(-)
+ create mode 100644 tools/testing/selftests/rlimits/.gitignore
+ create mode 100644 tools/testing/selftests/rlimits/Makefile
+ create mode 100644 tools/testing/selftests/rlimits/config
+ create mode 100644 tools/testing/selftests/rlimits/rlimits-per-userns.c
 
-The RANDKSTACK feature randomizes the location of the stack start
-(cpu_current_top_of_stack), i.e. including the location of pt_regs
-structure itself on the stack. Initially this patch followed the same
-approach, but during the recent discussions[2], it has been determined
-to be of a little value since, if ptrace functionality is available for
-an attacker, they can use PTRACE_PEEKUSR/PTRACE_POKEUSR to read/write
-different offsets in the pt_regs struct, observe the cache behavior of
-the pt_regs accesses, and figure out the random stack offset. Another
-difference is that the random offset is stored in a per-cpu variable,
-rather than having it be per-thread. As a result, these implementations
-differ a fair bit in their implementation details and results, though
-obviously the intent is similar.
-
-[1] https://lore.kernel.org/kernel-hardening/2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com/
-[2] https://lore.kernel.org/kernel-hardening/20190329081358.30497-1-elena.reshetova@intel.com/
-[3] https://lists.ubuntu.com/archives/ubuntu-devel/2019-June/040741.html
-
-Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
-Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
-Link: https://lore.kernel.org/r/20190415060918.3766-1-elena.reshetova@intel.com
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- .../admin-guide/kernel-parameters.txt         | 11 +++++
- Makefile                                      |  4 ++
- arch/Kconfig                                  | 23 ++++++++++
- include/linux/randomize_kstack.h              | 42 +++++++++++++++++++
- init/main.c                                   | 23 ++++++++++
- 5 files changed, 103 insertions(+)
- create mode 100644 include/linux/randomize_kstack.h
-
-diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index 04545725f187..bee8644a192e 100644
---- a/Documentation/admin-guide/kernel-parameters.txt
-+++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -4061,6 +4061,17 @@
- 			fully seed the kernel's CRNG. Default is controlled
- 			by CONFIG_RANDOM_TRUST_CPU.
- 
-+	randomize_kstack_offset=
-+			[KNL] Enable or disable kernel stack offset
-+			randomization, which provides roughly 5 bits of
-+			entropy, frustrating memory corruption attacks
-+			that depend on stack address determinism or
-+			cross-syscall address exposures. This is only
-+			available on architectures that have defined
-+			CONFIG_HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET.
-+			Format: <bool>  (1/Y/y=enable, 0/N/n=disable)
-+			Default is CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT.
-+
- 	ras=option[,option,...]	[KNL] RAS-specific options
- 
- 		cec_disable	[X86]
-diff --git a/Makefile b/Makefile
-index 31dcdb3d61fa..8a959a264588 100644
---- a/Makefile
-+++ b/Makefile
-@@ -811,6 +811,10 @@ KBUILD_CFLAGS	+= -ftrivial-auto-var-init=zero
- KBUILD_CFLAGS	+= -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
- endif
- 
-+# While VLAs have been removed, GCC produces unreachable stack probes
-+# for the randomize_kstack_offset feature. Disable it for all compilers.
-+KBUILD_CFLAGS	+= $(call cc-option, -fno-stack-clash-protection)
-+
- DEBUG_CFLAGS	:=
- 
- # Workaround for GCC versions < 5.0
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 2bb30673d8e6..4fe6b047fcbc 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -1055,6 +1055,29 @@ config VMAP_STACK
- 	  backing virtual mappings with real shadow memory, and KASAN_VMALLOC
- 	  must be enabled.
- 
-+config HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
-+	def_bool n
-+	help
-+	  An arch should select this symbol if it can support kernel stack
-+	  offset randomization with calls to add_random_kstack_offset()
-+	  during syscall entry and choose_random_kstack_offset() during
-+	  syscall exit. Careful removal of -fstack-protector-strong and
-+	  -fstack-protector should also be applied to the entry code and
-+	  closely examined, as the artificial stack bump looks like an array
-+	  to the compiler, so it will attempt to add canary checks regardless
-+	  of the static branch state.
-+
-+config RANDOMIZE_KSTACK_OFFSET_DEFAULT
-+	bool "Randomize kernel stack offset on syscall entry"
-+	depends on HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
-+	help
-+	  The kernel stack offset can be randomized (after pt_regs) by
-+	  roughly 5 bits of entropy, frustrating memory corruption
-+	  attacks that depend on stack address determinism or
-+	  cross-syscall address exposures. This feature is controlled
-+	  by kernel boot param "randomize_kstack_offset=on/off", and this
-+	  config chooses the default boot state.
-+
- config ARCH_OPTIONAL_KERNEL_RWX
- 	def_bool n
- 
-diff --git a/include/linux/randomize_kstack.h b/include/linux/randomize_kstack.h
-new file mode 100644
-index 000000000000..c4701a39c21f
---- /dev/null
-+++ b/include/linux/randomize_kstack.h
-@@ -0,0 +1,42 @@
-+/* SPDX-License-Identifier: GPL-2.0-only */
-+#ifndef _LINUX_RANDOMIZE_KSTACK_H
-+#define _LINUX_RANDOMIZE_KSTACK_H
-+
-+#include <linux/kernel.h>
-+#include <linux/jump_label.h>
-+#include <linux/percpu-defs.h>
-+
-+DECLARE_STATIC_KEY_MAYBE(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,
-+			 randomize_kstack_offset);
-+DECLARE_PER_CPU(u32, kstack_offset);
-+
-+/*
-+ * Do not use this anywhere else in the kernel. This is used here because
-+ * it provides an arch-agnostic way to grow the stack with correct
-+ * alignment. Also, since this use is being explicitly masked to a max of
-+ * 10 bits, stack-clash style attacks are unlikely. For more details see
-+ * "VLAs" in Documentation/process/deprecated.rst
-+ * The asm statement is designed to convince the compiler to keep the
-+ * allocation around even after "ptr" goes out of scope.
-+ */
-+void *__builtin_alloca(size_t size);
-+
-+#define add_random_kstack_offset() do {					\
-+	if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,	\
-+				&randomize_kstack_offset)) {		\
-+		u32 offset = this_cpu_read(kstack_offset);		\
-+		u8 *ptr = __builtin_alloca(offset & 0x3FF);		\
-+		asm volatile("" : "=m"(*ptr) :: "memory");		\
-+	}								\
-+} while (0)
-+
-+#define choose_random_kstack_offset(rand) do {				\
-+	if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,	\
-+				&randomize_kstack_offset)) {		\
-+		u32 offset = this_cpu_read(kstack_offset);		\
-+		offset ^= (rand);					\
-+		this_cpu_write(kstack_offset, offset);			\
-+	}								\
-+} while (0)
-+
-+#endif
-diff --git a/init/main.c b/init/main.c
-index 53b278845b88..f498aac26e8c 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -844,6 +844,29 @@ static void __init mm_init(void)
- 	pti_init();
- }
- 
-+#ifdef CONFIG_HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
-+DEFINE_STATIC_KEY_MAYBE_RO(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,
-+			   randomize_kstack_offset);
-+DEFINE_PER_CPU(u32, kstack_offset);
-+
-+static int __init early_randomize_kstack_offset(char *buf)
-+{
-+	int ret;
-+	bool bool_result;
-+
-+	ret = kstrtobool(buf, &bool_result);
-+	if (ret)
-+		return ret;
-+
-+	if (bool_result)
-+		static_branch_enable(&randomize_kstack_offset);
-+	else
-+		static_branch_disable(&randomize_kstack_offset);
-+	return 0;
-+}
-+early_param("randomize_kstack_offset", early_randomize_kstack_offset);
-+#endif
-+
- void __init __weak arch_call_rest_init(void)
- {
- 	rest_init();
 -- 
-2.25.1
+2.29.2
 
