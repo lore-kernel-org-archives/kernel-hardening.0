@@ -1,21 +1,21 @@
-Return-Path: <SRS0=jWyf=IJ=lists.openwall.com=kernel-hardening-return-20926-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=TAgf=IJ=lists.openwall.com=kernel-hardening-return-20927-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-16.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0A971C433E0
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Mar 2021 10:53:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A5ADFC433E0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Mar 2021 18:23:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DF69D64EFD
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Mar 2021 10:53:25 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DF69D64EFD
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20926-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3759 invoked by uid 550); 11 Mar 2021 10:53:17 -0000
+	by mail.kernel.org (Postfix) with SMTP id 78D0164F47
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Mar 2021 18:23:39 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 78D0164F47
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20927-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20223 invoked by uid 550); 11 Mar 2021 18:23:30 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,159 +23,105 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3739 invoked from network); 11 Mar 2021 10:53:17 -0000
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-To: Al Viro <viro@zeniv.linux.org.uk>,
-	James Morris <jmorris@namei.org>,
-	Serge Hallyn <serge@hallyn.com>
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christoph Hellwig <hch@lst.de>,
-	David Howells <dhowells@redhat.com>,
-	Dominik Brodowski <linux@dominikbrodowski.net>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	John Johansen <john.johansen@canonical.com>,
-	Kees Cook <keescook@chromium.org>,
-	Kentaro Takeda <takedakn@nttdata.co.jp>,
-	Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
-	kernel-hardening@lists.openwall.com,
-	linux-fsdevel@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
+Received: (qmail 20188 invoked from network); 11 Mar 2021 18:23:30 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1615486987;
+	bh=SpnCU8DF8fceQcBGatEhurYgUxXjyn+Yh3rMYnZtpBw=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=EJGVOIR575wXcr5c6RRSlrapvOBsan8L+f6g86Oe6pPunBUxgE4Uxr3yKQsYvuF55
+	 Fk+OhstRBVDUiL5BP9azSbnTEAJAaL2YDxrGXgYab5j1zM1tCwPHuho67fkGJFNRny
+	 I3CMBI7vURJKEGu4DCemsRLl20UpoLgYi+fcWYn0=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Thu, 11 Mar 2021 19:22:52 +0100
+From: John Wood <john.wood@gmx.com>
+To: Andi Kleen <ak@linux.intel.com>
+Cc: John Wood <john.wood@gmx.com>, Kees Cook <keescook@chromium.org>,
+	Jann Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>,
+	Jonathan Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>,
+	Shuah Khan <shuah@kernel.org>, "Serge E. Hallyn" <serge@hallyn.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
-Subject: [PATCH v3 1/1] fs: Allow no_new_privs tasks to call chroot(2)
-Date: Thu, 11 Mar 2021 11:52:42 +0100
-Message-Id: <20210311105242.874506-2-mic@digikod.net>
-X-Mailer: git-send-email 2.30.2
-In-Reply-To: <20210311105242.874506-1-mic@digikod.net>
-References: <20210311105242.874506-1-mic@digikod.net>
+	linux-kselftest@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH v5 7/8] Documentation: Add documentation for the Brute LSM
+Message-ID: <20210311182252.GA3349@ubuntu>
+References: <20210227153013.6747-1-john.wood@gmx.com>
+ <20210227153013.6747-8-john.wood@gmx.com>
+ <878s78dnrm.fsf@linux.intel.com>
+ <20210302183032.GA3049@ubuntu>
+ <20210307151920.GR472138@tassilo.jf.intel.com>
+ <20210307164520.GA16296@ubuntu>
+ <20210307172540.GS472138@tassilo.jf.intel.com>
+ <20210307180541.GA17108@ubuntu>
+ <20210307224927.GT472138@tassilo.jf.intel.com>
+ <20210309184054.GA3058@ubuntu>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20210309184054.GA3058@ubuntu>
+X-Provags-ID: V03:K1:G8f/cmLbzHC0nvOAJdH8LHg1kBQt5faDFzmpqz5385toUzzE7T/
+ aBAqokU4PkqDSQJV80GvLHFPwvw5izfUOdKZo0dRxlGYKGeLzprDF4za3AuKGiSftYOsWZA
+ miE6mjre9ithdQuNaeNBsIShWd524U0NwGLtlI/0nLPgFY3Gnem7CNFokvucxf3g7qGtR3L
+ dYo6zcVtd9Nhoy9g6b9tA==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:IuvjmF4wvE8=:k+Np5YEJ/gTxWhv5RAx2aR
+ Naxj9IijaZ8D19fjm+4yscaHdBgu7pWkS0syoMyl5PgbGlKIHME1MWaLDyHw+nTW5ev4o28gM
+ n82pmgZHDVYWbpfGjmWnQ31+Mej/j868cvItrSX00RjPyaCpDcRbzJ3K+rOcjtQnGlGcrA/qs
+ HF1X+Yo9P7S4UsSvO9p9CKACZVZLqdzSrXJ5mDZ+gKxLu9IzN4bd8NvVoAOSz6Bo/ZDfav5pP
+ 7KJLAH0fA9FqQF4lU+r4LEnMU+3cJL01dswzOfE4LOOlZitGV830gVLIzKZ4zrw6Sm/Sb11Dz
+ 5p/AJbOWpeiuIFw9aByBtBhIQq/pTCxQNaj3Ex9eP2RlUCQXAe4Q6BwljSxyTcrRsMKgijXoL
+ Qa634MLCQLMjBuuzoLgiZlHRN+nqmzw6aNw32B+CS1GIXD8yOye3v4Bu9azwDeM4uwY0kn2Mo
+ dOVF7vKPAc7rU/tVFds+vkBP5bxemL7pU/YVEHZgxB1GXXR1IDfYL6ku7kpNzlnc+Bw0f7qiD
+ 0BELxF7+QUvGlepuAFeUO5AO257g4cTKcTK1n6FmQ6rg4TQkMwMtt9GfZWWKfrSLng6h4ICQ9
+ TiSeezx3n/+kze3B9lSg4zQv2SumZB2qOIEn649sZUMFJXfcSRVL3cb2mYpYv7oMjde6z5a0Z
+ 42Y+SuykritmMsZhHreEx0fSuRr54R00t2sQd7kC9YblMm2Yy2mKLLFRvAQRWl0nKeMlsfJcu
+ 9HkF6CgCtD68r1MU2s0bK+FV3cWvICtDu/6hMHkS0DmsWgo7ZX/zsmhtfG/duSyluefLHUGAM
+ HwJwt1O/E8L0NihOxV8aNOfKusr6CnHZ2tfnvoJu/lHuuVuMBVqD8m37xgUI7jWbDe1td8OQC
+ DILVp6PlvjR8m/sRveeg==
+Content-Transfer-Encoding: quoted-printable
 
-From: Mickaël Salaün <mic@linux.microsoft.com>
+Hi,
 
-Being able to easily change root directories enable to ease some
-development workflow and can be used as a tool to strengthen
-unprivileged security sandboxes.  chroot(2) is not an access-control
-mechanism per se, but it can be used to limit the absolute view of the
-filesystem, and then limit ways to access data and kernel interfaces
-(e.g. /proc, /sys, /dev, etc.).
+On Tue, Mar 09, 2021 at 07:40:54PM +0100, John Wood wrote:
+> On Sun, Mar 07, 2021 at 02:49:27PM -0800, Andi Kleen wrote:
+>
+> > So I think it needs more work on the user space side for most usages.
+>
+> Anyway, in the case that the supervisor is init then the system will pan=
+ic. So,
+> I think that we can add a prctl to avoid kill the parent task (the task =
+that
+> exec) and only block new fork system calls from this task. When this boo=
+lean is
+> set, any parent task that is involved in the attack will not be killed. =
+In this
+> case, any following forks will be blocked. This way the system will not =
+crash.
 
-Users may not wish to expose namespace complexity to potentially
-malicious processes, or limit their use because of limited resources.
-The chroot feature is much more simple (and limited) than the mount
-namespace, but can still be useful.  As for containers, users of
-chroot(2) should take care of file descriptors or data accessible by
-other means (e.g. current working directory, leaked FDs, passed FDs,
-devices, mount points, etc.).  There is a lot of literature that discuss
-the limitations of chroot, and users of this feature should be aware of
-the multiple ways to bypass it.  Using chroot(2) for security purposes
-can make sense if it is combined with other features (e.g. dedicated
-user, seccomp, LSM access-controls, etc.).
+Another proposal that I think suits better:
 
-One could argue that chroot(2) is useless without a properly populated
-root hierarchy (i.e. without /dev and /proc).  However, there are
-multiple use cases that don't require the chrooting process to create
-file hierarchies with special files nor mount points, e.g.:
-* A process sandboxing itself, once all its libraries are loaded, may
-  not need files other than regular files, or even no file at all.
-* Some pre-populated root hierarchies could be used to chroot into,
-  provided for instance by development environments or tailored
-  distributions.
-* Processes executed in a chroot may not require access to these special
-  files (e.g. with minimal runtimes, or by emulating some special files
-  with a LD_PRELOADed library or seccomp).
+When a brute force attack is detected through the fork or execve system ca=
+ll,
+all the tasks involved in the attack will be killed with the exception of =
+the
+init task (task with pid equal to zero). Now, and only if the init task is
+involved in the attack, block the fork system call from the init process d=
+uring
+a user defined time (using a sysctl attribute). This way the brute force a=
+ttack
+is mitigated and the system does not panic.
 
-Allowing a task to change its own root directory is not a threat to the
-system if we can prevent confused deputy attacks, which could be
-performed through execution of SUID-like binaries.  This can be
-prevented if the calling task sets PR_SET_NO_NEW_PRIVS on itself with
-prctl(2).  To only affect this task, its filesystem information must not
-be shared with other tasks, which can be achieved by not passing
-CLONE_FS to clone(2).  A similar no_new_privs check is already used by
-seccomp to avoid the same kind of security issues.  Furthermore, because
-of its security use and to avoid giving a new way for attackers to get
-out of a chroot (e.g. using /proc/<pid>/root, or chroot/chdir), an
-unprivileged chroot is only allowed if the calling process is not
-already chrooted.  This limitation is the same as for creating user
-namespaces.
+I think that this is a better solution than the other one since this is a =
+per
+system solution. And I believe that with a default value for the blocking =
+time
+(sysctl attribute) could be useful in a generic way (for most usages).
 
-This change may not impact systems relying on other permission models
-than POSIX capabilities (e.g. Tomoyo).  Being able to use chroot(2) on
-such systems may require to update their security policies.
+The proposal using prctl will need more actions from userspace and it is n=
+ot a
+generic one due to it is a per process solution.
 
-Only the chroot system call is relaxed with this no_new_privs check; the
-init_chroot() helper doesn't require such change.
+> What do you think?
 
-Allowing unprivileged users to use chroot(2) is one of the initial
-objectives of no_new_privs:
-https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html
-This patch is a follow-up of a previous one sent by Andy Lutomirski:
-https://lore.kernel.org/lkml/0e2f0f54e19bff53a3739ecfddb4ffa9a6dbde4d.1327858005.git.luto@amacapital.net/
-
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Christian Brauner <christian.brauner@ubuntu.com>
-Cc: Christoph Hellwig <hch@lst.de>
-Cc: David Howells <dhowells@redhat.com>
-Cc: Dominik Brodowski <linux@dominikbrodowski.net>
-Cc: Eric W. Biederman <ebiederm@xmission.com>
-Cc: James Morris <jmorris@namei.org>
-Cc: John Johansen <john.johansen@canonical.com>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Kentaro Takeda <takedakn@nttdata.co.jp>
-Cc: Serge Hallyn <serge@hallyn.com>
-Cc: Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>
-Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-Link: https://lore.kernel.org/r/20210311105242.874506-2-mic@digikod.net
----
-
-Changes since v2:
-* Replace path_is_under() check with current_chrooted() to gain the same
-  protection as create_user_ns() (suggested by Jann Horn). See commit
-  3151527ee007 ("userns:  Don't allow creation if the user is chrooted")
-
-Changes since v1:
-* Replace custom is_path_beneath() with existing path_is_under().
----
- fs/open.c | 13 ++++++++++++-
- 1 file changed, 12 insertions(+), 1 deletion(-)
-
-diff --git a/fs/open.c b/fs/open.c
-index e53af13b5835..1eb086ed324b 100644
---- a/fs/open.c
-+++ b/fs/open.c
-@@ -22,6 +22,7 @@
- #include <linux/slab.h>
- #include <linux/uaccess.h>
- #include <linux/fs.h>
-+#include <linux/path.h>
- #include <linux/personality.h>
- #include <linux/pagemap.h>
- #include <linux/syscalls.h>
-@@ -546,8 +547,18 @@ SYSCALL_DEFINE1(chroot, const char __user *, filename)
- 	if (error)
- 		goto dput_and_out;
- 
-+	/*
-+	 * Changing the root directory for the calling task (and its future
-+	 * children) requires that this task has CAP_SYS_CHROOT in its
-+	 * namespace, or be running with no_new_privs and not sharing its
-+	 * fs_struct and not escaping its current root (cf. create_user_ns()).
-+	 * As for seccomp, checking no_new_privs avoids scenarios where
-+	 * unprivileged tasks can affect the behavior of privileged children.
-+	 */
- 	error = -EPERM;
--	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT))
-+	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT) &&
-+			!(task_no_new_privs(current) && current->fs->users == 1
-+				&& !current_chrooted()))
- 		goto dput_and_out;
- 	error = security_path_chroot(&path);
- 	if (error)
--- 
-2.30.2
-
+Thanks,
+John Wood
