@@ -1,21 +1,21 @@
-Return-Path: <SRS0=SsgF=IJ=lists.openwall.com=kernel-hardening-return-20930-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=uQLH=IK=lists.openwall.com=kernel-hardening-return-20931-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-15.3 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 625E1C433DB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Mar 2021 20:42:16 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B750AC433E0
+	for <kernel-hardening@archiver.kernel.org>; Fri, 12 Mar 2021 16:20:09 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DA84564F11
-	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Mar 2021 20:42:14 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DA84564F11
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=sony.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20930-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 13323 invoked by uid 550); 11 Mar 2021 20:42:06 -0000
+	by mail.kernel.org (Postfix) with SMTP id D86A064F80
+	for <kernel-hardening@archiver.kernel.org>; Fri, 12 Mar 2021 16:20:08 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D86A064F80
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20931-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5642 invoked by uid 550); 12 Mar 2021 16:20:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,253 +23,114 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9403 invoked from network); 11 Mar 2021 20:33:06 -0000
+Received: (qmail 5610 invoked from network); 12 Mar 2021 16:19:59 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1615565977;
+	bh=VZf1ffj/4RS89iXA7oEEQahAXYgObise/bJlm1SH0i8=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=IDV7wAHot5KJfxh/MckcvE9vjldhR0CievjD3XHItbuqmk3Mgazp/V4TGG8hFJ4ot
+	 AcGK9fjtChrCqo8k2Tb9nAYLvkbgueHBUbcR4YTv530Cm6hpD43Jfv6+kZ1xqivQiM
+	 l/4zsy1cHpzbtIxonrmjHTbaOdKx0Cn+YhR4wq5E=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Fri, 12 Mar 2021 17:19:21 +0100
+From: John Wood <john.wood@gmx.com>
+To: peter enderborg <peter.enderborg@sony.com>,
+	Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
+	Randy Dunlap <rdunlap@infradead.org>,
+	Jonathan Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>,
+	Shuah Khan <shuah@kernel.org>
+Cc: John Wood <john.wood@gmx.com>, "Serge E. Hallyn" <serge@hallyn.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
 Subject: Re: [PATCH v5 5/8] security/brute: Mitigate a brute force attack
-To: John Wood <john.wood@gmx.com>, Kees Cook <keescook@chromium.org>, Jann
- Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>, Jonathan
- Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>, Shuah Khan
-	<shuah@kernel.org>
-CC: "Serge E. Hallyn" <serge@hallyn.com>, Greg Kroah-Hartman
-	<gregkh@linuxfoundation.org>, <linux-doc@vger.kernel.org>,
-	<linux-kernel@vger.kernel.org>, <linux-security-module@vger.kernel.org>,
-	<linux-kselftest@vger.kernel.org>, <kernel-hardening@lists.openwall.com>
+Message-ID: <20210312161921.GA3103@ubuntu>
 References: <20210227153013.6747-1-john.wood@gmx.com>
  <20210227153013.6747-6-john.wood@gmx.com>
-From: peter enderborg <peter.enderborg@sony.com>
-Message-ID: <5419ebe6-bb82-9b66-052b-0eefff93e5ae@sony.com>
-Date: Thu, 11 Mar 2021 21:32:47 +0100
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.10.0
+ <5419ebe6-bb82-9b66-052b-0eefff93e5ae@sony.com>
 MIME-Version: 1.0
-In-Reply-To: <20210227153013.6747-6-john.wood@gmx.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Content-Language: en-GB
-X-SEG-SpamProfiler-Analysis: v=2.3 cv=fqOim2wf c=1 sm=1 tr=0 a=9drRLWArJOlETflmpfiyCA==:117 a=IkcTkHD0fZMA:10 a=dESyimp9J3IA:10 a=7YfXLusrAAAA:8 a=WXpgeRTL1FoQa_35La8A:9 a=QEXdDO2ut3YA:10 a=SLz71HocmBbuEhFRYD3r:22
-X-SEG-SpamProfiler-Score: 0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <5419ebe6-bb82-9b66-052b-0eefff93e5ae@sony.com>
+X-Provags-ID: V03:K1:nYmy5eaPQHj33hgRpiMxaTOcPMTYvN7xaS3wyLDazjP5V/YFb4Z
+ znbqz2yNzZRPv4v+XFaAXX+Xy1YuYETB7K1FSzeSQ5md6tzqj4qkIMLy7qnvRGB+bUMKerI
+ Hb/iKHMgrnztcYSIrmeJqfekU4XRdUE9KXDk+RiRNfCdDfNKDGpFrqbXTlRloURX604NGHh
+ WMhhaIq892k+SuVCS052g==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:TPWopnVyQWU=:NfpcNJWDWUL5ams7fHn7cV
+ ejevW9rLBSX4FsFEKy6ZYk2l3BJjqw9L9bPFgiNcG5vYjf8STw/q8ZjDYW2KfCfQ1ko21arHJ
+ RYhwPDvFE3biBT+p4shdN9vK3DdRbofwZbDS7bi0f3N3xAObXLJQc2RTBbDgMJ7xRePmhgHWp
+ Lj3lRPRz0MgoWfwypkFBEeeaIZ5pyL38RWjuBE4TZ8YWS+qFZZIkSVsAOVUQpXZfjJ5bdM7ZP
+ dyHetdrMr0M0pygmRv4I+TdELeTkMuAPueOYzj6jz1AtF0PtEn5EggjBAbcixayk7d2jgjWvS
+ sG5ShaOHhwcT/bWSIHXdhIzlchVMIenECsj7+uGsZLt7IiICkDxBn5+FZ3FZQEk7udg47P5NJ
+ P2MtDnfih+tSAqzN21jJL3n9nl7HsVU9JkOJC420kO+GMOO4vczoeYPGICqQVR3lZdzwskDg4
+ zh14aHE05Ae/6C4dYTDFCU9Q15sNdtXUGg/QqhUgO6w74po9TgZHXR+w22Yeye8LYfoM8MBIO
+ G9+f/VBz5GZ9bLgz4sYGzQMwSlbtTQX/Jcxlgc3P/8fCOnhRmOwaW8m+iU/2GHI1Msh5aoGRU
+ 5VwnXSQ4lH7KAqx38dpXxAqc0pOs0jpscBGramBdM0kGlx4gllHJIibak7rjvm0mGVLJxqxfd
+ Evc1miLzs4bsq7AidaFvmEesGvz/F5OHVByQyu9IrshWTyAtYdt9sJ/JVZBiqY2xcbrhrSu+4
+ WxheGmLZIF6QyumbTKczXdhYqWbGU0IlGSRCFHi0gb8y9cnTs3m6/t+Kb4RHYfkMVcv/Iykol
+ +Xp0kfBwI1vcC8wrzEH8Ob8XPYok10MfY58kllIXt4gwGn4alrGRh9KAzcExFr5jXo1kKJe3A
+ lbMbcTaQ6SqOoW0yNKBw==
+Content-Transfer-Encoding: quoted-printable
 
-On 2/27/21 4:30 PM, John Wood wrote:
-> In order to mitigate a brute force attack all the offending tasks involved
-> in the attack must be killed. In other words, it is necessary to kill all
-> the tasks that share the fork and/or exec statistical data related to the
-> attack. Moreover, if the attack happens through the fork system call, the
-> processes that have the same group_leader that the current task (the task
-> that has crashed) must be avoided since they are in the path to be killed.
->
-> When the SIGKILL signal is sent to the offending tasks, the function
-> "brute_kill_offending_tasks" will be called in a recursive way from the
-> task_fatal_signal LSM hook due to a small crash period. So, to avoid kill
-> again the same tasks due to a recursive call of this function, it is
-> necessary to disable the attack detection for the involved hierarchies.
+Hi,
 
-Would it not be useful for forensic reasons to be able to send SIGABRT and get the a coredump?
+On Thu, Mar 11, 2021 at 09:32:47PM +0100, peter enderborg wrote:
+> On 2/27/21 4:30 PM, John Wood wrote:
+> > In order to mitigate a brute force attack all the offending tasks invo=
+lved
+> > in the attack must be killed. In other words, it is necessary to kill =
+all
+> > the tasks that share the fork and/or exec statistical data related to =
+the
+> > attack. Moreover, if the attack happens through the fork system call, =
+the
+> > processes that have the same group_leader that the current task (the t=
+ask
+> > that has crashed) must be avoided since they are in the path to be kil=
+led.
+> >
+> > When the SIGKILL signal is sent to the offending tasks, the function
+> > "brute_kill_offending_tasks" will be called in a recursive way from th=
+e
+> > task_fatal_signal LSM hook due to a small crash period. So, to avoid k=
+ill
+> > again the same tasks due to a recursive call of this function, it is
+> > necessary to disable the attack detection for the involved hierarchies=
+.
+>
+> Would it not be useful for forensic reasons to be able to send SIGABRT a=
+nd get the a coredump?
 
+If there are many tasks involved in the attack we will generate a big numb=
+er of
+coredumps (one per task aborted). This can be solved if we send the SIGABR=
+T to
+terminate the first process found and send SIGKILL to terminate the remain=
+ing
+processes. But I don't know if under this scenario we will get a core dump=
+ with
+lack of information (the info related to the other processes).
 
-> To disable the attack detection, set to zero the last crash timestamp and
-> avoid to compute the application crash period in this case.
->
-> Signed-off-by: John Wood <john.wood@gmx.com>
-> ---
->  security/brute/brute.c | 141 ++++++++++++++++++++++++++++++++++++++---
->  1 file changed, 132 insertions(+), 9 deletions(-)
->
-> diff --git a/security/brute/brute.c b/security/brute/brute.c
-> index 0a99cd4c3303..48b07d923ec7 100644
-> --- a/security/brute/brute.c
-> +++ b/security/brute/brute.c
-> @@ -22,6 +22,7 @@
->  #include <linux/math64.h>
->  #include <linux/netdevice.h>
->  #include <linux/path.h>
-> +#include <linux/pid.h>
->  #include <linux/printk.h>
->  #include <linux/refcount.h>
->  #include <linux/rwlock.h>
-> @@ -64,7 +65,7 @@ struct brute_cred {
->   * @lock: Lock to protect the brute_stats structure.
->   * @refc: Reference counter.
->   * @faults: Number of crashes.
-> - * @jiffies: Last crash timestamp.
-> + * @jiffies: Last crash timestamp. If zero, the attack detection is disabled.
->   * @period: Crash period's moving average.
->   * @saved_cred: Saved credentials.
->   * @network: Network activity flag.
-> @@ -566,6 +567,125 @@ static inline void print_fork_attack_running(void)
->  	pr_warn("Fork brute force attack detected [%s]\n", current->comm);
->  }
->
-> +/**
-> + * brute_disabled() - Test if the brute force attack detection is disabled.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + *
-> + * The brute force attack detection enabling/disabling is based on the last
-> + * crash timestamp. A zero timestamp indicates that this feature is disabled. A
-> + * timestamp greater than zero indicates that the attack detection is enabled.
-> + *
-> + * The statistical data shared by all the fork hierarchy processes cannot be
-> + * NULL.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
-> + *
-> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> + *          held.
-> + * Return: True if the brute force attack detection is disabled. False
-> + *         otherwise.
-> + */
-> +static bool brute_disabled(struct brute_stats *stats)
-> +{
-> +	bool disabled;
-> +
-> +	spin_lock(&stats->lock);
-> +	disabled = !stats->jiffies;
-> +	spin_unlock(&stats->lock);
-> +
-> +	return disabled;
-> +}
-> +
-> +/**
-> + * brute_disable() - Disable the brute force attack detection.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + *
-> + * To disable the brute force attack detection it is only necessary to set the
-> + * last crash timestamp to zero. A zero timestamp indicates that this feature is
-> + * disabled. A timestamp greater than zero indicates that the attack detection
-> + * is enabled.
-> + *
-> + * The statistical data shared by all the fork hierarchy processes cannot be
-> + * NULL.
-> + *
-> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> + *          and brute_stats::lock held.
-> + */
-> +static inline void brute_disable(struct brute_stats *stats)
-> +{
-> +	stats->jiffies = 0;
-> +}
-> +
-> +/**
-> + * enum brute_attack_type - Brute force attack type.
-> + * @BRUTE_ATTACK_TYPE_FORK: Attack that happens through the fork system call.
-> + * @BRUTE_ATTACK_TYPE_EXEC: Attack that happens through the execve system call.
-> + */
-> +enum brute_attack_type {
-> +	BRUTE_ATTACK_TYPE_FORK,
-> +	BRUTE_ATTACK_TYPE_EXEC,
-> +};
-> +
-> +/**
-> + * brute_kill_offending_tasks() - Kill the offending tasks.
-> + * @attack_type: Brute force attack type.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + *
-> + * When a brute force attack is detected all the offending tasks involved in the
-> + * attack must be killed. In other words, it is necessary to kill all the tasks
-> + * that share the same statistical data. Moreover, if the attack happens through
-> + * the fork system call, the processes that have the same group_leader that the
-> + * current task must be avoided since they are in the path to be killed.
-> + *
-> + * When the SIGKILL signal is sent to the offending tasks, this function will be
-> + * called again from the task_fatal_signal hook due to a small crash period. So,
-> + * to avoid kill again the same tasks due to a recursive call of this function,
-> + * it is necessary to disable the attack detection for this fork hierarchy.
-> + *
-> + * The statistical data shared by all the fork hierarchy processes cannot be
-> + * NULL.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
-> + *
-> + * Context: Must be called with interrupts disabled and tasklist_lock and
-> + *          brute_stats_ptr_lock held.
-> + */
-> +static void brute_kill_offending_tasks(enum brute_attack_type attack_type,
-> +				       struct brute_stats *stats)
-> +{
-> +	struct task_struct *p;
-> +	struct brute_stats **p_stats;
-> +
-> +	spin_lock(&stats->lock);
-> +
-> +	if (attack_type == BRUTE_ATTACK_TYPE_FORK &&
-> +	    refcount_read(&stats->refc) == 1) {
-> +		spin_unlock(&stats->lock);
-> +		return;
-> +	}
-> +
-> +	brute_disable(stats);
-> +	spin_unlock(&stats->lock);
-> +
-> +	for_each_process(p) {
-> +		if (attack_type == BRUTE_ATTACK_TYPE_FORK &&
-> +		    p->group_leader == current->group_leader)
-> +			continue;
-> +
-> +		p_stats = brute_stats_ptr(p);
-> +		if (*p_stats != stats)
-> +			continue;
-> +
-> +		do_send_sig_info(SIGKILL, SEND_SIG_PRIV, p, PIDTYPE_PID);
-> +		pr_warn_ratelimited("Offending process %d [%s] killed\n",
-> +				    p->pid, p->comm);
-> +	}
-> +}
-> +
->  /**
->   * brute_manage_fork_attack() - Manage a fork brute force attack.
->   * @stats: Statistical data shared by all the fork hierarchy processes.
-> @@ -581,8 +701,8 @@ static inline void print_fork_attack_running(void)
->   * since the task_free hook can be called from an IRQ context during the
->   * execution of the task_fatal_signal hook.
->   *
-> - * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> - *          held.
-> + * Context: Must be called with interrupts disabled and tasklist_lock and
-> + *          brute_stats_ptr_lock held.
->   * Return: The last crash timestamp before updating it.
->   */
->  static u64 brute_manage_fork_attack(struct brute_stats *stats, u64 now)
-> @@ -590,8 +710,10 @@ static u64 brute_manage_fork_attack(struct brute_stats *stats, u64 now)
->  	u64 last_fork_crash;
->
->  	last_fork_crash = brute_update_crash_period(stats, now);
-> -	if (brute_attack_running(stats))
-> +	if (brute_attack_running(stats)) {
->  		print_fork_attack_running();
-> +		brute_kill_offending_tasks(BRUTE_ATTACK_TYPE_FORK, stats);
-> +	}
->
->  	return last_fork_crash;
->  }
-> @@ -778,8 +900,10 @@ static void brute_manage_exec_attack(struct brute_stats *stats, u64 now,
->  	if (fork_period == exec_period)
->  		return;
->
-> -	if (brute_attack_running(exec_stats))
-> +	if (brute_attack_running(exec_stats)) {
->  		print_exec_attack_running(exec_stats);
-> +		brute_kill_offending_tasks(BRUTE_ATTACK_TYPE_EXEC, exec_stats);
-> +	}
->  }
->
->  /**
-> @@ -895,10 +1019,9 @@ static void brute_task_fatal_signal(const kernel_siginfo_t *siginfo)
->  	read_lock(&tasklist_lock);
->  	read_lock_irqsave(&brute_stats_ptr_lock, flags);
->
-> -	if (WARN(!*stats, "No statistical data\n"))
-> -		goto unlock;
-> -
-> -	if (!brute_threat_model_supported(siginfo, *stats))
-> +	if (WARN(!*stats, "No statistical data\n") ||
-> +	    brute_disabled(*stats) ||
-> +	    !brute_threat_model_supported(siginfo, *stats))
->  		goto unlock;
->
->  	last_fork_crash = brute_manage_fork_attack(*stats, now);
-> --
-> 2.25.1
->
+Another scenario:
 
+The process that crashes is the last in the fork hierarchy and triggers a =
+brute
+force attack mitigation. In this case it it not necessary to kill the proc=
+ess
+that crashes since it is in the path to be killed. So, under this situatio=
+n we
+will not get a coredump (we don't send any signal). Lack of information ag=
+ain.
+
+Currently, we show the name of the task that triggers the mitigation, the =
+attack
+type (fork or exec) and the name and pid of all the offending tasks involv=
+ed in
+the attack (the tasks that we kill). If it's necessary we can show more in=
+fo.
+What info do you think would be necessary?
+
+Thanks,
+John Wood
