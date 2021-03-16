@@ -1,20 +1,20 @@
-Return-Path: <SRS0=z3BA=IN=lists.openwall.com=kernel-hardening-return-20945-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=vCzC=IO=lists.openwall.com=kernel-hardening-return-20946-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3924DC433E0
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Mar 2021 22:19:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8F75EC433DB
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 08:17:32 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 48A9564F07
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Mar 2021 22:19:54 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 48A9564F07
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-foundation.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20945-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20261 invoked by uid 550); 15 Mar 2021 22:19:47 -0000
+	by mail.kernel.org (Postfix) with SMTP id 3221E64FD9
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 08:17:31 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3221E64FD9
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20946-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 27805 invoked by uid 550); 16 Mar 2021 08:17:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,80 +22,119 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20238 invoked from network); 15 Mar 2021 22:19:47 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linux-foundation.org; s=google;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=JHuD9L12GwXv9CMjuewy7NJi4UEeZj8gMIMY0fXoMjo=;
-        b=S+PBvkiNvoS7h8zAD5cjsSRJz4FVPn0bUbOW1vAx3cSOxv0XYlgWOMD63ht2EW+UvG
-         WqRwvdt1hEocnp30SVofJDviTh5NFMlDuAZFdZ0CFQTPQzKAvpCn4FZXTYX5F2Q7x0TA
-         w6hkZe/5rBy3BNMBjtwIU8r7P3WUEjnalDrr4=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=JHuD9L12GwXv9CMjuewy7NJi4UEeZj8gMIMY0fXoMjo=;
-        b=jRZARi1mkkJk1AKQFvI+flV5iWJO+XwZmEYf779iEa3SK5BRMRSCdVb8VYeJPqjhv6
-         apwvD7S3a5jbXbHqD5RP2m1NBfdUOmimr6dKH5dYwI3ueaBvep/NEYEDKOhYUOUqx/P6
-         aGnho/DQZ3aXh7eGGEHMq+QycwRUWp2jcNooqZ/Lmppjd4OgiBy75P3gBg2zgQhULiEC
-         PjwgkZ9mw2J3cSCbJ/qmbn2UZ2G5XpzjnY4Ar+++wEcJvYjAT0uvp0L1YFwVJKar/zAG
-         eBpfldmqaHO73YMrGPEKsMrcIwlAVqJ9n7K0FH3W+TYGXeFCs3It9a9/F8eEcYGYTzUR
-         buoA==
-X-Gm-Message-State: AOAM532K84polOk/mv7lgg4SsSnBDFyRndYVAUZkfoER7B3Dd4wldlKC
-	MFQYqQDe0Y/xpe0XHG9nnTkCtYgv2/6nZw==
-X-Google-Smtp-Source: ABdhPJyvVRB9no/0fA6z3VGsQbNLVh+SDzXHLqeKykd0EDlUPH6aLV4Udbfy5DJ1zCBpWvcM8jk3Sg==
-X-Received: by 2002:a05:651c:119b:: with SMTP id w27mr682968ljo.237.1615846775177;
-        Mon, 15 Mar 2021 15:19:35 -0700 (PDT)
-X-Received: by 2002:a2e:a589:: with SMTP id m9mr729361ljp.220.1615846773296;
- Mon, 15 Mar 2021 15:19:33 -0700 (PDT)
-MIME-Version: 1.0
-References: <cover.1615372955.git.gladkov.alexey@gmail.com>
- <59ee3289194cd97d70085cce701bc494bfcb4fd2.1615372955.git.gladkov.alexey@gmail.com>
- <202103151426.ED27141@keescook>
-In-Reply-To: <202103151426.ED27141@keescook>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 15 Mar 2021 15:19:17 -0700
-X-Gmail-Original-Message-ID: <CAHk-=wjYOCgM+mKzwTZwkDDg12DdYjFFkmoFKYLim7NFmR9HBg@mail.gmail.com>
-Message-ID: <CAHk-=wjYOCgM+mKzwTZwkDDg12DdYjFFkmoFKYLim7NFmR9HBg@mail.gmail.com>
-Subject: Re: [PATCH v8 3/8] Use atomic_t for ucounts reference counting
+Received: (qmail 27785 invoked from network); 16 Mar 2021 08:17:22 -0000
+Subject: Re: [PATCH v3 1/1] fs: Allow no_new_privs tasks to call chroot(2)
 To: Kees Cook <keescook@chromium.org>
-Cc: Alexey Gladkov <gladkov.alexey@gmail.com>, LKML <linux-kernel@vger.kernel.org>, 
-	io-uring <io-uring@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, 
-	Linux Containers <containers@lists.linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, 
-	Alexey Gladkov <legion@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, 
-	Christian Brauner <christian.brauner@ubuntu.com>, "Eric W . Biederman" <ebiederm@xmission.com>, 
-	Jann Horn <jannh@google.com>, Jens Axboe <axboe@kernel.dk>, Oleg Nesterov <oleg@redhat.com>
-Content-Type: text/plain; charset="UTF-8"
+Cc: Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>,
+ Serge Hallyn <serge@hallyn.com>, Andy Lutomirski <luto@amacapital.net>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ Christoph Hellwig <hch@lst.de>, David Howells <dhowells@redhat.com>,
+ Dominik Brodowski <linux@dominikbrodowski.net>,
+ "Eric W . Biederman" <ebiederm@xmission.com>,
+ John Johansen <john.johansen@canonical.com>,
+ Kentaro Takeda <takedakn@nttdata.co.jp>,
+ Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
+ kernel-hardening@lists.openwall.com, linux-fsdevel@vger.kernel.org,
+ linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org,
+ =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@linux.microsoft.com>
+References: <20210311105242.874506-1-mic@digikod.net>
+ <20210311105242.874506-2-mic@digikod.net> <202103151405.88334370F@keescook>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <041935de-83fb-5651-73d9-2ea88d4d84cc@digikod.net>
+Date: Tue, 16 Mar 2021 09:17:08 +0100
+User-Agent:
+MIME-Version: 1.0
+In-Reply-To: <202103151405.88334370F@keescook>
+Content-Type: text/plain; charset=iso-8859-15
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
 
-On Mon, Mar 15, 2021 at 3:03 PM Kees Cook <keescook@chromium.org> wrote:
->
-> On Wed, Mar 10, 2021 at 01:01:28PM +0100, Alexey Gladkov wrote:
-> > The current implementation of the ucounts reference counter requires the
-> > use of spin_lock. We're going to use get_ucounts() in more performance
-> > critical areas like a handling of RLIMIT_SIGPENDING.
->
-> This really looks like it should be refcount_t.
 
-No.
+On 15/03/2021 22:17, Kees Cook wrote:
+> On Thu, Mar 11, 2021 at 11:52:42AM +0100, Mickaël Salaün wrote:
+>> [...]
+>> This change may not impact systems relying on other permission models
+>> than POSIX capabilities (e.g. Tomoyo).  Being able to use chroot(2) on
+>> such systems may require to update their security policies.
+>>
+>> Only the chroot system call is relaxed with this no_new_privs check; the
+>> init_chroot() helper doesn't require such change.
+>>
+>> Allowing unprivileged users to use chroot(2) is one of the initial
+>> objectives of no_new_privs:
+>> https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html
+>> This patch is a follow-up of a previous one sent by Andy Lutomirski:
+>> https://lore.kernel.org/lkml/0e2f0f54e19bff53a3739ecfddb4ffa9a6dbde4d.1327858005.git.luto@amacapital.net/
+> 
+> I liked it back when Andy first suggested it, and I still like it now.
+> :) I'm curious, do you have a specific user in mind for this feature?
 
-refcount_t didn't have the capabilities required.
+Except for development and test purposes, being able to use root
+(without CAP_SYS_CHROOT) would now enable to easily remove ambient
+filesystem access. Indeed, thanks to openat2 with RESOLVE_BENEATH or
+RESOLVE_IN_ROOT, it would be simple for most processes to chroot/chdir
+into an empty directory after opening (or being given) file descriptors
+opened with RESOLVE_BENEATH (e.g. configuration directory, cache
+directory, data directory, etc.). We can get something really close to a
+security capability system (different than POSIX capabilities), which
+wasn't possible when Andy posted the previous patches, and can help
+improve the state of userspace security.
 
-It just saturates, and doesn't have the "don't do this" case, which
-the ucounts case *DOES* have.
+It is already possible to limit ptrace-like attacks, even when multiple
+processes are running with the same UID, with the help of SELinux, or
+even simply with Yama. This already enables sysadmins or distros to
+harden their system, and this kind of restrictions (with additional
+access-control bits) will be available to userspace developers thanks to
+Landlock.
 
-In other words, refcount_t is entirely misdesigned for this - because
-it's literally designed for "people can't handle overflow, so we warn
-and saturate".
+> 
+>> [...]
+>> @@ -546,8 +547,18 @@ SYSCALL_DEFINE1(chroot, const char __user *, filename)
+>>  	if (error)
+>>  		goto dput_and_out;
+>>  
+>> +	/*
+>> +	 * Changing the root directory for the calling task (and its future
+>> +	 * children) requires that this task has CAP_SYS_CHROOT in its
+>> +	 * namespace, or be running with no_new_privs and not sharing its
+>> +	 * fs_struct and not escaping its current root (cf. create_user_ns()).
+>> +	 * As for seccomp, checking no_new_privs avoids scenarios where
+>> +	 * unprivileged tasks can affect the behavior of privileged children.
+>> +	 */
+>>  	error = -EPERM;
+>> -	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT))
+>> +	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT) &&
+>> +			!(task_no_new_privs(current) && current->fs->users == 1
+>> +				&& !current_chrooted()))
+>>  		goto dput_and_out;
+>>  	error = security_path_chroot(&path);
+>>  	if (error)
+> 
+> I think the logic here needs to be rearranged to avoid setting
+> PF_SUPERPRIV, and I find the many negations hard to read. Perhaps:
+> 
+> static inline int current_chroot_allowed(void)
+> {
+> 	/* comment here */
+> 	if (task_no_new_privs(current) && current->fs->users == 1 &&
+> 	    !current_chrooted())
+> 		return 0;
+> 
+> 	if (ns_capable(current_user_ns(), CAP_SYS_CHROOT))
+> 		return 0;
+> 
+> 	return -EPERM;
+> }
+> 
+> ...
+> 
+> 	error = current_chroot_allowed();
+> 	if (error)
+> 		goto dput_and_out;
+> 
+> 
+> I can't think of a way to race current->fs->users ...
+> 
 
-ucounts can never saturate, because they replace saturation with
-"don't do that then".
-
-In other words, ucounts work like the page counts do (which also don't
-saturate, they just say "ok, you can't get a reference".
-
-I know you are attached to refcounts, but really: they are not only
-more expensive, THEY LITERALLY DO THE WRONG THING.
-
-           Linus
+OK, I would be a bit bigger patch but easier to read.
