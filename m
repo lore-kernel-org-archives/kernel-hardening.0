@@ -1,21 +1,21 @@
-Return-Path: <SRS0=ZtYt=IO=lists.openwall.com=kernel-hardening-return-20960-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=AbJz=IO=lists.openwall.com=kernel-hardening-return-20961-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-16.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
 	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4EF81C433DB
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:37:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 12B20C433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:43:16 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5304C64F7B
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:37:03 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5304C64F7B
+	by mail.kernel.org (Postfix) with SMTP id 05DC064F7B
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:43:14 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 05DC064F7B
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20960-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32549 invoked by uid 550); 16 Mar 2021 20:36:53 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20961-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3816 invoked by uid 550); 16 Mar 2021 20:43:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,185 +23,249 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32437 invoked from network); 16 Mar 2021 20:36:52 -0000
+Received: (qmail 3796 invoked from network); 16 Mar 2021 20:43:06 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-To: Al Viro <viro@zeniv.linux.org.uk>,
-	James Morris <jmorris@namei.org>,
-	Serge Hallyn <serge@hallyn.com>
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christoph Hellwig <hch@lst.de>,
-	David Howells <dhowells@redhat.com>,
-	Dominik Brodowski <linux@dominikbrodowski.net>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
+To: James Morris <jmorris@namei.org>,
 	Jann Horn <jannh@google.com>,
-	John Johansen <john.johansen@canonical.com>,
+	"Serge E . Hallyn" <serge@hallyn.com>
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
+	Al Viro <viro@zeniv.linux.org.uk>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@amacapital.net>,
+	Anton Ivanov <anton.ivanov@cambridgegreys.com>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	David Howells <dhowells@redhat.com>,
+	Jeff Dike <jdike@addtoit.com>,
+	Jonathan Corbet <corbet@lwn.net>,
 	Kees Cook <keescook@chromium.org>,
-	Kentaro Takeda <takedakn@nttdata.co.jp>,
-	Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	Richard Weinberger <richard@nod.at>,
+	Shuah Khan <shuah@kernel.org>,
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
 	kernel-hardening@lists.openwall.com,
+	linux-api@vger.kernel.org,
+	linux-arch@vger.kernel.org,
+	linux-doc@vger.kernel.org,
 	linux-fsdevel@vger.kernel.org,
 	linux-kernel@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
 	linux-security-module@vger.kernel.org,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
-Subject: [PATCH v5 1/1] fs: Allow no_new_privs tasks to call chroot(2)
-Date: Tue, 16 Mar 2021 21:36:33 +0100
-Message-Id: <20210316203633.424794-2-mic@digikod.net>
+	x86@kernel.org
+Subject: [PATCH v30 00/12] Landlock LSM
+Date: Tue, 16 Mar 2021 21:42:40 +0100
+Message-Id: <20210316204252.427806-1-mic@digikod.net>
 X-Mailer: git-send-email 2.30.2
-In-Reply-To: <20210316203633.424794-1-mic@digikod.net>
-References: <20210316203633.424794-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-From: Mickaël Salaün <mic@linux.microsoft.com>
+Hi,
 
-Being able to easily change root directories enables to ease some
-development workflow and can be used as a tool to strengthen
-unprivileged security sandboxes.  chroot(2) is not an access-control
-mechanism per se, but it can be used to limit the absolute view of the
-filesystem, and then limit ways to access data and kernel interfaces
-(e.g. /proc, /sys, /dev, etc.).
+This patch series is mainly a rebase on top of v5.12-rc3 and a
+synchronization with the new mount_setattr(2).  A light cleanup of
+hook_sb_delete() and new tests are also included.
 
-Users may not wish to expose namespace complexity to potentially
-malicious processes, or limit their use because of limited resources.
-The chroot feature is much more simple (and limited) than the mount
-namespace, but can still be useful.  As for containers, users of
-chroot(2) should take care of file descriptors or data accessible by
-other means (e.g. current working directory, leaked FDs, passed FDs,
-devices, mount points, etc.).  There is a lot of literature that discuss
-the limitations of chroot, and users of this feature should be aware of
-the multiple ways to bypass it.  Using chroot(2) for security purposes
-can make sense if it is combined with other features (e.g. dedicated
-user, seccomp, LSM access-controls, etc.).
+The SLOC count is 1329 for security/landlock/ and 2556 for
+tools/testing/selftest/landlock/ .  Test coverage for security/landlock/
+is 93.6% of lines.  The code not covered only deals with internal kernel
+errors (e.g. memory allocation) and race conditions.  This series is
+being fuzzed by syzkaller (which may cover internal kernel errors), and
+patches are on their way: https://github.com/google/syzkaller/pull/2380
 
-One could argue that chroot(2) is useless without a properly populated
-root hierarchy (i.e. without /dev and /proc).  However, there are
-multiple use cases that don't require the chrooting process to create
-file hierarchies with special files nor mount points, e.g.:
-* A process sandboxing itself, once all its libraries are loaded, may
-  not need files other than regular files, or even no file at all.
-* Some pre-populated root hierarchies could be used to chroot into,
-  provided for instance by development environments or tailored
-  distributions.
-* Processes executed in a chroot may not require access to these special
-  files (e.g. with minimal runtimes, or by emulating some special files
-  with a LD_PRELOADed library or seccomp).
+The compiled documentation is available here:
+https://landlock.io/linux-doc/landlock-v30/userspace-api/landlock.html
 
-Allowing a task to change its own root directory is not a threat to the
-system if we can prevent confused deputy attacks, which could be
-performed through execution of SUID-like binaries.  This can be
-prevented if the calling task sets PR_SET_NO_NEW_PRIVS on itself with
-prctl(2).  To only affect this task, its filesystem information must not
-be shared with other tasks, which can be achieved by not passing
-CLONE_FS to clone(2).  A similar no_new_privs check is already used by
-seccomp to avoid the same kind of security issues.  Furthermore, because
-of its security use and to avoid giving a new way for attackers to get
-out of a chroot (e.g. using /proc/<pid>/root, or chroot/chdir), an
-unprivileged chroot is only allowed if the calling process is not
-already chrooted.  This limitation is the same as for creating user
-namespaces.
+This series can be applied on top of v5.12-rc3 .  This can be tested with
+CONFIG_SECURITY_LANDLOCK, CONFIG_SAMPLE_LANDLOCK and by prepending
+"landlock," to CONFIG_LSM.  This patch series can be found in a Git
+repository here:
+https://github.com/landlock-lsm/linux/commits/landlock-v30
+This patch series seems ready for upstream and I would really appreciate
+final reviews.
 
-This change may not impact systems relying on other permission models
-than POSIX capabilities (e.g. Tomoyo).  Being able to use chroot(2) on
-such systems may require to update their security policies.
 
-Only the chroot system call is relaxed with this no_new_privs check; the
-init_chroot() helper doesn't require such change.
+Landlock LSM
+------------
 
-Allowing unprivileged users to use chroot(2) is one of the initial
-objectives of no_new_privs:
-https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html
-This patch is a follow-up of a previous one sent by Andy Lutomirski:
-https://lore.kernel.org/lkml/0e2f0f54e19bff53a3739ecfddb4ffa9a6dbde4d.1327858005.git.luto@amacapital.net/
+The goal of Landlock is to enable to restrict ambient rights (e.g.
+global filesystem access) for a set of processes.  Because Landlock is a
+stackable LSM [1], it makes possible to create safe security sandboxes
+as new security layers in addition to the existing system-wide
+access-controls. This kind of sandbox is expected to help mitigate the
+security impact of bugs or unexpected/malicious behaviors in user-space
+applications. Landlock empowers any process, including unprivileged
+ones, to securely restrict themselves.
 
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Christian Brauner <christian.brauner@ubuntu.com>
-Cc: Christoph Hellwig <hch@lst.de>
-Cc: David Howells <dhowells@redhat.com>
-Cc: Dominik Brodowski <linux@dominikbrodowski.net>
-Cc: Eric W. Biederman <ebiederm@xmission.com>
-Cc: James Morris <jmorris@namei.org>
-Cc: Jann Horn <jannh@google.com>
-Cc: John Johansen <john.johansen@canonical.com>
-Cc: Kentaro Takeda <takedakn@nttdata.co.jp>
-Cc: Serge Hallyn <serge@hallyn.com>
-Cc: Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>
-Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Link: https://lore.kernel.org/r/20210316203633.424794-2-mic@digikod.net
----
+Landlock is inspired by seccomp-bpf but instead of filtering syscalls
+and their raw arguments, a Landlock rule can restrict the use of kernel
+objects like file hierarchies, according to the kernel semantic.
+Landlock also takes inspiration from other OS sandbox mechanisms: XNU
+Sandbox, FreeBSD Capsicum or OpenBSD Pledge/Unveil.
 
-Changes since v4:
-* Use READ_ONCE(current->fs->users) (found by Jann Horn).
-* Remove ambiguous example in commit description.
-* Add Reviewed-by Kees Cook.
+In this current form, Landlock misses some access-control features.
+This enables to minimize this patch series and ease review.  This series
+still addresses multiple use cases, especially with the combined use of
+seccomp-bpf: applications with built-in sandboxing, init systems,
+security sandbox tools and security-oriented APIs [2].
 
-Changes since v3:
-* Move the new permission checks to a dedicated helper
-  current_chroot_allowed() to make the code easier to read and align
-  with user_path_at(), path_permission() and security_path_chroot()
-  calls (suggested by Kees Cook).
-* Remove now useless included file.
-* Extend commit description.
-* Rebase on v5.12-rc3 .
+[1] https://lore.kernel.org/lkml/50db058a-7dde-441b-a7f9-f6837fe8b69f@schaufler-ca.com/
+[2] https://lore.kernel.org/lkml/f646e1c7-33cf-333f-070c-0a40ad0468cd@digikod.net/
 
-Changes since v2:
-* Replace path_is_under() check with current_chrooted() to gain the same
-  protection as create_user_ns() (suggested by Jann Horn). See commit
-  3151527ee007 ("userns:  Don't allow creation if the user is chrooted")
+Previous versions:
+v29: https://lore.kernel.org/lkml/20210225190614.2181147-1-mic@digikod.net/
+v28: https://lore.kernel.org/lkml/20210202162710.657398-1-mic@digikod.net/
+v27: https://lore.kernel.org/lkml/20210121205119.793296-1-mic@digikod.net/
+v26: https://lore.kernel.org/lkml/20201209192839.1396820-1-mic@digikod.net/
+v25: https://lore.kernel.org/lkml/20201201192322.213239-1-mic@digikod.net/
+v24: https://lore.kernel.org/lkml/20201112205141.775752-1-mic@digikod.net/
+v23: https://lore.kernel.org/lkml/20201103182109.1014179-1-mic@digikod.net/
+v22: https://lore.kernel.org/lkml/20201027200358.557003-1-mic@digikod.net/
+v21: https://lore.kernel.org/lkml/20201008153103.1155388-1-mic@digikod.net/
+v20: https://lore.kernel.org/lkml/20200802215903.91936-1-mic@digikod.net/
+v19: https://lore.kernel.org/lkml/20200707180955.53024-1-mic@digikod.net/
+v18: https://lore.kernel.org/lkml/20200526205322.23465-1-mic@digikod.net/
+v17: https://lore.kernel.org/lkml/20200511192156.1618284-1-mic@digikod.net/
+v16: https://lore.kernel.org/lkml/20200416103955.145757-1-mic@digikod.net/
+v15: https://lore.kernel.org/lkml/20200326202731.693608-1-mic@digikod.net/
+v14: https://lore.kernel.org/lkml/20200224160215.4136-1-mic@digikod.net/
+v13: https://lore.kernel.org/lkml/20191104172146.30797-1-mic@digikod.net/
+v12: https://lore.kernel.org/lkml/20191031164445.29426-1-mic@digikod.net/
+v11: https://lore.kernel.org/lkml/20191029171505.6650-1-mic@digikod.net/
+v10: https://lore.kernel.org/lkml/20190721213116.23476-1-mic@digikod.net/
+v9: https://lore.kernel.org/lkml/20190625215239.11136-1-mic@digikod.net/
+v8: https://lore.kernel.org/lkml/20180227004121.3633-1-mic@digikod.net/
+v7: https://lore.kernel.org/lkml/20170821000933.13024-1-mic@digikod.net/
+v6: https://lore.kernel.org/lkml/20170328234650.19695-1-mic@digikod.net/
+v5: https://lore.kernel.org/lkml/20170222012632.4196-1-mic@digikod.net/
+v4: https://lore.kernel.org/lkml/20161026065654.19166-1-mic@digikod.net/
+v3: https://lore.kernel.org/lkml/20160914072415.26021-1-mic@digikod.net/
+v2: https://lore.kernel.org/lkml/1472121165-29071-1-git-send-email-mic@digikod.net/
+v1: https://lore.kernel.org/kernel-hardening/1458784008-16277-1-git-send-email-mic@digikod.net/
 
-Changes since v1:
-* Replace custom is_path_beneath() with existing path_is_under().
----
- fs/open.c | 23 +++++++++++++++++++++--
- 1 file changed, 21 insertions(+), 2 deletions(-)
+Casey Schaufler (1):
+  LSM: Infrastructure management of the superblock
 
-diff --git a/fs/open.c b/fs/open.c
-index e53af13b5835..480010a551b2 100644
---- a/fs/open.c
-+++ b/fs/open.c
-@@ -532,6 +532,24 @@ SYSCALL_DEFINE1(fchdir, unsigned int, fd)
- 	return error;
- }
- 
-+static inline int current_chroot_allowed(void)
-+{
-+	/*
-+	 * Changing the root directory for the calling task (and its future
-+	 * children) requires that this task has CAP_SYS_CHROOT in its
-+	 * namespace, or be running with no_new_privs and not sharing its
-+	 * fs_struct and not escaping its current root (cf. create_user_ns()).
-+	 * As for seccomp, checking no_new_privs avoids scenarios where
-+	 * unprivileged tasks can affect the behavior of privileged children.
-+	 */
-+	if (task_no_new_privs(current) && READ_ONCE(current->fs->users) == 1 &&
-+			!current_chrooted())
-+		return 0;
-+	if (ns_capable(current_user_ns(), CAP_SYS_CHROOT))
-+		return 0;
-+	return -EPERM;
-+}
-+
- SYSCALL_DEFINE1(chroot, const char __user *, filename)
- {
- 	struct path path;
-@@ -546,9 +564,10 @@ SYSCALL_DEFINE1(chroot, const char __user *, filename)
- 	if (error)
- 		goto dput_and_out;
- 
--	error = -EPERM;
--	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT))
-+	error = current_chroot_allowed();
-+	if (error)
- 		goto dput_and_out;
-+
- 	error = security_path_chroot(&path);
- 	if (error)
- 		goto dput_and_out;
+Mickaël Salaün (11):
+  landlock: Add object management
+  landlock: Add ruleset and domain management
+  landlock: Set up the security framework and manage credentials
+  landlock: Add ptrace restrictions
+  fs,security: Add sb_delete hook
+  landlock: Support filesystem access-control
+  landlock: Add syscall implementations
+  arch: Wire up Landlock syscalls
+  selftests/landlock: Add user space tests
+  samples/landlock: Add a sandbox manager example
+  landlock: Add user and kernel documentation
+
+ Documentation/security/index.rst              |    1 +
+ Documentation/security/landlock.rst           |   79 +
+ Documentation/userspace-api/index.rst         |    1 +
+ Documentation/userspace-api/landlock.rst      |  307 ++
+ MAINTAINERS                                   |   15 +
+ arch/Kconfig                                  |    7 +
+ arch/alpha/kernel/syscalls/syscall.tbl        |    3 +
+ arch/arm/tools/syscall.tbl                    |    3 +
+ arch/arm64/include/asm/unistd.h               |    2 +-
+ arch/arm64/include/asm/unistd32.h             |    6 +
+ arch/ia64/kernel/syscalls/syscall.tbl         |    3 +
+ arch/m68k/kernel/syscalls/syscall.tbl         |    3 +
+ arch/microblaze/kernel/syscalls/syscall.tbl   |    3 +
+ arch/mips/kernel/syscalls/syscall_n32.tbl     |    3 +
+ arch/mips/kernel/syscalls/syscall_n64.tbl     |    3 +
+ arch/mips/kernel/syscalls/syscall_o32.tbl     |    3 +
+ arch/parisc/kernel/syscalls/syscall.tbl       |    3 +
+ arch/powerpc/kernel/syscalls/syscall.tbl      |    3 +
+ arch/s390/kernel/syscalls/syscall.tbl         |    3 +
+ arch/sh/kernel/syscalls/syscall.tbl           |    3 +
+ arch/sparc/kernel/syscalls/syscall.tbl        |    3 +
+ arch/um/Kconfig                               |    1 +
+ arch/x86/entry/syscalls/syscall_32.tbl        |    3 +
+ arch/x86/entry/syscalls/syscall_64.tbl        |    3 +
+ arch/xtensa/kernel/syscalls/syscall.tbl       |    3 +
+ fs/super.c                                    |    1 +
+ include/linux/lsm_hook_defs.h                 |    1 +
+ include/linux/lsm_hooks.h                     |    4 +
+ include/linux/security.h                      |    4 +
+ include/linux/syscalls.h                      |    7 +
+ include/uapi/asm-generic/unistd.h             |    8 +-
+ include/uapi/linux/landlock.h                 |  128 +
+ kernel/sys_ni.c                               |    5 +
+ samples/Kconfig                               |    7 +
+ samples/Makefile                              |    1 +
+ samples/landlock/.gitignore                   |    1 +
+ samples/landlock/Makefile                     |   13 +
+ samples/landlock/sandboxer.c                  |  238 ++
+ security/Kconfig                              |   11 +-
+ security/Makefile                             |    2 +
+ security/landlock/Kconfig                     |   21 +
+ security/landlock/Makefile                    |    4 +
+ security/landlock/common.h                    |   20 +
+ security/landlock/cred.c                      |   46 +
+ security/landlock/cred.h                      |   58 +
+ security/landlock/fs.c                        |  687 ++++
+ security/landlock/fs.h                        |   56 +
+ security/landlock/limits.h                    |   21 +
+ security/landlock/object.c                    |   67 +
+ security/landlock/object.h                    |   91 +
+ security/landlock/ptrace.c                    |  120 +
+ security/landlock/ptrace.h                    |   14 +
+ security/landlock/ruleset.c                   |  473 +++
+ security/landlock/ruleset.h                   |  165 +
+ security/landlock/setup.c                     |   40 +
+ security/landlock/setup.h                     |   18 +
+ security/landlock/syscalls.c                  |  445 +++
+ security/security.c                           |   51 +-
+ security/selinux/hooks.c                      |   58 +-
+ security/selinux/include/objsec.h             |    6 +
+ security/selinux/ss/services.c                |    3 +-
+ security/smack/smack.h                        |    6 +
+ security/smack/smack_lsm.c                    |   35 +-
+ tools/testing/selftests/Makefile              |    1 +
+ tools/testing/selftests/landlock/.gitignore   |    2 +
+ tools/testing/selftests/landlock/Makefile     |   24 +
+ tools/testing/selftests/landlock/base_test.c  |  219 ++
+ tools/testing/selftests/landlock/common.h     |  183 ++
+ tools/testing/selftests/landlock/config       |    7 +
+ tools/testing/selftests/landlock/fs_test.c    | 2792 +++++++++++++++++
+ .../testing/selftests/landlock/ptrace_test.c  |  337 ++
+ tools/testing/selftests/landlock/true.c       |    5 +
+ 72 files changed, 6896 insertions(+), 77 deletions(-)
+ create mode 100644 Documentation/security/landlock.rst
+ create mode 100644 Documentation/userspace-api/landlock.rst
+ create mode 100644 include/uapi/linux/landlock.h
+ create mode 100644 samples/landlock/.gitignore
+ create mode 100644 samples/landlock/Makefile
+ create mode 100644 samples/landlock/sandboxer.c
+ create mode 100644 security/landlock/Kconfig
+ create mode 100644 security/landlock/Makefile
+ create mode 100644 security/landlock/common.h
+ create mode 100644 security/landlock/cred.c
+ create mode 100644 security/landlock/cred.h
+ create mode 100644 security/landlock/fs.c
+ create mode 100644 security/landlock/fs.h
+ create mode 100644 security/landlock/limits.h
+ create mode 100644 security/landlock/object.c
+ create mode 100644 security/landlock/object.h
+ create mode 100644 security/landlock/ptrace.c
+ create mode 100644 security/landlock/ptrace.h
+ create mode 100644 security/landlock/ruleset.c
+ create mode 100644 security/landlock/ruleset.h
+ create mode 100644 security/landlock/setup.c
+ create mode 100644 security/landlock/setup.h
+ create mode 100644 security/landlock/syscalls.c
+ create mode 100644 tools/testing/selftests/landlock/.gitignore
+ create mode 100644 tools/testing/selftests/landlock/Makefile
+ create mode 100644 tools/testing/selftests/landlock/base_test.c
+ create mode 100644 tools/testing/selftests/landlock/common.h
+ create mode 100644 tools/testing/selftests/landlock/config
+ create mode 100644 tools/testing/selftests/landlock/fs_test.c
+ create mode 100644 tools/testing/selftests/landlock/ptrace_test.c
+ create mode 100644 tools/testing/selftests/landlock/true.c
+
+
+base-commit: 1e28eed17697bcf343c6743f0028cc3b5dd88bf0
 -- 
 2.30.2
 
