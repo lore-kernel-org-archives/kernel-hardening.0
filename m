@@ -1,20 +1,21 @@
-Return-Path: <SRS0=EyWt=IO=lists.openwall.com=kernel-hardening-return-20959-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ZtYt=IO=lists.openwall.com=kernel-hardening-return-20960-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-16.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D1D11C433E0
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:36:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4EF81C433DB
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:37:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D6FBE64F7B
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:36:55 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D6FBE64F7B
+	by mail.kernel.org (Postfix) with SMTP id 5304C64F7B
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Mar 2021 20:37:03 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 5304C64F7B
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20959-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 31990 invoked by uid 550); 16 Mar 2021 20:36:48 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20960-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32549 invoked by uid 550); 16 Mar 2021 20:36:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,7 +23,7 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 31970 invoked from network); 16 Mar 2021 20:36:48 -0000
+Received: (qmail 32437 invoked from network); 16 Mar 2021 20:36:52 -0000
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: Al Viro <viro@zeniv.linux.org.uk>,
 	James Morris <jmorris@namei.org>,
@@ -43,49 +44,164 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	kernel-hardening@lists.openwall.com,
 	linux-fsdevel@vger.kernel.org,
 	linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org
-Subject: [PATCH v5 0/1] Unprivileged chroot
-Date: Tue, 16 Mar 2021 21:36:32 +0100
-Message-Id: <20210316203633.424794-1-mic@digikod.net>
+	linux-security-module@vger.kernel.org,
+	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
+Subject: [PATCH v5 1/1] fs: Allow no_new_privs tasks to call chroot(2)
+Date: Tue, 16 Mar 2021 21:36:33 +0100
+Message-Id: <20210316203633.424794-2-mic@digikod.net>
 X-Mailer: git-send-email 2.30.2
+In-Reply-To: <20210316203633.424794-1-mic@digikod.net>
+References: <20210316203633.424794-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-Hi,
+From: Mickaël Salaün <mic@linux.microsoft.com>
 
-This new patch fix a race (spotted by Jann Horn) when reading
-current->fs->users .
+Being able to easily change root directories enables to ease some
+development workflow and can be used as a tool to strengthen
+unprivileged security sandboxes.  chroot(2) is not an access-control
+mechanism per se, but it can be used to limit the absolute view of the
+filesystem, and then limit ways to access data and kernel interfaces
+(e.g. /proc, /sys, /dev, etc.).
 
-The chroot system call is currently limited to be used by processes with
-the CAP_SYS_CHROOT capability.  This protects against malicious
-procesess willing to trick SUID-like binaries.  The following patch
-allows unprivileged users to safely use chroot(2), which may be
-complementary to the use of user namespaces.
+Users may not wish to expose namespace complexity to potentially
+malicious processes, or limit their use because of limited resources.
+The chroot feature is much more simple (and limited) than the mount
+namespace, but can still be useful.  As for containers, users of
+chroot(2) should take care of file descriptors or data accessible by
+other means (e.g. current working directory, leaked FDs, passed FDs,
+devices, mount points, etc.).  There is a lot of literature that discuss
+the limitations of chroot, and users of this feature should be aware of
+the multiple ways to bypass it.  Using chroot(2) for security purposes
+can make sense if it is combined with other features (e.g. dedicated
+user, seccomp, LSM access-controls, etc.).
 
-This patch is a follow-up of a previous one sent by Andy Lutomirski some
-time ago:
+One could argue that chroot(2) is useless without a properly populated
+root hierarchy (i.e. without /dev and /proc).  However, there are
+multiple use cases that don't require the chrooting process to create
+file hierarchies with special files nor mount points, e.g.:
+* A process sandboxing itself, once all its libraries are loaded, may
+  not need files other than regular files, or even no file at all.
+* Some pre-populated root hierarchies could be used to chroot into,
+  provided for instance by development environments or tailored
+  distributions.
+* Processes executed in a chroot may not require access to these special
+  files (e.g. with minimal runtimes, or by emulating some special files
+  with a LD_PRELOADed library or seccomp).
+
+Allowing a task to change its own root directory is not a threat to the
+system if we can prevent confused deputy attacks, which could be
+performed through execution of SUID-like binaries.  This can be
+prevented if the calling task sets PR_SET_NO_NEW_PRIVS on itself with
+prctl(2).  To only affect this task, its filesystem information must not
+be shared with other tasks, which can be achieved by not passing
+CLONE_FS to clone(2).  A similar no_new_privs check is already used by
+seccomp to avoid the same kind of security issues.  Furthermore, because
+of its security use and to avoid giving a new way for attackers to get
+out of a chroot (e.g. using /proc/<pid>/root, or chroot/chdir), an
+unprivileged chroot is only allowed if the calling process is not
+already chrooted.  This limitation is the same as for creating user
+namespaces.
+
+This change may not impact systems relying on other permission models
+than POSIX capabilities (e.g. Tomoyo).  Being able to use chroot(2) on
+such systems may require to update their security policies.
+
+Only the chroot system call is relaxed with this no_new_privs check; the
+init_chroot() helper doesn't require such change.
+
+Allowing unprivileged users to use chroot(2) is one of the initial
+objectives of no_new_privs:
+https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html
+This patch is a follow-up of a previous one sent by Andy Lutomirski:
 https://lore.kernel.org/lkml/0e2f0f54e19bff53a3739ecfddb4ffa9a6dbde4d.1327858005.git.luto@amacapital.net/
 
-This patch can be applied on top of v5.12-rc3 .  I would really
-appreciate constructive reviews.
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: Andy Lutomirski <luto@amacapital.net>
+Cc: Christian Brauner <christian.brauner@ubuntu.com>
+Cc: Christoph Hellwig <hch@lst.de>
+Cc: David Howells <dhowells@redhat.com>
+Cc: Dominik Brodowski <linux@dominikbrodowski.net>
+Cc: Eric W. Biederman <ebiederm@xmission.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Jann Horn <jannh@google.com>
+Cc: John Johansen <john.johansen@canonical.com>
+Cc: Kentaro Takeda <takedakn@nttdata.co.jp>
+Cc: Serge Hallyn <serge@hallyn.com>
+Cc: Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>
+Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Link: https://lore.kernel.org/r/20210316203633.424794-2-mic@digikod.net
+---
 
-Previous versions:
-v4: https://lore.kernel.org/r/20210316170135.226381-1-mic@digikod.net
-v3: https://lore.kernel.org/r/20210311105242.874506-1-mic@digikod.net
-v2: https://lore.kernel.org/r/20210310181857.401675-1-mic@digikod.net
-v1: https://lore.kernel.org/r/20210310161000.382796-1-mic@digikod.net
+Changes since v4:
+* Use READ_ONCE(current->fs->users) (found by Jann Horn).
+* Remove ambiguous example in commit description.
+* Add Reviewed-by Kees Cook.
 
-Regards,
+Changes since v3:
+* Move the new permission checks to a dedicated helper
+  current_chroot_allowed() to make the code easier to read and align
+  with user_path_at(), path_permission() and security_path_chroot()
+  calls (suggested by Kees Cook).
+* Remove now useless included file.
+* Extend commit description.
+* Rebase on v5.12-rc3 .
 
-Mickaël Salaün (1):
-  fs: Allow no_new_privs tasks to call chroot(2)
+Changes since v2:
+* Replace path_is_under() check with current_chrooted() to gain the same
+  protection as create_user_ns() (suggested by Jann Horn). See commit
+  3151527ee007 ("userns:  Don't allow creation if the user is chrooted")
 
+Changes since v1:
+* Replace custom is_path_beneath() with existing path_is_under().
+---
  fs/open.c | 23 +++++++++++++++++++++--
  1 file changed, 21 insertions(+), 2 deletions(-)
 
-
-base-commit: 1e28eed17697bcf343c6743f0028cc3b5dd88bf0
+diff --git a/fs/open.c b/fs/open.c
+index e53af13b5835..480010a551b2 100644
+--- a/fs/open.c
++++ b/fs/open.c
+@@ -532,6 +532,24 @@ SYSCALL_DEFINE1(fchdir, unsigned int, fd)
+ 	return error;
+ }
+ 
++static inline int current_chroot_allowed(void)
++{
++	/*
++	 * Changing the root directory for the calling task (and its future
++	 * children) requires that this task has CAP_SYS_CHROOT in its
++	 * namespace, or be running with no_new_privs and not sharing its
++	 * fs_struct and not escaping its current root (cf. create_user_ns()).
++	 * As for seccomp, checking no_new_privs avoids scenarios where
++	 * unprivileged tasks can affect the behavior of privileged children.
++	 */
++	if (task_no_new_privs(current) && READ_ONCE(current->fs->users) == 1 &&
++			!current_chrooted())
++		return 0;
++	if (ns_capable(current_user_ns(), CAP_SYS_CHROOT))
++		return 0;
++	return -EPERM;
++}
++
+ SYSCALL_DEFINE1(chroot, const char __user *, filename)
+ {
+ 	struct path path;
+@@ -546,9 +564,10 @@ SYSCALL_DEFINE1(chroot, const char __user *, filename)
+ 	if (error)
+ 		goto dput_and_out;
+ 
+-	error = -EPERM;
+-	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT))
++	error = current_chroot_allowed();
++	if (error)
+ 		goto dput_and_out;
++
+ 	error = security_path_chroot(&path);
+ 	if (error)
+ 		goto dput_and_out;
 -- 
 2.30.2
 
