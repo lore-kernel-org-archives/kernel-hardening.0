@@ -1,4 +1,4 @@
-Return-Path: <SRS0=htZS=IQ=lists.openwall.com=kernel-hardening-return-20976-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=RhDc=IQ=lists.openwall.com=kernel-hardening-return-20977-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -7,15 +7,15 @@ X-Spam-Status: No, score=-16.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
 	URIBL_BLOCKED autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6EE83C433DB
-	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Mar 2021 02:57:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 452FDC433DB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Mar 2021 04:01:17 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id BF13564F20
-	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Mar 2021 02:57:34 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BF13564F20
+	by mail.kernel.org (Postfix) with SMTP id 914DC64F10
+	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Mar 2021 04:01:15 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 914DC64F10
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20976-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 28638 invoked by uid 550); 18 Mar 2021 02:57:26 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20977-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 22444 invoked by uid 550); 18 Mar 2021 04:01:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,32 +23,32 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28606 invoked from network); 18 Mar 2021 02:57:25 -0000
+Received: (qmail 22410 invoked from network); 18 Mar 2021 04:01:05 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=NUKVVALo46DGDLY5Fpeo9BiER2fbqhihd3E1ZF34CxI=;
-        b=lz5ruq2g10F+WV/R9w10Emn1b/d3L7wD5eqK3paO76kfssR8OfYeSvl8ps5bKV5/KW
-         K3CL9xllkqMJV2aNREAgWyii3Vxw452N2edSPFJnkDdw0xznCiigvconRoWaj7aXN2ob
-         hGb+OkumdLkoJFXazfD9n76MyYd5/ORyLhZYE=
+        bh=+PDx2ETSsybyjv8lYQbaCw0/ZC3EaF/6hDbP8WAdDDU=;
+        b=jmpF1oVKhThnjlKFRGjhQ0GZ7IYC+dhw+ayMCDgBw+Fia716dImqvugbnVflyMckx8
+         p317YipYasW7GCD1fyQfrAyR6D2/HXMUi9HhWs6ma+VmyMRCIa7z4eSyv51/JQlIercb
+         1FgbCtCoNobngirV5lpcYkqZ2lEisya26YXRs=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=NUKVVALo46DGDLY5Fpeo9BiER2fbqhihd3E1ZF34CxI=;
-        b=OJ1/soY8oECbt4yq0OrFs51G0ihyFQxjFIWWl22d1jeSFRrv/IeMrKNX0JPLPc1ge8
-         oN+te+y4m17r12kbpEaARLRwhcsjRqup0rGTx/vPyMY+22WXr0ZnjBs45NjoIyvovjwj
-         DP2qw7iMyl5VvXM0hH5tSJlTOsF60V2EA+3fa3r/Kao+eqHORblUB4P2B6z3cUEC9sys
-         oiWwzXXnAB15/GzzmKa4pLuzR/rccilfZYOVBb+r0Z5faxCxOXR7BpoMcHcrqYXQGQ+K
-         w4P+nLq+nLW7PMjzm6vbpiceqohlfM0R3SV1eOdvwQCrj20UNp74zF4cS/oXMFKxgU4I
-         BIMQ==
-X-Gm-Message-State: AOAM5330pMIMS30EqoBpibMlayOk3l0OYTv+7tfmxgqEKjPNZQusJuJW
-	OCNvmZt037aDGXSxnCyqXZeSWg==
-X-Google-Smtp-Source: ABdhPJz1ek8GfT0KeD8DnVJAAL3uk+iTkBFyKHB5qADwC+qlPXChftj9SX9SK/zR80mbxWsg6DrN7Q==
-X-Received: by 2002:a17:90b:94c:: with SMTP id dw12mr1895089pjb.119.1616036232560;
-        Wed, 17 Mar 2021 19:57:12 -0700 (PDT)
-Date: Wed, 17 Mar 2021 19:57:10 -0700
+        bh=+PDx2ETSsybyjv8lYQbaCw0/ZC3EaF/6hDbP8WAdDDU=;
+        b=hhomP/6mqTLJjDAxiwzgEO2XY5sYgddk2o19hNhJy0+z2MUt71B0CphHlNKy2xh/2h
+         x2X1Yr8fg4EnjsJZ+iWJruEyQF+ZP5V/ZZkP4vct+zF1iyHNw0HNNNx/0hQIuycz+MVB
+         zpswSjjOCfF9/dVCCrxY1UBoR4XdtgbX/DOUuaAd7Mrg41LaQ+e2luReWZ743uA7b/6f
+         9KzUHhnkMCXBF5xYPkuzy9zEzBRoP/P5ymcW7JZMOlT5X04/2buliW/cd2w6aG71Udc8
+         cQz8PDv4MTWN86SLREGwxB873LiWaEdEj2o6WRRyPR7d0O9b+QKIbFg/P4PWz32okToa
+         L8Lg==
+X-Gm-Message-State: AOAM533TAzEdi3kL3fHwEUAQQoc8qsN4LnYFCf/rB+zgmum/fGSrjn0k
+	KPgu14IE+zpYjzwKNeXhYMipNg==
+X-Google-Smtp-Source: ABdhPJzW+YGhgIHxGj6CBZjbiZVHcmu4AVXFh3OPUFjbCMhGQJExLvQcQbeDC73TQ09/77sGT1pbqA==
+X-Received: by 2002:a17:902:ecc3:b029:e5:d7cc:2a20 with SMTP id a3-20020a170902ecc3b02900e5d7cc2a20mr7553690plh.11.1616040053272;
+        Wed, 17 Mar 2021 21:00:53 -0700 (PDT)
+Date: Wed, 17 Mar 2021 21:00:51 -0700
 From: Kees Cook <keescook@chromium.org>
 To: John Wood <john.wood@gmx.com>
 Cc: Jann Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>,
@@ -61,819 +61,538 @@ Cc: Jann Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>,
 	linux-security-module@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v6 3/8] securtiy/brute: Detect a brute force attack
-Message-ID: <202103171902.E6F55172@keescook>
+Subject: Re: [PATCH v6 4/8] security/brute: Fine tuning the attack detection
+Message-ID: <202103171957.16C0560D@keescook>
 References: <20210307113031.11671-1-john.wood@gmx.com>
- <20210307113031.11671-4-john.wood@gmx.com>
+ <20210307113031.11671-5-john.wood@gmx.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20210307113031.11671-4-john.wood@gmx.com>
+In-Reply-To: <20210307113031.11671-5-john.wood@gmx.com>
 
-On Sun, Mar 07, 2021 at 12:30:26PM +0100, John Wood wrote:
-> To detect a brute force attack it is necessary that the statistics
-> shared by all the fork hierarchy processes be updated in every fatal
-> crash and the most important data to update is the application crash
-> period. To do so, use the new "task_fatal_signal" LSM hook added in a
-> previous step.
+On Sun, Mar 07, 2021 at 12:30:27PM +0100, John Wood wrote:
+> To avoid false positives during the attack detection it is necessary to
+> narrow the possible cases. Only the following scenarios are taken into
+> account:
 > 
-> The application crash period must be a value that is not prone to change
-> due to spurious data and follows the real crash period. So, to compute
-> it, the exponential moving average (EMA) is used.
+> 1.- Launching (fork()/exec()) a setuid/setgid process repeatedly until a
+>     desirable memory layout is got (e.g. Stack Clash).
+> 2.- Connecting to an exec()ing network daemon (e.g. xinetd) repeatedly
+>     until a desirable memory layout is got (e.g. what CTFs do for simple
+>     network service).
+> 3.- Launching processes without exec() (e.g. Android Zygote) and exposing
+>     state to attack a sibling.
+> 4.- Connecting to a fork()ing network daemon (e.g. apache) repeatedly until
+>     the previously shared memory layout of all the other children is
+>     exposed (e.g. kind of related to HeartBleed).
 > 
-> There are two types of brute force attacks that need to be detected. The
-> first one is an attack that happens through the fork system call and the
-> second one is an attack that happens through the execve system call. The
-> first type uses the statistics shared by all the fork hierarchy
-> processes, but the second type cannot use this statistical data due to
-> these statistics disappear when the involved tasks finished. In this
-> last scenario the attack info should be tracked by the statistics of a
-> higher fork hierarchy (the hierarchy that contains the process that
-> forks before the execve system call).
+> In each case, a privilege boundary has been crossed:
 > 
-> Moreover, these two attack types have two variants. A slow brute force
-> attack that is detected if the maximum number of faults per fork
-> hierarchy is reached and a fast brute force attack that is detected if
-> the application crash period falls below a certain threshold.
+> Case 1: setuid/setgid process
+> Case 2: network to local
+> Case 3: privilege changes
+> Case 4: network to local
 > 
-> Also, this patch adds locking to protect the statistics pointer hold by
-> every process.
+> So, this patch checks if any of these privilege boundaries have been
+> crossed before to compute the application crash period.
+> 
+> Also, in every fatal crash only the signals delivered by the kernel are
+> taken into account with the exception of the SIGABRT signal since the
+> latter is used by glibc for stack canary, malloc, etc failures, which may
+> indicate that a mitigation has been triggered.
 > 
 > Signed-off-by: John Wood <john.wood@gmx.com>
 > ---
->  security/brute/brute.c | 498 +++++++++++++++++++++++++++++++++++++++--
->  1 file changed, 479 insertions(+), 19 deletions(-)
+>  security/brute/brute.c | 293 +++++++++++++++++++++++++++++++++++++++--
+>  1 file changed, 280 insertions(+), 13 deletions(-)
 > 
 > diff --git a/security/brute/brute.c b/security/brute/brute.c
-> index 99d099e45112..870db55332d4 100644
+> index 870db55332d4..38e5e050964a 100644
 > --- a/security/brute/brute.c
 > +++ b/security/brute/brute.c
-> @@ -11,9 +11,14 @@
+> @@ -3,15 +3,25 @@
+>  #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+> 
+>  #include <asm/current.h>
+> +#include <asm/rwonce.h>
+> +#include <asm/siginfo.h>
+> +#include <asm/signal.h>
+> +#include <linux/binfmts.h>
+>  #include <linux/bug.h>
+>  #include <linux/compiler.h>
+> +#include <linux/cred.h>
+> +#include <linux/dcache.h>
+>  #include <linux/errno.h>
+> +#include <linux/fs.h>
+>  #include <linux/gfp.h>
+> +#include <linux/if.h>
+>  #include <linux/init.h>
 >  #include <linux/jiffies.h>
 >  #include <linux/kernel.h>
 >  #include <linux/lsm_hooks.h>
-> +#include <linux/math64.h>
+>  #include <linux/math64.h>
+> +#include <linux/netdevice.h>
+> +#include <linux/path.h>
 >  #include <linux/printk.h>
 >  #include <linux/refcount.h>
-> +#include <linux/rwlock.h>
-> +#include <linux/rwlock_types.h>
+>  #include <linux/rwlock.h>
+> @@ -19,9 +29,35 @@
 >  #include <linux/sched.h>
-> +#include <linux/sched/signal.h>
-> +#include <linux/sched/task.h>
+>  #include <linux/sched/signal.h>
+>  #include <linux/sched/task.h>
+> +#include <linux/signal.h>
+> +#include <linux/skbuff.h>
 >  #include <linux/slab.h>
 >  #include <linux/spinlock.h>
+> +#include <linux/stat.h>
 >  #include <linux/types.h>
-> @@ -37,6 +42,11 @@ struct brute_stats {
->  	u64 period;
->  };
-> 
-> +/*
-> + * brute_stats_ptr_lock - Lock to protect the brute_stats structure pointer.
-> + */
-> +static DEFINE_RWLOCK(brute_stats_ptr_lock);
+> +#include <linux/uidgid.h>
 
-Yeow, you've switched from an (unneeded in prior patch) per-stats lock
-to a global lock? I think this isn't needed...
+This is really a LOT of includes. Are you sure all of these are
+explicitly needed?
 
 > +
->  /*
->   * brute_blob_sizes - LSM blob sizes.
->   *
-> @@ -74,7 +84,7 @@ static struct brute_stats *brute_new_stats(void)
->  {
->  	struct brute_stats *stats;
-> 
-> -	stats = kmalloc(sizeof(struct brute_stats), GFP_KERNEL);
-> +	stats = kmalloc(sizeof(struct brute_stats), GFP_ATOMIC);
-
-Why change this here? I'd just start with this in the patch that
-introduces it.
-
->  	if (!stats)
->  		return NULL;
-> 
-> @@ -99,16 +109,17 @@ static struct brute_stats *brute_new_stats(void)
->   * It's mandatory to disable interrupts before acquiring the brute_stats::lock
->   * since the task_free hook can be called from an IRQ context during the
->   * execution of the task_alloc hook.
-> + *
-> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> + *          held.
->   */
->  static void brute_share_stats(struct brute_stats *src,
->  			      struct brute_stats **dst)
->  {
-> -	unsigned long flags;
-> -
-> -	spin_lock_irqsave(&src->lock, flags);
-> +	spin_lock(&src->lock);
->  	refcount_inc(&src->refc);
->  	*dst = src;
-> -	spin_unlock_irqrestore(&src->lock, flags);
-> +	spin_unlock(&src->lock);
->  }
-
-I still don't think any locking is needed here; the whole function can
-go away, IMO.
-
+> +/**
+> + * struct brute_cred - Saved credentials.
+> + * @uid: Real UID of the task.
+> + * @gid: Real GID of the task.
+> + * @suid: Saved UID of the task.
+> + * @sgid: Saved GID of the task.
+> + * @euid: Effective UID of the task.
+> + * @egid: Effective GID of the task.
+> + * @fsuid: UID for VFS ops.
+> + * @fsgid: GID for VFS ops.
+> + */
+> +struct brute_cred {
+> +	kuid_t uid;
+> +	kgid_t gid;
+> +	kuid_t suid;
+> +	kgid_t sgid;
+> +	kuid_t euid;
+> +	kgid_t egid;
+> +	kuid_t fsuid;
+> +	kgid_t fsgid;
+> +};
 > 
 >  /**
-> @@ -126,26 +137,36 @@ static void brute_share_stats(struct brute_stats *src,
+>   * struct brute_stats - Fork brute force attack statistics.
+> @@ -30,6 +66,9 @@
+>   * @faults: Number of crashes.
+>   * @jiffies: Last crash timestamp.
+>   * @period: Crash period's moving average.
+> + * @saved_cred: Saved credentials.
+> + * @network: Network activity flag.
+> + * @bounds_crossed: Privilege bounds crossed flag.
+>   *
+>   * This structure holds the statistical data shared by all the fork hierarchy
+>   * processes.
+> @@ -40,6 +79,9 @@ struct brute_stats {
+>  	unsigned char faults;
+>  	u64 jiffies;
+>  	u64 period;
+> +	struct brute_cred saved_cred;
+> +	unsigned char network : 1;
+> +	unsigned char bounds_crossed : 1;
+
+If you really want to keep faults a "char", I would move these bools
+after "faults" to avoid adding more padding.
+
+>  };
+> 
+>  /*
+> @@ -71,18 +113,25 @@ static inline struct brute_stats **brute_stats_ptr(struct task_struct *task)
+> 
+>  /**
+>   * brute_new_stats() - Allocate a new statistics structure.
+> + * @network_to_local: Network activity followed by a fork or execve system call.
+> + * @is_setid: The executable file has the setid flags set.
+>   *
+>   * If the allocation is successful the reference counter is set to one to
+>   * indicate that there will be one task that points to this structure. Also, the
+>   * last crash timestamp is set to now. This way, it is possible to compute the
+>   * application crash period at the first fault.
+>   *
+> + * Moreover, the credentials of the current task are saved. Also, the network
+> + * and bounds_crossed flags are set based on the network_to_local and is_setid
+> + * parameters.
+> + *
+>   * Return: NULL if the allocation fails. A pointer to the new allocated
+>   *         statistics structure if it success.
+>   */
+> -static struct brute_stats *brute_new_stats(void)
+> +static struct brute_stats *brute_new_stats(bool network_to_local, bool is_setid)
+>  {
+>  	struct brute_stats *stats;
+> +	const struct cred *cred = current_cred();
+> 
+>  	stats = kmalloc(sizeof(struct brute_stats), GFP_ATOMIC);
+>  	if (!stats)
+> @@ -93,6 +142,16 @@ static struct brute_stats *brute_new_stats(void)
+>  	stats->faults = 0;
+>  	stats->jiffies = get_jiffies_64();
+>  	stats->period = 0;
+> +	stats->saved_cred.uid = cred->uid;
+> +	stats->saved_cred.gid = cred->gid;
+> +	stats->saved_cred.suid = cred->suid;
+> +	stats->saved_cred.sgid = cred->sgid;
+> +	stats->saved_cred.euid = cred->euid;
+> +	stats->saved_cred.egid = cred->egid;
+> +	stats->saved_cred.fsuid = cred->fsuid;
+> +	stats->saved_cred.fsgid = cred->fsgid;
+
+Hm, there's more than just uids to check for perms, but I'll go read
+more...
+
+> +	stats->network = network_to_local;
+> +	stats->bounds_crossed = network_to_local || is_setid;
+> 
+>  	return stats;
+>  }
+> @@ -137,6 +196,10 @@ static void brute_share_stats(struct brute_stats *src,
 >   * this task and the new one being allocated. Otherwise, share the statistics
 >   * that the current task already has.
 >   *
-> + * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
-> + * and brute_stats::lock since the task_free hook can be called from an IRQ
-> + * context during the execution of the task_alloc hook.
+> + * Also, if the shared statistics indicate a previous network activity, the
+> + * bounds_crossed flag must be set to show that a network-to-local privilege
+> + * boundary has been crossed.
 > + *
->   * Return: -ENOMEM if the allocation of the new statistics structure fails. Zero
->   *         otherwise.
->   */
->  static int brute_task_alloc(struct task_struct *task, unsigned long clone_flags)
->  {
->  	struct brute_stats **stats, **p_stats;
-> +	unsigned long flags;
-> 
->  	stats = brute_stats_ptr(task);
->  	p_stats = brute_stats_ptr(current);
-> +	write_lock_irqsave(&brute_stats_ptr_lock, flags);
+>   * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
+>   * and brute_stats::lock since the task_free hook can be called from an IRQ
+>   * context during the execution of the task_alloc hook.
+> @@ -155,11 +218,14 @@ static int brute_task_alloc(struct task_struct *task, unsigned long clone_flags)
 > 
 >  	if (likely(*p_stats)) {
 >  		brute_share_stats(*p_stats, stats);
-> +		write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+> +		spin_lock(&(*stats)->lock);
+> +		(*stats)->bounds_crossed |= (*stats)->network;
+> +		spin_unlock(&(*stats)->lock);
+>  		write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
 >  		return 0;
 >  	}
 > 
->  	*stats = brute_new_stats();
-> -	if (!*stats)
-> +	if (!*stats) {
-> +		write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+> -	*stats = brute_new_stats();
+> +	*stats = brute_new_stats(false, false);
+>  	if (!*stats) {
+>  		write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
 >  		return -ENOMEM;
-> +	}
-> 
->  	brute_share_stats(*stats, p_stats);
-> +	write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+> @@ -170,6 +236,61 @@ static int brute_task_alloc(struct task_struct *task, unsigned long clone_flags)
 >  	return 0;
 >  }
-
-I'd much prefer that whatever locking is needed be introduced in the
-initial patch: this transformation just double the work to review. :)
-
 > 
-> @@ -167,9 +188,9 @@ static int brute_task_alloc(struct task_struct *task, unsigned long clone_flags)
+> +/**
+> + * brute_is_setid() - Test if the executable file has the setid flags set.
+> + * @bprm: Points to the linux_binprm structure.
+> + *
+> + * Return: True if the executable file has the setid flags set. False otherwise.
+> + */
+> +static bool brute_is_setid(const struct linux_binprm *bprm)
+> +{
+> +	struct file *file = bprm->file;
+> +	struct inode *inode;
+> +	umode_t mode;
+> +
+> +	if (!file)
+> +		return false;
+> +
+> +	inode = file->f_path.dentry->d_inode;
+> +	mode = inode->i_mode;
+> +
+> +	return !!(mode & (S_ISUID | S_ISGID));
+> +}
+
+Oh, er, no, this should not reinvent the wheel. You just want to know if
+creds got elevated, so you want bprm->secureexec; this gets correctly
+checked in cap_bprm_creds_from_file().
+
+> +
+> +/**
+> + * brute_reset_stats() - Reset the statistical data.
+> + * @stats: Statistics to be reset.
+> + * @is_setid: The executable file has the setid flags set.
+> + *
+> + * Reset the faults and period and set the last crash timestamp to now. This
+> + * way, it is possible to compute the application crash period at the next
+> + * fault. Also, save the credentials of the current task and update the
+> + * bounds_crossed flag based on a previous network activity and the is_setid
+> + * parameter.
+> + *
+> + * The statistics to be reset cannot be NULL.
+> + *
+> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
+> + *          and brute_stats::lock held.
+> + */
+> +static void brute_reset_stats(struct brute_stats *stats, bool is_setid)
+> +{
+> +	const struct cred *cred = current_cred();
+> +
+> +	stats->faults = 0;
+> +	stats->jiffies = get_jiffies_64();
+> +	stats->period = 0;
+> +	stats->saved_cred.uid = cred->uid;
+> +	stats->saved_cred.gid = cred->gid;
+> +	stats->saved_cred.suid = cred->suid;
+> +	stats->saved_cred.sgid = cred->sgid;
+> +	stats->saved_cred.euid = cred->euid;
+> +	stats->saved_cred.egid = cred->egid;
+> +	stats->saved_cred.fsuid = cred->fsuid;
+> +	stats->saved_cred.fsgid = cred->fsgid;
+> +	stats->bounds_crossed = stats->network || is_setid;
+> +}
+
+I would include brute_reset_stats() in the first patch (and add to it as
+needed). To that end, it can start with a memset(stats, 0, sizeof(*stats));
+
+> +
+>  /**
+>   * brute_task_execve() - Target for the bprm_committing_creds hook.
+>   * @bprm: Points to the linux_binprm structure.
+> @@ -188,6 +309,11 @@ static int brute_task_alloc(struct task_struct *task, unsigned long clone_flags)
 >   * only one task (the task that calls the execve function) points to the data.
 >   * In this case, the previous allocation is used but the statistics are reset.
 >   *
-> - * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> - * since the task_free hook can be called from an IRQ context during the
-> - * execution of the bprm_committing_creds hook.
-> + * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
-> + * and brute_stats::lock since the task_free hook can be called from an IRQ
-> + * context during the execution of the bprm_committing_creds hook.
->   */
->  static void brute_task_execve(struct linux_binprm *bprm)
+> + * Also, if the statistics of the process that calls the execve system call
+> + * indicate a previous network activity or the executable file has the setid
+> + * flags set, the bounds_crossed flag must be set to show that a network to
+> + * local privilege boundary or setid boundary has been crossed respectively.
+> + *
+>   * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
+>   * and brute_stats::lock since the task_free hook can be called from an IRQ
+>   * context during the execution of the bprm_committing_creds hook.
+> @@ -196,6 +322,8 @@ static void brute_task_execve(struct linux_binprm *bprm)
 >  {
-> @@ -177,24 +198,33 @@ static void brute_task_execve(struct linux_binprm *bprm)
+>  	struct brute_stats **stats;
 >  	unsigned long flags;
+> +	bool network_to_local;
+> +	bool is_setid = false;
 > 
 >  	stats = brute_stats_ptr(current);
-> -	if (WARN(!*stats, "No statistical data\n"))
-> +	read_lock_irqsave(&brute_stats_ptr_lock, flags);
-> +
-> +	if (WARN(!*stats, "No statistical data\n")) {
-> +		read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
->  		return;
-> +	}
+>  	read_lock_irqsave(&brute_stats_ptr_lock, flags);
+> @@ -206,12 +334,18 @@ static void brute_task_execve(struct linux_binprm *bprm)
+>  	}
 > 
-> -	spin_lock_irqsave(&(*stats)->lock, flags);
-> +	spin_lock(&(*stats)->lock);
+>  	spin_lock(&(*stats)->lock);
+> +	network_to_local = (*stats)->network;
+> +
+> +	/*
+> +	 * A network_to_local flag equal to true will set the bounds_crossed
+> +	 * flag. So, in this scenario the "is setid" test can be avoided.
+> +	 */
+> +	if (!network_to_local)
+> +		is_setid = brute_is_setid(bprm);
 > 
 >  	if (!refcount_dec_not_one(&(*stats)->refc)) {
 >  		/* execve call after an execve call */
->  		(*stats)->faults = 0;
->  		(*stats)->jiffies = get_jiffies_64();
->  		(*stats)->period = 0;
-> -		spin_unlock_irqrestore(&(*stats)->lock, flags);
-> +		spin_unlock(&(*stats)->lock);
-> +		read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+> -		(*stats)->faults = 0;
+> -		(*stats)->jiffies = get_jiffies_64();
+> -		(*stats)->period = 0;
+> +		brute_reset_stats(*stats, is_setid);
+>  		spin_unlock(&(*stats)->lock);
+>  		read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
 >  		return;
->  	}
+> @@ -222,7 +356,7 @@ static void brute_task_execve(struct linux_binprm *bprm)
+>  	read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
 > 
->  	/* execve call after a fork call */
-> -	spin_unlock_irqrestore(&(*stats)->lock, flags);
-> +	spin_unlock(&(*stats)->lock);
-> +	read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
-> +
-> +	write_lock_irqsave(&brute_stats_ptr_lock, flags);
->  	*stats = brute_new_stats();
+>  	write_lock_irqsave(&brute_stats_ptr_lock, flags);
+> -	*stats = brute_new_stats();
+> +	*stats = brute_new_stats(network_to_local, is_setid);
 >  	WARN(!*stats, "Cannot allocate statistical data\n");
-> +	write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+>  	write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
 >  }
-
-Again, I don't see a need for locking -- this is just managing the
-lifetime which is entirely handled by the implicit locking of "current"
-and the refcount_t.
-
+> @@ -653,12 +787,103 @@ static void brute_manage_exec_attack(struct brute_stats *stats, u64 now,
+>  		print_exec_attack_running(exec_stats);
+>  }
 > 
->  /**
-> @@ -204,9 +234,9 @@ static void brute_task_execve(struct linux_binprm *bprm)
->   * The statistical data that is shared between all the fork hierarchy processes
->   * needs to be freed when this hierarchy disappears.
->   *
-> - * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> - * since the task_free hook can be called from an IRQ context during the
-> - * execution of the task_free hook.
-> + * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
-> + * and brute_stats::lock since the task_free hook can be called from an IRQ
-> + * context during the execution of the task_free hook.
->   */
->  static void brute_task_free(struct task_struct *task)
->  {
-> @@ -215,17 +245,446 @@ static void brute_task_free(struct task_struct *task)
->  	bool refc_is_zero;
-> 
->  	stats = brute_stats_ptr(task);
-> -	if (WARN(!*stats, "No statistical data\n"))
-> +	read_lock_irqsave(&brute_stats_ptr_lock, flags);
-> +
-> +	if (WARN(!*stats, "No statistical data\n")) {
-> +		read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
->  		return;
-> +	}
-> 
-> -	spin_lock_irqsave(&(*stats)->lock, flags);
-> +	spin_lock(&(*stats)->lock);
->  	refc_is_zero = refcount_dec_and_test(&(*stats)->refc);
-> -	spin_unlock_irqrestore(&(*stats)->lock, flags);
-> +	spin_unlock(&(*stats)->lock);
-> +	read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
-> 
->  	if (refc_is_zero) {
-> +		write_lock_irqsave(&brute_stats_ptr_lock, flags);
->  		kfree(*stats);
->  		*stats = NULL;
-> +		write_unlock_irqrestore(&brute_stats_ptr_lock, flags);
-> +	}
-> +}
-
-Same; I would expect this to be simply:
-
-	stats = brute_stats_ptr(task);
-	if (WARN_ON_ONCE(!*stats))
-		return;
-	if (refcount_dec_and_test(&(*stats)->refc)) {
-		kfree(*stats);
-		*stats = NULL;
-	}
-
-> +
-> +/*
-> + * BRUTE_EMA_WEIGHT_NUMERATOR - Weight's numerator of EMA.
-> + */
-> +static const u64 BRUTE_EMA_WEIGHT_NUMERATOR = 7;
-> +
-> +/*
-> + * BRUTE_EMA_WEIGHT_DENOMINATOR - Weight's denominator of EMA.
-> + */
-> +static const u64 BRUTE_EMA_WEIGHT_DENOMINATOR = 10;
-
-Should these be externally configurable (via sysfs)?
-
-> +
 > +/**
-> + * brute_mul_by_ema_weight() - Multiply by EMA weight.
-> + * @value: Value to multiply by EMA weight.
+> + * brute_priv_have_changed() - Test if the privileges have changed.
+> + * @stats: Statistics that hold the saved credentials.
 > + *
-> + * Return: The result of the multiplication operation.
-> + */
-> +static inline u64 brute_mul_by_ema_weight(u64 value)
-> +{
-> +	return mul_u64_u64_div_u64(value, BRUTE_EMA_WEIGHT_NUMERATOR,
-> +				   BRUTE_EMA_WEIGHT_DENOMINATOR);
-> +}
-> +
-> +/*
-> + * BRUTE_MAX_FAULTS - Maximum number of faults.
+> + * The privileges have changed if the credentials of the current task are
+> + * different from the credentials saved in the statistics structure.
 > + *
-> + * If a brute force attack is running slowly for a long time, the application
-> + * crash period's EMA is not suitable for the detection. This type of attack
-> + * must be detected using a maximum number of faults.
-> + */
-> +static const unsigned char BRUTE_MAX_FAULTS = 200;
-
-Same.
-
-> +
-> +/**
-> + * brute_update_crash_period() - Update the application crash period.
-> + * @stats: Statistics that hold the application crash period to update.
-> + * @now: The current timestamp in jiffies.
-> + *
-> + * The application crash period must be a value that is not prone to change due
-> + * to spurious data and follows the real crash period. So, to compute it, the
-> + * exponential moving average (EMA) is used.
-> + *
-> + * This kind of average defines a weight (between 0 and 1) for the new value to
-> + * add and applies the remainder of the weight to the current average value.
-> + * This way, some spurious data will not excessively modify the average and only
-> + * if the new values are persistent, the moving average will tend towards them.
-> + *
-> + * Mathematically the application crash period's EMA can be expressed as
-> + * follows:
-> + *
-> + * period_ema = period * weight + period_ema * (1 - weight)
-> + *
-> + * If the operations are applied:
-> + *
-> + * period_ema = period * weight + period_ema - period_ema * weight
-> + *
-> + * If the operands are ordered:
-> + *
-> + * period_ema = period_ema - period_ema * weight + period * weight
-> + *
-> + * Finally, this formula can be written as follows:
-> + *
-> + * period_ema -= period_ema * weight;
-> + * period_ema += period * weight;
-> + *
-> + * The statistics that hold the application crash period to update cannot be
-> + * NULL.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
+> + * The statistics that hold the saved credentials cannot be NULL.
 > + *
 > + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> + *          held.
-> + * Return: The last crash timestamp before updating it.
+> + *          and brute_stats::lock held.
+> + * Return: True if the privileges have changed. False otherwise.
 > + */
-> +static u64 brute_update_crash_period(struct brute_stats *stats, u64 now)
+> +static bool brute_priv_have_changed(struct brute_stats *stats)
 > +{
-> +	u64 current_period;
-> +	u64 last_crash_timestamp;
+> +	const struct cred *cred = current_cred();
+> +	bool priv_have_changed;
 > +
-> +	spin_lock(&stats->lock);
-> +	current_period = now - stats->jiffies;
-> +	last_crash_timestamp = stats->jiffies;
-> +	stats->jiffies = now;
+> +	priv_have_changed = !uid_eq(stats->saved_cred.uid, cred->uid) ||
+> +		!gid_eq(stats->saved_cred.gid, cred->gid) ||
+> +		!uid_eq(stats->saved_cred.suid, cred->suid) ||
+> +		!gid_eq(stats->saved_cred.sgid, cred->sgid) ||
+> +		!uid_eq(stats->saved_cred.euid, cred->euid) ||
+> +		!gid_eq(stats->saved_cred.egid, cred->egid) ||
+> +		!uid_eq(stats->saved_cred.fsuid, cred->fsuid) ||
+> +		!gid_eq(stats->saved_cred.fsgid, cred->fsgid);
 > +
-> +	stats->period -= brute_mul_by_ema_weight(stats->period);
-> +	stats->period += brute_mul_by_ema_weight(current_period);
-> +
-> +	if (stats->faults < BRUTE_MAX_FAULTS)
-> +		stats->faults += 1;
-> +
-> +	spin_unlock(&stats->lock);
-> +	return last_crash_timestamp;
+> +	return priv_have_changed;
 > +}
 
-Now *here* locking makes sense, and it only needs to be per-stat, not
-global, since multiple processes may be operating on the same stat
-struct. To make this more no-reader-locking-friendly, I'd also update
-everything at the end, and use WRITE_ONCE():
-
-	u64 current_period, period;
-	u64 last_crash_timestamp;
-	u64 faults;
-
-	spin_lock(&stats->lock);
-	current_period = now - stats->jiffies;
-	last_crash_timestamp = stats->jiffies;
-
-	WRITE_ONCE(stats->period,
-		   stats->period - brute_mul_by_ema_weight(stats->period) +
-		   brute_mul_by_ema_weight(current_period));
-
-	if (stats->faults < BRUTE_MAX_FAULTS)
-		WRITE_ONCE(stats->faults, stats->faults + 1);
-
-	WRITE_ONCE(stats->jiffies, now);
-
-	spin_unlock(&stats->lock);
-	return last_crash_timestamp;
-
-That way readers can (IIUC) safely use READ_ONCE() on jiffies and faults
-without needing to hold the &stats->lock (unless they need perfectly matching
-jiffies, period, and faults).
-
-> +
-> +/*
-> + * BRUTE_MIN_FAULTS - Minimum number of faults.
-> + *
-> + * The application crash period's EMA cannot be used until a minimum number of
-> + * data has been applied to it. This constraint allows getting a trend when this
-> + * moving average is used. Moreover, it avoids the scenario where an application
-> + * fails quickly from execve system call due to reasons unrelated to a real
-> + * attack.
-> + */
-> +static const unsigned char BRUTE_MIN_FAULTS = 5;
-> +
-> +/*
-> + * BRUTE_CRASH_PERIOD_THRESHOLD - Application crash period threshold.
-> + *
-> + * The units are expressed in milliseconds.
-> + *
-> + * A fast brute force attack is detected when the application crash period falls
-> + * below this threshold.
-> + */
-> +static const u64 BRUTE_CRASH_PERIOD_THRESHOLD = 30000;
-
-These could all be sysctls (see yama's use of sysctl).
+This should just be checked from bprm->secureexec, which is valid by the
+time you get to the bprm_committing_creds hook. You can just save the
+value to your stats struct instead of re-interrogating current_cred,
+etc.
 
 > +
 > +/**
-> + * brute_attack_running() - Test if a brute force attack is happening.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + *
-> + * The decision if a brute force attack is running is based on the statistical
-> + * data shared by all the fork hierarchy processes. This statistics cannot be
-> + * NULL.
-> + *
-> + * There are two types of brute force attacks that can be detected using the
-> + * statistical data. The first one is a slow brute force attack that is detected
-> + * if the maximum number of faults per fork hierarchy is reached. The second
-> + * type is a fast brute force attack that is detected if the application crash
-> + * period falls below a certain threshold.
-> + *
-> + * Moreover, it is important to note that no attacks will be detected until a
-> + * minimum number of faults have occurred. This allows to have a trend in the
-> + * crash period when the EMA is used and also avoids the scenario where an
-> + * application fails quickly from execve system call due to reasons unrelated to
-> + * a real attack.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
-> + *
-> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> + *          held.
-> + * Return: True if a brute force attack is happening. False otherwise.
-> + */
-> +static bool brute_attack_running(struct brute_stats *stats)
-> +{
-> +	u64 crash_period;
-> +
-> +	spin_lock(&stats->lock);
-> +	if (stats->faults < BRUTE_MIN_FAULTS) {
-> +		spin_unlock(&stats->lock);
-> +		return false;
-> +	}
-
-If I'm reading this correctly, you're performing two tests, so there
-isn't a strict relationship between faults and period for this test,
-and I think it could be done without locking with READ_ONCE():
-
-	u64 faults;
-	u64 crash_period;
-
-	faults = READ_ONCE(stats->faults);
-	if (faults < BRUTE_MIN_FAULTS)
-		return false;
-	if (faults >= BRUTE_MAX_FAULTS)
-		return true;
-
-	crash_period = jiffies64_to_msecs(READ_ONCE(stats->period));
-	return crash_period < BRUTE_CRASH_PERIOD_THRESHOLD;
-
-
-> +
-> +	if (stats->faults >= BRUTE_MAX_FAULTS) {
-> +		spin_unlock(&stats->lock);
-> +		return true;
-> +	}
-> +
-> +	crash_period = jiffies64_to_msecs(stats->period);
-> +	spin_unlock(&stats->lock);
-> +
-> +	return crash_period < BRUTE_CRASH_PERIOD_THRESHOLD;
-> +}
-> +
-> +/**
-> + * print_fork_attack_running() - Warn about a fork brute force attack.
-> + */
-> +static inline void print_fork_attack_running(void)
-> +{
-> +	pr_warn("Fork brute force attack detected [%s]\n", current->comm);
-> +}
-
-I think pid should be part of this...
-
-> +
-> +/**
-> + * brute_manage_fork_attack() - Manage a fork brute force attack.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + * @now: The current timestamp in jiffies.
-> + *
-> + * For a correct management of a fork brute force attack it is only necessary to
-> + * update the statistics and test if an attack is happening based on these data.
-> + *
-> + * The statistical data shared by all the fork hierarchy processes cannot be
-> + * NULL.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
-> + *
-> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> + *          held.
-> + * Return: The last crash timestamp before updating it.
-> + */
-> +static u64 brute_manage_fork_attack(struct brute_stats *stats, u64 now)
-> +{
-> +	u64 last_fork_crash;
-> +
-> +	last_fork_crash = brute_update_crash_period(stats, now);
-> +	if (brute_attack_running(stats))
-> +		print_fork_attack_running();
-> +
-> +	return last_fork_crash;
-> +}
-> +
-> +/**
-> + * brute_get_exec_stats() - Get the exec statistics.
-> + * @stats: When this function is called, this parameter must point to the
-> + *         current process' statistical data. When this function returns, this
-> + *         parameter points to the parent process' statistics of the fork
-> + *         hierarchy that hold the current process' statistics.
-> + *
-> + * To manage a brute force attack that happens through the execve system call it
-> + * is not possible to use the statistical data hold by this process due to these
-> + * statistics disappear when this task is finished. In this scenario this data
-> + * should be tracked by the statistics of a higher fork hierarchy (the hierarchy
-> + * that contains the process that forks before the execve system call).
-> + *
-> + * To find these statistics the current fork hierarchy must be traversed up
-> + * until new statistics are found.
-> + *
-> + * Context: Must be called with tasklist_lock and brute_stats_ptr_lock held.
-> + */
-> +static void brute_get_exec_stats(struct brute_stats **stats)
-> +{
-> +	const struct task_struct *task = current;
-> +	struct brute_stats **p_stats;
-> +
-> +	do {
-> +		if (!task->real_parent) {
-> +			*stats = NULL;
-> +			return;
-> +		}
-> +
-> +		p_stats = brute_stats_ptr(task->real_parent);
-> +		task = task->real_parent;
-> +	} while (*stats == *p_stats);
-> +
-> +	*stats = *p_stats;
-> +}
-
-See Yama's task_is_descendant() for how to walk up the process tree
-(and I think the process group stuff will save some steps too); you
-don't need tasklist_lock held, just rcu_read_lock held, AIUI:
-Documentation/RCU/listRCU.rst
-
-And since you're passing this stats struct back up, and it would be outside of rcu read lock, you'd want to do a "get" on it first:
-
-	rcu_read_lock();
-	loop {
-		...
-	}
-	refcount_inc_not_zero(&(*p_stats)->refc);
-	rcu_read_unlock();
-
-	*stats = *p_stats
-
-
-
-> +
-> +/**
-> + * brute_update_exec_crash_period() - Update the exec crash period.
-> + * @stats: When this function is called, this parameter must point to the
-> + *         current process' statistical data. When this function returns, this
-> + *         parameter points to the updated statistics (statistics that track the
-> + *         info to manage a brute force attack that happens through the execve
-> + *         system call).
-> + * @now: The current timestamp in jiffies.
-> + * @last_fork_crash: The last fork crash timestamp before updating it.
-> + *
-> + * If this is the first update of the statistics used to manage a brute force
-> + * attack that happens through the execve system call, its last crash timestamp
-> + * (the timestamp that shows when the execve was called) cannot be used to
-> + * compute the crash period's EMA. Instead, the last fork crash timestamp should
-> + * be used (the last crash timestamp of the child fork hierarchy before updating
-> + * the crash period). This allows that in a brute force attack that happens
-> + * through the fork system call, the exec and fork statistics are the same. In
-> + * this situation, the mitigation method will act only in the processes that are
-> + * sharing the fork statistics. This way, the process that forked before the
-> + * execve system call will not be involved in the mitigation method. In this
-> + * scenario, the parent is not responsible of the child's behaviour.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
-> + *
-> + * Context: Must be called with interrupts disabled and tasklist_lock and
-> + *          brute_stats_ptr_lock held.
-> + * Return: -EFAULT if there are no exec statistics. Zero otherwise.
-> + */
-> +static int brute_update_exec_crash_period(struct brute_stats **stats,
-> +					  u64 now, u64 last_fork_crash)
-> +{
-> +	brute_get_exec_stats(stats);
-> +	if (!*stats)
-> +		return -EFAULT;
-
-This isn't EFAULT (userspace memory fault), but rather more EINVAL or
-ESRCH.
-
-> +
-> +	spin_lock(&(*stats)->lock);
-> +	if (!(*stats)->faults)
-> +		(*stats)->jiffies = last_fork_crash;
-> +	spin_unlock(&(*stats)->lock);
-> +
-> +	brute_update_crash_period(*stats, now);
-
-and then you can add:
-
-	if (refcount_dec_and_test(&(*stats)->refc))
-		kfree(*stats);
-
-(or better yet, make that a helper) named something like
-"put_brute_stats".
-
-> +	return 0;
-> +}
-
-I find the re-writing of **stats confusing here -- I think you should
-leave that unmodified, and instead return a pointer (instead of "int"),
-and for errors, use ERR_PTR(-ESRCH)
-
-> +
-> +/**
-> + * brute_get_crash_period() - Get the application crash period.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + *
-> + * The statistical data shared by all the fork hierarchy processes cannot be
-> + * NULL.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
-> + *
-> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
-> + *          held.
-> + * Return: The application crash period.
-> + */
-> +static u64 brute_get_crash_period(struct brute_stats *stats)
-> +{
-> +	u64 crash_period;
-> +
-> +	spin_lock(&stats->lock);
-> +	crash_period = stats->period;
-> +	spin_unlock(&stats->lock);
-> +
-> +	return crash_period;
-> +}
-
-return READ_ONCE(stats->period);
-
-> +
-> +/**
-> + * print_exec_attack_running() - Warn about an exec brute force attack.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + *
-> + * The statistical data shared by all the fork hierarchy processes cannot be
-> + * NULL.
-> + *
-> + * Before showing the process name it is mandatory to find a process that holds
-> + * a pointer to the exec statistics.
-> + *
-> + * Context: Must be called with tasklist_lock and brute_stats_ptr_lock held.
-> + */
-> +static void print_exec_attack_running(const struct brute_stats *stats)
-> +{
-> +	struct task_struct *p;
-> +	struct brute_stats **p_stats;
-> +	bool found = false;
-> +
-> +	for_each_process(p) {
-> +		p_stats = brute_stats_ptr(p);
-> +		if (*p_stats == stats) {
-> +			found = true;
-> +			break;
-> +		}
-> +	}
-> +
-> +	if (WARN(!found, "No exec process\n"))
-> +		return;
-> +
-> +	pr_warn("Exec brute force attack detected [%s]\n", p->comm);
-> +}
-
-Same logic to change here as above for talking the process list. (IIUC, since
-you're only reading, you don't need tasklist_lock, just rcu_read_lock.)
-But, if I'm reading this right, you only ever call this with "current".
-It seems like it would be way more efficient to just use "current"
-instead?
-
-> +
-> +/**
-> + * brute_manage_exec_attack() - Manage an exec brute force attack.
-> + * @stats: Statistical data shared by all the fork hierarchy processes.
-> + * @now: The current timestamp in jiffies.
-> + * @last_fork_crash: The last fork crash timestamp before updating it.
-> + *
-> + * For a correct management of an exec brute force attack it is only necessary
-> + * to update the exec statistics and test if an attack is happening based on
-> + * these data.
-> + *
-> + * It is important to note that if the fork and exec crash periods are the same,
-> + * the attack test is avoided. This allows that in a brute force attack that
-> + * happens through the fork system call, the mitigation method does not act on
-> + * the parent process of the fork hierarchy.
-> + *
-> + * The statistical data shared by all the fork hierarchy processes cannot be
-> + * NULL.
-> + *
-> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> + * since the task_free hook can be called from an IRQ context during the
-> + * execution of the task_fatal_signal hook.
-> + *
-> + * Context: Must be called with interrupts disabled and tasklist_lock and
-> + *          brute_stats_ptr_lock held.
-> + */
-> +static void brute_manage_exec_attack(struct brute_stats *stats, u64 now,
-> +				     u64 last_fork_crash)
-> +{
-> +	int ret;
-> +	struct brute_stats *exec_stats = stats;
-> +	u64 fork_period;
-> +	u64 exec_period;
-> +
-> +	ret = brute_update_exec_crash_period(&exec_stats, now, last_fork_crash);
-> +	if (WARN(ret, "No exec statistical data\n"))
-> +		return;
-
-I think this should fail closed: if there's a static processing error,
-treat it as an attack.
-
-> +
-> +	fork_period = brute_get_crash_period(stats);
-> +	exec_period = brute_get_crash_period(exec_stats);
-> +	if (fork_period == exec_period)
-> +		return;
-> +
-> +	if (brute_attack_running(exec_stats))
-> +		print_exec_attack_running(exec_stats);
-> +}
-> +
-> +/**
-> + * brute_task_fatal_signal() - Target for the task_fatal_signal hook.
+> + * brute_threat_model_supported() - Test if the threat model is supported.
 > + * @siginfo: Contains the signal information.
+> + * @stats: Statistical data shared by all the fork hierarchy processes.
 > + *
-> + * To detect a brute force attack is necessary to update the fork and exec
-> + * statistics in every fatal crash and act based on these data.
+> + * To avoid false positives during the attack detection it is necessary to
+> + * narrow the possible cases. Only the following scenarios are taken into
+> + * account:
+> + *
+> + * 1.- Launching (fork()/exec()) a setuid/setgid process repeatedly until a
+> + *     desirable memory layout is got (e.g. Stack Clash).
+> + * 2.- Connecting to an exec()ing network daemon (e.g. xinetd) repeatedly until
+> + *     a desirable memory layout is got (e.g. what CTFs do for simple network
+> + *     service).
+> + * 3.- Launching processes without exec() (e.g. Android Zygote) and exposing
+> + *     state to attack a sibling.
+> + * 4.- Connecting to a fork()ing network daemon (e.g. apache) repeatedly until
+> + *     the previously shared memory layout of all the other children is exposed
+> + *     (e.g. kind of related to HeartBleed).
+> + *
+> + * In each case, a privilege boundary has been crossed:
+> + *
+> + * Case 1: setuid/setgid process
+> + * Case 2: network to local
+> + * Case 3: privilege changes
+> + * Case 4: network to local
+> + *
+> + * Also, only the signals delivered by the kernel are taken into account with
+> + * the exception of the SIGABRT signal since the latter is used by glibc for
+> + * stack canary, malloc, etc failures, which may indicate that a mitigation has
+> + * been triggered.
+> + *
+> + * The signal information and the statistical data shared by all the fork
+> + * hierarchy processes cannot be NULL.
+> + *
+> + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
+> + * since the task_free hook can be called from an IRQ context during the
+> + * execution of the task_fatal_signal hook.
+> + *
+> + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
+> + *          held.
+> + * Return: True if the threat model is supported. False otherwise.
+> + */
+> +static bool brute_threat_model_supported(const kernel_siginfo_t *siginfo,
+> +					 struct brute_stats *stats)
+> +{
+> +	bool bounds_crossed;
+> +
+> +	if (siginfo->si_signo == SIGKILL && siginfo->si_code != SIGABRT)
+> +		return false;
+> +
+> +	spin_lock(&stats->lock);
+> +	bounds_crossed = stats->bounds_crossed;
+> +	bounds_crossed = bounds_crossed || brute_priv_have_changed(stats);
+> +	stats->bounds_crossed = bounds_crossed;
+> +	spin_unlock(&stats->lock);
+> +
+> +	return bounds_crossed;
+> +}
+
+I think this logic can be done with READ_ONCE()s and moved directly into
+brute_task_fatal_signal().
+
+> +
+>  /**
+>   * brute_task_fatal_signal() - Target for the task_fatal_signal hook.
+>   * @siginfo: Contains the signal information.
+>   *
+> - * To detect a brute force attack is necessary to update the fork and exec
+> - * statistics in every fatal crash and act based on these data.
+> + * To detect a brute force attack it is necessary, as a first step, to test in
+> + * every fatal crash if the threat model is supported. If so, update the fork
+> + * and exec statistics and act based on these data.
+>   *
+>   * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
+>   * and brute_stats::lock since the task_free hook can be called from an IRQ
+> @@ -675,18 +900,59 @@ static void brute_task_fatal_signal(const kernel_siginfo_t *siginfo)
+>  	read_lock(&tasklist_lock);
+>  	read_lock_irqsave(&brute_stats_ptr_lock, flags);
+> 
+> -	if (WARN(!*stats, "No statistical data\n")) {
+> -		read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+> -		read_unlock(&tasklist_lock);
+> -		return;
+> -	}
+> +	if (WARN(!*stats, "No statistical data\n"))
+> +		goto unlock;
+> +
+> +	if (!brute_threat_model_supported(siginfo, *stats))
+> +		goto unlock;
+> 
+>  	last_fork_crash = brute_manage_fork_attack(*stats, now);
+>  	brute_manage_exec_attack(*stats, now, last_fork_crash);
+> +unlock:
+>  	read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+>  	read_unlock(&tasklist_lock);
+>  }
+> 
+> +/**
+> + * brute_network() - Target for the socket_sock_rcv_skb hook.
+> + * @sk: Contains the sock (not socket) associated with the incoming sk_buff.
+> + * @skb: Contains the incoming network data.
+> + *
+> + * A previous step to detect that a network to local boundary has been crossed
+> + * is to detect if there is network activity. To do this, it is only necessary
+> + * to check if there are data packets received from a network device other than
+> + * loopback.
 > + *
 > + * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
 > + * and brute_stats::lock since the task_free hook can be called from an IRQ
-> + * context during the execution of the task_fatal_signal hook.
+> + * context during the execution of the socket_sock_rcv_skb hook.
+> + *
+> + * Return: -EFAULT if the current task doesn't have statistical data. Zero
+> + *         otherwise.
 > + */
-> +static void brute_task_fatal_signal(const kernel_siginfo_t *siginfo)
+> +static int brute_network(struct sock *sk, struct sk_buff *skb)
 > +{
 > +	struct brute_stats **stats;
 > +	unsigned long flags;
-> +	u64 last_fork_crash;
-> +	u64 now = get_jiffies_64();
+> +
+> +	if (!skb->dev || (skb->dev->flags & IFF_LOOPBACK))
+> +		return 0;
 > +
 > +	stats = brute_stats_ptr(current);
-> +	read_lock(&tasklist_lock);
+
+Uhh, is "current" valid here? I actually don't know this hook very well.
+
 > +	read_lock_irqsave(&brute_stats_ptr_lock, flags);
 > +
-> +	if (WARN(!*stats, "No statistical data\n")) {
+> +	if (!*stats) {
 > +		read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
-> +		read_unlock(&tasklist_lock);
-> +		return;
->  	}
+> +		return -EFAULT;
+> +	}
 > +
-> +	last_fork_crash = brute_manage_fork_attack(*stats, now);
-> +	brute_manage_exec_attack(*stats, now, last_fork_crash);
+> +	spin_lock(&(*stats)->lock);
+> +	(*stats)->network = true;
+> +	spin_unlock(&(*stats)->lock);
 > +	read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
-> +	read_unlock(&tasklist_lock);
->  }
-> 
+> +	return 0;
+> +}
+> +
 >  /*
-> @@ -235,6 +694,7 @@ static struct security_hook_list brute_hooks[] __lsm_ro_after_init = {
->  	LSM_HOOK_INIT(task_alloc, brute_task_alloc),
+>   * brute_hooks - Targets for the LSM's hooks.
+>   */
+> @@ -695,6 +961,7 @@ static struct security_hook_list brute_hooks[] __lsm_ro_after_init = {
 >  	LSM_HOOK_INIT(bprm_committing_creds, brute_task_execve),
 >  	LSM_HOOK_INIT(task_free, brute_task_free),
-> +	LSM_HOOK_INIT(task_fatal_signal, brute_task_fatal_signal),
+>  	LSM_HOOK_INIT(task_fatal_signal, brute_task_fatal_signal),
+> +	LSM_HOOK_INIT(socket_sock_rcv_skb, brute_network),
 >  };
 > 
 >  /**
 > --
 > 2.25.1
 > 
-
-I think this is very close!
 
 -- 
 Kees Cook
