@@ -1,21 +1,21 @@
-Return-Path: <SRS0=7NW2=IR=lists.openwall.com=kernel-hardening-return-21002-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=7+LH=IR=lists.openwall.com=kernel-hardening-return-21003-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-6.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=ham autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AE3C6C433DB
-	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 19:12:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 67438C433DB
+	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 19:15:58 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id AE39161941
-	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 19:12:02 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org AE39161941
+	by mail.kernel.org (Postfix) with SMTP id 6D4716194D
+	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 19:15:57 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6D4716194D
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21002-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 8178 invoked by uid 550); 19 Mar 2021 19:11:53 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21003-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11671 invoked by uid 550); 19 Mar 2021 19:15:50 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,33 +23,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8152 invoked from network); 19 Mar 2021 19:11:53 -0000
+Received: (qmail 11651 invoked from network); 19 Mar 2021 19:15:49 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=8+dj9XdsQigirosGIEMIHcITvWVWyXmBGTduGwQLkwQ=;
-        b=SMFAohEOg1b0SvUCrqANnZ14nWX3kYufAeHLUH1T4fip5oY60hqPpZPYYdIwxuM5Go
-         +6zNXws6SgckWc+bIn46xfilkhShdmMK8VAZSDFVmdPEMJYX5aVVTSfR5JljwADmLJTu
-         fa4+TfL/+RgVxnoewR/Gnyf24K/AHGmZxK9sI=
+        bh=UhVshRutOq0lszJbq/YX4dDlC5l4aOjl7AUjxQMu52w=;
+        b=bBKx+9uN8xnCc5sshFh2/XhWXlYamoIzo+jRJ+PEm23+wwPHDN30u21VYQIXFuEQpD
+         w+w4KIEC/rk6vS+80NpNCv+5zSBGLevW+p8ahQVPa2S2k9ZqiIfInhQI3nIlyFhnIbyL
+         FS7xcu7RdHUC6pgg3s5aV9vLgE7MofLySVDYY=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:content-transfer-encoding
          :in-reply-to;
-        bh=8+dj9XdsQigirosGIEMIHcITvWVWyXmBGTduGwQLkwQ=;
-        b=Kj1XUVZnrKEleupgEsSbzROVTCrNFnmnzqZp2BSleaP51i/6KvpobeiVukYYEo61JL
-         0Pko4dbvDu+KBFqkRiUnx2AL0ndz7Ddg4tV/aWI8Eiy/q28KYPbFGPQOoOArqusSiHcU
-         M6eUYbJY0p+2sxuHh/NUfOosvfexmRs4lEjnso68mldhLBP8649/weWEIBkaBIABU822
-         nWgFTwpnGj1gbl1T4AsbXD2f/2bMbJOj/KzGmG7Gwu9Ca/qlVPSDf5Sw7fYPC31bNDhl
-         xx4azMbl7oWVacap5ioodiC5EvdCgAu/o4VUvq0AUSRFom/I36X4meXAzEYF/sR0t0Tl
-         z0kA==
-X-Gm-Message-State: AOAM533L42XPjvDzEH+AyG2RO60TaJYnGtoBdxiTk2bk2Aag4BoCzGRS
-	YEUmjmANAG5nlbQGCpjeG6kPhQ==
-X-Google-Smtp-Source: ABdhPJw77NJBXyie+CZaWQgxVAqktzOswabCGYKmJ35fViYrJhan5H46f0mY2WOpg1a64hwApsbuNg==
-X-Received: by 2002:a17:90a:c207:: with SMTP id e7mr11982pjt.188.1616181101020;
-        Fri, 19 Mar 2021 12:11:41 -0700 (PDT)
-Date: Fri, 19 Mar 2021 12:11:39 -0700
+        bh=UhVshRutOq0lszJbq/YX4dDlC5l4aOjl7AUjxQMu52w=;
+        b=Lxwil5ohrrQkX+xSUmdnRDSedVakoHYQOu367zsL4Vco9/rrk7rJglcQiNVxdDQnis
+         qZ8TJOFx2Zjo8YBHPTTwDNWryTRozX/6zG5PETUtdgmuIgRiTkixz/We2p+125aKPX9g
+         5tMFbkOSaw8AtZmxkrNdfj3IwffXC87blbYmQvfvNtrJOgolKesn+bmBAfUrAt+78Ddd
+         vnhTuPbboWNPqheteQP8v0blSlIL8Y2pwbys8Q3YenRhepSxuGELCm+q11qgtlZwgl70
+         ir91amS46kTANDSwu00IxiSWSQtlBm5U7VUGl4gz4n2ATzsv3+0mWcgJs/0VHotu+iM9
+         8tZg==
+X-Gm-Message-State: AOAM531ijorzlwTBPr6B/IdcE0VbvZ8BXcYE9RMva/aU+TRwp1EZnTPp
+	lIxd1fQvgBW/TGo+C6OtY/KraA==
+X-Google-Smtp-Source: ABdhPJyocwGZ+YCdp+AEKehahWsjJ+Q+SCbixvse5NoSiTvSwxOgE6bO6/4QIhmDO4axWxnOK6O7hQ==
+X-Received: by 2002:a63:4761:: with SMTP id w33mr12829462pgk.118.1616181337860;
+        Fri, 19 Mar 2021 12:15:37 -0700 (PDT)
+Date: Fri, 19 Mar 2021 12:15:36 -0700
 From: Kees Cook <keescook@chromium.org>
 To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
 Cc: James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>,
@@ -70,157 +70,40 @@ Cc: James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>,
 	linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
 	linux-security-module@vger.kernel.org, x86@kernel.org,
-	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>
-Subject: Re: [PATCH v30 10/12] selftests/landlock: Add user space tests
-Message-ID: <202103191207.E12FD4E51@keescook>
+	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>
+Subject: Re: [PATCH v30 02/12] landlock: Add ruleset and domain management
+Message-ID: <202103191213.D6B1B27423@keescook>
 References: <20210316204252.427806-1-mic@digikod.net>
- <20210316204252.427806-11-mic@digikod.net>
- <202103191026.D936362B@keescook>
- <e98a1f48-4c35-139d-af88-b6e65fbb5c3f@digikod.net>
+ <20210316204252.427806-3-mic@digikod.net>
+ <202103191114.C87C5E2B69@keescook>
+ <acda4be1-4076-a31d-fcfd-27764dd598c8@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <e98a1f48-4c35-139d-af88-b6e65fbb5c3f@digikod.net>
+In-Reply-To: <acda4be1-4076-a31d-fcfd-27764dd598c8@digikod.net>
 
-On Fri, Mar 19, 2021 at 07:41:00PM +0100, Mickaël Salaün wrote:
-> 
-> On 19/03/2021 18:56, Kees Cook wrote:
-> > On Tue, Mar 16, 2021 at 09:42:50PM +0100, Mickaël Salaün wrote:
-> >> From: Mickaël Salaün <mic@linux.microsoft.com>
-> >>
-> >> Test all Landlock system calls, ptrace hooks semantic and filesystem
-> >> access-control with multiple layouts.
-> >>
-> >> Test coverage for security/landlock/ is 93.6% of lines.  The code not
-> >> covered only deals with internal kernel errors (e.g. memory allocation)
-> >> and race conditions.
-> >>
-> >> Cc: James Morris <jmorris@namei.org>
-> >> Cc: Jann Horn <jannh@google.com>
-> >> Cc: Kees Cook <keescook@chromium.org>
-> >> Cc: Serge E. Hallyn <serge@hallyn.com>
-> >> Cc: Shuah Khan <shuah@kernel.org>
-> >> Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-> >> Reviewed-by: Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>
-> >> Link: https://lore.kernel.org/r/20210316204252.427806-11-mic@digikod.net
-> > 
-> > This is terrific. I love the coverage. How did you measure this, BTW?
-> 
-> I used gcov: https://www.kernel.org/doc/html/latest/dev-tools/gcov.html
-> 
-> > To increase it into memory allocation failures, have you tried
-> > allocation fault injection:
-> > https://www.kernel.org/doc/html/latest/fault-injection/fault-injection.html
-> 
-> Yes, it is used by syzkaller, but I don't know how to extract this
-> specific coverage.
-> 
-> > 
+On Fri, Mar 19, 2021 at 08:03:22PM +0100, Mickaël Salaün wrote:
+> On 19/03/2021 19:40, Kees Cook wrote:
+> > On Tue, Mar 16, 2021 at 09:42:42PM +0100, Mickaël Salaün wrote:
 > >> [...]
-> >> +TEST(inconsistent_attr) {
-> >> +	const long page_size = sysconf(_SC_PAGESIZE);
-> >> +	char *const buf = malloc(page_size + 1);
-> >> +	struct landlock_ruleset_attr *const ruleset_attr = (void *)buf;
-> >> +
-> >> +	ASSERT_NE(NULL, buf);
-> >> +
-> >> +	/* Checks copy_from_user(). */
-> >> +	ASSERT_EQ(-1, landlock_create_ruleset(ruleset_attr, 0, 0));
-> >> +	/* The size if less than sizeof(struct landlock_attr_enforce). */
-> >> +	ASSERT_EQ(EINVAL, errno);
-> >> +	ASSERT_EQ(-1, landlock_create_ruleset(ruleset_attr, 1, 0));
-> >> +	ASSERT_EQ(EINVAL, errno);
+> >> +static void put_rule(struct landlock_rule *const rule)
+> >> +{
+> >> +	might_sleep();
+> >> +	if (!rule)
+> >> +		return;
+> >> +	landlock_put_object(rule->object);
+> >> +	kfree(rule);
+> >> +}
 > > 
-> > Almost everywhere you're using ASSERT instead of EXPECT. Is this correct
-> > (in the sense than as soon as an ASSERT fails the rest of the test is
-> > skipped)? I do see you using EXPECT is some places, but I figured I'd
-> > ask about the intention here.
+> > I'd expect this to be named "release" rather than "put" since it doesn't
+> > do any lifetime reference counting.
 > 
-> I intentionally use ASSERT as much as possible, but I use EXPECT when an
-> error could block a test or when it could stop a cleanup (i.e. teardown).
+> It does decrement rule->object->usage .
 
-Okay. Does the test suite run sanely when landlock is missing from the
-kernel?
-
-> > 
-> >> +/*
-> >> + * TEST_F_FORK() is useful when a test drop privileges but the corresponding
-> >> + * FIXTURE_TEARDOWN() requires them (e.g. to remove files from a directory
-> >> + * where write actions are denied).  For convenience, FIXTURE_TEARDOWN() is
-> >> + * also called when the test failed, but not when FIXTURE_SETUP() failed.  For
-> >> + * this to be possible, we must not call abort() but instead exit smoothly
-> >> + * (hence the step print).
-> >> + */
-> > 
-> > Hm, interesting. I think this should be extracted into a separate patch
-> > and added to the test harness proper.
-> 
-> I agree, but it may require some modifications to fit nicely in
-> kselftest_harness.h . For now, it works well for my use case. I'll send
-> patches once Landlock is merged. In fact, I already made
-> kselftest_harness.h available for other users than seccomp. ;)
-
-Fair points.
-
-> > 
-> > Could this be solved with TEARDOWN being called on SETUP failure?
-> 
-> The goal of this helper is to still be able to call TEARDOWN when TEST
-> failed, not SETUP.
-> 
-> > 
-> >> +#define TEST_F_FORK(fixture_name, test_name) \
-> >> +	static void fixture_name##_##test_name##_child( \
-> >> +		struct __test_metadata *_metadata, \
-> >> +		FIXTURE_DATA(fixture_name) *self, \
-> >> +		const FIXTURE_VARIANT(fixture_name) *variant); \
-> >> +	TEST_F(fixture_name, test_name) \
-> >> +	{ \
-> >> +		int status; \
-> >> +		const pid_t child = fork(); \
-> >> +		if (child < 0) \
-> >> +			abort(); \
-> >> +		if (child == 0) { \
-> >> +			_metadata->no_print = 1; \
-> >> +			fixture_name##_##test_name##_child(_metadata, self, variant); \
-> >> +			if (_metadata->skip) \
-> >> +				_exit(255); \
-> >> +			if (_metadata->passed) \
-> >> +				_exit(0); \
-> >> +			_exit(_metadata->step); \
-> >> +		} \
-> >> +		if (child != waitpid(child, &status, 0)) \
-> >> +			abort(); \
-> >> +		if (WIFSIGNALED(status) || !WIFEXITED(status)) { \
-> >> +			_metadata->passed = 0; \
-> >> +			_metadata->step = 1; \
-> >> +			return; \
-> >> +		} \
-> >> +		switch (WEXITSTATUS(status)) { \
-> >> +		case 0: \
-> >> +			_metadata->passed = 1; \
-> >> +			break; \
-> >> +		case 255: \
-> >> +			_metadata->passed = 1; \
-> >> +			_metadata->skip = 1; \
-> >> +			break; \
-> >> +		default: \
-> >> +			_metadata->passed = 0; \
-> >> +			_metadata->step = WEXITSTATUS(status); \
-> >> +			break; \
-> >> +		} \
-> >> +	} \
-> > 
-> > This looks like a subset of __wait_for_test()? Could __TEST_F_IMPL() be
-> > updated instead to do this? (Though the fork overhead might not be great
-> > for everyone.)
-> 
-> Yes, it will probably be my approach to update kselftest_harness.h .
-
-It seems like this would be named better as TEST_DROPS_PRIVS or something,
-which describes the reason for the fork.
+Well, landlock_put_object() decrements rule->object's lifetime. It seems
+"rule" doesn't have a lifetime. (There is no refcounter on rule.) I just
+find it strange to see "put" without a matching "get". Not a big deal.
 
 -- 
 Kees Cook
