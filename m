@@ -1,20 +1,21 @@
-Return-Path: <SRS0=SPC5=IR=lists.openwall.com=kernel-hardening-return-20993-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ogje=IR=lists.openwall.com=kernel-hardening-return-20994-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-16.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2043EC433DB
-	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 18:41:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A460FC433E3
+	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 18:45:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 6594761979
-	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 18:41:09 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6594761979
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20993-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 16320 invoked by uid 550); 19 Mar 2021 18:41:03 -0000
+	by mail.kernel.org (Postfix) with SMTP id E9BE061974
+	for <kernel-hardening@archiver.kernel.org>; Fri, 19 Mar 2021 18:45:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E9BE061974
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-20994-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19979 invoked by uid 550); 19 Mar 2021 18:45:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,162 +23,116 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16300 invoked from network); 19 Mar 2021 18:41:02 -0000
-Subject: Re: [PATCH v30 10/12] selftests/landlock: Add user space tests
-To: Kees Cook <keescook@chromium.org>
+Received: (qmail 19949 invoked from network); 19 Mar 2021 18:45:27 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:content-transfer-encoding:in-reply-to;
+        bh=Sb8mG2TwoLcJMKUkEkVhAmXUHbnUNYxK1v1iC8KimUA=;
+        b=CmUS9RcCmK5o96Fk6zyoSVLADipDZJ38jBX+VRx8vf9lsD2CgWWYfDsPUIj3QczMWR
+         AaiQadC5iuMOJEZRtQ6ZIcrfB1K5dnxHEEaSckKGDMsCD0J7OswnuO4wDM0nDIwrNKLj
+         2OqV6blXxkO3bm9u9mMktQ68Ql9zMUKo57h4I=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:content-transfer-encoding
+         :in-reply-to;
+        bh=Sb8mG2TwoLcJMKUkEkVhAmXUHbnUNYxK1v1iC8KimUA=;
+        b=U9Q4hgpBoNgYoEkBEtvc5XxRIJvWZjtCDp7c9iGz4qm9Ps6cfI2vBjNGjBCErMCvM3
+         ZSwQb3a0Nk3ksPLPbs4RIZbyBYQipdUMRhyjHl6uHTRTLJG/H6bHQDSutn6/mYGij9mm
+         nT7CuMMstgG0FNSwZ1VIoxFd+MInYUV7f2jh623tPSkvQZKjtBH3QqvVMo+56g+KlXRI
+         yqZ8c+A3oeLaS1oG8s3IsfSZyaZZFWj3oWfK84PGCN76q3qroVOaptMXLELj7XfWD8em
+         3otnPHA9PLp451r5gebskxy/dPBme92dR+Ncg6baJ1Ak3ah+yp+f35JainPLPQ/FTmx7
+         LEpA==
+X-Gm-Message-State: AOAM531fjNVEbrLmOIWNnjnwbCa2uRGHLRg+8gFvMPFszTilHdYPCwM0
+	hcYb3JQdgL/ArYLo3wT6xJVmmA==
+X-Google-Smtp-Source: ABdhPJwxrFCu/tr6zG57P/oXPpC7+dmNq8+B1nfLURKK038KTmr5VVbtL8LNWxfd7fIU6Fty2w8R/g==
+X-Received: by 2002:a17:902:d481:b029:e4:8afa:8524 with SMTP id c1-20020a170902d481b02900e48afa8524mr15809510plg.52.1616179515805;
+        Fri, 19 Mar 2021 11:45:15 -0700 (PDT)
+Date: Fri, 19 Mar 2021 11:45:14 -0700
+From: Kees Cook <keescook@chromium.org>
+To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
 Cc: James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>,
- "Serge E . Hallyn" <serge@hallyn.com>, Al Viro <viro@zeniv.linux.org.uk>,
- Andrew Morton <akpm@linux-foundation.org>,
- Andy Lutomirski <luto@amacapital.net>,
- Anton Ivanov <anton.ivanov@cambridgegreys.com>, Arnd Bergmann
- <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
- David Howells <dhowells@redhat.com>, Jeff Dike <jdike@addtoit.com>,
- Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>,
- Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
- Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
- linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
- linux-kselftest@vger.kernel.org, linux-security-module@vger.kernel.org,
- x86@kernel.org, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?=
- <mic@linux.microsoft.com>, Dmitry Vyukov <dvyukov@google.com>
+	"Serge E . Hallyn" <serge@hallyn.com>,
+	Al Viro <viro@zeniv.linux.org.uk>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@amacapital.net>,
+	Anton Ivanov <anton.ivanov@cambridgegreys.com>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	David Howells <dhowells@redhat.com>, Jeff Dike <jdike@addtoit.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+	linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	linux-security-module@vger.kernel.org, x86@kernel.org,
+	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>
+Subject: Re: [PATCH v30 03/12] landlock: Set up the security framework and
+ manage credentials
+Message-ID: <202103191140.7D1F10CBFD@keescook>
 References: <20210316204252.427806-1-mic@digikod.net>
- <20210316204252.427806-11-mic@digikod.net> <202103191026.D936362B@keescook>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <e98a1f48-4c35-139d-af88-b6e65fbb5c3f@digikod.net>
-Date: Fri, 19 Mar 2021 19:41:00 +0100
-User-Agent:
+ <20210316204252.427806-4-mic@digikod.net>
 MIME-Version: 1.0
-In-Reply-To: <202103191026.D936362B@keescook>
-Content-Type: text/plain; charset=iso-8859-15
-Content-Language: en-US
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
+In-Reply-To: <20210316204252.427806-4-mic@digikod.net>
 
+On Tue, Mar 16, 2021 at 09:42:43PM +0100, Mickaël Salaün wrote:
+>  config LSM
+>  	string "Ordered list of enabled LSMs"
+> -	default "lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
+> -	default "lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
+> -	default "lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO
+> -	default "lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT_SECURITY_DAC
+> -	default "lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf"
+> +	default "landlock,lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
+> +	default "landlock,lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
+> +	default "landlock,lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO
+> +	default "landlock,lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT_SECURITY_DAC
+> +	default "landlock,lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf"
+>  	help
+>  	  A comma-separated list of LSMs, in initialization order.
+>  	  Any LSMs left off this list will be ignored. This can be
 
-On 19/03/2021 18:56, Kees Cook wrote:
-> On Tue, Mar 16, 2021 at 09:42:50PM +0100, Mickaël Salaün wrote:
->> From: Mickaël Salaün <mic@linux.microsoft.com>
->>
->> Test all Landlock system calls, ptrace hooks semantic and filesystem
->> access-control with multiple layouts.
->>
->> Test coverage for security/landlock/ is 93.6% of lines.  The code not
->> covered only deals with internal kernel errors (e.g. memory allocation)
->> and race conditions.
->>
->> Cc: James Morris <jmorris@namei.org>
->> Cc: Jann Horn <jannh@google.com>
->> Cc: Kees Cook <keescook@chromium.org>
->> Cc: Serge E. Hallyn <serge@hallyn.com>
->> Cc: Shuah Khan <shuah@kernel.org>
->> Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
->> Reviewed-by: Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>
->> Link: https://lore.kernel.org/r/20210316204252.427806-11-mic@digikod.net
-> 
-> This is terrific. I love the coverage. How did you measure this, BTW?
+There was some discussion long ago about landlock needing to be last
+in the list because it was unprivileged. Is that no longer true? (And
+what is the justification for its position in the list?)
 
-I used gcov: https://www.kernel.org/doc/html/latest/dev-tools/gcov.html
+> diff --git a/security/landlock/common.h b/security/landlock/common.h
+> new file mode 100644
+> index 000000000000..5dc0fe15707d
+> --- /dev/null
+> +++ b/security/landlock/common.h
+> @@ -0,0 +1,20 @@
+> +/* SPDX-License-Identifier: GPL-2.0-only */
+> +/*
+> + * Landlock LSM - Common constants and helpers
+> + *
+> + * Copyright © 2016-2020 Mickaël Salaün <mic@digikod.net>
+> + * Copyright © 2018-2020 ANSSI
+> + */
+> +
+> +#ifndef _SECURITY_LANDLOCK_COMMON_H
+> +#define _SECURITY_LANDLOCK_COMMON_H
+> +
+> +#define LANDLOCK_NAME "landlock"
+> +
+> +#ifdef pr_fmt
+> +#undef pr_fmt
+> +#endif
 
-> To increase it into memory allocation failures, have you tried
-> allocation fault injection:
-> https://www.kernel.org/doc/html/latest/fault-injection/fault-injection.html
+When I see "#undef pr_fmt" I think there is a header ordering problem.
 
-Yes, it is used by syzkaller, but I don't know how to extract this
-specific coverage.
+> [...]
 
-> 
->> [...]
->> +TEST(inconsistent_attr) {
->> +	const long page_size = sysconf(_SC_PAGESIZE);
->> +	char *const buf = malloc(page_size + 1);
->> +	struct landlock_ruleset_attr *const ruleset_attr = (void *)buf;
->> +
->> +	ASSERT_NE(NULL, buf);
->> +
->> +	/* Checks copy_from_user(). */
->> +	ASSERT_EQ(-1, landlock_create_ruleset(ruleset_attr, 0, 0));
->> +	/* The size if less than sizeof(struct landlock_attr_enforce). */
->> +	ASSERT_EQ(EINVAL, errno);
->> +	ASSERT_EQ(-1, landlock_create_ruleset(ruleset_attr, 1, 0));
->> +	ASSERT_EQ(EINVAL, errno);
-> 
-> Almost everywhere you're using ASSERT instead of EXPECT. Is this correct
-> (in the sense than as soon as an ASSERT fails the rest of the test is
-> skipped)? I do see you using EXPECT is some places, but I figured I'd
-> ask about the intention here.
+Everything else looks like regular boilerplate for an LSM. :)
 
-I intentionally use ASSERT as much as possible, but I use EXPECT when an
-error could block a test or when it could stop a cleanup (i.e. teardown).
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
-> 
->> +/*
->> + * TEST_F_FORK() is useful when a test drop privileges but the corresponding
->> + * FIXTURE_TEARDOWN() requires them (e.g. to remove files from a directory
->> + * where write actions are denied).  For convenience, FIXTURE_TEARDOWN() is
->> + * also called when the test failed, but not when FIXTURE_SETUP() failed.  For
->> + * this to be possible, we must not call abort() but instead exit smoothly
->> + * (hence the step print).
->> + */
-> 
-> Hm, interesting. I think this should be extracted into a separate patch
-> and added to the test harness proper.
-
-I agree, but it may require some modifications to fit nicely in
-kselftest_harness.h . For now, it works well for my use case. I'll send
-patches once Landlock is merged. In fact, I already made
-kselftest_harness.h available for other users than seccomp. ;)
-
-> 
-> Could this be solved with TEARDOWN being called on SETUP failure?
-
-The goal of this helper is to still be able to call TEARDOWN when TEST
-failed, not SETUP.
-
-> 
->> +#define TEST_F_FORK(fixture_name, test_name) \
->> +	static void fixture_name##_##test_name##_child( \
->> +		struct __test_metadata *_metadata, \
->> +		FIXTURE_DATA(fixture_name) *self, \
->> +		const FIXTURE_VARIANT(fixture_name) *variant); \
->> +	TEST_F(fixture_name, test_name) \
->> +	{ \
->> +		int status; \
->> +		const pid_t child = fork(); \
->> +		if (child < 0) \
->> +			abort(); \
->> +		if (child == 0) { \
->> +			_metadata->no_print = 1; \
->> +			fixture_name##_##test_name##_child(_metadata, self, variant); \
->> +			if (_metadata->skip) \
->> +				_exit(255); \
->> +			if (_metadata->passed) \
->> +				_exit(0); \
->> +			_exit(_metadata->step); \
->> +		} \
->> +		if (child != waitpid(child, &status, 0)) \
->> +			abort(); \
->> +		if (WIFSIGNALED(status) || !WIFEXITED(status)) { \
->> +			_metadata->passed = 0; \
->> +			_metadata->step = 1; \
->> +			return; \
->> +		} \
->> +		switch (WEXITSTATUS(status)) { \
->> +		case 0: \
->> +			_metadata->passed = 1; \
->> +			break; \
->> +		case 255: \
->> +			_metadata->passed = 1; \
->> +			_metadata->skip = 1; \
->> +			break; \
->> +		default: \
->> +			_metadata->passed = 0; \
->> +			_metadata->step = WEXITSTATUS(status); \
->> +			break; \
->> +		} \
->> +	} \
-> 
-> This looks like a subset of __wait_for_test()? Could __TEST_F_IMPL() be
-> updated instead to do this? (Though the fork overhead might not be great
-> for everyone.)
-
-Yes, it will probably be my approach to update kselftest_harness.h .
+-- 
+Kees Cook
