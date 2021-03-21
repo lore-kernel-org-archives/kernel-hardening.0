@@ -1,21 +1,21 @@
-Return-Path: <SRS0=gaY0=IT=lists.openwall.com=kernel-hardening-return-21025-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Shmv=IT=lists.openwall.com=kernel-hardening-return-21026-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-6.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6F085C433C1
-	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 17:37:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4237FC433C1
+	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 18:01:26 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 26E5561946
-	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 17:37:39 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 26E5561946
+	by mail.kernel.org (Postfix) with SMTP id 1598661939
+	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 18:01:24 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1598661939
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21025-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 26578 invoked by uid 550); 21 Mar 2021 17:37:32 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21026-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1185 invoked by uid 550); 21 Mar 2021 18:01:18 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,32 +23,32 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 26546 invoked from network); 21 Mar 2021 17:37:31 -0000
+Received: (qmail 1153 invoked from network); 21 Mar 2021 18:01:17 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=h1o7IzHwWbxdPHi+8uUp3/Koaw8yljOar4ODRP9JcNU=;
-        b=QCSrTB65+gO/mWpneMOKqnkMx0IckhHxEMVpw/wknbb2Lz3sRC9GExh18/RQNLu3dI
-         ENXytI4LIW1QVxzKHwNKRfEbSC8CsR+oBz9O3UrcGodRRnUlgcNagLnp4f7Ul6ErFRgC
-         RI5jXj4Np1phupV3DzS7y1TeSymkUHwSe60eQ=
+        bh=iBrKCN7co0fN6DQ3Z7oVF42ggkUDpYbjPmhV3o6bWXE=;
+        b=cCKPMhwksUZ+yG1vaCu6wa8LkufPS1iF7vvliCffs1hluULxo1HADGt4q9mvtjBqIR
+         U1ubZko3f81D30hNlvfAjNKNIaI/FvSlsAfUF32Cr2jNM/Z3Uvzr6yN9spxjY+SqBjwB
+         ZW++v4cMTbXPBele8dErnlXmZCdJPemi1xzbo=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=h1o7IzHwWbxdPHi+8uUp3/Koaw8yljOar4ODRP9JcNU=;
-        b=JIUxE0GNaucm0TnFhK2AcNe/cp+V2hrVqcx9MexVLpkEwxZewA31sy5dBuRB/Q1vf0
-         yPvN3r+SD8nljR5pBSAvjFAqFqPqsA+6AJSnAthbAQ6+lJteZqCavul9PqxDr2/kkENY
-         3jgxsWEgUCpMdSjWBEv/qwWfeOG31KM6lSc7kNRt7VHiey2js3DCIGYqqFXZlWZCwCDa
-         j1Ee+8e6PioPSc4mEjYH3bdRD/HudPrnBBQZjAW1AIKM/6fZ0ykot8/i4gYwKRPHD+zy
-         kEmsVCvRo6OiY9s/mGCqVqPNTOb2+sdTzZVgZ3wLQTlRu9G3G2QUuQerhGJXW3U0jBEG
-         qURA==
-X-Gm-Message-State: AOAM5316QmxpIz8bGTO05/OdkkSUsgT7Yk3+XQX/Q4b66HSs3VZqhjbT
-	6fwGOdhTW2fRsi88BrLc5OAHEHoA0t12FA==
-X-Google-Smtp-Source: ABdhPJx7f+7KrqqQ2UNcYrMTPWR7geuxADOud2Pt1BKnWAECIduFCs6HMz/l+Z7c6l0ZWemH+Lr/xw==
-X-Received: by 2002:a62:68c1:0:b029:1ee:5dfa:860b with SMTP id d184-20020a6268c10000b02901ee5dfa860bmr17681481pfc.35.1616348239667;
-        Sun, 21 Mar 2021 10:37:19 -0700 (PDT)
-Date: Sun, 21 Mar 2021 10:37:17 -0700
+        bh=iBrKCN7co0fN6DQ3Z7oVF42ggkUDpYbjPmhV3o6bWXE=;
+        b=RVM1IUAHR1Hg5CAgv781n9hV3ejdyAyh8TJFbbtQ4qajnqAMy3T2ka0WQ1Hr5FyReO
+         VpjAqxpQ6pqH7jEcsoJxxq5fkxPr9u4iEVh4T+bF1G1OqHrFOZZqulFrKp0xTw6xrTmS
+         EMcGpkwwKxh8P2fJb5FMB8n29z72zo7bdKWYeTltI7+gsoEQzHFf1yLqrSmCEcY1/rZ8
+         NWyPNQ4U6p+3Lty+SRQZpf1yoUmhpOBcxmvEDsmlE5DhFMGPrNlmVN7iB0tzbkAjlHGx
+         RT7ixD106+WMR3iwZK912VDtq+K2QMYa5eHYr1IQOTazUEazQUv4pYvhWuHunl7yaSwV
+         iTKw==
+X-Gm-Message-State: AOAM532GmxHcK0JDcamk2u7iCEePxNF4oQ9RZLsW15IMpZn63lHp8r+V
+	AYwRR7QcdGxJdXs+yo9dKG7ajw==
+X-Google-Smtp-Source: ABdhPJzKcyFhLu+VVYrkrgFkX1seObKVaaqxd2+uvQ/k/gufXuSV0xwmK/GIaFl5VVtZ13L/Yakkaw==
+X-Received: by 2002:a17:90b:116:: with SMTP id p22mr9044261pjz.161.1616349664842;
+        Sun, 21 Mar 2021 11:01:04 -0700 (PDT)
+Date: Sun, 21 Mar 2021 11:01:03 -0700
 From: Kees Cook <keescook@chromium.org>
 To: John Wood <john.wood@gmx.com>
 Cc: Jann Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>,
@@ -61,274 +61,126 @@ Cc: Jann Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>,
 	linux-security-module@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v6 2/8] security/brute: Define a LSM and manage
- statistical data
-Message-ID: <202103211013.4680330D7@keescook>
+Subject: Re: [PATCH v6 4/8] security/brute: Fine tuning the attack detection
+Message-ID: <202103211038.99C87F12@keescook>
 References: <20210307113031.11671-1-john.wood@gmx.com>
- <20210307113031.11671-3-john.wood@gmx.com>
- <202103171823.E7F64A593@keescook>
- <20210320150153.GA3023@ubuntu>
+ <20210307113031.11671-5-john.wood@gmx.com>
+ <202103171957.16C0560D@keescook>
+ <20210320154648.GC3023@ubuntu>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20210320150153.GA3023@ubuntu>
+In-Reply-To: <20210320154648.GC3023@ubuntu>
 
-On Sat, Mar 20, 2021 at 04:01:53PM +0100, John Wood wrote:
-> Hi,
-> First of all thanks for the review. More info and questions inline.
-> 
-> On Wed, Mar 17, 2021 at 07:00:56PM -0700, Kees Cook wrote:
-> > On Sun, Mar 07, 2021 at 12:30:25PM +0100, John Wood wrote:
-> > >
-> > >  config LSM
-> > >  	string "Ordered list of enabled LSMs"
-> > > -	default "lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
-> > > -	default "lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
-> > > -	default "lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO
-> > > -	default "lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT_SECURITY_DAC
-> > > -	default "lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf"
-> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
-> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
-> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO
-> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT_SECURITY_DAC
-> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf"
-> >
-> > It probably doesn't matter much, but I think brute should be added
-> > between lockdown and yama.
-> 
-> What is the rationale for the stacking order (in relation with brute and
-> lockdown)?
-
-lockdown has some very early hooks, so leaving it at the front seems
-organizationally correct to me. It doesn't really matter, though, so
-perhaps we should just alphabetize them, but that's for another day.
-
-> 
-> > > diff --git a/security/Makefile b/security/Makefile
-> > > index 3baf435de541..1236864876da 100644
-> > > --- a/security/Makefile
-> > > +++ b/security/Makefile
-> > > @@ -36,3 +36,7 @@ obj-$(CONFIG_BPF_LSM)			+= bpf/
-> > >  # Object integrity file lists
-> > >  subdir-$(CONFIG_INTEGRITY)		+= integrity
-> > >  obj-$(CONFIG_INTEGRITY)			+= integrity/
-> > > +
-> > > +# Object brute file lists
-> > > +subdir-$(CONFIG_SECURITY_FORK_BRUTE)	+= brute
-> > > +obj-$(CONFIG_SECURITY_FORK_BRUTE)	+= brute/
-> >
-> > I don't think subdir is needed here? I think you can use obj-... like
-> > loadpin, etc.
-> 
-> loadpin also uses subdir just like selinux, smack, tomoyo, etc.. So, why
-> is it not necessary for brute?
-
-Oops, yes, my mistake. I didn't look at the Makefile as a whole. I will
-adjust my suggestion as: please split subdir and obj as done by the
-other LSMs (integrity should be fixed to do the same, but that doesn't
-need to be part of this series).
-
-> 
-> > > +#include <asm/current.h>
-> >
-> > Why is this needed?
-> 
-> IIUC, the "current" macro is defined in this header. I try to include the
-> appropiate header for every macro and function used.
-
-The common approach is actually to minimize the number of explicit
-headers so that if header files includes need to be changed, they only
-need to be changed internally instead of everywhere in the kernel.
-Please find an appropriately minimal set of headers to include.
-
-> 
+On Sat, Mar 20, 2021 at 04:46:48PM +0100, John Wood wrote:
+> On Wed, Mar 17, 2021 at 09:00:51PM -0700, Kees Cook wrote:
+> > On Sun, Mar 07, 2021 at 12:30:27PM +0100, John Wood wrote:
 > > > +/**
-> > > + * struct brute_stats - Fork brute force attack statistics.
-> > > + * @lock: Lock to protect the brute_stats structure.
-> > > + * @refc: Reference counter.
-> > > + * @faults: Number of crashes.
-> > > + * @jiffies: Last crash timestamp.
-> > > + * @period: Crash period's moving average.
+> > > + * brute_reset_stats() - Reset the statistical data.
+> > > + * @stats: Statistics to be reset.
+> > > + * @is_setid: The executable file has the setid flags set.
 > > > + *
-> > > + * This structure holds the statistical data shared by all the fork hierarchy
-> > > + * processes.
+> > > + * Reset the faults and period and set the last crash timestamp to now. This
+> > > + * way, it is possible to compute the application crash period at the next
+> > > + * fault. Also, save the credentials of the current task and update the
+> > > + * bounds_crossed flag based on a previous network activity and the is_setid
+> > > + * parameter.
+> > > + *
+> > > + * The statistics to be reset cannot be NULL.
+> > > + *
+> > > + * Context: Must be called with interrupts disabled and brute_stats_ptr_lock
+> > > + *          and brute_stats::lock held.
 > > > + */
-> > > +struct brute_stats {
-> > > +	spinlock_t lock;
-> > > +	refcount_t refc;
-> > > +	unsigned char faults;
-> > > +	u64 jiffies;
-> > > +	u64 period;
-> > > +};
-> >
-> > I assume the max-255 "faults" will be explained... why is this so small?
-> 
-> If a brute force attack is running slowly for a long time, the application
-> crash period's EMA is not suitable for the detection. This type of attack
-> must be detected using a maximum number of faults. In this case, the
-> BRUTE_MAX_FAULTS is defined as 200.
-
-Okay, so given the choise of BRUTE_MAX_FAULTS, you limited the storage
-size? I guess I worry about this somehow wrapping around easily. Given
-the struct has padding due to the u8 storage, it seems like just using
-int would be fine too.
-
-> > > +static int brute_task_alloc(struct task_struct *task, unsigned long clone_flags)
+> > > +static void brute_reset_stats(struct brute_stats *stats, bool is_setid)
 > > > +{
-> > > +	struct brute_stats **stats, **p_stats;
+> > > +	const struct cred *cred = current_cred();
 > > > +
-> > > +	stats = brute_stats_ptr(task);
-> > > +	p_stats = brute_stats_ptr(current);
-> > > +
-> > > +	if (likely(*p_stats)) {
-> > > +		brute_share_stats(*p_stats, stats);
-> > > +		return 0;
-> > > +	}
-> > > +
-> > > +	*stats = brute_new_stats();
-> > > +	if (!*stats)
-> > > +		return -ENOMEM;
-> > > +
-> > > +	brute_share_stats(*stats, p_stats);
-> > > +	return 0;
+> > > +	stats->faults = 0;
+> > > +	stats->jiffies = get_jiffies_64();
+> > > +	stats->period = 0;
+> > > +	stats->saved_cred.uid = cred->uid;
+> > > +	stats->saved_cred.gid = cred->gid;
+> > > +	stats->saved_cred.suid = cred->suid;
+> > > +	stats->saved_cred.sgid = cred->sgid;
+> > > +	stats->saved_cred.euid = cred->euid;
+> > > +	stats->saved_cred.egid = cred->egid;
+> > > +	stats->saved_cred.fsuid = cred->fsuid;
+> > > +	stats->saved_cred.fsgid = cred->fsgid;
+> > > +	stats->bounds_crossed = stats->network || is_setid;
 > > > +}
 > >
-> > During the task_alloc hook, aren't both "current" and "task" already
-> > immutable (in the sense that no lock needs to be held for
-> > brute_share_stats())?
+> > I would include brute_reset_stats() in the first patch (and add to it as
+> > needed). To that end, it can start with a memset(stats, 0, sizeof(*stats));
 > 
-> I will work on it.
-> 
-> > And what is the case where brute_stats_ptr(current) returns NULL?
-> 
-> Sorry, but I don't understand what you are trying to explain me.
-> brute_stats_ptr(current) returns a pointer to a pointer. So, I think
-> your question is: What's the purpose of the "if (likely(*p_stats))"
-> check? If it is the case, this check is to guarantee that all the tasks
-> have statistical data. If some task has been allocated prior the brute
-> LSM initialization, this task doesn't have stats. So, with this check
-> all the tasks that fork have stats.
+> So, need all the struct fields to be introduced in the initial patch?
+> Even if they are not needed in the initial patch? I'm confused.
 
-Thank you for figuring out my poorly-worded question. :) Yes, I was
-curious about the "if (likely(*p_stats))". It seems like it shouldn't be
-possible for a process to lack a stats allocation: the LSMs get
-initialized before processes. If you wanted to be defensive, I would
-have expected:
+No, I meant try to introduce as much infrastructure as possible early in
+the series. In this case, I was suggesting having introduced
+brute_reset_stats() at the start, so that in this patch you'd just be
+adding the new fields to the function. (Instead of both adding new
+fields and changing the execution pattern.)
 
-if (WARN_ON_ONCE(!*p_stats))
-	return -ENOMEM;
-
-or something (brute should be able to count on the kernel internals
-behaving here: you're not expecting any path where this could happen).
-
-> 
-> > > +
 > > > +/**
-> > > + * brute_task_execve() - Target for the bprm_committing_creds hook.
-> > > + * @bprm: Points to the linux_binprm structure.
+> > > + * brute_network() - Target for the socket_sock_rcv_skb hook.
+> > > + * @sk: Contains the sock (not socket) associated with the incoming sk_buff.
+> > > + * @skb: Contains the incoming network data.
 > > > + *
-> > > + * When a forked task calls the execve system call, the memory contents are set
-> > > + * with new values. So, in this scenario the parent's statistical data no need
-> > > + * to be shared. Instead, a new statistical data structure must be allocated to
-> > > + * start a new hierarchy. This condition is detected when the statistics
-> > > + * reference counter holds a value greater than or equal to two (a fork always
-> > > + * sets the statistics reference counter to a minimum of two since the parent
-> > > + * and the child task are sharing the same data).
+> > > + * A previous step to detect that a network to local boundary has been crossed
+> > > + * is to detect if there is network activity. To do this, it is only necessary
+> > > + * to check if there are data packets received from a network device other than
+> > > + * loopback.
 > > > + *
-> > > + * However, if the execve function is called immediately after another execve
-> > > + * call, althought the memory contents are reset, there is no need to allocate
-> > > + * a new statistical data structure. This is possible because at this moment
-> > > + * only one task (the task that calls the execve function) points to the data.
-> > > + * In this case, the previous allocation is used but the statistics are reset.
+> > > + * It's mandatory to disable interrupts before acquiring brute_stats_ptr_lock
+> > > + * and brute_stats::lock since the task_free hook can be called from an IRQ
+> > > + * context during the execution of the socket_sock_rcv_skb hook.
 > > > + *
-> > > + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> > > + * since the task_free hook can be called from an IRQ context during the
-> > > + * execution of the bprm_committing_creds hook.
+> > > + * Return: -EFAULT if the current task doesn't have statistical data. Zero
+> > > + *         otherwise.
 > > > + */
-> > > +static void brute_task_execve(struct linux_binprm *bprm)
+> > > +static int brute_network(struct sock *sk, struct sk_buff *skb)
 > > > +{
 > > > +	struct brute_stats **stats;
 > > > +	unsigned long flags;
+> > > +
+> > > +	if (!skb->dev || (skb->dev->flags & IFF_LOOPBACK))
+> > > +		return 0;
+
+I wonder if you need to also ignore netlink, unix sockets, etc, or does
+the IFF_LOOPBACK cover those too?
+
 > > > +
 > > > +	stats = brute_stats_ptr(current);
-> > > +	if (WARN(!*stats, "No statistical data\n"))
-> > > +		return;
+> >
+> > Uhh, is "current" valid here? I actually don't know this hook very well.
+> 
+> I think so, but I will try to study it. Thanks for noted this.
+
+I think you might need to track the mapping of task to sock via
+security_socket_post_create(), security_socket_accept(),
+and/or security_socket_connect()?
+
+Perhaps just mark it once with security_socket_post_create(), instead of
+running a hook on every incoming network packet, too?
+
+-Kees
+
+> > > +	read_lock_irqsave(&brute_stats_ptr_lock, flags);
 > > > +
-> > > +	spin_lock_irqsave(&(*stats)->lock, flags);
-> > > +
-> > > +	if (!refcount_dec_not_one(&(*stats)->refc)) {
-> > > +		/* execve call after an execve call */
-> > > +		(*stats)->faults = 0;
-> > > +		(*stats)->jiffies = get_jiffies_64();
-> > > +		(*stats)->period = 0;
-> > > +		spin_unlock_irqrestore(&(*stats)->lock, flags);
-> > > +		return;
+> > > +	if (!*stats) {
+> > > +		read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+> > > +		return -EFAULT;
 > > > +	}
 > > > +
-> > > +	/* execve call after a fork call */
-> > > +	spin_unlock_irqrestore(&(*stats)->lock, flags);
-> > > +	*stats = brute_new_stats();
-> > > +	WARN(!*stats, "Cannot allocate statistical data\n");
+> > > +	spin_lock(&(*stats)->lock);
+> > > +	(*stats)->network = true;
+> > > +	spin_unlock(&(*stats)->lock);
+> > > +	read_unlock_irqrestore(&brute_stats_ptr_lock, flags);
+> > > +	return 0;
 > > > +}
-> >
-> > I don't think any of this locking is needed -- you're always operating
-> > on "current", so its brute_stats will always be valid.
 > 
-> But another process (that share the same stats) could be modifying this
-> concurrently.
-> 
-> Scenario 1: cpu 1 writes stats and cpu 2 writes stats.
-> Scenario 2: cpu 1 writes stats, then IRQ on the same cpu writes stats.
-> 
-> I think it is possible. So AFAIK we need locking. Sorry if I am wrong.
-
-Maybe I'm misunderstanding, but even your comments on the function say
-that the zeroing path is there to avoid a new allocation, since only 1
-thread has access to that "stats". (i.e. no locking needed), and in the
-other path, a new stats is allocated (no locking needed). What are the
-kernel execution paths you see where you'd need locking here?
-
-> > > +/**
-> > > + * brute_task_free() - Target for the task_free hook.
-> > > + * @task: Task about to be freed.
-> > > + *
-> > > + * The statistical data that is shared between all the fork hierarchy processes
-> > > + * needs to be freed when this hierarchy disappears.
-> > > + *
-> > > + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
-> > > + * since the task_free hook can be called from an IRQ context during the
-> > > + * execution of the task_free hook.
-> > > + */
-> > > +static void brute_task_free(struct task_struct *task)
-> > > +{
-> > > +	struct brute_stats **stats;
-> > > +	unsigned long flags;
-> > > +	bool refc_is_zero;
-> > > +
-> > > +	stats = brute_stats_ptr(task);
-> > > +	if (WARN(!*stats, "No statistical data\n"))
-> > > +		return;
-> > > +
-> > > +	spin_lock_irqsave(&(*stats)->lock, flags);
-> > > +	refc_is_zero = refcount_dec_and_test(&(*stats)->refc);
-> > > +	spin_unlock_irqrestore(&(*stats)->lock, flags);
-> > > +
-> > > +	if (refc_is_zero) {
-> > > +		kfree(*stats);
-> > > +		*stats = NULL;
-> > > +	}
-> > > +}
-> >
-> > Same thing -- this is what dec_and_test is for: it's atomic, so no
-> > locking needed.
-> 
-> Ok, in this case I can see that the locking is not necessary due to the
-> stats::refc is atomic. But in the previous case, faults, jiffies and
-> period are not atomic. So I think the lock is necessary. If not, what am
-> I missing?
-
-I thought the code had established that there could only be a single
-stats holder for that code, so no locking. Maybe I misunderstood?
+> Thanks,
+> John Wood
 
 -- 
 Kees Cook
