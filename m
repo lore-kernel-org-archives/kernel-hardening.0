@@ -1,21 +1,21 @@
-Return-Path: <SRS0=RX8u=IT=lists.openwall.com=kernel-hardening-return-21024-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=gaY0=IT=lists.openwall.com=kernel-hardening-return-21025-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 71AF9C433C1
-	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 17:04:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6F085C433C1
+	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 17:37:41 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 48D0F61920
-	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 17:04:16 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 48D0F61920
+	by mail.kernel.org (Postfix) with SMTP id 26E5561946
+	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Mar 2021 17:37:39 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 26E5561946
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21024-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 17759 invoked by uid 550); 21 Mar 2021 17:04:07 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21025-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 26578 invoked by uid 550); 21 Mar 2021 17:37:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,217 +23,312 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17736 invoked from network); 21 Mar 2021 17:04:06 -0000
+Received: (qmail 26546 invoked from network); 21 Mar 2021 17:37:31 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=date:from:to:cc:subject:message-id:references:mime-version
          :content-disposition:in-reply-to;
-        bh=t6QjqKPe2nTK/PNzThmSOWe7GdZqbg6jHmNdZttH5JY=;
-        b=kS0l+gnw6EHePRjrc1IKP71VOtAYgrJ/DvSJI87MecLBwpXsLwucas1kVL44njHOJD
-         Khoo0uVVUFRXCYmj4hVz4zS64uDP+RLLOH01d0sBCMXWt/rX8Ya9tRjKEiNqtQRBPi0x
-         wkZZ6b6gOyBIeboYXlFaaOlvX2/Ui7wcSKz8s=
+        bh=h1o7IzHwWbxdPHi+8uUp3/Koaw8yljOar4ODRP9JcNU=;
+        b=QCSrTB65+gO/mWpneMOKqnkMx0IckhHxEMVpw/wknbb2Lz3sRC9GExh18/RQNLu3dI
+         ENXytI4LIW1QVxzKHwNKRfEbSC8CsR+oBz9O3UrcGodRRnUlgcNagLnp4f7Ul6ErFRgC
+         RI5jXj4Np1phupV3DzS7y1TeSymkUHwSe60eQ=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
          :mime-version:content-disposition:in-reply-to;
-        bh=t6QjqKPe2nTK/PNzThmSOWe7GdZqbg6jHmNdZttH5JY=;
-        b=f9nR1G6fVfZ33vxFxN0GIyDJQQagsfW5Uj6w7LBv+RpXeUo+qcF4fGDoOJTOasDPGt
-         wd589xhEtwbBlRoIgFCk7RDtZC02nFx48tNz1fCEEYWHvzFaIAVhLU+jAJI1gk7lJ0hZ
-         lRjrBE2IhkIx62TU6Ja/FZtkmAJt+xqr8VWGgLbAwPZVNeNMIzqZwZNGaIIiS2TmGmyL
-         OAqg87aBkypjZk1lEl/3ZmildCzoJyAIpNOj6V61VAjNVpxyJ08PyvnWHKSCJyVpAdCU
-         22+Xyrc5HdnSSCkX/3DnvbOsDQcocZ4cWj10vGYmhwA6uB4VxspL3Y6tWqiv31LQ3aTt
-         guEw==
-X-Gm-Message-State: AOAM532b9m5/AHRMTxzG8IZXp+K6hwthqy2HT1sbn6Mgnn8n3xsosZh2
-	YWR1E14HjRB2Sl88sByZEkokLg==
-X-Google-Smtp-Source: ABdhPJwYdOzaG5EX8VfuaSd/pv73OKX7Gdj5qaTHa4vBEGnBqdu/yXDr+Yzf5Pmcf6GbAWD8fFNpIQ==
-X-Received: by 2002:a63:d17:: with SMTP id c23mr19993736pgl.251.1616346234415;
-        Sun, 21 Mar 2021 10:03:54 -0700 (PDT)
-Date: Sun, 21 Mar 2021 10:03:52 -0700
+        bh=h1o7IzHwWbxdPHi+8uUp3/Koaw8yljOar4ODRP9JcNU=;
+        b=JIUxE0GNaucm0TnFhK2AcNe/cp+V2hrVqcx9MexVLpkEwxZewA31sy5dBuRB/Q1vf0
+         yPvN3r+SD8nljR5pBSAvjFAqFqPqsA+6AJSnAthbAQ6+lJteZqCavul9PqxDr2/kkENY
+         3jgxsWEgUCpMdSjWBEv/qwWfeOG31KM6lSc7kNRt7VHiey2js3DCIGYqqFXZlWZCwCDa
+         j1Ee+8e6PioPSc4mEjYH3bdRD/HudPrnBBQZjAW1AIKM/6fZ0ykot8/i4gYwKRPHD+zy
+         kEmsVCvRo6OiY9s/mGCqVqPNTOb2+sdTzZVgZ3wLQTlRu9G3G2QUuQerhGJXW3U0jBEG
+         qURA==
+X-Gm-Message-State: AOAM5316QmxpIz8bGTO05/OdkkSUsgT7Yk3+XQX/Q4b66HSs3VZqhjbT
+	6fwGOdhTW2fRsi88BrLc5OAHEHoA0t12FA==
+X-Google-Smtp-Source: ABdhPJx7f+7KrqqQ2UNcYrMTPWR7geuxADOud2Pt1BKnWAECIduFCs6HMz/l+Z7c6l0ZWemH+Lr/xw==
+X-Received: by 2002:a62:68c1:0:b029:1ee:5dfa:860b with SMTP id d184-20020a6268c10000b02901ee5dfa860bmr17681481pfc.35.1616348239667;
+        Sun, 21 Mar 2021 10:37:19 -0700 (PDT)
+Date: Sun, 21 Mar 2021 10:37:17 -0700
 From: Kees Cook <keescook@chromium.org>
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>,
-	Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org,
-	Andy Lutomirski <luto@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Will Deacon <will@kernel.org>, Mark Rutland <mark.rutland@arm.com>,
-	Alexander Potapenko <glider@google.com>,
-	Alexander Popov <alex.popov@linux.com>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Jann Horn <jannh@google.com>, Vlastimil Babka <vbabka@suse.cz>,
-	David Hildenbrand <david@redhat.com>,
-	Mike Rapoport <rppt@linux.ibm.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	kernel-hardening@lists.openwall.com,
-	linux-hardening@vger.kernel.org,
-	linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org,
-	linux-kernel@vger.kernel.org,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Peter Zijlstra <a.p.zijlstra@chello.nl>,
-	Borislav Petkov <bp@alien8.de>
-Subject: Re: [PATCH v7 4/6] x86/entry: Enable random_kstack_offset support
-Message-ID: <202103210944.6EA6C80@keescook>
-References: <20210319212835.3928492-1-keescook@chromium.org>
- <20210319212835.3928492-5-keescook@chromium.org>
- <20210320115820.GA4151166@gmail.com>
+To: John Wood <john.wood@gmx.com>
+Cc: Jann Horn <jannh@google.com>, Randy Dunlap <rdunlap@infradead.org>,
+	Jonathan Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>,
+	Shuah Khan <shuah@kernel.org>, "Serge E. Hallyn" <serge@hallyn.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Andi Kleen <ak@linux.intel.com>,
+	kernel test robot <oliver.sang@intel.com>,
+	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH v6 2/8] security/brute: Define a LSM and manage
+ statistical data
+Message-ID: <202103211013.4680330D7@keescook>
+References: <20210307113031.11671-1-john.wood@gmx.com>
+ <20210307113031.11671-3-john.wood@gmx.com>
+ <202103171823.E7F64A593@keescook>
+ <20210320150153.GA3023@ubuntu>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20210320115820.GA4151166@gmail.com>
+In-Reply-To: <20210320150153.GA3023@ubuntu>
 
-On Sat, Mar 20, 2021 at 12:58:20PM +0100, Ingo Molnar wrote:
+On Sat, Mar 20, 2021 at 04:01:53PM +0100, John Wood wrote:
+> Hi,
+> First of all thanks for the review. More info and questions inline.
 > 
-> * Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Mar 17, 2021 at 07:00:56PM -0700, Kees Cook wrote:
+> > On Sun, Mar 07, 2021 at 12:30:25PM +0100, John Wood wrote:
+> > >
+> > >  config LSM
+> > >  	string "Ordered list of enabled LSMs"
+> > > -	default "lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
+> > > -	default "lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
+> > > -	default "lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO
+> > > -	default "lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT_SECURITY_DAC
+> > > -	default "lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf"
+> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
+> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
+> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO
+> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,bpf" if DEFAULT_SECURITY_DAC
+> > > +	default "brute,lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf"
+> >
+> > It probably doesn't matter much, but I think brute should be added
+> > between lockdown and yama.
 > 
-> > Allow for a randomized stack offset on a per-syscall basis, with roughly
-> > 5-6 bits of entropy, depending on compiler and word size. Since the
-> > method of offsetting uses macros, this cannot live in the common entry
-> > code (the stack offset needs to be retained for the life of the syscall,
-> > which means it needs to happen at the actual entry point).
-> 
-> >  __visible noinstr void do_syscall_64(unsigned long nr, struct pt_regs *regs)
-> >  {
-> > +	add_random_kstack_offset();
-> >  	nr = syscall_enter_from_user_mode(regs, nr);
-> 
-> > @@ -83,6 +84,7 @@ __visible noinstr void do_int80_syscall_32(struct pt_regs *regs)
-> >  {
-> >  	unsigned int nr = syscall_32_enter(regs);
-> >  
-> > +	add_random_kstack_offset();
-> 
-> >  	unsigned int nr = syscall_32_enter(regs);
-> >  	int res;
-> >  
-> > +	add_random_kstack_offset();
-> 
-> > @@ -70,6 +71,13 @@ static inline void arch_exit_to_user_mode_prepare(struct pt_regs *regs,
-> >  	 */
-> >  	current_thread_info()->status &= ~(TS_COMPAT | TS_I386_REGS_POKED);
-> >  #endif
-> > +
-> > +	/*
-> > +	 * x86_64 stack alignment means 3 bits are ignored, so keep
-> > +	 * the top 5 bits. x86_32 needs only 2 bits of alignment, so
-> > +	 * the top 6 bits will be used.
-> > +	 */
-> > +	choose_random_kstack_offset(rdtsc() & 0xFF);
-> >  }
-> 
-> 1)
-> 
-> Wondering why the calculation of the kstack offset (which happens in 
-> every syscall) is separated from the entry-time logic and happens 
-> during return to user-space?
-> 
-> The two methods:
-> 
-> +#define add_random_kstack_offset() do {                                        \
-> +       if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT, \
-> +                               &randomize_kstack_offset)) {            \
-> +               u32 offset = this_cpu_read(kstack_offset);              \
-> +               u8 *ptr = __builtin_alloca(offset & 0x3FF);             \
-> +               asm volatile("" : "=m"(*ptr) :: "memory");              \
-> +       }                                                               \
-> +} while (0)
-> +
-> +#define choose_random_kstack_offset(rand) do {                         \
-> +       if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT, \
-> +                               &randomize_kstack_offset)) {            \
-> +               u32 offset = this_cpu_read(kstack_offset);              \
-> +               offset ^= (rand);                                       \
-> +               this_cpu_write(kstack_offset, offset);                  \
-> +       }                                                               \
-> +} while (0)
-> 
-> choose_random_kstack_offset() basically calculates the offset and 
-> stores it in a percpu variable (mixing it with the previous offset 
-> value), add_random_kstack_offset() uses it in an alloca() dynamic 
-> stack allocation.
-> 
-> Wouldn't it be (slightly) lower combined overhead to just do it in a 
-> single step? There would be duplication along the 3 syscall entry 
-> points, but this should be marginal as this looks small, and the entry 
-> points would probably be cache-hot.
+> What is the rationale for the stacking order (in relation with brute and
+> lockdown)?
 
-In earlier threads it was pointed out that one way to make things less
-predictable was to do the calculation at the end of a syscall so that it
-was more distant from entering userspace (with the thinking that things
-like rdtsc were more predictable by userspace if it was always happening
-X cycles after entering a syscall). Additionally, the idea of using
-percpu meant that the chosen values wouldn't be tied to a process,
-making even "short" syscalls (i.e. getpid) less predictable because an
-attacker would need to have pinned the process to a single CPU, etc.
+lockdown has some very early hooks, so leaving it at the front seems
+organizationally correct to me. It doesn't really matter, though, so
+perhaps we should just alphabetize them, but that's for another day.
 
-I can include these details more explicitly in the next change log, if
-you think that makes sense?
+> 
+> > > diff --git a/security/Makefile b/security/Makefile
+> > > index 3baf435de541..1236864876da 100644
+> > > --- a/security/Makefile
+> > > +++ b/security/Makefile
+> > > @@ -36,3 +36,7 @@ obj-$(CONFIG_BPF_LSM)			+= bpf/
+> > >  # Object integrity file lists
+> > >  subdir-$(CONFIG_INTEGRITY)		+= integrity
+> > >  obj-$(CONFIG_INTEGRITY)			+= integrity/
+> > > +
+> > > +# Object brute file lists
+> > > +subdir-$(CONFIG_SECURITY_FORK_BRUTE)	+= brute
+> > > +obj-$(CONFIG_SECURITY_FORK_BRUTE)	+= brute/
+> >
+> > I don't think subdir is needed here? I think you can use obj-... like
+> > loadpin, etc.
+> 
+> loadpin also uses subdir just like selinux, smack, tomoyo, etc.. So, why
+> is it not necessary for brute?
 
-> 2)
-> 
-> Another detail I noticed: add_random_kstack_offset() limits the offset 
-> to 0x3ff, or 1k - 10 bits.
-> 
-> But the RDTSC mask is 0xff, 8 bits:
-> 
-> +       /*
-> +        * x86_64 stack alignment means 3 bits are ignored, so keep
-> +        * the top 5 bits. x86_32 needs only 2 bits of alignment, so
-> +        * the top 6 bits will be used.
-> +        */
-> +       choose_random_kstack_offset(rdtsc() & 0xFF);
-> 
-> alloca() itself works in byte units and will round the allocation to 8 
-> bytes on x86-64, to 4 bytes on x86-32, this is what the 'ignored bits' 
-> reference in the comment is to, right?
-> 
-> Why is there a 0x3ff mask for the alloca() call and a 0xff mask to the 
-> RDTSC randomizing value? Shouldn't the two be synced up? Or was the 
-> intention to shift the RDTSC value to the left by 3 bits?
+Oops, yes, my mistake. I didn't look at the Makefile as a whole. I will
+adjust my suggestion as: please split subdir and obj as done by the
+other LSMs (integrity should be fixed to do the same, but that doesn't
+need to be part of this series).
 
-Yes, it's intentional -- the 0x3ff limit is there to make sure the
-alloca has a distinct upper bound, and the 8 bits is there to let the
-compiler choose how much of those 8 bits it wants to throw away to stack
-alignment. The limit to "at most 8 bits" (really 5) is chosen as a
-middle ground between raising unpredictability without shrinking the
-available stack space too much. (Note that arm64's alignment has to
-tweak this by 1 more bit, so it is masking with 0x1ff.
+> 
+> > > +#include <asm/current.h>
+> >
+> > Why is this needed?
+> 
+> IIUC, the "current" macro is defined in this header. I try to include the
+> appropiate header for every macro and function used.
 
-I could attempt to adjust the comments to reflect these considerations.
+The common approach is actually to minimize the number of explicit
+headers so that if header files includes need to be changed, they only
+need to be changed internally instead of everywhere in the kernel.
+Please find an appropriately minimal set of headers to include.
 
-> 3)
 > 
-> Finally, kstack_offset is a percpu variable:
+> > > +/**
+> > > + * struct brute_stats - Fork brute force attack statistics.
+> > > + * @lock: Lock to protect the brute_stats structure.
+> > > + * @refc: Reference counter.
+> > > + * @faults: Number of crashes.
+> > > + * @jiffies: Last crash timestamp.
+> > > + * @period: Crash period's moving average.
+> > > + *
+> > > + * This structure holds the statistical data shared by all the fork hierarchy
+> > > + * processes.
+> > > + */
+> > > +struct brute_stats {
+> > > +	spinlock_t lock;
+> > > +	refcount_t refc;
+> > > +	unsigned char faults;
+> > > +	u64 jiffies;
+> > > +	u64 period;
+> > > +};
+> >
+> > I assume the max-255 "faults" will be explained... why is this so small?
 > 
->   #ifdef CONFIG_HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
->   ...
->   DEFINE_PER_CPU(u32, kstack_offset);
-> 
-> This is inherited across tasks on scheduling, and new syscalls will 
-> mix in new RDTSC values to continue to randomize the offset.
-> 
-> Wouldn't it make sense to further mix values into this across context 
-> switching boundaries? A really inexpensive way would be to take the 
-> kernel stack value and mix it into the offset, and maybe even the 
-> randomized t->stack_canary value?
-> 
-> This would further isolate the syscall kernel stack offsets of 
-> separate execution contexts from each other, should an attacker find a 
-> way to estimate or influence likely RDTSC values.
+> If a brute force attack is running slowly for a long time, the application
+> crash period's EMA is not suitable for the detection. This type of attack
+> must be detected using a maximum number of faults. In this case, the
+> BRUTE_MAX_FAULTS is defined as 200.
 
-I think this was discussed at some point too, though my search-foo is
-failing me. I'm open to adding this to the mix, though care is needed
-for both stack address and stack canary values, since they both have
-specific structure (i.e. high and low bits of address are "known", and
-low bits of canary are always zero) and we don't want to run the risk
-of entangling secret values: if one can be exposed, does the entangling
-expose the others?
+Okay, so given the choise of BRUTE_MAX_FAULTS, you limited the storage
+size? I guess I worry about this somehow wrapping around easily. Given
+the struct has padding due to the u8 storage, it seems like just using
+int would be fine too.
 
-I've had to deal with both of these issues with the slab freelist pointer
-obfuscation, so my instinct here is to avoid mixing the other values in.
-I'm open to improving it, of course, but I think rdtsc is a good first
-step.
+> > > +static int brute_task_alloc(struct task_struct *task, unsigned long clone_flags)
+> > > +{
+> > > +	struct brute_stats **stats, **p_stats;
+> > > +
+> > > +	stats = brute_stats_ptr(task);
+> > > +	p_stats = brute_stats_ptr(current);
+> > > +
+> > > +	if (likely(*p_stats)) {
+> > > +		brute_share_stats(*p_stats, stats);
+> > > +		return 0;
+> > > +	}
+> > > +
+> > > +	*stats = brute_new_stats();
+> > > +	if (!*stats)
+> > > +		return -ENOMEM;
+> > > +
+> > > +	brute_share_stats(*stats, p_stats);
+> > > +	return 0;
+> > > +}
+> >
+> > During the task_alloc hook, aren't both "current" and "task" already
+> > immutable (in the sense that no lock needs to be held for
+> > brute_share_stats())?
+> 
+> I will work on it.
+> 
+> > And what is the case where brute_stats_ptr(current) returns NULL?
+> 
+> Sorry, but I don't understand what you are trying to explain me.
+> brute_stats_ptr(current) returns a pointer to a pointer. So, I think
+> your question is: What's the purpose of the "if (likely(*p_stats))"
+> check? If it is the case, this check is to guarantee that all the tasks
+> have statistical data. If some task has been allocated prior the brute
+> LSM initialization, this task doesn't have stats. So, with this check
+> all the tasks that fork have stats.
+
+Thank you for figuring out my poorly-worded question. :) Yes, I was
+curious about the "if (likely(*p_stats))". It seems like it shouldn't be
+possible for a process to lack a stats allocation: the LSMs get
+initialized before processes. If you wanted to be defensive, I would
+have expected:
+
+if (WARN_ON_ONCE(!*p_stats))
+	return -ENOMEM;
+
+or something (brute should be able to count on the kernel internals
+behaving here: you're not expecting any path where this could happen).
+
+> 
+> > > +
+> > > +/**
+> > > + * brute_task_execve() - Target for the bprm_committing_creds hook.
+> > > + * @bprm: Points to the linux_binprm structure.
+> > > + *
+> > > + * When a forked task calls the execve system call, the memory contents are set
+> > > + * with new values. So, in this scenario the parent's statistical data no need
+> > > + * to be shared. Instead, a new statistical data structure must be allocated to
+> > > + * start a new hierarchy. This condition is detected when the statistics
+> > > + * reference counter holds a value greater than or equal to two (a fork always
+> > > + * sets the statistics reference counter to a minimum of two since the parent
+> > > + * and the child task are sharing the same data).
+> > > + *
+> > > + * However, if the execve function is called immediately after another execve
+> > > + * call, althought the memory contents are reset, there is no need to allocate
+> > > + * a new statistical data structure. This is possible because at this moment
+> > > + * only one task (the task that calls the execve function) points to the data.
+> > > + * In this case, the previous allocation is used but the statistics are reset.
+> > > + *
+> > > + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
+> > > + * since the task_free hook can be called from an IRQ context during the
+> > > + * execution of the bprm_committing_creds hook.
+> > > + */
+> > > +static void brute_task_execve(struct linux_binprm *bprm)
+> > > +{
+> > > +	struct brute_stats **stats;
+> > > +	unsigned long flags;
+> > > +
+> > > +	stats = brute_stats_ptr(current);
+> > > +	if (WARN(!*stats, "No statistical data\n"))
+> > > +		return;
+> > > +
+> > > +	spin_lock_irqsave(&(*stats)->lock, flags);
+> > > +
+> > > +	if (!refcount_dec_not_one(&(*stats)->refc)) {
+> > > +		/* execve call after an execve call */
+> > > +		(*stats)->faults = 0;
+> > > +		(*stats)->jiffies = get_jiffies_64();
+> > > +		(*stats)->period = 0;
+> > > +		spin_unlock_irqrestore(&(*stats)->lock, flags);
+> > > +		return;
+> > > +	}
+> > > +
+> > > +	/* execve call after a fork call */
+> > > +	spin_unlock_irqrestore(&(*stats)->lock, flags);
+> > > +	*stats = brute_new_stats();
+> > > +	WARN(!*stats, "Cannot allocate statistical data\n");
+> > > +}
+> >
+> > I don't think any of this locking is needed -- you're always operating
+> > on "current", so its brute_stats will always be valid.
+> 
+> But another process (that share the same stats) could be modifying this
+> concurrently.
+> 
+> Scenario 1: cpu 1 writes stats and cpu 2 writes stats.
+> Scenario 2: cpu 1 writes stats, then IRQ on the same cpu writes stats.
+> 
+> I think it is possible. So AFAIK we need locking. Sorry if I am wrong.
+
+Maybe I'm misunderstanding, but even your comments on the function say
+that the zeroing path is there to avoid a new allocation, since only 1
+thread has access to that "stats". (i.e. no locking needed), and in the
+other path, a new stats is allocated (no locking needed). What are the
+kernel execution paths you see where you'd need locking here?
+
+> > > +/**
+> > > + * brute_task_free() - Target for the task_free hook.
+> > > + * @task: Task about to be freed.
+> > > + *
+> > > + * The statistical data that is shared between all the fork hierarchy processes
+> > > + * needs to be freed when this hierarchy disappears.
+> > > + *
+> > > + * It's mandatory to disable interrupts before acquiring the brute_stats::lock
+> > > + * since the task_free hook can be called from an IRQ context during the
+> > > + * execution of the task_free hook.
+> > > + */
+> > > +static void brute_task_free(struct task_struct *task)
+> > > +{
+> > > +	struct brute_stats **stats;
+> > > +	unsigned long flags;
+> > > +	bool refc_is_zero;
+> > > +
+> > > +	stats = brute_stats_ptr(task);
+> > > +	if (WARN(!*stats, "No statistical data\n"))
+> > > +		return;
+> > > +
+> > > +	spin_lock_irqsave(&(*stats)->lock, flags);
+> > > +	refc_is_zero = refcount_dec_and_test(&(*stats)->refc);
+> > > +	spin_unlock_irqrestore(&(*stats)->lock, flags);
+> > > +
+> > > +	if (refc_is_zero) {
+> > > +		kfree(*stats);
+> > > +		*stats = NULL;
+> > > +	}
+> > > +}
+> >
+> > Same thing -- this is what dec_and_test is for: it's atomic, so no
+> > locking needed.
+> 
+> Ok, in this case I can see that the locking is not necessary due to the
+> stats::refc is atomic. But in the previous case, faults, jiffies and
+> period are not atomic. So I think the lock is necessary. If not, what am
+> I missing?
+
+I thought the code had established that there could only be a single
+stats holder for that code, so no locking. Maybe I misunderstood?
 
 -- 
 Kees Cook
