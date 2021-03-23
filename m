@@ -1,21 +1,22 @@
-Return-Path: <SRS0=2V/q=IV=lists.openwall.com=kernel-hardening-return-21038-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=uoVp=IV=lists.openwall.com=kernel-hardening-return-21039-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,
+	DKIM_ADSP_CUSTOM_MED,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 415A2C433C1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 19:29:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B494CC433E0
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 21:00:31 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 570AB619C1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 19:29:50 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 570AB619C1
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21038-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 20167 invoked by uid 550); 23 Mar 2021 19:29:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id 955E4601FE
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 21:00:30 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 955E4601FE
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21039-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28183 invoked by uid 550); 23 Mar 2021 21:00:19 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,212 +24,175 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20147 invoked from network); 23 Mar 2021 19:29:43 -0000
-Subject: Re: [PATCH v30 07/12] landlock: Support filesystem access-control
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Kees Cook <keescook@chromium.org>
-Cc: James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>,
- "Serge E . Hallyn" <serge@hallyn.com>, Al Viro <viro@zeniv.linux.org.uk>,
- Andrew Morton <akpm@linux-foundation.org>,
- Andy Lutomirski <luto@amacapital.net>,
- Anton Ivanov <anton.ivanov@cambridgegreys.com>, Arnd Bergmann
- <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
- David Howells <dhowells@redhat.com>, Jeff Dike <jdike@addtoit.com>,
- Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>,
- Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
- Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
- linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
- linux-kselftest@vger.kernel.org, linux-security-module@vger.kernel.org,
- x86@kernel.org, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?=
- <mic@linux.microsoft.com>
-References: <20210316204252.427806-1-mic@digikod.net>
- <20210316204252.427806-8-mic@digikod.net> <202103191148.6E819426D@keescook>
- <f705f7e8-3ee3-bae9-c283-174fab41629a@digikod.net>
-Message-ID: <79d96c0a-9254-63aa-6f0b-2c0fce370c29@digikod.net>
-Date: Tue, 23 Mar 2021 20:30:03 +0100
-User-Agent:
+Received: (qmail 28150 invoked from network); 23 Mar 2021 21:00:18 -0000
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: LKML <linux-kernel@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux Containers <containers@lists.linux-foundation.org>,
+	linux-mm@kvack.org
+Cc: Alexey Gladkov <legion@kernel.org>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	"Eric W . Biederman" <ebiederm@xmission.com>,
+	Jann Horn <jannh@google.com>,
+	Jens Axboe <axboe@kernel.dk>,
+	Kees Cook <keescook@chromium.org>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Oleg Nesterov <oleg@redhat.com>
+Subject: [PATCH v9 0/8] Count rlimits in each user namespace
+Date: Tue, 23 Mar 2021 21:59:09 +0100
+Message-Id: <cover.1616533074.git.gladkov.alexey@gmail.com>
+X-Mailer: git-send-email 2.29.3
 MIME-Version: 1.0
-In-Reply-To: <f705f7e8-3ee3-bae9-c283-174fab41629a@digikod.net>
-Content-Type: text/plain; charset=iso-8859-15
-Content-Language: en-US
 Content-Transfer-Encoding: 8bit
+X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.4 (raptor.unsafe.ru [5.9.43.93]); Tue, 23 Mar 2021 21:00:07 +0000 (UTC)
 
+Preface
+-------
+These patches are for binding the rlimit counters to a user in user namespace.
+This patch set can be applied on top of:
 
-On 19/03/2021 20:19, Mickaël Salaün wrote:
-> 
-> On 19/03/2021 19:57, Kees Cook wrote:
->> On Tue, Mar 16, 2021 at 09:42:47PM +0100, Mickaël Salaün wrote:
->>> From: Mickaël Salaün <mic@linux.microsoft.com>
->>>
->>> Using Landlock objects and ruleset, it is possible to tag inodes
->>> according to a process's domain.  To enable an unprivileged process to
->>> express a file hierarchy, it first needs to open a directory (or a file)
->>> and pass this file descriptor to the kernel through
->>> landlock_add_rule(2).  When checking if a file access request is
->>> allowed, we walk from the requested dentry to the real root, following
->>> the different mount layers.  The access to each "tagged" inodes are
->>> collected according to their rule layer level, and ANDed to create
->>> access to the requested file hierarchy.  This makes possible to identify
->>> a lot of files without tagging every inodes nor modifying the
->>> filesystem, while still following the view and understanding the user
->>> has from the filesystem.
->>>
->>> Add a new ARCH_EPHEMERAL_INODES for UML because it currently does not
->>> keep the same struct inodes for the same inodes whereas these inodes are
->>> in use.
->>>
->>> This commit adds a minimal set of supported filesystem access-control
->>> which doesn't enable to restrict all file-related actions.  This is the
->>> result of multiple discussions to minimize the code of Landlock to ease
->>> review.  Thanks to the Landlock design, extending this access-control
->>> without breaking user space will not be a problem.  Moreover, seccomp
->>> filters can be used to restrict the use of syscall families which may
->>> not be currently handled by Landlock.
->>>
->>> Cc: Al Viro <viro@zeniv.linux.org.uk>
->>> Cc: Anton Ivanov <anton.ivanov@cambridgegreys.com>
->>> Cc: James Morris <jmorris@namei.org>
->>> Cc: Jann Horn <jannh@google.com>
->>> Cc: Jeff Dike <jdike@addtoit.com>
->>> Cc: Kees Cook <keescook@chromium.org>
->>> Cc: Richard Weinberger <richard@nod.at>
->>> Cc: Serge E. Hallyn <serge@hallyn.com>
->>> Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
->>> Link: https://lore.kernel.org/r/20210316204252.427806-8-mic@digikod.net
->>> [...]
->>> +	spin_lock(&sb->s_inode_list_lock);
->>> +	list_for_each_entry(inode, &sb->s_inodes, i_sb_list) {
->>> +		struct landlock_object *object;
->>> +
->>> +		/* Only handles referenced inodes. */
->>> +		if (!atomic_read(&inode->i_count))
->>> +			continue;
->>> +
->>> +		/*
->>> +		 * Checks I_FREEING and I_WILL_FREE  to protect against a race
->>> +		 * condition when release_inode() just called iput(), which
->>> +		 * could lead to a NULL dereference of inode->security or a
->>> +		 * second call to iput() for the same Landlock object.  Also
->>> +		 * checks I_NEW because such inode cannot be tied to an object.
->>> +		 */
->>> +		spin_lock(&inode->i_lock);
->>> +		if (inode->i_state & (I_FREEING | I_WILL_FREE | I_NEW)) {
->>> +			spin_unlock(&inode->i_lock);
->>> +			continue;
->>> +		}
->>
->> This (and elsewhere here) seems like a lot of inode internals getting
->> exposed. Can any of this be repurposed into helpers? I see this test
->> scattered around the kernel a fair bit:
->>
->> $ git grep I_FREEING | grep I_WILL_FREE | grep I_NEW | wc -l
->> 9
-> 
-> Dealing with the filesystem is complex. Some helpers could probably be
-> added, but with a series dedicated to the filesystem. I can work on that
-> once this series is merged.
-> 
->>
->>> +static inline u32 get_mode_access(const umode_t mode)
->>> +{
->>> +	switch (mode & S_IFMT) {
->>> +	case S_IFLNK:
->>> +		return LANDLOCK_ACCESS_FS_MAKE_SYM;
->>> +	case 0:
->>> +		/* A zero mode translates to S_IFREG. */
->>> +	case S_IFREG:
->>> +		return LANDLOCK_ACCESS_FS_MAKE_REG;
->>> +	case S_IFDIR:
->>> +		return LANDLOCK_ACCESS_FS_MAKE_DIR;
->>> +	case S_IFCHR:
->>> +		return LANDLOCK_ACCESS_FS_MAKE_CHAR;
->>> +	case S_IFBLK:
->>> +		return LANDLOCK_ACCESS_FS_MAKE_BLOCK;
->>> +	case S_IFIFO:
->>> +		return LANDLOCK_ACCESS_FS_MAKE_FIFO;
->>> +	case S_IFSOCK:
->>> +		return LANDLOCK_ACCESS_FS_MAKE_SOCK;
->>> +	default:
->>> +		WARN_ON_ONCE(1);
->>> +		return 0;
->>> +	}
->>
->> I'm assuming this won't be reachable from userspace.
-> 
-> It should not, only a bogus kernel code could.
-> 
->>
->>> [...]
->>> index a5d6ef334991..f8e8e980454c 100644
->>> --- a/security/landlock/setup.c
->>> +++ b/security/landlock/setup.c
->>> @@ -11,17 +11,24 @@
->>>  
->>>  #include "common.h"
->>>  #include "cred.h"
->>> +#include "fs.h"
->>>  #include "ptrace.h"
->>>  #include "setup.h"
->>>  
->>> +bool landlock_initialized __lsm_ro_after_init = false;
->>> +
->>>  struct lsm_blob_sizes landlock_blob_sizes __lsm_ro_after_init = {
->>>  	.lbs_cred = sizeof(struct landlock_cred_security),
->>> +	.lbs_inode = sizeof(struct landlock_inode_security),
->>> +	.lbs_superblock = sizeof(struct landlock_superblock_security),
->>>  };
->>>  
->>>  static int __init landlock_init(void)
->>>  {
->>>  	landlock_add_cred_hooks();
->>>  	landlock_add_ptrace_hooks();
->>> +	landlock_add_fs_hooks();
->>> +	landlock_initialized = true;
->>
->> I think this landlock_initialized is logically separate from the optional
->> DEFINE_LSM "enabled" variable, but I thought I'd double check. :)
-> 
-> An LSM can be marked as enabled (at boot) but not yet initialized.
-> 
->>
->> It seems like it's used here to avoid releasing superblocks before
->> landlock_init() is called? What is the scenario where that happens?
-> 
-> It is a condition for LSM hooks, syscalls and superblock management.
-> 
->>
->>>  	pr_info("Up and running.\n");
->>>  	return 0;
->>>  }
->>> diff --git a/security/landlock/setup.h b/security/landlock/setup.h
->>> index 9fdbf33fcc33..1daffab1ab4b 100644
->>> --- a/security/landlock/setup.h
->>> +++ b/security/landlock/setup.h
->>> @@ -11,6 +11,8 @@
->>>  
->>>  #include <linux/lsm_hooks.h>
->>>  
->>> +extern bool landlock_initialized;
->>> +
->>>  extern struct lsm_blob_sizes landlock_blob_sizes;
->>>  
->>>  #endif /* _SECURITY_LANDLOCK_SETUP_H */
->>> -- 
->>> 2.30.2
->>>
->>
->> The locking and inode semantics are pretty complex, but since, again,
->> it's got significant test and syzkaller coverage, it looks good to me.
->>
->> With the inode helper cleanup:
+git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git v5.12-rc4
 
-I think the inode helper would have to be in a separate patch focused on
-fs/ (like all matches of your greps, except Landlock). Are you OK if I
-send a patch for that once Landlock is merged?
+Problem
+-------
+The RLIMIT_NPROC, RLIMIT_MEMLOCK, RLIMIT_SIGPENDING, RLIMIT_MSGQUEUE rlimits
+implementation places the counters in user_struct [1]. These limits are global
+between processes and persists for the lifetime of the process, even if
+processes are in different user namespaces.
 
+To illustrate the impact of rlimits, let's say there is a program that does not
+fork. Some service-A wants to run this program as user X in multiple containers.
+Since the program never fork the service wants to set RLIMIT_NPROC=1.
 
->>
->> Reviewed-by: Kees Cook <keescook@chromium.org>
->>
+service-A
+ \- program (uid=1000, container1, rlimit_nproc=1)
+ \- program (uid=1000, container2, rlimit_nproc=1)
+
+The service-A sets RLIMIT_NPROC=1 and runs the program in container1. When the
+service-A tries to run a program with RLIMIT_NPROC=1 in container2 it fails
+since user X already has one running process.
+
+The problem is not that the limit from container1 affects container2. The
+problem is that limit is verified against the global counter that reflects
+the number of processes in all containers.
+
+This problem can be worked around by using different users for each container
+but in this case we face a different problem of uid mapping when transferring
+files from one container to another.
+
+Eric W. Biederman mentioned this issue [2][3].
+
+Introduced changes
+------------------
+To address the problem, we bind rlimit counters to user namespace. Each counter
+reflects the number of processes in a given uid in a given user namespace. The
+result is a tree of rlimit counters with the biggest value at the root (aka
+init_user_ns). The limit is considered exceeded if it's exceeded up in the tree.
+
+[1]: https://lore.kernel.org/containers/87imd2incs.fsf@x220.int.ebiederm.org/
+[2]: https://lists.linuxfoundation.org/pipermail/containers/2020-August/042096.html
+[3]: https://lists.linuxfoundation.org/pipermail/containers/2020-October/042524.html
+
+Changelog
+---------
+v9:
+* Used a negative value to check that the ucounts->count is close to overflow.
+* Rebased onto v5.12-rc4.
+
+v8:
+* Used atomic_t for ucounts reference counting. Also added counter overflow
+  check (thanks to Linus Torvalds for the idea).
+* Fixed other issues found by lkp-tests project in the patch that Reimplements
+  RLIMIT_MEMLOCK on top of ucounts.
+
+v7:
+* Fixed issues found by lkp-tests project in the patch that Reimplements
+  RLIMIT_MEMLOCK on top of ucounts.
+
+v6:
+* Fixed issues found by lkp-tests project.
+* Rebased onto v5.11.
+
+v5:
+* Split the first commit into two commits: change ucounts.count type to atomic_long_t
+  and add ucounts to cred. These commits were merged by mistake during the rebase.
+* The __get_ucounts() renamed to alloc_ucounts().
+* The cred.ucounts update has been moved from commit_creds() as it did not allow
+  to handle errors.
+* Added error handling of set_cred_ucounts().
+
+v4:
+* Reverted the type change of ucounts.count to refcount_t.
+* Fixed typo in the kernel/cred.c
+
+v3:
+* Added get_ucounts() function to increase the reference count. The existing
+  get_counts() function renamed to __get_ucounts().
+* The type of ucounts.count changed from atomic_t to refcount_t.
+* Dropped 'const' from set_cred_ucounts() arguments.
+* Fixed a bug with freeing the cred structure after calling cred_alloc_blank().
+* Commit messages have been updated.
+* Added selftest.
+
+v2:
+* RLIMIT_MEMLOCK, RLIMIT_SIGPENDING and RLIMIT_MSGQUEUE are migrated to ucounts.
+* Added ucounts for pair uid and user namespace into cred.
+* Added the ability to increase ucount by more than 1.
+
+v1:
+* After discussion with Eric W. Biederman, I increased the size of ucounts to
+  atomic_long_t.
+* Added ucount_max to avoid the fork bomb.
+
+--
+
+Alexey Gladkov (8):
+  Increase size of ucounts to atomic_long_t
+  Add a reference to ucounts for each cred
+  Use atomic_t for ucounts reference counting
+  Reimplement RLIMIT_NPROC on top of ucounts
+  Reimplement RLIMIT_MSGQUEUE on top of ucounts
+  Reimplement RLIMIT_SIGPENDING on top of ucounts
+  Reimplement RLIMIT_MEMLOCK on top of ucounts
+  kselftests: Add test to check for rlimit changes in different user
+    namespaces
+
+ fs/exec.c                                     |   6 +-
+ fs/hugetlbfs/inode.c                          |  16 +-
+ fs/proc/array.c                               |   2 +-
+ include/linux/cred.h                          |   4 +
+ include/linux/hugetlb.h                       |   4 +-
+ include/linux/mm.h                            |   4 +-
+ include/linux/sched/user.h                    |   7 -
+ include/linux/shmem_fs.h                      |   2 +-
+ include/linux/signal_types.h                  |   4 +-
+ include/linux/user_namespace.h                |  26 ++-
+ ipc/mqueue.c                                  |  41 ++---
+ ipc/shm.c                                     |  26 +--
+ kernel/cred.c                                 |  50 +++++-
+ kernel/exit.c                                 |   2 +-
+ kernel/fork.c                                 |  18 +-
+ kernel/signal.c                               |  57 +++----
+ kernel/sys.c                                  |  14 +-
+ kernel/ucount.c                               | 133 ++++++++++++---
+ kernel/user.c                                 |   3 -
+ kernel/user_namespace.c                       |   9 +-
+ mm/memfd.c                                    |   4 +-
+ mm/mlock.c                                    |  23 ++-
+ mm/mmap.c                                     |   4 +-
+ mm/shmem.c                                    |   8 +-
+ tools/testing/selftests/Makefile              |   1 +
+ tools/testing/selftests/rlimits/.gitignore    |   2 +
+ tools/testing/selftests/rlimits/Makefile      |   6 +
+ tools/testing/selftests/rlimits/config        |   1 +
+ .../selftests/rlimits/rlimits-per-userns.c    | 161 ++++++++++++++++++
+ 29 files changed, 493 insertions(+), 145 deletions(-)
+ create mode 100644 tools/testing/selftests/rlimits/.gitignore
+ create mode 100644 tools/testing/selftests/rlimits/Makefile
+ create mode 100644 tools/testing/selftests/rlimits/config
+ create mode 100644 tools/testing/selftests/rlimits/rlimits-per-userns.c
+
+-- 
+2.29.3
+
