@@ -1,21 +1,21 @@
-Return-Path: <SRS0=RfKF=IU=lists.openwall.com=kernel-hardening-return-21031-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=EmPl=IV=lists.openwall.com=kernel-hardening-return-21032-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-18.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E3A68C433C1
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Mar 2021 18:32:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C3B1AC433C1
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 00:14:14 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 891EE61925
-	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Mar 2021 18:32:53 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 891EE61925
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21031-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25819 invoked by uid 550); 22 Mar 2021 18:32:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id E3CAC619AA
+	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 00:14:13 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org E3CAC619AA
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21032-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1294 invoked by uid 550); 23 Mar 2021 00:14:06 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,200 +23,81 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25784 invoked from network); 22 Mar 2021 18:32:43 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1616437935;
-	bh=a9Q8Zcnw/xf9sXWdpvtkD22X/toBDzx5VCNMGPqEsao=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=V+IEsbsg7pA8J46v3DI+dAtmCtV6lBWVzlRyw8QPDa9OwVA/xsKrEHq/ZG0KrPkHo
-	 sDyi4LRHH2WuE1Y2Cs4A+qs3QVtSFQ8S7LqSf9t/vtvSoPk1iqTy5TpnCVG0bGhcWp
-	 2W6e0vm15HHS1YDUsbcuaBwvhHpYVVrsZeZDPTmo=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Mon, 22 Mar 2021 19:32:01 +0100
-From: John Wood <john.wood@gmx.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: John Wood <john.wood@gmx.com>, Jann Horn <jannh@google.com>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	Jonathan Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>,
-	Shuah Khan <shuah@kernel.org>, "Serge E. Hallyn" <serge@hallyn.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Andi Kleen <ak@linux.intel.com>,
-	kernel test robot <oliver.sang@intel.com>,
-	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-kselftest@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v6 3/8] securtiy/brute: Detect a brute force attack
-Message-ID: <20210322183201.GA3401@ubuntu>
-References: <20210307113031.11671-1-john.wood@gmx.com>
- <20210307113031.11671-4-john.wood@gmx.com>
- <202103171902.E6F55172@keescook>
- <20210321150118.GA3403@ubuntu>
- <202103211128.B59FEB91F@keescook>
+Received: (qmail 1274 invoked from network); 23 Mar 2021 00:14:05 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc:content-transfer-encoding;
+        bh=0Zv/Nh1NwdjT4vNoEgAKJF0+3Ir6H8KTDS01ZyTPf3o=;
+        b=MYfMpOlaWILZRe1pDeuZweAI3vdknsgeo67laT+dKd7DkSPJ3kqkICjvz6DoYVVnHZ
+         16OeAVHxuQfaEw3tjPMoe7QoNfBgXwLH10I06HQvLQrqH5L2JNBJAwiEQ2JR4BIEX+9S
+         mKRD0C7UQTjhxOy/6H8fA1YjCpW2EGV+O/1qAjuqnz/pmrLszTPkOjvS0yYpv/ZZ/qEF
+         lAjiGv9YsocO9v0uFbeqK3kItyVLmzZ8XbFjbvISEZUv72q4Dv/aYT92AgSreyZJuLpZ
+         d2c1Ghef/K4UviwHxjZHI5pznTsVIQq7ZchuSPAoEZC7/qFfjBKUTKzfd7IBKdOJs9LE
+         ySlA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=0Zv/Nh1NwdjT4vNoEgAKJF0+3Ir6H8KTDS01ZyTPf3o=;
+        b=gf7UUwFk6pjGC+LxXLIKHhe6RncC1r8/2v/IFR6QbNZ5FukwCfQU5ehw/1jWA1/qTM
+         TsCwKAMIvdJ/BoTsbo08FEBTcjESna0y4wz6CRdRVlgxjnqhhMgdW9hmyjeXWZR0oXEf
+         KTAjFnaIDUuiUkAvIx19Q93Q052VZA1b8TSCdo0oDjiRtENNMKI134a/yJNFxk1CM+Tn
+         njRf2PoeR0U5yFUdk69nKnW8iPB4nYjqo2suwlh6mXE4q1DQKO0pirAbPfIWm8M6Mnsp
+         Iv5cwQp3Ip2pRRA882cIRWowueaQU8VdgC7/2AMI/QKdrH+0fHmPyjR9I1yhZMXPWFWm
+         PP0A==
+X-Gm-Message-State: AOAM532xrp4Fh+Gy3uFvjpT6tGyhSwoP118yONOtoNRwAHmraNF98S4N
+	3IE3ddaQpzPkYhw0Af+jUj4TQTjf/YiDJCDc43i6wQ==
+X-Google-Smtp-Source: ABdhPJywL/8xL+s/Wz9PYQqACsNKJlIixpOZzrkkMLprtEmtD0taXBt0RZSmBTlrPE/s8ZHyKoeWgqn3ctd+1W/a4Oo=
+X-Received: by 2002:a2e:9bcd:: with SMTP id w13mr1219196ljj.43.1616458434230;
+ Mon, 22 Mar 2021 17:13:54 -0700 (PDT)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <202103211128.B59FEB91F@keescook>
-X-Provags-ID: V03:K1:v1YYfDM4ZzWgD2iLohzBa4hvx/dVZggni7kZwkchp3kHU/01//I
- C2Oinu1rDKAQRRiEUgF2Twqs7C5KvD2CLs+AE4WG8sDVw+pbeuEceyAXjiafm4H3xvuAW6v
- H+I9Ko1qx6aJ2dKurmRWhGY9pM3sAkkiCr499DVfuESAbJfwK3tvBqsO+pWwkiPQvhgkIEq
- /B095FfHE6Enpr+2ol5yg==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:qUJ7roGywfk=:fBRjjkvxFOsWRm92sDEG5J
- fZol4nE3DxEHkCEFoKKpPv1BUPhVSQTV9rjS9X/WIKJ1CAke7JXqq+aRTMXlet4aJmmJ0wUwv
- 2EZqyktEQFCYKhV4aZRJ/7qUtY/6EAO0XiRqaOQJT9PUkDMBpeh+gNGwgjGxto1sLd/dJJOjF
- HXI3gPzyAJStb+Z2shGg3618w6cPoFCXMQp0fzvV/iAH/6oxWVjtOA5MPrQ7Fgp9cCy3Y0Qye
- maOcQmLkB1GkFjH20Dzixc+iZYQAu38ZntB+FyXv3Oc6UvUoxfuR8SkUfym8FbAowtdW99UbK
- lmKPJpkftX/qN8uBj/FjA7dH9QMETEoFSssd2bVl+fhvZxOlfRMI/GYWAOUyPuxrrmeIVvRUq
- QII1NMqHh8yVFC+7ZR/Gij5q/jt0CdN+tQs65IeQGJNHuqmzzQGChx//PWqcuLEEHf7MJPGcT
- dvNwwpEgnzc8SnGA8Su9F/5DFkHghwP9NKQ3GCEsWCTJhRK5GIzC5xtl43AdBQZvskMLQBZq/
- 5c5yo15l5INHhsRb3vz0qjLGbwPvKgyAJ+yzQ0Z8piLhnzpdCfcXHUmH2INAsIhqCvcpCkT+y
- 5nLdiGwJeLg3Rlaqd/rubsD30ZoPE70sSKXFF5lgC/WOobuPPuMyFiE9TKvtVsk5YKvBGjr4J
- Q0OFra46huJKsYXjBWd1ZqwpqQmbx56FFXqmUfXZuHIzzs5JAsjn3PZfv+jeeO7NT1uSzZPU8
- gtCMj6nNFM5XlpoRct1c28iubp0Z/wpLGZz+Qy5uVKxUF4X5cCU6KgUcQzLaHF51LjAcNo6sV
- lv1WvrC6ZnS8rr6M30fJCT6TGccaeT9uznqDAXSNeVaJJ1LQsS7ZmAdD10nF9W9flE/Te1Ve6
- dxMbxvJPHRpC/J+lKN9g==
+References: <20210316204252.427806-1-mic@digikod.net> <20210316204252.427806-3-mic@digikod.net>
+In-Reply-To: <20210316204252.427806-3-mic@digikod.net>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 23 Mar 2021 01:13:27 +0100
+Message-ID: <CAG48ez3v44du6_qVLa25SOdfLsr5+z-=a0pUP63d=qHP2tf4Pg@mail.gmail.com>
+Subject: Re: [PATCH v30 02/12] landlock: Add ruleset and domain management
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: James Morris <jmorris@namei.org>, "Serge E . Hallyn" <serge@hallyn.com>, 
+	Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, 
+	Andy Lutomirski <luto@amacapital.net>, Anton Ivanov <anton.ivanov@cambridgegreys.com>, 
+	Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, 
+	David Howells <dhowells@redhat.com>, Jeff Dike <jdike@addtoit.com>, 
+	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
+	Michael Kerrisk <mtk.manpages@gmail.com>, Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>, 
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
+	kernel list <linux-kernel@vger.kernel.org>, 
+	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, 
+	linux-security-module <linux-security-module@vger.kernel.org>, 
+	"the arch/x86 maintainers" <x86@kernel.org>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-Hi,
+On Tue, Mar 16, 2021 at 9:43 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
+wrote:
+> A Landlock ruleset is mainly a red-black tree with Landlock rules as
+> nodes.  This enables quick update and lookup to match a requested
+> access, e.g. to a file.  A ruleset is usable through a dedicated file
+> descriptor (cf. following commit implementing syscalls) which enables a
+> process to create and populate a ruleset with new rules.
+>
+> A domain is a ruleset tied to a set of processes.  This group of rules
+> defines the security policy enforced on these processes and their future
+> children.  A domain can transition to a new domain which is the
+> intersection of all its constraints and those of a ruleset provided by
+> the current process.  This modification only impact the current process.
+> This means that a process can only gain more constraints (i.e. lose
+> accesses) over time.
+>
+> Cc: James Morris <jmorris@namei.org>
+> Cc: Jann Horn <jannh@google.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@linux.microsoft.com>
+> Acked-by: Serge Hallyn <serge@hallyn.com>
+> Link: https://lore.kernel.org/r/20210316204252.427806-3-mic@digikod.net
 
-On Sun, Mar 21, 2021 at 11:45:59AM -0700, Kees Cook wrote:
-> On Sun, Mar 21, 2021 at 04:01:18PM +0100, John Wood wrote:
-> > On Wed, Mar 17, 2021 at 07:57:10PM -0700, Kees Cook wrote:
-> > > On Sun, Mar 07, 2021 at 12:30:26PM +0100, John Wood wrote:
-> > Sorry, but I try to understand how to use locking properly without luc=
-k.
-> >
-> > I have read (and tried to understand):
-> >    tools/memory-model/Documentation/simple.txt
-> >    tools/memory-model/Documentation/ordering.txt
-> >    tools/memory-model/Documentation/recipes.txt
-> >    Documentation/memory-barriers.txt
-> >
-> > And I don't find the responses that I need. I'm not saying they aren't
-> > there but I don't see them. So my questions:
-> >
-> > If in the above function makes sense to use locking, and it is called =
-from
-> > the brute_task_fatal_signal hook, then, all the functions that are cal=
-led
-> > from this hook need locking (more than one process can access stats at=
- the
-> > same time).
-> >
-> > So, as you point, how it is possible and safe to read jiffies and faul=
-ts
-> > (and I think period even though you not mention it) using READ_ONCE() =
-but
-> > without holding brute_stats::lock? I'm very confused.
->
-> There are, I think, 3 considerations:
->
-> - is "stats", itself, a valid allocation in kernel memory? This is the
->   "lifetime" management of the structure: it will only stay allocated as
->   long as there is a task still alive that is attached to it. The use of
->   refcount_t on task creation/death should entirely solve this issue, so
->   that all the other places where you access "stats", the memory will be
->   valid. AFAICT, this one is fine: you're doing all the correct lifetime
->   management.
->
-> - changing a task's stats pointer: this is related to lifetime
->   management, but it, I think, entirely solved by the existing
->   refcounting. (And isn't helped by holding stats->lock since this is
->   about stats itself being a valid pointer.) Again, I think this is all
->   correct already in your existing code (due to the implicit locking of
->   "current"). Perhaps I've missed something here, but I guess we'll see!
-
-My only concern now is the following case:
-
-One process crashes with a fatal signal. Then, its stats are updated. Then
-we get the exec stats (the stats of the task that calls exec). At the same
-time another CPU frees this same stats. Now, if the first process writes
-to the exec stats we get a "use after free" bug.
-
-If this scenario is possible, we would need to protect all the section
-inside the task_fatal_signal hook that deals with the exec stats. I think
-that here a global lock is necessary and also, protect the write of the
-pointer to stats struct in the task_free hook.
-
-Moreover, I can see another scenario:
-
-The first CPU gets the exec stats when a task fails with a fatal signal.
-The second CPU exec()ve after exec()ve over the same task from we get the
-exec stats with the first CPU. This second CPU resets the stats at the sam=
-e
-time that the first CPU updates the same stats. I think we also need lock
-here.
-
-Am I right? Are these paths possible?
-
->
-> - are the values in stats getting written by multiple writers, or read
->   during a write, etc?
->
-> This last one is the core of what I think could be improved here:
->
-> To keep the writes serialized, you (correctly) perform locking in the
-> writers. This is fine.
->
-> There is also locking in the readers, which I think is not needed.
-> AFAICT, READ_ONCE() (with WRITE_ONCE() in the writers) is sufficient for
-> the readers here.
->
-> > IIUC (during the reading of the documentation) READ_ONCE and WRITE_ONC=
-E only
-> > guarantees that a variable loaded with WRITE_ONCE can be read safely w=
-ith
-> > READ_ONCE avoiding tearing, etc. So, I see these functions like a form=
- of
-> > guarantee atomicity in variables.
->
-> Right -- from what I can see about how you're reading the statistics, I
-> don't see a way to have the values get confused (assuming locked writes
-> and READ/WRITE_ONCE()).
->
-> > Another question. Is it also safe to use WRITE_ONCE without holding th=
-e lock?
-> > Or this is only appliable to read operations?
->
-> No -- you'll still want the writer locked since you update multiple fiel=
-ds
-> in stats during a write, so you could miss increments, or interleave
-> count vs jiffies writes, etc. But the WRITE_ONCE() makes sure that the
-> READ_ONCE() readers will see a stable value (as I understand it), and
-> in the order they were written.
->
-> > Any light on this will help me to do the best job in the next patches.=
- If
-> > somebody can point me to the right direction it would be greatly appre=
-ciated.
-> >
-> > Is there any documentation for newbies regarding this theme? I'm stuck=
-.
-> > I have also read the documentation about spinlocks, semaphores, mutex,=
- etc..
-> > but nothing clears me the concept expose.
-> >
-> > Apologies if this question has been answered in the past. But the sear=
-ch in
-> > the mailing list has not been lucky.
->
-> It's a complex subject! Here are some other docs that might help:
->
-> tools/memory-model/Documentation/explanation.txt
-> Documentation/core-api/refcount-vs-atomic.rst
->
-> or they may melt your brain further! :) I know mine is always mushy
-> after reading them.
->
-> > Thanks for your time and patience.
->
-> You're welcome; and thank you for your work on this! I've wanted a robus=
-t
-> brute force mitigation in the kernel for a long time. :)
->
-
-Thank you very much for this great explanation and mentorship. Now this
-subject is more clear to me. It's a pleasure to me to work on this.
-
-Again, thanks for your help.
-John Wood
+Reviewed-by: Jann Horn <jannh@google.com>
