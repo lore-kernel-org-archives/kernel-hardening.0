@@ -1,22 +1,21 @@
-Return-Path: <SRS0=npss=IV=lists.openwall.com=kernel-hardening-return-21047-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=AmZS=IW=lists.openwall.com=kernel-hardening-return-21048-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.7 required=3.0 tests=BAYES_00,
-	DKIM_ADSP_CUSTOM_MED,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-18.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2E6BCC433C1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 21:01:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E4D97C433DB
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Mar 2021 03:11:15 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 201B061937
-	for <kernel-hardening@archiver.kernel.org>; Tue, 23 Mar 2021 21:01:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 201B061937
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21047-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 30420 invoked by uid 550); 23 Mar 2021 21:00:33 -0000
+	by mail.kernel.org (Postfix) with SMTP id 87BA6619E3
+	for <kernel-hardening@archiver.kernel.org>; Wed, 24 Mar 2021 03:11:14 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 87BA6619E3
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21048-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 32626 invoked by uid 550); 24 Mar 2021 03:11:06 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,443 +23,333 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30176 invoked from network); 23 Mar 2021 21:00:30 -0000
-From: Alexey Gladkov <gladkov.alexey@gmail.com>
-To: LKML <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	Linux Containers <containers@lists.linux-foundation.org>,
-	linux-mm@kvack.org
-Cc: Alexey Gladkov <legion@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	"Eric W . Biederman" <ebiederm@xmission.com>,
-	Jann Horn <jannh@google.com>,
-	Jens Axboe <axboe@kernel.dk>,
-	Kees Cook <keescook@chromium.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Oleg Nesterov <oleg@redhat.com>,
-	kernel test robot <oliver.sang@intel.com>
-Subject: [PATCH v9 7/8] Reimplement RLIMIT_MEMLOCK on top of ucounts
-Date: Tue, 23 Mar 2021 21:59:16 +0100
-Message-Id: <acfead7ff5aee1d267d0a515f201424e6fd26d8b.1616533074.git.gladkov.alexey@gmail.com>
-X-Mailer: git-send-email 2.29.3
-In-Reply-To: <cover.1616533074.git.gladkov.alexey@gmail.com>
-References: <cover.1616533074.git.gladkov.alexey@gmail.com>
+Received: (qmail 32606 invoked from network); 24 Mar 2021 03:11:05 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc:content-transfer-encoding;
+        bh=ZegDJhsrs3t5DmLNRfuIr22Aaf3RCbcyU5Kj5Ptg79A=;
+        b=M1aeEDxmk9ECf3516Cji4G52oSFsAn8KliAgARkCx5OFt/DI6XCdQtqOSm9+ierP53
+         96dKx4KCJbD1lvEnlxaUGmiNHqSq7B9S+YnK8FMkPsxubMWmxCIKdd5hbiSOCmLVD8x2
+         y6n2VRtZwCuBVid10EDPdpch8y7Qu9isZUjXElYw2NB9WvCorTXHb/TyI6ot3eE3NxDI
+         7RsZdviWjL1D7m/r0hZMgfAIfoSy9HyDnzgjDhHI+4bgia3SIf9923vAMV2rMcGwAwJu
+         +fnXWI39SCzeRrtCZiqNDUgvaQvB4cbJ5ZtxdmrQjAnfMEHQ9KUtf86yaWDN3j/WVdih
+         Ii/A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=ZegDJhsrs3t5DmLNRfuIr22Aaf3RCbcyU5Kj5Ptg79A=;
+        b=I9fGrakEmBIxqAAhYmFQGuG/JOSaX6FNDdvrmyy6eeaf6W+O0S56ChaVy/xWYEnIbL
+         4GptjOfke3KcTPHfGkMV/qKP+tLXhMMnxTWpe18bUPrbq019iU7+Y0f/hsttFwY0IoHk
+         YnU2Ignj4P82I23OIAo56RhaMrc10/mv2PWKq8rxoSw+P5SnxPsdsobVLw8kM2PTqTF/
+         QXeO80ksGqOlvCRJXArOIOGIdAIJ6f2NRIuYhVMO3nNI9PvLPa3g8EXpgiyW0YRK9y6r
+         Cpnw4ggQxiVWzdvfmFADM9iH42ug1ynqE+qfaJarC3u3P8DnDuCaLZrAmujMLopmkkaJ
+         jbAQ==
+X-Gm-Message-State: AOAM533zEM19trX1Ft5Asj7WjJ7HLW+V8ErIGj3h7Gja6XYH3+jDVZ+8
+	m/XLYRqeAVgPHV5p+CKbh2Rsd4rb2Lg/CD2aS7k97A==
+X-Google-Smtp-Source: ABdhPJxSapwHRvBnLCwcoR2sXbNCQsSDCdMD6ytmf/icFhUU43QYK5yfde5P5ZIWyLr27rM90Izr4s50uVBB8ADYn3Q=
+X-Received: by 2002:a2e:9310:: with SMTP id e16mr638054ljh.226.1616555454025;
+ Tue, 23 Mar 2021 20:10:54 -0700 (PDT)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Greylist: Sender succeeded SMTP AUTH, not delayed by milter-greylist-4.6.4 (raptor.unsafe.ru [5.9.43.93]); Tue, 23 Mar 2021 21:00:12 +0000 (UTC)
+References: <20210316204252.427806-1-mic@digikod.net> <20210316204252.427806-8-mic@digikod.net>
+ <CAG48ez1arKO3uYzwng8fst-UHkcH6J7YzyHFN+vfXUT2=1HT+w@mail.gmail.com>
+ <b41a021c-69f4-075f-e9a0-a4483b280df8@digikod.net> <CAG48ez1Vkd3KtYphDHLLbbkKY9T_ByhUcxwYAcWuDAyiA04A+w@mail.gmail.com>
+ <7e494b74-8d5d-a109-6327-992d7d8fca87@digikod.net>
+In-Reply-To: <7e494b74-8d5d-a109-6327-992d7d8fca87@digikod.net>
+From: Jann Horn <jannh@google.com>
+Date: Wed, 24 Mar 2021 04:10:27 +0100
+Message-ID: <CAG48ez0ex48pCgunrg+BpJ-LppZUVXhsmiEW_2d2mhbkDB793Q@mail.gmail.com>
+Subject: Re: [PATCH v30 07/12] landlock: Support filesystem access-control
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: James Morris <jmorris@namei.org>, "Serge E . Hallyn" <serge@hallyn.com>, 
+	Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, 
+	Andy Lutomirski <luto@amacapital.net>, Anton Ivanov <anton.ivanov@cambridgegreys.com>, 
+	Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, 
+	David Howells <dhowells@redhat.com>, Jeff Dike <jdike@addtoit.com>, 
+	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
+	Michael Kerrisk <mtk.manpages@gmail.com>, Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>, 
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, 
+	linux-arch <linux-arch@vger.kernel.org>, 
+	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, 
+	kernel list <linux-kernel@vger.kernel.org>, 
+	"open list:KERNEL SELFTEST FRAMEWORK" <linux-kselftest@vger.kernel.org>, 
+	linux-security-module <linux-security-module@vger.kernel.org>, 
+	"the arch/x86 maintainers" <x86@kernel.org>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-The rlimit counter is tied to uid in the user_namespace. This allows
-rlimit values to be specified in userns even if they are already
-globally exceeded by the user. However, the value of the previous
-user_namespaces cannot be exceeded.
+On Tue, Mar 23, 2021 at 8:22 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
+wrote:
+> On 23/03/2021 18:49, Jann Horn wrote:
+> > On Tue, Mar 23, 2021 at 4:54 PM Micka=C3=ABl Sala=C3=BCn <mic@digikod.n=
+et> wrote:
+> >> On 23/03/2021 01:13, Jann Horn wrote:
+> >>>  On Tue, Mar 16, 2021 at 9:43 PM Micka=C3=ABl Sala=C3=BCn <mic@digiko=
+d.net> wrote:
+> >>>> Using Landlock objects and ruleset, it is possible to tag inodes
+> >>>> according to a process's domain.
+> >>> [...]
+> >>>> +static void release_inode(struct landlock_object *const object)
+> >>>> +       __releases(object->lock)
+> >>>> +{
+> >>>> +       struct inode *const inode =3D object->underobj;
+> >>>> +       struct super_block *sb;
+> >>>> +
+> >>>> +       if (!inode) {
+> >>>> +               spin_unlock(&object->lock);
+> >>>> +               return;
+> >>>> +       }
+> >>>> +
+> >>>> +       /*
+> >>>> +        * Protects against concurrent use by hook_sb_delete() of th=
+e reference
+> >>>> +        * to the underlying inode.
+> >>>> +        */
+> >>>> +       object->underobj =3D NULL;
+> >>>> +       /*
+> >>>> +        * Makes sure that if the filesystem is concurrently unmount=
+ed,
+> >>>> +        * hook_sb_delete() will wait for us to finish iput().
+> >>>> +        */
+> >>>> +       sb =3D inode->i_sb;
+> >>>> +       atomic_long_inc(&landlock_superblock(sb)->inode_refs);
+> >>>> +       spin_unlock(&object->lock);
+> >>>> +       /*
+> >>>> +        * Because object->underobj was not NULL, hook_sb_delete() a=
+nd
+> >>>> +        * get_inode_object() guarantee that it is safe to reset
+> >>>> +        * landlock_inode(inode)->object while it is not NULL.  It i=
+s therefore
+> >>>> +        * not necessary to lock inode->i_lock.
+> >>>> +        */
+> >>>> +       rcu_assign_pointer(landlock_inode(inode)->object, NULL);
+> >>>> +       /*
+> >>>> +        * Now, new rules can safely be tied to @inode with get_inod=
+e_object().
+> >>>> +        */
+> >>>> +
+> >>>> +       iput(inode);
+> >>>> +       if (atomic_long_dec_and_test(&landlock_superblock(sb)->inode=
+_refs))
+> >>>> +               wake_up_var(&landlock_superblock(sb)->inode_refs);
+> >>>> +}
+> >>> [...]
+> >>>> +static struct landlock_object *get_inode_object(struct inode *const=
+ inode)
+> >>>> +{
+> >>>> +       struct landlock_object *object, *new_object;
+> >>>> +       struct landlock_inode_security *inode_sec =3D landlock_inode=
+(inode);
+> >>>> +
+> >>>> +       rcu_read_lock();
+> >>>> +retry:
+> >>>> +       object =3D rcu_dereference(inode_sec->object);
+> >>>> +       if (object) {
+> >>>> +               if (likely(refcount_inc_not_zero(&object->usage))) {
+> >>>> +                       rcu_read_unlock();
+> >>>> +                       return object;
+> >>>> +               }
+> >>>> +               /*
+> >>>> +                * We are racing with release_inode(), the object is=
+ going
+> >>>> +                * away.  Wait for release_inode(), then retry.
+> >>>> +                */
+> >>>> +               spin_lock(&object->lock);
+> >>>> +               spin_unlock(&object->lock);
+> >>>> +               goto retry;
+> >>>> +       }
+> >>>> +       rcu_read_unlock();
+> >>>> +
+> >>>> +       /*
+> >>>> +        * If there is no object tied to @inode, then create a new o=
+ne (without
+> >>>> +        * holding any locks).
+> >>>> +        */
+> >>>> +       new_object =3D landlock_create_object(&landlock_fs_underops,=
+ inode);
+> >>>> +       if (IS_ERR(new_object))
+> >>>> +               return new_object;
+> >>>> +
+> >>>> +       /* Protects against concurrent get_inode_object() calls. */
+> >>>> +       spin_lock(&inode->i_lock);
+> >>>> +       object =3D rcu_dereference_protected(inode_sec->object,
+> >>>> +                       lockdep_is_held(&inode->i_lock));
+> >>>
+> >>> rcu_dereference_protected() requires that inode_sec->object is not
+> >>> concurrently changed, but I think another thread could call
+> >>> get_inode_object() while we're in landlock_create_object(), and then
+> >>> we could race with the NULL write in release_inode() here? (It
+> >>> wouldn't actually be a UAF though because we're not actually accessin=
+g
+> >>> `object` here.) Or am I missing a lock that prevents this?
+> >>>
+> >>> In v28 this wasn't an issue because release_inode() was holding
+> >>> inode->i_lock (and object->lock) during the NULL store; but in v29 an=
+d
+> >>> this version the NULL store in release_inode() moved out of the locke=
+d
+> >>> region. I think you could just move the NULL store in release_inode()
+> >>> back up (and maybe add a comment explaining the locking rules for
+> >>> landlock_inode(...)->object)?
+> >>>
+> >>> (Or alternatively you could use rcu_dereference_raw() with a comment
+> >>> explaining that the read pointer is only used to check for NULL-ness,
+> >>> and that it is guaranteed that the pointer can't change if it is NULL
+> >>> and we're holding the lock. But that'd be needlessly complicated, I
+> >>> think.)
+> >>
+> >> To reach rcu_assign_pointer(landlock_inode(inode)->object, NULL) in
+> >> release_inode() or in hook_sb_delete(), the
+> >> landlock_inode(inode)->object need to be non-NULL,
+> >
+> > Yes.
+> >
+> >> which implies that a
+> >> call to get_inode_object(inode) either "retry" (because release_inode =
+is
+> >> only called by landlock_put_object, which set object->usage to 0) unti=
+l
+> >> it creates a new object, or reuses the existing referenced object (and
+> >> increments object->usage).
+> >
+> > But it can be that landlock_inode(inode)->object only becomes non-NULL
+> > after get_inode_object() has checked
+> > rcu_dereference(inode_sec->object).
+> >
+> >> The worse case would be if
+> >> get_inode_object(inode) is called just before the
+> >> rcu_assign_pointer(landlock_inode(inode)->object, NULL) from
+> >> hook_sb_delete(), which would result in an object with a NULL underobj=
+,
+> >> which is the expected behavior (and checked by release_inode).
+> >
+> > The scenario I'm talking about doesn't involve hook_sb_delete().
+> >
+> >> The line rcu_assign_pointer(inode_sec->object, new_object) from
+> >> get_inode_object() can only be reached if the underlying inode doesn't
+> >> reference an object,
+> >
+> > Yes.
+> >
+> >> in which case hook_sb_delete() will not reach the
+> >> rcu_assign_pointer(landlock_inode(inode)->object, NULL) line for this
+> >> same inode.
+> >>
+> >> This works because get_inode_object(inode) is mutually exclusive to
+> >> itself with the same inode (i.e. an inode can only point to an object
+> >> that references this same inode).
+> >
+> > To clarify: You can concurrently call get_inode_object() multiple
+> > times on the same inode, right? There are no locks held on entry to
+> > that function.
+> >
+> >> I tried to explain this with the comment "Protects against concurrent
+> >> get_inode_object() calls" in get_inode_object(), and the comments just
+> >> before both rcu_assign_pointer(landlock_inode(inode)->object, NULL).
+> >
+> > The scenario I'm talking about is:
+> >
+> > Initially the inode does not have an associated landlock_object. There
+> > are two threads A and B. Thread A is going to execute
+> > get_inode_object(). Thread B is going to execute get_inode_object()
+> > followed immediately by landlock_put_object().
+> >
+> > thread A: enters get_inode_object()
+> > thread A: rcu_dereference(inode_sec->object) returns NULL
+> > thread A: enters landlock_create_object()
+> > thread B: enters get_inode_object()
+> > thread B: rcu_dereference(inode_sec->object) returns NULL
+> > thread B: calls landlock_create_object()
+> > thread B: sets inode_sec->object while holding inode->i_lock
+> > thread B: leaves get_inode_object()
+> > thread B: enters landlock_put_object()
+> > thread B: object->usage drops to 0, object->lock is taken
+> > thread B: calls release_inode()
+> > thread B: drops object->lock
+> > thread A: returns from landlock_create_object()
+> > thread A: takes inode->i_lock
+> >
+> > At this point, thread B will run:
+> >
+> >     rcu_assign_pointer(landlock_inode(inode)->object, NULL);
+> >
+> > while thread A runs:
+> >
+> >     rcu_dereference_protected(inode_sec->object,
+> >         lockdep_is_held(&inode->i_lock));
+> >
+> > meaning there is a (theoretical) data race, since
+> > rcu_dereference_protected() doesn't use READ_ONCE().
+>
+> Hum, I see, that is what I was missing. And that explain why there is
+> (in practice) no impact on winning the race.
+>
+> I would prefer to use rcu_access_pointer() instead of
+> rcu_dereference_protected() to avoid pitfall, and it reflects what I was
+> expecting:
+>
+> --- a/security/landlock/fs.c
+> +++ b/security/landlock/fs.c
+> @@ -117,9 +117,7 @@ static struct landlock_object
+> *get_inode_object(struct inode *const inode)
+>
+>         /* Protects against concurrent get_inode_object() calls. */
+>         spin_lock(&inode->i_lock);
+> -       object =3D rcu_dereference_protected(inode_sec->object,
+> -                       lockdep_is_held(&inode->i_lock));
+> -       if (unlikely(object)) {
+> +       if (unlikely(rcu_access_pointer(inode_sec->object))) {
+>                 /* Someone else just created the object, bail out and
+> retry. */
+>                 spin_unlock(&inode->i_lock);
+>                 kfree(new_object);
 
-Changelog
-v8:
-* Fix issues found by lkp-tests project.
+Ah, yeah, that should work. I had forgotten about rcu_access_pointer().
 
-v7:
-* Keep only ucounts for RLIMIT_MEMLOCK checks instead of struct cred.
+> But I'm not sure about your proposition to move the NULL store in
+> release_inode() back up. Do you mean to add back the inode lock in
+> release_inode() like this?
+>
+> --- a/security/landlock/fs.c
+> +++ b/security/landlock/fs.c
+> @@ -59,16 +59,12 @@ static void release_inode(struct landlock_object
+> *const object)
+>          * Makes sure that if the filesystem is concurrently unmounted,
+>          * hook_sb_delete() will wait for us to finish iput().
+>          */
+> +       spin_lock(&inode->i_lock);
+>         sb =3D inode->i_sb;
+>         atomic_long_inc(&landlock_superblock(sb)->inode_refs);
+>         spin_unlock(&object->lock);
+> -       /*
+> -        * Because object->underobj was not NULL, hook_sb_delete() and
+> -        * get_inode_object() guarantee that it is safe to reset
+> -        * landlock_inode(inode)->object while it is not NULL.  It is the=
+refore
+> -        * not necessary to lock inode->i_lock.
+> -        */
+>         rcu_assign_pointer(landlock_inode(inode)->object, NULL);
+> +       spin_unlock(&inode->i_lock);
+>         /*
+>          * Now, new rules can safely be tied to @inode with get_inode_obj=
+ect().
+>          */
+>
+>
+> I would prefer to avoid nested locks if it is not necessary though.
 
-v6:
-* Fix bug in hugetlb_file_setup() detected by trinity.
+Hm, yeah, you have a point there.
 
-Reported-by: kernel test robot <oliver.sang@intel.com>
-Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
----
- fs/hugetlbfs/inode.c           | 16 ++++++++--------
- include/linux/hugetlb.h        |  4 ++--
- include/linux/mm.h             |  4 ++--
- include/linux/sched/user.h     |  1 -
- include/linux/shmem_fs.h       |  2 +-
- include/linux/user_namespace.h |  1 +
- ipc/shm.c                      | 26 +++++++++++++-------------
- kernel/fork.c                  |  1 +
- kernel/ucount.c                |  1 +
- kernel/user.c                  |  1 -
- kernel/user_namespace.c        |  1 +
- mm/memfd.c                     |  4 ++--
- mm/mlock.c                     | 23 +++++++++++++++--------
- mm/mmap.c                      |  4 ++--
- mm/shmem.c                     |  8 ++++----
- 15 files changed, 53 insertions(+), 44 deletions(-)
+Doing it locklessly does make the locking rules a little complicated
+though, and you'll have to update the comment inside struct
+landlock_inode_security. At the moment, it says:
 
-diff --git a/fs/hugetlbfs/inode.c b/fs/hugetlbfs/inode.c
-index 701c82c36138..be519fc9559a 100644
---- a/fs/hugetlbfs/inode.c
-+++ b/fs/hugetlbfs/inode.c
-@@ -1443,7 +1443,7 @@ static int get_hstate_idx(int page_size_log)
-  * otherwise hugetlb_reserve_pages reserves one less hugepages than intended.
-  */
- struct file *hugetlb_file_setup(const char *name, size_t size,
--				vm_flags_t acctflag, struct user_struct **user,
-+				vm_flags_t acctflag, struct ucounts **ucounts,
- 				int creat_flags, int page_size_log)
- {
- 	struct inode *inode;
-@@ -1455,20 +1455,20 @@ struct file *hugetlb_file_setup(const char *name, size_t size,
- 	if (hstate_idx < 0)
- 		return ERR_PTR(-ENODEV);
- 
--	*user = NULL;
-+	*ucounts = NULL;
- 	mnt = hugetlbfs_vfsmount[hstate_idx];
- 	if (!mnt)
- 		return ERR_PTR(-ENOENT);
- 
- 	if (creat_flags == HUGETLB_SHMFS_INODE && !can_do_hugetlb_shm()) {
--		*user = current_user();
--		if (user_shm_lock(size, *user)) {
-+		*ucounts = current_ucounts();
-+		if (user_shm_lock(size, *ucounts)) {
- 			task_lock(current);
- 			pr_warn_once("%s (%d): Using mlock ulimits for SHM_HUGETLB is deprecated\n",
- 				current->comm, current->pid);
- 			task_unlock(current);
- 		} else {
--			*user = NULL;
-+			*ucounts = NULL;
- 			return ERR_PTR(-EPERM);
- 		}
- 	}
-@@ -1495,9 +1495,9 @@ struct file *hugetlb_file_setup(const char *name, size_t size,
- 
- 	iput(inode);
- out:
--	if (*user) {
--		user_shm_unlock(size, *user);
--		*user = NULL;
-+	if (*ucounts) {
-+		user_shm_unlock(size, *ucounts);
-+		*ucounts = NULL;
- 	}
- 	return file;
- }
-diff --git a/include/linux/hugetlb.h b/include/linux/hugetlb.h
-index cccd1aab69dd..96d63dbdec65 100644
---- a/include/linux/hugetlb.h
-+++ b/include/linux/hugetlb.h
-@@ -434,7 +434,7 @@ static inline struct hugetlbfs_inode_info *HUGETLBFS_I(struct inode *inode)
- extern const struct file_operations hugetlbfs_file_operations;
- extern const struct vm_operations_struct hugetlb_vm_ops;
- struct file *hugetlb_file_setup(const char *name, size_t size, vm_flags_t acct,
--				struct user_struct **user, int creat_flags,
-+				struct ucounts **ucounts, int creat_flags,
- 				int page_size_log);
- 
- static inline bool is_file_hugepages(struct file *file)
-@@ -454,7 +454,7 @@ static inline struct hstate *hstate_inode(struct inode *i)
- #define is_file_hugepages(file)			false
- static inline struct file *
- hugetlb_file_setup(const char *name, size_t size, vm_flags_t acctflag,
--		struct user_struct **user, int creat_flags,
-+		struct ucounts **ucounts, int creat_flags,
- 		int page_size_log)
- {
- 	return ERR_PTR(-ENOSYS);
-diff --git a/include/linux/mm.h b/include/linux/mm.h
-index 64a71bf20536..7466eab000d0 100644
---- a/include/linux/mm.h
-+++ b/include/linux/mm.h
-@@ -1658,8 +1658,8 @@ extern bool can_do_mlock(void);
- #else
- static inline bool can_do_mlock(void) { return false; }
- #endif
--extern int user_shm_lock(size_t, struct user_struct *);
--extern void user_shm_unlock(size_t, struct user_struct *);
-+extern int user_shm_lock(size_t, struct ucounts *);
-+extern void user_shm_unlock(size_t, struct ucounts *);
- 
- /*
-  * Parameter block passed down to zap_pte_range in exceptional cases.
-diff --git a/include/linux/sched/user.h b/include/linux/sched/user.h
-index 8ba9cec4fb99..82bd2532da6b 100644
---- a/include/linux/sched/user.h
-+++ b/include/linux/sched/user.h
-@@ -18,7 +18,6 @@ struct user_struct {
- #ifdef CONFIG_EPOLL
- 	atomic_long_t epoll_watches; /* The number of file descriptors currently watched */
- #endif
--	unsigned long locked_shm; /* How many pages of mlocked shm ? */
- 	unsigned long unix_inflight;	/* How many files in flight in unix sockets */
- 	atomic_long_t pipe_bufs;  /* how many pages are allocated in pipe buffers */
- 
-diff --git a/include/linux/shmem_fs.h b/include/linux/shmem_fs.h
-index d82b6f396588..aa77dcd1646f 100644
---- a/include/linux/shmem_fs.h
-+++ b/include/linux/shmem_fs.h
-@@ -65,7 +65,7 @@ extern struct file *shmem_file_setup_with_mnt(struct vfsmount *mnt,
- extern int shmem_zero_setup(struct vm_area_struct *);
- extern unsigned long shmem_get_unmapped_area(struct file *, unsigned long addr,
- 		unsigned long len, unsigned long pgoff, unsigned long flags);
--extern int shmem_lock(struct file *file, int lock, struct user_struct *user);
-+extern int shmem_lock(struct file *file, int lock, struct ucounts *ucounts);
- #ifdef CONFIG_SHMEM
- extern const struct address_space_operations shmem_aops;
- static inline bool shmem_mapping(struct address_space *mapping)
-diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
-index 6e8736c7aa29..82851fba7278 100644
---- a/include/linux/user_namespace.h
-+++ b/include/linux/user_namespace.h
-@@ -53,6 +53,7 @@ enum ucount_type {
- 	UCOUNT_RLIMIT_NPROC,
- 	UCOUNT_RLIMIT_MSGQUEUE,
- 	UCOUNT_RLIMIT_SIGPENDING,
-+	UCOUNT_RLIMIT_MEMLOCK,
- 	UCOUNT_COUNTS,
- };
- 
-diff --git a/ipc/shm.c b/ipc/shm.c
-index febd88daba8c..003234fbbd17 100644
---- a/ipc/shm.c
-+++ b/ipc/shm.c
-@@ -60,7 +60,7 @@ struct shmid_kernel /* private to the kernel */
- 	time64_t		shm_ctim;
- 	struct pid		*shm_cprid;
- 	struct pid		*shm_lprid;
--	struct user_struct	*mlock_user;
-+	struct ucounts		*mlock_ucounts;
- 
- 	/* The task created the shm object.  NULL if the task is dead. */
- 	struct task_struct	*shm_creator;
-@@ -286,10 +286,10 @@ static void shm_destroy(struct ipc_namespace *ns, struct shmid_kernel *shp)
- 	shm_rmid(ns, shp);
- 	shm_unlock(shp);
- 	if (!is_file_hugepages(shm_file))
--		shmem_lock(shm_file, 0, shp->mlock_user);
--	else if (shp->mlock_user)
-+		shmem_lock(shm_file, 0, shp->mlock_ucounts);
-+	else if (shp->mlock_ucounts)
- 		user_shm_unlock(i_size_read(file_inode(shm_file)),
--				shp->mlock_user);
-+				shp->mlock_ucounts);
- 	fput(shm_file);
- 	ipc_update_pid(&shp->shm_cprid, NULL);
- 	ipc_update_pid(&shp->shm_lprid, NULL);
-@@ -625,7 +625,7 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
- 
- 	shp->shm_perm.key = key;
- 	shp->shm_perm.mode = (shmflg & S_IRWXUGO);
--	shp->mlock_user = NULL;
-+	shp->mlock_ucounts = NULL;
- 
- 	shp->shm_perm.security = NULL;
- 	error = security_shm_alloc(&shp->shm_perm);
-@@ -650,7 +650,7 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
- 		if (shmflg & SHM_NORESERVE)
- 			acctflag = VM_NORESERVE;
- 		file = hugetlb_file_setup(name, hugesize, acctflag,
--				  &shp->mlock_user, HUGETLB_SHMFS_INODE,
-+				  &shp->mlock_ucounts, HUGETLB_SHMFS_INODE,
- 				(shmflg >> SHM_HUGE_SHIFT) & SHM_HUGE_MASK);
- 	} else {
- 		/*
-@@ -698,8 +698,8 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
- no_id:
- 	ipc_update_pid(&shp->shm_cprid, NULL);
- 	ipc_update_pid(&shp->shm_lprid, NULL);
--	if (is_file_hugepages(file) && shp->mlock_user)
--		user_shm_unlock(size, shp->mlock_user);
-+	if (is_file_hugepages(file) && shp->mlock_ucounts)
-+		user_shm_unlock(size, shp->mlock_ucounts);
- 	fput(file);
- 	ipc_rcu_putref(&shp->shm_perm, shm_rcu_free);
- 	return error;
-@@ -1105,12 +1105,12 @@ static int shmctl_do_lock(struct ipc_namespace *ns, int shmid, int cmd)
- 		goto out_unlock0;
- 
- 	if (cmd == SHM_LOCK) {
--		struct user_struct *user = current_user();
-+		struct ucounts *ucounts = current_ucounts();
- 
--		err = shmem_lock(shm_file, 1, user);
-+		err = shmem_lock(shm_file, 1, ucounts);
- 		if (!err && !(shp->shm_perm.mode & SHM_LOCKED)) {
- 			shp->shm_perm.mode |= SHM_LOCKED;
--			shp->mlock_user = user;
-+			shp->mlock_ucounts = ucounts;
- 		}
- 		goto out_unlock0;
- 	}
-@@ -1118,9 +1118,9 @@ static int shmctl_do_lock(struct ipc_namespace *ns, int shmid, int cmd)
- 	/* SHM_UNLOCK */
- 	if (!(shp->shm_perm.mode & SHM_LOCKED))
- 		goto out_unlock0;
--	shmem_lock(shm_file, 0, shp->mlock_user);
-+	shmem_lock(shm_file, 0, shp->mlock_ucounts);
- 	shp->shm_perm.mode &= ~SHM_LOCKED;
--	shp->mlock_user = NULL;
-+	shp->mlock_ucounts = NULL;
- 	get_file(shm_file);
- 	ipc_unlock_object(&shp->shm_perm);
- 	rcu_read_unlock();
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 741f896c156e..a3a5e317c3c0 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -825,6 +825,7 @@ void __init fork_init(void)
- 	init_user_ns.ucount_max[UCOUNT_RLIMIT_NPROC] = task_rlimit(&init_task, RLIMIT_NPROC);
- 	init_user_ns.ucount_max[UCOUNT_RLIMIT_MSGQUEUE] = task_rlimit(&init_task, RLIMIT_MSGQUEUE);
- 	init_user_ns.ucount_max[UCOUNT_RLIMIT_SIGPENDING] = task_rlimit(&init_task, RLIMIT_SIGPENDING);
-+	init_user_ns.ucount_max[UCOUNT_RLIMIT_MEMLOCK] = task_rlimit(&init_task, RLIMIT_MEMLOCK);
- 
- #ifdef CONFIG_VMAP_STACK
- 	cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vm_stack_cache",
-diff --git a/kernel/ucount.c b/kernel/ucount.c
-index 29976c8942f3..1db2c8744cde 100644
---- a/kernel/ucount.c
-+++ b/kernel/ucount.c
-@@ -84,6 +84,7 @@ static struct ctl_table user_table[] = {
- 	{ },
- 	{ },
- 	{ },
-+	{ },
- 	{ }
- };
- #endif /* CONFIG_SYSCTL */
-diff --git a/kernel/user.c b/kernel/user.c
-index 6737327f83be..c82399c1618a 100644
---- a/kernel/user.c
-+++ b/kernel/user.c
-@@ -98,7 +98,6 @@ static DEFINE_SPINLOCK(uidhash_lock);
- /* root_user.__count is 1, for init task cred */
- struct user_struct root_user = {
- 	.__count	= REFCOUNT_INIT(1),
--	.locked_shm     = 0,
- 	.uid		= GLOBAL_ROOT_UID,
- 	.ratelimit	= RATELIMIT_STATE_INIT(root_user.ratelimit, 0, 0),
- };
-diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
-index df1bed32dd48..5ef0d4b182ba 100644
---- a/kernel/user_namespace.c
-+++ b/kernel/user_namespace.c
-@@ -124,6 +124,7 @@ int create_user_ns(struct cred *new)
- 	ns->ucount_max[UCOUNT_RLIMIT_NPROC] = rlimit(RLIMIT_NPROC);
- 	ns->ucount_max[UCOUNT_RLIMIT_MSGQUEUE] = rlimit(RLIMIT_MSGQUEUE);
- 	ns->ucount_max[UCOUNT_RLIMIT_SIGPENDING] = rlimit(RLIMIT_SIGPENDING);
-+	ns->ucount_max[UCOUNT_RLIMIT_MEMLOCK] = rlimit(RLIMIT_MEMLOCK);
- 	ns->ucounts = ucounts;
- 
- 	/* Inherit USERNS_SETGROUPS_ALLOWED from our parent */
-diff --git a/mm/memfd.c b/mm/memfd.c
-index 2647c898990c..081dd33e6a61 100644
---- a/mm/memfd.c
-+++ b/mm/memfd.c
-@@ -297,9 +297,9 @@ SYSCALL_DEFINE2(memfd_create,
- 	}
- 
- 	if (flags & MFD_HUGETLB) {
--		struct user_struct *user = NULL;
-+		struct ucounts *ucounts = NULL;
- 
--		file = hugetlb_file_setup(name, 0, VM_NORESERVE, &user,
-+		file = hugetlb_file_setup(name, 0, VM_NORESERVE, &ucounts,
- 					HUGETLB_ANONHUGE_INODE,
- 					(flags >> MFD_HUGE_SHIFT) &
- 					MFD_HUGE_MASK);
-diff --git a/mm/mlock.c b/mm/mlock.c
-index f8f8cc32d03d..b874d0436976 100644
---- a/mm/mlock.c
-+++ b/mm/mlock.c
-@@ -817,9 +817,10 @@ SYSCALL_DEFINE0(munlockall)
-  */
- static DEFINE_SPINLOCK(shmlock_user_lock);
- 
--int user_shm_lock(size_t size, struct user_struct *user)
-+int user_shm_lock(size_t size, struct ucounts *ucounts)
- {
- 	unsigned long lock_limit, locked;
-+	bool overlimit;
- 	int allowed = 0;
- 
- 	locked = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
-@@ -828,21 +829,27 @@ int user_shm_lock(size_t size, struct user_struct *user)
- 		allowed = 1;
- 	lock_limit >>= PAGE_SHIFT;
- 	spin_lock(&shmlock_user_lock);
--	if (!allowed &&
--	    locked + user->locked_shm > lock_limit && !capable(CAP_IPC_LOCK))
-+	overlimit = inc_rlimit_ucounts_and_test(ucounts, UCOUNT_RLIMIT_MEMLOCK,
-+			locked, lock_limit);
-+
-+	if (!allowed && overlimit && !capable(CAP_IPC_LOCK)) {
-+		dec_rlimit_ucounts(ucounts, UCOUNT_RLIMIT_MEMLOCK, locked);
-+		goto out;
-+	}
-+	if (!get_ucounts(ucounts)) {
-+		dec_rlimit_ucounts(ucounts, UCOUNT_RLIMIT_MEMLOCK, locked);
- 		goto out;
--	get_uid(user);
--	user->locked_shm += locked;
-+	}
- 	allowed = 1;
- out:
- 	spin_unlock(&shmlock_user_lock);
- 	return allowed;
- }
- 
--void user_shm_unlock(size_t size, struct user_struct *user)
-+void user_shm_unlock(size_t size, struct ucounts *ucounts)
- {
- 	spin_lock(&shmlock_user_lock);
--	user->locked_shm -= (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
-+	dec_rlimit_ucounts(ucounts, UCOUNT_RLIMIT_MEMLOCK, (size + PAGE_SIZE - 1) >> PAGE_SHIFT);
- 	spin_unlock(&shmlock_user_lock);
--	free_uid(user);
-+	put_ucounts(ucounts);
- }
-diff --git a/mm/mmap.c b/mm/mmap.c
-index 3f287599a7a3..99f97d200aa4 100644
---- a/mm/mmap.c
-+++ b/mm/mmap.c
-@@ -1605,7 +1605,7 @@ unsigned long ksys_mmap_pgoff(unsigned long addr, unsigned long len,
- 			goto out_fput;
- 		}
- 	} else if (flags & MAP_HUGETLB) {
--		struct user_struct *user = NULL;
-+		struct ucounts *ucounts = NULL;
- 		struct hstate *hs;
- 
- 		hs = hstate_sizelog((flags >> MAP_HUGE_SHIFT) & MAP_HUGE_MASK);
-@@ -1621,7 +1621,7 @@ unsigned long ksys_mmap_pgoff(unsigned long addr, unsigned long len,
- 		 */
- 		file = hugetlb_file_setup(HUGETLB_ANON_FILE, len,
- 				VM_NORESERVE,
--				&user, HUGETLB_ANONHUGE_INODE,
-+				&ucounts, HUGETLB_ANONHUGE_INODE,
- 				(flags >> MAP_HUGE_SHIFT) & MAP_HUGE_MASK);
- 		if (IS_ERR(file))
- 			return PTR_ERR(file);
-diff --git a/mm/shmem.c b/mm/shmem.c
-index b2db4ed0fbc7..45b71a002ab1 100644
---- a/mm/shmem.c
-+++ b/mm/shmem.c
-@@ -2227,7 +2227,7 @@ static struct mempolicy *shmem_get_policy(struct vm_area_struct *vma,
- }
- #endif
- 
--int shmem_lock(struct file *file, int lock, struct user_struct *user)
-+int shmem_lock(struct file *file, int lock, struct ucounts *ucounts)
- {
- 	struct inode *inode = file_inode(file);
- 	struct shmem_inode_info *info = SHMEM_I(inode);
-@@ -2239,13 +2239,13 @@ int shmem_lock(struct file *file, int lock, struct user_struct *user)
- 	 * no serialization needed when called from shm_destroy().
- 	 */
- 	if (lock && !(info->flags & VM_LOCKED)) {
--		if (!user_shm_lock(inode->i_size, user))
-+		if (!user_shm_lock(inode->i_size, ucounts))
- 			goto out_nomem;
- 		info->flags |= VM_LOCKED;
- 		mapping_set_unevictable(file->f_mapping);
- 	}
--	if (!lock && (info->flags & VM_LOCKED) && user) {
--		user_shm_unlock(inode->i_size, user);
-+	if (!lock && (info->flags & VM_LOCKED) && ucounts) {
-+		user_shm_unlock(inode->i_size, ucounts);
- 		info->flags &= ~VM_LOCKED;
- 		mapping_clear_unevictable(file->f_mapping);
- 	}
--- 
-2.29.3
+* @object: Weak pointer to an allocated object.  All writes (i.e.
+* creating a new object or removing one) are protected by the
+* underlying inode->i_lock.  Disassociating @object from the inode is
+* additionally protected by @object->lock, from the time @object's
+* usage refcount drops to zero to the time this pointer is nulled out.
 
+which isn't true anymore.
