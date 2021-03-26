@@ -1,21 +1,22 @@
-Return-Path: <SRS0=OBvg=IY=lists.openwall.com=kernel-hardening-return-21068-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=78GN=IY=lists.openwall.com=kernel-hardening-return-21069-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EF7DCC433C1
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Mar 2021 04:31:14 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 51862C433DB
+	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Mar 2021 15:42:49 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 399D061A3F
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Mar 2021 04:31:14 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 399D061A3F
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21068-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 9960 invoked by uid 550); 26 Mar 2021 04:31:08 -0000
+	by mail.kernel.org (Postfix) with SMTP id 502E561A24
+	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Mar 2021 15:42:47 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 502E561A24
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21069-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 3570 invoked by uid 550); 26 Mar 2021 15:42:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,82 +24,157 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9940 invoked from network); 26 Mar 2021 04:31:07 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=35XopTC+7WOzIQnHzWXImRYQHw0CHWkdoXHcf/+9Onk=;
-        b=FuXqSLOY5UJibY4x5cy44xNCqVYXhs/QB8SAK6Ph5plXJluUdlmzkl2vYUhpV/m3iz
-         fBwsgAxyhUwk4l2OzfotcXS7ilTz5vz/4D0pRkceuJfu6MDHX6kEBtNhBX+0z1Q+x9Rq
-         gJAq/6u1b6zvaFaFWLn9VBJN47ayz/H6CG+SQ=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=35XopTC+7WOzIQnHzWXImRYQHw0CHWkdoXHcf/+9Onk=;
-        b=J7nYVYKIHHOlfU84qomDC9RUs0MxpqAwrXxL79mGCQnC6/g3swJwVoqF0VlA3XaRLB
-         ZxrXw9WuiRR6+XczJ4EO2cBA70Ak37Xf30R9/Jd9rrnQFx8SHg2BwQHuo6i12qbkfSOy
-         mIBx/4W4mOQBtfVLRoZ349CNwBczWnD0RtgW7eBOwsajTFwckHu5GnSWGuKyYEUeZDsl
-         2z2FqjmGpIz+vq7dbSejFPAZVpb6l+u0jke6ZW5rgfS9nfZ5nCbF0sYC75wMIAU3k8/u
-         LVn0dJE1TLfjmH2bCegxaSrFpmHu9cbTomS9m6Uc+ylT/sMTmrwB9095f8h+qZMAaHyj
-         uCOw==
-X-Gm-Message-State: AOAM533NIJ2fxwc1b3swAyDRvMM2MpxoRvu5bRXjFU961yCqC3fBi5CB
-	YC0fZCUUDOIsZehxiL1s8jwYYg==
-X-Google-Smtp-Source: ABdhPJxJ4Uh8qq7VGivmsaxoe1yrWQkMSLzdjT7KyXHUDkthLjeUOIqUGrr9oa/zfMmenb3JnsesWA==
-X-Received: by 2002:a62:7f86:0:b029:20a:a195:bb36 with SMTP id a128-20020a627f860000b029020aa195bb36mr11204021pfd.4.1616733055463;
-        Thu, 25 Mar 2021 21:30:55 -0700 (PDT)
-Date: Thu, 25 Mar 2021 21:30:53 -0700
-From: Kees Cook <keescook@chromium.org>
-To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>,
-	"Serge E . Hallyn" <serge@hallyn.com>,
-	Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Andy Lutomirski <luto@amacapital.net>,
-	Anton Ivanov <anton.ivanov@cambridgegreys.com>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	David Howells <dhowells@redhat.com>, Jeff Dike <jdike@addtoit.com>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Michael Kerrisk <mtk.manpages@gmail.com>,
-	Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
-	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
-	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-	linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+Received: (qmail 3487 invoked from network); 26 Mar 2021 15:42:38 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
+	s=badeba3b8450; t=1616773315;
+	bh=5eLgdU45K7E2wo8Ug5bX02jFCrshvXXHtRqXp9B6Ow4=;
+	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=h8SQ3C/2QwpQx0H0KY6KP+jiib7Gm5USU+lQNsEvBANLK8Smdnfid33h7KFB12x81
+	 J973x93ulLSa39BNO+pIsKe63b3zq5qjrZJSl5r8bnDMhUMY0ZaLcWqfkbNNOzqcsb
+	 n76DLt/OLQKTDbpkQPdF2Yd/qmbdd9MY2ZlVjXTY=
+X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
+Date: Fri, 26 Mar 2021 16:41:41 +0100
+From: John Wood <john.wood@gmx.com>
+To: Jonathan Corbet <corbet@lwn.net>
+Cc: Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
+	Randy Dunlap <rdunlap@infradead.org>,
+	James Morris <jmorris@namei.org>, Shuah Khan <shuah@kernel.org>,
+	John Wood <john.wood@gmx.com>, "Serge E. Hallyn" <serge@hallyn.com>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	Andi Kleen <ak@linux.intel.com>,
+	kernel test robot <oliver.sang@intel.com>,
+	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
 	linux-kselftest@vger.kernel.org,
-	linux-security-module@vger.kernel.org, x86@kernel.org,
-	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>
-Subject: Re: [PATCH v31 10/12] selftests/landlock: Add user space tests
-Message-ID: <202103252130.54C78E4@keescook>
-References: <20210324191520.125779-1-mic@digikod.net>
- <20210324191520.125779-11-mic@digikod.net>
+	kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH v6 7/8] Documentation: Add documentation for the Brute LSM
+Message-ID: <20210326154141.GA3131@ubuntu>
+References: <20210307113031.11671-1-john.wood@gmx.com>
+ <20210307113031.11671-8-john.wood@gmx.com>
+ <87k0q0l4s8.fsf@meer.lwn.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20210324191520.125779-11-mic@digikod.net>
+In-Reply-To: <87k0q0l4s8.fsf@meer.lwn.net>
+X-Provags-ID: V03:K1:2ffp/O9iNnB5tOZJlOKbIBIElc1aB7tKPscALEmFt1EkyRNffNU
+ wiPNw8U3ciTKoYxsVRf81yoQRo+H/hCZy/YRjAhdBHs3d0PuEgLHBhO3PnfD7k9tPPFojEM
+ cGrMSsT0B1TFpWESJbnCsgDEso8ClCflg1zZj8nlYfUqt71TtWmomZBAxLP/erTm8BKsSQK
+ seGzO+1FPZsNDkPT/lboQ==
+X-UI-Out-Filterresults: notjunk:1;V03:K0:vchnW+PvK4U=:Kaw9IXbD5r2xS7sNA6OL56
+ QE1/0MjKUGVmH5sEyhJqPw6vSvgHThqEtvtDYJZUOOOx/PiFtqjWxWcqPZYpfm6fAF26hbUyL
+ dQzXBiz/3yLMAS810CnIcsi0OZeAvX2pe2c98w+koowqJVNgyvhnDatNlfCFsD7DjotBsCNjw
+ Ek/8IIFJ0C5eOTQDBwUWwpgFNkjFBKEK+k7YJOl33byzzHjIg09gCeJjg5Qk/j/jth+t0Jp8g
+ rDJfsaNv2horig5RmhCLYi7xfpv74AztymIxntOdxFs2b/4m4CpL7OXlHTGz5TWDE7yDNbdXz
+ LTQGMcyqZHUnsiaN/bUEGiSpV7MA5B4kY/SF3CIU4bMBoH3W4rtGS93HJMFJEDrlpl95Ixry3
+ WjGbM03IHwI2jJOcPceBGFru4tC4PwQIIDZt7yka/ujCKfliV8+l7bvxQR/Yb0N8FKSta9mYn
+ wJMFcl5T+BIChZLYAqArTJe4aGFObBz3gmbeRgK6OXuxDUlFz7k58yhIxgWSme9sMrn5UX2M9
+ KnoG1n0PkJBrTqxbZaxejWeBp5e1f/vtxjE8t+5FjQcyNfcKx1snzJxMUqzhtAwDlMRdICkFi
+ O1RIW4vtfFH1C/5/Ppj9cMUz6D2BTooqzurmm19swoL12/uPVCO5WkvEhtij155ZviTMjFkl1
+ EtPKV7SDFMeonS671j5j8P055AKpZbyKYA5xetqt7l0fzA2rJTie2rmS2c65kO8Gf4v+nC9AT
+ kj7qg7C+oQR7uR1YJQec0Oi1ljqBKcERi4Axsd6vqVUmYhWRFF6A9jQSaxGrfS+bZ2irLenMN
+ vT7NOFvhTzL7nZZXed5oi4GF2nWUW00nMMgkr+yXfJ/IbTsoGMwRQYWxOMdMzjLhCCPXak6tG
+ 5HUmVFEMKL6OrA1hz2PETgTBOEQ0EbY8+EoBUy1DrpVlSBhbSoC0wOjnbMqSKmN0ftRYspGyz
+ IknRYK5luCxnOfAgKvm8T4oAlcCN8VZr8wEgfvEXk0f4fOc+5VhgN+wXvKbJB3w0H2qxh7mdd
+ /3qNaBqWfeGSzPpgjskBhLeG8sxCeHvnyAQjxLPrB3IXryXyKXBEQfeITIVg5NwJcwqX+Zrjq
+ QMy4mSh9VU9q/fgRaw7VWbjnXf576OgiDe8jrbQNjAP40LHgtxet2LPlJEfACu+P3Dc775l0b
+ KiQ9ZMeMLa8xYiKNjOfvfRZHcpCykK9NEMIQk1XBD48HaVsli04WH179X88YsvSyiz4xE=
+Content-Transfer-Encoding: quoted-printable
 
-On Wed, Mar 24, 2021 at 08:15:18PM +0100, Mickaël Salaün wrote:
-> From: Mickaël Salaün <mic@linux.microsoft.com>
-> 
-> Test all Landlock system calls, ptrace hooks semantic and filesystem
-> access-control with multiple layouts.
-> 
-> Test coverage for security/landlock/ is 93.6% of lines.  The code not
-> covered only deals with internal kernel errors (e.g. memory allocation)
-> and race conditions.
-> 
-> Cc: James Morris <jmorris@namei.org>
-> Cc: Jann Horn <jannh@google.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Serge E. Hallyn <serge@hallyn.com>
-> Cc: Shuah Khan <shuah@kernel.org>
-> Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
+On Sun, Mar 21, 2021 at 12:50:47PM -0600, Jonathan Corbet wrote:
+> John Wood <john.wood@gmx.com> writes:
+>
+> > Add some info detailing what is the Brute LSM, its motivation, weak
+> > points of existing implementations, proposed solutions, enabling,
+> > disabling and self-tests.
+> >
+> > Signed-off-by: John Wood <john.wood@gmx.com>
+> > ---
+> >  Documentation/admin-guide/LSM/Brute.rst | 278 +++++++++++++++++++++++=
++
+> >  Documentation/admin-guide/LSM/index.rst |   1 +
+> >  security/brute/Kconfig                  |   3 +-
+> >  3 files changed, 281 insertions(+), 1 deletion(-)
+> >  create mode 100644 Documentation/admin-guide/LSM/Brute.rst
+>
+> Thanks for including documentation with the patch!
+>
+> As you get closer to merging this, though, you'll want to take a minute
+> (OK, a few minutes) to build the docs and look at the result; there are
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+Thanks, I will do it.
 
--- 
-Kees Cook
+> a number of places where you're not going to get what you expect.  Just
+> as an example:
+>
+> [...]
+>
+> > +Based on the above scenario it would be nice to have this detected an=
+d
+> > +mitigated, and this is the goal of this implementation. Specifically =
+the
+> > +following attacks are expected to be detected:
+> > +
+> > +1.- Launching (fork()/exec()) a setuid/setgid process repeatedly unti=
+l a
+> > +    desirable memory layout is got (e.g. Stack Clash).
+> > +2.- Connecting to an exec()ing network daemon (e.g. xinetd) repeatedl=
+y until a
+> > +    desirable memory layout is got (e.g. what CTFs do for simple netw=
+ork
+> > +    service).
+> > +3.- Launching processes without exec() (e.g. Android Zygote) and expo=
+sing state
+> > +    to attack a sibling.
+> > +4.- Connecting to a fork()ing network daemon (e.g. apache) repeatedly=
+ until the
+> > +    previously shared memory layout of all the other children is expo=
+sed (e.g.
+> > +    kind of related to HeartBleed).
+>
+> Sphinx will try to recognize your enumerated list, but that may be a bit
+> more punctuation than it is prepared to deal with; I'd take the hyphens
+> out, if nothing else.
+
+Thanks. I will fix this for the next version.
+
+> > +These statistics are hold by the brute_stats struct.
+> > +
+> > +struct brute_cred {
+> > +	kuid_t uid;
+> > +	kgid_t gid;
+> > +	kuid_t suid;
+> > +	kgid_t sgid;
+> > +	kuid_t euid;
+> > +	kgid_t egid;
+> > +	kuid_t fsuid;
+> > +	kgid_t fsgid;
+> > +};
+>
+> That will certainly not render the way you want.  What you need here is
+> a literal block:
+>
+> These statistics are hold by the brute_stats struct::
+>
+>     struct brute_cred {
+> 	kuid_t uid;
+> 	kgid_t gid;
+> 	kuid_t suid;
+> 	kgid_t sgid;
+> 	kuid_t euid;
+> 	kgid_t egid;
+> 	kuid_t fsuid;
+> 	kgid_t fsgid;
+>     };
+>
+> The "::" causes all of the indented text following to be formatted
+> literally.
+
+Thanks a lot for your comments and guidance. I will build the docs and
+check if the output is as I want.
+
+> Thanks,
+>
+> jon
+
+Regards,
+John Wood
