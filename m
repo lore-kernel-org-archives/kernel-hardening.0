@@ -1,22 +1,21 @@
-Return-Path: <SRS0=78GN=IY=lists.openwall.com=kernel-hardening-return-21069-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ugGE=IZ=lists.openwall.com=kernel-hardening-return-21070-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.5 required=3.0 tests=BAYES_00,DKIM_INVALID,
+	DKIM_SIGNED,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,FROM_EXCESS_BASE64,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 51862C433DB
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Mar 2021 15:42:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F0E58C433C1
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Mar 2021 10:20:21 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 502E561A24
-	for <kernel-hardening@archiver.kernel.org>; Fri, 26 Mar 2021 15:42:47 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 502E561A24
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21069-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 3570 invoked by uid 550); 26 Mar 2021 15:42:39 -0000
+	by mail.kernel.org (Postfix) with SMTP id 1C50761966
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Mar 2021 10:20:20 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1C50761966
+Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=mail.ru
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21070-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 23941 invoked by uid 550); 27 Mar 2021 10:20:12 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,157 +23,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3487 invoked from network); 26 Mar 2021 15:42:38 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1616773315;
-	bh=5eLgdU45K7E2wo8Ug5bX02jFCrshvXXHtRqXp9B6Ow4=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=h8SQ3C/2QwpQx0H0KY6KP+jiib7Gm5USU+lQNsEvBANLK8Smdnfid33h7KFB12x81
-	 J973x93ulLSa39BNO+pIsKe63b3zq5qjrZJSl5r8bnDMhUMY0ZaLcWqfkbNNOzqcsb
-	 n76DLt/OLQKTDbpkQPdF2Yd/qmbdd9MY2ZlVjXTY=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Fri, 26 Mar 2021 16:41:41 +0100
-From: John Wood <john.wood@gmx.com>
-To: Jonathan Corbet <corbet@lwn.net>
-Cc: Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	James Morris <jmorris@namei.org>, Shuah Khan <shuah@kernel.org>,
-	John Wood <john.wood@gmx.com>, "Serge E. Hallyn" <serge@hallyn.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Andi Kleen <ak@linux.intel.com>,
-	kernel test robot <oliver.sang@intel.com>,
-	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-kselftest@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v6 7/8] Documentation: Add documentation for the Brute LSM
-Message-ID: <20210326154141.GA3131@ubuntu>
-References: <20210307113031.11671-1-john.wood@gmx.com>
- <20210307113031.11671-8-john.wood@gmx.com>
- <87k0q0l4s8.fsf@meer.lwn.net>
+Received: (qmail 22078 invoked from network); 26 Mar 2021 23:12:55 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=mail.ru; s=mail3;
+	h=Content-Transfer-Encoding:Content-Type:Message-ID:Reply-To:Date:MIME-Version:Subject:To:From:From:Subject:Content-Type:Content-Transfer-Encoding:To:Cc; bh=TCgmuDJAYTsjobPwpCKnWi9eh9wfEhXbvIg+omz35DM=;
+	b=WzB97DjzJA6KD0rKtEvuFRcUXaH4NOyHg7rw5Ubpm+lhWb9s7s7AlhcXS333BC2lOLbl+Ixk6A/NWpQguI7Ob6kzw79FgLMA9zV4raNKs/yZJmB002IP637r/iGZJp/lNcpSPHtVpmtZcr+tn51fQ4ZS0ZuCtF+yTNpdpQYQGq4=;
+From: =?UTF-8?B?QXNrYXIgU2FmaW4=?= <safinaskar@mail.ru>
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>,
+	kernel-hardening@lists.openwall.com,
+	linux-fsdevel@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org
+Subject: =?UTF-8?B?UmU6IFtQQVRDSCB2NSAxLzFdIGZzOiBBbGxvdyBub19uZXdfcHJpdnMgdGFz?=
+ =?UTF-8?B?a3MgdG8gY2FsbCBjaHJvb3QoMik=?=
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87k0q0l4s8.fsf@meer.lwn.net>
-X-Provags-ID: V03:K1:2ffp/O9iNnB5tOZJlOKbIBIElc1aB7tKPscALEmFt1EkyRNffNU
- wiPNw8U3ciTKoYxsVRf81yoQRo+H/hCZy/YRjAhdBHs3d0PuEgLHBhO3PnfD7k9tPPFojEM
- cGrMSsT0B1TFpWESJbnCsgDEso8ClCflg1zZj8nlYfUqt71TtWmomZBAxLP/erTm8BKsSQK
- seGzO+1FPZsNDkPT/lboQ==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:vchnW+PvK4U=:Kaw9IXbD5r2xS7sNA6OL56
- QE1/0MjKUGVmH5sEyhJqPw6vSvgHThqEtvtDYJZUOOOx/PiFtqjWxWcqPZYpfm6fAF26hbUyL
- dQzXBiz/3yLMAS810CnIcsi0OZeAvX2pe2c98w+koowqJVNgyvhnDatNlfCFsD7DjotBsCNjw
- Ek/8IIFJ0C5eOTQDBwUWwpgFNkjFBKEK+k7YJOl33byzzHjIg09gCeJjg5Qk/j/jth+t0Jp8g
- rDJfsaNv2horig5RmhCLYi7xfpv74AztymIxntOdxFs2b/4m4CpL7OXlHTGz5TWDE7yDNbdXz
- LTQGMcyqZHUnsiaN/bUEGiSpV7MA5B4kY/SF3CIU4bMBoH3W4rtGS93HJMFJEDrlpl95Ixry3
- WjGbM03IHwI2jJOcPceBGFru4tC4PwQIIDZt7yka/ujCKfliV8+l7bvxQR/Yb0N8FKSta9mYn
- wJMFcl5T+BIChZLYAqArTJe4aGFObBz3gmbeRgK6OXuxDUlFz7k58yhIxgWSme9sMrn5UX2M9
- KnoG1n0PkJBrTqxbZaxejWeBp5e1f/vtxjE8t+5FjQcyNfcKx1snzJxMUqzhtAwDlMRdICkFi
- O1RIW4vtfFH1C/5/Ppj9cMUz6D2BTooqzurmm19swoL12/uPVCO5WkvEhtij155ZviTMjFkl1
- EtPKV7SDFMeonS671j5j8P055AKpZbyKYA5xetqt7l0fzA2rJTie2rmS2c65kO8Gf4v+nC9AT
- kj7qg7C+oQR7uR1YJQec0Oi1ljqBKcERi4Axsd6vqVUmYhWRFF6A9jQSaxGrfS+bZ2irLenMN
- vT7NOFvhTzL7nZZXed5oi4GF2nWUW00nMMgkr+yXfJ/IbTsoGMwRQYWxOMdMzjLhCCPXak6tG
- 5HUmVFEMKL6OrA1hz2PETgTBOEQ0EbY8+EoBUy1DrpVlSBhbSoC0wOjnbMqSKmN0ftRYspGyz
- IknRYK5luCxnOfAgKvm8T4oAlcCN8VZr8wEgfvEXk0f4fOc+5VhgN+wXvKbJB3w0H2qxh7mdd
- /3qNaBqWfeGSzPpgjskBhLeG8sxCeHvnyAQjxLPrB3IXryXyKXBEQfeITIVg5NwJcwqX+Zrjq
- QMy4mSh9VU9q/fgRaw7VWbjnXf576OgiDe8jrbQNjAP40LHgtxet2LPlJEfACu+P3Dc775l0b
- KiQ9ZMeMLa8xYiKNjOfvfRZHcpCykK9NEMIQk1XBD48HaVsli04WH179X88YsvSyiz4xE=
-Content-Transfer-Encoding: quoted-printable
+X-Mailer: Mail.Ru Mailer 1.0
+Date: Sat, 27 Mar 2021 02:12:42 +0300
+X-Priority: 3 (Normal)
+Message-ID: <1616800362.522029786@f737.i.mail.ru>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+Authentication-Results: f737.i.mail.ru; auth=pass smtp.auth=safinaskar@mail.ru smtp.mailfrom=safinaskar@mail.ru
+X-7564579A: EEAE043A70213CC8
+X-77F55803: 119C1F4DF6A9251C54E3E0C6C5F9D941601365FF1EFA00A57B72CABF76C0DD1EABF6EAE57C0FACE9D8A01C7BE6A5AE8F10256108459FC4386EF9DF32E4A6FB8805836D1F9953231F
+X-7FA49CB5: 70AAF3C13DB7016878DA827A17800CE75C5A0068DDB44521D82A6BABE6F325AC08BE7437D75B48FABCF491FFA38154B613377AFFFEAFD269176DF2183F8FC7C05C0AD7D016C066E3C2099A533E45F2D0395957E7521B51C2CFCAF695D4D8E9FCEA1F7E6F0F101C6778DA827A17800CE74E9055D3307A84CAEA1F7E6F0F101C67CDEEF6D7F21E0D1D174C73DBBBFC7664C364260FAD8F937CCA2C1D19EE196DDBF4001F4B0FE1189D389733CBF5DBD5E913377AFFFEAFD269176DF2183F8FC7C04CF195F1528592878941B15DA834481FCF19DD082D7633A0EF3E4896CB9E6436389733CBF5DBD5E9D5E8D9A59859A8B64AAE2D1698E8717BCC7F00164DA146DA6F5DAA56C3B73B237318B6A418E8EAB86D1867E19FE14079C09775C1D3CA48CFC5EA940A35A165FF2DBA43225CD8A89FD63380FFBEB38773156CCFE7AF13BCA4B5C8C57E37DE458BEDA766A37F9254B7
+X-B7AD71C0: AC4F5C86D027EB782CDD5689AFBDA7A2368A440D3B0F6089093C9A16E5BC824AC8B6CDF511875BC4E8F7B195E1C97831F7A2AF59AE45E8C5AB73A7D1547457A7
+X-C1DE0DAB: 0D63561A33F958A5A6AFBEC59E2B787535FC3150985A3DCC196730366FEFC50BBDC6A1CF3F042BAD6DF99611D93F60EF4280523C145DA091699F904B3F4130E343918A1A30D5E7FCCB5012B2E24CD356
+X-C8649E89: 4E36BF7865823D7055A7F0CF078B5EC49A30900B95165D34C786159FDC4342B0C9E4B168990CD8780BCEBC64311BE505E8F3D0AD8841ECE51ADEA222FBDD9F961D7E09C32AA3244C0B0CF7C92C78415DA03BED48498C790D81560E2432555DBB83B48618A63566E0
+X-D57D3AED: 3ZO7eAau8CL7WIMRKs4sN3D3tLDjz0dLbV79QFUyzQ2Ujvy7cMT6pYYqY16iZVKkSc3dCLJ7zSJH7+u4VD18S7Vl4ZUrpaVfd2+vE6kuoey4m4VkSEu530nj6fImhcD4MUrOEAnl0W826KZ9Q+tr5+wYjsrrSY/u8Y3PrTqANeitKFiSd6Yd7yPpbiiZ/d5BsxIjK0jGQgCHUM3Ry2Lt2G3MDkMauH3h0dBdQGj+BB/iPzQYh7XS329fgu+/vnDhQDnxeTQymRYind6cQHiLPg==
+X-Mailru-MI: 1000000000800
+X-Mailru-Sender: 583F1D7ACE8F49BD48DC4DEF5972559E2B2CCB5D3FBD3778DD0ECC4DFEACCE8F1C238ED0579F4A1304DCC68E0365DB113919A3F0584408A7E277D648EEF17123F32B7A1AD1AAC36A3BEC1D9798BA4B85D186BC2F9B8D6AD3EAB4BC95F72C04283CDA0F3B3F5B9367
+X-Mras: Ok
+X-Spam: undefined
 
-On Sun, Mar 21, 2021 at 12:50:47PM -0600, Jonathan Corbet wrote:
-> John Wood <john.wood@gmx.com> writes:
->
-> > Add some info detailing what is the Brute LSM, its motivation, weak
-> > points of existing implementations, proposed solutions, enabling,
-> > disabling and self-tests.
-> >
-> > Signed-off-by: John Wood <john.wood@gmx.com>
-> > ---
-> >  Documentation/admin-guide/LSM/Brute.rst | 278 +++++++++++++++++++++++=
-+
-> >  Documentation/admin-guide/LSM/index.rst |   1 +
-> >  security/brute/Kconfig                  |   3 +-
-> >  3 files changed, 281 insertions(+), 1 deletion(-)
-> >  create mode 100644 Documentation/admin-guide/LSM/Brute.rst
->
-> Thanks for including documentation with the patch!
->
-> As you get closer to merging this, though, you'll want to take a minute
-> (OK, a few minutes) to build the docs and look at the result; there are
-
-Thanks, I will do it.
-
-> a number of places where you're not going to get what you expect.  Just
-> as an example:
->
-> [...]
->
-> > +Based on the above scenario it would be nice to have this detected an=
-d
-> > +mitigated, and this is the goal of this implementation. Specifically =
-the
-> > +following attacks are expected to be detected:
-> > +
-> > +1.- Launching (fork()/exec()) a setuid/setgid process repeatedly unti=
-l a
-> > +    desirable memory layout is got (e.g. Stack Clash).
-> > +2.- Connecting to an exec()ing network daemon (e.g. xinetd) repeatedl=
-y until a
-> > +    desirable memory layout is got (e.g. what CTFs do for simple netw=
-ork
-> > +    service).
-> > +3.- Launching processes without exec() (e.g. Android Zygote) and expo=
-sing state
-> > +    to attack a sibling.
-> > +4.- Connecting to a fork()ing network daemon (e.g. apache) repeatedly=
- until the
-> > +    previously shared memory layout of all the other children is expo=
-sed (e.g.
-> > +    kind of related to HeartBleed).
->
-> Sphinx will try to recognize your enumerated list, but that may be a bit
-> more punctuation than it is prepared to deal with; I'd take the hyphens
-> out, if nothing else.
-
-Thanks. I will fix this for the next version.
-
-> > +These statistics are hold by the brute_stats struct.
-> > +
-> > +struct brute_cred {
-> > +	kuid_t uid;
-> > +	kgid_t gid;
-> > +	kuid_t suid;
-> > +	kgid_t sgid;
-> > +	kuid_t euid;
-> > +	kgid_t egid;
-> > +	kuid_t fsuid;
-> > +	kgid_t fsgid;
-> > +};
->
-> That will certainly not render the way you want.  What you need here is
-> a literal block:
->
-> These statistics are hold by the brute_stats struct::
->
->     struct brute_cred {
-> 	kuid_t uid;
-> 	kgid_t gid;
-> 	kuid_t suid;
-> 	kgid_t sgid;
-> 	kuid_t euid;
-> 	kgid_t egid;
-> 	kuid_t fsuid;
-> 	kgid_t fsgid;
->     };
->
-> The "::" causes all of the indented text following to be formatted
-> literally.
-
-Thanks a lot for your comments and guidance. I will build the docs and
-check if the output is as I want.
-
-> Thanks,
->
-> jon
-
-Regards,
-John Wood
+SGkuIFVucHJpdmlsZWdlZCB1c2VycyBhbHJlYWR5IGNhbiBkbyBjaHJvb3QuIEhlIHNob3VsZCBz
+aW1wbHkgY3JlYXRlIHVzZXJucyBhbmQgdGhlbiBjYWxsICJjaHJvb3QiIGluc2lkZS4gQXMgYW4g
+TFdOIGNvbW1lbnRlciBub3RlZCwgeW91IGNhbiBzaW1wbHkgcnVuIAoidW5zaGFyZSAtciAvdXNy
+L3NiaW4vY2hyb290IHNvbWUtZGlyIi4gKEkgcmVjb21tZW5kIHJlYWRpbmcgYWxsIGNvbW1lbnRz
+OiBodHRwczovL2x3bi5uZXQvQXJ0aWNsZXMvODQ5MTI1LyAuKQoKQWxzbzogaWYgeW91IG5lZWQg
+Y2hyb290IGZvciBwYXRoIHJlc29sdmluZyBvbmx5LCBjb25zaWRlciBvcGVuYXQyIHdpdGggUkVT
+T0xWRV9JTl9ST09UICggaHR0cHM6Ly9sd24ubmV0L0FydGljbGVzLzc5Njg2OC8gKS4KCgo9PQpB
+c2thciBTYWZpbgpodHRwczovL2dpdGh1Yi5jb20vc2FmaW5hc2thcgo=
