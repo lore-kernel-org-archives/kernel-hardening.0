@@ -1,21 +1,20 @@
-Return-Path: <SRS0=ugGE=IZ=lists.openwall.com=kernel-hardening-return-21070-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=gwO/=IZ=lists.openwall.com=kernel-hardening-return-21071-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.5 required=3.0 tests=BAYES_00,DKIM_INVALID,
-	DKIM_SIGNED,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,FROM_EXCESS_BASE64,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F0E58C433C1
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Mar 2021 10:20:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C8EADC433C1
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Mar 2021 18:55:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1C50761966
-	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Mar 2021 10:20:20 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1C50761966
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=mail.ru
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21070-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 23941 invoked by uid 550); 27 Mar 2021 10:20:12 -0000
+	by mail.kernel.org (Postfix) with SMTP id B8462619B1
+	for <kernel-hardening@archiver.kernel.org>; Sat, 27 Mar 2021 18:55:56 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org B8462619B1
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21071-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 21958 invoked by uid 550); 27 Mar 2021 18:55:47 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,43 +22,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22078 invoked from network); 26 Mar 2021 23:12:55 -0000
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=mail.ru; s=mail3;
-	h=Content-Transfer-Encoding:Content-Type:Message-ID:Reply-To:Date:MIME-Version:Subject:To:From:From:Subject:Content-Type:Content-Transfer-Encoding:To:Cc; bh=TCgmuDJAYTsjobPwpCKnWi9eh9wfEhXbvIg+omz35DM=;
-	b=WzB97DjzJA6KD0rKtEvuFRcUXaH4NOyHg7rw5Ubpm+lhWb9s7s7AlhcXS333BC2lOLbl+Ixk6A/NWpQguI7Ob6kzw79FgLMA9zV4raNKs/yZJmB002IP637r/iGZJp/lNcpSPHtVpmtZcr+tn51fQ4ZS0ZuCtF+yTNpdpQYQGq4=;
-From: =?UTF-8?B?QXNrYXIgU2FmaW4=?= <safinaskar@mail.ru>
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>,
-	kernel-hardening@lists.openwall.com,
-	linux-fsdevel@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org
-Subject: =?UTF-8?B?UmU6IFtQQVRDSCB2NSAxLzFdIGZzOiBBbGxvdyBub19uZXdfcHJpdnMgdGFz?=
- =?UTF-8?B?a3MgdG8gY2FsbCBjaHJvb3QoMik=?=
+Received: (qmail 21926 invoked from network); 27 Mar 2021 18:55:46 -0000
+Subject: Re: [PATCH v5 1/1] fs: Allow no_new_privs tasks to call chroot(2)
+To: Askar Safin <safinaskar@mail.ru>
+References: <1616800362.522029786@f737.i.mail.ru>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Cc: kernel-hardening@lists.openwall.com, linux-fsdevel@vger.kernel.org,
+ linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Message-ID: <7d9c2a08-89da-14ea-6550-527a3f2c9c9e@digikod.net>
+Date: Sat, 27 Mar 2021 19:56:23 +0100
+User-Agent:
 MIME-Version: 1.0
-X-Mailer: Mail.Ru Mailer 1.0
-Date: Sat, 27 Mar 2021 02:12:42 +0300
-X-Priority: 3 (Normal)
-Message-ID: <1616800362.522029786@f737.i.mail.ru>
+In-Reply-To: <1616800362.522029786@f737.i.mail.ru>
 Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: base64
-Authentication-Results: f737.i.mail.ru; auth=pass smtp.auth=safinaskar@mail.ru smtp.mailfrom=safinaskar@mail.ru
-X-7564579A: EEAE043A70213CC8
-X-77F55803: 119C1F4DF6A9251C54E3E0C6C5F9D941601365FF1EFA00A57B72CABF76C0DD1EABF6EAE57C0FACE9D8A01C7BE6A5AE8F10256108459FC4386EF9DF32E4A6FB8805836D1F9953231F
-X-7FA49CB5: 70AAF3C13DB7016878DA827A17800CE75C5A0068DDB44521D82A6BABE6F325AC08BE7437D75B48FABCF491FFA38154B613377AFFFEAFD269176DF2183F8FC7C05C0AD7D016C066E3C2099A533E45F2D0395957E7521B51C2CFCAF695D4D8E9FCEA1F7E6F0F101C6778DA827A17800CE74E9055D3307A84CAEA1F7E6F0F101C67CDEEF6D7F21E0D1D174C73DBBBFC7664C364260FAD8F937CCA2C1D19EE196DDBF4001F4B0FE1189D389733CBF5DBD5E913377AFFFEAFD269176DF2183F8FC7C04CF195F1528592878941B15DA834481FCF19DD082D7633A0EF3E4896CB9E6436389733CBF5DBD5E9D5E8D9A59859A8B64AAE2D1698E8717BCC7F00164DA146DA6F5DAA56C3B73B237318B6A418E8EAB86D1867E19FE14079C09775C1D3CA48CFC5EA940A35A165FF2DBA43225CD8A89FD63380FFBEB38773156CCFE7AF13BCA4B5C8C57E37DE458BEDA766A37F9254B7
-X-B7AD71C0: AC4F5C86D027EB782CDD5689AFBDA7A2368A440D3B0F6089093C9A16E5BC824AC8B6CDF511875BC4E8F7B195E1C97831F7A2AF59AE45E8C5AB73A7D1547457A7
-X-C1DE0DAB: 0D63561A33F958A5A6AFBEC59E2B787535FC3150985A3DCC196730366FEFC50BBDC6A1CF3F042BAD6DF99611D93F60EF4280523C145DA091699F904B3F4130E343918A1A30D5E7FCCB5012B2E24CD356
-X-C8649E89: 4E36BF7865823D7055A7F0CF078B5EC49A30900B95165D34C786159FDC4342B0C9E4B168990CD8780BCEBC64311BE505E8F3D0AD8841ECE51ADEA222FBDD9F961D7E09C32AA3244C0B0CF7C92C78415DA03BED48498C790D81560E2432555DBB83B48618A63566E0
-X-D57D3AED: 3ZO7eAau8CL7WIMRKs4sN3D3tLDjz0dLbV79QFUyzQ2Ujvy7cMT6pYYqY16iZVKkSc3dCLJ7zSJH7+u4VD18S7Vl4ZUrpaVfd2+vE6kuoey4m4VkSEu530nj6fImhcD4MUrOEAnl0W826KZ9Q+tr5+wYjsrrSY/u8Y3PrTqANeitKFiSd6Yd7yPpbiiZ/d5BsxIjK0jGQgCHUM3Ry2Lt2G3MDkMauH3h0dBdQGj+BB/iPzQYh7XS329fgu+/vnDhQDnxeTQymRYind6cQHiLPg==
-X-Mailru-MI: 1000000000800
-X-Mailru-Sender: 583F1D7ACE8F49BD48DC4DEF5972559E2B2CCB5D3FBD3778DD0ECC4DFEACCE8F1C238ED0579F4A1304DCC68E0365DB113919A3F0584408A7E277D648EEF17123F32B7A1AD1AAC36A3BEC1D9798BA4B85D186BC2F9B8D6AD3EAB4BC95F72C04283CDA0F3B3F5B9367
-X-Mras: Ok
-X-Spam: undefined
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-SGkuIFVucHJpdmlsZWdlZCB1c2VycyBhbHJlYWR5IGNhbiBkbyBjaHJvb3QuIEhlIHNob3VsZCBz
-aW1wbHkgY3JlYXRlIHVzZXJucyBhbmQgdGhlbiBjYWxsICJjaHJvb3QiIGluc2lkZS4gQXMgYW4g
-TFdOIGNvbW1lbnRlciBub3RlZCwgeW91IGNhbiBzaW1wbHkgcnVuIAoidW5zaGFyZSAtciAvdXNy
-L3NiaW4vY2hyb290IHNvbWUtZGlyIi4gKEkgcmVjb21tZW5kIHJlYWRpbmcgYWxsIGNvbW1lbnRz
-OiBodHRwczovL2x3bi5uZXQvQXJ0aWNsZXMvODQ5MTI1LyAuKQoKQWxzbzogaWYgeW91IG5lZWQg
-Y2hyb290IGZvciBwYXRoIHJlc29sdmluZyBvbmx5LCBjb25zaWRlciBvcGVuYXQyIHdpdGggUkVT
-T0xWRV9JTl9ST09UICggaHR0cHM6Ly9sd24ubmV0L0FydGljbGVzLzc5Njg2OC8gKS4KCgo9PQpB
-c2thciBTYWZpbgpodHRwczovL2dpdGh1Yi5jb20vc2FmaW5hc2thcgo=
+
+On 27/03/2021 00:12, Askar Safin wrote:
+> Hi. Unprivileged users already can do chroot. He should simply create userns and then call "chroot" inside. As an LWN commenter noted, you can simply run 
+> "unshare -r /usr/sbin/chroot some-dir". (I recommend reading all comments: https://lwn.net/Articles/849125/ .)
+
+We know that userns can be use to get the required capability in a new
+namespace, but this patch is to not require to use this namespace, as
+explained in the commit message. I already added some comments in the
+LWN article though.
+
+> 
+> Also: if you need chroot for path resolving only, consider openat2 with RESOLVE_IN_ROOT ( https://lwn.net/Articles/796868/ ).
+
+openat2 was also discussed in previous versions of this patch.
