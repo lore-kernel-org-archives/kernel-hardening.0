@@ -1,21 +1,21 @@
-Return-Path: <SRS0=xp78=I3=lists.openwall.com=kernel-hardening-return-21077-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=IEiD=I4=lists.openwall.com=kernel-hardening-return-21078-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-13.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B7541C433C1
-	for <kernel-hardening@archiver.kernel.org>; Mon, 29 Mar 2021 18:43:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DF06DC433C1
+	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Mar 2021 17:01:23 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id D1D1961981
-	for <kernel-hardening@archiver.kernel.org>; Mon, 29 Mar 2021 18:43:43 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D1D1961981
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21077-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 19685 invoked by uid 550); 29 Mar 2021 18:43:37 -0000
+	by mail.kernel.org (Postfix) with SMTP id 42098619CC
+	for <kernel-hardening@archiver.kernel.org>; Tue, 30 Mar 2021 17:01:22 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 42098619CC
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21078-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13856 invoked by uid 550); 30 Mar 2021 17:01:13 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,81 +23,187 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19664 invoked from network); 29 Mar 2021 18:43:37 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=LlNrP/9Ut5sXN3pkzKNi+WSrlgUBYs/IFekoNMyL2Jw=;
-        b=T+DpvsxQed12BAoexlkki+09jZcOH2cjiPTOOafDyn6acCeGPxIcFenrtcJ3zGGa8+
-         mSk7Iu22+Txx0wacKigEu3+FnKaFEgH82nuqdasm4GN0gQoF+hpT3m52TrAsh9p0Gnkv
-         ME2leGRxC72wu2uxStmg0L9ey3ygUFNqHk0V4=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=LlNrP/9Ut5sXN3pkzKNi+WSrlgUBYs/IFekoNMyL2Jw=;
-        b=sUbc2rWDdD8Z/zavP4n+85zCQyOSKCpvic2VyBIAgGZ0QgUIdHt0jYpCMANBlYPMXH
-         1hmQHSwpCFGzDR/H7k4wBjI0LWKTTIoXRi0y3v+cqD/rUd7UI2H+oQAhvEhXpI4uQ9Wd
-         XKyVMGQ91b+WI4yxUtS6FcR2CzedJyXNGCOhJxmD/VkzFChNM7zkbQfacDklhvMpQYwT
-         r30f9XsCmiq5cmSVfue89D7BvZAGQcLz4KVbfe3lxcoGWlLAwD2Dlj4sUAShqKEiN53q
-         RuU6y3q4EM22FvLvIIgnJPkv0ABSwClaCibKo40tERBs+FA9qhMbCbvBWD8R1w5fFzI/
-         POBA==
-X-Gm-Message-State: AOAM531Q+6gbiK/chKJGUu+eLre1KqL9dlC8vb3F1GGvSOpg4higUCM6
-	lbqSoxA6IHdbrSbRiN9hbT1bHg==
-X-Google-Smtp-Source: ABdhPJxToxGXO0GwIsEriJuM+yDUQVqjN+yq+LJpGrMhEoXh9Okut5BCawWoS9xITNbBK4nDieDGBg==
-X-Received: by 2002:a17:90a:bd09:: with SMTP id y9mr458540pjr.179.1617043404655;
-        Mon, 29 Mar 2021 11:43:24 -0700 (PDT)
-Date: Mon, 29 Mar 2021 11:43:23 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org,
-	Andy Lutomirski <luto@kernel.org>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Catalin Marinas <catalin.marinas@arm.com>,
-	Will Deacon <will@kernel.org>, Mark Rutland <mark.rutland@arm.com>,
-	Alexander Potapenko <glider@google.com>,
-	Alexander Popov <alex.popov@linux.com>,
-	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
-	Jann Horn <jannh@google.com>, Vlastimil Babka <vbabka@suse.cz>,
-	David Hildenbrand <david@redhat.com>,
-	Mike Rapoport <rppt@linux.ibm.com>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	kernel-hardening@lists.openwall.com,
-	linux-hardening@vger.kernel.org,
-	linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org,
-	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v7 4/6] x86/entry: Enable random_kstack_offset support
-Message-ID: <202103291141.EC2A77731@keescook>
-References: <20210319212835.3928492-1-keescook@chromium.org>
- <20210319212835.3928492-5-keescook@chromium.org>
- <87h7kvcqen.ffs@nanos.tec.linutronix.de>
+Received: (qmail 13833 invoked from network); 30 Mar 2021 17:01:12 -0000
+Subject: Re: [PATCH v5 1/1] fs: Allow no_new_privs tasks to call chroot(2)
+To: Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>,
+ Serge Hallyn <serge@hallyn.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: Andy Lutomirski <luto@amacapital.net>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Christian Brauner <christian.brauner@ubuntu.com>,
+ Christoph Hellwig <hch@lst.de>, David Howells <dhowells@redhat.com>,
+ Dominik Brodowski <linux@dominikbrodowski.net>,
+ "Eric W . Biederman" <ebiederm@xmission.com>, Jann Horn <jannh@google.com>,
+ John Johansen <john.johansen@canonical.com>,
+ Kees Cook <keescook@chromium.org>, Kentaro Takeda <takedakn@nttdata.co.jp>,
+ Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>,
+ kernel-hardening@lists.openwall.com, linux-fsdevel@vger.kernel.org,
+ linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org,
+ =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@linux.microsoft.com>
+References: <20210316203633.424794-1-mic@digikod.net>
+ <20210316203633.424794-2-mic@digikod.net>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <fef10d28-df59-640e-ecf7-576f8348324e@digikod.net>
+Date: Tue, 30 Mar 2021 19:01:57 +0200
+User-Agent:
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87h7kvcqen.ffs@nanos.tec.linutronix.de>
+In-Reply-To: <20210316203633.424794-2-mic@digikod.net>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 8bit
 
-On Sun, Mar 28, 2021 at 04:18:56PM +0200, Thomas Gleixner wrote:
-> On Fri, Mar 19 2021 at 14:28, Kees Cook wrote:
-> > +
-> > +	/*
-> > +	 * x86_64 stack alignment means 3 bits are ignored, so keep
-> > +	 * the top 5 bits. x86_32 needs only 2 bits of alignment, so
-> > +	 * the top 6 bits will be used.
-> > +	 */
-> > +	choose_random_kstack_offset(rdtsc() & 0xFF);
+Hi,
+
+Is there new comments on this patch? Could we move forward?
+
+Regards,
+ Mickaël
+
+
+On 16/03/2021 21:36, Mickaël Salaün wrote:
+> From: Mickaël Salaün <mic@linux.microsoft.com>
 > 
-> Comment mumbles about 5/6 bits and the TSC value is masked with 0xFF and
-> then the applied offset is itself limited with 0x3FF.
+> Being able to easily change root directories enables to ease some
+> development workflow and can be used as a tool to strengthen
+> unprivileged security sandboxes.  chroot(2) is not an access-control
+> mechanism per se, but it can be used to limit the absolute view of the
+> filesystem, and then limit ways to access data and kernel interfaces
+> (e.g. /proc, /sys, /dev, etc.).
 > 
-> Too many moving parts for someone who does not have the details of all
-> this memorized.
-
-Each piece is intentional -- I will improve the comments to explain
-each level of masking happening (implicit compiler stack alignment mask,
-explicit per-arch mask, and the VLA upper-bound protection mask).
-
--- 
-Kees Cook
+> Users may not wish to expose namespace complexity to potentially
+> malicious processes, or limit their use because of limited resources.
+> The chroot feature is much more simple (and limited) than the mount
+> namespace, but can still be useful.  As for containers, users of
+> chroot(2) should take care of file descriptors or data accessible by
+> other means (e.g. current working directory, leaked FDs, passed FDs,
+> devices, mount points, etc.).  There is a lot of literature that discuss
+> the limitations of chroot, and users of this feature should be aware of
+> the multiple ways to bypass it.  Using chroot(2) for security purposes
+> can make sense if it is combined with other features (e.g. dedicated
+> user, seccomp, LSM access-controls, etc.).
+> 
+> One could argue that chroot(2) is useless without a properly populated
+> root hierarchy (i.e. without /dev and /proc).  However, there are
+> multiple use cases that don't require the chrooting process to create
+> file hierarchies with special files nor mount points, e.g.:
+> * A process sandboxing itself, once all its libraries are loaded, may
+>   not need files other than regular files, or even no file at all.
+> * Some pre-populated root hierarchies could be used to chroot into,
+>   provided for instance by development environments or tailored
+>   distributions.
+> * Processes executed in a chroot may not require access to these special
+>   files (e.g. with minimal runtimes, or by emulating some special files
+>   with a LD_PRELOADed library or seccomp).
+> 
+> Allowing a task to change its own root directory is not a threat to the
+> system if we can prevent confused deputy attacks, which could be
+> performed through execution of SUID-like binaries.  This can be
+> prevented if the calling task sets PR_SET_NO_NEW_PRIVS on itself with
+> prctl(2).  To only affect this task, its filesystem information must not
+> be shared with other tasks, which can be achieved by not passing
+> CLONE_FS to clone(2).  A similar no_new_privs check is already used by
+> seccomp to avoid the same kind of security issues.  Furthermore, because
+> of its security use and to avoid giving a new way for attackers to get
+> out of a chroot (e.g. using /proc/<pid>/root, or chroot/chdir), an
+> unprivileged chroot is only allowed if the calling process is not
+> already chrooted.  This limitation is the same as for creating user
+> namespaces.
+> 
+> This change may not impact systems relying on other permission models
+> than POSIX capabilities (e.g. Tomoyo).  Being able to use chroot(2) on
+> such systems may require to update their security policies.
+> 
+> Only the chroot system call is relaxed with this no_new_privs check; the
+> init_chroot() helper doesn't require such change.
+> 
+> Allowing unprivileged users to use chroot(2) is one of the initial
+> objectives of no_new_privs:
+> https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html
+> This patch is a follow-up of a previous one sent by Andy Lutomirski:
+> https://lore.kernel.org/lkml/0e2f0f54e19bff53a3739ecfddb4ffa9a6dbde4d.1327858005.git.luto@amacapital.net/
+> 
+> Cc: Al Viro <viro@zeniv.linux.org.uk>
+> Cc: Andy Lutomirski <luto@amacapital.net>
+> Cc: Christian Brauner <christian.brauner@ubuntu.com>
+> Cc: Christoph Hellwig <hch@lst.de>
+> Cc: David Howells <dhowells@redhat.com>
+> Cc: Dominik Brodowski <linux@dominikbrodowski.net>
+> Cc: Eric W. Biederman <ebiederm@xmission.com>
+> Cc: James Morris <jmorris@namei.org>
+> Cc: Jann Horn <jannh@google.com>
+> Cc: John Johansen <john.johansen@canonical.com>
+> Cc: Kentaro Takeda <takedakn@nttdata.co.jp>
+> Cc: Serge Hallyn <serge@hallyn.com>
+> Cc: Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>
+> Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> Link: https://lore.kernel.org/r/20210316203633.424794-2-mic@digikod.net
+> ---
+> 
+> Changes since v4:
+> * Use READ_ONCE(current->fs->users) (found by Jann Horn).
+> * Remove ambiguous example in commit description.
+> * Add Reviewed-by Kees Cook.
+> 
+> Changes since v3:
+> * Move the new permission checks to a dedicated helper
+>   current_chroot_allowed() to make the code easier to read and align
+>   with user_path_at(), path_permission() and security_path_chroot()
+>   calls (suggested by Kees Cook).
+> * Remove now useless included file.
+> * Extend commit description.
+> * Rebase on v5.12-rc3 .
+> 
+> Changes since v2:
+> * Replace path_is_under() check with current_chrooted() to gain the same
+>   protection as create_user_ns() (suggested by Jann Horn). See commit
+>   3151527ee007 ("userns:  Don't allow creation if the user is chrooted")
+> 
+> Changes since v1:
+> * Replace custom is_path_beneath() with existing path_is_under().
+> ---
+>  fs/open.c | 23 +++++++++++++++++++++--
+>  1 file changed, 21 insertions(+), 2 deletions(-)
+> 
+> diff --git a/fs/open.c b/fs/open.c
+> index e53af13b5835..480010a551b2 100644
+> --- a/fs/open.c
+> +++ b/fs/open.c
+> @@ -532,6 +532,24 @@ SYSCALL_DEFINE1(fchdir, unsigned int, fd)
+>  	return error;
+>  }
+>  
+> +static inline int current_chroot_allowed(void)
+> +{
+> +	/*
+> +	 * Changing the root directory for the calling task (and its future
+> +	 * children) requires that this task has CAP_SYS_CHROOT in its
+> +	 * namespace, or be running with no_new_privs and not sharing its
+> +	 * fs_struct and not escaping its current root (cf. create_user_ns()).
+> +	 * As for seccomp, checking no_new_privs avoids scenarios where
+> +	 * unprivileged tasks can affect the behavior of privileged children.
+> +	 */
+> +	if (task_no_new_privs(current) && READ_ONCE(current->fs->users) == 1 &&
+> +			!current_chrooted())
+> +		return 0;
+> +	if (ns_capable(current_user_ns(), CAP_SYS_CHROOT))
+> +		return 0;
+> +	return -EPERM;
+> +}
+> +
+>  SYSCALL_DEFINE1(chroot, const char __user *, filename)
+>  {
+>  	struct path path;
+> @@ -546,9 +564,10 @@ SYSCALL_DEFINE1(chroot, const char __user *, filename)
+>  	if (error)
+>  		goto dput_and_out;
+>  
+> -	error = -EPERM;
+> -	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT))
+> +	error = current_chroot_allowed();
+> +	if (error)
+>  		goto dput_and_out;
+> +
+>  	error = security_path_chroot(&path);
+>  	if (error)
+>  		goto dput_and_out;
+> 
