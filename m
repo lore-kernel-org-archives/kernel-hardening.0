@@ -1,22 +1,21 @@
-Return-Path: <SRS0=1Vm4=I5=lists.openwall.com=kernel-hardening-return-21102-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=PiaC=I5=lists.openwall.com=kernel-hardening-return-21103-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-23.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-18.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 555D8C433B4
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Mar 2021 20:55:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EB1A3C43460
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Mar 2021 20:56:03 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 9329760BBB
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Mar 2021 20:55:53 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9329760BBB
+	by mail.kernel.org (Postfix) with SMTP id BA91E61076
+	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Mar 2021 20:56:02 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BA91E61076
 Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21102-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 11524 invoked by uid 550); 31 Mar 2021 20:55:19 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21103-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 11553 invoked by uid 550); 31 Mar 2021 20:55:20 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -24,41 +23,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11347 invoked from network); 31 Mar 2021 20:55:17 -0000
+Received: (qmail 11348 invoked from network); 31 Mar 2021 20:55:17 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=9ijlYcKqhmRnIjh3GfaZu6VzSGgGwccaBk76YZfh88U=;
-        b=WPzOZI/7h/nIlJykeZPJIx0pP8kh07MzAyzEZatHRuIhHB97Us6jbJeY/UYOlmqOhI
-         I0ecVNwtacYNG9lms+cBmhaFNl0rIzXFYDD0LRCOvReTo3zRWs7cC3oUH7692A+ZDVVi
-         2gGuQxNlOLAX8UFE9I1BxL/Nh/X2RmBxs4Bxw=
+        bh=RutUqpOitWCdbZalzYnzDPosoYLJFQ6+Y5v6HtBDvu0=;
+        b=B0icO6/yr0dDynv9hwYddqBiGLIt4DcoWjQPT9PN9IVNWo5+YrUFU1WeIzvM6tjMWl
+         xI9/tLr3SJTxoGy0LoVkSx4GmBCK9dEYvjO/4GFsV24/s+BQ8a3fuzACDbxJ0ysuR1iS
+         dONWvqlOfOKYo301gzM1pl4xw5AEnhi9BQYmk=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=9ijlYcKqhmRnIjh3GfaZu6VzSGgGwccaBk76YZfh88U=;
-        b=Si7FKvgWxNkHdMKz+4ViDR48f8ZQoOeIqPxd5tIxyKxJoxgyI6NJpwcq5c1ixeD3Ob
-         goOP4aDhRZuYOFEypnMPOAt0clCa9NgT4ju19C2BGXuKWMwt3ilUfa4zIgKMPNZIIk3A
-         kkEV/monG1CRulG9TuV5Y1tTrFDszDuE8ge6GqpNdu7Pu32TNQ10SpphRUWXn+7jfui5
-         2z9IlTJr35InKqZA+X34z94AXdzP4agQtyHjsA8Qb8yyXiCyD685+2V/4Y9caLHCJAEx
-         9re9c1P7rJbTvp5J5LKeYRzoLRyzrXz5InNM5MtpriE9O4tcO0hRx1qxox8n99OEcH2/
-         XUoQ==
-X-Gm-Message-State: AOAM533RH7GpErqYHfxXEOpY6AYnMPphxRg3fgCD8aFkPsIai42weTsJ
-	UxNAt/qsISgKPSRKyYLlVS8QSQ==
-X-Google-Smtp-Source: ABdhPJwjc+yR/F1HFGbsO3JvcN74Eaz7ocQ4vidQqR9lLlweYVUpN1FMKcKww5c8xRtm5T99yzj42g==
-X-Received: by 2002:a63:4f56:: with SMTP id p22mr4811122pgl.224.1617224106052;
-        Wed, 31 Mar 2021 13:55:06 -0700 (PDT)
+        bh=RutUqpOitWCdbZalzYnzDPosoYLJFQ6+Y5v6HtBDvu0=;
+        b=kk751Gm2lpoQfU8UXEwNXVZGCgQzp+S0pId1ebHtaTRKSZzIeUkdFsxIqGUQYxwHpY
+         ewjgpRZ48IyX+Gm+k7YEoztyC8wFUkekWb9FI9o1CGgSrj6a20TApA2cIFS9hibM8W0z
+         aZGOszv6tGG9B2eJpxMU0vLt6koh0XUsU2CU7Gfh1SvJvV5BKeDDnI+zRtbWFyOG6zq1
+         mfjIOHXmsKDH2wWIp19R20MA2suVnmzcIMegGk/DEN3VlRQH540QFBRsUHNUckjj84jG
+         kaznowfcAh15Yc6kpgPjlIJBknFjSo0TC5cvC1GZXeM9TQ7XuB5AikCJkG1re7lNyynJ
+         feWw==
+X-Gm-Message-State: AOAM533GxThV/XKEc9tOcCHTJvxyozxQGhiXLoqP6l6qWPLWn5Ehr5se
+	mKOQ2xNtWVmwI9koSfnzD+CpUw==
+X-Google-Smtp-Source: ABdhPJx2woNfGLMLPxFC9P5ASMxdM3TYjhsPyIqCnjNnW6a+mvqs/KcpVAasrY1wtmZzYnEhSm4lMg==
+X-Received: by 2002:aa7:8f04:0:b029:1f7:d71b:6a51 with SMTP id x4-20020aa78f040000b02901f7d71b6a51mr4688718pfr.4.1617224105749;
+        Wed, 31 Mar 2021 13:55:05 -0700 (PDT)
 From: Kees Cook <keescook@chromium.org>
 To: Will Deacon <will@kernel.org>
 Cc: Kees Cook <keescook@chromium.org>,
-	Peter Zijlstra <peterz@infradead.org>,
+	Elena Reshetova <elena.reshetova@intel.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
 	Catalin Marinas <catalin.marinas@arm.com>,
 	Mark Rutland <mark.rutland@arm.com>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Elena Reshetova <elena.reshetova@intel.com>,
 	x86@kernel.org,
 	Andy Lutomirski <luto@kernel.org>,
+	Peter Zijlstra <peterz@infradead.org>,
 	Alexander Potapenko <glider@google.com>,
 	Alexander Popov <alex.popov@linux.com>,
 	Ard Biesheuvel <ard.biesheuvel@linaro.org>,
@@ -74,70 +73,344 @@ Cc: Kees Cook <keescook@chromium.org>,
 	linux-arm-kernel@lists.infradead.org,
 	linux-mm@kvack.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v9 1/6] jump_label: Provide CONFIG-driven build state defaults
-Date: Wed, 31 Mar 2021 13:54:53 -0700
-Message-Id: <20210331205458.1871746-2-keescook@chromium.org>
+Subject: [PATCH v9 3/6] stack: Optionally randomize kernel stack offset each syscall
+Date: Wed, 31 Mar 2021 13:54:55 -0700
+Message-Id: <20210331205458.1871746-4-keescook@chromium.org>
 X-Mailer: git-send-email 2.25.1
 In-Reply-To: <20210331205458.1871746-1-keescook@chromium.org>
 References: <20210331205458.1871746-1-keescook@chromium.org>
 MIME-Version: 1.0
-X-Patch-Hashes: v=1; h=sha256; g=aa54c44d1d71b9550d6015efc734f667917094a1; i=Vishx6UyAXwYzcnoSyP+eBB3iQyx+/i5smsbQfc0cnA=; m=vc4sSYlf+uaSlLSFP5TpbQv56VaSRpBLpRuMltXaB4Q=; p=mNH2Bo/K9vrGz9sBtTDV8UFO0eJ8yv8BbR/DeIaO1es=
-X-Patch-Sig: m=pgp; i=keescook@chromium.org; s=0x0x8972F4DFDC6DC026; b=iQIzBAABCgAdFiEEpcP2jyKd1g9yPm4TiXL039xtwCYFAmBk4aEACgkQiXL039xtwCaqhg/+KwH hAw/wsPS1SeVqGJmKPfdQr82hCM0Ml7SVm9J6WipR0nxoHNTRoTq5fJgQ/HAKX35mqAAL3tYGqBi0 2+4WfT2O7DCmcfB4kxHIAZPP1QJPHiUWqb+fNCgutJ9rorMb8tWzDisghAXGGA5mLJTb+e3za84Mg Tz11kRO6uL8orQe4PDGMbtu4ZCR98bQV+/s0SJ2edzBC6JEfXsZGQR+aVB8IXsP7SLf4m7cqs+xko 0HsCJcGnkdPob7OY3xJ5xX638TmezTLmrLymvZQF/3nSqc6H9sGuaiM3d+AM23zJ3MCY6ZlyJXvV8 GzbL/fy12rUa+H/CHYoxEjJJDyopHQQOf677UExOEVO+E4cujeCRzdKv5dGhmFIcpDsFb7FlVCloU ORxvUCgvTSBkWF3qpl9OVmYHU6SKzdG4TU/awDvK6NojCgqhZpoIKjFDsImZzpta59PWF0iJQY7XJ jEq3UVi32y1V10znVqFCRaTTsYnknmSRGohaJqK9aIN29Ua/iBZooygQSNVS0ae3NR3YEQRHRoEZV kgil7zpFlzwuBxrLHrYvvKq3r0q0H4hsoDpFHgHGDZaTXKU4EXWsZ66xrOPJi0r6R9a8pYf+QDjxC cqQfU25fy65WH6DRJBFFXm3eRu/MP8OcVb83DQXHPhdKGC0lf0O4/2ELWKbU5SbM=
+X-Patch-Hashes: v=1; h=sha256; g=7dee8e580dc00790294e5ee00f7f28b6b5fbea41; i=R0fcIKmEUh8zot7Dpk8JcJdIeXVfXkVsg5oQI7Df8iY=; m=DpAISBt1P8rBqdsbU5gorkSdKBigCKStgTSYV1Mo6JQ=; p=mhC0jrFn+HYXfvIhHIo/0WcmsabsohrY2touYM9hldY=
+X-Patch-Sig: m=pgp; i=keescook@chromium.org; s=0x0x8972F4DFDC6DC026; b=iQIzBAABCgAdFiEEpcP2jyKd1g9yPm4TiXL039xtwCYFAmBk4aEACgkQiXL039xtwCYboA/9GIw UcynNMpQH11h3wtw3gx/xsdWpppdig69XDHDbn3JrQ8ZSAaVigwqEjUox/blySdc7pfLt79bza00U EWvwdisSblgOzT9qppKwfA7nIaU+9TJX2Mv0juKKlg3Xbx4AcVtnmfoMw+lsH0JGC1z5OAdkfisMT S9DdCs7HxkSA5Gbs3jgj+0QK3FzfSgAJqLC4yG4nYaOkeSusbCyrSJBL7oLPfUC0uVv9lDK4az6mH hYf7C5IUvr1dx4JisR+cYDuvBucn+kFhCv3nNs7reCe4SVwxb/3IAx8PiCNED5yRhF37mzQ43SR5J KM0gYvTwvBXWgo/qv1dlxd3aZ+CvL9y4BrUgvVWWuv6nN72uKJ3xl6Axzug27Iz9500NuZAD1DaXH JYp9n9V+j7uIZLQvKA6du4Vu15bVr57USm2UdfcZhjcE9e+f9x5NSLXBhNPridK+ymOltpbJPXcyJ eq4H8FrDXqjSiyzELpDxrXqfHLnS9z0QfAWSxbjanIbAzSbhNe1JnJANXXmQlNmDqMBXnYmPRm3p4 zZNeaWDKssrIvlT3Tl+V/I2s6L9fj2SRw+HC6aNYkS14iui65RCDhKYrrwxa2dbPCqIucwuOo85py d5IkdYfp5Sh9aYq4M0fZvi8UbAKao9YpIXTrvu3UK9zcdFBJUdLYkQv/L4fpo20w=
 Content-Transfer-Encoding: 8bit
 
-As shown in jump_label.h[1], choosing the initial state of static
-branches changes the assembly layout. If the condition is expected to
-be likely it's inline, and if unlikely it is out of line via a jump. A
-few places in the kernel use (or could be using) a CONFIG to choose the
-default state, which would give a small performance benefit to their
-compile-time declared default. Provide the infrastructure to do this.
+This provides the ability for architectures to enable kernel stack base
+address offset randomization. This feature is controlled by the boot
+param "randomize_kstack_offset=on/off", with its default value set by
+CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT.
 
-[1] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/linux/jump_label.h?h=v5.11#n398
+This feature is based on the original idea from the last public release
+of PaX's RANDKSTACK feature: https://pax.grsecurity.net/docs/randkstack.txt
+All the credit for the original idea goes to the PaX team. Note that
+the design and implementation of this upstream randomize_kstack_offset
+feature differs greatly from the RANDKSTACK feature (see below).
 
-Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Link: https://lore.kernel.org/lkml/20200324220641.GT2452@worktop.programming.kicks-ass.net/
+Reasoning for the feature:
+
+This feature aims to make harder the various stack-based attacks that
+rely on deterministic stack structure. We have had many such attacks in
+past (just to name few):
+
+https://jon.oberheide.org/files/infiltrate12-thestackisback.pdf
+https://jon.oberheide.org/files/stackjacking-infiltrate11.pdf
+https://googleprojectzero.blogspot.com/2016/06/exploiting-recursion-in-linux-kernel_20.html
+
+As Linux kernel stack protections have been constantly improving
+(vmap-based stack allocation with guard pages, removal of thread_info,
+STACKLEAK), attackers have had to find new ways for their exploits
+to work. They have done so, continuing to rely on the kernel's stack
+determinism, in situations where VMAP_STACK and THREAD_INFO_IN_TASK_STRUCT
+were not relevant. For example, the following recent attacks would have
+been hampered if the stack offset was non-deterministic between syscalls:
+
+https://repositorio-aberto.up.pt/bitstream/10216/125357/2/374717.pdf
+(page 70: targeting the pt_regs copy with linear stack overflow)
+
+https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
+(leaked stack address from one syscall as a target during next syscall)
+
+The main idea is that since the stack offset is randomized on each system
+call, it is harder for an attack to reliably land in any particular place
+on the thread stack, even with address exposures, as the stack base will
+change on the next syscall. Also, since randomization is performed after
+placing pt_regs, the ptrace-based approach[1] to discover the randomized
+offset during a long-running syscall should not be possible.
+
+Design description:
+
+During most of the kernel's execution, it runs on the "thread stack",
+which is pretty deterministic in its structure: it is fixed in size,
+and on every entry from userspace to kernel on a syscall the thread
+stack starts construction from an address fetched from the per-cpu
+cpu_current_top_of_stack variable. The first element to be pushed to the
+thread stack is the pt_regs struct that stores all required CPU registers
+and syscall parameters. Finally the specific syscall function is called,
+with the stack being used as the kernel executes the resulting request.
+
+The goal of randomize_kstack_offset feature is to add a random offset
+after the pt_regs has been pushed to the stack and before the rest of the
+thread stack is used during the syscall processing, and to change it every
+time a process issues a syscall. The source of randomness is currently
+architecture-defined (but x86 is using the low byte of rdtsc()). Future
+improvements for different entropy sources is possible, but out of scope
+for this patch. Further more, to add more unpredictability, new offsets
+are chosen at the end of syscalls (the timing of which should be less
+easy to measure from userspace than at syscall entry time), and stored
+in a per-CPU variable, so that the life of the value does not stay
+explicitly tied to a single task.
+
+As suggested by Andy Lutomirski, the offset is added using alloca()
+and an empty asm() statement with an output constraint, since it avoids
+changes to assembly syscall entry code, to the unwinder, and provides
+correct stack alignment as defined by the compiler.
+
+In order to make this available by default with zero performance impact
+for those that don't want it, it is boot-time selectable with static
+branches. This way, if the overhead is not wanted, it can just be
+left turned off with no performance impact.
+
+The generated assembly for x86_64 with GCC looks like this:
+
+...
+ffffffff81003977: 65 8b 05 02 ea 00 7f  mov %gs:0x7f00ea02(%rip),%eax
+					    # 12380 <kstack_offset>
+ffffffff8100397e: 25 ff 03 00 00        and $0x3ff,%eax
+ffffffff81003983: 48 83 c0 0f           add $0xf,%rax
+ffffffff81003987: 25 f8 07 00 00        and $0x7f8,%eax
+ffffffff8100398c: 48 29 c4              sub %rax,%rsp
+ffffffff8100398f: 48 8d 44 24 0f        lea 0xf(%rsp),%rax
+ffffffff81003994: 48 83 e0 f0           and $0xfffffffffffffff0,%rax
+...
+
+As a result of the above stack alignment, this patch introduces about
+5 bits of randomness after pt_regs is spilled to the thread stack on
+x86_64, and 6 bits on x86_32 (since its has 1 fewer bit required for
+stack alignment). The amount of entropy could be adjusted based on how
+much of the stack space we wish to trade for security.
+
+My measure of syscall performance overhead (on x86_64):
+
+lmbench: /usr/lib/lmbench/bin/x86_64-linux-gnu/lat_syscall -N 10000 null
+    randomize_kstack_offset=y	Simple syscall: 0.7082 microseconds
+    randomize_kstack_offset=n	Simple syscall: 0.7016 microseconds
+
+So, roughly 0.9% overhead growth for a no-op syscall, which is very
+manageable. And for people that don't want this, it's off by default.
+
+There are two gotchas with using the alloca() trick. First,
+compilers that have Stack Clash protection (-fstack-clash-protection)
+enabled by default (e.g. Ubuntu[3]) add pagesize stack probes to
+any dynamic stack allocations. While the randomization offset is
+always less than a page, the resulting assembly would still contain
+(unreachable!) probing routines, bloating the resulting assembly. To
+avoid this, -fno-stack-clash-protection is unconditionally added to
+the kernel Makefile since this is the only dynamic stack allocation in
+the kernel (now that VLAs have been removed) and it is provably safe
+from Stack Clash style attacks.
+
+The second gotcha with alloca() is a negative interaction with
+-fstack-protector*, in that it sees the alloca() as an array allocation,
+which triggers the unconditional addition of the stack canary function
+pre/post-amble which slows down syscalls regardless of the static
+branch. In order to avoid adding this unneeded check and its associated
+performance impact, architectures need to carefully remove uses of
+-fstack-protector-strong (or -fstack-protector) in the compilation units
+that use the add_random_kstack() macro and to audit the resulting stack
+mitigation coverage (to make sure no desired coverage disappears). No
+change is visible for this on x86 because the stack protector is already
+unconditionally disabled for the compilation unit, but the change is
+required on arm64. There is, unfortunately, no attribute that can be
+used to disable stack protector for specific functions.
+
+Comparison to PaX RANDKSTACK feature:
+
+The RANDKSTACK feature randomizes the location of the stack start
+(cpu_current_top_of_stack), i.e. including the location of pt_regs
+structure itself on the stack. Initially this patch followed the same
+approach, but during the recent discussions[2], it has been determined
+to be of a little value since, if ptrace functionality is available for
+an attacker, they can use PTRACE_PEEKUSR/PTRACE_POKEUSR to read/write
+different offsets in the pt_regs struct, observe the cache behavior of
+the pt_regs accesses, and figure out the random stack offset. Another
+difference is that the random offset is stored in a per-cpu variable,
+rather than having it be per-thread. As a result, these implementations
+differ a fair bit in their implementation details and results, though
+obviously the intent is similar.
+
+[1] https://lore.kernel.org/kernel-hardening/2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com/
+[2] https://lore.kernel.org/kernel-hardening/20190329081358.30497-1-elena.reshetova@intel.com/
+[3] https://lists.ubuntu.com/archives/ubuntu-devel/2019-June/040741.html
+
+Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
+Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+Link: https://lore.kernel.org/r/20190415060918.3766-1-elena.reshetova@intel.com
+Reviewed-by: Thomas Gleixner <tglx@linutronix.de>
+Link: https://lore.kernel.org/lkml/87im5769op.ffs@nanos.tec.linutronix.de/
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- include/linux/jump_label.h | 19 +++++++++++++++++++
- 1 file changed, 19 insertions(+)
+ .../admin-guide/kernel-parameters.txt         | 11 ++++
+ Makefile                                      |  4 ++
+ arch/Kconfig                                  | 23 ++++++++
+ include/linux/randomize_kstack.h              | 54 +++++++++++++++++++
+ init/main.c                                   | 23 ++++++++
+ 5 files changed, 115 insertions(+)
+ create mode 100644 include/linux/randomize_kstack.h
 
-diff --git a/include/linux/jump_label.h b/include/linux/jump_label.h
-index d92691262f51..05f5554d860f 100644
---- a/include/linux/jump_label.h
-+++ b/include/linux/jump_label.h
-@@ -382,6 +382,21 @@ struct static_key_false {
- 		[0 ... (count) - 1] = STATIC_KEY_FALSE_INIT,	\
- 	}
+diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+index 04545725f187..bee8644a192e 100644
+--- a/Documentation/admin-guide/kernel-parameters.txt
++++ b/Documentation/admin-guide/kernel-parameters.txt
+@@ -4061,6 +4061,17 @@
+ 			fully seed the kernel's CRNG. Default is controlled
+ 			by CONFIG_RANDOM_TRUST_CPU.
  
-+#define _DEFINE_STATIC_KEY_1(name)	DEFINE_STATIC_KEY_TRUE(name)
-+#define _DEFINE_STATIC_KEY_0(name)	DEFINE_STATIC_KEY_FALSE(name)
-+#define DEFINE_STATIC_KEY_MAYBE(cfg, name)			\
-+	__PASTE(_DEFINE_STATIC_KEY_, IS_ENABLED(cfg))(name)
++	randomize_kstack_offset=
++			[KNL] Enable or disable kernel stack offset
++			randomization, which provides roughly 5 bits of
++			entropy, frustrating memory corruption attacks
++			that depend on stack address determinism or
++			cross-syscall address exposures. This is only
++			available on architectures that have defined
++			CONFIG_HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET.
++			Format: <bool>  (1/Y/y=enable, 0/N/n=disable)
++			Default is CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT.
 +
-+#define _DEFINE_STATIC_KEY_RO_1(name)	DEFINE_STATIC_KEY_TRUE_RO(name)
-+#define _DEFINE_STATIC_KEY_RO_0(name)	DEFINE_STATIC_KEY_FALSE_RO(name)
-+#define DEFINE_STATIC_KEY_MAYBE_RO(cfg, name)			\
-+	__PASTE(_DEFINE_STATIC_KEY_RO_, IS_ENABLED(cfg))(name)
-+
-+#define _DECLARE_STATIC_KEY_1(name)	DECLARE_STATIC_KEY_TRUE(name)
-+#define _DECLARE_STATIC_KEY_0(name)	DECLARE_STATIC_KEY_FALSE(name)
-+#define DECLARE_STATIC_KEY_MAYBE(cfg, name)			\
-+	__PASTE(_DECLARE_STATIC_KEY_, IS_ENABLED(cfg))(name)
-+
- extern bool ____wrong_branch_error(void);
+ 	ras=option[,option,...]	[KNL] RAS-specific options
  
- #define static_key_enabled(x)							\
-@@ -482,6 +497,10 @@ extern bool ____wrong_branch_error(void);
+ 		cec_disable	[X86]
+diff --git a/Makefile b/Makefile
+index 31dcdb3d61fa..8a959a264588 100644
+--- a/Makefile
++++ b/Makefile
+@@ -811,6 +811,10 @@ KBUILD_CFLAGS	+= -ftrivial-auto-var-init=zero
+ KBUILD_CFLAGS	+= -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
+ endif
  
- #endif /* CONFIG_JUMP_LABEL */
- 
-+#define static_branch_maybe(config, x)					\
-+	(IS_ENABLED(config) ? static_branch_likely(x)			\
-+			    : static_branch_unlikely(x))
++# While VLAs have been removed, GCC produces unreachable stack probes
++# for the randomize_kstack_offset feature. Disable it for all compilers.
++KBUILD_CFLAGS	+= $(call cc-option, -fno-stack-clash-protection)
 +
- /*
-  * Advanced usage; refcount, branch is enabled when: count != 0
-  */
+ DEBUG_CFLAGS	:=
+ 
+ # Workaround for GCC versions < 5.0
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 2bb30673d8e6..4fe6b047fcbc 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -1055,6 +1055,29 @@ config VMAP_STACK
+ 	  backing virtual mappings with real shadow memory, and KASAN_VMALLOC
+ 	  must be enabled.
+ 
++config HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
++	def_bool n
++	help
++	  An arch should select this symbol if it can support kernel stack
++	  offset randomization with calls to add_random_kstack_offset()
++	  during syscall entry and choose_random_kstack_offset() during
++	  syscall exit. Careful removal of -fstack-protector-strong and
++	  -fstack-protector should also be applied to the entry code and
++	  closely examined, as the artificial stack bump looks like an array
++	  to the compiler, so it will attempt to add canary checks regardless
++	  of the static branch state.
++
++config RANDOMIZE_KSTACK_OFFSET_DEFAULT
++	bool "Randomize kernel stack offset on syscall entry"
++	depends on HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
++	help
++	  The kernel stack offset can be randomized (after pt_regs) by
++	  roughly 5 bits of entropy, frustrating memory corruption
++	  attacks that depend on stack address determinism or
++	  cross-syscall address exposures. This feature is controlled
++	  by kernel boot param "randomize_kstack_offset=on/off", and this
++	  config chooses the default boot state.
++
+ config ARCH_OPTIONAL_KERNEL_RWX
+ 	def_bool n
+ 
+diff --git a/include/linux/randomize_kstack.h b/include/linux/randomize_kstack.h
+new file mode 100644
+index 000000000000..0452e0063cb1
+--- /dev/null
++++ b/include/linux/randomize_kstack.h
+@@ -0,0 +1,54 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++#ifndef _LINUX_RANDOMIZE_KSTACK_H
++#define _LINUX_RANDOMIZE_KSTACK_H
++
++#include <linux/kernel.h>
++#include <linux/jump_label.h>
++#include <linux/percpu-defs.h>
++
++DECLARE_STATIC_KEY_MAYBE(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,
++			 randomize_kstack_offset);
++DECLARE_PER_CPU(u32, kstack_offset);
++
++/*
++ * Do not use this anywhere else in the kernel. This is used here because
++ * it provides an arch-agnostic way to grow the stack with correct
++ * alignment. Also, since this use is being explicitly masked to a max of
++ * 10 bits, stack-clash style attacks are unlikely. For more details see
++ * "VLAs" in Documentation/process/deprecated.rst
++ */
++void *__builtin_alloca(size_t size);
++/*
++ * Use, at most, 10 bits of entropy. We explicitly cap this to keep the
++ * "VLA" from being unbounded (see above). 10 bits leaves enough room for
++ * per-arch offset masks to reduce entropy (by removing higher bits, since
++ * high entropy may overly constrain usable stack space), and for
++ * compiler/arch-specific stack alignment to remove the lower bits.
++ */
++#define KSTACK_OFFSET_MAX(x)	((x) & 0x3FF)
++
++/*
++ * These macros must be used during syscall entry when interrupts and
++ * preempt are disabled, and after user registers have been stored to
++ * the stack.
++ */
++#define add_random_kstack_offset() do {					\
++	if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,	\
++				&randomize_kstack_offset)) {		\
++		u32 offset = __this_cpu_read(kstack_offset);		\
++		u8 *ptr = __builtin_alloca(KSTACK_OFFSET_MAX(offset));	\
++		/* Keep allocation even after "ptr" loses scope. */	\
++		asm volatile("" : "=m"(*ptr) :: "memory");		\
++	}								\
++} while (0)
++
++#define choose_random_kstack_offset(rand) do {				\
++	if (static_branch_maybe(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,	\
++				&randomize_kstack_offset)) {		\
++		u32 offset = __this_cpu_read(kstack_offset);		\
++		offset ^= (rand);					\
++		__this_cpu_write(kstack_offset, offset);		\
++	}								\
++} while (0)
++
++#endif
+diff --git a/init/main.c b/init/main.c
+index 53b278845b88..f498aac26e8c 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -844,6 +844,29 @@ static void __init mm_init(void)
+ 	pti_init();
+ }
+ 
++#ifdef CONFIG_HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET
++DEFINE_STATIC_KEY_MAYBE_RO(CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT,
++			   randomize_kstack_offset);
++DEFINE_PER_CPU(u32, kstack_offset);
++
++static int __init early_randomize_kstack_offset(char *buf)
++{
++	int ret;
++	bool bool_result;
++
++	ret = kstrtobool(buf, &bool_result);
++	if (ret)
++		return ret;
++
++	if (bool_result)
++		static_branch_enable(&randomize_kstack_offset);
++	else
++		static_branch_disable(&randomize_kstack_offset);
++	return 0;
++}
++early_param("randomize_kstack_offset", early_randomize_kstack_offset);
++#endif
++
+ void __init __weak arch_call_rest_init(void)
+ {
+ 	rest_init();
 -- 
 2.25.1
 
