@@ -1,20 +1,20 @@
-Return-Path: <SRS0=kXB+=I5=lists.openwall.com=kernel-hardening-return-21107-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=pzXM=I6=lists.openwall.com=kernel-hardening-return-21108-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 94033C43460
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Mar 2021 22:38:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8212FC433B4
+	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Apr 2021 02:15:34 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 8A0F161008
-	for <kernel-hardening@archiver.kernel.org>; Wed, 31 Mar 2021 22:38:51 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8A0F161008
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linutronix.de
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21107-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24359 invoked by uid 550); 31 Mar 2021 22:38:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id 27BC561006
+	for <kernel-hardening@archiver.kernel.org>; Thu,  1 Apr 2021 02:15:32 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 27BC561006
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=zeniv.linux.org.uk
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21108-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 28298 invoked by uid 550); 1 Apr 2021 02:15:24 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,85 +22,133 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24339 invoked from network); 31 Mar 2021 22:38:43 -0000
-From: Thomas Gleixner <tglx@linutronix.de>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linutronix.de;
-	s=2020; t=1617230311;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=MTAca8jamyiv4OQC/0ehNmkUzrYgK82+B2gnABlfuE4=;
-	b=wLJuSNRlSVF/PkDm3fuzha7lpECmwuVqtA03/nXyQDXDAWvBirH+/fYTNYqrnlItwtLK39
-	ueabTGEjWfDwJRWajmljjDlBBRKb1e4iWShFRNEaFV/o2ysNaExtYxnlKlAmRe3XZMJnKG
-	bNQvUoKtTg4fdrC48N52k6UMO9iR3DD92508uibjdl9Mmhw/WkzMQdF6Rjwqo7Q7jvmbj+
-	WxukKQ1OuTjvMmPRlRVQVfC0Htd3LczE5FTUIDbv/T8HXjwy0JEUrOjh1ErBC+f7z6rUNc
-	jP8Y+MbOuHb2pyR7nVtU21KL+1pc2hsRU+1ZQlaM5d6XOuJe6UKGsmHaYhzSQA==
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=linutronix.de;
-	s=2020e; t=1617230311;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=MTAca8jamyiv4OQC/0ehNmkUzrYgK82+B2gnABlfuE4=;
-	b=yTpBUljzXJtrMhJ2lcQnuH9tBbKROS0ovJE/lzzYE7vrNqhZtLuA5E4XjbMAeCAsuBkJfi
-	LNLwWc3mHTWDTwBw==
-To: Kees Cook <keescook@chromium.org>
-Cc: Elena Reshetova <elena.reshetova@intel.com>, x86@kernel.org, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Alexander Potapenko <glider@google.com>, Alexander Popov <alex.popov@linux.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jann Horn <jannh@google.com>, Vlastimil Babka <vbabka@suse.cz>, David Hildenbrand <david@redhat.com>, Mike Rapoport <rppt@linux.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Jonathan Corbet <corbet@lwn.net>, Randy Dunlap <rdunlap@infradead.org>, kernel-hardening@lists.openwall.com, linux-hardening@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v8 3/6] stack: Optionally randomize kernel stack offset each syscall
-In-Reply-To: <202103311453.A840B7FC5@keescook>
-References: <20210330205750.428816-1-keescook@chromium.org> <20210330205750.428816-4-keescook@chromium.org> <87im5769op.ffs@nanos.tec.linutronix.de> <202103311453.A840B7FC5@keescook>
-Date: Thu, 01 Apr 2021 00:38:31 +0200
-Message-ID: <87v9973q54.ffs@nanos.tec.linutronix.de>
+Received: (qmail 28278 invoked from network); 1 Apr 2021 02:15:23 -0000
+Date: Thu, 1 Apr 2021 02:14:45 +0000
+From: Al Viro <viro@zeniv.linux.org.uk>
+To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
+Cc: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Andy Lutomirski <luto@amacapital.net>,
+	Anton Ivanov <anton.ivanov@cambridgegreys.com>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	David Howells <dhowells@redhat.com>, Jeff Dike <jdike@addtoit.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Michael Kerrisk <mtk.manpages@gmail.com>,
+	Richard Weinberger <richard@nod.at>, Shuah Khan <shuah@kernel.org>,
+	Vincent Dagonneau <vincent.dagonneau@ssi.gouv.fr>,
+	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+	linux-arch@vger.kernel.org, linux-doc@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	linux-security-module@vger.kernel.org, x86@kernel.org,
+	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@linux.microsoft.com>,
+	James Morris <jmorris@namei.org>,
+	"Serge E . Hallyn" <serge@hallyn.com>
+Subject: Re: [PATCH v31 07/12] landlock: Support filesystem access-control
+Message-ID: <YGUslUPwp85Zrp4t@zeniv-ca.linux.org.uk>
+References: <20210324191520.125779-1-mic@digikod.net>
+ <20210324191520.125779-8-mic@digikod.net>
+ <d2764451-8970-6cbd-e2bf-254a42244ffc@digikod.net>
 MIME-Version: 1.0
-Content-Type: text/plain
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <d2764451-8970-6cbd-e2bf-254a42244ffc@digikod.net>
+Sender: Al Viro <viro@ftp.linux.org.uk>
 
-On Wed, Mar 31 2021 at 14:54, Kees Cook wrote:
-> On Wed, Mar 31, 2021 at 09:53:26AM +0200, Thomas Gleixner wrote:
->> On Tue, Mar 30 2021 at 13:57, Kees Cook wrote:
->> > +/*
->> > + * Do not use this anywhere else in the kernel. This is used here because
->> > + * it provides an arch-agnostic way to grow the stack with correct
->> > + * alignment. Also, since this use is being explicitly masked to a max of
->> > + * 10 bits, stack-clash style attacks are unlikely. For more details see
->> > + * "VLAs" in Documentation/process/deprecated.rst
->> > + * The asm statement is designed to convince the compiler to keep the
->> > + * allocation around even after "ptr" goes out of scope.
->> 
->> Nit. That explanation of "ptr" might be better placed right at the
->> add_random...() macro.
->
-> Ah, yes! Fixed in v9.
+On Wed, Mar 31, 2021 at 07:33:50PM +0200, Mickaël Salaün wrote:
 
-Hmm, looking at V9 the "ptr" thing got lost ....
+> > +static inline u64 unmask_layers(
+> > +		const struct landlock_ruleset *const domain,
+> > +		const struct path *const path, const u32 access_request,
+> > +		u64 layer_mask)
+> > +{
+> > +	const struct landlock_rule *rule;
+> > +	const struct inode *inode;
+> > +	size_t i;
+> > +
+> > +	if (d_is_negative(path->dentry))
+> > +		/* Continues to walk while there is no mapped inode. */
+				     ^^^^^
+Odd comment, that...
 
-> +/*
-> + * Do not use this anywhere else in the kernel. This is used here because
-> + * it provides an arch-agnostic way to grow the stack with correct
-> + * alignment. Also, since this use is being explicitly masked to a max of
-> + * 10 bits, stack-clash style attacks are unlikely. For more details see
-> + * "VLAs" in Documentation/process/deprecated.rst
-> + */
-> +void *__builtin_alloca(size_t size);
-> +/*
-> + * Use, at most, 10 bits of entropy. We explicitly cap this to keep the
-> + * "VLA" from being unbounded (see above). 10 bits leaves enough room for
-> + * per-arch offset masks to reduce entropy (by removing higher bits, since
-> + * high entropy may overly constrain usable stack space), and for
-> + * compiler/arch-specific stack alignment to remove the lower bits.
-> + */
-> +#define KSTACK_OFFSET_MAX(x)	((x) & 0x3FF)
-> +
-> +/*
-> + * These macros must be used during syscall entry when interrupts and
-> + * preempt are disabled, and after user registers have been stored to
-> + * the stack.
-> + */
-> +#define add_random_kstack_offset() do {					\
+> > +static int check_access_path(const struct landlock_ruleset *const domain,
+> > +		const struct path *const path, u32 access_request)
+> > +{
 
-> Do you want to take this via -tip (and leave off the arm64 patch until
-> it is acked), or would you rather it go via arm64? (I've sent v9 now...)
+> > +	walker_path = *path;
+> > +	path_get(&walker_path);
 
-Either way is fine.
+> > +	while (true) {
+> > +		struct dentry *parent_dentry;
+> > +
+> > +		layer_mask = unmask_layers(domain, &walker_path,
+> > +				access_request, layer_mask);
+> > +		if (layer_mask == 0) {
+> > +			/* Stops when a rule from each layer grants access. */
+> > +			allowed = true;
+> > +			break;
+> > +		}
+> > +
+> > +jump_up:
+> > +		if (walker_path.dentry == walker_path.mnt->mnt_root) {
+> > +			if (follow_up(&walker_path)) {
+> > +				/* Ignores hidden mount points. */
+> > +				goto jump_up;
+> > +			} else {
+> > +				/*
+> > +				 * Stops at the real root.  Denies access
+> > +				 * because not all layers have granted access.
+> > +				 */
+> > +				allowed = false;
+> > +				break;
+> > +			}
+> > +		}
+> > +		if (unlikely(IS_ROOT(walker_path.dentry))) {
+> > +			/*
+> > +			 * Stops at disconnected root directories.  Only allows
+> > +			 * access to internal filesystems (e.g. nsfs, which is
+> > +			 * reachable through /proc/<pid>/ns/<namespace>).
+> > +			 */
+> > +			allowed = !!(walker_path.mnt->mnt_flags & MNT_INTERNAL);
+> > +			break;
+> > +		}
+> > +		parent_dentry = dget_parent(walker_path.dentry);
+> > +		dput(walker_path.dentry);
+> > +		walker_path.dentry = parent_dentry;
+> > +	}
+> > +	path_put(&walker_path);
+> > +	return allowed ? 0 : -EACCES;
 
-Thanks,
+That's a whole lot of grabbing/dropping references...  I realize that it's
+an utterly tactless question, but... how costly it is?  IOW, do you have
+profiling data?
 
-        tglx
+> > +/*
+> > + * pivot_root(2), like mount(2), changes the current mount namespace.  It must
+> > + * then be forbidden for a landlocked process.
+
+... and cross-directory rename(2) can change the tree topology.  Do you ban that
+as well?
+
+[snip]
+
+> > +static int hook_path_rename(const struct path *const old_dir,
+> > +		struct dentry *const old_dentry,
+> > +		const struct path *const new_dir,
+> > +		struct dentry *const new_dentry)
+> > +{
+> > +	const struct landlock_ruleset *const dom =
+> > +		landlock_get_current_domain();
+> > +
+> > +	if (!dom)
+> > +		return 0;
+> > +	/* The mount points are the same for old and new paths, cf. EXDEV. */
+> > +	if (old_dir->dentry != new_dir->dentry)
+> > +		/* For now, forbids reparenting. */
+> > +		return -EACCES;
+
+You do, apparently, and not in a way that would have the userland fall
+back to copy+unlink.  Lovely...  Does e.g. git survive such restriction?
+Same question for your average package build...
