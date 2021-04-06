@@ -1,21 +1,21 @@
-Return-Path: <SRS0=/9NZ=JC=lists.openwall.com=kernel-hardening-return-21146-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=9mUs=JD=lists.openwall.com=kernel-hardening-return-21147-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.7 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable autolearn_force=no
+X-Spam-Status: No, score=-0.7 required=3.0 tests=BAYES_00,DKIM_ADSP_CUSTOM_MED,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BA6EFC433B4
-	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Apr 2021 17:03:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 95D04C433ED
+	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Apr 2021 15:45:08 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id DBF39613AE
-	for <kernel-hardening@archiver.kernel.org>; Mon,  5 Apr 2021 17:03:29 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DBF39613AE
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21146-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 10045 invoked by uid 550); 5 Apr 2021 17:03:23 -0000
+	by mail.kernel.org (Postfix) with SMTP id 8D147613B8
+	for <kernel-hardening@archiver.kernel.org>; Tue,  6 Apr 2021 15:45:07 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8D147613B8
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21147-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20281 invoked by uid 550); 6 Apr 2021 15:44:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,142 +23,47 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 10020 invoked from network); 5 Apr 2021 17:03:22 -0000
-From: ebiederm@xmission.com (Eric W. Biederman)
-To: Alexey Gladkov <gladkov.alexey@gmail.com>
-Cc: LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux Containers <containers@lists.linux-foundation.org>,  linux-mm@kvack.org,  Alexey Gladkov <legion@kernel.org>,  Andrew Morton <akpm@linux-foundation.org>,  Christian Brauner <christian.brauner@ubuntu.com>,  Jann Horn <jannh@google.com>,  Jens Axboe <axboe@kernel.dk>,  Kees Cook <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,  Oleg Nesterov <oleg@redhat.com>
+Received: (qmail 20260 invoked from network); 6 Apr 2021 15:44:59 -0000
+Date: Tue, 6 Apr 2021 17:44:44 +0200
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: LKML <linux-kernel@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux Containers <containers@lists.linux-foundation.org>,
+	linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	Jann Horn <jannh@google.com>, Jens Axboe <axboe@kernel.dk>,
+	Kees Cook <keescook@chromium.org>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Oleg Nesterov <oleg@redhat.com>
+Subject: Re: [PATCH v9 4/8] Reimplement RLIMIT_NPROC on top of ucounts
+Message-ID: <20210406154444.icpvezlq3izzxf5t@example.org>
 References: <cover.1616533074.git.gladkov.alexey@gmail.com>
-Date: Mon, 05 Apr 2021 12:03:05 -0500
-In-Reply-To: <cover.1616533074.git.gladkov.alexey@gmail.com> (Alexey Gladkov's
-	message of "Tue, 23 Mar 2021 21:59:09 +0100")
-Message-ID: <m17dlgll4m.fsf@fess.ebiederm.org>
-User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
+ <8f0c2888b4e92d51239e154b82d75972e7e39833.1616533074.git.gladkov.alexey@gmail.com>
+ <m1y2dwllfg.fsf@fess.ebiederm.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-X-XM-SPF: eid=1lTSd2-0000VS-UE;;;mid=<m17dlgll4m.fsf@fess.ebiederm.org>;;;hst=in01.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
-X-XM-AID: U2FsdGVkX18auhi4AyUcfdr4Byj9mZr34hCEOOzN8aw=
-X-SA-Exim-Connect-IP: 68.227.160.95
-X-SA-Exim-Mail-From: ebiederm@xmission.com
-Subject: Re: [PATCH v9 0/8] Count rlimits in each user namespace
-X-SA-Exim-Version: 4.2.1 (built Thu, 05 May 2016 13:38:54 -0600)
-X-SA-Exim-Scanned: Yes (on in01.mta.xmission.com)
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <m1y2dwllfg.fsf@fess.ebiederm.org>
 
-Alexey Gladkov <gladkov.alexey@gmail.com> writes:
+On Mon, Apr 05, 2021 at 11:56:35AM -0500, Eric W. Biederman wrote:
+>
+> Also when setting ns->ucount_max[] in create_user_ns because one value
+> is signed and the other is unsigned.  Care should be taken so that
+> rlimit_infinity is translated into the largest positive value the
+> type can hold.
 
-> Preface
-> -------
-> These patches are for binding the rlimit counters to a user in user namespace.
-> This patch set can be applied on top of:
->
-> git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git v5.12-rc4
->
-> Problem
-> -------
-> The RLIMIT_NPROC, RLIMIT_MEMLOCK, RLIMIT_SIGPENDING, RLIMIT_MSGQUEUE rlimits
-> implementation places the counters in user_struct [1]. These limits are global
-> between processes and persists for the lifetime of the process, even if
-> processes are in different user namespaces.
->
-> To illustrate the impact of rlimits, let's say there is a program that does not
-> fork. Some service-A wants to run this program as user X in multiple containers.
-> Since the program never fork the service wants to set RLIMIT_NPROC=1.
->
-> service-A
->  \- program (uid=1000, container1, rlimit_nproc=1)
->  \- program (uid=1000, container2, rlimit_nproc=1)
->
-> The service-A sets RLIMIT_NPROC=1 and runs the program in container1. When the
-> service-A tries to run a program with RLIMIT_NPROC=1 in container2 it fails
-> since user X already has one running process.
->
-> The problem is not that the limit from container1 affects container2. The
-> problem is that limit is verified against the global counter that reflects
-> the number of processes in all containers.
->
-> This problem can be worked around by using different users for each container
-> but in this case we face a different problem of uid mapping when transferring
-> files from one container to another.
->
-> Eric W. Biederman mentioned this issue [2][3].
->
-> Introduced changes
-> ------------------
-> To address the problem, we bind rlimit counters to user namespace. Each counter
-> reflects the number of processes in a given uid in a given user namespace. The
-> result is a tree of rlimit counters with the biggest value at the root (aka
-> init_user_ns). The limit is considered exceeded if it's exceeded up in the tree.
->
-> [1]: https://lore.kernel.org/containers/87imd2incs.fsf@x220.int.ebiederm.org/
-> [2]: https://lists.linuxfoundation.org/pipermail/containers/2020-August/042096.html
-> [3]: https://lists.linuxfoundation.org/pipermail/containers/2020-October/042524.html
->
-> Changelog
-> ---------
-> v9:
-> * Used a negative value to check that the ucounts->count is close to overflow.
-> * Rebased onto v5.12-rc4.
->
-> v8:
-> * Used atomic_t for ucounts reference counting. Also added counter overflow
->   check (thanks to Linus Torvalds for the idea).
-> * Fixed other issues found by lkp-tests project in the patch that Reimplements
->   RLIMIT_MEMLOCK on top of ucounts.
->
-> v7:
-> * Fixed issues found by lkp-tests project in the patch that Reimplements
->   RLIMIT_MEMLOCK on top of ucounts.
->
-> v6:
-> * Fixed issues found by lkp-tests project.
-> * Rebased onto v5.11.
->
-> v5:
-> * Split the first commit into two commits: change ucounts.count type to atomic_long_t
->   and add ucounts to cred. These commits were merged by mistake during the rebase.
-> * The __get_ucounts() renamed to alloc_ucounts().
-> * The cred.ucounts update has been moved from commit_creds() as it did not allow
->   to handle errors.
-> * Added error handling of set_cred_ucounts().
->
-> v4:
-> * Reverted the type change of ucounts.count to refcount_t.
-> * Fixed typo in the kernel/cred.c
->
-> v3:
-> * Added get_ucounts() function to increase the reference count. The existing
->   get_counts() function renamed to __get_ucounts().
-> * The type of ucounts.count changed from atomic_t to refcount_t.
-> * Dropped 'const' from set_cred_ucounts() arguments.
-> * Fixed a bug with freeing the cred structure after calling cred_alloc_blank().
-> * Commit messages have been updated.
-> * Added selftest.
->
-> v2:
-> * RLIMIT_MEMLOCK, RLIMIT_SIGPENDING and RLIMIT_MSGQUEUE are migrated to ucounts.
-> * Added ucounts for pair uid and user namespace into cred.
-> * Added the ability to increase ucount by more than 1.
->
-> v1:
-> * After discussion with Eric W. Biederman, I increased the size of ucounts to
->   atomic_long_t.
-> * Added ucount_max to avoid the fork bomb.
->
-> --
->
-> Alexey Gladkov (8):
->   Increase size of ucounts to atomic_long_t
->   Add a reference to ucounts for each cred
->   Use atomic_t for ucounts reference counting
->   Reimplement RLIMIT_NPROC on top of ucounts
->   Reimplement RLIMIT_MSGQUEUE on top of ucounts
->   Reimplement RLIMIT_SIGPENDING on top of ucounts
->   Reimplement RLIMIT_MEMLOCK on top of ucounts
->   kselftests: Add test to check for rlimit changes in different user namespaces
->
+You mean like that ?
 
-Overall this looks good, and it is a very good sign that the automatic
-testing bots have not found anything.  I found a few little nits.
-But thing are looking very good.
+ns->ucount_max[UCOUNT_RLIMIT_NPROC] = rlimit(RLIMIT_NPROC) <= LONG_MAX ?
+	rlimit(RLIMIT_NPROC) : LONG_MAX;
+ns->ucount_max[UCOUNT_RLIMIT_MSGQUEUE] = rlimit(RLIMIT_MSGQUEUE) <= LONG_MAX ?
+	rlimit(RLIMIT_MSGQUEUE) : LONG_MAX;
+ns->ucount_max[UCOUNT_RLIMIT_SIGPENDING] = rlimit(RLIMIT_SIGPENDING) <= LONG_MAX ?
+	rlimit(RLIMIT_SIGPENDING) : LONG_MAX;
+ns->ucount_max[UCOUNT_RLIMIT_MEMLOCK] = rlimit(RLIMIT_MEMLOCK) <= LONG_MAX ?
+	rlimit(RLIMIT_MEMLOCK) : LONG_MAX;
 
-Eric
+-- 
+Rgrds, legion
 
