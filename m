@@ -1,21 +1,21 @@
-Return-Path: <SRS0=hbm7=JG=lists.openwall.com=kernel-hardening-return-21187-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=/63f=JG=lists.openwall.com=kernel-hardening-return-21188-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.3 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 33125C433B4
-	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Apr 2021 16:08:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9C49CC433B4
+	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Apr 2021 16:35:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 11763600D4
-	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Apr 2021 16:08:48 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 11763600D4
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21187-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 29739 invoked by uid 550); 9 Apr 2021 16:08:42 -0000
+	by mail.kernel.org (Postfix) with SMTP id DC3B06108B
+	for <kernel-hardening@archiver.kernel.org>; Fri,  9 Apr 2021 16:35:04 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org DC3B06108B
+Authentication-Results: mail.kernel.org; dmarc=fail (p=quarantine dis=none) header.from=googlemail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21188-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13478 invoked by uid 550); 9 Apr 2021 16:34:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,90 +23,73 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29707 invoked from network); 9 Apr 2021 16:08:41 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1617984506;
-	bh=HEzSNgADWM4JdH/UP4RWxfXteS7uGjPvcCoUhETis/w=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=TMp7qmyOTZ06xZtd3IkwSP3IInsseEcEgh3JgzcGx4qzd7o1uncrGzYdEvgq3C4gr
-	 ZeNAoaODnWiuEHh0wNKdPbc50soCpSvVH5eWBOnn4/+2KbADchHCCp9XPQXKz03Qjo
-	 IxL72Qyu0QN3YHxTfKAb+TGUGDug2AIXg2tmFXN0=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Fri, 9 Apr 2021 18:08:14 +0200
-From: John Wood <john.wood@gmx.com>
-To: Andi Kleen <ak@linux.intel.com>
-Cc: John Wood <john.wood@gmx.com>,
-	Valdis =?utf-8?Q?Kl=C4=93tnieks?= <valdis.kletnieks@vt.edu>,
-	kernelnewbies@kernelnewbies.org, Kees Cook <keescook@chromium.org>,
-	kernel-hardening@lists.openwall.com
-Subject: Re: Notify special task kill using wait* functions
-Message-ID: <20210409160814.GA4937@ubuntu>
-References: <145687.1617485641@turing-police>
- <20210404094837.GA3263@ubuntu>
- <193167.1617570625@turing-police>
- <20210405073147.GA3053@ubuntu>
- <115437.1617753336@turing-police>
- <20210407175151.GA3301@ubuntu>
- <184666.1617827926@turing-police>
- <20210408015148.GB3762101@tassilo.jf.intel.com>
- <20210409142933.GA3150@ubuntu>
- <20210409150621.GJ3762101@tassilo.jf.intel.com>
+Received: (qmail 9665 invoked from network); 9 Apr 2021 16:27:03 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=googlemail.com; s=20161025;
+        h=from:to:cc:references:subject:message-id:date:user-agent
+         :mime-version:in-reply-to:content-transfer-encoding:content-language;
+        bh=Phuwohh2HbCcjFvp4UIIQp3Pa48Fgzncr9mTT74dDuc=;
+        b=OrDC9KNIV2KoycO1UJbjgt3dS7Zq2KuRnckwcv/US0NFH4y5p75lCVm23WaG0rVojv
+         HeCavVxA+Ac3nwNniNDRjJlmFDlnmdgTPgutRu8juSbyZercO77k+ZH4K/xP8mSbGVW1
+         G++R4TWtflixrhcsAfXommXjVB6yQiFu5TxHopFnit0aQNYVGcJrLop+n3PsSErczidr
+         y/BmGlelv/wJ2dwQIZ2BoB9crvw7/JOCylrmSKctjliDydy1Zqwnxq9epeI68cv8qBo7
+         aVl4QC/KAnohy1n6qqYkh6J0d4Hco/WOB13ML9dE/SxBO3Wsvj7W0s+HSYU6g8xU0NgX
+         fkxQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:references:subject:message-id:date
+         :user-agent:mime-version:in-reply-to:content-transfer-encoding
+         :content-language;
+        bh=Phuwohh2HbCcjFvp4UIIQp3Pa48Fgzncr9mTT74dDuc=;
+        b=LKB+niTet/Sq7RDUxwkyIF8//2T2kS832LPXrF0ax5VxGmiI+ZvaVO/wwTwBN70kz2
+         N/aprU4lWSbtEUY/aNmdR6fsBc0dunzVGzMhaEBXO8Qui3kl9dUlGEfdBlCvOW7Hv8oO
+         TCeeGrOodWhNRQx6UmxC2M6kIsUj+9gU8tdlee3dX7NZMh4jizO99wVIt94DO8L7Gdb6
+         b5b//Rm6qEtioMYDB1GWfz0gyinC8qxXh8/V8ZuWGa2pvJoagryJFw5PQQ0EDy1aCGJp
+         sAxcw7nHpPjsntP12LHrTpXGw8TF3WNYJRDk+SPCOOD+wq86oCjKWYGF+v9GyUpaIoqR
+         O/Mg==
+X-Gm-Message-State: AOAM532x6EIm7ME3aa9F597hGG0YhihL3cDPXmfINfizkDtmry1E32XP
+	cEK6etS+b+nwbNGbiZDosxM=
+X-Google-Smtp-Source: ABdhPJwEELsjjLV+hBsfJiej4imi1ND7VZLuZxQpk+R/tkx/cwIMM3GphnH/4bn5zw34pvgfQlwTVg==
+X-Received: by 2002:a1c:9853:: with SMTP id a80mr14414819wme.44.1617985611974;
+        Fri, 09 Apr 2021 09:26:51 -0700 (PDT)
+From: bauen1 <j2468h@googlemail.com>
+X-Google-Original-From: bauen1 <j2468h@gmail.com>
+To: mic@digikod.net
+Cc: akpm@linux-foundation.org, arnd@arndb.de, casey@schaufler-ca.com,
+ christian.brauner@ubuntu.com, christian@python.org, corbet@lwn.net,
+ cyphar@cyphar.com, deven.desai@linux.microsoft.com, dvyukov@google.com,
+ ebiggers@kernel.org, ericchiang@google.com, fweimer@redhat.com,
+ geert@linux-m68k.org, jack@suse.cz, jannh@google.com, jmorris@namei.org,
+ keescook@chromium.org, kernel-hardening@lists.openwall.com,
+ linux-api@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+ linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
+ linux-security-module@vger.kernel.org, luto@kernel.org,
+ madvenka@linux.microsoft.com, mjg59@google.com, mszeredi@redhat.com,
+ mtk.manpages@gmail.com, nramas@linux.microsoft.com,
+ philippe.trebuchet@ssi.gouv.fr, scottsh@microsoft.com,
+ sean.j.christopherson@intel.com, sgrubb@redhat.com, shuah@kernel.org,
+ steve.dower@python.org, thibaut.sautereau@clip-os.org,
+ vincent.strubel@ssi.gouv.fr, viro@zeniv.linux.org.uk, willy@infradead.org,
+ zohar@linux.ibm.com
+References: <20201203173118.379271-1-mic@digikod.net>
+Subject: Re: [PATCH v12 0/3] Add trusted_for(2) (was O_MAYEXEC)
+Message-ID: <d3b0da18-d0f6-3f72-d3ab-6cf19acae6eb@gmail.com>
+Date: Fri, 9 Apr 2021 18:26:49 +0200
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
+ Thunderbird/78.9.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20210409150621.GJ3762101@tassilo.jf.intel.com>
-X-Provags-ID: V03:K1:IsLAyPnMEKrzZmnegL9MyBRHawdUyxil//3hcCrquCaKFVNVr0o
- g0p6Jc7cmZTcu5XqE+R8rFrnselUZm4OY3Ky5j/XxQcaJHWZUDPhYP6OIyAS4HH31LN/Uxx
- +TP1OGTLcIBB/VSUjq5h0tC7MSC7eR5Z+gvUicuIghTDCn3aZcYsXHHY7nV6GeUYPkVwu5W
- gNDsv+QhpRI0FOeZP8Bsw==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:w/ghK7fOuso=:HM2XrcA+UBAA6skFfEdrJf
- qH8ZitfDacjhM9eBr22yNOkWWyXGT2XHxoGBXw1KP3RZRQSRx5rKLOU7ZPcRa84pu72onwApT
- XRD4NIs1V848Ixkdg2z7QJvh7x5ECDCLy1m8zmmVX5QufVaYPH1SUCw5RlS2FxxtrMvHqXCsj
- sCeqSn7VUMlA0PQ8JG1Z01g07euXSoqB25fs10z5AZuUZGjO8IB+QTqH//E4zdAlzCxTgx2lR
- 5j6fPTgLEhFHBwYc6OWCS4/NZbyJxLa7Zl9jjp0Pon5q1YjM4q1DeDE0/mX3gEb0GBl6zKFdq
- wtM51eCe5hBC9o6MlVwAixQh6+nkaPcSu+O2h5aoM1O/dG7fNj3Vlj8T/Mp9fKYvUbP3cCXAD
- VqykZ5YcxveVf6eKg2xW3aGbmPV5uqgiP0agBBEFMloW7rXyEM7+VzOVrb1WwOXIalaMGVESn
- RmACrhQ4Nem6+2Rq2GZSaG+FmAyo4bGvBzeq36RXaG50EhulLFCbHfzM5qQmD+d1PKYUYetEI
- +BBgyBKvUjt9fuawDPMEDpIDgVKt75cwrGuiWMn9fGDtZIi4vi3cgiMMbb3QI0254ClRgM5X9
- SBjYQqE5J0RMhD3d4MZO7GY88Z+v8te6B6ffP1nTuCcOn/rXTJyTflJxWvHUmMWxxU8X7FxUV
- cNSE41BSpu/Ao2RIYgwdALDXpeoQwPNdOlTi8VZyZ2C1MUQXMzcgyWt8sQxUkH4P79EOo8fGL
- abSSzgAD1Ym7jfIKujzgleneBeah4Y3CTFku4JEAVKNHQPofnjOV0vci/z1wi/rA/8qr+Gcap
- 1n3T7dkVLTTk8smDNVU0Byh/3rEnf8s7xQwburuqZAPH6Id11RQHf3yHuYb5U6xTwERyRtJ6N
- TR3M89mOKh6gpYly1lAzrrB+x6D1ycM2W71sjz4FxK13cu3CxhttaS/kM3zawzGKHhwH6IOS1
- C8lEVSg3BYaITasxxMD3Zfp1YiQtFlXJZ5oP/zl7LRk9GEj4Ey24pVOBtQZbvX3yRyFT1gTgJ
- RWKWCVeefVGamp4CpwUdRz7Aq6m5XaOy+FBWoE1CVlhfEbmlBzyzDTOjLodpTvGFVlhUu1Tyy
- IUN9EiJVhTWCgISl8LRR2HAjd70Hi9AJXmC3N5lI6atzbobMQMepoRYN7F1zfzTDPaKb5FHpd
- bl23eqQOUsmWPUWLFIMgNe0E2T4R7JZYV6JoG9+a+LifEeqb4SWesatDkLNcQRcdGn2uA=
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20201203173118.379271-1-mic@digikod.net>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Content-Language: en-US
 
-Hi,
+Hello,
 
-On Fri, Apr 09, 2021 at 08:06:21AM -0700, Andi Kleen wrote:
-> > > Any caching of state is inherently insecure because any caches of li=
-mited
-> > > size can be always thrashed by a purposeful attacker. I suppose the
-> > > only thing that would work is to actually write something to the
-> > > executable itself on disk, but of course that doesn't always work ei=
-ther.
-> >
-> > I'm also working on this. In the next version I will try to find a way=
- to
-> > prevent brute force attacks through the execve system call with more t=
-han
-> > one level of forking.
->
-> Thanks.
->
-> Thinking more about it what I wrote above wasn't quite right. The cache
-> would only need to be as big as the number of attackable services/suid
-> binaries. Presumably on many production systems that's rather small,
-> so a cache (which wouldn't actually be a cache, but a complete database)
-> might actually work.
+As a user of SELinux I'm quite interested in the trusted_for / O_MAYEXEC changes in the kernel and userspace.
+However the last activity on this patch seems to be this email from 2020-12-03 with no replies, so what is the status of this patchset or is there something that I'm missing ?
 
-Thanks. I will keep it in mind.
+https://patchwork.kernel.org/project/linux-security-module/list/?series=395617
 
->
-> -Andi
+https://lore.kernel.org/linux-security-module/20201203173118.379271-1-mic@digikod.net/
 
-Regards,
-John Wood
+
