@@ -1,21 +1,21 @@
-Return-Path: <SRS0=ePpM=JI=lists.openwall.com=kernel-hardening-return-21191-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=cDE0=JN=lists.openwall.com=kernel-hardening-return-21192-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.7 required=3.0 tests=BAYES_00,DKIM_ADSP_CUSTOM_MED,
+	FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	URIBL_RED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 19135C433ED
-	for <kernel-hardening@archiver.kernel.org>; Sun, 11 Apr 2021 08:46:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E547BC433ED
+	for <kernel-hardening@archiver.kernel.org>; Fri, 16 Apr 2021 11:33:35 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 26AEC60C41
-	for <kernel-hardening@archiver.kernel.org>; Sun, 11 Apr 2021 08:46:41 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 26AEC60C41
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21191-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 24000 invoked by uid 550); 11 Apr 2021 08:46:34 -0000
+	by mail.kernel.org (Postfix) with SMTP id 0DC1D610F7
+	for <kernel-hardening@archiver.kernel.org>; Fri, 16 Apr 2021 11:33:34 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0DC1D610F7
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21192-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1208 invoked by uid 550); 16 Apr 2021 11:33:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,90 +23,171 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 23967 invoked from network); 11 Apr 2021 08:46:33 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1618130776;
-	bh=1Vjjks+zQW7ZziNWekmeuRzGkREulQj8fD8WOwQIaW0=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=lqHoz7dNSwtpS0Y4W78q4wta7aqyZw002JsOCiD0DveF6D2Di33OetZ2LtWnJB3M7
-	 oEZ8dTQSWo36JUrMANDJrsCaAQDCm4HFTdpwTQb6N2uvcnx6itVQJOkqseScPjI/Tj
-	 9ywJobl19TS8mZG53/fHWobEAkIT12XGvtdMbn5w=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Sun, 11 Apr 2021 10:46:02 +0200
-From: John Wood <john.wood@gmx.com>
-To: Valdis =?utf-8?Q?Kl=C4=93tnieks?= <valdis.kletnieks@vt.edu>,
-	Andi Kleen <ak@linux.intel.com>
-Cc: John Wood <john.wood@gmx.com>, kernelnewbies@kernelnewbies.org,
-	Kees Cook <keescook@chromium.org>,
-	kernel-hardening@lists.openwall.com
-Subject: Re: Notify special task kill using wait* functions
-Message-ID: <20210411084602.GA3111@ubuntu>
-References: <20210404094837.GA3263@ubuntu>
- <193167.1617570625@turing-police>
- <20210405073147.GA3053@ubuntu>
- <115437.1617753336@turing-police>
- <20210407175151.GA3301@ubuntu>
- <184666.1617827926@turing-police>
- <20210408015148.GB3762101@tassilo.jf.intel.com>
- <20210409142933.GA3150@ubuntu>
- <20210409150621.GJ3762101@tassilo.jf.intel.com>
- <109781.1618010900@turing-police>
+Received: (qmail 1185 invoked from network); 16 Apr 2021 11:33:25 -0000
+Date: Fri, 16 Apr 2021 13:33:10 +0200
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>,
+	kernel test robot <oliver.sang@intel.com>,
+	0day robot <lkp@intel.com>, LKML <linux-kernel@vger.kernel.org>,
+	lkp@lists.01.org, "Huang, Ying" <ying.huang@intel.com>,
+	Feng Tang <feng.tang@intel.com>, zhengjun.xing@intel.com,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux Containers <containers@lists.linux-foundation.org>,
+	Linux-MM <linux-mm@kvack.org>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	Jann Horn <jannh@google.com>, Jens Axboe <axboe@kernel.dk>,
+	Kees Cook <keescook@chromium.org>, Oleg Nesterov <oleg@redhat.com>
+Subject: Re: 08ed4efad6: stress-ng.sigsegv.ops_per_sec -41.9% regression
+Message-ID: <20210416113310.vbxrzorycqdxwiyc@example.org>
+References: <7abe5ab608c61fc2363ba458bea21cf9a4a64588.1617814298.git.gladkov.alexey@gmail.com>
+ <20210408083026.GE1696@xsang-OptiPlex-9020>
+ <CAHk-=wigPx+MMQMQ-7EA0pq5_5+kMCNV4qFsOss-WwdCSQmb-w@mail.gmail.com>
+ <m1im4wmx9g.fsf@fess.ebiederm.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
-In-Reply-To: <109781.1618010900@turing-police>
-X-Provags-ID: V03:K1:EAEmH3q/PIh5praZCAHmNWQtBjhZxAhZQELrlWn078K7j+7TAF3
- R9msrSb0bKzKAXgP1jmOtrwqnHIVNkIGmQVpo9kqBhnb8BFCBGqgUON+FjdNvqE/Md01qQx
- ihtitAxwKSufan3AGhQy30jdHjqCMj73Qyk4Iz8IRdgOfoKQwnambJAaC7IhhwU6nEwdwJ3
- +nZI/GhWGcO7wvusbYuEA==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:/mjAx4sG5S0=:Qq7JEAjjy+IbYLWb3HvGxb
- KW3TSJd+avTEVTklg6OuzIfJEGLTVKPuVDntr/Z/nhyQj/gXppFs9PftERV7emoUDxGFEuxHR
- IBdYK8I23fjK6qo8K88G0bRgK0TBlUKVcTyGPaqVnFkQ26pNE2f5fM5+YBuoibs0e4VfOAxo9
- 6Ruc+bGQGye9zMn3Bz9LNmP79qst5pJtqmcMdYqk0Ls11P0e9oQhyXyMkGj+BoB2RKUbWhtvi
- 6+HLGfeoSdJfhJmv6CRNH0qv9bSuKlxVC0ZIJ8F/DSYehA5HU7GCZZAq24KV0aYS494FEiEJi
- KVqmUytKh7aoyMjz0+0DzV9lbHQdZrjmqSHmQkl708iC72EhzZNPpyak5sNI2hMe+omfwlV7w
- 6Cl+XweP0eeU8hzYPU2jW4ueIhvAe0jihzw1xHqDGjp0u8WLTv9RImt5CbSq7qt5571XeZCn1
- yYINTAURYa5dmVs9T61iRi3naCZV9brs1ZZFkeyd4sNDRVMjrc9UGqtP0l/70U3GNgGM0VnJ1
- TWYO5ncZCh3X5PGDGt3P0Z41if0cNQwYNVcGEwtMiw1cykoRsqxi6Mg0cLkzwtws5ukX5rjOB
- H1mwwzXZO1lj18isQ1Nr130rQTaB+BbXRz1jBZVJn00rFY9LKbA7ypYouOSXOUVe5au0gbAXp
- RpggfSmE46xKZ6bga0unZE1nKUALMwhKp5tyMCRpDeNOq31Q0h6vma9r8smJSOCm2pq3gKH65
- VasCgKNdBawwTAy8OVWMSwHAAayiX108RyjpKITySUgIntU5imICuJCsgHddqvThSi32fJbh7
- RTL8t2wyNos5DXEDNlpLTGhayqowOZhyQDUMqo4s4kjosn6XsWUDANnsxkyMC1i1PtUy2i+rF
- pIxFnM6mbNVtu/o/iXFAjODLjaIZSJEdSlBzudajBj0aqnZZwfvpO1pMQbhishl8eJRVfoylj
- tQV+mrAP6TgL94FxNvt9+q+WZUlVMIpQYKOsu8LBOCKmxHDjXXBxZeNiQ4JfTqHfjKKVybcDt
- 098UxEJSoXChpia25qt37X3M/6hMlrRH4oy1p5c0kaE/wjIQSizEbLa/K5Nw8qKoeVeCaXodj
- 1j2eNOF0TlyZY+MoP7XTsIhS/yRCCM60VYDajRXBV9CdU69NYsl++xTBBOarm61ZGmuUejGr6
- 7rqdDINpcv7cuPVbx0W/gGXwKynkqeAKE9SMzyGFx6iVdl8b4OG8Jy7vBeEvyA3EHEa20=
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <m1im4wmx9g.fsf@fess.ebiederm.org>
 
-Hi,
+On Thu, Apr 08, 2021 at 01:44:43PM -0500, Eric W. Biederman wrote:
+> Linus Torvalds <torvalds@linux-foundation.org> writes:
+> 
+> > On Thu, Apr 8, 2021 at 1:32 AM kernel test robot <oliver.sang@intel.com> wrote:
+> >>
+> >> FYI, we noticed a -41.9% regression of stress-ng.sigsegv.ops_per_sec due to commit
+> >> 08ed4efad684 ("[PATCH v10 6/9] Reimplement RLIMIT_SIGPENDING on top of ucounts")
+> >
+> > Ouch.
+> 
+> We were cautiously optimistic when no test problems showed up from
+> the last posting that there was nothing to look at here.
+> 
+> Unfortunately it looks like the bots just missed the last posting. 
+> 
+> So it seems we are finally pretty much at correct code in need
+> of performance tuning.
+> 
+> > I *think* this test may be testing "send so many signals that it
+> > triggers the signal queue overflow case".
+> >
+> > And I *think* that the performance degradation may be due to lots of
+> > unnecessary allocations, because ity looks like that commit changes
+> > __sigqueue_alloc() to do
+> >
+> >         struct sigqueue *q = kmem_cache_alloc(sigqueue_cachep, flags);
+> >
+> > *before* checking the signal limit, and then if the signal limit was
+> > exceeded, it will just be free'd instead.
+> >
+> > The old code would check the signal count against RLIMIT_SIGPENDING
+> > *first*, and if there were m ore pending signals then it wouldn't do
+> > anything at all (including not incrementing that expensive atomic
+> > count).
+> 
+> This is an interesting test in a lot of ways as it is testing the
+> synchronous signal delivery path caused by an exception.  The test
+> is either executing *ptr = 0 (where ptr points to a read-only page)
+> or it executes an x86 instruction that is excessively long.
+> 
+> I have found the code but I haven't figured out how it is being
+> called yet.  The core loop is just:
+> 	for(;;) {
+> 		sigaction(SIGSEGV, &action, NULL);
+> 		sigaction(SIGILL, &action, NULL);
+> 		sigaction(SIGBUS, &action, NULL);
+> 
+> 		ret = sigsetjmp(jmp_env, 1);
+> 		if (done())
+>                 	break;
+> 		if (ret) {
+>                 	/* verify signal */
+>                 } else {
+>                 	*ptr = 0;
+>                 }
+> 	}
+> 
+> Code like that fundamentally can not be multi-threaded.  So the only way
+> the sigpending limit is being hit is if there are more processes running
+> that code simultaneously than the size of the limit.
+> 
+> Further it looks like stress-ng pushes RLIMIT_SIGPENDING as high as it
+> will go before the test starts.
+> 
+> 
+> > Also, the old code was very careful to only do the "get_user()" for
+> > the *first* signal it added to the queue, and do the "put_user()" for
+> > when removing the last signal. Exactly because those atomics are very
+> > expensive.
+> >
+> > The new code just does a lot of these atomics unconditionally.
+> 
+> Yes. That seems a likely culprit.
+> 
+> > I dunno. The profile data in there is a bit hard to read, but there's
+> > a lot more cachee misses, and a *lot* of node crossers:
+> >
+> >>    5961544          +190.4%   17314361        perf-stat.i.cache-misses
+> >>   22107466          +119.2%   48457656        perf-stat.i.cache-references
+> >>     163292 ą  3%   +4582.0%    7645410        perf-stat.i.node-load-misses
+> >>     227388 ą  2%   +3708.8%    8660824        perf-stat.i.node-loads
+> >
+> > and (probably as a result) average instruction costs have gone up enormously:
+> >
+> >>       3.47           +66.8%       5.79        perf-stat.overall.cpi
+> >>      22849           -65.6%       7866        perf-stat.overall.cycles-between-cache-misses
+> >
+> > and it does seem to be at least partly about "put_ucounts()":
+> >
+> >>       0.00            +4.5        4.46        perf-profile.calltrace.cycles-pp.put_ucounts.__sigqueue_free.get_signal.arch_do_signal_or_restart.exit_to_user_mode_prepare
+> >
+> > and a lot of "get_ucounts()".
+> >
+> > But it may also be that the new "get sigpending" is just *so* much
+> > more expensive than it used to be.
+> 
+> That too is possible.
+> 
+> That node-load-misses number does look like something is bouncing back
+> and forth between the nodes a lot more.  So I suspect stress-ng is
+> running multiple copies of the sigsegv test in different processes at
+> once.
+> 
+> 
+> 
+> That really suggests cache line ping pong from get_ucounts and
+> incrementing sigpending.
+> 
+> It surprises me that obtaining the cache lines exclusively is
+> the dominant cost on this code path but obtaining two cache lines
+> exclusively instead of one cache cache line exclusively is consistent
+> with a causing the exception delivery to take nearly twice as long.
+> 
+> For the optimization we only care about the leaf count so with a little
+> care we can restore the optimization.  So that is probably the thing
+> to do here.  The fewer changes to worry about the less likely to find
+> surprises.
+> 
+> 
+> 
+> That said for this specific case there is a lot of potential room for
+> improvement.  As this is a per thread signal the code update sigpending
+> in commit_cred and never worry about needing to pin the struct
+> user_struct or struct ucounts.  As this is a synchronous signal we could
+> skip the sigpending increment, skip the signal queue entirely, and
+> deliver the signal to user-space immediately.  The removal of all cache
+> ping pongs might make it worth it.
+> 
+> There is also Thomas Gleixner's recent optimization to cache one
+> sigqueue entry per task to give more predictable behavior.  That
+> would remove the cost of the allocation.
 
-On Fri, Apr 09, 2021 at 07:28:20PM -0400, Valdis Kl=C4=93tnieks wrote:
-> On Fri, 09 Apr 2021 08:06:21 -0700, Andi Kleen said:
->
-> > Thinking more about it what I wrote above wasn't quite right. The cach=
-e
-> > would only need to be as big as the number of attackable services/suid
-> > binaries. Presumably on many production systems that's rather small,
-> > so a cache (which wouldn't actually be a cache, but a complete databas=
-e)
-> > might actually work.
->
-> You also need to consider non-suid things called by suid things that don=
-'t
-> sanitize input sufficiently before invocation...
->
-> Thinking about at - is it really a good thing to try to do this in kerne=
-lspace?
-> Or is 'echo 1 > /proc/sys/kernel/print-fatal-signals' and a program to w=
-atch
-> the dmesg and take action more appropriate?  A userspace monitor would
-> have more options (though a slightly higher risk of race conditions).
->
+https://git.kernel.org/pub/scm/linux/kernel/git/legion/linux.git/commit/?h=patchset/per-userspace-rlimit/v11.1&id=08db0c814926c6f16e08de99b2de34c8b5ff68ce
 
-Thanks for the ideas. I need some time to send a formal proposal that
-works properly. I would like to get feedback at that moment. I think it
-would be better to discuss about the real patch.
+You mean something like this ? I did it on top of Thomas Gleixner's
+patches.
 
-Again, thanks.
-John Wood
+-- 
+Rgrds, legion
+
