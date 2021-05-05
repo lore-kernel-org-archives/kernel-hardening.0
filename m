@@ -1,21 +1,20 @@
-Return-Path: <SRS0=f1f0=KA=lists.openwall.com=kernel-hardening-return-21240-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=5qNj=KA=lists.openwall.com=kernel-hardening-return-21241-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.3 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,NICE_REPLY_A,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4E47CC43460
-	for <kernel-hardening@archiver.kernel.org>; Wed,  5 May 2021 11:08:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A26CFC433ED
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 May 2021 11:57:40 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 24460613C7
-	for <kernel-hardening@archiver.kernel.org>; Wed,  5 May 2021 11:08:56 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 24460613C7
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21240-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 21703 invoked by uid 550); 5 May 2021 11:08:48 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9D8976112F
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 May 2021 11:57:39 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9D8976112F
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21241-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 20285 invoked by uid 550); 5 May 2021 11:57:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,126 +22,50 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21665 invoked from network); 5 May 2021 11:08:47 -0000
-X-Virus-Scanned: by amavisd-new at test-mx.suse.de
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>, dave.hansen@intel.com,
- luto@kernel.org, peterz@infradead.org, linux-mm@kvack.org, x86@kernel.org,
- akpm@linux-foundation.org, linux-hardening@vger.kernel.org,
- kernel-hardening@lists.openwall.com
-Cc: ira.weiny@intel.com, rppt@kernel.org, dan.j.williams@intel.com,
- linux-kernel@vger.kernel.org
-References: <20210505003032.489164-1-rick.p.edgecombe@intel.com>
-From: Vlastimil Babka <vbabka@suse.cz>
+Received: (qmail 20253 invoked from network); 5 May 2021 11:57:31 -0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=casper.20170209; h=In-Reply-To:Content-Type:MIME-Version:
+	References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+	Content-Transfer-Encoding:Content-ID:Content-Description;
+	bh=FJVYW0nVvzqzV0WuVSs2TE+406TDgUZdxaAg4wu6QtQ=; b=nJLzibjO7NeYl3c8yjFLSafo+H
+	nPW9d5mpe6/UtkdfbkiY8dlbuJiyUAJVhUDchJ0hrxMm6YWssSXl8nm8yx1w6e6SD8ASz+bx15rJX
+	lNU2/cH5dLiCzBV/LtxSgGkrZeoL5kizOm5brfC1OOfnmvue+nHegEoUBa+gk3hKb1pRGZNob7b/H
+	ECFF+QqD6WpyPg7PPCh3pPs70ro2wTZBa2OgYya5a0j4wDd/ue8jYhDtmZrpOQoUSP4PkFRDrds5m
+	rU07lsDHCE3TGxxbc86eji6Ptn1c4tWQ/Vn2zzzOlRFOZIh+ar/V+ZaKq9VGyC2tigC9Vjs2c5pSy
+	u5NjT/4Q==;
+Date: Wed, 5 May 2021 13:56:16 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+To: Vlastimil Babka <vbabka@suse.cz>
+Cc: Rick Edgecombe <rick.p.edgecombe@intel.com>, dave.hansen@intel.com,
+	luto@kernel.org, linux-mm@kvack.org, x86@kernel.org,
+	akpm@linux-foundation.org, linux-hardening@vger.kernel.org,
+	kernel-hardening@lists.openwall.com, ira.weiny@intel.com,
+	rppt@kernel.org, dan.j.williams@intel.com,
+	linux-kernel@vger.kernel.org
 Subject: Re: [PATCH RFC 0/9] PKS write protected page tables
-Message-ID: <d01c7845-6f9c-6770-c861-e624c3e2bfc5@suse.cz>
-Date: Wed, 5 May 2021 13:08:35 +0200
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
- Thunderbird/78.10.0
+Message-ID: <YJKH4HDuCGLArdmp@hirez.programming.kicks-ass.net>
+References: <20210505003032.489164-1-rick.p.edgecombe@intel.com>
+ <d01c7845-6f9c-6770-c861-e624c3e2bfc5@suse.cz>
 MIME-Version: 1.0
-In-Reply-To: <20210505003032.489164-1-rick.p.edgecombe@intel.com>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <d01c7845-6f9c-6770-c861-e624c3e2bfc5@suse.cz>
 
-On 5/5/21 2:30 AM, Rick Edgecombe wrote:
-> This is a POC for write protecting page tables with PKS (Protection Keys for 
-> Supervisor) [1]. The basic idea is to make the page tables read only, except 
-> temporarily on a per-cpu basis when they need to be modified. I’m looking for 
-> opinions on whether people like the general direction of this in terms of 
-> value and implementation.
-> 
-> Why would people want this?
-> ===========================
-> Page tables are the basis for many types of protections and as such, are a 
-> juicy target for attackers. Mapping them read-only will make them harder to 
-> use in attacks.
-> 
-> This protects against an attacker that has acquired the ability to write to 
-> the page tables. It's not foolproof because an attacker who can execute 
-> arbitrary code can either disable PKS directly, or simply call the same 
-> functions that the kernel uses for legitimate page table writes.
+On Wed, May 05, 2021 at 01:08:35PM +0200, Vlastimil Babka wrote:
+> On 5/5/21 2:30 AM, Rick Edgecombe wrote:
 
-Yeah, it's a good idea. I've once used a similar approach locally during
-debugging a problem that appeared to be stray writes hitting page tables, and
-without PKS I indeed made the whole pages read-only when not touched by the
-designated code.
+> > Why use PKS for this?
+> > =====================
+> > PKS is an upcoming CPU feature that allows supervisor virtual memory 
+> > permissions to be changed without flushing the TLB, like PKU does for user 
+> > memory. Protecting page tables would normally be really expensive because you 
+> > would have to do it with paging itself. PKS helps by providing a way to toggle 
+> > the writability of the page tables with just a per-cpu MSR.
+> 
+> I can see in patch 8/9 that you are flipping the MSR around individual
+> operations on page table entries. In my patch I hooked making the page table
+> writable to obtaining the page table lock (IIRC I had only the PTE level fully
+> handled though). Wonder if that would be better tradeoff even for your MSR approach?
 
-> Why use PKS for this?
-> =====================
-> PKS is an upcoming CPU feature that allows supervisor virtual memory 
-> permissions to be changed without flushing the TLB, like PKU does for user 
-> memory. Protecting page tables would normally be really expensive because you 
-> would have to do it with paging itself. PKS helps by providing a way to toggle 
-> the writability of the page tables with just a per-cpu MSR.
-
-I can see in patch 8/9 that you are flipping the MSR around individual
-operations on page table entries. In my patch I hooked making the page table
-writable to obtaining the page table lock (IIRC I had only the PTE level fully
-handled though). Wonder if that would be better tradeoff even for your MSR approach?
-
-Vlastimil
-
-> Performance impacts
-> ===================
-> Setting direct map permissions on whatever random page gets allocated for a 
-> page table would result in a lot of kernel range shootdowns and direct map 
-> large page shattering. So the way the PKS page table memory is created is 
-> similar to this module page clustering series[2], where a cache of pages is 
-> replenished from 2MB pages such that the direct map permissions and associated 
-> breakage is localized on the direct map. In the PKS page tables case, a PKS 
-> key is pre-applied to the direct map for pages in the cache.
-> 
-> There would be some costs of memory overhead in order to protect the direct 
-> map page tables. There would also be some extra kernel range shootdowns to 
-> replenish the cache on occasion, from setting the PKS key on the direct map of 
-> the new pages. I don’t have any actual performance data yet.
-> 
-> This is based on V6 [1] of the core PKS infrastructure patches. PKS 
-> infrastructure follow-on’s are planned to enable keys to be set to the same 
-> permissions globally. Since this usage needs a key to be set globally 
-> read-only by default, a small temporary solution is hacked up in patch 8. Long 
-> term, PKS protected page tables would use a better and more generic solution 
-> to achieve this.
-> 
-> [1]
-> https://lore.kernel.org/lkml/20210401225833.566238-1-ira.weiny@intel.com/
-> [2]
-> https://lore.kernel.org/lkml/20210405203711.1095940-1-rick.p.edgecombe@intel.com
-> /
-> 
-> Thanks,
-> 
-> Rick
-> 
-> 
-> Rick Edgecombe (9):
->   list: Support getting most recent element in list_lru
->   list: Support list head not in object for list_lru
->   x86/mm/cpa: Add grouped page allocations
->   mm: Explicitly zero page table lock ptr
->   x86, mm: Use cache of page tables
->   x86/mm/cpa: Add set_memory_pks()
->   x86/mm/cpa: Add perm callbacks to grouped pages
->   x86, mm: Protect page tables with PKS
->   x86, cpa: PKS protect direct map page tables
-> 
->  arch/x86/boot/compressed/ident_map_64.c |   5 +
->  arch/x86/include/asm/pgalloc.h          |   6 +
->  arch/x86/include/asm/pgtable.h          |  26 +-
->  arch/x86/include/asm/pgtable_64.h       |  33 ++-
->  arch/x86/include/asm/pkeys_common.h     |   8 +-
->  arch/x86/include/asm/set_memory.h       |  23 ++
->  arch/x86/mm/init.c                      |  40 +++
->  arch/x86/mm/pat/set_memory.c            | 312 +++++++++++++++++++++++-
->  arch/x86/mm/pgtable.c                   | 144 ++++++++++-
->  include/asm-generic/pgalloc.h           |  42 +++-
->  include/linux/list_lru.h                |  26 ++
->  include/linux/mm.h                      |   7 +
->  mm/Kconfig                              |   6 +-
->  mm/list_lru.c                           |  38 ++-
->  mm/memory.c                             |   1 +
->  mm/swap.c                               |   7 +
->  mm/swap_state.c                         |   6 +
->  17 files changed, 705 insertions(+), 25 deletions(-)
-> 
-
+There's also the HIGHPTE code we could abuse to kmap an alias while
+we're at it.
