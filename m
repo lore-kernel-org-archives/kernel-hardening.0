@@ -1,21 +1,20 @@
-Return-Path: <SRS0=lQ9h=KC=lists.openwall.com=kernel-hardening-return-21256-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=S0bN=KC=lists.openwall.com=kernel-hardening-return-21257-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-18.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,INCLUDES_PULL_REQUEST,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4127DC433ED
-	for <kernel-hardening@archiver.kernel.org>; Fri,  7 May 2021 16:15:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6D776C433B4
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 May 2021 16:27:55 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 12ABB6144F
-	for <kernel-hardening@archiver.kernel.org>; Fri,  7 May 2021 16:15:13 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 12ABB6144F
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21256-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 29779 invoked by uid 550); 7 May 2021 16:15:06 -0000
+	by mail.kernel.org (Postfix) with SMTP id 537766144F
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 May 2021 16:27:54 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 537766144F
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21257-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5980 invoked by uid 550); 7 May 2021 16:27:46 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,242 +22,135 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29744 invoked from network); 7 May 2021 16:15:05 -0000
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Subject: New mailing list for Landlock LSM user space discussions
-To: landlock@lists.linux.dev
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org,
- linux-security-module@vger.kernel.org, linux-hardening@vger.kernel.org
-References: <11a1adfd-d2e8-2181-81a-529792e4b6e5@namei.org>
-Message-ID: <92296246-9d24-8d64-3ace-e8a36e595d27@digikod.net>
-Date: Fri, 7 May 2021 18:15:44 +0200
-User-Agent:
-MIME-Version: 1.0
-In-Reply-To: <11a1adfd-d2e8-2181-81a-529792e4b6e5@namei.org>
-Content-Type: text/plain; charset=iso-8859-15
+Received: (qmail 5931 invoked from network); 7 May 2021 16:27:44 -0000
+IronPort-SDR: JbfYuhgR7+4NsHdLI5ZCWSij/K9obxOGuk6qO5SBzW0gbDNhSWGJ4jhPlluztfKnTgfCco4yL+
+ T3rQpP7+Q1Qg==
+X-IronPort-AV: E=McAfee;i="6200,9189,9977"; a="260037549"
+X-IronPort-AV: E=Sophos;i="5.82,281,1613462400"; 
+   d="scan'208";a="260037549"
+IronPort-SDR: Ri6BuNk9XhAE0cNck5O6Hcv3R6Zsq6jX4qeg3VBjpoF05y6OZDAo2MQHFET/bXC8UuNm7f5JNO
+ 6OY44v1I6iHg==
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.82,281,1613462400"; 
+   d="scan'208";a="453148188"
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=btq/s7KfvIRUW8bdg0HE4O/3z1GvTRG0JUrap9eGe5HfM0yfHzcXNrMk2pYO63AdiUyM2lQ3SC3Wi1kGVRy5dL3m7mF0Jf6Wif+eU5k0UtxxFlZeDop06SvCAiwywqCRv2NoD5t6iNPsL6hwUn2nrIz5G6WOLX5HQu5wkFQf2ixgsb2IpQDEy0l8Tvj0H1Que8UjYz8T1d5BQLg+5NXfSFsnnaduI0dByrTMQk7b1xYF7ql/TdduoMO+tccBIseKV08eRhFybaahw6pFlr52fJKyEZ3oFJC2sv45OPN4GZQ7ACw3zAM4uQBp4E5QCcs9vyP7zoJVTD5yNaEXsFLfNA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=TaG8Xt34/b7FoBySChbBMNJ1b4kD6K8ZxxfeQCSs7Yk=;
+ b=nntVMaXo7lVloG+ZYY/btRZyMW1P8TeDNHhB8knA4f2NI7CR4o7pQR4hsH2DvICkDwQlA0kz8+n0YCIJ6lVJRF9gN3YxphECCoWxLxYZvddnJ9xWWYC8+zyZwJpdt/NpMIUi2fxzyNJjUe+RPBZPTRhKRMCwnk3zGeys7vC2UAiN3QijmGiG8PrsmwElc39csUCQ3j78lD70K3Xf1C4UC/ytiKS1r08Yrntaf2kKPZDcTuo7Si5jSBuHOMxjZsfNOtar7kF70STFC4EYOAArsQQbXbwLyKIIz7ESsnOGJKQiEwE7UGukvz4/X/vjDucBmlQ3ibqvUqaVc33aqBkd+A==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=intel.com; dmarc=pass action=none header.from=intel.com;
+ dkim=pass header.d=intel.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=intel.onmicrosoft.com;
+ s=selector2-intel-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=TaG8Xt34/b7FoBySChbBMNJ1b4kD6K8ZxxfeQCSs7Yk=;
+ b=ecXkFyEY05v8Eiqu+bJqtTJfKakZBjWbzzLqOn+AYt0/kYxYA9pJELnxgCOll/JwlSF0HpS4E4VRHBFm6V1hJIw15Kq56jy+9hKoKTjQgyD54RDYdAUMCAcO+I4axZ53a0TFyH/sHfwymvVKb5RZA6HkxxSM9dbTqAdSU1WCO3o=
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+To: "shakeelb@google.com" <shakeelb@google.com>
+CC: "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>, "luto@kernel.org" <luto@kernel.org>,
+	"Hansen, Dave" <dave.hansen@intel.com>, "x86@kernel.org" <x86@kernel.org>,
+	"linux-mm@kvack.org" <linux-mm@kvack.org>, "peterz@infradead.org"
+	<peterz@infradead.org>, "akpm@linux-foundation.org"
+	<akpm@linux-foundation.org>, "linux-kernel@vger.kernel.org"
+	<linux-kernel@vger.kernel.org>, "rppt@kernel.org" <rppt@kernel.org>,
+	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, "Weiny,
+ Ira" <ira.weiny@intel.com>, "Williams, Dan J" <dan.j.williams@intel.com>
+Subject: Re: [PATCH RFC 5/9] x86, mm: Use cache of page tables
+Thread-Topic: [PATCH RFC 5/9] x86, mm: Use cache of page tables
+Thread-Index: AQHXQUYjun+WzMbt+kG/lp6eVw61HKrWx4EAgAFxrQA=
+Date: Fri, 7 May 2021 16:27:27 +0000
+Message-ID: <588d4b82a6cb47383e73e5d375b2b1766b4d3511.camel@intel.com>
+References: <20210505003032.489164-1-rick.p.edgecombe@intel.com>
+	 <20210505003032.489164-6-rick.p.edgecombe@intel.com>
+	 <CALvZod7ieLEObX0y-7X+_zMwaVN5o0P-ZwZVLqCAK5ytQrNs9w@mail.gmail.com>
+In-Reply-To: <CALvZod7ieLEObX0y-7X+_zMwaVN5o0P-ZwZVLqCAK5ytQrNs9w@mail.gmail.com>
+Accept-Language: en-US
 Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+user-agent: Evolution 3.38.4 (3.38.4-1.fc33) 
+authentication-results: google.com; dkim=none (message not signed)
+ header.d=none;google.com; dmarc=none action=none header.from=intel.com;
+x-originating-ip: [134.134.139.86]
+x-ms-publictraffictype: Email
+x-ms-office365-filtering-correlation-id: dda41096-0a63-4da0-9234-08d9117500ca
+x-ms-traffictypediagnostic: SN6PR11MB2672:
+x-ld-processed: 46c98d88-e344-4ed4-8496-4ed7712e255d,ExtAddr,ExtFwd
+x-ms-exchange-transport-forked: True
+x-microsoft-antispam-prvs: <SN6PR11MB2672EC7D4BEA691C6BAD4627C9579@SN6PR11MB2672.namprd11.prod.outlook.com>
+x-ms-oob-tlc-oobclassifiers: OLM:8882;
+x-ms-exchange-senderadcheck: 1
+x-microsoft-antispam: BCL:0;
+x-microsoft-antispam-message-info: 6xMF/+9oldho/I0JEd7yMHso+0YvkDsG/A0rdPyTtwvYL4a3NYiG22HA49dCes1eTHne7IyZ3Raf2bijALvL9dsZXWVBaKaNfTAnNaQKKnWFm+EdvxZLQ8+GUYpMzSlF36GXIPQwqjsMUykqIgSIjcuROQQem+MnVH9nFmQkSRsJ/NWLyDdxmIIRoqBg+JyKwAWbjy7UStlhtnKupJrcKbifsEa+1ofpzndJoPrq4ekPkhoHu93KRyJGiie9tEtLg8wQQt0TodO0PxPCvu9iE1sd9K+zXfLE16835hYToSvdLn0TncFKDi9OjuWxIvJkm9tBrL/UwyE0OD4zMkjuMZoeavueweKXGCtCyty5nMSnfr3E0KlkKrjrNcxBAV8MZNhc0vTOM7qI7RpCXI9DkOFcddRYXjMPzH5X+sSHJKIk6SBNZfLwJ5NFdMe0e1aFcvJ911weEnknIVDomKazlnp2syvCe5YB8Waa0m0kzNLJTi+yIktXu03NffKp90Ng8CEKtpFYVmCoJQ+lCns022bi4Es01Qo6rYve5n87wZ2VNxttIrWD/4LHnhhZ96su/T9t5kMyS+OueIZnEZ6mA3JJpLnuq1rPsVLq5idR5DQ=
+x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:SN6PR11MB3184.namprd11.prod.outlook.com;PTR:;CAT:NONE;SFS:(366004)(136003)(346002)(39860400002)(396003)(376002)(6916009)(2616005)(66476007)(86362001)(4326008)(316002)(36756003)(53546011)(7416002)(6486002)(6506007)(54906003)(66446008)(64756008)(83380400001)(8936002)(91956017)(66946007)(76116006)(66556008)(5660300002)(2906002)(186003)(478600001)(71200400001)(4744005)(6512007)(8676002)(38100700002)(122000001)(26005);DIR:OUT;SFP:1102;
+x-ms-exchange-antispam-messagedata: =?utf-8?B?SnRHcmhsVTlzNzMvNDJpaVhTTTgrVmVQcWJPbkxpT21WQnArd0Q2WUVkVlhx?=
+ =?utf-8?B?VFBtcythMmw2SDk3d2g5RStIdE15c3JIYXFwUmp0TlVuWFpKais4d1pieG43?=
+ =?utf-8?B?UzBXdExxS3Z2RW9JTDUxUUdMQTRmaDZUbjl5SjVGeDEzenhPZXdENVpVSnBx?=
+ =?utf-8?B?V0V2V1hyRnpHTG0zUlY4UEdCZzV5VkhkOENEM283bGhzRk5LZFllZk1DUWVa?=
+ =?utf-8?B?RXVRbk1DQ2JBc24wZytOYUNBZmcwQi85UDZrSUZrR3hHQ1dpRWtwUU5nZTZK?=
+ =?utf-8?B?dUVnNVhzckZtbmw0TlRLTC9VTnRUUUZMWmFtdS9NOWUzU3Q2TTQrTEtWSi85?=
+ =?utf-8?B?RHRPMGpKV3NCY1J6NE13K0JnS0VXcTVpa3oyeVZFazYwR2RUN0R0Q0lCRXNi?=
+ =?utf-8?B?OTBBQ0k0bno1VTliZFRNLzF3SklhbFBLbDJCSVVUZXBqMDd3Q1ZBbWpITEFn?=
+ =?utf-8?B?NjY4dnZENlFSMzNGeVRiUVl3RDFud1VkajVEVEZ4c2s2bWt4VkphaHpyQy9V?=
+ =?utf-8?B?L0hDZ2pWa0l1bGNjNUNneW1memVrUUZTc0FhazVVVFBLWURGN3h2ZnJJOUxx?=
+ =?utf-8?B?Y3hVT0NydDR1YnpFNnIweThheWJZVmd4N25QZHJRMlUrSGtsRWRQcUVvaHlE?=
+ =?utf-8?B?SWRTQk5hZ3NTQW41QTVDL2RiM2RRd3JwOXNEeHJqenRUSTFJNnJLSVJCa3NV?=
+ =?utf-8?B?U1p2cjVOUTBrTlRNdHFHYTdTRktBVUFzN1J6UkFWUkxYd204ZTNhTm9YTTkv?=
+ =?utf-8?B?cGdONVdacVJXYndmSzV6K1ZTNjNKSndGWTMrYVlKSmRGOVh3RWdwT2h5WnpV?=
+ =?utf-8?B?M29BODhXWTFrWmhvNnA1QTNsVUZkV25tSmJ0cmVHOVBmOVpiU0E2RVhJT1Rt?=
+ =?utf-8?B?ZDZFdFlTckR6cDdubVYvMENiZm96Z2Y3UFM0M3NhcnI5U004V2crWHJzK2FI?=
+ =?utf-8?B?UjlMQ0lpQzZ0VG85Zlg2bVhlTW1ZMTdWeTNPQXJqa01VRFBVKy8zQ3pINm9y?=
+ =?utf-8?B?Vk1ZYnlwMVRLL0NBN0RJcG80V2JnKzhXM3lwVDE2cHRvNkt0ZGVZU09URit5?=
+ =?utf-8?B?VEIyamVIMzBQdXZqbHJHZjlEdHNwNHhCWGw1S3lxNzZFNE1sWHpnL1BjNXRH?=
+ =?utf-8?B?dEZoVnFVUXFXVVZRUmpXbVpHSjJQdEpkYnkzY2o0VTkvMFllbVJXeWNHVGty?=
+ =?utf-8?B?QlhDTlp5OXNTRUZPbTJNeEtON0hHSnpiWHdnRGJvWnczRGZ4VmhlRzRLaC9p?=
+ =?utf-8?B?NkcyNllmcFZGVUN0STI0TW8wb1VpTTQxV3ZUamVrM3RtOUI2RUl3MWRtV0FO?=
+ =?utf-8?B?SlBHaFB2c2Z0MEJ6UjZ4anNMblo5aUpmdVA5ZUZnS0ZoZU9Pbzg2ZUlXeTB4?=
+ =?utf-8?B?VnRLSXRFTUdqT2dlOGw4cEVnRis0bE9GSFBLcDBFT3dOTktPRmp2enVJVUsw?=
+ =?utf-8?B?QWVxUWNIOW15elFZNm1tNlNZdTcyTmVDSlpXc3RpZmxvaFpIaWxBcXZiWldi?=
+ =?utf-8?B?Y0RRckpRUGFoUldrcHB0akF1M1pybDVBM3RwTkpwTTFQcDdhU21QQkl6TzVL?=
+ =?utf-8?B?VFRUemN6ejJ5KzVaTGk3MlNjdE4xemtWalQrK2lHdzFBUDlWQ2g4VGdQeTNM?=
+ =?utf-8?B?c2NrU0kwSkVuYnZNRXNEMFEwNlNZQURaeU9WK0F5UzlwNGN6Y1VDeko5djA2?=
+ =?utf-8?B?QW9ISW5HODl3V1lHbWtjeTFVVEhORXc4Q2hmVStaSU5qaERjaXNYZk1yTEpj?=
+ =?utf-8?Q?M6yhMNjaJIk17kh0+nYMMGDfMLJ7QVjIW5d3hKi?=
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <7479924C4599EF47AE6D00F10FD01996@namprd11.prod.outlook.com>
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: SN6PR11MB3184.namprd11.prod.outlook.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: dda41096-0a63-4da0-9234-08d9117500ca
+X-MS-Exchange-CrossTenant-originalarrivaltime: 07 May 2021 16:27:27.0697
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: 46c98d88-e344-4ed4-8496-4ed7712e255d
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: StoVTqiu6z7mxtMxMFEyPDrC8K+Fp9IH6n/wEB0ni8ptsxzJEU+oMysQpNpYP0+TJVcCt6+WY4tSOL1q43UYU0+8VyiUPptJQ9ZpaCpnBeY=
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: SN6PR11MB2672
+X-OriginatorOrg: intel.com
 
-Hi,
-
-Here is a new mailing list for application developers to ask questions
-about Landlock and collaborate. This mailing list is also a place to
-send patches to user space applications (in CC) to support Landlock. The
-linux-security-module@vger.kernel.org mailing list should still be used
-for kernel development though.
-
-You can subscribe or just freely send emails to
-landlock@lists.linux.dev: https://subspace.kernel.org/lists.linux.dev.html
-
-Regards,
- Mickaël
-
-
-On 02/05/2021 04:02, pr-tracker-bot@kernel.org wrote:
-> The pull request you sent on Wed, 28 Apr 2021 12:54:22 +1000 (AEST):
->
->> git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git tags/landlock_v34
->
-> has been merged into torvalds/linux.git:
-> https://git.kernel.org/torvalds/c/17ae69aba89dbfa2139b7f8024b757ab3cc42f59
->
-> Thank you!
->
-
-On 28/04/2021 04:54, James Morris wrote:
-> Hi Linus,
-> 
-> This patchset adds a new LSM called Landlock, from Mickaël Salaün.
-> 
-> Briefly, Landlock provides for unprivileged application sandboxing.
-> 
->>From Mickaël's cover letter:
-> 
->   The goal of Landlock is to enable to restrict ambient rights (e.g.
->   global filesystem access) for a set of processes.  Because Landlock is a
->   stackable LSM [1], it makes possible to create safe security sandboxes
->   as new security layers in addition to the existing system-wide
->   access-controls.  This kind of sandbox is expected to help mitigate the
->   security impact of bugs or unexpected/malicious behaviors in user-space
->   applications.  Landlock empowers any process, including unprivileged
->   ones, to securely restrict themselves.
-> 
->   Landlock is inspired by seccomp-bpf but instead of filtering syscalls
->   and their raw arguments, a Landlock rule can restrict the use of kernel
->   objects like file hierarchies, according to the kernel semantic.
->   Landlock also takes inspiration from other OS sandbox mechanisms: XNU
->   Sandbox, FreeBSD Capsicum or OpenBSD Pledge/Unveil.
-> 
->   In this current form, Landlock misses some access-control features.
->   This enables to minimize this patch series and ease review.  This series
->   still addresses multiple use cases, especially with the combined use of
->   seccomp-bpf: applications with built-in sandboxing, init systems,
->   security sandbox tools and security-oriented APIs [2].
-> 
->   [1] https://lore.kernel.org/lkml/50db058a-7dde-441b-a7f9-f6837fe8b69f@schaufler-ca.com/
->   [2] https://lore.kernel.org/lkml/f646e1c7-33cf-333f-070c-0a40ad0468cd@digikod.net/
-> 
-> The cover letter and v34 posting is here:
-> https://lore.kernel.org/linux-security-module/20210422154123.13086-1-mic@digikod.net/
-> 
-> See also: https://landlock.io/
-> 
-> This code has had extensive design discussion and review over several 
-> years. The v33 code has been in next since April 9, and was updated last 
-> week to v34 with a relatively simple change. If you prefer to pull v33 
-> instead, please pull "tags/landlock_v33" instead, and we'll push the 
-> change through after merging.
-> 
-> There's a merge conflict in the syscall tables, with resolution by 
-> Stephen Rothwell:
-> https://lore.kernel.org/linux-next/20210409143954.22329cfa@canb.auug.org.au/
-> 
-> Al Viro raised some issues re. the VFS in v31:
-> https://lore.kernel.org/linux-security-module/YGUslUPwp85Zrp4t@zeniv-ca.linux.org.uk/
-> 
-> which were addressed in comments and in v33:
-> https://lore.kernel.org/linux-security-module/5f4dfa1-f9ac-f31f-3237-dcf976cabbfc@namei.org/
-> 
-> 
-> Please pull.
-> 
-> ---
-> 
-> The following changes since commit 1e28eed17697bcf343c6743f0028cc3b5dd88bf0:
-> 
->   Linux 5.12-rc3 (2021-03-14 14:41:02 -0700)
-> 
-> are available in the Git repository at:
-> 
->   git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git tags/landlock_v34
-> 
-> for you to fetch changes up to 3532b0b4352ce79400b0aa68414f1a0fc422b920:
-> 
->   landlock: Enable user space to infer supported features (2021-04-22 12:22:11 -0700)
-> 
-> ----------------------------------------------------------------
-> Add Landlock, a new LSM from Mickaël Salaün <mic@linux.microsoft.com>
-> 
-> ----------------------------------------------------------------
-> Casey Schaufler (1):
->       LSM: Infrastructure management of the superblock
-> 
-> Mickaël Salaün (12):
->       landlock: Add object management
->       landlock: Add ruleset and domain management
->       landlock: Set up the security framework and manage credentials
->       landlock: Add ptrace restrictions
->       landlock: Support filesystem access-control
->       fs,security: Add sb_delete hook
->       arch: Wire up Landlock syscalls
->       landlock: Add syscall implementations
->       selftests/landlock: Add user space tests
->       samples/landlock: Add a sandbox manager example
->       landlock: Add user and kernel documentation
->       landlock: Enable user space to infer supported features
-> 
->  Documentation/security/index.rst               |    1 +
->  Documentation/security/landlock.rst            |   85 +
->  Documentation/userspace-api/index.rst          |    1 +
->  Documentation/userspace-api/landlock.rst       |  311 +++
->  MAINTAINERS                                    |   15 +
->  arch/Kconfig                                   |    7 +
->  arch/alpha/kernel/syscalls/syscall.tbl         |    3 +
->  arch/arm/tools/syscall.tbl                     |    3 +
->  arch/arm64/include/asm/unistd.h                |    2 +-
->  arch/arm64/include/asm/unistd32.h              |    6 +
->  arch/ia64/kernel/syscalls/syscall.tbl          |    3 +
->  arch/m68k/kernel/syscalls/syscall.tbl          |    3 +
->  arch/microblaze/kernel/syscalls/syscall.tbl    |    3 +
->  arch/mips/kernel/syscalls/syscall_n32.tbl      |    3 +
->  arch/mips/kernel/syscalls/syscall_n64.tbl      |    3 +
->  arch/mips/kernel/syscalls/syscall_o32.tbl      |    3 +
->  arch/parisc/kernel/syscalls/syscall.tbl        |    3 +
->  arch/powerpc/kernel/syscalls/syscall.tbl       |    3 +
->  arch/s390/kernel/syscalls/syscall.tbl          |    3 +
->  arch/sh/kernel/syscalls/syscall.tbl            |    3 +
->  arch/sparc/kernel/syscalls/syscall.tbl         |    3 +
->  arch/um/Kconfig                                |    1 +
->  arch/x86/entry/syscalls/syscall_32.tbl         |    3 +
->  arch/x86/entry/syscalls/syscall_64.tbl         |    3 +
->  arch/xtensa/kernel/syscalls/syscall.tbl        |    3 +
->  fs/super.c                                     |    1 +
->  include/linux/lsm_hook_defs.h                  |    1 +
->  include/linux/lsm_hooks.h                      |    4 +
->  include/linux/security.h                       |    4 +
->  include/linux/syscalls.h                       |    7 +
->  include/uapi/asm-generic/unistd.h              |    8 +-
->  include/uapi/linux/landlock.h                  |  137 ++
->  kernel/sys_ni.c                                |    5 +
->  samples/Kconfig                                |    7 +
->  samples/Makefile                               |    1 +
->  samples/landlock/.gitignore                    |    1 +
->  samples/landlock/Makefile                      |   13 +
->  samples/landlock/sandboxer.c                   |  238 ++
->  security/Kconfig                               |   11 +-
->  security/Makefile                              |    2 +
->  security/landlock/Kconfig                      |   21 +
->  security/landlock/Makefile                     |    4 +
->  security/landlock/common.h                     |   20 +
->  security/landlock/cred.c                       |   46 +
->  security/landlock/cred.h                       |   58 +
->  security/landlock/fs.c                         |  692 ++++++
->  security/landlock/fs.h                         |   70 +
->  security/landlock/limits.h                     |   21 +
->  security/landlock/object.c                     |   67 +
->  security/landlock/object.h                     |   91 +
->  security/landlock/ptrace.c                     |  120 +
->  security/landlock/ptrace.h                     |   14 +
->  security/landlock/ruleset.c                    |  473 ++++
->  security/landlock/ruleset.h                    |  165 ++
->  security/landlock/setup.c                      |   40 +
->  security/landlock/setup.h                      |   18 +
->  security/landlock/syscalls.c                   |  451 ++++
->  security/security.c                            |   51 +-
->  security/selinux/hooks.c                       |   58 +-
->  security/selinux/include/objsec.h              |    6 +
->  security/selinux/ss/services.c                 |    3 +-
->  security/smack/smack.h                         |    6 +
->  security/smack/smack_lsm.c                     |   35 +-
->  tools/testing/selftests/Makefile               |    1 +
->  tools/testing/selftests/landlock/.gitignore    |    2 +
->  tools/testing/selftests/landlock/Makefile      |   24 +
->  tools/testing/selftests/landlock/base_test.c   |  266 +++
->  tools/testing/selftests/landlock/common.h      |  183 ++
->  tools/testing/selftests/landlock/config        |    7 +
->  tools/testing/selftests/landlock/fs_test.c     | 2791 ++++++++++++++++++++++++
->  tools/testing/selftests/landlock/ptrace_test.c |  337 +++
->  tools/testing/selftests/landlock/true.c        |    5 +
->  72 files changed, 6986 insertions(+), 77 deletions(-)
->  create mode 100644 Documentation/security/landlock.rst
->  create mode 100644 Documentation/userspace-api/landlock.rst
->  create mode 100644 include/uapi/linux/landlock.h
->  create mode 100644 samples/landlock/.gitignore
->  create mode 100644 samples/landlock/Makefile
->  create mode 100644 samples/landlock/sandboxer.c
->  create mode 100644 security/landlock/Kconfig
->  create mode 100644 security/landlock/Makefile
->  create mode 100644 security/landlock/common.h
->  create mode 100644 security/landlock/cred.c
->  create mode 100644 security/landlock/cred.h
->  create mode 100644 security/landlock/fs.c
->  create mode 100644 security/landlock/fs.h
->  create mode 100644 security/landlock/limits.h
->  create mode 100644 security/landlock/object.c
->  create mode 100644 security/landlock/object.h
->  create mode 100644 security/landlock/ptrace.c
->  create mode 100644 security/landlock/ptrace.h
->  create mode 100644 security/landlock/ruleset.c
->  create mode 100644 security/landlock/ruleset.h
->  create mode 100644 security/landlock/setup.c
->  create mode 100644 security/landlock/setup.h
->  create mode 100644 security/landlock/syscalls.c
->  create mode 100644 tools/testing/selftests/landlock/.gitignore
->  create mode 100644 tools/testing/selftests/landlock/Makefile
->  create mode 100644 tools/testing/selftests/landlock/base_test.c
->  create mode 100644 tools/testing/selftests/landlock/common.h
->  create mode 100644 tools/testing/selftests/landlock/config
->  create mode 100644 tools/testing/selftests/landlock/fs_test.c
->  create mode 100644 tools/testing/selftests/landlock/ptrace_test.c
->  create mode 100644 tools/testing/selftests/landlock/true.c
-> 
+T24gVGh1LCAyMDIxLTA1LTA2IGF0IDExOjI0IC0wNzAwLCBTaGFrZWVsIEJ1dHQgd3JvdGU6DQo+
+IE9uIFR1ZSwgTWF5IDQsIDIwMjEgYXQgNTozNiBQTSBSaWNrIEVkZ2Vjb21iZQ0KPiA8cmljay5w
+LmVkZ2Vjb21iZUBpbnRlbC5jb20+IHdyb3RlOg0KPiA+IA0KPiBbLi4uXQ0KPiA+ICsjaWZkZWYg
+Q09ORklHX1BLU19QR19UQUJMRVMNCj4gPiArc3RydWN0IHBhZ2UgKmFsbG9jX3RhYmxlKGdmcF90
+IGdmcCkNCj4gPiArew0KPiA+ICvCoMKgwqDCoMKgwqAgc3RydWN0IHBhZ2UgKnRhYmxlOw0KPiA+
+ICsNCj4gPiArwqDCoMKgwqDCoMKgIGlmICghcGtzX3BhZ2VfZW4pDQo+ID4gK8KgwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoMKgwqAgcmV0dXJuIGFsbG9jX3BhZ2UoZ2ZwKTsNCj4gPiArDQo+ID4gK8Kg
+wqDCoMKgwqDCoCB0YWJsZSA9IGdldF9ncm91cGVkX3BhZ2UobnVtYV9ub2RlX2lkKCksICZncGNf
+cGtzKTsNCj4gPiArwqDCoMKgwqDCoMKgIGlmICghdGFibGUpDQo+ID4gK8KgwqDCoMKgwqDCoMKg
+wqDCoMKgwqDCoMKgwqAgcmV0dXJuIE5VTEw7DQo+ID4gKw0KPiA+ICvCoMKgwqDCoMKgwqAgaWYg
+KGdmcCAmIF9fR0ZQX1pFUk8pDQo+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqAgbWVt
+c2V0KHBhZ2VfYWRkcmVzcyh0YWJsZSksIDAsIFBBR0VfU0laRSk7DQo+ID4gKw0KPiA+ICvCoMKg
+wqDCoMKgwqAgaWYgKG1lbWNnX2ttZW1fZW5hYmxlZCgpICYmDQo+ID4gK8KgwqDCoMKgwqDCoMKg
+wqDCoMKgIGdmcCAmIF9fR0ZQX0FDQ09VTlQgJiYNCj4gPiArwqDCoMKgwqDCoMKgwqDCoMKgwqAg
+IV9fbWVtY2dfa21lbV9jaGFyZ2VfcGFnZSh0YWJsZSwgZ2ZwLCAwKSkgew0KPiA+ICvCoMKgwqDC
+oMKgwqDCoMKgwqDCoMKgwqDCoMKgIGZyZWVfdGFibGUodGFibGUpOw0KPiA+ICvCoMKgwqDCoMKg
+wqDCoMKgwqDCoMKgwqDCoMKgIHRhYmxlID0gTlVMTDsNCj4gPiArwqDCoMKgwqDCoMKgIH0NCj4g
+PiArDQo+ID4gK8KgwqDCoMKgwqDCoCBWTV9CVUdfT05fUEFHRSgqKHVuc2lnbmVkIGxvbmcgKikm
+dGFibGUtPnB0bCwgdGFibGUpOw0KPiANCj4gdGFibGUgY2FuIGJlIE5VTEwgZHVlIHRvIGNoYXJn
+ZSBmYWlsdXJlLg0KDQpBcmdoLCB5ZXMuIFRoYW5rIHlvdS4gSSdsbCByZW1vdmUgdGhlIFZNX0JV
+R19PTiwgaXQgd2FzIGxlZnQNCmFjY2lkZW50YWxseS4NCg==
