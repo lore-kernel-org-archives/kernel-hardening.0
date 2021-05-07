@@ -1,21 +1,20 @@
-Return-Path: <SRS0=5e7d=KB=lists.openwall.com=kernel-hardening-return-21254-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=eqvf=KC=lists.openwall.com=kernel-hardening-return-21255-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.3 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 954FAC433ED
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 May 2021 18:28:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6AF54C433ED
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 May 2021 06:58:03 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A133961154
-	for <kernel-hardening@archiver.kernel.org>; Thu,  6 May 2021 18:28:51 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A133961154
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21254-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 15792 invoked by uid 550); 6 May 2021 18:28:44 -0000
+	by mail.kernel.org (Postfix) with SMTP id 4898E61164
+	for <kernel-hardening@archiver.kernel.org>; Fri,  7 May 2021 06:58:02 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 4898E61164
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21255-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 13725 invoked by uid 550); 7 May 2021 06:57:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,76 +22,59 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13651 invoked from network); 6 May 2021 18:24:40 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=jEv5tsbty+v8OeQ9wP03mPApi7oS9HlG3cJxYfgNoiA=;
-        b=cwWL6QfDfsK88627ETLN1flWqt9CgqYpMKMsnTfLYNl1q4lygFb0rZq1Lz0VwVsmrT
-         AA9L6aOYWLWc8zfj+wGu+fTRyHCLoBzinxwLZ+RovMH7d0BzrMTIS/1t+Z5Na/ZsVpBS
-         tPXeVSy7MvRWsvD3T64Pg72keOq3vST+61MvG326ReMWUIXXORBy8AI/uBrqCi0PujKV
-         TrLfh6Xr7Tybx8Sza9TaTAeui8kUskm8BNtjkWdjkBwW1l53PKDohLZKu6PoGynPeHxs
-         DzifD5lCoEgDClyS4w0wbpYYhUuq4kjnledeOK+gUfjx/j7/OLGYWNY51QaQj9vIvbYe
-         lVug==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=jEv5tsbty+v8OeQ9wP03mPApi7oS9HlG3cJxYfgNoiA=;
-        b=duJtCQ1ErIAnPWpkDTuxrkHVRyDikVMlY1MSQhehYrYwWfak7LTHeCBerbk7IdtNMU
-         vJ3Fwk4HCFws+voTxxrQSGYHiHEbpfYqRzlErACCjZyQmg0SNfwtbHIKMziBZleY4Ae4
-         Rd1JDbEKcsq3lydMBYVhgbxeeeh9CEsYAWfiyCMSeoNhZpwJx30/sXZY1FIqha6j4YGn
-         3awWxVsP4DXoCFlvMd12R9zy1LoAZY72U414gtuTVMmhppQifdzoxSvXSZraHOH9ttFT
-         sW71gDUJvoH7B78zEc6z/glbl0jFTdeWVuu9C1NFOM05HrwCCxejTg+2KSBP4I3rwIWB
-         EBrg==
-X-Gm-Message-State: AOAM532NMSm2x2EdEXlp/okCeqvHZdj9+qHYb9DzY7BEAU+g+OpwObh6
-	3neHr6atosz/es5o4zDY5DsUAlpdKu6OBWhMi5TrRw==
-X-Google-Smtp-Source: ABdhPJzy4hau3Y+ImQptMqxd6yvrIolm3ihuACWllTQt3Q7HCocEB90y1lMX8Lc4gL3EwqVc0U2JKjjqKX4V2//PC5c=
-X-Received: by 2002:a2e:b5cd:: with SMTP id g13mr4757099ljn.0.1620325469530;
- Thu, 06 May 2021 11:24:29 -0700 (PDT)
+Received: (qmail 13699 invoked from network); 7 May 2021 06:57:53 -0000
+IronPort-SDR: DFE5U0gVXgeKu+GdL6KLwIAE/s2HdyzGlNuGp4IUJZGj9xIQo7++kTKFtES00kMbypB6anx608
+ afDrCTfEbPWw==
+X-IronPort-AV: E=McAfee;i="6200,9189,9976"; a="178906268"
+X-IronPort-AV: E=Sophos;i="5.82,279,1613462400"; 
+   d="scan'208";a="178906268"
+IronPort-SDR: UnRDUhXp1YJ7woWBBKXsCQlMusv9ZIYJsasX7Fo8/Ov0wrjePJAgLPUsXswZk9LXN/8OdSjgMH
+ 5aLf1swSJOdw==
+X-IronPort-AV: E=Sophos;i="5.82,279,1613462400"; 
+   d="scan'208";a="469793342"
+Date: Fri, 7 May 2021 15:14:38 +0800
+From: Oliver Sang <oliver.sang@intel.com>
+To: Alexey Gladkov <legion@kernel.org>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
+	Alexey Gladkov <gladkov.alexey@gmail.com>,
+	0day robot <lkp@intel.com>, LKML <linux-kernel@vger.kernel.org>,
+	lkp@lists.01.org, "Huang, Ying" <ying.huang@intel.com>,
+	Feng Tang <feng.tang@intel.com>, zhengjun.xing@intel.com,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>,
+	Linux Containers <containers@lists.linux-foundation.org>,
+	Linux-MM <linux-mm@kvack.org>,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	Jann Horn <jannh@google.com>, Jens Axboe <axboe@kernel.dk>,
+	Kees Cook <keescook@chromium.org>, Oleg Nesterov <oleg@redhat.com>
+Subject: Re: 08ed4efad6: stress-ng.sigsegv.ops_per_sec -41.9% regression
+Message-ID: <20210507071438.GC27263@xsang-OptiPlex-9020>
+References: <7abe5ab608c61fc2363ba458bea21cf9a4a64588.1617814298.git.gladkov.alexey@gmail.com>
+ <20210408083026.GE1696@xsang-OptiPlex-9020>
+ <CAHk-=wigPx+MMQMQ-7EA0pq5_5+kMCNV4qFsOss-WwdCSQmb-w@mail.gmail.com>
+ <m1im4wmx9g.fsf@fess.ebiederm.org>
+ <20210423024722.GA13968@xsang-OptiPlex-9020>
+ <20210423074431.7ob6aqasome2zjbk@example.org>
+ <20210428143008.GA19916@xsang-OptiPlex-9020>
+ <20210428150952.mdnvl7i4kimgwswh@example.org>
 MIME-Version: 1.0
-References: <20210505003032.489164-1-rick.p.edgecombe@intel.com> <20210505003032.489164-6-rick.p.edgecombe@intel.com>
-In-Reply-To: <20210505003032.489164-6-rick.p.edgecombe@intel.com>
-From: Shakeel Butt <shakeelb@google.com>
-Date: Thu, 6 May 2021 11:24:18 -0700
-Message-ID: <CALvZod7ieLEObX0y-7X+_zMwaVN5o0P-ZwZVLqCAK5ytQrNs9w@mail.gmail.com>
-Subject: Re: [PATCH RFC 5/9] x86, mm: Use cache of page tables
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Dave Hansen <dave.hansen@intel.com>, Andy Lutomirski <luto@kernel.org>, 
-	"Peter Zijlstra (Intel)" <peterz@infradead.org>, Linux MM <linux-mm@kvack.org>, x86@kernel.org, 
-	Andrew Morton <akpm@linux-foundation.org>, linux-hardening@vger.kernel.org, 
-	kernel-hardening@lists.openwall.com, Ira Weiny <ira.weiny@intel.com>, 
-	Mike Rapoport <rppt@kernel.org>, Dan Williams <dan.j.williams@intel.com>, 
-	LKML <linux-kernel@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20210428150952.mdnvl7i4kimgwswh@example.org>
+User-Agent: Mutt/1.9.4 (2018-02-28)
 
-On Tue, May 4, 2021 at 5:36 PM Rick Edgecombe
-<rick.p.edgecombe@intel.com> wrote:
->
-[...]
-> +#ifdef CONFIG_PKS_PG_TABLES
-> +struct page *alloc_table(gfp_t gfp)
-> +{
-> +       struct page *table;
-> +
-> +       if (!pks_page_en)
-> +               return alloc_page(gfp);
-> +
-> +       table = get_grouped_page(numa_node_id(), &gpc_pks);
-> +       if (!table)
-> +               return NULL;
-> +
-> +       if (gfp & __GFP_ZERO)
-> +               memset(page_address(table), 0, PAGE_SIZE);
-> +
-> +       if (memcg_kmem_enabled() &&
-> +           gfp & __GFP_ACCOUNT &&
-> +           !__memcg_kmem_charge_page(table, gfp, 0)) {
-> +               free_table(table);
-> +               table = NULL;
-> +       }
-> +
-> +       VM_BUG_ON_PAGE(*(unsigned long *)&table->ptl, table);
+hi Alexey,
 
-table can be NULL due to charge failure.
+On Wed, Apr 28, 2021 at 05:09:52PM +0200, Alexey Gladkov wrote:
+> 
+> Thank you very much for testing and good news for me !!!
+> 
+> Do you have a place where its possible to see if the patch has been tested?
+> I mean test passed or not.
+
+sorry for late.
+
+unfortunately, we don't yet have a public place for this currently,
+which is a problem for developer to know the test coverage.
+
