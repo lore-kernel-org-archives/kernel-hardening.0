@@ -1,20 +1,21 @@
-Return-Path: <SRS0=+O/G=KE=lists.openwall.com=kernel-hardening-return-21258-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=lGfg=KF=lists.openwall.com=kernel-hardening-return-21259-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2430BC43461
-	for <kernel-hardening@archiver.kernel.org>; Sun,  9 May 2021 09:40:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E0650C433B4
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 May 2021 01:12:28 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 418E661370
-	for <kernel-hardening@archiver.kernel.org>; Sun,  9 May 2021 09:40:26 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 418E661370
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21258-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 4014 invoked by uid 550); 9 May 2021 09:40:17 -0000
+	by mail.kernel.org (Postfix) with SMTP id EEAAB6112F
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 May 2021 01:12:27 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org EEAAB6112F
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-foundation.org
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21259-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 19660 invoked by uid 550); 10 May 2021 01:12:19 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,112 +23,37 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3975 invoked from network); 9 May 2021 09:40:16 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1620553204;
-	bh=arqj45G9UntJeTybAfBKTHblqTMzSlsbmScLhph1JQw=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=LME6quczRrfH5T+sZlxMjLWKBvWW/uhkH89PfrtZENGozc14UbpYKyz+LEMe3jtTv
-	 A6Mq05FD+ZyCTiA7nDPDKOB0s6jgVT5AhLMzdI/xtaOrCL0el5+kwoYWXjdrbGZgI4
-	 bbZEGw4A23BaP2+qZN/TMDhOSzQ41o9h3RWsxO6uOdMwB1EUgL+EugElVMeWayt2Lg
-	 0+MpKZCLvUhmfjFvN2sL1/bJpFSgUfHAVnJCT0KQ+VaMceRy1twji2MkndvwMQv/kB
-	 PX/sRh0EuMbEZsc0L0+R8eCr0CrObDm/G9ZN39HhS6SO2FJKy5PYBj7+g2ZZTUBt/q
-	 VjhYQsQCEcxhQ==
-Date: Sun, 9 May 2021 12:39:55 +0300
-From: Mike Rapoport <rppt@kernel.org>
-To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Cc: "peterz@infradead.org" <peterz@infradead.org>,
-	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
-	"Hansen, Dave" <dave.hansen@intel.com>,
-	"luto@kernel.org" <luto@kernel.org>,
-	"x86@kernel.org" <x86@kernel.org>,
-	"linux-mm@kvack.org" <linux-mm@kvack.org>,
-	"akpm@linux-foundation.org" <akpm@linux-foundation.org>,
-	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
-	"Williams, Dan J" <dan.j.williams@intel.com>,
-	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>,
-	"Weiny, Ira" <ira.weiny@intel.com>
-Subject: Re: [PATCH RFC 3/9] x86/mm/cpa: Add grouped page allocations
-Message-ID: <YJet66kzbb6UB5Qe@kernel.org>
-References: <20210505003032.489164-1-rick.p.edgecombe@intel.com>
- <20210505003032.489164-4-rick.p.edgecombe@intel.com>
- <YJKKu7kMCtCuel2L@kernel.org>
- <YJKY+Ccxfe9wD0iP@hirez.programming.kicks-ass.net>
- <YJLnyJP755XAPZNX@kernel.org>
- <bb2a9aaedcd5d47ace719050fa06d7a21050cfc5.camel@intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <bb2a9aaedcd5d47ace719050fa06d7a21050cfc5.camel@intel.com>
+Received: (qmail 19640 invoked from network); 10 May 2021 01:12:18 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=linux-foundation.org;
+	s=korg; t=1620609126;
+	bh=x2gGptb1afI/ezHs0O8XaEYRbGWZuQr1p1oLQy4q6Iw=;
+	h=Date:From:To:Cc:Subject:In-Reply-To:References:From;
+	b=PsykP65fPWil10yBdaN+TV260LHnVIO1GNUlokxYTLJMTuFAZPqNqBv6VpL7/Sgi/
+	 /zkHwCxNsoOGgzUV5inffKDhjte3h3bbkthKv8CHeyjrtXVrkzQg4Gs/OGe1ChG0Dc
+	 LT3ukFWo/2VAKyRLC0xJMbfHIL9B/26I5ra0PP0s=
+Date: Sun, 9 May 2021 18:12:05 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+To: legion@kernel.org
+Cc: LKML <linux-kernel@vger.kernel.org>, Kernel Hardening
+ <kernel-hardening@lists.openwall.com>, Linux Containers
+ <containers@lists.linux-foundation.org>, linux-mm@kvack.org, Christian
+ Brauner <christian.brauner@ubuntu.com>, "Eric W . Biederman"
+ <ebiederm@xmission.com>, Jann Horn <jannh@google.com>, Jens Axboe
+ <axboe@kernel.dk>, Kees Cook <keescook@chromium.org>, Linus Torvalds
+ <torvalds@linux-foundation.org>, Oleg Nesterov <oleg@redhat.com>
+Subject: Re: [PATCH v11 0/9] Count rlimits in each user namespace
+Message-Id: <20210509181205.f0ce806919858efa0e0e0d20@linux-foundation.org>
+In-Reply-To: <cover.1619094428.git.legion@kernel.org>
+References: <cover.1619094428.git.legion@kernel.org>
+X-Mailer: Sylpheed 3.5.1 (GTK+ 2.24.31; x86_64-pc-linux-gnu)
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 
-On Wed, May 05, 2021 at 09:57:17PM +0000, Edgecombe, Rick P wrote:
-> On Wed, 2021-05-05 at 21:45 +0300, Mike Rapoport wrote:
-> > On Wed, May 05, 2021 at 03:09:12PM +0200, Peter Zijlstra wrote:
-> > > On Wed, May 05, 2021 at 03:08:27PM +0300, Mike Rapoport wrote:
-> > > > On Tue, May 04, 2021 at 05:30:26PM -0700, Rick Edgecombe wrote:
-> > > > > For x86, setting memory permissions on the direct map results
-> > > > > in fracturing
-> > > > > large pages. Direct map fracturing can be reduced by locating
-> > > > > pages that
-> > > > > will have their permissions set close together.
-> > > > > 
-> > > > > Create a simple page cache that allocates pages from huge page
-> > > > > size
-> > > > > blocks. Don't guarantee that a page will come from a huge page
-> > > > > grouping,
-> > > > > instead fallback to non-grouped pages to fulfill the allocation
-> > > > > if
-> > > > > needed. Also, register a shrinker such that the system can ask
-> > > > > for the
-> > > > > pages back if needed. Since this is only needed when there is a
-> > > > > direct
-> > > > > map, compile it out on highmem systems.
-> > > > 
-> > > > I only had time to skim through the patches, I like the idea of
-> > > > having a
-> > > > simple cache that allocates larger pages with a fallback to basic
-> > > > page
-> > > > size.
-> > > > 
-> > > > I just think it should be more generic and closer to the page
-> > > > allocator.
-> > > > I was thinking about adding a GFP flag that will tell that the
-> > > > allocated
-> > > > pages should be removed from the direct map. Then alloc_pages()
-> > > > could use
-> > > > such cache whenever this GFP flag is specified with a fallback
-> > > > for lower
-> > > > order allocations.
-> > > 
-> > > That doesn't provide enough information I think. Removing from
-> > > direct
-> > > map isn't the only consideration, you also want to group them by
-> > > the
-> > > target protection bits such that we don't get to use 4k pages quite
-> > > so
-> > > much.
-> > 
-> > Unless I'm missing something we anyway hand out 4k pages from the
-> > cache and
-> > the neighbouring 4k may end up with different protections.
-> > 
-> > This is also similar to what happens in the set Rick posted a while
-> > ago to
-> > support grouped vmalloc allocations:
-> > 
-> 
-> One issue is with the shrinker callbacks. If you are just trying to
-> reset and free a single page because the system is low on memory, it
-> could be problematic to have to break a large page, which would require
-> another page.
+On Thu, 22 Apr 2021 14:27:07 +0200 legion@kernel.org wrote:
 
-I don't follow you here. Maybe I've misread the patches but AFAIU the large
-page is broken at allocation time and 4k pages remain 4k pages afterwards.
+> These patches are for binding the rlimit counters to a user in user namespace.
 
-In my understanding the problem with a simple shrinker is that even if we
-have the entire 2M free it is not being reinstated as 2M page in the direct
-mapping.
- 
--- 
-Sincerely yours,
-Mike.
+It's at v11 and no there has been no acking or reviewing activity?  Or
+have you not been tracking these?
+
