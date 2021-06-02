@@ -1,4 +1,4 @@
-Return-Path: <SRS0=L2dy=KU=lists.openwall.com=kernel-hardening-return-21274-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=sYeh=K4=lists.openwall.com=kernel-hardening-return-21275-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
@@ -6,15 +6,15 @@ X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
 	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3266EC2B9F8
-	for <kernel-hardening@archiver.kernel.org>; Tue, 25 May 2021 16:30:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 96398C4708F
+	for <kernel-hardening@archiver.kernel.org>; Wed,  2 Jun 2021 20:38:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 41BF06141D
-	for <kernel-hardening@archiver.kernel.org>; Tue, 25 May 2021 16:30:09 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 41BF06141D
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=namei.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21274-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 18076 invoked by uid 550); 25 May 2021 16:29:48 -0000
+	by mail.kernel.org (Postfix) with SMTP id 9E7D361008
+	for <kernel-hardening@archiver.kernel.org>; Wed,  2 Jun 2021 20:38:04 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 9E7D361008
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=xmission.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21275-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 1057 invoked by uid 550); 2 Jun 2021 20:37:55 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,145 +22,43 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 18019 invoked from network); 25 May 2021 16:29:47 -0000
-Date: Wed, 26 May 2021 02:24:35 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-To: linux-security-module@vger.kernel.org
-cc: linux-kernel@vger.kernel.org, lwn@lwn.net, fedora-selinux-list@redhat.com, 
-    linux-crypto@vger.kernel.org, kernel-hardening@lists.openwall.com, 
-    linux-integrity@vger.kernel.org, selinux@vger.kernel.org, 
-    Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, 
-    keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, 
-    Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>
-Subject: Re: [ANNOUNCE][CFP] Linux Security Summit 2021
-In-Reply-To: <c244f77-56a1-c089-521d-2e670488c10@namei.org>
-Message-ID: <5b3a0bf-226d-6ee-d0b-d6673eff32b2@namei.org>
-References: <c244f77-56a1-c089-521d-2e670488c10@namei.org>
+Received: (qmail 1037 invoked from network); 2 Jun 2021 20:37:55 -0000
+From: ebiederm@xmission.com (Eric W. Biederman)
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: legion@kernel.org,  LKML <linux-kernel@vger.kernel.org>,  Kernel Hardening <kernel-hardening@lists.openwall.com>,  Linux Containers <containers@lists.linux-foundation.org>,  linux-mm@kvack.org,  Christian Brauner <christian.brauner@ubuntu.com>,  Jann Horn <jannh@google.com>,  Jens Axboe <axboe@kernel.dk>,  Kees Cook <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,  Oleg Nesterov <oleg@redhat.com>
+References: <cover.1619094428.git.legion@kernel.org>
+	<20210509181205.f0ce806919858efa0e0e0d20@linux-foundation.org>
+Date: Wed, 02 Jun 2021 15:37:32 -0500
+In-Reply-To: <20210509181205.f0ce806919858efa0e0e0d20@linux-foundation.org>
+	(Andrew Morton's message of "Sun, 9 May 2021 18:12:05 -0700")
+Message-ID: <87o8coq9yr.fsf@disp2133>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+Content-Type: text/plain
+X-XM-SPF: eid=1loXcR-00Efry-DT;;;mid=<87o8coq9yr.fsf@disp2133>;;;hst=in02.mta.xmission.com;;;ip=68.227.160.95;;;frm=ebiederm@xmission.com;;;spf=neutral
+X-XM-AID: U2FsdGVkX181tofntvStz1+pRqA2mAhl7FTynzngIXM=
+X-SA-Exim-Connect-IP: 68.227.160.95
+X-SA-Exim-Mail-From: ebiederm@xmission.com
+Subject: Re: [PATCH v11 0/9] Count rlimits in each user namespace
+X-SA-Exim-Version: 4.2.1 (built Sat, 08 Feb 2020 21:53:50 +0000)
+X-SA-Exim-Scanned: Yes (on in02.mta.xmission.com)
 
-Note that the venue of LSS 2021 has now changed to Seattle, USA.
+Andrew Morton <akpm@linux-foundation.org> writes:
 
-See https://events.linuxfoundation.org/linux-security-summit-north-america/
+> On Thu, 22 Apr 2021 14:27:07 +0200 legion@kernel.org wrote:
+>
+>> These patches are for binding the rlimit counters to a user in user namespace.
+>
+> It's at v11 and no there has been no acking or reviewing activity?  Or
+> have you not been tracking these?
 
-The new event dates are 29 September to 01 October.
+Most of the reviews were noticing things that needed to be changed.
 
-The CFP closes on June 27th.
+For the ack/review by tags I am the one reviewing it and merging the
+change so I guess I didn't give Alex any Acked-by or Reviewed-by
+tags.
 
+Regardless the changes are sitting in linux-next now and seem to be
+doing fine.
 
-
-
-
-On Tue, 9 Feb 2021, James Morris wrote:
-
-> ==============================================================================
->                    ANNOUNCEMENT AND CALL FOR PARTICIPATION
-> 
->                          LINUX SECURITY SUMMIT 2021
->                              
->                               27-29 September
->                               Dublin, Ireland
-> ==============================================================================
-> 
-> DESCRIPTION
->  
-> Linux Security Summit (LSS) is a technical forum for collaboration between
-> Linux developers, researchers, and end-users.  Its primary aim is to foster
-> community efforts in analyzing and solving Linux security challenges.
-> 
->  The program committee currently seeks proposals for:
->  
->    * Refereed Presentations:
->      45 minutes in length.
->  
->    * Panel Discussion Topics:
->      45 minutes in length.
->  
->    * Short Topics:
->      30 minutes in total, including at least 10 minutes discussion.
->  
->    * Tutorials
->      90 minutes in length.
->  
-> Tutorial sessions should be focused on advanced Linux security defense
-> topics within areas such as the kernel, compiler, and security-related
-> libraries.  Priority will be given to tutorials created for this conference,
-> and those where the presenter a leading subject matter expert on the topic.
->  
-> Topic areas include, but are not limited to:
->  
->    * Kernel self-protection
->    * Access control
->    * Cryptography and key management
->    * Integrity policy and enforcement
->    * Hardware Security
->    * IoT and embedded security
->    * Virtualization and containers
->    * System-specific system hardening
->    * Case studies
->    * Security tools
->    * Security UX
->    * Emerging technologies, threats & techniques
-> 
->   Proposals should be submitted via:
->     https://events.linuxfoundation.org/linux-security-summit-europe/program/cfp/
-> 
-> 
-> ** Note that for 2021, the North American and European events are combined into
-> a single event planned for Dublin, Ireland. **
->  
-> 
-> DATES
->  
->   * CFP close:            June 27
->   * CFP notifications:    July 20
->   * Schedule announced:   July 22
->   * Event:                September 27-29
-> 
-> WHO SHOULD ATTEND
->  
-> We're seeking a diverse range of attendees and welcome participation by
-> people involved in Linux security development, operations, and research.
->  
-> LSS is a unique global event that provides the opportunity to present and
-> discuss your work or research with key Linux security community members and
-> maintainers.  It's also useful for those who wish to keep up with the latest
-> in Linux security development and to provide input to the development
-> process.
-> 
-> WEB SITE
-> 
->     https://events.linuxfoundation.org/linux-security-summit-europe/
-> 
-> TWITTER
-> 
->   For event updates and announcements, follow:
-> 
->     https://twitter.com/LinuxSecSummit
->   
->     #linuxsecuritysummit
-> 
-> PROGRAM COMMITTEE
-> 
->   The program committee for LSS 2021 is:
-> 
->     * James Morris, Microsoft
->     * Serge Hallyn, Cisco
->     * Paul Moore, Cisco
->     * Stephen Smalley, NSA
->     * Elena Reshetova, Intel
->     * John Johansen, Canonical
->     * Kees Cook, Google
->     * Casey Schaufler, Intel
->     * Mimi Zohar, IBM
->     * David A. Wheeler, Institute for Defense Analyses
-> 
->   The program committee may be contacted as a group via email:
->     lss-pc () lists.linuxfoundation.org
-> 
-> 
-
--- 
-James Morris
-<jmorris@namei.org>
-
+Eric
