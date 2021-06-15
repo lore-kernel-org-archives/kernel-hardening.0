@@ -1,21 +1,22 @@
-Return-Path: <SRS0=kZBo=LF=lists.openwall.com=kernel-hardening-return-21303-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ktvs=LJ=lists.openwall.com=kernel-hardening-return-21304-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-15.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D6D40C48BE6
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Jun 2021 15:42:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2C00CC48BDF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Jun 2021 16:42:50 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id A471360D07
-	for <kernel-hardening@archiver.kernel.org>; Fri, 11 Jun 2021 15:42:37 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A471360D07
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmx.com
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21303-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 32692 invoked by uid 550); 11 Jun 2021 15:42:28 -0000
+	by mail.kernel.org (Postfix) with SMTP id 1E98C6188B
+	for <kernel-hardening@archiver.kernel.org>; Tue, 15 Jun 2021 16:42:48 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 1E98C6188B
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=gmail.com
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21304-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 18279 invoked by uid 550); 15 Jun 2021 16:42:39 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,174 +24,201 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32669 invoked from network); 11 Jun 2021 15:42:28 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=gmx.net;
-	s=badeba3b8450; t=1623426100;
-	bh=wSl94BM+7x5/sCumDnkuvfHVswV21AdjoNAYK7HUeg0=;
-	h=X-UI-Sender-Class:Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=Ktv15AFt+uhCBDslUDCIx1FJIBzYrZ3u61mrbS09SZ8CYUSCThBLz9MaVwyb1Fozf
-	 N/Pe2Jskoc0lhiOmiEts4rJ9FuzobAcwu2xGxvRTpGZ8WsFF/RQexkFqRKv/lNV7Bq
-	 wQGqYp/p9mytBvSd2EU+qff/qDr4dH4JDQL623e4=
-X-UI-Sender-Class: 01bb95c1-4bf8-414a-932a-4f6e2808ef9c
-Date: Fri, 11 Jun 2021 17:41:23 +0200
-From: John Wood <john.wood@gmx.com>
-To: Kees Cook <keescook@chromium.org>, Andi Kleen <ak@linux.intel.com>
-Cc: John Wood <john.wood@gmx.com>, Jann Horn <jannh@google.com>,
-	Jonathan Corbet <corbet@lwn.net>, James Morris <jmorris@namei.org>,
-	"Serge E. Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>,
-	x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>,
-	Arnd Bergmann <arnd@arndb.de>, valdis.kletnieks@vt.edu,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	linux-kselftest@vger.kernel.org, linux-arch@vger.kernel.org,
-	linux-hardening@vger.kernel.org,
-	kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH v8 0/8] Fork brute force attack mitigation
-Message-ID: <20210611154123.GA3057@ubuntu>
-References: <20210605150405.6936-1-john.wood@gmx.com>
- <202106081616.EC17DC1D0D@keescook>
- <cbfd306b-6e37-a697-ebdb-4a5029d36583@linux.intel.com>
- <202106090951.8C1B5BAD@keescook>
+Received: (qmail 18244 invoked from network); 15 Jun 2021 16:42:38 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=from:to:cc:subject:date:message-id:in-reply-to:references
+         :mime-version:content-transfer-encoding;
+        bh=5HqZgwKlnzHk7eYEZtH1CaDCUYRbqEaAMkPzJHvXqS0=;
+        b=mybjY4le4ctEWGm4xYu2iOggsKW4q3/OyS+MxcoV+4sj4lWFwwnQNlmhPG+4ab8x1U
+         eGsvSWvravHxwru85zseEObBLKnmFFAKleEjMXqFeo/AAKK7F6vHUQiMTj+LkjBYl9CB
+         ElZy+6UTOxwulqLE/1DJtATQRhuNKzyaBTKdMu9bO2tSvsq/EwMG3Qcbm1oHHuWPvkoc
+         JEwU2r3TJyNZ81FlgaipOWrPVgZNpCEz8C5Xr5Id0F15hRR3wGRIexVErFKRcAmYHupS
+         u/NOU4f1YPVY6dlllL4AvnoSJ3H1Xo7QDnLZpOjoPAAN2Fe5nt0pyXyroPiQVTWwjCoM
+         lLjA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=5HqZgwKlnzHk7eYEZtH1CaDCUYRbqEaAMkPzJHvXqS0=;
+        b=G6//66OINHLSMkMojH6vC5DfVxrNZqYaX+F+rHnYFZvcgRppyhvwkQz6NXREv1GjFc
+         2TKsFeYaPPqSXC6qTKg0qTzAv/+F7gzR34Xxyysec4WccOsnJNxlT2rj3punrlEgSBBs
+         1Pvy8pCOEVSULYHyzyhGaEZvGbaZo4DQJesf6UZBPaMLWAaJcBbnOGreFKxzL3qimewW
+         CkqDwXRlEhKmWZjFZYIPlCcfDmy2/1hMhqT7LbnFmrf7M+OWZKD8jlPTQB3DaOIs2eiK
+         RuOQnRsXshyWogII1dlhEgLEUTsSioNYjNknvWudVL7CiUB2QQfec+yM/+f0e6htWRtZ
+         YRww==
+X-Gm-Message-State: AOAM530ZW3sk+iPaegSFhQkZqNJxFbe8y4eUM+rXlNPAr8gvJrFaglYD
+	AtbwmPOk3L3LLaYM+ys45iA=
+X-Google-Smtp-Source: ABdhPJwp84+Gas8I1iFxMF+l7Gvuia2vMA5qr7ms18jAFHC17zcr6iYbk+siFXsqqCOGOhy2a2vdPw==
+X-Received: by 2002:a05:6000:110e:: with SMTP id z14mr26964792wrw.235.1623775347448;
+        Tue, 15 Jun 2021 09:42:27 -0700 (PDT)
+From: Kurt Manucredo <fuzzybritches0@gmail.com>
+To: ebiggers@kernel.org,
+	syzbot+bed360704c521841c85d@syzkaller.appspotmail.com
+Cc: Kurt Manucredo <fuzzybritches0@gmail.com>,
+	keescook@chromium.org,
+	yhs@fb.com,
+	dvyukov@google.com,
+	andrii@kernel.org,
+	ast@kernel.org,
+	bpf@vger.kernel.org,
+	daniel@iogearbox.net,
+	davem@davemloft.net,
+	hawk@kernel.org,
+	john.fastabend@gmail.com,
+	kafai@fb.com,
+	kpsingh@kernel.org,
+	kuba@kernel.org,
+	linux-kernel@vger.kernel.org,
+	netdev@vger.kernel.org,
+	songliubraving@fb.com,
+	syzkaller-bugs@googlegroups.com,
+	nathan@kernel.org,
+	ndesaulniers@google.com,
+	clang-built-linux@googlegroups.com,
+	kernel-hardening@lists.openwall.com,
+	kasan-dev@googlegroups.com
+Subject: [PATCH v5] bpf: core: fix shift-out-of-bounds in ___bpf_prog_run
+Date: Tue, 15 Jun 2021 16:42:10 +0000
+Message-Id: <85536-177443-curtm@phaethon>
+X-Mailer: git-send-email 2.30.2
+In-Reply-To: <YMJvbGEz0xu9JU9D@gmail.com>
+References: <87609-531187-curtm@phaethon> <6a392b66-6f26-4532-d25f-6b09770ce366@fb.com> <CAADnVQKexxZQw0yK_7rmFOdaYabaFpi2EmF6RGs5bXvFHtUQaA@mail.gmail.com> <CACT4Y+b=si6NCx=nRHKm_pziXnVMmLo-eSuRajsxmx5+Hy_ycg@mail.gmail.com> <202106091119.84A88B6FE7@keescook> <752cb1ad-a0b1-92b7-4c49-bbb42fdecdbe@fb.com> <CACT4Y+a592rxFmNgJgk2zwqBE8EqW1ey9SjF_-U3z6gt3Yc=oA@mail.gmail.com> <1aaa2408-94b9-a1e6-beff-7523b66fe73d@fb.com> <202106101002.DF8C7EF@keescook> <CAADnVQKMwKYgthoQV4RmGpZm9Hm-=wH3DoaNqs=UZRmJKefwGw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <202106090951.8C1B5BAD@keescook>
-X-Provags-ID: V03:K1:z/ThWGP2ZXkRX2ENXQAW/y0IqOK8vdtgPOoV6FgxUCUCFL6dypE
- Q2jb1TIg/EBtSsnOOmZRk5QWnOZUUHjYolIgJf4CYCaeOTqxYMjuXgRhvutKU4VTq9EfK0+
- IUIbEDpjRaIJsJwfD7MpdryDp+sCXpPdVSWuhbsVu6c/zi6waJmk5puVuhdQQFmxwj9kiJ/
- IK8pJI6fVbxIjv/MIv5Gw==
-X-UI-Out-Filterresults: notjunk:1;V03:K0:Jcw2bEeUOA4=:8Y2o1L32c5gONZQWS8a6u7
- X2yTDJ2C8O2Jc69Azq8go7nM7u/PFeRW2EmORk1I7Iqkd4O4ShnurPNRasNNF0EKq7wANU5qX
- zmUZkCcOvCwp42c7Qp026M3OOS/Gge2Bl6TPrQAA8s6BpRD6Z+YQZvrfJyoEtYjVR/0OQpDL5
- ACGwLBqWsL4OEOe+64DU1jg0AOi/9NlSNGyrACjq7Z3oJMC3YX4oByU6ElloP0UGdEJa0CDXT
- 8wugo0k6PStZzcj1/x72E336qPT2V6/EnA3BlKF5LrMF0tgUa9T2PAY+gXJSy+WnDuNZCXSek
- PfTgzkQ6FiUa2a4aHT1ThrwQwiinfDq0fnQj5MoL5u265ZxQFTCYatuL4cp6wivUsn5jqM9gW
- +5f7axMaY6YW9KtorDOzDFmMVTucu3Zw03shXZpgvu/rNRw1HKtXpYo+uzjkOq7G+F3Ko9RY3
- G8jqxIQGiE+WZ0yhsrDfwfTwANnuiGaMqTkjL8k8Wsfn6y4t/51RZRM69SoMfkgSwnXxv2Pca
- jtXNU22sj4dFI6cI0Rzs6Oi39yurSDmWg2H0Vq2mFYeWpVkCVxJIDb9jB9ruCj4HuijGklNQ3
- G4Vk5JBp8GIotoPp/BZcUebHaRHoxGXXP2mQcdWft6wvFZDTwMS4QYCOvPhjVd4A/yxaByH1f
- J/6W0LJgi3VyJ73ZFmVPrd+zreavLizvV38Lx+ZCYvcZmiVsQaUMB4hlpp+VANQcrdyJcetXg
- ZEQD6J14tEwXXk12ZsmjvEaXmatCzKaIBT+vZKj2NDWCLQmdvBmcW0173aaIULFRyEqoVO3Vy
- riOm373Is1aOpOdCetPbyqwjXgfx5epO5yba/NPMQzq0s0zpTS3qvrXkM2nMzk2CMGXdJtpqk
- 8ZKYeqMTpH0XfOSAQo6vPSpqxaaT3OOyjpzlAxHfZa5KMYOIkBpTnr/vBqUVCx1zvq9IodGLn
- qYbl4szFzS6q3vPwivuE7b2WaaOMQKsn863wA+i1LvAQdcdrYu+0NGwo9/46BHWW82C5AY4c7
- Oa1sAGJ1VQt/tD81gDBBot/qgLcAAR5/XaNy34PTubEYzkMbE0KhdInOVW9Rv4pENYHbjv/8w
- azBKa8ZZeHW0J2WanyqMOeuBmd/fG4IM6B7
-Content-Transfer-Encoding: quoted-printable
+Content-Transfer-Encoding: 8bit
 
-On Wed, Jun 09, 2021 at 09:52:29AM -0700, Kees Cook wrote:
-> On Tue, Jun 08, 2021 at 04:38:15PM -0700, Andi Kleen wrote:
-> >
-> > On 6/8/2021 4:19 PM, Kees Cook wrote:
-> > > On Sat, Jun 05, 2021 at 05:03:57PM +0200, John Wood wrote:
-> > > > [...]
-> > > > the kselftest to avoid the detection ;) ). So, in this version, to=
- track
-> > > > all the statistical data (info related with application crashes), =
-the
-> > > > extended attributes feature for the executable files are used. The=
- xattr is
-> > > > also used to mark the executables as "not allowed" when an attack =
-is
-> > > > detected. Then, the execve system call rely on this flag to avoid =
-following
-> > > > executions of this file.
-> > >
-> > > I have some concerns about this being actually usable and not creati=
-ng
-> > > DoS situations. For example, let's say an attacker had found a hard-=
-to-hit
-> > > bug in "sudo", and starts brute forcing it. When the brute LSM notic=
-es,
-> > > it'll make "sudo" unusable for the entire system, yes?
-> > >
-> > > And a reboot won't fix it, either, IIUC.
-> > >
-> > The whole point of the mitigation is to trade potential attacks agains=
-t DOS.
-> >
-> > If you're worried about DOS the whole thing is not for you.
->
-> Right, but there's no need to make a system unusable for everyone else.
-> There's nothing here that relaxes the defense (i.e. stop spawning apache
-> for 10 minutes). Writing it to disk with nothing that undoes it seems a
-> bit too much. :)
+Syzbot detects a shift-out-of-bounds in ___bpf_prog_run()
+kernel/bpf/core.c:1414:2.
 
-Here I have merge the first reply.
+The shift-out-of-bounds happens when we have BPF_X. This means we have
+to go the same way we go when we want to avoid a divide-by-zero. We do
+it in do_misc_fixups().
 
-> It seems like there is a need to track "user" running "prog", and have
-> that be timed out. Are there use-cases here where that wouldn't be
-> sufficient?
+When we have BPF_K we find divide-by-zero and shift-out-of-bounds guards
+next each other in check_alu_op(). It seems only logical to me that the
+same should be true for BPF_X in do_misc_fixups() since it is there where
+I found the divide-by-zero guard. Or is there a reason I'm not aware of,
+that dictates that the checks should be in adjust_scalar_min_max_vals(),
+as they are now?
 
-Ok, what do you think of the following proposal:
+This patch was tested by syzbot.
 
-Add an uid_t field to the structure saved in the xattr. So this struct
-contains now
+Reported-and-tested-by: syzbot+bed360704c521841c85d@syzkaller.appspotmail.com
+Signed-off-by: Kurt Manucredo <fuzzybritches0@gmail.com>
+---
 
-faults: Number of crashes.
-nsecs: Last crash timestamp as the number of nanoseconds in the
-       International Atomic Time (TAI) reference.
-period: Crash period's moving average.
-flags: Statistics flags.
-uid: User id not allowed to run the executable.
+https://syzkaller.appspot.com/bug?id=edb51be4c9a320186328893287bb30d5eed09231
 
-The logic would be the following:
+Changelog:
+----------
+v5 - Fix shift-out-of-bounds in do_misc_fixups().
+v4 - Fix shift-out-of-bounds in adjust_scalar_min_max_vals.
+     Fix commit message.
+v3 - Make it clearer what the fix is for.
+v2 - Fix shift-out-of-bounds in ___bpf_prog_run() by adding boundary
+     check in check_alu_op() in verifier.c.
+v1 - Fix shift-out-of-bounds in ___bpf_prog_run() by adding boundary
+     check in ___bpf_prog_run().
 
-1. faults, nsecs and period are updated in every crash and is a common inf=
-o
-   for all the users.
-2. If the max number of faults is reached, it is "not allowed" to run the
-   executable by any user. This condition blocks the file until root clear
-   the xattr. No timeout.
-3. When an attack is detected the uid of the user that is running the app
-   is saved in the xattr and the executable is marked as "not allowed" to
-   run by this user. The "not allowed" state has a timeout (more below).
-4. When someone tries to run the executable, if his uid is different from
-   the uid saved in the xattr, then the operation is "allowed".
-5. When someone tries to run the executable, if his uid is equal to the
-   uid saved in the xattr, then the operation is "not allowed". This user
-   is banned for a timeout.
-6. When someone tries to run the executable and the timeout has expired,
-   the operation is "allowed" and the saved uid is removed.
-7. If the executable crashes again when it is run by a user different from
-   the one saved in the xattr (and the timeout has no expired), the file
-   is marked as "not allowed" to run by any user. All users are banned for
-   a timeout.
+thanks
 
-The timeout: I think there are two options here.
+kind regards
 
-1. A fixed timeout set by a sysctl attribute.
-2. A dynamic timeout calculated from the info stored in the xattr. The
-   timeout would be the needed period to guarantee that when the app is
-   run again and it crashes, the attack detection will not be triggered.
-   To be more clear I expose the formulas:
+Kurt
 
-   Mathematically the application crash period's EMA can be expressed as
-   follows:
+ kernel/bpf/verifier.c | 53 +++++++++++++++++++++++++------------------
+ 1 file changed, 31 insertions(+), 22 deletions(-)
 
-   period_ema[i] =3D period[i] * weight + period_ema[i - 1] * (1 - weight)
+diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
+index 94ba5163d4c5..83c7c1ccaf26 100644
+--- a/kernel/bpf/verifier.c
++++ b/kernel/bpf/verifier.c
+@@ -7496,7 +7496,6 @@ static int adjust_scalar_min_max_vals(struct bpf_verifier_env *env,
+ 	u64 umin_val, umax_val;
+ 	s32 s32_min_val, s32_max_val;
+ 	u32 u32_min_val, u32_max_val;
+-	u64 insn_bitness = (BPF_CLASS(insn->code) == BPF_ALU64) ? 64 : 32;
+ 	bool alu32 = (BPF_CLASS(insn->code) != BPF_ALU64);
+ 	int ret;
+ 
+@@ -7592,39 +7591,18 @@ static int adjust_scalar_min_max_vals(struct bpf_verifier_env *env,
+ 		scalar_min_max_xor(dst_reg, &src_reg);
+ 		break;
+ 	case BPF_LSH:
+-		if (umax_val >= insn_bitness) {
+-			/* Shifts greater than 31 or 63 are undefined.
+-			 * This includes shifts by a negative number.
+-			 */
+-			mark_reg_unknown(env, regs, insn->dst_reg);
+-			break;
+-		}
+ 		if (alu32)
+ 			scalar32_min_max_lsh(dst_reg, &src_reg);
+ 		else
+ 			scalar_min_max_lsh(dst_reg, &src_reg);
+ 		break;
+ 	case BPF_RSH:
+-		if (umax_val >= insn_bitness) {
+-			/* Shifts greater than 31 or 63 are undefined.
+-			 * This includes shifts by a negative number.
+-			 */
+-			mark_reg_unknown(env, regs, insn->dst_reg);
+-			break;
+-		}
+ 		if (alu32)
+ 			scalar32_min_max_rsh(dst_reg, &src_reg);
+ 		else
+ 			scalar_min_max_rsh(dst_reg, &src_reg);
+ 		break;
+ 	case BPF_ARSH:
+-		if (umax_val >= insn_bitness) {
+-			/* Shifts greater than 31 or 63 are undefined.
+-			 * This includes shifts by a negative number.
+-			 */
+-			mark_reg_unknown(env, regs, insn->dst_reg);
+-			break;
+-		}
+ 		if (alu32)
+ 			scalar32_min_max_arsh(dst_reg, &src_reg);
+ 		else
+@@ -12353,6 +12331,37 @@ static int do_misc_fixups(struct bpf_verifier_env *env)
+ 			continue;
+ 		}
+ 
++		/* Make shift-out-of-bounds exceptions impossible. */
++		if (insn->code == (BPF_ALU64 | BPF_LSH | BPF_X) ||
++		    insn->code == (BPF_ALU64 | BPF_RSH | BPF_X) ||
++		    insn->code == (BPF_ALU64 | BPF_ARSH | BPF_X) ||
++		    insn->code == (BPF_ALU | BPF_LSH | BPF_X) ||
++		    insn->code == (BPF_ALU | BPF_RSH | BPF_X) ||
++		    insn->code == (BPF_ALU | BPF_ARSH | BPF_X)) {
++			bool is64 = BPF_CLASS(insn->code) == BPF_ALU64;
++			u8 insn_bitness = is64 ? 64 : 32;
++			struct bpf_insn chk_and_shift[] = {
++				/* [R,W]x shift >= 32||64 -> 0 */
++				BPF_RAW_INSN((is64 ? BPF_JMP : BPF_JMP32) |
++					     BPF_JLT | BPF_K, insn->src_reg,
++					     insn_bitness, 2, 0),
++				BPF_ALU32_REG(BPF_XOR, insn->dst_reg, insn->dst_reg),
++				BPF_JMP_IMM(BPF_JA, 0, 0, 1),
++				*insn,
++			};
++
++			cnt = ARRAY_SIZE(chk_and_shift);
++
++			new_prog = bpf_patch_insn_data(env, i + delta, chk_and_shift, cnt);
++			if (!new_prog)
++				return -ENOMEM;
++
++			delta    += cnt - 1;
++			env->prog = prog = new_prog;
++			insn      = new_prog->insnsi + i + delta;
++			continue;
++		}
++
+ 		/* Implement LD_ABS and LD_IND with a rewrite, if supported by the program type. */
+ 		if (BPF_CLASS(insn->code) == BPF_LD &&
+ 		    (BPF_MODE(insn->code) == BPF_ABS ||
+-- 
+2.30.2
 
-   If we isolate period:
-
-   period[i] =3D (period_ema[i] - period_ema[i - 1] * (1 - weight)) / weig=
-ht
-
-   Where period_ema[i] is the "crash_period_threshold", period_ema[i - 1]
-   is the last period ema saved in the xattr and period[i] is the dynamic
-   timeout.
-
-As a final point. Possibly there are more cases but the logic would be the
-one explained. I think that it is not necessary to save the uid for every
-user that crashes the app nor the crashes info for every user. If more
-than one user crashes the application, something "bad" is happening. So,
-all users are banned for a timeout. This way the info saved in the xattr
-has a fixed size and we prevent an attacker from abusing this size.
-
-I hope this proposal can be enough. What do you think?
-
-John Wood.
