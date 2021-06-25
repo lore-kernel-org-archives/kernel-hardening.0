@@ -1,21 +1,20 @@
-Return-Path: <SRS0=sAyf=LS=lists.openwall.com=kernel-hardening-return-21316-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=upLr=LT=lists.openwall.com=kernel-hardening-return-21317-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-15.2 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_2
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_SANE_2 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4ABE3C49EA6
-	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Jun 2021 14:54:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A6E22C2B9F4
+	for <kernel-hardening@archiver.kernel.org>; Fri, 25 Jun 2021 04:09:18 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 449C1613C0
-	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Jun 2021 14:54:44 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 449C1613C0
+	by mail.kernel.org (Postfix) with SMTP id D03C6613FD
+	for <kernel-hardening@archiver.kernel.org>; Fri, 25 Jun 2021 04:09:17 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D03C6613FD
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=goodmis.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21316-kernel-hardening=archiver.kernel.org@lists.openwall.com
-Received: (qmail 25668 invoked by uid 550); 24 Jun 2021 14:54:37 -0000
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=kernel-hardening-return-21317-kernel-hardening=archiver.kernel.org@lists.openwall.com
+Received: (qmail 5504 invoked by uid 550); 25 Jun 2021 04:09:09 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,136 +22,93 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25634 invoked from network); 24 Jun 2021 14:54:36 -0000
-Date: Thu, 24 Jun 2021 10:54:22 -0400
+Received: (qmail 5465 invoked from network); 25 Jun 2021 04:09:08 -0000
+Date: Fri, 25 Jun 2021 00:08:54 -0400
 From: Steven Rostedt <rostedt@goodmis.org>
 To: Yun Zhou <yun.zhou@windriver.com>
-Cc: <linux-kernel@vger.kernel.org>, <kernel-hardening@lists.openwall.com>,
- <ying.xue@windriver.com>, <ps-ccm-rr@windriver.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com,
+ ying.xue@windriver.com, ps-ccm-rr@windriver.com
 Subject: Re: [PATCH] seq_buf: let seq_buf_putmem_hex support len larger than
  8
-Message-ID: <20210624105422.5c8aaf4d@oasis.local.home>
-In-Reply-To: <20210624131646.17878-1-yun.zhou@windriver.com>
+Message-ID: <20210625000854.36ed6f2d@gandalf.local.home>
+In-Reply-To: <32276a16-b893-bdbb-e552-7f5ecaaec5f1@windriver.com>
 References: <20210624131646.17878-1-yun.zhou@windriver.com>
-X-Mailer: Claws Mail 3.17.3 (GTK+ 2.24.33; x86_64-pc-linux-gnu)
+	<20210624105422.5c8aaf4d@oasis.local.home>
+	<32276a16-b893-bdbb-e552-7f5ecaaec5f1@windriver.com>
+X-Mailer: Claws Mail 3.17.8 (GTK+ 2.24.33; x86_64-pc-linux-gnu)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 
-On Thu, 24 Jun 2021 21:16:46 +0800
+On Fri, 25 Jun 2021 11:41:35 +0800
 Yun Zhou <yun.zhou@windriver.com> wrote:
 
-> I guess the original intention of seq_buf_putmem_hex is to dump the raw
+> Hi Steve,
+>=20
+> Thanks very much for your friendly and clear feedback.
+>=20
+> Although in current kernel trace_seq_putmem_hex() is only used for=20
+> single word,
+>=20
+> I think it should/need support longer data. These are my arguments:
+>=20
+> 1. The design of double loop is used to process more data. If only=20
+> supports single word,
+>=20
+>  =C2=A0=C2=A0=C2=A0 the inner loop is enough, and the outer loop and the =
+following=20
+> lines are no longer needed.
+>=20
+>  =C2=A0=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0 len -=3D j / 2;
+>=20
+>  =C2=A0=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0 hex[j++] =3D ' ';
+>=20
+> 2. The last line above try to split two words/dwords with space. If only=
+=20
+> supports single word,
+>=20
+>  =C2=A0=C2=A0=C2=A0 this strange behavior is hard to understand.
+>=20
+> 3. If it only supports single word, I think parameter 'len' is redundant.
 
-A little background, this was originally introduced in 2008:
+Not really, we have to differentiate char, short, int and long long.
 
- 5e3ca0ec76fce ("ftrace: introduce the "hex" output method")
+>=20
+> 4. The comments of both seq_buf_putmem_hex() and trace_seq_putmem_hex()=20
+> have not
+>=20
+>  =C2=A0=C2=A0=C2=A0 indicated the scope of 'len'.
+>=20
+> 5. If it only supports single word, we need to design a new function to=20
+> support bigger block of data.
+>=20
+>  =C2=A0=C2=A0=C2=A0=C2=A0 I think it is redundant since the current funct=
+ion can perfectly=20
+> deal with.
+>=20
+> 6. If follow my patch, it can support any length of data, including the=20
+> single word.
+>=20
+> How do you think?
 
-And commit ad0a3b68114e8 ("trace: add build-time check to avoid overrunning hex buffer")
+First, since you found a real bug, we need to just fix that first (single
+word as is done currently). Because this needs to go to stable, and what
+you are explaining above is an enhancement, and not something that needs to
+be backported.
 
-changed HEX_CHARS from a hardcoded 17 to a way to decided what the max
-long is.
+Second, is there a use case? Honestly, I never use the "hex" version of the
+output. That was only pulled in because it was implemented in the original
+code that was in the rt patch. I wish we could just get rid of it.
 
- #define HEX_CHARS              (MAX_MEMHEX_BYTES*2 + 1)
+Thus, if there's a use case for handling more than one word, then I'm fine
+with adding that enhancement. But if it is being done just because it can
+be, then I don't think we should bother.
 
+What use case do you have in mind?
 
-> memory to seq_buf according to 64 bits integer number. It tries to output
-> numbers in reverse, with the high bits in the front and the low bits in
-> the back. If the length of the raw memory is equal to 8, e.g.
-> "01 23 45 67 89 ab cd ef" in memory, it will be dumped as "efcdab8967452301".
-
-Note, it only does that for little endian machines.
-
-> 
-> But if the length of the raw memory is larger than 8, the first value of
-> start_len will larger than 8, than seq_buf will save the last data, not
-> the eighth one, e.g. "01 23 45 67 89 ab cd ef 11" in memory, it will be
-> dumped as "11efcdab8967452301". I think it is not the original
-> intention of the function.
-> 
-> More seriously, if the length of the raw memory is larger than 9, the
-> start_len will be larger than 9, then hex will overflow, and the stack will be
-> corrupted. I do not kown if it can be exploited by hacker. But I am sure
-> it will cause kernel panic when the length of memory is more than 32 bytes.
-> 
-> [  448.551471] Unable to handle kernel paging request at virtual address 3438376c
-> [  448.558678] pgd = 6eaf278e
-> [  448.561376] [3438376c] *pgd=00000000
-> [  448.564945] Internal error: Oops: 5 [#2] PREEMPT ARM
-> [  448.569899] Modules linked in:
-> [  448.572951] CPU: 0 PID: 368 Comm: cat Tainted: G        W        4.18.40-yocto-standard #18
-> [  448.581374] Hardware name: Xilinx Zynq Platform
-> [  448.585901] PC is at trace_seq_putmem_hex+0x6c/0x84
-> [  448.590768] LR is at 0x20643032
-> [  448.593901] pc : [<c009a85c>]    lr : [<20643032>]    psr: 60000093
-> [  448.600159] sp : d980dc08  ip : 00000020  fp : c05f58cc
-> [  448.605375] r10: c05e5f30  r9 : 00000031  r8 : 00000000
-> [  448.610584] r7 : 20643032  r6 : 37663666  r5 : 36343730  r4 : 34383764
-> [  448.617103] r3 : 00001000  r2 : 00000042  r1 : d980dc00  r0 : 00000000
-> ...
-> [  448.907962] [<c009a85c>] (trace_seq_putmem_hex) from [<c010b008>] (trace_raw_output_write+0x58/0x9c)
-> [  448.917094] [<c010b008>] (trace_raw_output_write) from [<c00964c0>] (print_trace_line+0x144/0x3e8)
-> [  448.926050] [<c00964c0>] (print_trace_line) from [<c0098710>] (ftrace_dump+0x204/0x254)
-> [  448.934053] [<c0098710>] (ftrace_dump) from [<c0098780>] (trace_die_handler+0x20/0x34)
-> [  448.941975] [<c0098780>] (trace_die_handler) from [<c003cff8>] (notifier_call_chain+0x48/0x6c)
-> [  448.950581] [<c003cff8>] (notifier_call_chain) from [<c003d19c>] (__atomic_notifier_call_chain+0x3c/0x50)
-> [  448.960142] [<c003d19c>] (__atomic_notifier_call_chain) from [<c003d1cc>] (atomic_notifier_call_chain+0x1c/0x24)
-> [  448.970306] [<c003d1cc>] (atomic_notifier_call_chain) from [<c003d204>] (notify_die+0x30/0x3c)
-> [  448.978908] [<c003d204>] (notify_die) from [<c001361c>] (die+0xc4/0x258)
-> [  448.985604] [<c001361c>] (die) from [<c00173e8>] (__do_kernel_fault.part.0+0x5c/0x7c)
-> [  448.993438] [<c00173e8>] (__do_kernel_fault.part.0) from [<c043a270>] (do_page_fault+0x158/0x394)
-> [  449.002305] [<c043a270>] (do_page_fault) from [<c00174dc>] (do_DataAbort+0x40/0xec)
-> [  449.009959] [<c00174dc>] (do_DataAbort) from [<c0009970>] (__dabt_svc+0x50/0x80)
-> 
-> Additionally, the address of data ptr keeps in the same value in multiple
-> loops, the value of data buffer will not be picked forever.
-
-So the bug looks like it was there since the original code was
-introduced in 2008! There's two variables being increased in that loop
-(i and j), and i follows the raw data, and j follows what is being
-written into the buffer. The bug is that we are comparing the HEX_CHARS
-to 'i' when we really should be comparing it to 'j'! As if 'j' goes
-bigger than HEX_CHARS, it will overflow the destination buffer.
-
-And, it should be noted, that this is to read a single word (long) and
-not more. Thus, the "date += start_len" shouldn't be needed.
-
-Could you send another patch that makes it only process a single word
-and exit?
-
-I'll tag it for stable when you do.
+Anyway, please send just a fix patch, and then we can discuss the merits of
+this update later. I'd like the fix to be in ASAP.
 
 Thanks!
 
 -- Steve
-
-
-> 
-> Signed-off-by: Yun Zhou <yun.zhou@windriver.com>
-> ---
->  lib/seq_buf.c | 4 +++-
->  1 file changed, 3 insertions(+), 1 deletion(-)
-> 
-> diff --git a/lib/seq_buf.c b/lib/seq_buf.c
-> index 6aabb609dd87..948c8b55f666 100644
-> --- a/lib/seq_buf.c
-> +++ b/lib/seq_buf.c
-> @@ -229,7 +229,7 @@ int seq_buf_putmem_hex(struct seq_buf *s, const void *mem,
->  	WARN_ON(s->size == 0);
->  
->  	while (len) {
-> -		start_len = min(len, HEX_CHARS - 1);
-> +		start_len = min(len, MAX_MEMHEX_BYTES);
->  #ifdef __BIG_ENDIAN
->  		for (i = 0, j = 0; i < start_len; i++) {
->  #else
-> @@ -248,6 +248,8 @@ int seq_buf_putmem_hex(struct seq_buf *s, const void *mem,
->  		seq_buf_putmem(s, hex, j);
->  		if (seq_buf_has_overflowed(s))
->  			return -1;
-> +
-> +		data += start_len;
->  	}
->  	return 0;
->  }
-
