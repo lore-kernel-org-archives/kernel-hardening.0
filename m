@@ -1,21 +1,21 @@
-Return-Path: <SRS0=gFz8=NW=lists.openwall.com=kernel-hardening-return-21377-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=w1lv=NW=lists.openwall.com=kernel-hardening-return-21378-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-16.4 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
+X-Spam-Status: No, score=-10.3 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_2 autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3D770C432BE
-	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Aug 2021 10:14:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 70BFEC4320E
+	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Aug 2021 17:56:04 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 41A2D60F91
-	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Aug 2021 10:14:45 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 41A2D60F91
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=kernel.org
+	by mail.kernel.org (Postfix) with SMTP id 20CBF61059
+	for <kernel-hardening@archiver.kernel.org>; Tue, 31 Aug 2021 17:56:02 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 20CBF61059
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 5596 invoked by uid 550); 31 Aug 2021 10:14:37 -0000
+Received: (qmail 25908 invoked by uid 550); 31 Aug 2021 17:55:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,235 +23,128 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5559 invoked from network); 31 Aug 2021 10:14:36 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1630404864;
-	bh=sv+Cg1X+GBWUrO7fD0zMaYtizfycZgRul3+2yg67iwI=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=jjmdlQqBBwC61Dm6M3j6ltcmjch9JnUdjCt1m3iPM+1xA+zSjCR9ZVE5lUqJvNw0I
-	 QmtznYopatvh54G3PJL4O+aOONlBX6vtKCzq43PN3S23Hzf++5YgjJQHyXI+VTsyD+
-	 /ERe0A1hTT6brhvBCAv26DIqs4FDgfoYs1b2bRarfMN4RzKSfYYhZk4kT+fZmcuA1Z
-	 NxZ779TMOgpDgAQ4FlRaaPr4BqkMVOS9M6W4wLsy0adubDhHGNOMfASpb9RxAlSMpK
-	 /y46REUiJRJxP5u8Jg2ukGCMW5O8yRlnFK4TxmfDwysH9amt+7vENnsMIn8878hlmd
-	 yjXymAIBf97Cg==
-Date: Tue, 31 Aug 2021 13:14:16 +0300
-From: Mike Rapoport <rppt@kernel.org>
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: dave.hansen@intel.com, luto@kernel.org, peterz@infradead.org,
-	x86@kernel.org, akpm@linux-foundation.org, keescook@chromium.org,
-	shakeelb@google.com, vbabka@suse.cz, linux-mm@kvack.org,
-	linux-hardening@vger.kernel.org,
-	kernel-hardening@lists.openwall.com, ira.weiny@intel.com,
-	dan.j.williams@intel.com, linux-kernel@vger.kernel.org
-Subject: Re: [RFC PATCH v2 17/19] x86/mm/cpa: PKS protect direct map page
- tables
-Message-ID: <YS4A+F1H9MvyOeMV@kernel.org>
+Received: (qmail 25873 invoked from network); 31 Aug 2021 17:55:51 -0000
+X-IronPort-AV: E=McAfee;i="6200,9189,10093"; a="279545879"
+X-IronPort-AV: E=Sophos;i="5.84,367,1620716400"; 
+   d="scan'208";a="279545879"
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.84,367,1620716400"; 
+   d="scan'208";a="645408297"
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=YcpeGUW/9EwZftHyjkAnvTf8ktPxEGhCrCbmPGoET3/a/sQgwymvbdHV3paiPhNDIj2YJPGM/R5xQX1AmYXPqVdD5rbIEKVHbxpJ/e7wSSS1bu5Zv0kwM1QLx5aKXwZ3iE/iqGtlJan7lThJYcK30jc5JjSjmvJyTC5f7ygBlYYd+LCaWUVxN4sw9Nvkn8Pp5mRsYBS4LWPku+xYTh4wE/73dmHLrv7zznPXfWWN7MEdiS04PwI/XBWc+YcSEUluyAM2LOs0CjleQ+YLsmFPQsl5NtSetxz4Vj0tDZz1YNOh5mfHUMY5K2XH+R5cLIU4riWaG+dYWL7Fu1Qur5F5yw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=4SDt1eAVFScwlfCesRmtqDG/pcAVWz4MZLo87sbNTRk=;
+ b=IoOqQLM9ENXzy7LgcvhiPXaHeEAnjkDHUoVZbSWDc1amSYfQeBgtVnW5uh6zm7xBpbxxgWVK7Wr//kVRqPVe34foUPKGnGneew88TizlQpL3uf7O0fayg2aa3HN71bsF3My7VuJjI+AAabncXanO6zCNQY1hHaEYEEzgDCaIKGvFrz+WXYqnZ2kcFNQ8XMiSAwU0oI9V1GN+UrwcVYYtdZy+XV5uU2wXKmP/msMMf5leTltw6vHtmts9c/wNqjmiP0gcRC0GJwsMar5xj7KH5JGtGs4c1tS+Zj+voCAbw9LzkUr2tDVt9RaJmT/DKPTTGWwe7rV70bDjdHZOxen05Q==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=intel.com; dmarc=pass action=none header.from=intel.com;
+ dkim=pass header.d=intel.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=intel.onmicrosoft.com;
+ s=selector2-intel-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=4SDt1eAVFScwlfCesRmtqDG/pcAVWz4MZLo87sbNTRk=;
+ b=AhFPFrzy3MYKtLzTnMjoTP8zjVJFg9TJEfxZMm/oPXFSX8dJwwiw4AIcxS9u9fT0FuhZIVmwBEHCWwaZ4R8NJeCyUwwe8agjzzDkr/tnnOQbCnlFwfN/mKNBbog8trV3i0YvJYGYOWpkfHPsRV78UFAs8+0sja9NUsYhoSzGva4=
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+To: "peterz@infradead.org" <peterz@infradead.org>, "keescook@chromium.org"
+	<keescook@chromium.org>, "rdunlap@infradead.org" <rdunlap@infradead.org>,
+	"rppt@kernel.org" <rppt@kernel.org>, "vbabka@suse.cz" <vbabka@suse.cz>,
+	"x86@kernel.org" <x86@kernel.org>, "akpm@linux-foundation.org"
+	<akpm@linux-foundation.org>, "Lutomirski, Andy" <luto@kernel.org>, "Hansen,
+ Dave" <dave.hansen@intel.com>, "shakeelb@google.com" <shakeelb@google.com>
+CC: "Williams, Dan J" <dan.j.williams@intel.com>,
+	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>,
+	"linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-kernel@vger.kernel.org"
+	<linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com"
+	<kernel-hardening@lists.openwall.com>, "Weiny, Ira" <ira.weiny@intel.com>
+Subject: Re: [RFC PATCH v2 18/19] x86/mm: Add PKS table soft mode
+Thread-Topic: [RFC PATCH v2 18/19] x86/mm: Add PKS table soft mode
+Thread-Index: AQHXnftBX/vcpSfYlUWInlizZDpM2KuM+o8AgADsMYA=
+Date: Tue, 31 Aug 2021 17:55:17 +0000
+Message-ID: <402a645ddb31326c80d6d0eb649813816eaa6634.camel@intel.com>
 References: <20210830235927.6443-1-rick.p.edgecombe@intel.com>
- <20210830235927.6443-18-rick.p.edgecombe@intel.com>
+	 <20210830235927.6443-19-rick.p.edgecombe@intel.com>
+	 <052d20c6-347d-6340-1a62-d62bf53d3315@infradead.org>
+In-Reply-To: <052d20c6-347d-6340-1a62-d62bf53d3315@infradead.org>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+x-mailer: Evolution 3.28.5-0ubuntu0.18.04.2 
+authentication-results: infradead.org; dkim=none (message not signed)
+ header.d=none;infradead.org; dmarc=none action=none header.from=intel.com;
+x-ms-publictraffictype: Email
+x-ms-office365-filtering-correlation-id: 5908ba8f-40bd-4ef5-75a2-08d96ca87e5a
+x-ms-traffictypediagnostic: SN6PR11MB3072:
+x-ld-processed: 46c98d88-e344-4ed4-8496-4ed7712e255d,ExtAddr,ExtFwd
+x-ms-exchange-transport-forked: True
+x-microsoft-antispam-prvs: <SN6PR11MB3072133ED9810B52EF89940FC9CC9@SN6PR11MB3072.namprd11.prod.outlook.com>
+x-ms-oob-tlc-oobclassifiers: OLM:2657;
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam: BCL:0;
+x-microsoft-antispam-message-info: NjZ3UH6Jp8coiu3pWYEO9/cQmJqU7lkIW20vgdrdN/Zxw2Hs3qv8glaE46fFsYnRIMIIba9Plx2aYVRprDDL0rpL1sVrO89SWqoUl2FSScS/cfoy1ZIf5VDHCLEK8kdgtvL4K4ga81FV08gnU/RrGqAJDLN3BK9UmdzHucuat5J7vycv4WF3qtPp0UTIePc3ilF2n128xDHkBrPncbriXqD5VYSX+aPXQht4uRuGltM/K5dr+EWkeNQ3mRNs2YsrZrn2V1LTc61iGFLw0BxKStfdXVKyJJPKf5/OehyhgfnzPn+UIiiTxeYgdxCeTujoNzzqwu+5MevXAW0fYunRGjegi4b92//6BGj/KL2YcfKh5u2kUljAYf75T47NKpnm8/XTlYZZH2I2IAm7EwFD563nY1cX+gly6EtHU84QeK6wHGaaX3wNWpIHJk0Lre3zZzByjCioTDUOCH69MYlYn6EuQkgKymaL89fJaoFOyW6VWORC6upVuaDpUiYmxxMFpUfZ1wpaQg0UUBv7nO1vaa5zLmLA6TXzqhvL3Ycsmx1vXjytvUv3L30tGHfVdHoJcFBk4Khip8ryqkYDADxKrMCD6sCQWG5bbEI6l7aL6JjOcwhDj8GknyMz2a0D95ezpsNMkHiF//My5FcO5BUHBsrhDlsylyQ5uB2tpeuF5D47a2RFI0fxYRl7ZcYYBVqqmpms+ibguZV1wroQ4LJpxGf3je67tK5gDemUPzy5sxoL0evAfuLIG9ogq8pOufsj
+x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:SN6PR11MB3184.namprd11.prod.outlook.com;PTR:;CAT:NONE;SFS:(4636009)(39860400002)(346002)(376002)(366004)(136003)(396003)(478600001)(2906002)(8676002)(66476007)(38070700005)(6512007)(2616005)(4326008)(921005)(36756003)(6486002)(66946007)(53546011)(4744005)(316002)(71200400001)(54906003)(5660300002)(7416002)(186003)(76116006)(26005)(64756008)(66556008)(66446008)(8936002)(91956017)(38100700002)(122000001)(6506007)(110136005)(86362001)(83380400001)(99106002);DIR:OUT;SFP:1102;
+x-ms-exchange-antispam-messagedata-chunkcount: 1
+x-ms-exchange-antispam-messagedata-0: =?utf-8?B?b0RVc3FHNGhEL201LytUZHFyVURQK1JaMVZZMHBGY0hFamRKeXF4K3loSU9B?=
+ =?utf-8?B?eVZaZWkyNDdYS3hFMzI3a3NlcmU4S3dxNGw2MUNnL1JGTExDUE5WbzRRNzNa?=
+ =?utf-8?B?TzQxbFc5ekRVNHlBcm1pcVFEeTRJM21SUUc2T2FYWkhCUzE2TVBEOVNyejNn?=
+ =?utf-8?B?WGR2Z2F0RW03NXhDamljbGNuaFd1VGEyWGxRWDRUeENkQ25aaDFtRWdrYjdZ?=
+ =?utf-8?B?dVdUTndjWFMyN2IwT0l3Zmtla3J2VzdCQTR3UG1KNzNnSnVQS1JBOTh6OGxW?=
+ =?utf-8?B?dUpNTzBjUUxRTVNVVFNpam1SV1R4Q2lhOEZ2YW5YekcrYWRPRFFSdDFNWWNQ?=
+ =?utf-8?B?aFVMT2NDMDdlTG1KWGhKUnBoUk5iazZCOTZpYmtWU2FtUjJwb1dEMXNUSEtz?=
+ =?utf-8?B?MmdkWFhtWmo5NnRsS3hIU0gwVmo3RDErREFSTjR3RFJ3SmlJenkvNlJDTm5r?=
+ =?utf-8?B?Z0xmVEhkWVRqR1FzNDlOU2lUd0Y5WGVONlNldzNTVVkwTVJDOTV6R3hWRVky?=
+ =?utf-8?B?SkgrVVZSWE9tbGVrRnY1c1RIb0NvRFJRWGpEdkkzekJnTlR0UDNYNFp0czlH?=
+ =?utf-8?B?VXFVZUgrZlNSQmJ6dnE5QkV5SmVLdUVLMitVdjIzaVNGU1ViVXl5WXgvNzB4?=
+ =?utf-8?B?YVNocTNxbkVSRExyMTRZR1B4UkRzSytvVEhsMHJrTkY3SnE5Z1p0L0gxV204?=
+ =?utf-8?B?dmNOblYzUmVFQ2tSVU41OFcweVBoOXR3UktHNkZ4UmFMbmFJVllUQzcvaE1u?=
+ =?utf-8?B?YkE5dXhCS0dOa2ZZQmMrTkhWazZrdXRyYXpsT00vTTdKWmNXYkNKd3FUaTRH?=
+ =?utf-8?B?NlRnZElBMXRyWGprSnFkaUZyTnIwL1VDeGdMclVwU0RvQXZIK2N1YkFEeFF1?=
+ =?utf-8?B?eWs2RnpaM0RmK2NiN0k4Njd3K0FhSmNlaDgwa2FxaHd5dUxjYVRwTkFTRGkv?=
+ =?utf-8?B?S3o2NUkyb0Q3dnFLVjRIMVpTU1RRRzN4dXN4U3RHZ3N1UUFhNXRyNHl1L0tO?=
+ =?utf-8?B?WnFJaG92dmE0L2h6WDFRc3RBbnBTRGI3WENocHpGdmhCNFZHbVFDb2x1MGRP?=
+ =?utf-8?B?TE83NnpPcDQreC92UlhqcjA5aFcvTGt6MG5FWURlcTdYWkRadGdnOFNDS0RD?=
+ =?utf-8?B?clZxU3l4eldUcHFqWmpkdjd0Y2wrY2xlK2tzNXdaTXNYVmxvNmJBVVd2Q0Z3?=
+ =?utf-8?B?dSsvRUYvcW01TlhtUmJkazJLdXUrRU5JRUdHUHJzenBxZ2NaTVFPY1FyY1U4?=
+ =?utf-8?B?WSswS0hibE1tNmdTb0ZBUWxJMXk4QllZK2VTMEZqdFU3eDdwdENUUmYyTE80?=
+ =?utf-8?B?cWlqcGdZbkpzU3c3RjZkelpwMUZFL2VrMGphaGJBTmdMRXBvL2hHTWE1Wkh5?=
+ =?utf-8?B?MFJhVE94RElMTGwwUkpPT3AzelhNUk9iSkE5U3BaNE1aT3VFOGtTWDdWYWNh?=
+ =?utf-8?B?N29tY0xXVUhMTVVYR3k5VlNZQjNNM1JBck5rditTbGNGQnMvV3p4OHRhcDlY?=
+ =?utf-8?B?VkJSaElFNUI5Rk1vZlBCbHFrTk43UitaaGJOVEppYTBXVWRIbGFrd2RrMHFt?=
+ =?utf-8?B?Sk5MOGcyNmFGMFE1NXBNaGs1cW1kUXYzTUU3Z2k1bjIzSWNlNzJwUy9VODg5?=
+ =?utf-8?B?RGFWUEVIRGdEVkgyM2M5OXl4Vm5tbks5NzgvMEpvd1VZV3RhZmh2NXpzSGlk?=
+ =?utf-8?B?UXFKWm1hN252RHE0d2dhRXRlcU9DWGFXTnMweThyWnRZcWFSSjJ1WTJWc3Rt?=
+ =?utf-8?B?ZnErSjlibVhYOHlYQStmc2hBV1RYWjhHRkVTWnAzOElyY3BGOEZoMDJkd0Z4?=
+ =?utf-8?B?UjBkeWF4dU5XY3FNdDE2UT09?=
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <62345EED40A0224DAFDAEC89EE9861DA@namprd11.prod.outlook.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20210830235927.6443-18-rick.p.edgecombe@intel.com>
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: SN6PR11MB3184.namprd11.prod.outlook.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: 5908ba8f-40bd-4ef5-75a2-08d96ca87e5a
+X-MS-Exchange-CrossTenant-originalarrivaltime: 31 Aug 2021 17:55:17.8519
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: 46c98d88-e344-4ed4-8496-4ed7712e255d
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: Xym6VujxAuGJDSXE/2zSZ3F1kTazVJd/xCgZL9eREzqpOux9HdcVNYvFEvIpO9SANQ767O/Q6o/0C14ROvDFR+dTB5S4BuuFEMFgFxvOYX0=
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: SN6PR11MB3072
+X-OriginatorOrg: intel.com
 
-On Mon, Aug 30, 2021 at 04:59:25PM -0700, Rick Edgecombe wrote:
-> Protecting direct map page tables is a bit more difficult because a page
-> table may be needed for a page split as part of setting the PKS
-> permission the new page table. So in the case of an empty cache of page
-> tables the page table allocator could get into a situation where it cannot
-> create any more page tables.
-> 
-> Several solutions were looked at:
-> 
-> 1. Break the direct map with pages allocated from the large page being
-> converted to PKS. This would result in a window where the table could be
-> written to right before it was linked into the page tables. It also
-> depends on high order pages being available, and so would regress from
-> the un-protected behavior in that respect.
-> 2. Hold some page tables in reserve to be able to break the large page
-> for a new 2MB page, but if there are no 2MB page's available we may need
-> to add a single page to the cache, in which case we would use up the
-> reserve of page tables needed to break a new page, but not get enough
-> page tables back to replenish the resereve.
-> 3. Always map the direct map at 4k when protecting page tables so that
-> pages don't need to be broken to map them with a PKS key. This would have
-> undesirable performance.
-> 
-> 4. Lastly, the strategy employed in this patch, have a separate cache of
-> page tables just used for the direct map. Early in boot, squirrel away
-> enough page tables to map the direct map at 4k. This comes with the same
-> memory overhead of mapping the direct map at 4k, but gets the other
-> benefits of mapping the direct map as large pages.
-> 
-> There is also the problem of protecting page tables that are allocated
-> during boot. Instead of recording the tables to protect later, create a
-> page table traversing infrastructure to walk every page table in init_mm
-> and apply protection. This also covers non-direct map odds-and-ends page
-> tables that are allocated during boot. The existing page table traversing
-> in pagewalk.c cannot be used for this purpose because there are not actual
-> vmas for all of the kernel address space.
-> 
-> The algorithm for protecting the direct map page table cache, while also
-> allocating from it for direct map splits is described in the comments of
-> init_pks_dmap_tables().
-> 
-> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-> ---
->  arch/x86/include/asm/set_memory.h |   2 +
->  arch/x86/mm/init.c                |  89 ++++++++++
->  arch/x86/mm/pat/set_memory.c      | 263 +++++++++++++++++++++++++++++-
->  3 files changed, 350 insertions(+), 4 deletions(-)
-> 
-> diff --git a/arch/x86/include/asm/set_memory.h b/arch/x86/include/asm/set_memory.h
-> index 1ba2fb45ed05..9f8d0d0ae063 100644
-> --- a/arch/x86/include/asm/set_memory.h
-> +++ b/arch/x86/include/asm/set_memory.h
-> @@ -90,6 +90,8 @@ bool kernel_page_present(struct page *page);
->  
->  extern int kernel_set_to_readonly;
->  
-> +void add_dmap_table(unsigned long addr);
-> +
->  #ifdef CONFIG_X86_64
->  /*
->   * Prevent speculative access to the page by either unmapping
-> diff --git a/arch/x86/mm/init.c b/arch/x86/mm/init.c
-> index c8933c6d5efd..a91696e3da96 100644
-> --- a/arch/x86/mm/init.c
-> +++ b/arch/x86/mm/init.c
-> @@ -6,6 +6,7 @@
->  #include <linux/swapfile.h>
->  #include <linux/swapops.h>
->  #include <linux/kmemleak.h>
-> +#include <linux/hugetlb.h>
->  #include <linux/sched/task.h>
->  
->  #include <asm/set_memory.h>
-> @@ -26,6 +27,7 @@
->  #include <asm/pti.h>
->  #include <asm/text-patching.h>
->  #include <asm/memtype.h>
-> +#include <asm/pgalloc.h>
->  
->  /*
->   * We need to define the tracepoints somewhere, and tlb.c
-> @@ -119,6 +121,17 @@ __ref void *alloc_low_pages(unsigned int num)
->  	if (after_bootmem) {
->  		unsigned int order;
->  
-> +		if (cpu_feature_enabled(X86_FEATURE_PKS_TABLES)) {
-> +			struct page *page;
-> +
-> +			/* 64 bit only allocates order 0 pages */
-> +			WARN_ON(num != 1);
-> +
-> +			page = alloc_table(GFP_ATOMIC | __GFP_ZERO);
-> +			if (!page)
-> +				return NULL;
-> +			return (void *)page_address(page);
-> +		}
->  		order = get_order((unsigned long)num << PAGE_SHIFT);
->  		return (void *)__get_free_pages(GFP_ATOMIC | __GFP_ZERO, order);
->  	}
-> @@ -504,6 +517,79 @@ bool pfn_range_is_mapped(unsigned long start_pfn, unsigned long end_pfn)
->  	return false;
->  }
->  
-> +#ifdef CONFIG_PKS_PG_TABLES
-> +/* Page tables needed in bytes */
-> +static u64 calc_tables_needed(unsigned int size)
-> +{
-> +	unsigned int puds = size >> PUD_SHIFT;
-> +	unsigned int pmds = size >> PMD_SHIFT;
-> +
-> +	/*
-> +	 * Catch if direct map ever might need more page tables to split
-> +	 * down to 4k.
-> +	 */
-> +	BUILD_BUG_ON(p4d_huge(foo));
-> +	BUILD_BUG_ON(pgd_huge(foo));
-> +
-> +	return (puds + pmds) << PAGE_SHIFT;
-> +}
-> +
-> +/*
-> + * If pre boot, reserve large pages from memory that will be mapped. It's ok that this is not
-> + * mapped as PKS, other init code in CPA will handle the conversion.
-> + */
-> +static unsigned int __init reserve_pre_boot(u64 start, u64 end)
-> +{
-> +	u64 cur = memblock_find_in_range(start, end, HPAGE_SIZE, HPAGE_SIZE);
-> +	int i;
-
-Please use memblock_phys_alloc_range() here.
-Besides, it seems this reserved pages are not accessed until late_initcall
-time, so there is no need to limit the allocation to already mapped areas,
-memblock_alloc_raw() would suffice.
-
-> +
-> +	if (!cur)
-> +		return 0;
-> +	memblock_reserve(cur, HPAGE_SIZE);
-> +	for (i = 0; i < HPAGE_SIZE; i += PAGE_SIZE)
-> +		add_dmap_table((unsigned long)__va(cur + i));
-> +	return HPAGE_SIZE;
-> +}
-> +
-> +/* If post boot, memblock is not available. Just reserve from other memory regions */
-> +static unsigned int __init reserve_post_boot(void)
-> +{
-> +	struct page *page = alloc_table(GFP_KERNEL);
-> +
-> +	if (!page)
-> +		return 0;
-> +
-> +	add_dmap_table((unsigned long)page_address(page));
-
-add_dmap_table() calls use casting everywhere, maybe make it
-add_dmap_table(void *)?
-
-> +
-> +	return PAGE_SIZE;
-> +}
-> +
-> +static void __init reserve_page_tables(u64 start, u64 end)
-> +{
-> +	u64 reserve_size = calc_tables_needed(end - start);
-> +	u64 reserved = 0;
-> +	u64 cur_reserved;
-> +
-> +	while (reserved < reserve_size) {
-> +		if (after_bootmem)
-> +			cur_reserved = reserve_post_boot();
-> +		else
-> +			cur_reserved = reserve_pre_boot(start, end);
-> +
-> +		if (!cur_reserved) {
-> +			WARN(1, "Could not reserve direct map page tables %llu/%llu\n",
-> +				reserved,
-> +				reserve_size);
-> +			return;
-> +		}
-> +
-> +		reserved += cur_reserved;
-> +	}
-> +}
-> +#else
-> +static inline void reserve_page_tables(u64 start, u64 end) { }
-> +#endif
-> +
->  /*
->   * Setup the direct mapping of the physical memory at PAGE_OFFSET.
->   * This runs before bootmem is initialized and gets pages directly from
-> @@ -529,6 +615,9 @@ unsigned long __ref init_memory_mapping(unsigned long start,
->  
->  	add_pfn_range_mapped(start >> PAGE_SHIFT, ret >> PAGE_SHIFT);
->  
-> +	if (cpu_feature_enabled(X86_FEATURE_PKS_TABLES))
-> +		reserve_page_tables(start, end);
-> +
->  	return ret >> PAGE_SHIFT;
->  }
-
--- 
-Sincerely yours,
-Mike.
+T24gTW9uLCAyMDIxLTA4LTMwIGF0IDIwOjQ5IC0wNzAwLCBSYW5keSBEdW5sYXAgd3JvdGU6DQo+
+IE9uIDgvMzAvMjEgNDo1OSBQTSwgUmljayBFZGdlY29tYmUgd3JvdGU6DQo+ID4gZGlmZiAtLWdp
+dCBhL0RvY3VtZW50YXRpb24vYWRtaW4tZ3VpZGUva2VybmVsLXBhcmFtZXRlcnMudHh0DQo+ID4g
+Yi9Eb2N1bWVudGF0aW9uL2FkbWluLWd1aWRlL2tlcm5lbC1wYXJhbWV0ZXJzLnR4dA0KPiA+IGlu
+ZGV4IDc5MDJmY2U3ZjFkYS4uOGJiMjkwZmVlNzdmIDEwMDY0NA0KPiA+IC0tLSBhL0RvY3VtZW50
+YXRpb24vYWRtaW4tZ3VpZGUva2VybmVsLXBhcmFtZXRlcnMudHh0DQo+ID4gKysrIGIvRG9jdW1l
+bnRhdGlvbi9hZG1pbi1ndWlkZS9rZXJuZWwtcGFyYW1ldGVycy50eHQNCj4gPiBAQCAtNDI1NCw2
+ICs0MjU0LDEwIEBADQo+ID4gICAJbm9wdGkJCVtYODYtNjRdDQo+ID4gICAJCQlFcXVpdmFsZW50
+IHRvIHB0aT1vZmYNCj4gPiAgIA0KPiA+ICsJbm9wa3N0YWJsZXMJW1g4Ni02NF0gRGlzYWJsZSBQ
+S1MgcGFnZSB0YWJsZSBwcm90ZWN0aW9uDQo+ID4gKw0KPiA+ICsJcGtzdGFibGVzc29mdAlbWDg2
+LTY0XSBXYXJuIGluc3RlYWQgb2Ygb29wcyBvbiBwa3MgdGFibGVzDQo+ID4gdmlvbGF0aW9ucw0K
+PiANCj4gcHJlZmVyYWJseQkJICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgUEtTDQo+
+IA0KU3VyZSwgdGhhbmtzLg0KPiA+ICsNCj4gPiAgIAlwdHkubGVnYWN5X2NvdW50PQ0KPiA+ICAg
+CQkJW0tOTF0gTnVtYmVyIG9mIGxlZ2FjeSBwdHkncy4gT3ZlcndyaXRlcw0KPiA+IGNvbXBpbGVk
+LWluDQo+ID4gICAJCQlkZWZhdWx0IG51bWJlci4NCj4gDQo+IA0K
