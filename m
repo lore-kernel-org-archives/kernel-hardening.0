@@ -1,21 +1,20 @@
-Return-Path: <SRS0=Rjux=NY=lists.openwall.com=kernel-hardening-return-21385-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=u4yN=NY=lists.openwall.com=kernel-hardening-return-21386-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.5 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	NICE_REPLY_A,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 86997C432BE
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Sep 2021 13:57:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9BD92C87FDA
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Sep 2021 16:30:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id CDE8860FD7
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Sep 2021 13:57:16 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org CDE8860FD7
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
+	by mail.kernel.org (Postfix) with SMTP id 984E661246
+	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Sep 2021 16:12:55 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 984E661246
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 9901 invoked by uid 550); 2 Sep 2021 13:57:08 -0000
+Received: (qmail 27721 invoked by uid 550); 2 Sep 2021 16:12:47 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -23,129 +22,140 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9868 invoked from network); 2 Sep 2021 13:57:07 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-	t=1630591015; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=FBJbFYS9GOV6EVOWjJDcmNKkVbrLdPLLQpcRZp1U3Lo=;
-	b=F13lE2uqBNL7cIzpI01TniOVlc4xNW5ZO2BZI2dJ6afYyrB454Zmhn+mH9+SatFH9xVzpQ
-	ZfKGEBTckXRsgH8XBybfpxxHNQcA0mnznOCjT3CPuats9GRwVCYadzJyd8u+Vlmli+7bU2
-	X8hLoWJ+sLTVb8upO6g24YHeDKIxivA=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-	s=susede2_ed25519; t=1630591015;
-	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=FBJbFYS9GOV6EVOWjJDcmNKkVbrLdPLLQpcRZp1U3Lo=;
-	b=i9b7kb31nHLHFzgkDvG366ucXQh4DnidX/PceibcSoTwZ1jwf/pQ9lpN0AwFldF98FLLzx
-	5nxmRNdWDsvlmKCQ==
-Message-ID: <38d2a358-4146-bfc9-2a4f-68ce02f75c94@suse.cz>
-Date: Thu, 2 Sep 2021 15:56:55 +0200
+Received: (qmail 27689 invoked from network); 2 Sep 2021 16:12:46 -0000
+Subject: Re: Landlock news #1
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: landlock@lists.linux.dev
+Cc: linux-security-module <linux-security-module@vger.kernel.org>,
+ Linux Containers <containers@lists.linux.dev>, gentoo-hardened@gentoo.org,
+ kernel-hardening <kernel-hardening@lists.openwall.com>,
+ linux-hardening@vger.kernel.org
+References: <2df4887a-1710-bba2-f49c-cd5b785bb565@digikod.net>
+Message-ID: <1dce0b82-0f01-bbdb-bc41-37870cb59c0d@digikod.net>
+Date: Thu, 2 Sep 2021 18:13:52 +0200
+User-Agent:
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
- Thunderbird/91.0.3
+In-Reply-To: <2df4887a-1710-bba2-f49c-cd5b785bb565@digikod.net>
+Content-Type: text/plain; charset=iso-8859-15
 Content-Language: en-US
-To: Mike Rapoport <rppt@kernel.org>,
- "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
- "peterz@infradead.org" <peterz@infradead.org>,
- "keescook@chromium.org" <keescook@chromium.org>,
- "Weiny, Ira" <ira.weiny@intel.com>,
- "linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>,
- "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org"
- <x86@kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>,
- "Williams, Dan J" <dan.j.williams@intel.com>,
- "Lutomirski, Andy" <luto@kernel.org>,
- "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
- "Hansen, Dave" <dave.hansen@intel.com>,
- "shakeelb@google.com" <shakeelb@google.com>
-References: <20210830235927.6443-1-rick.p.edgecombe@intel.com>
- <20210830235927.6443-12-rick.p.edgecombe@intel.com>
- <YS3uhdT88XFvP9n3@kernel.org>
- <f77f3312a1b17b8f8de2ccf0f40f9f19f4a9f151.camel@intel.com>
- <YS8qRHrGzevns32P@kernel.org>
-From: Vlastimil Babka <vbabka@suse.cz>
-Subject: Re: [RFC PATCH v2 11/19] mm/sparsemem: Use alloc_table() for table
- allocations
-In-Reply-To: <YS8qRHrGzevns32P@kernel.org>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 
-On 9/1/21 09:22, Mike Rapoport wrote:
-> On Tue, Aug 31, 2021 at 06:25:23PM +0000, Edgecombe, Rick P wrote:
->> On Tue, 2021-08-31 at 11:55 +0300, Mike Rapoport wrote:
->> > On Mon, Aug 30, 2021 at 04:59:19PM -0700, Rick Edgecombe wrote:
->> <trim> 
->> > > -static void * __meminit vmemmap_alloc_block_zero(unsigned long
->> > > size, int node)
->> > > +static void * __meminit vmemmap_alloc_table(int node)
->> > >  {
->> > > -	void *p = vmemmap_alloc_block(size, node);
->> > > +	void *p;
->> > > +	if (slab_is_available()) {
->> > > +		struct page *page = alloc_table_node(GFP_KERNEL |
->> > > __GFP_ZERO, node);
->> > 
->> > This change removes __GFP_RETRY_MAYFAIL|__GFP_NOWARN from the
->> > original gfp
->> > vmemmap_alloc_block() used.
->> Oh, yea good point. Hmm, I guess grouped pages could be aware of that
->> flag too. Would be a small addition, but it starts to grow
->> unfortunately.
->> 
->> > Not sure __GFP_RETRY_MAYFAIL is really needed in
->> > vmemmap_alloc_block_zero()
->> > at the first place, though.
->> Looks like due to a real issue:
->> 055e4fd96e95b0eee0d92fd54a26be7f0d3bcad0
+Because this newsletter includes container-related and security-related
+information, I'm relaying this to other appropriate mailing lists. If
+you want to get updates, you can subscribe by sending an email to
+landlock+subscribe@lists.linux.dev
 
-That commit added __GFP_REPEAT, but __GFP_RETRY_MAYFAIL these days became
-subtly different.
+Regards,
+ Mickaël
 
-> I believe the issue was with memory map blocks rather than with page
-> tables, but since sparse-vmemmap uses the same vmemmap_alloc_block() for
-> both, the GFP flag got stick with both.
+On 01/09/2021 18:30, Mickaël Salaün wrote:
+> Hi,
 > 
-> I'm not really familiar with reclaim internals to say if
-> __GFP_RETRY_MAYFAIL would help much for order-0 allocation.
-
-For costly allocation, __GFP_RETRY_MAYFAIL will try harder, thus the RETRY
-part is accented. For order-0 the only difference is that it will skip OOM,
-thus the MAYFAIL part. It usually means there's a fallback. I guess in this
-case there's no fallback, so allocating without __GFP_RETRY_MAYFAIL would be
-better.
-
-> Vlastimil, can you comment on this?
->  
->> I think it should not affect PKS tables for now, so maybe I can make
->> separate logic instead. I'll look into it. Thanks.
->> > 
->> > More broadly, maybe it makes sense to split boot time and memory
->> > hotplug
->> > paths and use pxd_alloc() for the latter.
->> > 
->> > > +
->> > > +		if (!page)
->> > > +			return NULL;
->> > > +		return page_address(page);
->> > > +	}
->> > >  
->> > > +	p = __earlyonly_bootmem_alloc(node, PAGE_SIZE, PAGE_SIZE,
->> > > __pa(MAX_DMA_ADDRESS));
->> > 
->> > Opportunistically rename to __earlyonly_memblock_alloc()? ;-)
->> > 
->> Heh, I can. Just grepping, there are several other instances of
->> foo_bootmem() only calling foo_memblock() pattern scattered about. Or
->> maybe I'm missing the distinction.
+> Landlock landed in Linux 5.13 and here is an overview of the ongoing
+> developments.
 > 
-> Heh, I didn't do s/bootmem/memblock/g, so foo_bootmem() are reminders we
-> had bootmem allocator once.
-> Maybe it's a good time to remove them :)
->  
->> <trim>
+> User space
+> ----------
 > 
-
+> ### Rust library
+> 
+> This Rust library enables to manage Landlock in a best-effort way. It is
+> still a work-in-progress, but we plan to release a new major version in
+> the coming weeks, including documentation. Feedback is welcome!
+> https://github.com/landlock-lsm/rust-landlock
+> 
+> ### Go library
+> 
+> We are pleased to welcome Günther Noack and his Go library which enables
+> to create sandboxes with Landlock. This will be useful for any projects
+> developed in Go.
+> https://github.com/landlock-lsm/go-landlock
+> 
+> ### Open Container Initiative Runtime Specification
+> 
+> This project is intended to be a shared specification amongst container
+> runtimes (e.g. Docker/runc). Thanks to H. Vetinari for bringing the
+> subject and to Kailun Qin, Günther Noack, Konstantin Meskhidze, Aleksa
+> Sarai, Akihiro Suda for working on this and giving feedback!
+> https://github.com/opencontainers/runtime-spec/pull/1111
+> 
+> ### runc
+> 
+> Bringing Landlock support to runc has started.
+> https://github.com/opencontainers/runc/pull/3194
+> 
+> ### strace
+> 
+> strace 5.13 (2021-07-19) now supports Landlock syscalls and especially
+> their argument decoding. We can now easily debug programs using
+> Landlock. Thanks to Eugene Syromyatnikov and Dmitry V. Levin!
+> https://github.com/strace/strace/commit/7592a0eeab2588162c1741077053f8a052c8418f
+> 
+> ### glibc
+> 
+> glibc 2.34 (2021-08-01) now includes Landlock system call IDs, which are
+> required to properly use Landlock in C and C++ programs.
+> https://sourceware.org/git/?p=glibc.git;a=commit;h=b1b4f7209ecaad4bf9a5d0d2ef1338409d364bac
+> 
+> ### musl libc
+> 
+> A patch series is under review for musl libc to include Landlock system
+> call IDs in this alternative libc.
+> https://www.openwall.com/lists/musl/2021/07/10/12
+> 
+> ### Man Pages
+> 
+> Four manual pages dedicated to Landlock are being reviewed by Alejandro
+> Colomar and G. Branden Robinson. Thanks to them! This documentation is
+> splitted into a general overview landlock(7) and one page per syscall.
+> https://lore.kernel.org/linux-man/20210818155931.484070-1-mic@digikod.net/
+> 
+> Conferences
+> -----------
+> 
+> I'm glad that two (complementary) Landlock talks have been accepted to
+> the Open Source Summit and to the Linux Security Summit. I have given a
+> few talks in the last years but Landlock has changed drastically since
+> then (i.e. no more eBPF). These talks will unfortunately be virtual, but
+> I'll still be available for questions. See you at the end of the month!
+> 
+> ### Open Source Summit 2021 - Sandboxing Applications with Landlock
+> 
+> This talk focuses on the use of Landlock by user space, explaining the
+> rationale behind the design, how backward and forward compatibility is
+> handled, what features are currently available and what could come next.
+> https://sched.co/lAVl
+> 
+> ### Linux Security Summit 2021 - Deep Dive into Landlock Internals
+> 
+> This talk first explains the goal of Landlock and the related
+> consequences. This will enable to explain the kernel implementation
+> constraints, the choices that led to the current design, and the
+> potential and limits of the current and future features.
+> https://sched.co/ljRQ
+> 
+> Roadmap (kernel-side)
+> ---------------------
+> 
+> Last but not least, here is an overview of the roadmap for Landlock.
+> We'll add a proper dedicated page to the website soon: https://landlock.io
+> 
+> Short term:
+> * improve kernel performance for the current features;
+> * add the ability to change the parent directory of files (see current
+> Landlock limitations).
+> 
+> Medium term:
+> * add audit features to ease debugging;
+> * extend filesystem access-control types to address the current limitations;
+> * add the ability to follow a deny listing approach, which is required
+> for some use cases.
+> 
+> Long term:
+> * add minimal network access-control types;
+> * add the ability to create (file descriptor) capabilities compatible
+> with Capsicum.
+> 
+> Regards,
+>  Mickaël
+> 
