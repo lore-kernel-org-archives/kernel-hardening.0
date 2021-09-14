@@ -1,20 +1,20 @@
-Return-Path: <SRS0=u4yN=NY=lists.openwall.com=kernel-hardening-return-21386-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=or7A=OE=lists.openwall.com=kernel-hardening-return-21387-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9BD92C87FDA
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Sep 2021 16:30:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 785FAC433F5
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Sep 2021 02:53:56 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 984E661246
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Sep 2021 16:12:55 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 984E661246
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+	by mail.kernel.org (Postfix) with SMTP id 40411610FB
+	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Sep 2021 02:53:55 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 40411610FB
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=namei.org
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 27721 invoked by uid 550); 2 Sep 2021 16:12:47 -0000
+Received: (qmail 30169 invoked by uid 550); 14 Sep 2021 02:53:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,140 +22,31 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 27689 invoked from network); 2 Sep 2021 16:12:46 -0000
-Subject: Re: Landlock news #1
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: landlock@lists.linux.dev
-Cc: linux-security-module <linux-security-module@vger.kernel.org>,
- Linux Containers <containers@lists.linux.dev>, gentoo-hardened@gentoo.org,
- kernel-hardening <kernel-hardening@lists.openwall.com>,
- linux-hardening@vger.kernel.org
-References: <2df4887a-1710-bba2-f49c-cd5b785bb565@digikod.net>
-Message-ID: <1dce0b82-0f01-bbdb-bc41-37870cb59c0d@digikod.net>
-Date: Thu, 2 Sep 2021 18:13:52 +0200
-User-Agent:
+Received: (qmail 30149 invoked from network); 14 Sep 2021 02:53:45 -0000
+Date: Tue, 14 Sep 2021 12:44:46 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+To: linux-security-module@vger.kernel.org
+cc: linux-kernel@vger.kernel.org, fedora-selinux-list@redhat.com, 
+    linux-crypto@vger.kernel.org, kernel-hardening@lists.openwall.com, 
+    linux-integrity@vger.kernel.org, selinux@vger.kernel.org, 
+    Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, 
+    keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, 
+    Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>
+Subject: Re: [ANNOUNCE][CFP] Linux Security Summit 2021
+In-Reply-To: <2db579ee-1d1c-102c-c2d4-c268d89aae8c@namei.org>
+Message-ID: <8c864314-e0b9-e394-2271-5fab5e9cd11a@namei.org>
+References: <c244f77-56a1-c089-521d-2e670488c10@namei.org> <5b3a0bf-226d-6ee-d0b-d6673eff32b2@namei.org> <2db579ee-1d1c-102c-c2d4-c268d89aae8c@namei.org>
 MIME-Version: 1.0
-In-Reply-To: <2df4887a-1710-bba2-f49c-cd5b785bb565@digikod.net>
-Content-Type: text/plain; charset=iso-8859-15
-Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=US-ASCII
 
-Because this newsletter includes container-related and security-related
-information, I'm relaying this to other appropriate mailing lists. If
-you want to get updates, you can subscribe by sending an email to
-landlock+subscribe@lists.linux.dev
+For folks presenting remotely, the deadline for video talks is extended to 
+20th September, 2021.
 
-Regards,
- Mickaël
+Reminder: you can keep track LSS event information via: 
+https://twitter.com/LinuxSecSummit
 
-On 01/09/2021 18:30, Mickaël Salaün wrote:
-> Hi,
-> 
-> Landlock landed in Linux 5.13 and here is an overview of the ongoing
-> developments.
-> 
-> User space
-> ----------
-> 
-> ### Rust library
-> 
-> This Rust library enables to manage Landlock in a best-effort way. It is
-> still a work-in-progress, but we plan to release a new major version in
-> the coming weeks, including documentation. Feedback is welcome!
-> https://github.com/landlock-lsm/rust-landlock
-> 
-> ### Go library
-> 
-> We are pleased to welcome Günther Noack and his Go library which enables
-> to create sandboxes with Landlock. This will be useful for any projects
-> developed in Go.
-> https://github.com/landlock-lsm/go-landlock
-> 
-> ### Open Container Initiative Runtime Specification
-> 
-> This project is intended to be a shared specification amongst container
-> runtimes (e.g. Docker/runc). Thanks to H. Vetinari for bringing the
-> subject and to Kailun Qin, Günther Noack, Konstantin Meskhidze, Aleksa
-> Sarai, Akihiro Suda for working on this and giving feedback!
-> https://github.com/opencontainers/runtime-spec/pull/1111
-> 
-> ### runc
-> 
-> Bringing Landlock support to runc has started.
-> https://github.com/opencontainers/runc/pull/3194
-> 
-> ### strace
-> 
-> strace 5.13 (2021-07-19) now supports Landlock syscalls and especially
-> their argument decoding. We can now easily debug programs using
-> Landlock. Thanks to Eugene Syromyatnikov and Dmitry V. Levin!
-> https://github.com/strace/strace/commit/7592a0eeab2588162c1741077053f8a052c8418f
-> 
-> ### glibc
-> 
-> glibc 2.34 (2021-08-01) now includes Landlock system call IDs, which are
-> required to properly use Landlock in C and C++ programs.
-> https://sourceware.org/git/?p=glibc.git;a=commit;h=b1b4f7209ecaad4bf9a5d0d2ef1338409d364bac
-> 
-> ### musl libc
-> 
-> A patch series is under review for musl libc to include Landlock system
-> call IDs in this alternative libc.
-> https://www.openwall.com/lists/musl/2021/07/10/12
-> 
-> ### Man Pages
-> 
-> Four manual pages dedicated to Landlock are being reviewed by Alejandro
-> Colomar and G. Branden Robinson. Thanks to them! This documentation is
-> splitted into a general overview landlock(7) and one page per syscall.
-> https://lore.kernel.org/linux-man/20210818155931.484070-1-mic@digikod.net/
-> 
-> Conferences
-> -----------
-> 
-> I'm glad that two (complementary) Landlock talks have been accepted to
-> the Open Source Summit and to the Linux Security Summit. I have given a
-> few talks in the last years but Landlock has changed drastically since
-> then (i.e. no more eBPF). These talks will unfortunately be virtual, but
-> I'll still be available for questions. See you at the end of the month!
-> 
-> ### Open Source Summit 2021 - Sandboxing Applications with Landlock
-> 
-> This talk focuses on the use of Landlock by user space, explaining the
-> rationale behind the design, how backward and forward compatibility is
-> handled, what features are currently available and what could come next.
-> https://sched.co/lAVl
-> 
-> ### Linux Security Summit 2021 - Deep Dive into Landlock Internals
-> 
-> This talk first explains the goal of Landlock and the related
-> consequences. This will enable to explain the kernel implementation
-> constraints, the choices that led to the current design, and the
-> potential and limits of the current and future features.
-> https://sched.co/ljRQ
-> 
-> Roadmap (kernel-side)
-> ---------------------
-> 
-> Last but not least, here is an overview of the roadmap for Landlock.
-> We'll add a proper dedicated page to the website soon: https://landlock.io
-> 
-> Short term:
-> * improve kernel performance for the current features;
-> * add the ability to change the parent directory of files (see current
-> Landlock limitations).
-> 
-> Medium term:
-> * add audit features to ease debugging;
-> * extend filesystem access-control types to address the current limitations;
-> * add the ability to follow a deny listing approach, which is required
-> for some use cases.
-> 
-> Long term:
-> * add minimal network access-control types;
-> * add the ability to create (file descriptor) capabilities compatible
-> with Capsicum.
-> 
-> Regards,
->  Mickaël
-> 
+
+-- 
+James Morris
+<jmorris@namei.org>
+
