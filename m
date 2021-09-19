@@ -1,20 +1,21 @@
-Return-Path: <SRS0=or7A=OE=lists.openwall.com=kernel-hardening-return-21387-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=5OIe=OK=lists.openwall.com=kernel-hardening-return-21388-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 785FAC433F5
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Sep 2021 02:53:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 92F6FC433EF
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Sep 2021 10:36:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 40411610FB
-	for <kernel-hardening@archiver.kernel.org>; Tue, 14 Sep 2021 02:53:55 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 40411610FB
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=namei.org
+	by mail.kernel.org (Postfix) with SMTP id EF95160F3A
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Sep 2021 10:36:03 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org EF95160F3A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=spotco.us
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 30169 invoked by uid 550); 14 Sep 2021 02:53:45 -0000
+Received: (qmail 14088 invoked by uid 550); 20 Sep 2021 10:35:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -22,31 +23,77 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 30149 invoked from network); 14 Sep 2021 02:53:45 -0000
-Date: Tue, 14 Sep 2021 12:44:46 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-To: linux-security-module@vger.kernel.org
-cc: linux-kernel@vger.kernel.org, fedora-selinux-list@redhat.com, 
-    linux-crypto@vger.kernel.org, kernel-hardening@lists.openwall.com, 
-    linux-integrity@vger.kernel.org, selinux@vger.kernel.org, 
-    Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, 
-    keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, 
-    Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>
-Subject: Re: [ANNOUNCE][CFP] Linux Security Summit 2021
-In-Reply-To: <2db579ee-1d1c-102c-c2d4-c268d89aae8c@namei.org>
-Message-ID: <8c864314-e0b9-e394-2271-5fab5e9cd11a@namei.org>
-References: <c244f77-56a1-c089-521d-2e670488c10@namei.org> <5b3a0bf-226d-6ee-d0b-d6673eff32b2@namei.org> <2db579ee-1d1c-102c-c2d4-c268d89aae8c@namei.org>
+Received: (qmail 14017 invoked from network); 19 Sep 2021 20:44:54 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=spotco.us; s=gm1;
+	t=1632084283;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 content-transfer-encoding:content-transfer-encoding;
+	bh=9uoIEIA3582w/7yrrFMK2dalpy8bbXkkhxY5yUGLWSg=;
+	b=SH+9uiMelYRWQI1tkDc0TNyWpBkumSl0rW98JufpnpO7n+h/DnUtQok2TxCRtQ8ntjexhv
+	B1FQfn2zPMziLpkH6DB+H0nQATuNb8os/fRRO0c5XrRnjyFYLOsHd1mz9fPc2aHh1SuJff
+	sO+HgGs8ZVDlTI+Fc2NPT6cbU+haQDMD5reFKMd0fxKapODA5moFiDbvKkA8TI6+rlKTiO
+	+W5USu0ZNBV5ia9N3RHibXIR+YV0U9dZ0QemN3yzvJzw6zyi/kYPm1pA4LeKYlmTCl//QT
+	WOoE5E9nz9KVeg6dnTFPve5dIj9SDdQPD8wyQYuxPYiVJifNTkn9pNFE+E7dXA==
+Message-ID: <67cf8b802fe868ba63b28d49f8d836e179df833a.camel@spotco.us>
+Subject: Self introduction
+From: Tad <tad@spotco.us>
+To: kernel-hardening@lists.openwall.com
+Cc: linux-hardening@vger.kernel.org
+Date: Sun, 19 Sep 2021 16:44:40 -0400
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.40.4 (3.40.4-1.fc34) 
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 
-For folks presenting remotely, the deadline for video talks is extended to 
-20th September, 2021.
+Hello!
+My name is Tad.
 
-Reminder: you can keep track LSS event information via: 
-https://twitter.com/LinuxSecSummit
+I have a few personal projects for the past five or so years for making
+available kernel hardening features to more users.
 
+My main project is DivestOS, which provides more secure images for older/legacy
+Android devices.
+I harden all device kernels via the following:
+ * My automatic CVE checker/patcher program [1]. It is able to apply many dozen
+   to many hundred CVE patches to trees. It is backed by an extensive versioned
+   list [2] of CVE patches that I origianlly maintained by hand. In the past
+   year or so I pull in using a scraper I made for the CIP scripts [3].
+ * My hardenDefconfig function [4], inspired by the KSPP recommendations and
+   later Popov's kconfig-hardened-check. It simply enables and disables various
+   options.
+ * My hardenBootArgs function [5], currently just enables slub_debug=FZP for
+   devices.
+ * Some misc tweaks [6], currently for disabling slub/slab merging.
+ * And lastly some sysctl tweaks [7].
 
--- 
-James Morris
-<jmorris@namei.org>
+I also maintain another project for providing some extra security to modern
+distros, without recompilation.
+It is called Brace [8] and compatible with Arch/Fedora/Debian/OpenSUSE.
+In the kernel relations, it is mostly just sysctl [9] changes and kernel
+commandline [10] changes.
+
+Lastly some background:
+Micay inspired me to work on this area back in mid-2015, after he helped me port
+his Android PaX patchset to the OnePlus One phone [11].
+
+Sharing for any comments.
+Also most of you are likely working on mainline, not ancient kernels, so maybe
+you'll find this interesting.
+
+Best regards,
+Tad.
+
+[1] https://gitlab.com/divested-mobile/cve_checker
+[2] https://gitlab.com/divested-mobile/kernel_patches/-/blob/master/Kernel_CVE_Patch_List.txt
+[3] https://gitlab.com/cip-project/cip-kernel/cip-kernel-sec
+[4] https://gitlab.com/divested-mobile/divestos-build/-/blob/e7dd0af4/Scripts/Common/Functions.sh#L657
+[5] https://gitlab.com/divested-mobile/divestos-build/-/blob/e7dd0af4/Scripts/Common/Functions.sh#L493
+[6] https://gitlab.com/divested-mobile/divestos-build/-/blob/e7dd0af4/Scripts/Common/Post.sh#L28
+[7] https://gitlab.com/divested-mobile/divestos-build/-/blob/e7dd0af4/Patches/LineageOS-18.1/android_system_core/0001-Harden.patch
+[8] https://gitlab.com/divested/brace
+[9] https://gitlab.com/divested/brace/-/blob/1e4975c9/brace/usr/lib/sysctl.d/60-restrict.conf
+[10] https://gitlab.com/divested/brace/-/blob/1e4975c9/brace/usr/bin/brace-supplemental-changes#L33
+[11] https://divestos.org/images/screenshots/CopperheadOS-bacon.png
+
 
