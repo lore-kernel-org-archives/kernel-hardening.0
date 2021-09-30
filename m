@@ -1,16 +1,16 @@
-Return-Path: <SRS0=qd4q=OU=lists.openwall.com=kernel-hardening-return-21400-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=Bkm/=OU=lists.openwall.com=kernel-hardening-return-21401-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CFAEFC4332F
-	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Sep 2021 18:20:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7970DC433EF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Sep 2021 18:28:10 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 05A6E61A10
-	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Sep 2021 18:20:56 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 05A6E61A10
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+	by mail.kernel.org (Postfix) with SMTP id A1E30611C0
+	for <kernel-hardening@archiver.kernel.org>; Thu, 30 Sep 2021 18:28:09 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org A1E30611C0
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 28113 invoked by uid 550); 30 Sep 2021 18:20:49 -0000
+Received: (qmail 32218 invoked by uid 550); 30 Sep 2021 18:28:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,88 +18,118 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28081 invoked from network); 30 Sep 2021 18:20:48 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=rRzmSQnYKN75Gg93YuIv+rBGX5i47OpZAXZvIJOPAT0=;
-        b=lEQ8DLBf3vFDxlv1guB97pybHM/E5OgqqY7s5GW48JHxOcQmMFcVANRfaTHTtWIF9Y
-         9kRwW6x+vjlSmmTqC0Stb7CrJ/tg3DjlMrf5MAtA7cjscqC+AIUITJ17K3S1fLhd9/Xb
-         H6Q003Tl/g15SHWxlAxw0KfC0GrYBfK6GsZ94=
+Received: (qmail 32164 invoked from network); 30 Sep 2021 18:28:01 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=rRzmSQnYKN75Gg93YuIv+rBGX5i47OpZAXZvIJOPAT0=;
-        b=l80g6wSiXShSbjwfBneCLthokuyHNRwtnvMfGVlwmCsOEugFiyEgmMmF8dpjPIggdH
-         FJNxH7KICDVMoCxL1yBbIuMe/yNqQf2jFyGRvUTvP0FTmyKLK9x1goMCbtfN+eaGhvg6
-         G1pNZLW9Fuu8BPpo7U0Va6bL/1OMAzfTs/jFzfU4vTn/dM43Nkw1yol966P/HQwH2oMx
-         wQ9gkkKHh5Y4kSbFs07OOLEsmXKerrGrSWiCtP3ywidRWdf41uPJlA8HRDlLq7rxfUs9
-         fvzyNnfo0HnwDmpxtuQOqXljQE9eDAF3bYDVA0HSqUSzh3JWk/SRHNXUURBktnorc5Gu
-         rS+Q==
-X-Gm-Message-State: AOAM5303G6NwC9oPXhrcx8sNA2C6BTgDg78U7LRHb7/kJx5IV7ycBANJ
-	LYyjasrPnbifCArbHgwHU+p84A==
-X-Google-Smtp-Source: ABdhPJyimYmtoacGEdurWEUSpaz+kvhw5xhIwlnWJodE7rV8ATefMii0ooqe8fOMpyVb9+6sAe5Wrw==
-X-Received: by 2002:a17:903:2c2:b029:101:9c88:d928 with SMTP id s2-20020a17090302c2b02901019c88d928mr5409323plk.62.1633026036390;
-        Thu, 30 Sep 2021 11:20:36 -0700 (PDT)
-Date: Thu, 30 Sep 2021 11:20:34 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Dave Hansen <dave.hansen@intel.com>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Paul McKenney <paulmck@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
-	Muchun Song <songmuchun@bytedance.com>,
-	Viresh Kumar <viresh.kumar@linaro.org>,
-	Robin Murphy <robin.murphy@arm.com>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	Lu Baolu <baolu.lu@linux.intel.com>, Petr Mladek <pmladek@suse.com>,
-	Luis Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>,
-	John Ogness <john.ogness@linutronix.de>,
-	Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
-	Alexey Kardashevskiy <aik@ozlabs.ru>,
-	Christophe Leroy <christophe.leroy@csgroup.eu>,
-	Jann Horn <jannh@google.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Will Deacon <will.deacon@arm.com>,
-	David S Miller <davem@davemloft.net>,
-	Borislav Petkov <bp@alien8.de>, kernel-hardening@lists.openwall.com,
-	linux-hardening@vger.kernel.org, linux-doc@vger.kernel.org,
-	linux-kernel@vger.kernel.org, notify@kernel.org
+        h=x-gm-message-state:reply-to:subject:to:cc:references:from
+         :message-id:date:user-agent:mime-version:in-reply-to
+         :content-language:content-transfer-encoding;
+        bh=kXiXFZ9ry/i2aqEPHzEKtrxgwY/jrLKAjIEmqjjgomU=;
+        b=xgQxmgYzBSzQYB02HIpjLOQAWMSy+2NBXGsDB0ZnG44BC9HWU1z32IFa6LbdlZSYwx
+         VM4K1T1derDTmsmbBVJzxk4LBFztcDbzoIKiwIzMaZs22m0yMmTGd7FGYL2sCa5ky2p9
+         46XktzMrGg7hXLoQC2QbfaZz95ECn7/eUk/DS9kPxIRDrCfLP3qo7pSORKW+h6YWG8N4
+         ugSM4KVvPcVsLNFWDHOMf6w0If84uT8Po44dQhV0umb8LZMxzB23RaiL6rZkm+XA9fYn
+         ODwQBlnzL3usYJ9Pculq+kxxKV1hZlHXMOdizwHJ/erslpzcup9cVSKQALbSG6XjOHNn
+         MyaA==
+X-Gm-Message-State: AOAM532iEEl9L7wR07jCpqsOCIC6gjhAQQ9FUes/DQMXjHY2MM9wHseY
+	1psd63zUD9OVOBrLbYaW3ic=
+X-Google-Smtp-Source: ABdhPJxj9CMxn1KKITdh+ZI6jqK3Mxh13R5dPHWbok7gCHp0kQp4Dn7qOlUIxuEm9oWnhfLUfVVvVA==
+X-Received: by 2002:a17:906:c4a:: with SMTP id t10mr771534ejf.371.1633026470564;
+        Thu, 30 Sep 2021 11:27:50 -0700 (PDT)
 Subject: Re: [PATCH] Introduce the pkill_on_warn boot parameter
-Message-ID: <202109301120.B7B8F3F8A@keescook>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Jonathan Corbet <corbet@lwn.net>, Paul McKenney <paulmck@kernel.org>,
+ Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>,
+ Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
+ Muchun Song <songmuchun@bytedance.com>,
+ Viresh Kumar <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>,
+ Randy Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>,
+ Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>,
+ Luis Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>,
+ John Ogness <john.ogness@linutronix.de>,
+ Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
+ Alexey Kardashevskiy <aik@ozlabs.ru>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>,
+ Dave Hansen <dave.hansen@linux.intel.com>,
+ Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will.deacon@arm.com>,
+ David S Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>,
+ kernel-hardening@lists.openwall.com, linux-hardening@vger.kernel.org,
+ linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, notify@kernel.org
 References: <20210929185823.499268-1-alex.popov@linux.com>
- <323d0784-249d-7fef-6c60-e8426d35b083@intel.com>
- <202109291229.C64A1D9D@keescook>
- <cf6ada34-9854-b7ad-f671-52186da5abd0@linux.com>
+ <d290202d-a72d-0821-9edf-efbecf6f6cef@linux.com>
+ <20210929163143.aa8b70ac9d5cf0b628823370@linux-foundation.org>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <de96ffec-bbd8-2724-9285-0867cd9a08a0@linux.com>
+Date: Thu, 30 Sep 2021 21:27:43 +0300
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
+ Thunderbird/78.11.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <cf6ada34-9854-b7ad-f671-52186da5abd0@linux.com>
+In-Reply-To: <20210929163143.aa8b70ac9d5cf0b628823370@linux-foundation.org>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 
-On Thu, Sep 30, 2021 at 04:55:37PM +0300, Alexander Popov wrote:
-> The kernel can hit warning and omit calling __warn() that prints the message.
-> But pkill_on_warn action should be taken each time.
+On 30.09.2021 02:31, Andrew Morton wrote:
+> On Wed, 29 Sep 2021 22:01:33 +0300 Alexander Popov <alex.popov@linux.com> wrote:
 > 
-> As I can understand now, include/asm-generic/bug.h defines three warning
-> implementations:
->  1. CONFIG_BUG=y and the arch provides __WARN_FLAGS. In that case pkill_on_warn
-> should be checked in report_bug() that you mention.
->  2. CONFIG_BUG=y and the arch doesn't have __WARN_FLAGS. In that case
-> pkill_on_warn should be checked in warn_slowpath_fmt().
->  3. CONFIG_BUG is not set. In that case pkill_on_warn should not be considered.
+>> On 29.09.2021 21:58, Alexander Popov wrote:
+>>> Currently, the Linux kernel provides two types of reaction to kernel
+>>> warnings:
+>>>  1. Do nothing (by default),
+>>>  2. Call panic() if panic_on_warn is set. That's a very strong reaction,
+>>>     so panic_on_warn is usually disabled on production systems.
+>>>
+>>> From a safety point of view, the Linux kernel misses a middle way of
+>>> handling kernel warnings:
+>>>  - The kernel should stop the activity that provokes a warning,
+>>>  - But the kernel should avoid complete denial of service.
+>>>
+>>> From a security point of view, kernel warning messages provide a lot of
+>>> useful information for attackers. Many GNU/Linux distributions allow
+>>> unprivileged users to read the kernel log, so attackers use kernel
+>>> warning infoleak in vulnerability exploits. See the examples:
+>>>   https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
+>>>   https://a13xp0p0v.github.io/2021/02/09/CVE-2021-26708.html
+>>>
+>>> Let's introduce the pkill_on_warn boot parameter.
+>>> If this parameter is set, the kernel kills all threads in a process
+>>> that provoked a kernel warning. This behavior is reasonable from a safety
+>>> point of view described above. It is also useful for kernel security
+>>> hardening because the system kills an exploit process that hits a
+>>> kernel warning.
+>>>
+>>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+>>
+>> This patch was tested using CONFIG_LKDTM.
+>> The kernel kills a process that performs this:
+>>   echo WARNING > /sys/kernel/debug/provoke-crash/DIRECT
+>>
+>> If you are fine with this approach, I will prepare a patch adding the
+>> pkill_on_warn sysctl.
 > 
-> Please, correct me if needed.
+> Why do we need a boot parameter?  Isn't a sysctl all we need for this
+> feature? 
 
-That looks correct to me, yes.
+I would say we need both sysctl and boot parameter for pkill_on_warn.
+That would be consistent with panic_on_warn, ftrace_dump_on_oops and
+oops/panic_on_oops.
 
--- 
-Kees Cook
+> Also, 
+> 
+> 	if (pkill_on_warn && system_state >= SYSTEM_RUNNING)
+> 		do_group_exit(SIGKILL);
+> 
+> - why do we care about system_state?  An explanatory code comment
+>   seems appropriate.
+> 
+> - do we really want to do this in states > SYSTEM_RUNNING?  If so, why?
+
+A kernel warning may occur at any moment.
+I don't have a deep understanding of possible side effects on early boot stages.
+So I decided that at least it's safer to avoid interfering before SYSTEM_RUNNING.
+
+Best regards,
+Alexander
+
