@@ -1,16 +1,16 @@
-Return-Path: <SRS0=dx30=O7=lists.openwall.com=kernel-hardening-return-21439-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=TO5n=O7=lists.openwall.com=kernel-hardening-return-21440-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 10DADC433F5
-	for <kernel-hardening@archiver.kernel.org>; Mon, 11 Oct 2021 08:46:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2EE5FC433F5
+	for <kernel-hardening@archiver.kernel.org>; Mon, 11 Oct 2021 15:21:44 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0D57660F38
-	for <kernel-hardening@archiver.kernel.org>; Mon, 11 Oct 2021 08:46:33 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 0D57660F38
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+	by mail.kernel.org (Postfix) with SMTP id 7F53860E05
+	for <kernel-hardening@archiver.kernel.org>; Mon, 11 Oct 2021 15:21:41 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 7F53860E05
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=linux.ibm.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 15843 invoked by uid 550); 11 Oct 2021 08:46:27 -0000
+Received: (qmail 1381 invoked by uid 550); 11 Oct 2021 15:21:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,92 +18,132 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15820 invoked from network); 11 Oct 2021 08:46:26 -0000
-Subject: Re: [PATCH v14 0/3] Add trusted_for(2) (was O_MAYEXEC)
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Aleksa Sarai <cyphar@cyphar.com>,
- Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Christian Brauner <christian.brauner@ubuntu.com>,
- Christian Heimes <christian@python.org>,
- Deven Bowers <deven.desai@linux.microsoft.com>,
- Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
- Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
- Geert Uytterhoeven <geert@linux-m68k.org>, James Morris <jmorris@namei.org>,
- Jan Kara <jack@suse.cz>, Jann Horn <jannh@google.com>,
- Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
- Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
- "Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
- Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
- Miklos Szeredi <mszeredi@redhat.com>, Mimi Zohar <zohar@linux.ibm.com>,
- Paul Moore <paul@paul-moore.com>,
- =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
- Scott Shell <scottsh@microsoft.com>, Shuah Khan <shuah@kernel.org>,
- Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>,
- Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
- Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org,
- linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Received: (qmail 1358 invoked from network); 11 Oct 2021 15:21:32 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : subject :
+ from : to : cc : date : in-reply-to : references : content-type :
+ content-transfer-encoding : mime-version; s=pp1;
+ bh=8JdIijDsyFcyUndtQJTDx7Jep7qM7XiDzn473KgSPI8=;
+ b=dQeuk1C9NhNv8wdNfiGSpOFgTfDHrohiXCDUCDP5IUolSe+r9oG4EBTCLrxBmE3g4ldl
+ K0rRXAreO9pp5ZBO95ygRl8HGWa8QJ4jmfSGC1zr4usjASC9uUwZdIDGsOUt0SSUCPyL
+ SLcYS3MmIP/MZCHyHUiir7prXeQocK77DS19YnvHDxN+x8st5D3ZD9ByDscPccaGzSVa
+ PNFwZKc7t7oPxHueo6quzngZyne8lIxNR4sFD5c64oLoDIAe8aDyb7c1idDA2Y2VlXNu
+ mdEuAkdA3MhFLyNDOL3zW2kidNmOVbd/ARK6guiuUrUU8D745sIAEEoqC0T6htGI4uoi tg== 
+Message-ID: <539086ce33ed6417dd1ada1c8f593fc0edeb8f73.camel@linux.ibm.com>
+Subject: Re: [PATCH v14 1/3] fs: Add trusted_for(2) syscall implementation
+ and related sysctl
+From: Mimi Zohar <zohar@linux.ibm.com>
+To: Florian Weimer <fw@deneb.enyo.de>,
+        =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?=
+	 <mic@digikod.net>
+Cc: Al Viro <viro@zeniv.linux.org.uk>,
+        Andrew Morton
+ <akpm@linux-foundation.org>,
+        Aleksa Sarai <cyphar@cyphar.com>, Andy
+ Lutomirski <luto@kernel.org>,
+        Arnd Bergmann <arnd@arndb.de>,
+        Casey
+ Schaufler <casey@schaufler-ca.com>,
+        Christian Brauner
+ <christian.brauner@ubuntu.com>,
+        Christian Heimes <christian@python.org>,
+        Deven Bowers <deven.desai@linux.microsoft.com>,
+        Dmitry Vyukov
+ <dvyukov@google.com>,
+        Eric Biggers <ebiggers@kernel.org>,
+        Eric Chiang
+ <ericchiang@google.com>,
+        Geert Uytterhoeven <geert@linux-m68k.org>,
+        James
+ Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
+        Jann Horn
+ <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
+        Kees Cook
+ <keescook@chromium.org>,
+        Lakshmi Ramasubramanian
+ <nramas@linux.microsoft.com>,
+        "Madhavan T . Venkataraman"
+ <madvenka@linux.microsoft.com>,
+        Matthew Garrett <mjg59@google.com>,
+        Matthew
+ Wilcox <willy@infradead.org>,
+        Miklos Szeredi <mszeredi@redhat.com>,
+        Paul
+ Moore <paul@paul-moore.com>,
+        Philippe =?ISO-8859-1?Q?Tr=E9buchet?=
+ <philippe.trebuchet@ssi.gouv.fr>,
+        Scott Shell <scottsh@microsoft.com>, Shuah Khan <shuah@kernel.org>,
+        Steve Dower <steve.dower@python.org>, Steve
+ Grubb <sgrubb@redhat.com>,
+        Thibaut Sautereau
+ <thibaut.sautereau@ssi.gouv.fr>,
+        Vincent Strubel
+ <vincent.strubel@ssi.gouv.fr>,
+        kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+        linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org,
+        linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org,
+        =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?=
+ <mic@linux.microsoft.com>
+Date: Mon, 11 Oct 2021 11:20:02 -0400
+In-Reply-To: <87tuhpynr4.fsf@mid.deneb.enyo.de>
 References: <20211008104840.1733385-1-mic@digikod.net>
- <20211010144814.d9fb99de6b0af65b67dc96cb@linux-foundation.org>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <457941da-c4a4-262f-2981-74a85519c56f@digikod.net>
-Date: Mon, 11 Oct 2021 10:47:04 +0200
-User-Agent:
-MIME-Version: 1.0
-In-Reply-To: <20211010144814.d9fb99de6b0af65b67dc96cb@linux-foundation.org>
-Content-Type: text/plain; charset=UTF-8
-Content-Language: en-US
+	 <20211008104840.1733385-2-mic@digikod.net>
+	 <87tuhpynr4.fsf@mid.deneb.enyo.de>
+Content-Type: text/plain; charset="ISO-8859-15"
+X-Mailer: Evolution 3.28.5 (3.28.5-16.el8) 
+X-TM-AS-GCONF: 00
+X-Proofpoint-GUID: izC9yhrEe1LpTrA6aSB26JuAwHzBGp1s
+X-Proofpoint-ORIG-GUID: PawvuLLX4xcPVEed7b1tj13LIXgFSuK2
 Content-Transfer-Encoding: 8bit
+X-Proofpoint-UnRewURL: 0 URL was un-rewritten
+MIME-Version: 1.0
+X-Proofpoint-Virus-Version: vendor=baseguard
+ engine=ICAP:2.0.182.1,Aquarius:18.0.790,Hydra:6.0.425,FMLib:17.0.607.475
+ definitions=2021-10-11_05,2021-10-11_01,2020-04-07_01
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 phishscore=0 mlxlogscore=999
+ clxscore=1011 lowpriorityscore=0 adultscore=0 mlxscore=0
+ priorityscore=1501 bulkscore=0 malwarescore=0 impostorscore=0 spamscore=0
+ suspectscore=0 classifier=spam adjust=0 reason=mlx scancount=1
+ engine=8.12.0-2109230001 definitions=main-2110110088
 
+Hi Florian,
 
-On 10/10/2021 23:48, Andrew Morton wrote:
-> On Fri,  8 Oct 2021 12:48:37 +0200 Mickaël Salaün <mic@digikod.net> wrote:
+On Sun, 2021-10-10 at 16:10 +0200, Florian Weimer wrote:
+> * Micka�l Sala�n:
 > 
->> The final goal of this patch series is to enable the kernel to be a
->> global policy manager by entrusting processes with access control at
->> their level.  To reach this goal, two complementary parts are required:
->> * user space needs to be able to know if it can trust some file
->>   descriptor content for a specific usage;
->> * and the kernel needs to make available some part of the policy
->>   configured by the system administrator.
+> > Being able to restrict execution also enables to protect the kernel by
+> > restricting arbitrary syscalls that an attacker could perform with a
+> > crafted binary or certain script languages.  It also improves multilevel
+> > isolation by reducing the ability of an attacker to use side channels
+> > with specific code.  These restrictions can natively be enforced for ELF
+> > binaries (with the noexec mount option) but require this kernel
+> > extension to properly handle scripts (e.g. Python, Perl).  To get a
+> > consistent execution policy, additional memory restrictions should also
+> > be enforced (e.g. thanks to SELinux).
 > 
-> Apologies if I missed this...
+> One example I have come across recently is that code which can be
+> safely loaded as a Perl module is definitely not a no-op as a shell
+> script: it downloads code and executes it, apparently over an
+> untrusted network connection and without signature checking.
 > 
-> It would be nice to see a description of the proposed syscall interface
-> in these changelogs!  Then a few questions I have will be answered...
+> Maybe in the IMA world, the expectation is that such ambiguous code
+> would not be signed in the first place, but general-purpose
+> distributions are heading in a different direction with
+> across-the-board signing:
 
-I described this syscall and it's semantic in the first patch in
-Documentation/admin-guide/sysctl/fs.rst
-Do you want me to copy-paste this content in the cover letter?
-
-> 
-> long trusted_for(const int fd,
-> 		 const enum trusted_for_usage usage,
-> 		 const u32 flags)
-> 
-> - `usage' must be equal to TRUSTED_FOR_EXECUTION, so why does it
->   exist?  Some future modes are planned?  Please expand on this.
-
-Indeed, the current use case is to check if the kernel would allow
-execution of a file. But as Florian pointed out, we may want to add more
-context in the future, e.g. to enforce signature verification, to check
-if this is a legitimate (system) library, to check if the file is
-allowed to be used as (trusted) configuration…
-
-> 
-> - `flags' is unused (must be zero).  So why does it exist?  What are
->   the plans here?
-
-This is mostly to follow syscall good practices for extensibility. It
-could be used in combination with the usage argument (which defines the
-user space semantic), e.g. to check for extra properties such as
-cryptographic or integrity requirements, origin of the file…
+Automatically signing code is at least the first step in the right
+direction of only executing code with known provenance.  Perhaps future
+work would address the code signing granularity.
 
 > 
-> - what values does the syscall return and what do they mean?
+>   Signed RPM Contents
+>   <https://fedoraproject.org/wiki/Changes/Signed_RPM_Contents>
 > 
+> So I wonder if we need additional context information for a potential
+> LSM to identify the intended use case.
 
-It returns 0 on success, or -EACCES if the kernel policy denies the
-specified usage.
+My first thoughts were an enumeration UNSIGNED_DOWNLOADED_CODE or maybe
+even UNTRUSTED_DOWNLOADED_CODE, but that doesn't seem very
+helpful.  What type of context information were you thinking about?
+
+Mimi
+
