@@ -1,16 +1,16 @@
-Return-Path: <SRS0=o8dg=P5=lists.openwall.com=kernel-hardening-return-21460-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=1oCK=P6=lists.openwall.com=kernel-hardening-return-21461-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3FD10C433EF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Nov 2021 19:07:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 12CC4C433EF
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Nov 2021 11:27:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 3D29B61037
-	for <kernel-hardening@archiver.kernel.org>; Wed, 10 Nov 2021 19:07:04 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 3D29B61037
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+	by mail.kernel.org (Postfix) with SMTP id 2974C610CB
+	for <kernel-hardening@archiver.kernel.org>; Thu, 11 Nov 2021 11:27:35 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 2974C610CB
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=intel.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 15514 invoked by uid 550); 10 Nov 2021 19:06:29 -0000
+Received: (qmail 14123 invoked by uid 550); 11 Nov 2021 11:25:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,575 +18,159 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15372 invoked from network); 10 Nov 2021 19:06:28 -0000
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-To: Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
-	Aleksa Sarai <cyphar@cyphar.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christian Heimes <christian@python.org>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	Eric Chiang <ericchiang@google.com>,
-	Florian Weimer <fweimer@redhat.com>,
-	Geert Uytterhoeven <geert@linux-m68k.org>,
-	James Morris <jmorris@namei.org>,
-	Jan Kara <jack@suse.cz>,
-	Jann Horn <jannh@google.com>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Kees Cook <keescook@chromium.org>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,
-	Matthew Wilcox <willy@infradead.org>,
-	Miklos Szeredi <mszeredi@redhat.com>,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	Paul Moore <paul@paul-moore.com>,
-	=?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Shuah Khan <shuah@kernel.org>,
-	Steve Dower <steve.dower@python.org>,
-	Steve Grubb <sgrubb@redhat.com>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+Received: (qmail 14193 invoked from network); 11 Nov 2021 03:30:50 -0000
+X-IronPort-AV: E=McAfee;i="6200,9189,10164"; a="219732204"
+X-IronPort-AV: E=Sophos;i="5.87,225,1631602800"; 
+   d="scan'208";a="219732204"
+X-ExtLoop1: 1
+X-IronPort-AV: E=Sophos;i="5.87,225,1631602800"; 
+   d="scan'208";a="670102683"
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=nM7mOL4Isqqd/OGWBmGLIcdESL2rmw8N7NPoFWAE/D0IEY01dn++vrwcOG/AaNuTNwsdbVvXpxps5/drhpt7hWuyW2rwZwXYDt60MHtagbLcy9aKaDJszJEFrggEElx5KpZ4VEIpiyRBwZzqUQmtcEyt5Juv3Sk+cOsxa0Xpq288Bf9Vx3JWmLU6W13NRvejcm+/RtNwsOQwbdzKyo5T8VwZUHVrKQmLOKH/1wQNavQbvLZaZpWsYzWO240vXiLzsFUO9R+y28UB0ixGtM4mb6NjqPzPAJSV1dHA2nDa9VB6dGKl1TA1GC2hPk6x0Wyu+HI6eBa25jj51uc/K5Lung==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=HJ9PUPbgM6ABBJt4mzkOQY38bN1I725+AKLT6wzoK6o=;
+ b=ej7lTNGJeWSHOBhLdgQnYQbpMPSnvDJQUXOLx5Ga7jxuHLX3d3wOS9kdA76rMX06PeciZSdsfp+qDxXqgi5FdHPxE42kw2qt/S+FPBftBal2vzFJJkgTBdNfFQcB4OJnxm7MDPy2vr5J6bmD9XkmwCuGTIGW+ILEZi/mP1mnj/5qyomoS9FKjsX9hnPZgTfrRgPo1ryKnetwtzYNFqYRrgIWo87Yb4AjgV0cJlkwx3SBRBY52QbWHxJ/q5qZsV8GddX7VoWjZNKl5hm3bdDzfOAqQbLN2bLxPMpMG64EVn6DGf9SsibpyhIV2lwPswm0CAITSTGkMwuH/nxNLeSYqA==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=intel.com; dmarc=pass action=none header.from=intel.com;
+ dkim=pass header.d=intel.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=intel.onmicrosoft.com;
+ s=selector2-intel-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=HJ9PUPbgM6ABBJt4mzkOQY38bN1I725+AKLT6wzoK6o=;
+ b=TNiKV9p8SwgFChKbtUwLp89UKeTM3oNRW1IAbDIxO/9jpNrPz8G9FYBaRmYrDlXQZ4swAdT1hbLaPiQz1mYXpwmrSIPys0fzjIlXm6RzqYWvuJW0D4z8s+rOwFlflxdVuy0OsCGQOrah+t+6U/G6UC15e7CR+9KRA28UZEl/ssQ=
+Authentication-Results: digikod.net; dkim=none (message not signed)
+ header.d=none;digikod.net; dmarc=none action=none header.from=intel.com;
+Message-ID: <00da8188-8b8f-d1c0-ad8c-dfd79e52f289@intel.com>
+Date: Thu, 11 Nov 2021 11:29:59 +0800
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101
+ Firefox/91.0 Thunderbird/91.3.0
+Subject: Re: [fs] a0918006f9: netperf.Throughput_tps -11.6% regression
+Content-Language: en-US
+To: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, Kees Cook
+	<keescook@chromium.org>, kernel test robot <oliver.sang@intel.com>
+CC: <lkp@lists.01.org>, <lkp@intel.com>, <ying.huang@intel.com>,
+	<feng.tang@intel.com>, <zhengjun.xing@linux.intel.com>, Al Viro
+	<viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, "Aleksa
+ Sarai" <cyphar@cyphar.com>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann
+	<arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Christian Brauner
+	<christian.brauner@ubuntu.com>, Christian Heimes <christian@python.org>,
+	Deven Bowers <deven.desai@linux.microsoft.com>, Dmitry Vyukov
+	<dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>, Eric Chiang
+	<ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>, "Geert
+ Uytterhoeven" <geert@linux-m68k.org>, James Morris <jmorris@namei.org>, "Jan
+ Kara" <jack@suse.cz>, Jann Horn <jannh@google.com>, Jonathan Corbet
+	<corbet@lwn.net>, Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>, Matthew Garrett
+	<mjg59@google.com>, Matthew Wilcox <willy@infradead.org>, Miklos Szeredi
+	<mszeredi@redhat.com>, Mimi Zohar <zohar@linux.ibm.com>, Paul Moore
+	<paul@paul-moore.com>, =?UTF-8?Q?Philippe_Tr=c3=a9buchet?=
+	<philippe.trebuchet@ssi.gouv.fr>, Scott Shell <scottsh@microsoft.com>, "Shuah
+ Khan" <shuah@kernel.org>, Steve Dower <steve.dower@python.org>, Steve Grubb
+	<sgrubb@redhat.com>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
 	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	Yin Fengwei <fengwei.yin@intel.com>,
-	kernel-hardening@lists.openwall.com,
-	linux-api@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	linux-integrity@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
-Subject: [PATCH v16 3/3] selftest/interpreter: Add tests for trusted_for(2) policies
-Date: Wed, 10 Nov 2021 20:06:26 +0100
-Message-Id: <20211110190626.257017-4-mic@digikod.net>
-X-Mailer: git-send-email 2.32.0
-In-Reply-To: <20211110190626.257017-1-mic@digikod.net>
-References: <20211110190626.257017-1-mic@digikod.net>
-MIME-Version: 1.0
+	<kernel-hardening@lists.openwall.com>, <linux-api@vger.kernel.org>,
+	<linux-fsdevel@vger.kernel.org>, <linux-integrity@vger.kernel.org>,
+	<linux-kernel@vger.kernel.org>, <linux-security-module@vger.kernel.org>,
+	=?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@linux.microsoft.com>
+References: <20211012192410.2356090-2-mic@digikod.net>
+ <20211105064159.GB17949@xsang-OptiPlex-9020>
+ <202111090920.4958E610D1@keescook>
+ <95966337-b36e-f45e-6b16-f433bcb90c4d@digikod.net>
+From: Yin Fengwei <fengwei.yin@intel.com>
+In-Reply-To: <95966337-b36e-f45e-6b16-f433bcb90c4d@digikod.net>
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-ClientProxiedBy: SG2PR06CA0115.apcprd06.prod.outlook.com
+ (2603:1096:1:1d::17) To CO1PR11MB4820.namprd11.prod.outlook.com
+ (2603:10b6:303:6f::8)
+MIME-Version: 1.0
+X-MS-PublicTrafficType: Email
+X-MS-Office365-Filtering-Correlation-Id: c42d377b-7ae4-4adf-77dc-08d9a4c39461
+X-MS-TrafficTypeDiagnostic: MWHPR11MB0013:
+X-LD-Processed: 46c98d88-e344-4ed4-8496-4ed7712e255d,ExtAddr
+X-Microsoft-Antispam-PRVS: <MWHPR11MB00136B0892AD88AEB9AAB951EE949@MWHPR11MB0013.namprd11.prod.outlook.com>
+X-MS-Oob-TLC-OOBClassifiers: OLM:8882;
+X-MS-Exchange-SenderADCheck: 1
+X-MS-Exchange-AntiSpam-Relay: 0
+X-Microsoft-Antispam: BCL:0;
+X-Microsoft-Antispam-Message-Info: WSDlhl4UGWxTs87qEM0zJVPdIZQtK1/sSlwKXiU2uO90JpDA+MIEmjan/job9AhBChd3RgPLMccdq7hnEJSMrSIpECGARt/s5OKBrDMVpLHVjIGCppJUZRZmyncRR9UWQV70jCbFvpH+h0+7wfpN+cL40XwP93z8bTz3mkQ6gWzrP3SRNEndWb5ZV4n6LDJ0OCCCNXE+z3PFEnzUHAG+2n7vnrSUGXDGxFjC47LVRdHmrI/tlIxj5GhZazoIgCV7xRysiKbmWP6WBRsnac6ZlZd7ApV/MJq54u50Xd/iuiB/Y1nXgEr6j2ZsJm+lGEguUzspxyWYNdOYbL6z7REL3gqOUR5AAQkapAm1KiiDijhmIDUOepn++7+XS1fVWrkjbpj4Yhc6ToVKz4zeVLphTAeb8wU86tGV8uCa/1W17gYcEivvIvlkfpwTPOncu3KqZl8uGJkEl/1EB6SLLhf8GsMCVmB+eZT9Qb48PPf63A2EiDziE0KAA7gDf2kLu5oy7E06/+qeY22hQUVBmYFuxvyEoo1BXu1txd6uqntO7VtCK9mX1e5tJTWctGy1qBknwOk9kdQFq9WMU8Jsg91sc4X1h9GPA4dhK3BQN6b8/vCPE8KXBRMdJVyKHc8kvBdj6XGly54LN/oBN+kZ8JWPAlDdnBmRmueMRf7+pPkuosLVGYNcTcE6igrzNspLxnPQ7f9aMOlYsR0J3bLgjDegz+Q0c+D4ImF4q+glkNEKXUc=
+X-Forefront-Antispam-Report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:CO1PR11MB4820.namprd11.prod.outlook.com;PTR:;CAT:NONE;SFS:(366004)(38100700002)(8936002)(2906002)(66556008)(7406005)(7416002)(66476007)(6636002)(66574015)(31696002)(82960400001)(8676002)(508600001)(2616005)(4326008)(36756003)(6666004)(956004)(16576012)(316002)(86362001)(53546011)(110136005)(54906003)(26005)(186003)(31686004)(6486002)(5660300002)(66946007)(45980500001)(43740500002);DIR:OUT;SFP:1102;
+X-MS-Exchange-AntiSpam-MessageData-ChunkCount: 1
+X-MS-Exchange-AntiSpam-MessageData-0: =?utf-8?B?T1JtV0JvRGlONGYxRDVnWHRmdk1uK0hzRzA0QWd2L0hzTGh5UG51L0d1ek9X?=
+ =?utf-8?B?Z3hvMklMRmN6dWNjUEZJdGZ0QWNmSFlqa3EyWGhDcUgza2pCejdEckFIZGdN?=
+ =?utf-8?B?Z1oyTkxYTEovQW1XVVl0K1p1UXFPQ0J3L1BuVy9kYXB6Y0RnTHFSKzNsVUJI?=
+ =?utf-8?B?cmJKVTkzb1dvamlFWmdiZEZKaTFYNW1zalB5LzFnNzVUcWxVZEtBRFU2ZmNn?=
+ =?utf-8?B?SmFRVWlNbDlSa0VxR1o5aVRtblZCTmJJZjZyMk01MHVsQnZpTkwvWGc3RHU2?=
+ =?utf-8?B?b0JiNXF4RWw4NmtlbmE2TGFNWTVheTBQaWZ5NHNQOHpNaWZaNGRPQ1kwL1Bh?=
+ =?utf-8?B?VkcvMkdPYWhJWTNIUEJVVWNwLzZkNzBYNlhYcDRjSGVMNWVuZ0E1N2tISWE2?=
+ =?utf-8?B?bHh3Yk1SYWNTZmpWZ1dNV2QvcXRnK1VoUWZ5ZDVPOEQvTHQwM1lTeEFuZlFZ?=
+ =?utf-8?B?andpazg5SndHNmJpRlZ1UXpUL1lCVTYxV243WDI2d2Q4QU15b05PeUFKZll4?=
+ =?utf-8?B?K2ZDaVh0b2ljRlI3cnhRa2Zna1pFZzY5MUZFa1RsNW5JZXpyWGQ5Tk9DbVMx?=
+ =?utf-8?B?U0RUdFA1WnVUT3ZQSWNYNUdOc0hpa2pzSzhldXlYV28xN3BKZ3QxRkFGNEMy?=
+ =?utf-8?B?ZU9KamIyWjBTWFNUbUNjOVVQbFBrckJoS0IxcHNyWGhZRlA4QU9qRFdTMlc0?=
+ =?utf-8?B?aDNQRjlDY0c0dWJHc2tva1lEKzRET25iSG9OaDRqbXVQQnpsSmRTdVdqVUFU?=
+ =?utf-8?B?Rm04NWR4Sk1lQlA5YkhhUHdYMVU4aHZxTnZ0elFFZ0c5bmkyR3J2d0szL3hn?=
+ =?utf-8?B?U29GTTJsY05IWGRLM2V6eUZnN3dOOFM0elEzRFppalZXREsrdnR2RTB0bzJD?=
+ =?utf-8?B?b2FReWpPM3EwSWw2MFZ3MW1qOVF2dVlRTUw2MjE5VHI0SDd2dFZaOG9sRzFE?=
+ =?utf-8?B?L0VwbXlQVkdMdGo4ajJSSWxnTjBTRmFERHRZdEpuRm9pRGlkMnJzMUp0T3o0?=
+ =?utf-8?B?cG5yVytkMlhGSjlESytCdkFIUXpBY3ZpMTJ0K290dVlkWG0xVXMrTUUwWFlI?=
+ =?utf-8?B?TmpZcTAzanJwMnh0N2x2bUpPS0pBaGdIVEkxbU5wVnNKOXRHQzJiUCtkZGRT?=
+ =?utf-8?B?QWc3TzkwVUFwck1OYm9EckkyQ0twbktRSnJpVEUvN1JkWitVcnYzTWNhNDIx?=
+ =?utf-8?B?c3RjWDhDRXVXTzVVZkFKS0owaExtbkNTZ2l6VGRONjBaZnlJVUUzbjJSOExn?=
+ =?utf-8?B?QU1vcHJXM3FWOUNvQVRWR1I0RmtJMTBjVXU4T2FSKzk4MmoydkVvTUNaUjd6?=
+ =?utf-8?B?NEhkMjZyU2Q3NzYwNWVvTlNqd3UwRXlwaTBGWmhIdUhjTk8vWTMxSWtOdVU3?=
+ =?utf-8?B?QU8xRkZQWTFiWFptcXZsdHVjdFVibURBZFZQK1FNN1liUTBRNU1ZaTJRcTNw?=
+ =?utf-8?B?NVVWRkpFQ2l0bCtFNWEwVFI0TWVTYUEzaHQvK2ZYZXJTcmpXQldsUVJYUDIz?=
+ =?utf-8?B?bkczKzZGWTdoNERtVWx4dXFHcHp5N1Vna3ZGQlh4WCt4TjZYRndQU1BMMVBn?=
+ =?utf-8?B?U0haWnBGYmNBb0ZwMkVaVUE3U2I2Zm1xZmpUQ1FrQStlM3BTSHhFclNoZkZX?=
+ =?utf-8?B?TzZnUGVYbU56TnZQM3lzTXl3R3Y0ZlVHVVlVdUNJOS95YUpmMG1QSk5Ha0JK?=
+ =?utf-8?B?K0VJMDdjS1NtOGhkcnljdmUxM2x4R0RzWDFMdFZkRlVBRlJYRFhHOUl3TXZS?=
+ =?utf-8?B?UisrV09TaGFCR0JkSlI1VDBaUDZCQ2lvVXZLeHVrNlNqYUMvNUF5M1lHVXRZ?=
+ =?utf-8?B?dEkxOGpFWjdpWlFrRjNTczRONENPWlY3L01aMFVXMTQ2NWRPSzFYdUNjbEQ3?=
+ =?utf-8?B?ampaRE1HQ1VTdGw1ZUVMZzZoZjNWQ290MjdCSmwzQXFKV3VjLzR5aDRhZWpS?=
+ =?utf-8?B?OVc4UFg0Vmw0Q0VCV0lHbTFxSDlDSkdRZDRoVzJkendweTFhYlUxSHdrRkpr?=
+ =?utf-8?B?NUlVMlZUUldoMWZYQS9YU20vNmxiSURRWWRkWlJHZUFnKytLYTdDRThsMWRW?=
+ =?utf-8?B?SHNYdjlZdS95VWd4QXJoODB1cWxjRXNqN0Rvak9lTmNhNzZoL1dMcXUwb0Nr?=
+ =?utf-8?B?U0JldHA1SVFwVS9lWVZlWU1PeFhDUGlaNVg3dXFYMHgzTHlBTm1KQWZUZ1Y1?=
+ =?utf-8?Q?krV0niuf2N9tAINj5JJn16c=3D?=
+X-MS-Exchange-CrossTenant-Network-Message-Id: c42d377b-7ae4-4adf-77dc-08d9a4c39461
+X-MS-Exchange-CrossTenant-AuthSource: CO1PR11MB4820.namprd11.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 11 Nov 2021 03:30:17.1877
+ (UTC)
+X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
+X-MS-Exchange-CrossTenant-Id: 46c98d88-e344-4ed4-8496-4ed7712e255d
+X-MS-Exchange-CrossTenant-MailboxType: HOSTED
+X-MS-Exchange-CrossTenant-UserPrincipalName: cwyHjDHpFErkZerhdSgvnulIphR02Pqbj2H0nhXudyjQC5vbuY7FzQGVgZ8iaX1tngSxLaahbSyi0OZz8jFwuA==
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: MWHPR11MB0013
+X-OriginatorOrg: intel.com
 
-From: Mickaël Salaün <mic@linux.microsoft.com>
 
-Test that checks performed by trusted_for(2) on file descriptors are
-consistent with noexec mount points and file execute permissions,
-according to the policy configured with the fs.trust_policy sysctl.
+On 11/10/2021 4:52 PM, Mickaël Salaün wrote:
+>>> ---------------- ---------------------------
+>>>          %stddev     %change         %stddev
+>>>              \          |                \
+>>>     555600            -0.1%     555305        netperf.Throughput_total_tps
+>>>      34725            -0.1%      34706        netperf.Throughput_tps
+>>>
+>>>
+>>> Fengwei also helped review these results and commented:
+>>> I suppose these three CPUs have different cache policy. It also could be
+>>> related with netperf throughput testing.
+>> Does moving the syscall implementation somewhere else change things?
+>> That's a _huge_ performance change for something that isn't even called.
+>> What's going on here?
+> This regression doesn't make sense. I guess this is the result of a
+> flaky netperf test, maybe because the test machine was overloaded at
+> that time.
 
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Arnd Bergmann <arnd@arndb.de>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Shuah Khan <shuah@kernel.org>
-Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Link: https://lore.kernel.org/r/20211110190626.257017-4-mic@digikod.net
----
+I agree the test result looks strange. But I don't think the test machine
+or test methodology has issue. It's not possible the test box is overloaded
+when test case is running. We did test several times (> 12 times) on different
+days. Thanks.
 
-Changes since v14:
-* Add Reviewed-by Kees Cook.
 
-Changes since v13:
-* Move -I to CFLAGS (suggested by Kees Cook).
-* Update sysctl name.
-
-Changes since v12:
-* Fix Makefile's license.
-
-Changes since v10:
-* Update selftest Makefile.
-
-Changes since v9:
-* Rename the syscall and the sysctl.
-* Update tests for enum trusted_for_usage
-
-Changes since v8:
-* Update with the dedicated syscall introspect_access(2) and the renamed
-  fs.introspection_policy sysctl.
-* Remove check symlink which can't be use as is anymore.
-* Use socketpair(2) to test UNIX socket.
-
-Changes since v7:
-* Update tests with faccessat2/AT_INTERPRETED, including new ones to
-  check that setting R_OK or W_OK returns EINVAL.
-* Add tests for memfd, pipefs and nsfs.
-* Rename and move back tests to a standalone directory.
-
-Changes since v6:
-* Add full combination tests for all file types, including block
-  devices, character devices, fifos, sockets and symlinks.
-* Properly save and restore initial sysctl value for all tests.
-
-Changes since v5:
-* Refactor with FIXTURE_VARIANT, which make the tests much more easy to
-  read and maintain.
-* Save and restore initial sysctl value (suggested by Kees Cook).
-* Test with a sysctl value of 0.
-* Check errno in sysctl_access_write test.
-* Update tests for the CAP_SYS_ADMIN switch.
-* Update tests to check -EISDIR (replacing -EACCES).
-* Replace FIXTURE_DATA() with FIXTURE() (spotted by Kees Cook).
-* Use global const strings.
-
-Changes since v3:
-* Replace RESOLVE_MAYEXEC with O_MAYEXEC.
-* Add tests to check that O_MAYEXEC is ignored by open(2) and openat(2).
-
-Changes since v2:
-* Move tests from exec/ to openat2/ .
-* Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).
-* Cleanup tests.
-
-Changes since v1:
-* Move tests from yama/ to exec/ .
-* Fix _GNU_SOURCE in kselftest_harness.h .
-* Add a new test sysctl_access_write to check if CAP_MAC_ADMIN is taken
-  into account.
-* Test directory execution which is always forbidden since commit
-  73601ea5b7b1 ("fs/open.c: allow opening only regular files during
-  execve()"), and also check that even the root user can not bypass file
-  execution checks.
-* Make sure delete_workspace() always as enough right to succeed.
-* Cosmetic cleanup.
----
- tools/testing/selftests/Makefile              |   1 +
- .../testing/selftests/interpreter/.gitignore  |   2 +
- tools/testing/selftests/interpreter/Makefile  |  21 +
- tools/testing/selftests/interpreter/config    |   1 +
- .../selftests/interpreter/trust_policy_test.c | 362 ++++++++++++++++++
- 5 files changed, 387 insertions(+)
- create mode 100644 tools/testing/selftests/interpreter/.gitignore
- create mode 100644 tools/testing/selftests/interpreter/Makefile
- create mode 100644 tools/testing/selftests/interpreter/config
- create mode 100644 tools/testing/selftests/interpreter/trust_policy_test.c
-
-diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
-index c852eb40c4f7..3a032a545f74 100644
---- a/tools/testing/selftests/Makefile
-+++ b/tools/testing/selftests/Makefile
-@@ -20,6 +20,7 @@ TARGETS += ftrace
- TARGETS += futex
- TARGETS += gpio
- TARGETS += intel_pstate
-+TARGETS += interpreter
- TARGETS += ipc
- TARGETS += ir
- TARGETS += kcmp
-diff --git a/tools/testing/selftests/interpreter/.gitignore b/tools/testing/selftests/interpreter/.gitignore
-new file mode 100644
-index 000000000000..82a4846cbc4b
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/.gitignore
-@@ -0,0 +1,2 @@
-+# SPDX-License-Identifier: GPL-2.0-only
-+/*_test
-diff --git a/tools/testing/selftests/interpreter/Makefile b/tools/testing/selftests/interpreter/Makefile
-new file mode 100644
-index 000000000000..7402fdb6533f
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/Makefile
-@@ -0,0 +1,21 @@
-+# SPDX-License-Identifier: GPL-2.0
-+
-+CFLAGS += -Wall -O2 -I$(khdr_dir)
-+LDLIBS += -lcap
-+
-+src_test := $(wildcard *_test.c)
-+TEST_GEN_PROGS := $(src_test:.c=)
-+
-+KSFT_KHDR_INSTALL := 1
-+include ../lib.mk
-+
-+khdr_dir = $(top_srcdir)/usr/include
-+
-+$(khdr_dir)/asm-generic/unistd.h: khdr
-+	@:
-+
-+$(khdr_dir)/linux/trusted-for.h: khdr
-+	@:
-+
-+$(OUTPUT)/%_test: %_test.c $(khdr_dir)/asm-generic/unistd.h $(khdr_dir)/linux/trusted-for.h ../kselftest_harness.h
-+	$(LINK.c) $< $(LDLIBS) -o $@
-diff --git a/tools/testing/selftests/interpreter/config b/tools/testing/selftests/interpreter/config
-new file mode 100644
-index 000000000000..dd53c266bf52
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/config
-@@ -0,0 +1 @@
-+CONFIG_SYSCTL=y
-diff --git a/tools/testing/selftests/interpreter/trust_policy_test.c b/tools/testing/selftests/interpreter/trust_policy_test.c
-new file mode 100644
-index 000000000000..b59f07f537ad
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/trust_policy_test.c
-@@ -0,0 +1,362 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Test trusted_for(2) with fs.trusted_for_policy sysctl
-+ *
-+ * Copyright © 2018-2020 ANSSI
-+ *
-+ * Author: Mickaël Salaün <mic@digikod.net>
-+ */
-+
-+#define _GNU_SOURCE
-+#include <asm-generic/unistd.h>
-+#include <errno.h>
-+#include <fcntl.h>
-+#include <linux/trusted-for.h>
-+#include <stdio.h>
-+#include <stdlib.h>
-+#include <sys/capability.h>
-+#include <sys/mman.h>
-+#include <sys/mount.h>
-+#include <sys/socket.h>
-+#include <sys/stat.h>
-+#include <sys/syscall.h>
-+#include <sys/sysmacros.h>
-+#include <sys/types.h>
-+#include <unistd.h>
-+
-+#include "../kselftest_harness.h"
-+
-+#ifndef trusted_for
-+static int trusted_for(const int fd, const enum trusted_for_usage usage,
-+		const __u32 flags)
-+{
-+	errno = 0;
-+	return syscall(__NR_trusted_for, fd, usage, flags);
-+}
-+#endif
-+
-+static const char sysctl_path[] = "/proc/sys/fs/trusted_for_policy";
-+
-+static const char workdir_path[] = "./test-mount";
-+static const char reg_file_path[] = "./test-mount/regular_file";
-+static const char dir_path[] = "./test-mount/directory";
-+static const char block_dev_path[] = "./test-mount/block_device";
-+static const char char_dev_path[] = "./test-mount/character_device";
-+static const char fifo_path[] = "./test-mount/fifo";
-+
-+static void ignore_dac(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[2] = {
-+		CAP_DAC_OVERRIDE,
-+		CAP_DAC_READ_SEARCH,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void ignore_sys_admin(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[1] = {
-+		CAP_SYS_ADMIN,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void test_omx(struct __test_metadata *_metadata,
-+		const char *const path, const int err_access)
-+{
-+	int flags = O_RDONLY | O_CLOEXEC;
-+	int fd, access_ret, access_errno;
-+
-+	/* Do not block on pipes. */
-+	if (path == fifo_path)
-+		flags |= O_NONBLOCK;
-+
-+	fd = open(path, flags);
-+	ASSERT_LE(0, fd) {
-+		TH_LOG("Failed to open %s: %s", path, strerror(errno));
-+	}
-+	access_ret = trusted_for(fd, TRUSTED_FOR_EXECUTION, 0);
-+	access_errno = errno;
-+	if (err_access) {
-+		ASSERT_EQ(err_access, access_errno) {
-+			TH_LOG("Wrong error for trusted_for(2) with %s: %s",
-+					path, strerror(access_errno));
-+		}
-+		ASSERT_EQ(-1, access_ret);
-+	} else {
-+		ASSERT_EQ(0, access_ret) {
-+			TH_LOG("Access denied for %s: %s", path, strerror(access_errno));
-+		}
-+	}
-+
-+	/* Tests unsupported trusted usage. */
-+	access_ret = trusted_for(fd, 0, 0);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+
-+	access_ret = trusted_for(fd, 2, 0);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+static void test_policy_fd(struct __test_metadata *_metadata, const int fd,
-+		const bool has_policy)
-+{
-+	const int ret = trusted_for(fd, TRUSTED_FOR_EXECUTION, 0);
-+
-+	if (has_policy) {
-+		ASSERT_EQ(-1, ret);
-+		ASSERT_EQ(EACCES, errno) {
-+			TH_LOG("Wrong error for trusted_for(2) with FD: %s", strerror(errno));
-+		}
-+	} else {
-+		ASSERT_EQ(0, ret) {
-+			TH_LOG("Access denied for FD: %s", strerror(errno));
-+		}
-+	}
-+}
-+
-+FIXTURE(access) {
-+	char initial_sysctl_value;
-+	int memfd, pipefd;
-+	int pipe_fds[2], socket_fds[2];
-+};
-+
-+static void test_file_types(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests are performed on a tmpfs mount point. */
-+	test_omx(_metadata, reg_file_path, err_code);
-+	test_omx(_metadata, dir_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, block_dev_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, char_dev_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, fifo_path, has_policy ? EACCES : 0);
-+
-+	/* Checks that exec is denied for any socket FD. */
-+	test_policy_fd(_metadata, self->socket_fds[0], has_policy);
-+
-+	/* Checks that exec is denied for any memfd. */
-+	test_policy_fd(_metadata, self->memfd, has_policy);
-+
-+	/* Checks that exec is denied for any pipefs FD. */
-+	test_policy_fd(_metadata, self->pipefd, has_policy);
-+}
-+
-+static void test_files(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests as root. */
-+	ignore_dac(_metadata, 1);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+
-+	/* Tests without bypass. */
-+	ignore_dac(_metadata, 0);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+}
-+
-+static void sysctl_write_char(struct __test_metadata *_metadata, const char value)
-+{
-+	int fd;
-+
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, write(fd, &value, 1));
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+static char sysctl_read_char(struct __test_metadata *_metadata)
-+{
-+	int fd;
-+	char sysctl_value;
-+
-+	fd = open(sysctl_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, read(fd, &sysctl_value, 1));
-+	EXPECT_EQ(0, close(fd));
-+	return sysctl_value;
-+}
-+
-+FIXTURE_VARIANT(access) {
-+	const bool mount_exec;
-+	const bool file_exec;
-+	const int sysctl_err_code[3];
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_exec) {
-+	.mount_exec = true,
-+	.file_exec = true,
-+	.sysctl_err_code = {0, 0, 0},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_noexec)
-+{
-+	.mount_exec = true,
-+	.file_exec = false,
-+	.sysctl_err_code = {0, EACCES, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_exec)
-+{
-+	.mount_exec = false,
-+	.file_exec = true,
-+	.sysctl_err_code = {EACCES, 0, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_noexec)
-+{
-+	.mount_exec = false,
-+	.file_exec = false,
-+	.sysctl_err_code = {EACCES, EACCES, EACCES},
-+};
-+
-+FIXTURE_SETUP(access)
-+{
-+	int procfd_path_size;
-+	static const char path_template[] = "/proc/self/fd/%d";
-+	char procfd_path[sizeof(path_template) + 10];
-+
-+	/*
-+	 * Cleans previous workspace if any error previously happened (don't
-+	 * check errors).
-+	 */
-+	umount(workdir_path);
-+	rmdir(workdir_path);
-+
-+	/* Creates a clean mount point. */
-+	ASSERT_EQ(0, mkdir(workdir_path, 00700));
-+	ASSERT_EQ(0, mount("test", workdir_path, "tmpfs", MS_MGC_VAL |
-+				(variant->mount_exec ? 0 : MS_NOEXEC),
-+				"mode=0700,size=4k"));
-+
-+	/* Creates a regular file. */
-+	ASSERT_EQ(0, mknod(reg_file_path, S_IFREG | (variant->file_exec ? 0500 : 0400), 0));
-+	/* Creates a directory. */
-+	ASSERT_EQ(0, mkdir(dir_path, variant->file_exec ? 0500 : 0400));
-+	/* Creates a character device: /dev/null. */
-+	ASSERT_EQ(0, mknod(char_dev_path, S_IFCHR | 0400, makedev(1, 3)));
-+	/* Creates a block device: /dev/loop0 */
-+	ASSERT_EQ(0, mknod(block_dev_path, S_IFBLK | 0400, makedev(7, 0)));
-+	/* Creates a fifo. */
-+	ASSERT_EQ(0, mknod(fifo_path, S_IFIFO | 0400, 0));
-+
-+	/* Creates a regular file without user mount point. */
-+	self->memfd = memfd_create("test-interpreted", MFD_CLOEXEC);
-+	ASSERT_LE(0, self->memfd);
-+	/* Sets mode, which must be ignored by the exec check. */
-+	ASSERT_EQ(0, fchmod(self->memfd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Creates a pipefs file descriptor. */
-+	ASSERT_EQ(0, pipe(self->pipe_fds));
-+	procfd_path_size = snprintf(procfd_path, sizeof(procfd_path),
-+			path_template, self->pipe_fds[0]);
-+	ASSERT_LT(procfd_path_size, sizeof(procfd_path));
-+	self->pipefd = open(procfd_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, self->pipefd);
-+	ASSERT_EQ(0, fchmod(self->pipefd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Creates a socket file descriptor. */
-+	ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0, self->socket_fds));
-+
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+
-+	/* Prepares for sysctl writes. */
-+	ignore_sys_admin(_metadata, 1);
-+}
-+
-+FIXTURE_TEARDOWN(access)
-+{
-+	EXPECT_EQ(0, close(self->memfd));
-+	EXPECT_EQ(0, close(self->pipefd));
-+	EXPECT_EQ(0, close(self->pipe_fds[0]));
-+	EXPECT_EQ(0, close(self->pipe_fds[1]));
-+	EXPECT_EQ(0, close(self->socket_fds[0]));
-+	EXPECT_EQ(0, close(self->socket_fds[1]));
-+
-+	/* Restores initial sysctl value. */
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+
-+	/* There is no need to unlink the test files. */
-+	ASSERT_EQ(0, umount(workdir_path));
-+	ASSERT_EQ(0, rmdir(workdir_path));
-+}
-+
-+TEST_F(access, sysctl_0)
-+{
-+	/* Do not enforce anything. */
-+	sysctl_write_char(_metadata, '0');
-+	test_files(_metadata, self, 0, false);
-+}
-+
-+TEST_F(access, sysctl_1)
-+{
-+	/* Enforces mount exec check. */
-+	sysctl_write_char(_metadata, '1');
-+	test_files(_metadata, self, variant->sysctl_err_code[0], true);
-+}
-+
-+TEST_F(access, sysctl_2)
-+{
-+	/* Enforces file exec check. */
-+	sysctl_write_char(_metadata, '2');
-+	test_files(_metadata, self, variant->sysctl_err_code[1], true);
-+}
-+
-+TEST_F(access, sysctl_3)
-+{
-+	/* Enforces mount and file exec check. */
-+	sysctl_write_char(_metadata, '3');
-+	test_files(_metadata, self, variant->sysctl_err_code[2], true);
-+}
-+
-+FIXTURE(cleanup) {
-+	char initial_sysctl_value;
-+};
-+
-+FIXTURE_SETUP(cleanup)
-+{
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+}
-+
-+FIXTURE_TEARDOWN(cleanup)
-+{
-+	/* Restores initial sysctl value. */
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+}
-+
-+TEST_F(cleanup, sysctl_access_write)
-+{
-+	int fd;
-+	ssize_t ret;
-+
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, '0');
-+
-+	ignore_sys_admin(_metadata, 0);
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ret = write(fd, "0", 1);
-+	ASSERT_EQ(-1, ret);
-+	ASSERT_EQ(EPERM, errno);
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+TEST_HARNESS_MAIN
--- 
-2.32.0
-
+Regards
+Yin, Fengwei
