@@ -1,16 +1,16 @@
-Return-Path: <SRS0=4SJI=QA=lists.openwall.com=kernel-hardening-return-21467-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=fOf7=QA=lists.openwall.com=kernel-hardening-return-21468-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CF1CEC433EF
-	for <kernel-hardening@archiver.kernel.org>; Sat, 13 Nov 2021 13:02:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A609DC433EF
+	for <kernel-hardening@archiver.kernel.org>; Sat, 13 Nov 2021 18:15:07 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 0564960E08
-	for <kernel-hardening@archiver.kernel.org>; Sat, 13 Nov 2021 13:02:30 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 0564960E08
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+	by mail.kernel.org (Postfix) with SMTP id B3AFE60F46
+	for <kernel-hardening@archiver.kernel.org>; Sat, 13 Nov 2021 18:15:06 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org B3AFE60F46
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 15501 invoked by uid 550); 13 Nov 2021 13:02:22 -0000
+Received: (qmail 12127 invoked by uid 550); 13 Nov 2021 18:14:58 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,157 +18,125 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 15481 invoked from network); 13 Nov 2021 13:02:21 -0000
-Subject: Re: [PATCH v16 1/3] fs: Add trusted_for(2) syscall implementation and
- related sysctl
-To: "Alejandro Colomar (man-pages)" <alx.manpages@gmail.com>,
- Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>
-Cc: Aleksa Sarai <cyphar@cyphar.com>, Andy Lutomirski <luto@kernel.org>,
- Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
- Christian Brauner <christian.brauner@ubuntu.com>,
- Christian Heimes <christian@python.org>,
- Deven Bowers <deven.desai@linux.microsoft.com>,
- Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
- Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>,
- Geert Uytterhoeven <geert@linux-m68k.org>, James Morris <jmorris@namei.org>,
- Jan Kara <jack@suse.cz>, Jann Horn <jannh@google.com>,
- Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>,
- Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
- "Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
- Matthew Garrett <mjg59@google.com>, Matthew Wilcox <willy@infradead.org>,
- Miklos Szeredi <mszeredi@redhat.com>, Mimi Zohar <zohar@linux.ibm.com>,
- Paul Moore <paul@paul-moore.com>,
- =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
- Scott Shell <scottsh@microsoft.com>, Shuah Khan <shuah@kernel.org>,
- Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>,
- Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
- Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
- Yin Fengwei <fengwei.yin@intel.com>, kernel-hardening@lists.openwall.com,
- linux-api@vger.kernel.org, linux-fsdevel@vger.kernel.org,
- linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org,
- linux-security-module@vger.kernel.org,
- =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@linux.microsoft.com>
-References: <20211110190626.257017-1-mic@digikod.net>
- <20211110190626.257017-2-mic@digikod.net>
- <8a22a3c2-468c-e96c-6516-22a0f029aa34@gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <5312f022-96ea-5555-8d17-4e60a33cf8f8@digikod.net>
-Date: Sat, 13 Nov 2021 14:02:02 +0100
-User-Agent:
+Received: (qmail 12092 invoked from network); 13 Nov 2021 18:14:58 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=x-gm-message-state:message-id:date:mime-version:user-agent:reply-to
+         :subject:content-language:to:cc:references:from:in-reply-to
+         :content-transfer-encoding;
+        bh=qJpFgDmQX4NgXIPsmsa3L8Op/10DaprZpinixut55a0=;
+        b=LCUk/s3LYqfIUXrUQx/Yb4VZyelWsz0KqdfdG+VjpOaInIIT86zxTpBrHKbpggJdmi
+         Mr0VsoJkSaC4LaL2WLLGoz6EkbrQSu3N6JGLaMt0UAiNVy9T7zw7YWT8cI/4Y+j9Gh0j
+         orXp9UtNpzuGkV79Ur7qqHQ56DChjHNFEA+U0BY+iZAL/SbFtITkmaJidweK/hkqSL/l
+         oKuINVjnb62OgSYsjSDifvq7VyorQuveQIsMppqd1lGxxz1RdN+BHywhhPFx8msnabYq
+         5o43vVCSG2x2XOyQaVkk53vWS5u2Rxy4DAP446+r39sFY2G4qj2K8+kwgqE6eqGyFi31
+         WieQ==
+X-Gm-Message-State: AOAM530FyXBdu5iutOHYCiWTVDPnNTvnB0Roe9NBzuUsWAoUdKBWmgPr
+	EJZkKIecBild4QbOBo+q1Dc=
+X-Google-Smtp-Source: ABdhPJySvDqEIK8+A9iIm0gq0uH+YP8Ng3lmMG7/q64IpdcsRxTBcPM1NXj/RYt+u7AjGEpgcD8v+w==
+X-Received: by 2002:a05:600c:4108:: with SMTP id j8mr27714558wmi.139.1636827286595;
+        Sat, 13 Nov 2021 10:14:46 -0800 (PST)
+Message-ID: <77b79f0c-48f2-16dd-1d00-22f3a1b1f5a6@linux.com>
+Date: Sat, 13 Nov 2021 21:14:39 +0300
 MIME-Version: 1.0
-In-Reply-To: <8a22a3c2-468c-e96c-6516-22a0f029aa34@gmail.com>
-Content-Type: text/plain; charset=utf-8
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
+ Thunderbird/91.2.0
+Subject: Re: [PATCH v2 0/2] Introduce the pkill_on_warn parameter
 Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Jonathan Corbet <corbet@lwn.net>, Paul McKenney <paulmck@kernel.org>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>,
+ Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
+ Muchun Song <songmuchun@bytedance.com>,
+ Viresh Kumar <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>,
+ Randy Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>,
+ Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>,
+ Luis Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>,
+ John Ogness <john.ogness@linutronix.de>,
+ Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
+ Alexey Kardashevskiy <aik@ozlabs.ru>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>,
+ Dave Hansen <dave.hansen@linux.intel.com>,
+ Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
+ Ard Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>,
+ David S Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>,
+ Arnd Bergmann <arnd@arndb.de>, Andrew Scull <ascull@google.com>,
+ Marc Zyngier <maz@kernel.org>, Jessica Yu <jeyu@kernel.org>,
+ Iurii Zaikin <yzaikin@google.com>,
+ Rasmus Villemoes <linux@rasmusvillemoes.dk>, Wang Qing <wangqing@vivo.com>,
+ Mel Gorman <mgorman@suse.de>,
+ Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
+ Andrew Klychkov <andrew.a.klychkov@gmail.com>,
+ Mathieu Chouquet-Stringer <me@mathieu.digital>,
+ Daniel Borkmann <daniel@iogearbox.net>, Stephen Kitt <steve@sk2.org>,
+ Stephen Boyd <sboyd@kernel.org>,
+ Thomas Bogendoerfer <tsbogend@alpha.franken.de>,
+ Mike Rapoport <rppt@kernel.org>, Bjorn Andersson
+ <bjorn.andersson@linaro.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ linux-hardening@vger.kernel.org,
+ "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+ linux-arch <linux-arch@vger.kernel.org>,
+ Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>, notify@kernel.org,
+ main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
+ devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>,
+ Lukas Bulwahn <lukas.bulwahn@gmail.com>
+References: <20211027233215.306111-1-alex.popov@linux.com>
+ <ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
+ <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+In-Reply-To: <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
+
+On 13.11.2021 00:26, Linus Torvalds wrote:
+> On Fri, Nov 12, 2021 at 10:52 AM Alexander Popov <alex.popov@linux.com> wrote:
+>>
+>> Hello everyone!
+>> Friendly ping for your feedback.
+> 
+> I still haven't heard a compelling _reason_ for this all, and why
+> anybody should ever use this or care?
+
+Ok, to sum up:
+
+Killing the process that hit a kernel warning complies with the Fail-Fast 
+principle [1]. pkill_on_warn sysctl allows the kernel to stop the process when 
+the **first signs** of wrong behavior are detected.
+
+By default, the Linux kernel ignores a warning and proceeds the execution from 
+the flawed state. That is opposite to the Fail-Fast principle.
+A kernel warning may be followed by memory corruption or other negative effects, 
+like in CVE-2019-18683 exploit [2] or many other cases detected by the SyzScope 
+project [3]. pkill_on_warn would prevent the system from the errors going after 
+a warning in the process context.
+
+At the same time, pkill_on_warn does not kill the entire system like 
+panic_on_warn. That is the middle way of handling kernel warnings.
+Linus, it's similar to your BUG_ON() policy [4]. The process hitting BUG_ON() is 
+killed, and the system proceeds to work. pkill_on_warn just brings a similar 
+policy to WARN_ON() handling.
+
+I believe that many Linux distros (which don't hit WARN_ON() here and there) 
+will enable pkill_on_warn because it's reasonable from the safety and security 
+points of view.
+
+And I'm sure that the ELISA project by the Linux Foundation (Enabling Linux In 
+Safety Applications [5]) would support the pkill_on_warn sysctl.
+[Adding people from this project to CC]
+
+I hope that I managed to show the rationale.
+
+Best regards,
+Alexander
 
 
-On 12/11/2021 20:16, Alejandro Colomar (man-pages) wrote:
-> Hi Mickaël,
-
-Hi Alejandro,
-
-> 
-> On 11/10/21 20:06, Mickaël Salaün wrote:
->> diff --git a/fs/open.c b/fs/open.c
->> index f732fb94600c..96a80abec41b 100644
->> --- a/fs/open.c
->> +++ b/fs/open.c
->> @@ -480,6 +482,114 @@ SYSCALL_DEFINE2(access, const char __user *,
->> filename, int, mode)
->>       return do_faccessat(AT_FDCWD, filename, mode, 0);
->>   }
->>   +#define TRUST_POLICY_EXEC_MOUNT            BIT(0)
->> +#define TRUST_POLICY_EXEC_FILE            BIT(1)
->> +
->> +int sysctl_trusted_for_policy __read_mostly;
->> +
->> +/**
-> ...
->> + */
->> +SYSCALL_DEFINE3(trusted_for, const int, fd, const enum
->> trusted_for_usage, usage,
-> 
-> Please, don't use enums for interfaces.  They are implementation defined
-> types, and vary between compilers and within the same compiler also
-> depending on optimization flags.
-> 
-> C17::6.7.2.2.4:
-> [
-> Each enumerated type shall be compatible with char,
-> a signed integer type, or an unsigned integer type.
-> The choice of type is implementation-defined,130)
-> but shall be capable of representing the values of
-> all the members of the enumeration.
-> ]
-> 
-> See also:
-> <https://stackoverflow.com/questions/366017/what-is-the-size-of-an-enum-in-c>
-> 
-> 
-> So, please use only standard integer types for interfaces.
-> 
-> And in the case of enums, since the language specifies that enumeration
-> constants (the macro-like identifiers) are of type int, it makes sense
-> for functions to use int.
-> 
-> C17::6.7.2.2.3:
-> [
-> The identifiers in an enumerator list are declared as constants
-> that have type int and may appear wherever such are permitted.
-> ]
-> 
-> I'd use an int for the API/ABI, even if it's expected to be assigned
-> values of 'enum trusted_for_usage' (that should be specified in the
-> manual page in DESCRIPTION, but not in SYNOPSIS, which should specify int).
-> 
-> 
-> 
-> TL;DR:
-> 
-> ISO C specifies that for the following code:
-> 
->     enum foo {BAR};
-> 
->     enum foo foobar;
-> 
-> typeof(foo)    shall be int
-> typeof(foobar) is implementation-defined
-
-I tested with some version of GCC (from 4.9 to 11) and clang (10 and 11)
-with different optimizations and the related sizes are at least the same
-as for the int type.
-
-> 
-> Since foobar = BAR; assigns an int, the best thing to do to avoid
-> implementation-defined behavior, is to declare foobar as int too.
-
-OK, so it should be enough to change the syscall argument type from enum
-trusted_for_usage to int, but we can keep the UAPI with the enum (i.e.
-we don't need to change the value to #define TRUSTED_FOR_EXECUTION 1) right?
-
-> 
-> 
->> diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
->> index 528a478dbda8..c535e0e43cc8 100644
->> --- a/include/linux/syscalls.h
->> +++ b/include/linux/syscalls.h
->> @@ -462,6 +463,7 @@ asmlinkage long sys_fallocate(int fd, int mode,
->> loff_t offset, loff_t len);
->>   asmlinkage long sys_faccessat(int dfd, const char __user *filename,
->> int mode);
->>   asmlinkage long sys_faccessat2(int dfd, const char __user *filename,
->> int mode,
->>                      int flags);
->> +asmlinkage long sys_trusted_for(int fd, enum trusted_for_usage usage,
->> u32 flags);
-> 
-> Same here.
-> 
->>   asmlinkage long sys_chdir(const char __user *filename);
->>   asmlinkage long sys_fchdir(unsigned int fd);
->>   asmlinkage long sys_chroot(const char __user *filename);
-> 
-> Thanks,
-> Alex
-> 
-> 
+[1]: https://en.wikipedia.org/wiki/Fail-fast
+[2]: https://a13xp0p0v.github.io/2020/02/15/CVE-2019-18683.html
+[3]: https://www.usenix.org/system/files/sec22summer_zou.pdf
+[4]: http://lkml.iu.edu/hypermail/linux/kernel/1610.0/01217.html
+[5]: https://elisa.tech/
