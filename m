@@ -1,16 +1,16 @@
-Return-Path: <SRS0=i0Wl=QB=lists.openwall.com=kernel-hardening-return-21472-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=08Lk=QB=lists.openwall.com=kernel-hardening-return-21473-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D8B45C433EF
-	for <kernel-hardening@archiver.kernel.org>; Sun, 14 Nov 2021 14:21:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B2135C433F5
+	for <kernel-hardening@archiver.kernel.org>; Sun, 14 Nov 2021 15:32:46 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1051E61027
-	for <kernel-hardening@archiver.kernel.org>; Sun, 14 Nov 2021 14:21:49 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 1051E61027
-Authentication-Results: mail.kernel.org; dmarc=fail (p=reject dis=none) header.from=google.com
+	by mail.kernel.org (Postfix) with SMTP id B495A61105
+	for <kernel-hardening@archiver.kernel.org>; Sun, 14 Nov 2021 15:32:45 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org B495A61105
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux-m68k.org
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 32694 invoked by uid 550); 14 Nov 2021 14:21:42 -0000
+Received: (qmail 21651 invoked by uid 550); 14 Nov 2021 15:32:37 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,121 +18,102 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32662 invoked from network); 14 Nov 2021 14:21:41 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20210112;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to:user-agent;
-        bh=p8lk+q4Y2CquVO9sqmu4dSc1gvfHGQ8MpCynAwi+U0M=;
-        b=tmyGi86bjZW/7vtxIzqiUXXSul5Ye8VTLY6C1i8poScsrQmwey4pUrTupOUd2E5T/O
-         U6eX0di3bcDtRIs3BuWvdCD++Z4pOHXG2V7/QjHQvO431WlrLRjiIwM9WemrClq0gXC7
-         +Xwgxx1lTobE+ZE2jpjTNbPkawHwTRWgGn7pR4xCufUfAXa+44eXTTKOtS99KaHF6/+R
-         X8NSkvmce0zWcaFSbInWCw47Cpi/bqA/D2uBq+Lg4zTA1l4KCZa5rfTWtLhA0NbTHWly
-         iswWc8J+xnA9MCX3kJHw267Gkq+v0ts2CP9PZtr0/CC3u0DB5j2rE/ahsAFpiporeeH8
-         D3iw==
+Received: (qmail 21628 invoked from network); 14 Nov 2021 15:32:36 -0000
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to:user-agent;
-        bh=p8lk+q4Y2CquVO9sqmu4dSc1gvfHGQ8MpCynAwi+U0M=;
-        b=HKgq2JiMIVq1L7/HI67rg0S9I3kiuoQwObI3PF6RdYT3ViizcoV0yrteE2p6XrmGTO
-         iJ+SnVgy8HBhykRW1h2NYQftaEK/m6nM12zkY0yuTzpdPGSAy+vRD2yAy6/nkvC7i+l9
-         LBELZKQe2MDswJvlZy0ihLWLUBaxw0VjUjJEp0D/rjdmp1Z6ldeMr5fiq3z4ZcnO8B4b
-         t2geNahL4b3w3VzNaB1XyIcfw/bZvKz8RLnavFfmXkYst+XcFA5aDZi0QmSb5oYthpBz
-         mzTOcfXaPJ+a//fgxIPGSU5mnDGBvI6sCB9oYxYUoh4HtaK7JQ+EI/VbfkG5QDkQkm6g
-         UHbg==
-X-Gm-Message-State: AOAM53105VJy4+nM1HfEdFP40FF15LRsoPhG7GSJmp4rCsHnyKBdI1pc
-	7kn0h52+RuS1xkD+ZYK1fcdh2w==
-X-Google-Smtp-Source: ABdhPJz1rGJhN4paD+q9e5k6x6AlTsEg1AdYORqZcrmrG1v2dBBnBwDrylK3vuq8tZdXbfsQe80dtQ==
-X-Received: by 2002:adf:f042:: with SMTP id t2mr38984084wro.180.1636899689743;
-        Sun, 14 Nov 2021 06:21:29 -0800 (PST)
-Date: Sun, 14 Nov 2021 15:21:22 +0100
-From: Marco Elver <elver@google.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Paul McKenney <paulmck@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
-	Muchun Song <songmuchun@bytedance.com>,
-	Viresh Kumar <viresh.kumar@linaro.org>,
-	Robin Murphy <robin.murphy@arm.com>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	Lu Baolu <baolu.lu@linux.intel.com>, Petr Mladek <pmladek@suse.com>,
-	Kees Cook <keescook@chromium.org>,
-	Luis Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>,
-	John Ogness <john.ogness@linutronix.de>,
-	Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
-	Alexey Kardashevskiy <aik@ozlabs.ru>,
-	Christophe Leroy <christophe.leroy@csgroup.eu>,
-	Jann Horn <jannh@google.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
-	Ard Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>,
-	David S Miller <davem@davemloft.net>,
-	Borislav Petkov <bp@alien8.de>, Arnd Bergmann <arnd@arndb.de>,
-	Andrew Scull <ascull@google.com>, Marc Zyngier <maz@kernel.org>,
-	Jessica Yu <jeyu@kernel.org>, Iurii Zaikin <yzaikin@google.com>,
-	Rasmus Villemoes <linux@rasmusvillemoes.dk>,
-	Wang Qing <wangqing@vivo.com>, Mel Gorman <mgorman@suse.de>,
-	Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
-	Andrew Klychkov <andrew.a.klychkov@gmail.com>,
-	Mathieu Chouquet-Stringer <me@mathieu.digital>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Stephen Kitt <steve@sk2.org>, Stephen Boyd <sboyd@kernel.org>,
-	Thomas Bogendoerfer <tsbogend@alpha.franken.de>,
-	Mike Rapoport <rppt@kernel.org>,
-	Bjorn Andersson <bjorn.andersson@linaro.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-hardening@vger.kernel.org,
-	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>, notify@kernel.org,
-	main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
-	devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>,
-	Lukas Bulwahn <lukas.bulwahn@gmail.com>, glider@google.com
-Subject: Re: [PATCH v2 0/2] Introduce the pkill_on_warn parameter
-Message-ID: <YZEbYmzy64uai7Af@elver.google.com>
-References: <20211027233215.306111-1-alex.popov@linux.com>
- <ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
- <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
- <77b79f0c-48f2-16dd-1d00-22f3a1b1f5a6@linux.com>
- <CAHk-=wg+UMNYrR59Z31MhxMzdUEiZMQ1RF9jQvAb6HGBO5EyEA@mail.gmail.com>
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc:content-transfer-encoding;
+        bh=AMLZNNJz4rzWLCa/Dr8r4qa1Ugz4YCnUFphJhYJFFBo=;
+        b=5vs5NlbdTDx9TNrMZug+rEm0U9A1sPGdro/fes9Lqq1AaXLd14PzC9NvB2pl/yAPRe
+         sksz/UZVewNiazQP3VWgSBZQgm6BlHpN3uyLkmt9IEtuLGVmRmdY+8bupGxistipESyP
+         /P215rbbNs8BNXC5Vx4Zb4SPboPYOfs7pgic63QJDNMpQyYT9rYvOT/aT3vi/opviDC3
+         7HWzfa1EnikmeipqOrVX/u3QgsfLIb9yHyUHESVkTQf12Proat82qpucDjfbI2s/Te7e
+         drRm3H5FsenxQaHFGl/6LVP5va7vRPTgbNM/W7QZ/1RBOvwrCNSIgOcOI0+fDBq72qra
+         u24Q==
+X-Gm-Message-State: AOAM53095ASX8+12X1XuCQIpr5S/FF2wfPIzR8yr9GZAG1IefYU3ad6a
+	PA7Jmb+qBDLvbanWjr6Gq0+y+AbOjtJJVw==
+X-Google-Smtp-Source: ABdhPJxkFoKsLbkx40Sf48EQnOBSnxEHu5UQtvPqJPQ2Z21mfBRIG0wr1tn9j43QGiAUtKXx6TW+5w==
+X-Received: by 2002:ab0:4301:: with SMTP id k1mr47591472uak.75.1636903944998;
+        Sun, 14 Nov 2021 07:32:24 -0800 (PST)
+X-Received: by 2002:a05:6122:20a7:: with SMTP id i39mr47085557vkd.15.1636903933687;
+ Sun, 14 Nov 2021 07:32:13 -0800 (PST)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAHk-=wg+UMNYrR59Z31MhxMzdUEiZMQ1RF9jQvAb6HGBO5EyEA@mail.gmail.com>
-User-Agent: Mutt/2.0.5 (2021-01-21)
+References: <20211110190626.257017-1-mic@digikod.net> <20211110190626.257017-2-mic@digikod.net>
+ <8a22a3c2-468c-e96c-6516-22a0f029aa34@gmail.com> <5312f022-96ea-5555-8d17-4e60a33cf8f8@digikod.net>
+ <34779736-e875-c3e0-75d5-0f0a55d729aa@gmail.com>
+In-Reply-To: <34779736-e875-c3e0-75d5-0f0a55d729aa@gmail.com>
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Date: Sun, 14 Nov 2021 16:32:02 +0100
+X-Gmail-Original-Message-ID: <CAMuHMdXj8fHDq-eFd41GJ4oNwGD5sxhPx82izNwKxE_=x8dqEA@mail.gmail.com>
+Message-ID: <CAMuHMdXj8fHDq-eFd41GJ4oNwGD5sxhPx82izNwKxE_=x8dqEA@mail.gmail.com>
+Subject: Re: [PATCH v16 1/3] fs: Add trusted_for(2) syscall implementation and
+ related sysctl
+To: "Alejandro Colomar (man-pages)" <alx.manpages@gmail.com>
+Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, 
+	Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, 
+	Aleksa Sarai <cyphar@cyphar.com>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, 
+	Casey Schaufler <casey@schaufler-ca.com>, Christian Brauner <christian.brauner@ubuntu.com>, 
+	Christian Heimes <christian@python.org>, Deven Bowers <deven.desai@linux.microsoft.com>, 
+	Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>, 
+	Eric Chiang <ericchiang@google.com>, Florian Weimer <fweimer@redhat.com>, 
+	James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>, Jann Horn <jannh@google.com>, 
+	Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, 
+	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, 
+	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>, Matthew Garrett <mjg59@google.com>, 
+	Matthew Wilcox <willy@infradead.org>, Miklos Szeredi <mszeredi@redhat.com>, 
+	Mimi Zohar <zohar@linux.ibm.com>, Paul Moore <paul@paul-moore.com>, 
+	=?UTF-8?Q?Philippe_Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>, 
+	Scott Shell <scottsh@microsoft.com>, Shuah Khan <shuah@kernel.org>, 
+	Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, 
+	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, 
+	Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yin Fengwei <fengwei.yin@intel.com>, 
+	kernel-hardening@lists.openwall.com, Linux API <linux-api@vger.kernel.org>, 
+	Linux FS Devel <linux-fsdevel@vger.kernel.org>, 
+	linux-integrity <linux-integrity@vger.kernel.org>, 
+	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, 
+	linux-security-module <linux-security-module@vger.kernel.org>, 
+	=?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@linux.microsoft.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-On Sat, Nov 13, 2021 at 11:58AM -0800, Linus Torvalds wrote:
-> On Sat, Nov 13, 2021 at 10:14 AM Alexander Popov <alex.popov@linux.com> wrote:
-[...]
-> Honestly, if the intent is to not have to parse the dmesg output, then
-> I think it would be much better to introduce a new /proc file to read
-> the kernel tainting state, and then some test manager process could be
-> able to poll() that file or something. Not sending a signal to random
-> targets, but have a much more explicit model.
-> 
-> That said, I'm not convinced that "just read the kernel message log"
-> is in any way wrong either.
+Hi Alejandro,
 
-We had this problem of "need to get errors/warnings that appear in the
-kernel log" without actually polling the kernel log all the time. Since
-5.12 there's the 'error_report' tracepoint for exactly this purpose [1].
+On Sat, Nov 13, 2021 at 8:56 PM Alejandro Colomar (man-pages)
+<alx.manpages@gmail.com> wrote:
+> On 11/13/21 14:02, Micka=C3=ABl Sala=C3=BCn wrote:
+> >> TL;DR:
+> >>
+> >> ISO C specifies that for the following code:
+> >>
+> >>      enum foo {BAR};
+> >>
+> >>      enum foo foobar;
+> >>
+> >> typeof(foo)    shall be int
+> >> typeof(foobar) is implementation-defined
+> >
+> > I tested with some version of GCC (from 4.9 to 11) and clang (10 and 11=
+)
+> > with different optimizations and the related sizes are at least the sam=
+e
+> > as for the int type.
+>
+> GCC has -fshort-enums to make enum types be as short as possible.  I
+> expected -Os to turn this on, since it saves space, but it doesn't.
 
-Right now it only generates events on KASAN and KFENCE reports, but we
-imagined it's easy enough to extend with more types. Like WARN, should
-the need arise (you'd have to add it if you decide to go down that
-route).
+Changing optimization level must not change the ABI, else debugging
+would become even more of a nightmare.
 
-So you could implement a close-enough variant of the whole thing in
-userspace using what tracepoints give you by just monitoring the trace
-pipe. It'd be much easier to experiment with different policies as well.
+Gr{oetje,eeting}s,
 
-[1] https://git.kernel.org/torvalds/c/9c0dee54eb91d48cca048bd7bd2c1f4a166e0252 
+                        Geert
+
+--
+Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k=
+.org
+
+In personal conversations with technical people, I call myself a hacker. Bu=
+t
+when I'm talking to journalists I just say "programmer" or something like t=
+hat.
+                                -- Linus Torvalds
