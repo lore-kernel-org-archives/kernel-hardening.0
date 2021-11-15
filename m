@@ -1,16 +1,16 @@
-Return-Path: <SRS0=Gomo=QC=lists.openwall.com=kernel-hardening-return-21481-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=uC3d=QC=lists.openwall.com=kernel-hardening-return-21482-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5BE1FC433EF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 18:53:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 59DAEC4332F
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 20:54:05 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 5AA1F633A6
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 18:53:54 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 5AA1F633A6
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
+	by mail.kernel.org (Postfix) with SMTP id 5190861AA9
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 20:54:04 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 5190861AA9
+Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=redhat.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 29834 invoked by uid 550); 15 Nov 2021 18:53:27 -0000
+Received: (qmail 30362 invoked by uid 550); 15 Nov 2021 20:53:55 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,576 +18,275 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 29777 invoked from network); 15 Nov 2021 18:53:26 -0000
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-To: Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
-	Alejandro Colomar <alx.manpages@gmail.com>,
-	Aleksa Sarai <cyphar@cyphar.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christian Heimes <christian@python.org>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	Eric Chiang <ericchiang@google.com>,
-	Florian Weimer <fweimer@redhat.com>,
-	Geert Uytterhoeven <geert@linux-m68k.org>,
-	James Morris <jmorris@namei.org>,
-	Jan Kara <jack@suse.cz>,
-	Jann Horn <jannh@google.com>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Kees Cook <keescook@chromium.org>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,
-	Matthew Wilcox <willy@infradead.org>,
-	Miklos Szeredi <mszeredi@redhat.com>,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	Paul Moore <paul@paul-moore.com>,
-	=?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Shuah Khan <shuah@kernel.org>,
-	Steve Dower <steve.dower@python.org>,
-	Steve Grubb <sgrubb@redhat.com>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	Yin Fengwei <fengwei.yin@intel.com>,
-	kernel-hardening@lists.openwall.com,
-	linux-api@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	linux-integrity@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
-Subject: [PATCH v17 3/3] selftest/interpreter: Add tests for trusted_for(2) policies
-Date: Mon, 15 Nov 2021 19:53:04 +0100
-Message-Id: <20211115185304.198460-4-mic@digikod.net>
-X-Mailer: git-send-email 2.33.1
-In-Reply-To: <20211115185304.198460-1-mic@digikod.net>
-References: <20211115185304.198460-1-mic@digikod.net>
+Received: (qmail 3208 invoked from network); 15 Nov 2021 15:52:06 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1636991514;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=bARiWFzSqYKuP0Ns4vE+EPidwg1BEOivkLvH/D29Daw=;
+	b=bNRUzrzPm4Veut23RSXdoEu8V+7Og0jU66A7tveI5CcbDjlNt0h9T88uIPVW3Ed5tkEeoq
+	o7J+NP02S86ujay48sRiQXFz28apGGsnLmJPYNGw9Na02+OjrlFkKOsPYiNTZ40uhLT2my
+	BaHf1W9lx/MjxvAgk+EYhcqlzsEjyf4=
+X-MC-Unique: nEG1G_tAOj-pSiT4bKoKxQ-1
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=x-gm-message-state:message-id:date:mime-version:user-agent:subject
+         :content-language:to:cc:references:from:in-reply-to
+         :content-transfer-encoding;
+        bh=bARiWFzSqYKuP0Ns4vE+EPidwg1BEOivkLvH/D29Daw=;
+        b=x71aDGpAISI/nwpslqqsNzQ8/GlEG79s4fPXvuTvoRjrQrANP7vZmziZJBB+LEwOyn
+         tiwLQVda+uUVRvpxtdWC/CEgdqlAYkfqRQ6EMhbgVUNl/MVJE2Mcevgu3v6GlmD2dLmJ
+         naOOwDelWRe/EYdF1gRyDHXZeEjH5ZqsVSM45ghrmFUiO5fqpLNbRVXjrZEok4ugXZrP
+         u5k5TX6Xv6Ckc0CQFkkVWPamlbsK+NHAj3hPn3Hi5uuaNu3HeBWgIYDn0Suc0YlD0ZvH
+         7JQMDMHV9Qq0nt1xD3FgGxVlI7NeMKcjX6TmfjZv+hfUWXBDrRCqagX+w5FTGe23DYI1
+         9pXA==
+X-Gm-Message-State: AOAM532B1lKrbIqV8FM0JPvUUN37uzwqCF7e1vQjH5JH1U1afVJpHo+F
+	gCBn5CB8eYvVncvOBEJNODWSMR5BOErRbknQadz+VUTt1Z4C6+rwjsd4UzE9koTzv8OmUCQim7v
+	JpE7FdRaBE3GRTcTNzQUbhXMSi3s2Kbo/pg==
+X-Received: by 2002:a05:6402:5216:: with SMTP id s22mr56756859edd.291.1636991510411;
+        Mon, 15 Nov 2021 07:51:50 -0800 (PST)
+X-Google-Smtp-Source: ABdhPJyGMnQu7V7jGlmHYqyueX9jxsgYuIN1h2kHXuTfwBgHVc2ufyxq4nknuuYxsuqe2wjeS5YJNw==
+X-Received: by 2002:a05:6402:5216:: with SMTP id s22mr56756750edd.291.1636991510041;
+        Mon, 15 Nov 2021 07:51:50 -0800 (PST)
+Message-ID: <22828e84-b34f-7132-c9e9-bb42baf9247b@redhat.com>
+Date: Mon, 15 Nov 2021 16:51:35 +0100
 MIME-Version: 1.0
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
+ Thunderbird/91.2.0
+Subject: Re: [ELISA Safety Architecture WG] [PATCH v2 0/2] Introduce the
+ pkill_on_warn parameter
+To: Lukas Bulwahn <lukas.bulwahn@gmail.com>,
+ Alexander Popov <alex.popov@linux.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>,
+ Jonathan Corbet <corbet@lwn.net>, Paul McKenney <paulmck@kernel.org>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>,
+ Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
+ Muchun Song <songmuchun@bytedance.com>,
+ Viresh Kumar <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>,
+ Randy Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>,
+ Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>,
+ Luis Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>,
+ John Ogness <john.ogness@linutronix.de>,
+ Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
+ Alexey Kardashevskiy <aik@ozlabs.ru>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>,
+ Dave Hansen <dave.hansen@linux.intel.com>,
+ Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
+ Ard Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>,
+ David S Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>,
+ Arnd Bergmann <arnd@arndb.de>, Andrew Scull <ascull@google.com>,
+ Marc Zyngier <maz@kernel.org>, Jessica Yu <jeyu@kernel.org>,
+ Iurii Zaikin <yzaikin@google.com>,
+ Rasmus Villemoes <linux@rasmusvillemoes.dk>, Wang Qing <wangqing@vivo.com>,
+ Mel Gorman <mgorman@suse.de>,
+ Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
+ Andrew Klychkov <andrew.a.klychkov@gmail.com>,
+ Mathieu Chouquet-Stringer <me@mathieu.digital>,
+ Daniel Borkmann <daniel@iogearbox.net>, Stephen Kitt <steve@sk2.org>,
+ Stephen Boyd <sboyd@kernel.org>,
+ Thomas Bogendoerfer <tsbogend@alpha.franken.de>,
+ Mike Rapoport <rppt@kernel.org>, Bjorn Andersson
+ <bjorn.andersson@linaro.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ linux-hardening@vger.kernel.org,
+ "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+ linux-arch <linux-arch@vger.kernel.org>,
+ Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>, notify@kernel.org,
+ main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
+ devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>
+References: <20211027233215.306111-1-alex.popov@linux.com>
+ <ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
+ <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
+ <77b79f0c-48f2-16dd-1d00-22f3a1b1f5a6@linux.com>
+ <CAKXUXMx5Oi-dNVKB+8E-pdrz+ooELMZf=oT_oGXKFrNWejz=fg@mail.gmail.com>
+From: Gabriele Paoloni <gpaoloni@redhat.com>
+In-Reply-To: <CAKXUXMx5Oi-dNVKB+8E-pdrz+ooELMZf=oT_oGXKFrNWejz=fg@mail.gmail.com>
+Authentication-Results: relay.mimecast.com;
+	auth=pass smtp.auth=CUSA124A263 smtp.mailfrom=gpaoloni@redhat.com
+X-Mimecast-Spam-Score: 0
+X-Mimecast-Originator: redhat.com
+Content-Language: en-GB
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Content-Transfer-Encoding: 7bit
 
-From: Mickaël Salaün <mic@linux.microsoft.com>
 
-Test that checks performed by trusted_for(2) on file descriptors are
-consistent with noexec mount points and file execute permissions,
-according to the policy configured with the fs.trust_policy sysctl.
 
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Arnd Bergmann <arnd@arndb.de>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Shuah Khan <shuah@kernel.org>
-Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Link: https://lore.kernel.org/r/20211115185304.198460-4-mic@digikod.net
----
+On 15/11/2021 14:59, Lukas Bulwahn wrote:
+> On Sat, Nov 13, 2021 at 7:14 PM Alexander Popov <alex.popov@linux.com> wrote:
+>>
+>> On 13.11.2021 00:26, Linus Torvalds wrote:
+>>> On Fri, Nov 12, 2021 at 10:52 AM Alexander Popov <alex.popov@linux.com> wrote:
+>>>>
+>>>> Hello everyone!
+>>>> Friendly ping for your feedback.
+>>>
+>>> I still haven't heard a compelling _reason_ for this all, and why
+>>> anybody should ever use this or care?
+>>
+>> Ok, to sum up:
+>>
+>> Killing the process that hit a kernel warning complies with the Fail-Fast
+>> principle [1]. pkill_on_warn sysctl allows the kernel to stop the process when
+>> the **first signs** of wrong behavior are detected.
+>>
+>> By default, the Linux kernel ignores a warning and proceeds the execution from
+>> the flawed state. That is opposite to the Fail-Fast principle.
+>> A kernel warning may be followed by memory corruption or other negative effects,
+>> like in CVE-2019-18683 exploit [2] or many other cases detected by the SyzScope
+>> project [3]. pkill_on_warn would prevent the system from the errors going after
+>> a warning in the process context.
+>>
+>> At the same time, pkill_on_warn does not kill the entire system like
+>> panic_on_warn. That is the middle way of handling kernel warnings.
+>> Linus, it's similar to your BUG_ON() policy [4]. The process hitting BUG_ON() is
+>> killed, and the system proceeds to work. pkill_on_warn just brings a similar
+>> policy to WARN_ON() handling.
+>>
+>> I believe that many Linux distros (which don't hit WARN_ON() here and there)
+>> will enable pkill_on_warn because it's reasonable from the safety and security
+>> points of view.
+>>
+>> And I'm sure that the ELISA project by the Linux Foundation (Enabling Linux In
+>> Safety Applications [5]) would support the pkill_on_warn sysctl.
+>> [Adding people from this project to CC]
+>>
+>> I hope that I managed to show the rationale.
+>>
+> 
+> Alex, officially and formally, I cannot talk for the ELISA project
+> (Enabling Linux In Safety Applications) by the Linux Foundation and I
+> do not think there is anyone that can confidently do so on such a
+> detailed technical aspect that you are raising here, and as the
+> various participants in the ELISA Project have not really agreed on
+> such a technical aspect being one way or the other and I would not see
+> that happening quickly. However, I have spent quite some years on the
+> topic on "what is the right and important topics for using Linux in
+> safety applications"; so here are my five cents:
+> 
+> One of the general assumptions about safety applications and safety
+> systems is that the malfunction of a function within a system is more
+> critical, i.e., more likely to cause harm to people, directly or
+> indirectly, than the unavailability of the system. So, before
+> "something potentially unexpected happens"---which can have arbitrary
+> effects and hence effects difficult to foresee and control---, it is
+> better to just shutdown/silence the system, i.e., design a fail-safe
+> or fail-silent system, as the effect of shutdown is pretty easily
+> foreseeable during the overall system design and you could think about
+> what the overall system does, when the kernel crashes the usual way.
+> 
+> So, that brings us to what a user would expect from the kernel in a
+> safety-critical system: Shutdown on any event that is unexpected.
+> 
+> Here, I currently see panic_on_warn as the closest existing feature to
+> indicate any event that is unexpected and to shutdown the system. That
+> requires two things for the kernel development:
+> 
+> 1. Allow a reasonably configured kernel to boot and run with
+> panic_on_warn set. Warnings should only be raised when something is
+> not configured as the developers expect it or the kernel is put into a
+> state that generally is _unexpected_ and has been exposed little to
+> the critical thought of the developer, to testing efforts and use in
+> other systems in the wild. Warnings should not be used for something
+> informative, which still allows the kernel to continue running in a
+> proper way in a generally expected environment. Up to my knowledge,
+> there are some kernels in production that run with panic_on_warn; so,
+> IMHO, this requirement is generally accepted (we might of course
+> discuss the one or other use of warn) and is not too much to ask for.
+> 
+> 2. Really ensure that the system shuts down when it hits warn and
+> panic. That requires that the execution path for warn() and panic() is
+> not overly complicated (stuffed with various bells and whistles).
+> Otherwise, warn() and panic() could fail in various complex ways and
+> potentially keep the system running, although it should be shut down.
+> Some people in the ELISA Project looked a bit into why they believe
+> panic() shuts down a system but I have not seen a good system analysis
+> and argument why any third person could be convinced that panic()
+> works under all circumstances where it is invoked or that at least,
+> the circumstances under which panic really works is properly
+> documented. That is a central aspect for using Linux in a
+> reasonably-designed safety-critical system. That is possibly also
+> relevant for security, as you might see an attacker obtain information
+> because it was possible to "block" the kernel shutting down after
+> invoking panic() and hence, the attacker could obtain certain
+> information that was only possible because 1. the system got into an
+> inconsistent state, 2. it was detected by some check leading to warn()
+> or panic(), and 3. the system's security engineers assumed that the
+> system must have been shutting down at that point, as panic() was
+> invoked, and hence, this would be disallowing a lot of further
+> operations or some specific operations that the attacker would need to
+> trigger in that inconsistent state to obtain information.
+> 
+> To your feature, Alex, I do not see the need to have any refined
+> handling of killing a specific process when the kernel warns; stopping
+> the whole system is the better and more predictable thing to do. I
+> would prefer if systems, which have those high-integrity requirements,
+> e.g., in a highly secure---where stopping any unintended information
+> flow matters more than availability---or in fail-silent environments
+> in safety systems, can use panic_on_warn. That should address your
+> concern above of handling certain CVEs as well.
+> 
+> In summary, I am not supporting pkill_on_warn. I would support the
+> other points I mentioned above, i.e., a good enforced policy for use
+> of warn() and any investigation to understand the complexity of
+> panic() and reducing its complexity if triggered by such an
+> investigation.
 
-Changes since v14:
-* Add Reviewed-by Kees Cook.
+Hi Alex
 
-Changes since v13:
-* Move -I to CFLAGS (suggested by Kees Cook).
-* Update sysctl name.
+I also agree with the summary that Lukas gave here. From my experience
+the safety system are always guarded by an external flow monitor (e.g. a
+watchdog) that triggers in case the safety relevant workloads slows down
+or block (for any reason); given this condition of use, a system that
+goes into the panic state is always safe, since the watchdog would
+trigger and drive the system automatically into safe state.
+So I also don't see a clear advantage of having pkill_on_warn();
+actually on the flip side it seems to me that such feature could
+introduce more risk, as it kills only the threads of the process that
+caused the kernel warning whereas the other processes are trusted to
+run on a weaker Kernel (does killing the threads of the process that
+caused the kernel warning always fix the Kernel condition that lead to
+the warning?)
 
-Changes since v12:
-* Fix Makefile's license.
+Thanks
+Gab
 
-Changes since v10:
-* Update selftest Makefile.
-
-Changes since v9:
-* Rename the syscall and the sysctl.
-* Update tests for enum trusted_for_usage
-
-Changes since v8:
-* Update with the dedicated syscall introspect_access(2) and the renamed
-  fs.introspection_policy sysctl.
-* Remove check symlink which can't be use as is anymore.
-* Use socketpair(2) to test UNIX socket.
-
-Changes since v7:
-* Update tests with faccessat2/AT_INTERPRETED, including new ones to
-  check that setting R_OK or W_OK returns EINVAL.
-* Add tests for memfd, pipefs and nsfs.
-* Rename and move back tests to a standalone directory.
-
-Changes since v6:
-* Add full combination tests for all file types, including block
-  devices, character devices, fifos, sockets and symlinks.
-* Properly save and restore initial sysctl value for all tests.
-
-Changes since v5:
-* Refactor with FIXTURE_VARIANT, which make the tests much more easy to
-  read and maintain.
-* Save and restore initial sysctl value (suggested by Kees Cook).
-* Test with a sysctl value of 0.
-* Check errno in sysctl_access_write test.
-* Update tests for the CAP_SYS_ADMIN switch.
-* Update tests to check -EISDIR (replacing -EACCES).
-* Replace FIXTURE_DATA() with FIXTURE() (spotted by Kees Cook).
-* Use global const strings.
-
-Changes since v3:
-* Replace RESOLVE_MAYEXEC with O_MAYEXEC.
-* Add tests to check that O_MAYEXEC is ignored by open(2) and openat(2).
-
-Changes since v2:
-* Move tests from exec/ to openat2/ .
-* Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).
-* Cleanup tests.
-
-Changes since v1:
-* Move tests from yama/ to exec/ .
-* Fix _GNU_SOURCE in kselftest_harness.h .
-* Add a new test sysctl_access_write to check if CAP_MAC_ADMIN is taken
-  into account.
-* Test directory execution which is always forbidden since commit
-  73601ea5b7b1 ("fs/open.c: allow opening only regular files during
-  execve()"), and also check that even the root user can not bypass file
-  execution checks.
-* Make sure delete_workspace() always as enough right to succeed.
-* Cosmetic cleanup.
----
- tools/testing/selftests/Makefile              |   1 +
- .../testing/selftests/interpreter/.gitignore  |   2 +
- tools/testing/selftests/interpreter/Makefile  |  21 +
- tools/testing/selftests/interpreter/config    |   1 +
- .../selftests/interpreter/trust_policy_test.c | 362 ++++++++++++++++++
- 5 files changed, 387 insertions(+)
- create mode 100644 tools/testing/selftests/interpreter/.gitignore
- create mode 100644 tools/testing/selftests/interpreter/Makefile
- create mode 100644 tools/testing/selftests/interpreter/config
- create mode 100644 tools/testing/selftests/interpreter/trust_policy_test.c
-
-diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
-index c852eb40c4f7..3a032a545f74 100644
---- a/tools/testing/selftests/Makefile
-+++ b/tools/testing/selftests/Makefile
-@@ -20,6 +20,7 @@ TARGETS += ftrace
- TARGETS += futex
- TARGETS += gpio
- TARGETS += intel_pstate
-+TARGETS += interpreter
- TARGETS += ipc
- TARGETS += ir
- TARGETS += kcmp
-diff --git a/tools/testing/selftests/interpreter/.gitignore b/tools/testing/selftests/interpreter/.gitignore
-new file mode 100644
-index 000000000000..82a4846cbc4b
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/.gitignore
-@@ -0,0 +1,2 @@
-+# SPDX-License-Identifier: GPL-2.0-only
-+/*_test
-diff --git a/tools/testing/selftests/interpreter/Makefile b/tools/testing/selftests/interpreter/Makefile
-new file mode 100644
-index 000000000000..7402fdb6533f
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/Makefile
-@@ -0,0 +1,21 @@
-+# SPDX-License-Identifier: GPL-2.0
-+
-+CFLAGS += -Wall -O2 -I$(khdr_dir)
-+LDLIBS += -lcap
-+
-+src_test := $(wildcard *_test.c)
-+TEST_GEN_PROGS := $(src_test:.c=)
-+
-+KSFT_KHDR_INSTALL := 1
-+include ../lib.mk
-+
-+khdr_dir = $(top_srcdir)/usr/include
-+
-+$(khdr_dir)/asm-generic/unistd.h: khdr
-+	@:
-+
-+$(khdr_dir)/linux/trusted-for.h: khdr
-+	@:
-+
-+$(OUTPUT)/%_test: %_test.c $(khdr_dir)/asm-generic/unistd.h $(khdr_dir)/linux/trusted-for.h ../kselftest_harness.h
-+	$(LINK.c) $< $(LDLIBS) -o $@
-diff --git a/tools/testing/selftests/interpreter/config b/tools/testing/selftests/interpreter/config
-new file mode 100644
-index 000000000000..dd53c266bf52
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/config
-@@ -0,0 +1 @@
-+CONFIG_SYSCTL=y
-diff --git a/tools/testing/selftests/interpreter/trust_policy_test.c b/tools/testing/selftests/interpreter/trust_policy_test.c
-new file mode 100644
-index 000000000000..b59f07f537ad
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/trust_policy_test.c
-@@ -0,0 +1,362 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Test trusted_for(2) with fs.trusted_for_policy sysctl
-+ *
-+ * Copyright © 2018-2020 ANSSI
-+ *
-+ * Author: Mickaël Salaün <mic@digikod.net>
-+ */
-+
-+#define _GNU_SOURCE
-+#include <asm-generic/unistd.h>
-+#include <errno.h>
-+#include <fcntl.h>
-+#include <linux/trusted-for.h>
-+#include <stdio.h>
-+#include <stdlib.h>
-+#include <sys/capability.h>
-+#include <sys/mman.h>
-+#include <sys/mount.h>
-+#include <sys/socket.h>
-+#include <sys/stat.h>
-+#include <sys/syscall.h>
-+#include <sys/sysmacros.h>
-+#include <sys/types.h>
-+#include <unistd.h>
-+
-+#include "../kselftest_harness.h"
-+
-+#ifndef trusted_for
-+static int trusted_for(const int fd, const enum trusted_for_usage usage,
-+		const __u32 flags)
-+{
-+	errno = 0;
-+	return syscall(__NR_trusted_for, fd, usage, flags);
-+}
-+#endif
-+
-+static const char sysctl_path[] = "/proc/sys/fs/trusted_for_policy";
-+
-+static const char workdir_path[] = "./test-mount";
-+static const char reg_file_path[] = "./test-mount/regular_file";
-+static const char dir_path[] = "./test-mount/directory";
-+static const char block_dev_path[] = "./test-mount/block_device";
-+static const char char_dev_path[] = "./test-mount/character_device";
-+static const char fifo_path[] = "./test-mount/fifo";
-+
-+static void ignore_dac(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[2] = {
-+		CAP_DAC_OVERRIDE,
-+		CAP_DAC_READ_SEARCH,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void ignore_sys_admin(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[1] = {
-+		CAP_SYS_ADMIN,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void test_omx(struct __test_metadata *_metadata,
-+		const char *const path, const int err_access)
-+{
-+	int flags = O_RDONLY | O_CLOEXEC;
-+	int fd, access_ret, access_errno;
-+
-+	/* Do not block on pipes. */
-+	if (path == fifo_path)
-+		flags |= O_NONBLOCK;
-+
-+	fd = open(path, flags);
-+	ASSERT_LE(0, fd) {
-+		TH_LOG("Failed to open %s: %s", path, strerror(errno));
-+	}
-+	access_ret = trusted_for(fd, TRUSTED_FOR_EXECUTION, 0);
-+	access_errno = errno;
-+	if (err_access) {
-+		ASSERT_EQ(err_access, access_errno) {
-+			TH_LOG("Wrong error for trusted_for(2) with %s: %s",
-+					path, strerror(access_errno));
-+		}
-+		ASSERT_EQ(-1, access_ret);
-+	} else {
-+		ASSERT_EQ(0, access_ret) {
-+			TH_LOG("Access denied for %s: %s", path, strerror(access_errno));
-+		}
-+	}
-+
-+	/* Tests unsupported trusted usage. */
-+	access_ret = trusted_for(fd, 0, 0);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+
-+	access_ret = trusted_for(fd, 2, 0);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+static void test_policy_fd(struct __test_metadata *_metadata, const int fd,
-+		const bool has_policy)
-+{
-+	const int ret = trusted_for(fd, TRUSTED_FOR_EXECUTION, 0);
-+
-+	if (has_policy) {
-+		ASSERT_EQ(-1, ret);
-+		ASSERT_EQ(EACCES, errno) {
-+			TH_LOG("Wrong error for trusted_for(2) with FD: %s", strerror(errno));
-+		}
-+	} else {
-+		ASSERT_EQ(0, ret) {
-+			TH_LOG("Access denied for FD: %s", strerror(errno));
-+		}
-+	}
-+}
-+
-+FIXTURE(access) {
-+	char initial_sysctl_value;
-+	int memfd, pipefd;
-+	int pipe_fds[2], socket_fds[2];
-+};
-+
-+static void test_file_types(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests are performed on a tmpfs mount point. */
-+	test_omx(_metadata, reg_file_path, err_code);
-+	test_omx(_metadata, dir_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, block_dev_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, char_dev_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, fifo_path, has_policy ? EACCES : 0);
-+
-+	/* Checks that exec is denied for any socket FD. */
-+	test_policy_fd(_metadata, self->socket_fds[0], has_policy);
-+
-+	/* Checks that exec is denied for any memfd. */
-+	test_policy_fd(_metadata, self->memfd, has_policy);
-+
-+	/* Checks that exec is denied for any pipefs FD. */
-+	test_policy_fd(_metadata, self->pipefd, has_policy);
-+}
-+
-+static void test_files(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests as root. */
-+	ignore_dac(_metadata, 1);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+
-+	/* Tests without bypass. */
-+	ignore_dac(_metadata, 0);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+}
-+
-+static void sysctl_write_char(struct __test_metadata *_metadata, const char value)
-+{
-+	int fd;
-+
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, write(fd, &value, 1));
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+static char sysctl_read_char(struct __test_metadata *_metadata)
-+{
-+	int fd;
-+	char sysctl_value;
-+
-+	fd = open(sysctl_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, read(fd, &sysctl_value, 1));
-+	EXPECT_EQ(0, close(fd));
-+	return sysctl_value;
-+}
-+
-+FIXTURE_VARIANT(access) {
-+	const bool mount_exec;
-+	const bool file_exec;
-+	const int sysctl_err_code[3];
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_exec) {
-+	.mount_exec = true,
-+	.file_exec = true,
-+	.sysctl_err_code = {0, 0, 0},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_noexec)
-+{
-+	.mount_exec = true,
-+	.file_exec = false,
-+	.sysctl_err_code = {0, EACCES, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_exec)
-+{
-+	.mount_exec = false,
-+	.file_exec = true,
-+	.sysctl_err_code = {EACCES, 0, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_noexec)
-+{
-+	.mount_exec = false,
-+	.file_exec = false,
-+	.sysctl_err_code = {EACCES, EACCES, EACCES},
-+};
-+
-+FIXTURE_SETUP(access)
-+{
-+	int procfd_path_size;
-+	static const char path_template[] = "/proc/self/fd/%d";
-+	char procfd_path[sizeof(path_template) + 10];
-+
-+	/*
-+	 * Cleans previous workspace if any error previously happened (don't
-+	 * check errors).
-+	 */
-+	umount(workdir_path);
-+	rmdir(workdir_path);
-+
-+	/* Creates a clean mount point. */
-+	ASSERT_EQ(0, mkdir(workdir_path, 00700));
-+	ASSERT_EQ(0, mount("test", workdir_path, "tmpfs", MS_MGC_VAL |
-+				(variant->mount_exec ? 0 : MS_NOEXEC),
-+				"mode=0700,size=4k"));
-+
-+	/* Creates a regular file. */
-+	ASSERT_EQ(0, mknod(reg_file_path, S_IFREG | (variant->file_exec ? 0500 : 0400), 0));
-+	/* Creates a directory. */
-+	ASSERT_EQ(0, mkdir(dir_path, variant->file_exec ? 0500 : 0400));
-+	/* Creates a character device: /dev/null. */
-+	ASSERT_EQ(0, mknod(char_dev_path, S_IFCHR | 0400, makedev(1, 3)));
-+	/* Creates a block device: /dev/loop0 */
-+	ASSERT_EQ(0, mknod(block_dev_path, S_IFBLK | 0400, makedev(7, 0)));
-+	/* Creates a fifo. */
-+	ASSERT_EQ(0, mknod(fifo_path, S_IFIFO | 0400, 0));
-+
-+	/* Creates a regular file without user mount point. */
-+	self->memfd = memfd_create("test-interpreted", MFD_CLOEXEC);
-+	ASSERT_LE(0, self->memfd);
-+	/* Sets mode, which must be ignored by the exec check. */
-+	ASSERT_EQ(0, fchmod(self->memfd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Creates a pipefs file descriptor. */
-+	ASSERT_EQ(0, pipe(self->pipe_fds));
-+	procfd_path_size = snprintf(procfd_path, sizeof(procfd_path),
-+			path_template, self->pipe_fds[0]);
-+	ASSERT_LT(procfd_path_size, sizeof(procfd_path));
-+	self->pipefd = open(procfd_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, self->pipefd);
-+	ASSERT_EQ(0, fchmod(self->pipefd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Creates a socket file descriptor. */
-+	ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0, self->socket_fds));
-+
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+
-+	/* Prepares for sysctl writes. */
-+	ignore_sys_admin(_metadata, 1);
-+}
-+
-+FIXTURE_TEARDOWN(access)
-+{
-+	EXPECT_EQ(0, close(self->memfd));
-+	EXPECT_EQ(0, close(self->pipefd));
-+	EXPECT_EQ(0, close(self->pipe_fds[0]));
-+	EXPECT_EQ(0, close(self->pipe_fds[1]));
-+	EXPECT_EQ(0, close(self->socket_fds[0]));
-+	EXPECT_EQ(0, close(self->socket_fds[1]));
-+
-+	/* Restores initial sysctl value. */
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+
-+	/* There is no need to unlink the test files. */
-+	ASSERT_EQ(0, umount(workdir_path));
-+	ASSERT_EQ(0, rmdir(workdir_path));
-+}
-+
-+TEST_F(access, sysctl_0)
-+{
-+	/* Do not enforce anything. */
-+	sysctl_write_char(_metadata, '0');
-+	test_files(_metadata, self, 0, false);
-+}
-+
-+TEST_F(access, sysctl_1)
-+{
-+	/* Enforces mount exec check. */
-+	sysctl_write_char(_metadata, '1');
-+	test_files(_metadata, self, variant->sysctl_err_code[0], true);
-+}
-+
-+TEST_F(access, sysctl_2)
-+{
-+	/* Enforces file exec check. */
-+	sysctl_write_char(_metadata, '2');
-+	test_files(_metadata, self, variant->sysctl_err_code[1], true);
-+}
-+
-+TEST_F(access, sysctl_3)
-+{
-+	/* Enforces mount and file exec check. */
-+	sysctl_write_char(_metadata, '3');
-+	test_files(_metadata, self, variant->sysctl_err_code[2], true);
-+}
-+
-+FIXTURE(cleanup) {
-+	char initial_sysctl_value;
-+};
-+
-+FIXTURE_SETUP(cleanup)
-+{
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+}
-+
-+FIXTURE_TEARDOWN(cleanup)
-+{
-+	/* Restores initial sysctl value. */
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+}
-+
-+TEST_F(cleanup, sysctl_access_write)
-+{
-+	int fd;
-+	ssize_t ret;
-+
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, '0');
-+
-+	ignore_sys_admin(_metadata, 0);
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ret = write(fd, "0", 1);
-+	ASSERT_EQ(-1, ret);
-+	ASSERT_EQ(EPERM, errno);
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+TEST_HARNESS_MAIN
--- 
-2.33.1
+> 
+> Of course, the listeners and participants in the ELISA Project are
+> very, very diverse and still on a steep learning curve, i.e., what
+> does the kernel do, how complex are certain aspects in the kernel, and
+> what are reasonable system designs that are in reach for
+> certification. So, there might be some stakeholders in the ELISA
+> Project that consider availability of a Linux system safety-critical,
+> i.e., if the system with a Linux kernel is not available, something
+> really bad (harmful to people) happens. I personally do not know how
+> these stakeholders could (ever) argue the availability of a complex
+> system with a Linux kernel, with the availability criteria and the
+> needed confidence (evidence and required methods) for exposing anyone
+> to such system under our current societal expectations on technical
+> systems (you would to need show sufficient investigation of the
+> kernel's availability for a certification), but that does not stop
+> anyone looking into it... Those stakeholders should really speak for
+> themselves, if they see any need for such a refined control of
+> "something unexpected happens" (an invocation of warn) and more
+> generally what features from the kernel are needed for such systems.
+> 
+> 
+> Lukas
+> 
+> 
+> -=-=-=-=-=-=-=-=-=-=-=-
+> Links: You receive all messages sent to this group.
+> View/Reply Online (#629): https://lists.elisa.tech/g/safety-architecture/message/629
+> Mute This Topic: https://lists.elisa.tech/mt/87069369/6239706
+> Group Owner: safety-architecture+owner@lists.elisa.tech
+> Unsubscribe: https://lists.elisa.tech/g/safety-architecture/unsub [gpaoloni@redhat.com]
+> -=-=-=-=-=-=-=-=-=-=-=-
+> 
+> 
 
