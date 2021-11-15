@@ -1,16 +1,16 @@
-Return-Path: <SRS0=uKsd=QC=lists.openwall.com=kernel-hardening-return-21477-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=cCcq=QC=lists.openwall.com=kernel-hardening-return-21478-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 63973C433EF
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 16:07:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EC1FBC433EF
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 18:53:25 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 966BF608FB
-	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 16:07:18 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 966BF608FB
-Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=goodmis.org
+	by mail.kernel.org (Postfix) with SMTP id EE0366347A
+	for <kernel-hardening@archiver.kernel.org>; Mon, 15 Nov 2021 18:53:24 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org EE0366347A
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=digikod.net
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 7868 invoked by uid 550); 15 Nov 2021 16:07:10 -0000
+Received: (qmail 27873 invoked by uid 550); 15 Nov 2021 18:53:16 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,84 +18,244 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7836 invoked from network); 15 Nov 2021 16:07:09 -0000
-Date: Mon, 15 Nov 2021 11:06:49 -0500
-From: Steven Rostedt <rostedt@goodmis.org>
-To: Lukas Bulwahn <lukas.bulwahn@gmail.com>
-Cc: Alexander Popov <alex.popov@linux.com>, Linus Torvalds
- <torvalds@linux-foundation.org>, Jonathan Corbet <corbet@lwn.net>, Paul
- McKenney <paulmck@kernel.org>, Andrew Morton <akpm@linux-foundation.org>,
- Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra
- <peterz@infradead.org>, Joerg Roedel <jroedel@suse.de>, Maciej Rozycki
- <macro@orcam.me.uk>, Muchun Song <songmuchun@bytedance.com>, Viresh Kumar
- <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>, Randy
- Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>, Petr
- Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>, Luis
- Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>, John Ogness
- <john.ogness@linutronix.de>, Andy Shevchenko
- <andriy.shevchenko@linux.intel.com>, Alexey Kardashevskiy <aik@ozlabs.ru>,
- Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
- <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Mark
- Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Dave
- Hansen <dave.hansen@linux.intel.com>, Will Deacon <will@kernel.org>, Ard
- Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>, David S
- Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>, Arnd Bergmann
- <arnd@arndb.de>, Andrew Scull <ascull@google.com>, Marc Zyngier
- <maz@kernel.org>, Jessica Yu <jeyu@kernel.org>, Iurii Zaikin
- <yzaikin@google.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Wang
- Qing <wangqing@vivo.com>, Mel Gorman <mgorman@suse.de>, Mauro Carvalho
- Chehab <mchehab+huawei@kernel.org>, Andrew Klychkov
- <andrew.a.klychkov@gmail.com>, Mathieu Chouquet-Stringer
- <me@mathieu.digital>, Daniel Borkmann <daniel@iogearbox.net>, Stephen Kitt
- <steve@sk2.org>, Stephen Boyd <sboyd@kernel.org>, Thomas Bogendoerfer
- <tsbogend@alpha.franken.de>, Mike Rapoport <rppt@kernel.org>, Bjorn
- Andersson <bjorn.andersson@linaro.org>, Kernel Hardening
- <kernel-hardening@lists.openwall.com>, linux-hardening@vger.kernel.org,
- "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, linux-arch
- <linux-arch@vger.kernel.org>, Linux Kernel Mailing List
- <linux-kernel@vger.kernel.org>, linux-fsdevel
- <linux-fsdevel@vger.kernel.org>, notify@kernel.org, main@lists.elisa.tech,
- safety-architecture@lists.elisa.tech, devel@lists.elisa.tech, Shuah Khan
- <shuah@kernel.org>
-Subject: Re: [PATCH v2 0/2] Introduce the pkill_on_warn parameter
-Message-ID: <20211115110649.4f9cb390@gandalf.local.home>
-In-Reply-To: <CAKXUXMx5Oi-dNVKB+8E-pdrz+ooELMZf=oT_oGXKFrNWejz=fg@mail.gmail.com>
-References: <20211027233215.306111-1-alex.popov@linux.com>
-	<ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
-	<CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
-	<77b79f0c-48f2-16dd-1d00-22f3a1b1f5a6@linux.com>
-	<CAKXUXMx5Oi-dNVKB+8E-pdrz+ooELMZf=oT_oGXKFrNWejz=fg@mail.gmail.com>
-X-Mailer: Claws Mail 3.17.8 (GTK+ 2.24.33; x86_64-pc-linux-gnu)
+Received: (qmail 27853 invoked from network); 15 Nov 2021 18:53:16 -0000
+From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
+To: Al Viro <viro@zeniv.linux.org.uk>,
+	Andrew Morton <akpm@linux-foundation.org>
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
+	Alejandro Colomar <alx.manpages@gmail.com>,
+	Aleksa Sarai <cyphar@cyphar.com>,
+	Andy Lutomirski <luto@kernel.org>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	Christian Heimes <christian@python.org>,
+	Deven Bowers <deven.desai@linux.microsoft.com>,
+	Dmitry Vyukov <dvyukov@google.com>,
+	Eric Biggers <ebiggers@kernel.org>,
+	Eric Chiang <ericchiang@google.com>,
+	Florian Weimer <fweimer@redhat.com>,
+	Geert Uytterhoeven <geert@linux-m68k.org>,
+	James Morris <jmorris@namei.org>,
+	Jan Kara <jack@suse.cz>,
+	Jann Horn <jannh@google.com>,
+	Jonathan Corbet <corbet@lwn.net>,
+	Kees Cook <keescook@chromium.org>,
+	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
+	Matthew Garrett <mjg59@google.com>,
+	Matthew Wilcox <willy@infradead.org>,
+	Miklos Szeredi <mszeredi@redhat.com>,
+	Mimi Zohar <zohar@linux.ibm.com>,
+	Paul Moore <paul@paul-moore.com>,
+	=?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+	Scott Shell <scottsh@microsoft.com>,
+	Shuah Khan <shuah@kernel.org>,
+	Steve Dower <steve.dower@python.org>,
+	Steve Grubb <sgrubb@redhat.com>,
+	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+	Yin Fengwei <fengwei.yin@intel.com>,
+	kernel-hardening@lists.openwall.com,
+	linux-api@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org,
+	linux-integrity@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-security-module@vger.kernel.org
+Subject: [PATCH v17 0/3] Add trusted_for(2) (was O_MAYEXEC)
+Date: Mon, 15 Nov 2021 19:53:01 +0100
+Message-Id: <20211115185304.198460-1-mic@digikod.net>
+X-Mailer: git-send-email 2.33.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
-On Mon, 15 Nov 2021 14:59:57 +0100
-Lukas Bulwahn <lukas.bulwahn@gmail.com> wrote:
+Hi,
 
-> 1. Allow a reasonably configured kernel to boot and run with
-> panic_on_warn set. Warnings should only be raised when something is
-> not configured as the developers expect it or the kernel is put into a
-> state that generally is _unexpected_ and has been exposed little to
-> the critical thought of the developer, to testing efforts and use in
-> other systems in the wild. Warnings should not be used for something
-> informative, which still allows the kernel to continue running in a
-> proper way in a generally expected environment. Up to my knowledge,
-> there are some kernels in production that run with panic_on_warn; so,
-> IMHO, this requirement is generally accepted (we might of course
+This new patch series fix the syscall signature as suggested by
+Alejandro Colomar.  It applies on Linus's master branch (v5.16-rc1) and
+next-20211115.
 
-To me, WARN*() is the same as BUG*(). If it gets hit, it's a bug in the
-kernel and needs to be fixed. I have several WARN*() calls in my code, and
-it's all because the algorithms used is expected to prevent the condition
-in the warning from happening. If the warning triggers, it means either that
-the algorithm is wrong or my assumption about the algorithm is wrong. In
-either case, the kernel needs to be updated. All my tests fail if a WARN*()
-gets hit (anywhere in the kernel, not just my own).
+Andrew, can you please consider to merge this into your tree?
 
-After reading all the replies and thinking about this more, I find the
-pkill_on_warning actually worse than not doing anything. If you are
-concerned about exploits from warnings, the only real solution is a
-panic_on_warning. Yes, it brings down the system, but really, it has to be
-brought down anyway, because it is in need of a kernel update.
+Overview
+========
 
--- Steve
+The final goal of this patch series is to enable the kernel to be a
+global policy manager by entrusting processes with access control at
+their level.  To reach this goal, two complementary parts are required:
+* user space needs to be able to know if it can trust some file
+  descriptor content for a specific usage;
+* and the kernel needs to make available some part of the policy
+  configured by the system administrator.
+
+Primary goal of trusted_for(2)
+==============================
+
+This new syscall enables user space to ask the kernel: is this file
+descriptor's content trusted to be used for this purpose?  The set of
+usage currently only contains execution, but other may follow (e.g.
+configuration, sensitive data).  If the kernel identifies the file
+descriptor as trustworthy for this usage, user space should then take
+this information into account.  The "execution" usage means that the
+content of the file descriptor is trusted according to the system policy
+to be executed by user space, which means that it interprets the content
+or (try to) maps it as executable memory.
+
+A simple system-wide security policy can be set by the system
+administrator through a sysctl configuration consistent with the mount
+points or the file access rights.  The documentation explains the
+prerequisites.
+
+It is important to note that this can only enable to extend access
+control managed by the kernel.  Hence it enables current access control
+mechanism to be extended and become a superset of what they can
+currently control.  Indeed, the security policy could also be delegated
+to an LSM, either a MAC system or an integrity system.  For instance,
+this is required to close a major IMA measurement/appraisal interpreter
+integrity gap by bringing the ability to check the use of scripts [1].
+Other uses are expected, such as for magic-links [2], SGX integration
+[3], bpffs [4].
+
+Complementary W^X protections can be brought by SELinux, IPE [5] and
+trampfd [6].
+
+System call description
+=======================
+
+trusted_for(int fd, enum trusted_for_usage usage, u32 flags);
+
+@fd is the file descriptor to check.
+
+@usage identifies the user space usage intended for @fd: only
+TRUSTED_FOR_EXECUTION for now, but trusted_for_usage could be extended
+to identify other usages (e.g. configuration, sensitive data).
+
+@flags must be 0 for now but it could be used in the future to do
+complementary checks (e.g. signature or integrity requirements, origin
+of the file).
+
+This system call returns 0 on success, or -EACCES if the kernel policy
+denies the specified usage (which should be enforced by the caller).
+
+The first patch contains the full syscall and sysctl documentation.
+
+Prerequisite of its use
+=======================
+
+User space needs to adapt to take advantage of this new feature.  For
+example, the PEP 578 [7] (Runtime Audit Hooks) enables Python 3.8 to be
+extended with policy enforcement points related to code interpretation,
+which can be used to align with the PowerShell audit features.
+Additional Python security improvements (e.g. a limited interpreter
+without -c, stdin piping of code) are on their way [8].
+
+Examples
+========
+
+The initial idea comes from CLIP OS 4 and the original implementation
+has been used for more than 13 years:
+https://github.com/clipos-archive/clipos4_doc
+Chrome OS has a similar approach:
+https://chromium.googlesource.com/chromiumos/docs/+/master/security/noexec_shell_scripts.md
+
+Userland patches can be found here:
+https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC
+Actually, there is more than the O_MAYEXEC changes (which matches this search)
+e.g., to prevent Python interactive execution. There are patches for
+Bash, Wine, Java (Icedtea), Busybox's ash, Perl and Python. There are
+also some related patches which do not directly rely on O_MAYEXEC but
+which restrict the use of browser plugins and extensions, which may be
+seen as scripts too:
+https://github.com/clipos-archive/clipos4_portage-overlay/tree/master/www-client
+
+An introduction to O_MAYEXEC was given at the Linux Security Summit
+Europe 2018 - Linux Kernel Security Contributions by ANSSI:
+https://www.youtube.com/watch?v=chNjCRtPKQY&t=17m15s
+The "write xor execute" principle was explained at Kernel Recipes 2018 -
+CLIP OS: a defense-in-depth OS:
+https://www.youtube.com/watch?v=PjRE0uBtkHU&t=11m14s
+See also a first LWN article about O_MAYEXEC and a new one about
+trusted_for(2) and its background:
+* https://lwn.net/Articles/820000/
+* https://lwn.net/Articles/832959/
+
+This can be tested with CONFIG_SYSCTL.  I would really appreciate
+constructive comments on this patch series.
+
+[1] https://lore.kernel.org/lkml/20211014130125.6991-1-zohar@linux.ibm.com/
+[2] https://lore.kernel.org/lkml/20190904201933.10736-6-cyphar@cyphar.com/
+[3] https://lore.kernel.org/lkml/CALCETrVovr8XNZSroey7pHF46O=kj_c5D9K8h=z2T_cNrpvMig@mail.gmail.com/
+[4] https://lore.kernel.org/lkml/CALCETrVeZ0eufFXwfhtaG_j+AdvbzEWE0M3wjXMWVEO7pj+xkw@mail.gmail.com/
+[5] https://lore.kernel.org/lkml/20200406221439.1469862-12-deven.desai@linux.microsoft.com/
+[6] https://lore.kernel.org/lkml/20200922215326.4603-1-madvenka@linux.microsoft.com/
+[7] https://www.python.org/dev/peps/pep-0578/
+[8] https://lore.kernel.org/lkml/0c70debd-e79e-d514-06c6-4cd1e021fa8b@python.org/
+
+Previous versions:
+v16: https://lore.kernel.org/r/20211110190626.257017-1-mic@digikod.net/
+v15: https://lore.kernel.org/r/20211012192410.2356090-1-mic@digikod.net/
+v14: https://lore.kernel.org/r/20211008104840.1733385-1-mic@digikod.net/
+v13: https://lore.kernel.org/r/20211007182321.872075-1-mic@digikod.net/
+v12: https://lore.kernel.org/r/20201203173118.379271-1-mic@digikod.net/
+v11: https://lore.kernel.org/r/20201019164932.1430614-1-mic@digikod.net/
+v10: https://lore.kernel.org/r/20200924153228.387737-1-mic@digikod.net/
+v9: https://lore.kernel.org/r/20200910164612.114215-1-mic@digikod.net/
+v8: https://lore.kernel.org/r/20200908075956.1069018-1-mic@digikod.net/
+v7: https://lore.kernel.org/r/20200723171227.446711-1-mic@digikod.net/
+v6: https://lore.kernel.org/r/20200714181638.45751-1-mic@digikod.net/
+v5: https://lore.kernel.org/r/20200505153156.925111-1-mic@digikod.net/
+v4: https://lore.kernel.org/r/20200430132320.699508-1-mic@digikod.net/
+v3: https://lore.kernel.org/r/20200428175129.634352-1-mic@digikod.net/
+v2: https://lore.kernel.org/r/20190906152455.22757-1-mic@digikod.net/
+v1: https://lore.kernel.org/r/20181212081712.32347-1-mic@digikod.net/
+
+Regards,
+
+Mickaël Salaün (3):
+  fs: Add trusted_for(2) syscall implementation and related sysctl
+  arch: Wire up trusted_for(2)
+  selftest/interpreter: Add tests for trusted_for(2) policies
+
+ Documentation/admin-guide/sysctl/fs.rst       |  50 +++
+ arch/alpha/kernel/syscalls/syscall.tbl        |   2 +
+ arch/arm/tools/syscall.tbl                    |   1 +
+ arch/arm64/include/asm/unistd.h               |   2 +-
+ arch/arm64/include/asm/unistd32.h             |   2 +
+ arch/ia64/kernel/syscalls/syscall.tbl         |   2 +
+ arch/m68k/kernel/syscalls/syscall.tbl         |   2 +
+ arch/microblaze/kernel/syscalls/syscall.tbl   |   2 +
+ arch/mips/kernel/syscalls/syscall_n32.tbl     |   2 +
+ arch/mips/kernel/syscalls/syscall_n64.tbl     |   2 +
+ arch/mips/kernel/syscalls/syscall_o32.tbl     |   2 +
+ arch/parisc/kernel/syscalls/syscall.tbl       |   2 +
+ arch/powerpc/kernel/syscalls/syscall.tbl      |   2 +
+ arch/s390/kernel/syscalls/syscall.tbl         |   2 +
+ arch/sh/kernel/syscalls/syscall.tbl           |   2 +
+ arch/sparc/kernel/syscalls/syscall.tbl        |   2 +
+ arch/x86/entry/syscalls/syscall_32.tbl        |   1 +
+ arch/x86/entry/syscalls/syscall_64.tbl        |   1 +
+ arch/xtensa/kernel/syscalls/syscall.tbl       |   2 +
+ fs/open.c                                     | 111 ++++++
+ include/linux/fs.h                            |   1 +
+ include/linux/syscalls.h                      |   1 +
+ include/uapi/asm-generic/unistd.h             |   4 +-
+ include/uapi/linux/trusted-for.h              |  18 +
+ kernel/sysctl.c                               |  12 +-
+ tools/testing/selftests/Makefile              |   1 +
+ .../testing/selftests/interpreter/.gitignore  |   2 +
+ tools/testing/selftests/interpreter/Makefile  |  21 +
+ tools/testing/selftests/interpreter/config    |   1 +
+ .../selftests/interpreter/trust_policy_test.c | 362 ++++++++++++++++++
+ 30 files changed, 613 insertions(+), 4 deletions(-)
+ create mode 100644 include/uapi/linux/trusted-for.h
+ create mode 100644 tools/testing/selftests/interpreter/.gitignore
+ create mode 100644 tools/testing/selftests/interpreter/Makefile
+ create mode 100644 tools/testing/selftests/interpreter/config
+ create mode 100644 tools/testing/selftests/interpreter/trust_policy_test.c
+
+
+base-commit: 8ab774587903771821b59471cc723bba6d893942
+-- 
+2.33.1
+
