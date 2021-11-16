@@ -1,16 +1,16 @@
-Return-Path: <SRS0=gBgL=QD=lists.openwall.com=kernel-hardening-return-21488-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=0mLm=QD=lists.openwall.com=kernel-hardening-return-21489-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7B6A6C433F5
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 08:42:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E5727C433F5
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 09:12:44 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 7A5D861055
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 08:42:12 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 7A5D861055
-Authentication-Results: mail.kernel.org; dmarc=fail (p=quarantine dis=none) header.from=suse.com
+	by mail.kernel.org (Postfix) with SMTP id E599461A4E
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 09:12:43 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org E599461A4E
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=linux.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 21829 invoked by uid 550); 16 Nov 2021 08:42:05 -0000
+Received: (qmail 6068 invoked by uid 550); 16 Nov 2021 09:12:36 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,158 +18,131 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21809 invoked from network); 16 Nov 2021 08:42:04 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1637052112; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=C55AwTWUd1GkY83Qar7hlYhX0sMPC1zTqlrpdkKmksU=;
-	b=ujlSZx2xq2UNx6Gfwb6APaWg8C/a5u7GwUcCTjJEpL+nfxQYYq4zZrH7hSjeCyqLbIP0Qs
-	3sYoOjRqSyOSvhKR2GJ6JAzLfipwCa7iHvYMPyCrL0/snaFxOQDeTN9Dl6lzauB/SngQ89
-	obm/9puvR0ZvvQrT4Mq2Wzx5nF3C2OM=
-Date: Tue, 16 Nov 2021 09:41:46 +0100
-From: Petr Mladek <pmladek@suse.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Gabriele Paoloni <gpaoloni@redhat.com>,
-	Lukas Bulwahn <lukas.bulwahn@gmail.com>,
-	Robert Krutsch <krutsch@gmail.com>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Paul McKenney <paulmck@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
-	Muchun Song <songmuchun@bytedance.com>,
-	Viresh Kumar <viresh.kumar@linaro.org>,
-	Robin Murphy <robin.murphy@arm.com>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	Lu Baolu <baolu.lu@linux.intel.com>,
-	Kees Cook <keescook@chromium.org>,
-	Luis Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>,
-	John Ogness <john.ogness@linutronix.de>,
-	Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
-	Alexey Kardashevskiy <aik@ozlabs.ru>,
-	Christophe Leroy <christophe.leroy@csgroup.eu>,
-	Jann Horn <jannh@google.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Steven Rostedt <rostedt@goodmis.org>, Will Deacon <will@kernel.org>,
-	Ard Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>,
-	David S Miller <davem@davemloft.net>,
-	Borislav Petkov <bp@alien8.de>, Arnd Bergmann <arnd@arndb.de>,
-	Andrew Scull <ascull@google.com>, Marc Zyngier <maz@kernel.org>,
-	Jessica Yu <jeyu@kernel.org>, Iurii Zaikin <yzaikin@google.com>,
-	Rasmus Villemoes <linux@rasmusvillemoes.dk>,
-	Wang Qing <wangqing@vivo.com>, Mel Gorman <mgorman@suse.de>,
-	Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
-	Andrew Klychkov <andrew.a.klychkov@gmail.com>,
-	Mathieu Chouquet-Stringer <me@mathieu.digital>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Stephen Kitt <steve@sk2.org>, Stephen Boyd <sboyd@kernel.org>,
-	Thomas Bogendoerfer <tsbogend@alpha.franken.de>,
-	Mike Rapoport <rppt@kernel.org>,
-	Bjorn Andersson <bjorn.andersson@linaro.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-hardening@vger.kernel.org,
-	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>, notify@kernel.org,
-	main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
-	devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>
-Subject: Re: [ELISA Safety Architecture WG] [PATCH v2 0/2] Introduce the
- pkill_on_warn parameter
-Message-ID: <YZNuyssYsAB0ogUD@alley>
+Received: (qmail 6033 invoked from network); 16 Nov 2021 09:12:35 -0000
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=x-gm-message-state:message-id:date:mime-version:user-agent:reply-to
+         :subject:content-language:to:cc:references:from:in-reply-to
+         :content-transfer-encoding;
+        bh=fmDWsP6HIgDPZm0jsUsVahurpJpoutIi09vI45Vo0Wc=;
+        b=FRHagvL6uaxn3o/BmI4Tcdodk+NfcEEL0MUUDkSTVzrgOownTh7EZp7fqYSrHZyEG1
+         t8vebGw7SMit7K6j3Ctccq9L2oJyKcvU58Y+nxwBmJ50vhs6+N9p0mzf7mecU/Z3psKJ
+         ykkn0FUkyi2gfEITvGtATAH+NfFTlVyiNVZTa5grjFHVJfrHIKarun+QlsKp0xhCRJwz
+         loIPBYxqUSL4yncXwRoPtMNzppSrHszxiIFp6LjA54g3zaMzIrFlB7XKuGT4zDwIxIAo
+         YkEf2irH1Q93f4nFvMR6slT9Uxik1mB3+t+2v1Bx+V+DLgzQ5zSWpCz3YXOCM8R5rrtM
+         dwPA==
+X-Gm-Message-State: AOAM532g1N23HyxtU3uRhKHEme51yehWt0jOMg1UoiUpdRSqTTij2wBe
+	iUZIebfrgSMrzrIZkIbU+SY=
+X-Google-Smtp-Source: ABdhPJxepms+HgoLFwnuhBFNqrvUhvNh4mcd7Wey0CxKrcVKLj1+P9n2pR6lZtm0ajXnCX83PK/xuw==
+X-Received: by 2002:adf:d4c2:: with SMTP id w2mr7481224wrk.225.1637053944102;
+        Tue, 16 Nov 2021 01:12:24 -0800 (PST)
+Message-ID: <59534db5-b251-c0c8-791f-58aca5c00a2b@linux.com>
+Date: Tue, 16 Nov 2021 12:12:16 +0300
+MIME-Version: 1.0
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
+ Thunderbird/91.2.0
+Subject: Re: [PATCH v2 0/2] Introduce the pkill_on_warn parameter
+Content-Language: en-US
+To: Kees Cook <keescook@chromium.org>, Steven Rostedt <rostedt@goodmis.org>,
+ Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Lukas Bulwahn <lukas.bulwahn@gmail.com>,
+ Linus Torvalds <torvalds@linux-foundation.org>,
+ Jonathan Corbet <corbet@lwn.net>, Paul McKenney <paulmck@kernel.org>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>,
+ Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
+ Muchun Song <songmuchun@bytedance.com>,
+ Viresh Kumar <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>,
+ Randy Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>,
+ Petr Mladek <pmladek@suse.com>, Luis Chamberlain <mcgrof@kernel.org>,
+ Wei Liu <wl@xen.org>, John Ogness <john.ogness@linutronix.de>,
+ Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
+ Alexey Kardashevskiy <aik@ozlabs.ru>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>,
+ Dave Hansen <dave.hansen@linux.intel.com>, Will Deacon <will@kernel.org>,
+ Ard Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>,
+ David S Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>,
+ Arnd Bergmann <arnd@arndb.de>, Andrew Scull <ascull@google.com>,
+ Marc Zyngier <maz@kernel.org>, Jessica Yu <jeyu@kernel.org>,
+ Iurii Zaikin <yzaikin@google.com>,
+ Rasmus Villemoes <linux@rasmusvillemoes.dk>, Wang Qing <wangqing@vivo.com>,
+ Mel Gorman <mgorman@suse.de>,
+ Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
+ Andrew Klychkov <andrew.a.klychkov@gmail.com>,
+ Mathieu Chouquet-Stringer <me@mathieu.digital>,
+ Daniel Borkmann <daniel@iogearbox.net>, Stephen Kitt <steve@sk2.org>,
+ Stephen Boyd <sboyd@kernel.org>,
+ Thomas Bogendoerfer <tsbogend@alpha.franken.de>,
+ Mike Rapoport <rppt@kernel.org>, Bjorn Andersson
+ <bjorn.andersson@linaro.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ linux-hardening@vger.kernel.org,
+ "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+ linux-arch <linux-arch@vger.kernel.org>,
+ Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>, notify@kernel.org,
+ main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
+ devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>
 References: <20211027233215.306111-1-alex.popov@linux.com>
  <ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
  <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
  <77b79f0c-48f2-16dd-1d00-22f3a1b1f5a6@linux.com>
  <CAKXUXMx5Oi-dNVKB+8E-pdrz+ooELMZf=oT_oGXKFrNWejz=fg@mail.gmail.com>
- <22828e84-b34f-7132-c9e9-bb42baf9247b@redhat.com>
- <cf57fb34-460c-3211-840f-8a5e3d88811a@linux.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <cf57fb34-460c-3211-840f-8a5e3d88811a@linux.com>
+ <20211115110649.4f9cb390@gandalf.local.home>
+ <202111151116.933184F716@keescook>
+From: Alexander Popov <alex.popov@linux.com>
+In-Reply-To: <202111151116.933184F716@keescook>
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
 
-On Tue 2021-11-16 10:52:39, Alexander Popov wrote:
-> On 15.11.2021 18:51, Gabriele Paoloni wrote:
-> > On 15/11/2021 14:59, Lukas Bulwahn wrote:
-> > > On Sat, Nov 13, 2021 at 7:14 PM Alexander Popov <alex.popov@linux.com> wrote:
-> > > > On 13.11.2021 00:26, Linus Torvalds wrote:
-> > > > > On Fri, Nov 12, 2021 at 10:52 AM Alexander Popov <alex.popov@linux.com> wrote:
-> > > > Killing the process that hit a kernel warning complies with the Fail-Fast
-> > > > principle [1]. pkill_on_warn sysctl allows the kernel to stop the process when
-> > > > the **first signs** of wrong behavior are detected.
-> > > > 
-> > > In summary, I am not supporting pkill_on_warn. I would support the
-> > > other points I mentioned above, i.e., a good enforced policy for use
-> > > of warn() and any investigation to understand the complexity of
-> > > panic() and reducing its complexity if triggered by such an
-> > > investigation.
-> > 
-> > Hi Alex
-> > 
-> > I also agree with the summary that Lukas gave here. From my experience
-> > the safety system are always guarded by an external flow monitor (e.g. a
-> > watchdog) that triggers in case the safety relevant workloads slows down
-> > or block (for any reason); given this condition of use, a system that
-> > goes into the panic state is always safe, since the watchdog would
-> > trigger and drive the system automatically into safe state.
-> > So I also don't see a clear advantage of having pkill_on_warn();
-> > actually on the flip side it seems to me that such feature could
-> > introduce more risk, as it kills only the threads of the process that
-> > caused the kernel warning whereas the other processes are trusted to
-> > run on a weaker Kernel (does killing the threads of the process that
-> > caused the kernel warning always fix the Kernel condition that lead to
-> > the warning?)
+On 16.11.2021 01:06, Kees Cook wrote:
+> Hmm, yes. What it originally boiled down to, which is why Linus first
+> objected to BUG(), was that we don't know what other parts of the system
+> have been disrupted. The best example is just that of locking: if we
+> BUG() or do_exit() in the middle of holding a lock, we'll wreck whatever
+> subsystem that was attached to. Without a deterministic system state
+> unwinder, there really isn't a "safe" way to just stop a kernel thread.
 > 
-> Lukas, Gabriele, Robert,
-> Thanks for showing this from the safety point of view.
+> With this pkill_on_warn, we avoid the BUG problem (since the thread of
+> execution continues and stops at an 'expected' place: the signal
+> handler).
 > 
-> The part about believing in panic() functionality is amazing :)
+> However, now we have the newer objection from Linus, which is one of
+> attribution: the WARN might be hit during an "unrelated" thread of
+> execution and "current" gets blamed, etc. And beyond that, if we take
+> down a portion of userspace, what in userspace may be destabilized? In
+> theory, we get a case where any required daemons would be restarted by
+> init, but that's not "known".
+> 
+> The safest version of this I can think of is for processes to opt into
+> this mitigation. That would also cover the "special cases" we've seen
+> exposed too. i.e. init and kthreads would not opt in.
+> 
+> However, that's a lot to implement when Marco's tracing suggestion might
+> be sufficient and policy could be entirely implemented in userspace. It
+> could be as simple as this (totally untested):
 
-Nothing is 100% reliable.
+I don't think that this userspace warning handling can work as pkill_on_warn.
 
-With printk() maintainer hat on, the current panic() implementation
-is less reliable because it tries hard to provide some debugging
-information, for example, error message, backtrace, registry,
-flush pending messages on console, crashdump.
+1. The kernel code execution continues after WARN_ON(), it will not wait some 
+userspace daemon that is polling trace events. That's not different from 
+ignoring and having all negative effects after WARN_ON().
 
-See panic() implementation, the reboot is done by emergency_restart().
-The rest is about duping the information.
-
-Well, the information is important. Otherwise, it is really hard to
-fix the problem.
-
-From my experience, especially the access to consoles is not fully
-safe. The reliability might improve a lot when a lockless console
-is used. I guess that using non-volatile memory for the log buffer
-might be even more reliable.
-
-I am not familiar with the code under emergency_restart(). I am not
-sure how reliable it is.
-
-> Yes, safety critical systems depend on the robust ability to restart.
-
-If I wanted to implement a super-reliable panic() I would
-use some external device that would cause power-reset when
-the watched device is not responding.
-
-Best Regards,
-Petr
+2. This userspace policy will miss WARN_ON_ONCE(), WARN_ONCE() and 
+WARN_TAINT_ONCE() after the first hit.
 
 
-PS: I do not believe much into the pkill approach as well.
+Oh, wait...
+I got a crazy idea that may bring more consistency in the error handling mess.
 
-    It is similar to OOM killer. And I always had to restart the
-    system when it was triggered.
+What if the Linux kernel had a LSM module responsible for error handling policy?
+That would require adding LSM hooks to BUG*(), WARN*(), KERN_EMERG, etc.
+In such LSM policy we can decide immediately how to react on the kernel error.
+We can even decide depending on the subsystem and things like that.
 
-    Also kernel is not prepared for the situation that an external
-    code kills a kthread. And kthreads are used by many subsystems
-    to handle work that has to be done asynchronously and/or in
-    process context. And I guess that kthreads are non-trivial
-    source of WARN().
+(idea for brainstorming)
+
+Best regards,
+Alexander
