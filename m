@@ -1,16 +1,16 @@
-Return-Path: <SRS0=AY4w=QD=lists.openwall.com=kernel-hardening-return-21495-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <SRS0=ndGV=QD=lists.openwall.com=kernel-hardening-return-21496-kernel-hardening=archiver.kernel.org@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E38D2C433F5
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 18:42:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C3689C433EF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 19:00:57 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 1272F61BA1
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 18:42:12 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 1272F61BA1
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
+	by mail.kernel.org (Postfix) with SMTP id EA68563214
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Nov 2021 19:00:56 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org EA68563214
+Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=schaufler-ca.com
 Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 8063 invoked by uid 550); 16 Nov 2021 18:42:03 -0000
+Received: (qmail 16064 invoked by uid 550); 16 Nov 2021 19:00:49 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,84 +18,90 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8026 invoked from network); 16 Nov 2021 18:42:02 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=rpZo5Ukhloxpo3t6te7xJnWQRrow3d4oIhzJ9wNY//s=;
-        b=VSNC43P14WmPSZmUrPilJ+DgGj5eVm+rYneRkINAieo4BCqCLBy5QiE+yxx4dMJHrP
-         ofgb/NWCMtHijcLBbRJZt2srQLA+UEZ3FYMnXTi4zhVU59bazntvLi1ZB9x1FOAMm3MU
-         zC1NqI7P7FvTEoA0kb6E30B9MNDZ7w/u4TNWQ=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20210112;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=rpZo5Ukhloxpo3t6te7xJnWQRrow3d4oIhzJ9wNY//s=;
-        b=0KQGpbJgH4K4lBG9pER5+g3XInBEnfMhZa85w2fwqG3f9dK4XGGtCp1pD1T5jLVBHd
-         WvRDywWfkwCagUqU8YF6pZVpYDC/dXQjkOnLf9fNDE3B3bQXYWnf6zEq8DOw6KxzpqF8
-         PZjwgoAYuTXwRD6tDIkjg2k1XMGsWERiJOTMiyP9v9qfSiSuMATN06mFFqAQVVEgsY7k
-         O6VXMyvkuU+Galt8h6Q/VMVVYMeSjHFUwQ95WtN4+UCHf2y9lRtKozsOPbQ1RiNmm6Vc
-         eFQIcmEjgv1hacrH7QHBymNor4AGMZri+4bmcCYfzdLp25G2xQUUaDBZsNcmIu7JWIvK
-         lG7g==
-X-Gm-Message-State: AOAM5316Je0TdVjj90pl/VgSAycSIxIUYcqhIvKFvR7go8dDnWCbYEK6
-	AUdkNqjdIh4uXf3TNq9pfPJdaA==
-X-Google-Smtp-Source: ABdhPJycX3gPzRKrPSWv0E+uNTJtZaFFdHv8BhJIhDH//Ix6o2hDequKidyqHX9nzJJNXw16lwDFmQ==
-X-Received: by 2002:a17:902:ced1:b0:141:e15d:49e0 with SMTP id d17-20020a170902ced100b00141e15d49e0mr47744243plg.27.1637088110227;
-        Tue, 16 Nov 2021 10:41:50 -0800 (PST)
-Date: Tue, 16 Nov 2021 10:41:49 -0800
-From: Kees Cook <keescook@chromium.org>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Steven Rostedt <rostedt@goodmis.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Lukas Bulwahn <lukas.bulwahn@gmail.com>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Paul McKenney <paulmck@kernel.org>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
-	Muchun Song <songmuchun@bytedance.com>,
-	Viresh Kumar <viresh.kumar@linaro.org>,
-	Robin Murphy <robin.murphy@arm.com>,
-	Randy Dunlap <rdunlap@infradead.org>,
-	Lu Baolu <baolu.lu@linux.intel.com>, Petr Mladek <pmladek@suse.com>,
-	Luis Chamberlain <mcgrof@kernel.org>, Wei Liu <wl@xen.org>,
-	John Ogness <john.ogness@linutronix.de>,
-	Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
-	Alexey Kardashevskiy <aik@ozlabs.ru>,
-	Christophe Leroy <christophe.leroy@csgroup.eu>,
-	Jann Horn <jannh@google.com>,
-	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	Mark Rutland <mark.rutland@arm.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Will Deacon <will@kernel.org>, Ard Biesheuvel <ardb@kernel.org>,
-	Laura Abbott <labbott@kernel.org>,
-	David S Miller <davem@davemloft.net>,
-	Borislav Petkov <bp@alien8.de>, Arnd Bergmann <arnd@arndb.de>,
-	Andrew Scull <ascull@google.com>, Marc Zyngier <maz@kernel.org>,
-	Jessica Yu <jeyu@kernel.org>, Iurii Zaikin <yzaikin@google.com>,
-	Rasmus Villemoes <linux@rasmusvillemoes.dk>,
-	Wang Qing <wangqing@vivo.com>, Mel Gorman <mgorman@suse.de>,
-	Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
-	Andrew Klychkov <andrew.a.klychkov@gmail.com>,
-	Mathieu Chouquet-Stringer <me@mathieu.digital>,
-	Daniel Borkmann <daniel@iogearbox.net>,
-	Stephen Kitt <steve@sk2.org>, Stephen Boyd <sboyd@kernel.org>,
-	Thomas Bogendoerfer <tsbogend@alpha.franken.de>,
-	Mike Rapoport <rppt@kernel.org>,
-	Bjorn Andersson <bjorn.andersson@linaro.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>,
-	linux-hardening@vger.kernel.org,
-	"open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
-	linux-arch <linux-arch@vger.kernel.org>,
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-	linux-fsdevel <linux-fsdevel@vger.kernel.org>, notify@kernel.org,
-	main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
-	devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>
+Received: (qmail 16029 invoked from network); 16 Nov 2021 19:00:48 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yahoo.com; s=s2048; t=1637089236; bh=iKZCNnZA8mKurfY2xcDf1xTfNga+uLdl6MyBXJlz4uc=; h=Date:Subject:To:Cc:References:From:In-Reply-To:From:Subject:Reply-To; b=IlCH7UXbsHb3z0KtV0Zi4KsaknBcLvperNnezhGl15qcbrSpimDo2BPd7gXIGNguliYf/M4D0X1AjPtZTJctdwl2U+kd2cp7OZA+hCyrBiLKWjVEBgAAeKgkscCQ4VeaPUaW4OrEFXvVnmBs15uCKVRuErwj1ObCyugITDDdxNZgnOqjmB82Nm/BKF+p60ZCbiChcx7EolKMZ8cbeFI4F0ZHxwdm0zH/ZsIM33XEz2OP68BpuJReaA0apJJaQM7gm+85vO/UpRZlv9XG8aDknpNhP+FzngUfsLzv9byuq1RUPiWVNyMWdaHDQK4i5ZY72A82yaJJngVs2NDDy3OB/A==
+X-SONIC-DKIM-SIGN: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yahoo.com; s=s2048; t=1637089236; bh=KakOMrcQOYQF6zPpoNGmpyCyNEzOa7vc472gsuuEvx9=; h=X-Sonic-MF:Date:Subject:To:From:From:Subject; b=aeJjUhU40xCYdNvg8nvLqVqSoO0xFZ4rXoxf2hgziY/Krx0JCEXxnQS6XAF1ZvL8fDnWdU3xAyA+0DTJDfGSW74zCDiI0DeRIu5S57lCyO8wlaja64DrQ+kYkcxR+Bdk8Zn/SO3/U/LgI7ZC+u9x6srlnMv+av371HY5b5uqWtvJ2VHEIxQZcAjOq4hnvcE8oUbNRzyYEKuaXadHLEVpYkcSLX50BxHZAltxjpgVRu8gfVe1gs5AzZ+g5wyBqjFm5Smx+PjtcWJ+4L2/PrBguWMKWjxxFbazCk8dFvr8F12wjy7poaQPu2lAFiw0/PMBNdkioOBliCMhaesXQB2qaw==
+X-YMail-OSG: dfV4KL4VM1kt.GaOicztohoLnrgWtyS2u7sPmOPbByL_RitHu.lxaIsY1XJM0Ez
+ mdcuj1dEhSXoO9oU1cBoSLUC6Zt27CBqCzkbx4dIimfdMAa2pyu_Tjvma2w6JddoUFXzusdUcOsn
+ 0osUUmRf5W0KMjIEocy_SQmW6d37YsgYK0wUHxvH9ie473oa5X0N3AUy8wD6bd.qQAvqfacokBtp
+ UVxbyopGr8SdJHn8p.Psog.4FyHKpeli2J9Sa16JwEcN3beeYXiPRMkaYqd9RfMOQ1S4rOBGa_QY
+ yFVY_P603FArpIViHnkM3YhVZ6zQL_.UbrKE_qIgTkM.rX3we9jpGhRejh9bEIQkeZUYR8tashVQ
+ ewpN2.bC8uEPuycHdbPCzK_54tKszy51Z58lUSp5wsl0pOLNq91sJO9v51.sC21uQkIHOCRA.t3_
+ UrCT7wYwGMJoEOBvDxN.6T0GP0ta6oKz8Co2kf78GsZs3H5B5O7LQUxaNs21sYM9WG1Ub5oytsvJ
+ tmF.16CyUDwIG99CzudDrzBRVeu0BTGn2J03_smiqE3mBL84HbFEqNjKOoHYXrxGO1yBG4j_FYYn
+ ioBwy8KpvFsHLonOWaEW4LYa6IkzqUtLD86YKd9IIt2DDWcKCSsg_Sgo24eYB6M.FWoM8_eCplzr
+ 4w1lGJku1G0zJtQZRGMvXfHGpcxTg24CvPQ23j8ZZ7AM_c5gaOL25gpoVsi399.KhybBfUDIuoNP
+ fsaeJ1EQCr3Y1qc1mmy9KkQk1En6sca6v9huAOT5MVzHDk67HbvnLaMhfMOmcKbzvE9TKIZ1BofN
+ p4erxAni31xY7WQSAf.TZ1vhqkMYsejVBSous_rmKBmBK8wzZ_6O6chyetspDAVi6nfeSRQXxOqF
+ Jvas9RcspTI6AwAsN2LKH9ByoMFOHNRxi0K.MgC1r2AQmI20nkDwrM45jyGaV7egh4cyhhQtU.0E
+ 8xSgF7J9.KFzrpNgIo8Uy1SgBJkjds8amBCypHUDG0pn6J3aBUJSE5MHR.S0V02oHbuiFiHsS8wH
+ C0z7RQ4W9Izz7nJUIRcGMnfAtuC.0ZmGFxu.Qs.dNjKWUd4oZdRCht_QjlO0OKaptnioNkIF_NQh
+ T2DIBSFfMKxpmxrDKtJQn25_vnbu1nzAsXJAfPpXVlCuAe.0Cri0JBTgIZ9BomSjre_wM.kfGOOg
+ qm4ZVbdqPYj7PkV8FZkhYgGnHI4I25iDyHyMNakkjsM8MIwrdyWstJKoaHA3mYiI.s4HgLGFqE4E
+ nn5WT4SQfFunyou.h.HCoq0Lkzzcqnn.gc7MHxYOqGrrUf25lA0JEkVAgvCt_kCiDnnfaC3AxLT1
+ OjSqV0r0w6mcbl_USL5fzd28vp4kc0ePGL5OuMVVaFf8a9kA0nDChaSAxFzd64pnqUg_DoKZGKlF
+ Yf26tACFNBYFeegkD.BQJdvZMzk__qgQrOlUQNyc_UREopzbfgsqvoE9lJw5wvV8AUjapuj36ffb
+ TC8jQq2o9H6M0H.FerhJMNECzowd4oh1y6XdBc2nkLUtQ1SaJh7dIFBxo8IUQ1pH.ges_xMFVyUy
+ aB4DEzUGYmwrTxxlu1ERd18Rx6_YNXym7L4OlLD0NwkQoN8YUX.uUzmiBSbCLutyXO3CFxxDHpZQ
+ XrG02UD8KN44_5CKT7EzNEjs0vYSxXESNald3nnJpGq_l9rLOY2C8CMcOrlg5RDM6PZX69pk9WYc
+ cHYjA4GDLJQRweZmKFXCqEgsIRRcb0OEJ_EqHEbzOXjA4AntlQr6.UFODumf7wVvBX9e.J0icsnF
+ Lp7tNKQUMADr3sWwjUyh7fMOBeJN0mPtLp5Gz2qsJwNiiOa0Gj5hUMCrtDmVKsKyy8C7jcxaeiLn
+ mt8N2Z4tpkcpeVJXss6qZrcj8Se9nQZY2C0iDtKgVrzP18lP0ipp1UH7jku0kmW6C2.QUv296xD.
+ dBKbXREiJfTkrwhNAGU3oOQf7EAH3GXTuPuSFB8C4tgZ1DYcwwTUW230Qs7rUHXEyx.lTa56GJz6
+ _hsATdtKFC1sy5xYkmcPtvVrkNJASjY5nU6anyAct_tiu7tJM2kUdpzRnn.XTcRvShzcdq4qot5k
+ n9MZrEpAsGAwDBA.RC1tSUq6y6_F9IU9XDIyWdDX07svYEyrsAxr6Jd6bwYLK9sJ2eMBZCtL0M4M
+ Lx91ER7ORK0MDTPpQRbdaqt5Do0LeDuRq8q3217c4.JKP.JtlH5BGL909INx6R8O4mga53VWNUCr
+ qjyeFOmSqSq067BWooNhEXr3mJ9PH_9WLz20-
+X-Sonic-MF: <casey@schaufler-ca.com>
+Message-ID: <fd86a05b-feca-c0a9-c6b0-b2e69c650021@schaufler-ca.com>
+Date: Tue, 16 Nov 2021 11:00:23 -0800
+MIME-Version: 1.0
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101
+ Thunderbird/91.3.0
 Subject: Re: [PATCH v2 0/2] Introduce the pkill_on_warn parameter
-Message-ID: <202111161037.7456C981@keescook>
+Content-Language: en-US
+To: Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>
+Cc: Steven Rostedt <rostedt@goodmis.org>,
+ Linus Torvalds <torvalds@linux-foundation.org>,
+ Lukas Bulwahn <lukas.bulwahn@gmail.com>, Jonathan Corbet <corbet@lwn.net>,
+ Paul McKenney <paulmck@kernel.org>, Andrew Morton
+ <akpm@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>,
+ Peter Zijlstra <peterz@infradead.org>, Joerg Roedel <jroedel@suse.de>,
+ Maciej Rozycki <macro@orcam.me.uk>, Muchun Song <songmuchun@bytedance.com>,
+ Viresh Kumar <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>,
+ Randy Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>,
+ Petr Mladek <pmladek@suse.com>, Luis Chamberlain <mcgrof@kernel.org>,
+ Wei Liu <wl@xen.org>, John Ogness <john.ogness@linutronix.de>,
+ Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
+ Alexey Kardashevskiy <aik@ozlabs.ru>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>,
+ Dave Hansen <dave.hansen@linux.intel.com>, Will Deacon <will@kernel.org>,
+ Ard Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>,
+ David S Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>,
+ Arnd Bergmann <arnd@arndb.de>, Andrew Scull <ascull@google.com>,
+ Marc Zyngier <maz@kernel.org>, Jessica Yu <jeyu@kernel.org>,
+ Iurii Zaikin <yzaikin@google.com>,
+ Rasmus Villemoes <linux@rasmusvillemoes.dk>, Wang Qing <wangqing@vivo.com>,
+ Mel Gorman <mgorman@suse.de>,
+ Mauro Carvalho Chehab <mchehab+huawei@kernel.org>,
+ Andrew Klychkov <andrew.a.klychkov@gmail.com>,
+ Mathieu Chouquet-Stringer <me@mathieu.digital>,
+ Daniel Borkmann <daniel@iogearbox.net>, Stephen Kitt <steve@sk2.org>,
+ Stephen Boyd <sboyd@kernel.org>,
+ Thomas Bogendoerfer <tsbogend@alpha.franken.de>,
+ Mike Rapoport <rppt@kernel.org>, Bjorn Andersson
+ <bjorn.andersson@linaro.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ linux-hardening@vger.kernel.org,
+ "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+ linux-arch <linux-arch@vger.kernel.org>,
+ Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+ linux-fsdevel <linux-fsdevel@vger.kernel.org>, notify@kernel.org,
+ main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
+ devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>,
+ Casey Schaufler <casey@schaufler-ca.com>
 References: <20211027233215.306111-1-alex.popov@linux.com>
  <ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
  <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
@@ -104,23 +110,28 @@ References: <20211027233215.306111-1-alex.popov@linux.com>
  <20211115110649.4f9cb390@gandalf.local.home>
  <202111151116.933184F716@keescook>
  <59534db5-b251-c0c8-791f-58aca5c00a2b@linux.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <59534db5-b251-c0c8-791f-58aca5c00a2b@linux.com>
+ <202111161037.7456C981@keescook>
+From: Casey Schaufler <casey@schaufler-ca.com>
+In-Reply-To: <202111161037.7456C981@keescook>
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
+X-Mailer: WebService/1.1.19306 mail.backend.jedi.jws.acl:role.jedi.acl.token.atz.jws.hermes.yahoo
 
-On Tue, Nov 16, 2021 at 12:12:16PM +0300, Alexander Popov wrote:
-> What if the Linux kernel had a LSM module responsible for error handling policy?
-> That would require adding LSM hooks to BUG*(), WARN*(), KERN_EMERG, etc.
-> In such LSM policy we can decide immediately how to react on the kernel error.
-> We can even decide depending on the subsystem and things like that.
+On 11/16/2021 10:41 AM, Kees Cook wrote:
+> On Tue, Nov 16, 2021 at 12:12:16PM +0300, Alexander Popov wrote:
+>> What if the Linux kernel had a LSM module responsible for error handling policy?
+>> That would require adding LSM hooks to BUG*(), WARN*(), KERN_EMERG, etc.
+>> In such LSM policy we can decide immediately how to react on the kernel error.
+>> We can even decide depending on the subsystem and things like that.
+> That would solve the "atomicity" issue the WARN tracepoint solution has,
+> and it would allow for very flexible userspace policy.
+>
+> I actually wonder if the existing panic_on_* sites should serve as a
+> guide for where to put the hooks. The current sysctls could be replaced
+> by the hooks and a simple LSM.
 
-That would solve the "atomicity" issue the WARN tracepoint solution has,
-and it would allow for very flexible userspace policy.
+Do you really want to make error handling a "security" issue?
+If you add security_bug(), security_warn_on() and the like
+you're begging that they be included in SELinux (AppArmor) policy.
+BPF, too, come to think of it. Is that what you want?
 
-I actually wonder if the existing panic_on_* sites should serve as a
-guide for where to put the hooks. The current sysctls could be replaced
-by the hooks and a simple LSM.
-
--- 
-Kees Cook
