@@ -1,16 +1,10 @@
-Return-Path: <SRS0=ihw/=QF=lists.openwall.com=kernel-hardening-return-21499-kernel-hardening=archiver.kernel.org@kernel.org>
+Return-Path: <kernel-hardening-return-21500-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
-Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 185EBC433EF
-	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Nov 2021 20:29:37 +0000 (UTC)
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by mail.kernel.org (Postfix) with SMTP id 4562961288
-	for <kernel-hardening@archiver.kernel.org>; Thu, 18 Nov 2021 20:29:36 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 4562961288
-Authentication-Results: mail.kernel.org; dmarc=fail (p=none dis=none) header.from=chromium.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.openwall.com
-Received: (qmail 25871 invoked by uid 550); 18 Nov 2021 20:29:29 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 2642BC433EF
+	for <kernel-hardening@archiver.kernel.org>; Sat, 20 Nov 2021 12:17:37 +0000 (UTC)
+Received: (qmail 3559 invoked by uid 550); 20 Nov 2021 12:17:28 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -18,38 +12,41 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25837 invoked from network); 18 Nov 2021 20:29:28 -0000
+Received: (qmail 3527 invoked from network); 20 Nov 2021 12:17:27 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google;
+        d=google.com; s=20210112;
         h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=ext/hA9Hqh6Ihnib1lEscDhjZ8UYlTCVA8i531ovqfY=;
-        b=DkxRs4QGBaUfZ5NxWhAUlvfgQ+APMPBEvDxf32GiR+ctjCEwclxDrBmpBI5JKbwmkA
-         cgeVsSzBs3oMnWsbAcEi6WdQ1dxVJsjLPfAZOSuwU+Dl1qCX9ttV+fmrBLBCUbr0JuYq
-         3HhDrirsunWX4JcVtzu7DG9bT9AHSJBG0fGMk=
+         :content-disposition:in-reply-to:user-agent;
+        bh=YaZx2Y1Vt1Ut2aTw36wNCypRpJkUbfgmQVTDZ0VmVgg=;
+        b=G0DspSlupKx4AUg5ZT7ltXNlBHPMlfmebwsWLEI0fjNTzN8FF+OAjnHjjkowTA3YTz
+         Y5DGUFU1RqZBdH04tC0xC/avnxq/1+skZ0VCOq1mgUIzCnpJtEHJO9HK7/LIwnRXoRp+
+         rQz4achBubaElapoI9/Vm6An/nbj7zuytcNNa5DhyFwX7BkkRnuS8Iy3LlaG3ID6GztZ
+         YpZ8RDsV1eLdYDx5VL7v/6AvQ5yHQGI/Q2ZK570uO4q6u0byapqvyd9zlkeZnOLpkU1l
+         Bk8c8Y3m+sCLMdxBlSNTFQ2wLo1WPxZZmXJqgWQbyyzXvjmZnY54fmRSKov6jhnyPm7k
+         mNEA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
         h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=ext/hA9Hqh6Ihnib1lEscDhjZ8UYlTCVA8i531ovqfY=;
-        b=LN7C+4I8saxwnc4PmiuNV49KIJijOihsCLu9thkTotVfvB/Q2AFo6cjfSEal9fkI9Y
-         gtw2bYACP3Kc8U/l7m6orRvvXvQIM1yBBXp+iBb3TEnXJiM1UmmrvqllGuhEUuazCADU
-         uFHKFU4PvIKz7El0stExzb0SFQbRQr0VlAUVGmA0NV0z1kvzWWep1m/q5hgMHbbgniNS
-         5qICC3swMvVe6QESiluvMb76RJtCeKTA+qcPTIno5c2RyrNTlQqtlBo4NM4pB6MNVXH8
-         doum0v1p8fCjXc8q9AQ3La+g69vg6GFtcRbb+sstnhbC83dOO0p5Wrm9jEdU+qEq71oY
-         TUtQ==
-X-Gm-Message-State: AOAM532wqkl5mVnzvoopzUKIqNjbabqxO675dDS9lurQgQdXShuarQdw
-	KyKkbthS682vt1GIBI3SxFrO2g==
-X-Google-Smtp-Source: ABdhPJzhN6XTGPJ+t5Eac6rxPUFgxhIjU9/l/jeG/zY9bBf89ym/EhuXk+yjIpBbzu4TIjZmokStrA==
-X-Received: by 2002:a17:90b:1a87:: with SMTP id ng7mr14046093pjb.86.1637267355937;
-        Thu, 18 Nov 2021 12:29:15 -0800 (PST)
-Date: Thu, 18 Nov 2021 12:29:14 -0800
-From: Kees Cook <keescook@chromium.org>
-To: Casey Schaufler <casey@schaufler-ca.com>
-Cc: Alexander Popov <alex.popov@linux.com>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Linus Torvalds <torvalds@linux-foundation.org>,
+         :mime-version:content-disposition:in-reply-to:user-agent;
+        bh=YaZx2Y1Vt1Ut2aTw36wNCypRpJkUbfgmQVTDZ0VmVgg=;
+        b=6lBAD1cKR+iWBqJJmkP6Yc064BG9HwzH9jj8YaVZtnoznE07r+rgYUJbOXw3rEVxIO
+         sszcpneMFUQHtTmO/v4nCexqlKq2uvrCno4dxUzItgIqs847VlETpwFMoNVNdwew5Pk3
+         KDa0eHQWFPnZ0+0xuVub06kp30ikO1sn6yWvo/8gqUWVMYmwdkPgBWriYkEf4RrCiEvd
+         MDwsnI1bxwLyOdoYkCs8/jBCsdN1Na1nMoLXT6IAVTpblmm7yt0xpDMRs1alxm2lN6hF
+         lCPnbLWxFLYxaFec3DF1Gt6/34Sy04OcOjP2SWgSEk3v1T3wUR2QnqaWsqm2IDGZagrP
+         7lxg==
+X-Gm-Message-State: AOAM531bp3MhnEVfGpz9g4a7L2ZIkwvcNGtyqEXZ2Ue7pQIdbBMizqHB
+	2jl09ocabTU3ZOMN2CD/2u1Xug==
+X-Google-Smtp-Source: ABdhPJwhl1qUNp/ARRgHBsOEZYB2zBIGB9ymLIhCgmSIMnKiuQtGzmOMF1KU2l9Kmdis+/qTqfvOjQ==
+X-Received: by 2002:a05:600c:3486:: with SMTP id a6mr9590995wmq.32.1637410635476;
+        Sat, 20 Nov 2021 04:17:15 -0800 (PST)
+Date: Sat, 20 Nov 2021 13:17:08 +0100
+From: Marco Elver <elver@google.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Steven Rostedt <rostedt@goodmis.org>,
 	Lukas Bulwahn <lukas.bulwahn@gmail.com>,
+	Alexander Popov <alex.popov@linux.com>,
+	Linus Torvalds <torvalds@linux-foundation.org>,
 	Jonathan Corbet <corbet@lwn.net>,
 	Paul McKenney <paulmck@kernel.org>,
 	Andrew Morton <akpm@linux-foundation.org>,
@@ -96,64 +93,116 @@ Cc: Alexander Popov <alex.popov@linux.com>,
 	main@lists.elisa.tech, safety-architecture@lists.elisa.tech,
 	devel@lists.elisa.tech, Shuah Khan <shuah@kernel.org>
 Subject: Re: [PATCH v2 0/2] Introduce the pkill_on_warn parameter
-Message-ID: <202111181226.D4538E2F@keescook>
-References: <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
+Message-ID: <YZjnREFGhEO9pX6O@elver.google.com>
+References: <20211027233215.306111-1-alex.popov@linux.com>
+ <ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
+ <CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
  <77b79f0c-48f2-16dd-1d00-22f3a1b1f5a6@linux.com>
  <CAKXUXMx5Oi-dNVKB+8E-pdrz+ooELMZf=oT_oGXKFrNWejz=fg@mail.gmail.com>
  <20211115110649.4f9cb390@gandalf.local.home>
  <202111151116.933184F716@keescook>
- <59534db5-b251-c0c8-791f-58aca5c00a2b@linux.com>
- <202111161037.7456C981@keescook>
- <fd86a05b-feca-c0a9-c6b0-b2e69c650021@schaufler-ca.com>
- <202111180930.5FA3EF0F59@keescook>
- <16baa1f4-972d-c781-2d57-508296a83bfb@schaufler-ca.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <16baa1f4-972d-c781-2d57-508296a83bfb@schaufler-ca.com>
+In-Reply-To: <202111151116.933184F716@keescook>
+User-Agent: Mutt/2.0.5 (2021-01-21)
 
-On Thu, Nov 18, 2021 at 10:30:32AM -0800, Casey Schaufler wrote:
-> On 11/18/2021 9:32 AM, Kees Cook wrote:
-> > On Tue, Nov 16, 2021 at 11:00:23AM -0800, Casey Schaufler wrote:
-> > > On 11/16/2021 10:41 AM, Kees Cook wrote:
-> > > > On Tue, Nov 16, 2021 at 12:12:16PM +0300, Alexander Popov wrote:
-> > > > > What if the Linux kernel had a LSM module responsible for error handling policy?
-> > > > > That would require adding LSM hooks to BUG*(), WARN*(), KERN_EMERG, etc.
-> > > > > In such LSM policy we can decide immediately how to react on the kernel error.
-> > > > > We can even decide depending on the subsystem and things like that.
-> > > > That would solve the "atomicity" issue the WARN tracepoint solution has,
-> > > > and it would allow for very flexible userspace policy.
-> > > > 
-> > > > I actually wonder if the existing panic_on_* sites should serve as a
-> > > > guide for where to put the hooks. The current sysctls could be replaced
-> > > > by the hooks and a simple LSM.
-> > > Do you really want to make error handling a "security" issue?
-> > > If you add security_bug(), security_warn_on() and the like
-> > > you're begging that they be included in SELinux (AppArmor) policy.
-> > > BPF, too, come to think of it. Is that what you want?
-> > Yeah, that is what I was thinking. This would give the LSM a view into
-> > kernel state, which seems a reasonable thing to do. If system integrity
-> > is compromised, an LSM may want to stop trusting things.
+On Mon, Nov 15, 2021 at 02:06PM -0800, Kees Cook wrote:
+[...]
+> However, that's a lot to implement when Marco's tracing suggestion might
+> be sufficient and policy could be entirely implemented in userspace. It
+> could be as simple as this (totally untested):
+[...]
 > 
-> How are you planning to communicate the security relevance of the
-> warning to the LSM? I don't think that __FILE__, __LINE__ or __func__
-> is great information to base security policy on. Nor is a backtrace.
+> Marco, is this the full version of monitoring this from the userspace
+> side?
 
-I think that would be part of the design proposal. Initially, the known
-parts are "warn or bug" and "pid".
+Sorry I completely missed this email (I somehow wasn't Cc'd... I just
+saw it by chance re-reading this thread).
 
-> > A dedicated error-handling LSM could be added for those hooks that
-> > implemented the existing default panic_on_* sysctls, and could expand on
-> > that logic for other actions.
-> 
-> I can see having an interface like LSM for choosing a bug/warn policy.
-> I worry about expanding the LSM hook list for a case where I would
-> hope no existing LSM would use them, and the new LSM doesn't use any
-> of the existing hooks.
+I've sent a patch to add WARN:
 
-Yeah, I can see that, though we've got a history of the "specialized"
-hooks getting used by other LSMs. (e.g. loadpin's stuff got hooked up to
-other LSMs, etc.)
+	https://lkml.kernel.org/r/20211115085630.1756817-1-elver@google.com
 
--- 
-Kees Cook
+Not sure how useful BUG is, but I have no objection to it also being
+traced if you think it's useful.
+
+(I added it to kernel/panic.c, because lib/bug.c requires
+CONFIG_GENERIC_BUG.)
+
+> 	perf record -e error_report:error_report_end
+
+I think userspace would want something other than perf tool to handle it
+of course.  There are several options:
+
+	1. Open trace pipe to be notified (/sys/kernel/tracing/trace_pipe).
+	   This already includes the pid.
+
+	2. As you suggest, use perf events globally (but the handling
+	   would be done by some system process).
+
+	3. As of 5.13 there's actually a new perf feature to
+	   synchronously SIGTRAP the exact task where an event occurred
+	   (see perf_event_attr::sigtrap). This would very closely mimic
+	   pkill_on_warn (because the SIGTRAP is synchronous), but lets the
+	   process being SIGTRAP'd decide what to do. Not sure how to
+	   deploy this though, because a) only root user can create this
+	   perf event (because exclude_kernel=0), and b) sigtrap perf
+	   events deliberately won't propagate beyond an exec
+	   (must remove_on_exec=1 if sigtrap=1) because who knows if
+	   the exec'd process has the right SIGTRAP handler.
+
+I think #3 is hard to deploy right, but below is an example program I
+played with.
+
+Thanks,
+-- Marco
+
+------ >8 ------
+
+#define _GNU_SOURCE
+#include <assert.h>
+#include <stdio.h>
+#include <linux/perf_event.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+static void sigtrap_handler(int signum, siginfo_t *info, void *ucontext)
+{
+	// FIXME: check event is error_report_end
+	printf("Kernel error in this task!\n");
+}
+static void generate_warning(void)
+{
+	... do something to generate a warning ...
+}
+int main()
+{
+	struct perf_event_attr attr = {
+		.type		= PERF_TYPE_TRACEPOINT,
+		.size		= sizeof(attr),
+		.config		= 189, // FIXME: error_report_end
+		.sample_period	= 1,
+		.inherit	= 1, /* Children inherit events ... */
+		.remove_on_exec = 1, /* Required by sigtrap. */
+		.sigtrap	= 1, /* Request synchronous SIGTRAP on event. */
+		.sig_data	= 189, /* FIXME: use to identify error_report_end */
+	};
+	struct sigaction action = {};
+	struct sigaction oldact;
+	int fd;
+	action.sa_flags = SA_SIGINFO | SA_NODEFER;
+	action.sa_sigaction = sigtrap_handler;
+	sigemptyset(&action.sa_mask);
+	assert(sigaction(SIGTRAP, &action, &oldact) == 0);
+	fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, PERF_FLAG_FD_CLOEXEC);
+	assert(fd != -1);
+	sleep(5); /* Try to generate a warning from elsewhere, nothing will be printed. */
+	generate_warning(); /* Warning from this process. */
+	sigaction(SIGTRAP, &oldact, NULL);
+	close(fd);
+	return 0;
+}
