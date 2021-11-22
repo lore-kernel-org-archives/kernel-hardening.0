@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21501-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21502-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id DFDCBC433F5
-	for <kernel-hardening@archiver.kernel.org>; Sun, 21 Nov 2021 10:03:32 +0000 (UTC)
-Received: (qmail 18362 invoked by uid 550); 21 Nov 2021 10:03:21 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 138D8C433F5
+	for <kernel-hardening@archiver.kernel.org>; Mon, 22 Nov 2021 16:21:36 +0000 (UTC)
+Received: (qmail 9871 invoked by uid 550); 22 Nov 2021 16:21:27 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,77 +12,75 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3885 invoked from network); 21 Nov 2021 00:43:03 -0000
-Date: Sun, 21 Nov 2021 00:42:43 +0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=damngood.tech;
-	s=protonmail; t=1637455367;
-	bh=o9p4bcKZi7I8HO4a+gPoQrsTFE/qYoL9LCmJPLm0MI8=;
-	h=Date:To:From:Reply-To:Subject:From;
-	b=nZHfY5ZVMS1l78kxgEuSsxpmfl3fk4zO4SQvrMokME2CNYmqdufYDzC7RmjM4+s+q
-	 6hv1R0wt/zDx3QuU7r1qCab1FHs9EMJOv9lsc64tQNECZzjlsEnf9vXoi0tCZmHrYm
-	 L6uDPJdmjWWaY/KWwYqge6FKfCEUBCAOAiN2jQ/TMMNYTvL66UNPz5IoovYU6EFqT7
-	 P5mEsxkjzinED5hk+4PvG7hUjgobKAf5rcuiKQeVM5HXBL/bEOL28MIFMOwC0ZgeUj
-	 ariNYfdxuO2nyD4YUXrJUy+TcwOlJPBq7nlkYhVLjRy46YElszdateE/2Gl/UHMaZD
-	 diCJKcBBzeMRg==
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-From: jordan@damngood.tech
-Subject: I'm Jordan; New Kernel Developer Here!
-Message-ID: <fXA60ALu2hdsrGAhW_ikHp7JHeP58swPN4_-uXH-V0JkJhcKVNGAtCvqCqhNJf_MEv9HHeBS3NfBgJyvD3IV_8mmANPQRDG0BT9NfIw8fEw=@damngood.tech>
+Received: (qmail 9829 invoked from network); 22 Nov 2021 16:21:26 -0000
+Date: Mon, 22 Nov 2021 11:21:06 -0500
+From: Steven Rostedt <rostedt@goodmis.org>
+To: Marco Elver <elver@google.com>
+Cc: Kees Cook <keescook@chromium.org>, Lukas Bulwahn
+ <lukas.bulwahn@gmail.com>, Alexander Popov <alex.popov@linux.com>, Linus
+ Torvalds <torvalds@linux-foundation.org>, Jonathan Corbet <corbet@lwn.net>,
+ Paul McKenney <paulmck@kernel.org>, Andrew Morton
+ <akpm@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Peter
+ Zijlstra <peterz@infradead.org>, Joerg Roedel <jroedel@suse.de>, Maciej
+ Rozycki <macro@orcam.me.uk>, Muchun Song <songmuchun@bytedance.com>, Viresh
+ Kumar <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>, Randy
+ Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>, Petr
+ Mladek <pmladek@suse.com>, Luis Chamberlain <mcgrof@kernel.org>, Wei Liu
+ <wl@xen.org>, John Ogness <john.ogness@linutronix.de>, Andy Shevchenko
+ <andriy.shevchenko@linux.intel.com>, Alexey Kardashevskiy <aik@ozlabs.ru>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Mark
+ Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Dave
+ Hansen <dave.hansen@linux.intel.com>, Will Deacon <will@kernel.org>, Ard
+ Biesheuvel <ardb@kernel.org>, Laura Abbott <labbott@kernel.org>, David S
+ Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>, Arnd Bergmann
+ <arnd@arndb.de>, Andrew Scull <ascull@google.com>, Marc Zyngier
+ <maz@kernel.org>, Jessica Yu <jeyu@kernel.org>, Iurii Zaikin
+ <yzaikin@google.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Wang
+ Qing <wangqing@vivo.com>, Mel Gorman <mgorman@suse.de>, Mauro Carvalho
+ Chehab <mchehab+huawei@kernel.org>, Andrew Klychkov
+ <andrew.a.klychkov@gmail.com>, Mathieu Chouquet-Stringer
+ <me@mathieu.digital>, Daniel Borkmann <daniel@iogearbox.net>, Stephen Kitt
+ <steve@sk2.org>, Stephen Boyd <sboyd@kernel.org>, Thomas Bogendoerfer
+ <tsbogend@alpha.franken.de>, Mike Rapoport <rppt@kernel.org>, Bjorn
+ Andersson <bjorn.andersson@linaro.org>, Kernel Hardening
+ <kernel-hardening@lists.openwall.com>, linux-hardening@vger.kernel.org,
+ "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, linux-arch
+ <linux-arch@vger.kernel.org>, Linux Kernel Mailing List
+ <linux-kernel@vger.kernel.org>, linux-fsdevel
+ <linux-fsdevel@vger.kernel.org>, notify@kernel.org, main@lists.elisa.tech,
+ safety-architecture@lists.elisa.tech, devel@lists.elisa.tech, Shuah Khan
+ <shuah@kernel.org>
+Subject: Re: [PATCH v2 0/2] Introduce the pkill_on_warn parameter
+Message-ID: <20211122112106.5fa656bc@gandalf.local.home>
+In-Reply-To: <YZjnREFGhEO9pX6O@elver.google.com>
+References: <20211027233215.306111-1-alex.popov@linux.com>
+	<ac989387-3359-f8da-23f9-f5f6deca4db8@linux.com>
+	<CAHk-=wgRmjkP3+32XPULMLTkv24AkA=nNLa7xxvSg-F0G1sJ9g@mail.gmail.com>
+	<77b79f0c-48f2-16dd-1d00-22f3a1b1f5a6@linux.com>
+	<CAKXUXMx5Oi-dNVKB+8E-pdrz+ooELMZf=oT_oGXKFrNWejz=fg@mail.gmail.com>
+	<20211115110649.4f9cb390@gandalf.local.home>
+	<202111151116.933184F716@keescook>
+	<YZjnREFGhEO9pX6O@elver.google.com>
+X-Mailer: Claws Mail 3.17.8 (GTK+ 2.24.33; x86_64-pc-linux-gnu)
 MIME-Version: 1.0
-Content-Type: multipart/alternative;
- boundary="b1_0th9WE8G1qwNRAwEv2Sw5IS8MNi22KHc9EGunNfiY"
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 
-This is a multi-part message in MIME format.
-
---b1_0th9WE8G1qwNRAwEv2Sw5IS8MNi22KHc9EGunNfiY
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: base64
-
-SGksIEknbSBKb3JkYW4uIEknbSBpbnRlcmVzdGVkIGluIHdvcmtpbmcgb24gc2VjdXJpdHkgaGFy
-ZGVuaW5nIGluIExpbnV4IQoKVGhlIGRvY3Mgc2FpZCB0byBpbnRyb2R1Y2UgbXlzZWxmLCBzbyBo
-ZXJlIGl0IGdvZXMhCgpJJ20gYSBkZXZlbG9wZXIgd2l0aCBhYm91dCAxMCB5ZWFycyBleHBlcmll
-bmNlLiBJIGN1cnJlbnRseSBmcmVlbGFuY2UgaW4gZnVsbCBzdGFjaywgYnV0IG15IHJvb3RzIGdv
-IGJhY2sgdG8gYW4gYXBwcmVudGljZXNoaXAgYXQgT1NETC4gSSd2ZSBiZWVuIGRvaW5nIGEgbG90
-IG9mIGZ1bGwgc3RhY2sgLyBQeXRob24gd29yayBsYXRlbHksIHNvIEkgbWF5IGJlIGEgbGl0dGxl
-IHJ1c3R5IHdpdGgga2VybmVsIGRldmVsb3BtZW50IGJ1dCBJJ20gbm93aGVyZSBuZWFyIGEgbm9v
-Yi4KCkkgcmFuIGludG8gYW5vdGhlciBrZXJuZWwgZGV2ZWxvcGVyIHJlY2VudGx5IGF0IGEgTGlu
-dXggdGVjaCB0YWxrLiBJIHdhcyB0b2xkIHRoYXQgd2hpbGUga2VybmRldiBpc24ndCAic2V4eSwi
-IGl0J3MgbmVjZXNzYXJ5IGFuZCBncmVhdGx5IGRlc2lyZWQuIFNvIEknbSBjb21pbmcgYmFjayB0
-byB3aGVyZSB0aGUgbmVlZCBpcy4KCkhvdydzIHRoYXQgZm9yIGFuIGludHJvPyBBbnl0aGluZyBl
-bHNlIHlvdSB3YW50IHRvIGtub3cgYWJvdXQgbWU/IEknbSBsb29raW5nIGZvcndhcmQgdG8gbWVl
-dGluZyBzb21lIG9mIHlvdSEKCkFsc28sIHdoYXQgYXJlIGdvb2QgZmlyc3Qgc3RlcHM/CgpQLlMu
-IEkgZGlkIHRyeSB0byByZWdpc3RlciBmb3IgdGhlIHVwc3RyZWFtIG1haWxpbmcgbGlzdCBhdCBo
-dHRwOi8vdmdlci5rZXJuZWwub3JnL3ZnZXItbGlzdHMuaHRtbCNsaW51eC1oYXJkZW5pbmcsIGJ1
-dCBJIGdvdCBhIGxvbmcgZW1haWwgdGhhdCBiZWdhbiB3aXRoICJ0aGlzIGlzIG5vdCBhIHZhbGlk
-IGNvbW1hbmQuIiBOb3Qgc3VyZSBob3cgdG8gcmVnaXN0ZXIu
-
---b1_0th9WE8G1qwNRAwEv2Sw5IS8MNi22KHc9EGunNfiY
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: base64
-
-PGRpdj5IaSwgSSdtIEpvcmRhbi4gSSdtIGludGVyZXN0ZWQgaW4gd29ya2luZyBvbiBzZWN1cml0
-eSBoYXJkZW5pbmcgaW4gTGludXghPGJyPjwvZGl2PjxkaXY+PGJyPjwvZGl2PjxkaXY+VGhlIGRv
-Y3Mgc2FpZCB0byBpbnRyb2R1Y2UgbXlzZWxmLCBzbyBoZXJlIGl0IGdvZXMhPGJyPjwvZGl2Pjxk
-aXY+PGJyPjwvZGl2PjxkaXY+SSdtIGEgZGV2ZWxvcGVyIHdpdGggYWJvdXQgMTAgeWVhcnMgZXhw
-ZXJpZW5jZS4gSSBjdXJyZW50bHkgZnJlZWxhbmNlIGluIGZ1bGwgc3RhY2ssIGJ1dCBteSByb290
-cyBnbyBiYWNrIHRvIGFuIGFwcHJlbnRpY2VzaGlwIGF0IE9TREwuIEkndmUgYmVlbiBkb2luZyBh
-IGxvdCBvZiBmdWxsIHN0YWNrIC8gUHl0aG9uIHdvcmsgbGF0ZWx5LCBzbyBJIG1heSBiZSBhIGxp
-dHRsZSBydXN0eSB3aXRoIGtlcm5lbCBkZXZlbG9wbWVudCBidXQgSSdtIG5vd2hlcmUgbmVhciBh
-IG5vb2IuPGJyPjwvZGl2PjxkaXY+PGJyPjwvZGl2PjxkaXY+SSByYW4gaW50byBhbm90aGVyIGtl
-cm5lbCBkZXZlbG9wZXIgcmVjZW50bHkgYXQgYSBMaW51eCB0ZWNoIHRhbGsuIEkgd2FzIHRvbGQg
-dGhhdCB3aGlsZSBrZXJuZGV2IGlzbid0ICJzZXh5LCIgaXQncyBuZWNlc3NhcnkgYW5kIGdyZWF0
-bHkgZGVzaXJlZC4gU28gSSdtIGNvbWluZyBiYWNrIHRvIHdoZXJlIHRoZSBuZWVkIGlzLjxicj48
-L2Rpdj48ZGl2Pjxicj48L2Rpdj48ZGl2PkhvdydzIHRoYXQgZm9yIGFuIGludHJvPyBBbnl0aGlu
-ZyBlbHNlIHlvdSB3YW50IHRvIGtub3cgYWJvdXQgbWU/IEknbSBsb29raW5nIGZvcndhcmQgdG8g
-bWVldGluZyBzb21lIG9mIHlvdSE8YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5BbHNvLCB3
-aGF0IGFyZSBnb29kIGZpcnN0IHN0ZXBzPzxicj48L2Rpdj48ZGl2Pjxicj48L2Rpdj48ZGl2PlAu
-Uy4gSSBkaWQgdHJ5IHRvIHJlZ2lzdGVyIGZvciB0aGUgdXBzdHJlYW0gbWFpbGluZyBsaXN0IGF0
-IDxhIGhyZWY9Imh0dHA6Ly92Z2VyLmtlcm5lbC5vcmcvdmdlci1saXN0cy5odG1sI2xpbnV4LWhh
-cmRlbmluZyI+aHR0cDovL3ZnZXIua2VybmVsLm9yZy92Z2VyLWxpc3RzLmh0bWwjbGludXgtaGFy
-ZGVuaW5nPC9hPiwgYnV0IEkgZ290IGEgbG9uZyBlbWFpbCB0aGF0IGJlZ2FuIHdpdGggInRoaXMg
-aXMgbm90IGEgdmFsaWQgY29tbWFuZC4iIE5vdCBzdXJlIGhvdyB0byByZWdpc3Rlci48YnI+PC9k
-aXY+
+On Sat, 20 Nov 2021 13:17:08 +0100
+Marco Elver <elver@google.com> wrote:
 
 
---b1_0th9WE8G1qwNRAwEv2Sw5IS8MNi22KHc9EGunNfiY--
+> I think userspace would want something other than perf tool to handle it
+> of course.  There are several options:
+> 
+> 	1. Open trace pipe to be notified (/sys/kernel/tracing/trace_pipe).
+> 	   This already includes the pid.
 
+I would suggest using /sys/kernel/tracing/per_cpu/cpu*/trace_pipe_raw
+
+and use libtracefs[1] to read it.
+
+-- Steve
+
+[1] https://git.kernel.org/pub/scm/libs/libtrace/libtracefs.git/
