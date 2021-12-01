@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21512-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21513-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id BDDADC433F5
-	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Dec 2021 13:16:08 +0000 (UTC)
-Received: (qmail 3838 invoked by uid 550); 1 Dec 2021 13:15:57 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id B377EC433F5
+	for <kernel-hardening@archiver.kernel.org>; Wed,  1 Dec 2021 16:40:40 +0000 (UTC)
+Received: (qmail 10109 invoked by uid 550); 1 Dec 2021 16:40:31 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,133 +12,86 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3809 invoked from network); 1 Dec 2021 13:15:57 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : subject :
- from : to : cc : date : in-reply-to : references : content-type :
- content-transfer-encoding : mime-version; s=pp1;
- bh=o7MU5ZEW3BlvRrPu95u+FYlzxn/o3dCRZhGlSHuRGvs=;
- b=EQbqU93mjERx4tytUgOTiHfb/lGWvW4J+OdQxiFYvTJWsC9Vey7ux6eqqUnHWQJ9Ai9O
- g/wRbQgnAFsSFPnc/XoUuIDZj3ekriraPETjJ4J/tSi9r8nwllxlrbPqJ8zVxHppZBDL
- AjKLO5zZgQy3InnVnUXy7CNWjK2EBI0vc0oKVOLOBTOwzzJZXQ9coo5EZlDugBy5CfTj
- OdpSsG5IWScTeMLAZdSB/JScFrGrYBr3uDP6LU/V48PKwScFi+wmMEIFqjX1lHcEGhIB
- YgRfaMkqpNiilRRfjr/frM0L9e4sThP4RLpWDxEZqzygsR49fInvTUDAOPZIUyOf1U3I aw== 
-Message-ID: <e91d238422f8df139acf84cc2df6ddb4fd300b87.camel@linux.ibm.com>
-Subject: Re: [PATCH v17 0/3] Add trusted_for(2) (was O_MAYEXEC)
-From: Mimi Zohar <zohar@linux.ibm.com>
-To: =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>,
-        Florian Weimer
-	 <fweimer@redhat.com>
+Received: (qmail 10086 invoked from network); 1 Dec 2021 16:40:31 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:content-transfer-encoding:in-reply-to;
+        bh=y8cmWY4Zar66oxROb9aCaWg+WHCdO5TorclDxazoih0=;
+        b=KMrgAdmxIQ8K3dFwdZP0KgMke/VWmOiwmkpwK8XtO5jg0bv+IwT6kwy5QeCS8cVmkG
+         iXva0YNAfh0jDs3F2vVeVDeeSEVNtLaDMU2jGFO9dRGbP5aXdL3iPH4S0TdEOsAPotsb
+         vAd3VHhwy3mFo4QwZrOfawXcT16vzNk/wWXh0=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:content-transfer-encoding
+         :in-reply-to;
+        bh=y8cmWY4Zar66oxROb9aCaWg+WHCdO5TorclDxazoih0=;
+        b=EHZHI50NzbmZV6dZo8pQ0a6VDVIX8uujGBEiocPD7HSLvIUTZ5P0l5QWgKHOZJoIi1
+         p+Uhb/FF01bXezVnAg/uGhTbph57m+ozZa3PMUM4YQhk4CMia78OdstkPIX4nyHctPGG
+         iAQTax3yMXVFTRGE5rMzJCqjDzp1I8lSAQmWrmeRFt3reMR1UkRIIT8NjbhnpJgAqG+y
+         uTBx1Hf6+uciIpIKKdWhGsgV21ofR8KRyT1YjNpLok5gy53eBLjhxyP/bedsgxCQPurT
+         GE1iGj0F5z9ZHA25rna6YS+kP1T1OsPtSQrNALqrYcLP98PsPQPADhYtL4Y/aZn8StYo
+         gQlg==
+X-Gm-Message-State: AOAM5332T+gmjhXmfvdSGYxqlvoQdocdNW6WZQFhNMYjaYEWHEQ2VrlP
+	E9j24zC0y1hdUxxdS7wmG1gC1A==
+X-Google-Smtp-Source: ABdhPJwJfw+rygwnhuiEpbRB+v+vZNeROz8C/SXUcdZBzJqV6OaozK2TnS2SEtEqIW0r9VUrX4HDWg==
+X-Received: by 2002:a17:90b:3ec2:: with SMTP id rm2mr9031549pjb.1.1638376818926;
+        Wed, 01 Dec 2021 08:40:18 -0800 (PST)
+Date: Wed, 1 Dec 2021 08:40:17 -0800
+From: Kees Cook <keescook@chromium.org>
+To: Andrew Morton <akpm@linux-foundation.org>
 Cc: Al Viro <viro@zeniv.linux.org.uk>,
-        Andrew Morton
- <akpm@linux-foundation.org>,
-        Alejandro Colomar <alx.manpages@gmail.com>,
-        Aleksa Sarai <cyphar@cyphar.com>, Andy Lutomirski <luto@kernel.org>,
-        Arnd
- Bergmann <arnd@arndb.de>,
-        Casey Schaufler <casey@schaufler-ca.com>,
-        Christian Brauner <christian.brauner@ubuntu.com>,
-        Christian Heimes
- <christian@python.org>,
-        Deven Bowers <deven.desai@linux.microsoft.com>,
-        Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@kernel.org>,
-        Eric Chiang <ericchiang@google.com>,
-        Geert Uytterhoeven
- <geert@linux-m68k.org>,
-        James Morris <jmorris@namei.org>, Jan Kara
- <jack@suse.cz>,
-        Jann Horn <jannh@google.com>, Jonathan Corbet
- <corbet@lwn.net>,
-        Kees Cook <keescook@chromium.org>,
-        Lakshmi
- Ramasubramanian <nramas@linux.microsoft.com>,
-        "Madhavan T . Venkataraman"
- <madvenka@linux.microsoft.com>,
-        Matthew Garrett <mjg59@google.com>,
-        Matthew
- Wilcox <willy@infradead.org>,
-        Miklos Szeredi <mszeredi@redhat.com>,
-        Paul
- Moore <paul@paul-moore.com>,
-        Philippe =?ISO-8859-1?Q?Tr=E9buchet?=
- <philippe.trebuchet@ssi.gouv.fr>,
-        Scott Shell <scottsh@microsoft.com>, Shuah Khan <shuah@kernel.org>,
-        Steve Dower <steve.dower@python.org>, Steve
- Grubb <sgrubb@redhat.com>,
-        Thibaut Sautereau
- <thibaut.sautereau@ssi.gouv.fr>,
-        Vincent Strubel
- <vincent.strubel@ssi.gouv.fr>,
-        Yin Fengwei <fengwei.yin@intel.com>,
-        kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
-        linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org,
-        linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
-Date: Wed, 01 Dec 2021 08:14:54 -0500
-In-Reply-To: <4a88f95b-d54d-ad70-fb49-e3c3f1d097f2@digikod.net>
+	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>,
+	Alejandro Colomar <alx.manpages@gmail.com>,
+	Aleksa Sarai <cyphar@cyphar.com>, Andy Lutomirski <luto@kernel.org>,
+	Arnd Bergmann <arnd@arndb.de>,
+	Casey Schaufler <casey@schaufler-ca.com>,
+	Christian Brauner <christian.brauner@ubuntu.com>,
+	Christian Heimes <christian@python.org>,
+	Deven Bowers <deven.desai@linux.microsoft.com>,
+	Dmitry Vyukov <dvyukov@google.com>,
+	Eric Biggers <ebiggers@kernel.org>,
+	Eric Chiang <ericchiang@google.com>,
+	Florian Weimer <fweimer@redhat.com>,
+	Geert Uytterhoeven <geert@linux-m68k.org>,
+	James Morris <jmorris@namei.org>, Jan Kara <jack@suse.cz>,
+	Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>,
+	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
+	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
+	Matthew Garrett <mjg59@google.com>,
+	Matthew Wilcox <willy@infradead.org>,
+	Miklos Szeredi <mszeredi@redhat.com>,
+	Mimi Zohar <zohar@linux.ibm.com>, Paul Moore <paul@paul-moore.com>,
+	Philippe =?iso-8859-1?Q?Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
+	Scott Shell <scottsh@microsoft.com>, Shuah Khan <shuah@kernel.org>,
+	Steve Dower <steve.dower@python.org>,
+	Steve Grubb <sgrubb@redhat.com>,
+	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
+	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
+	Yin Fengwei <fengwei.yin@intel.com>,
+	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
+	linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Subject: Re: [PATCH v17 0/3] Add trusted_for(2) (was O_MAYEXEC)
+Message-ID: <202112010839.4362C7A70@keescook>
 References: <20211115185304.198460-1-mic@digikod.net>
-	 <87sfvd8k4c.fsf@oldenburg.str.redhat.com>
-	 <4a88f95b-d54d-ad70-fb49-e3c3f1d097f2@digikod.net>
-Content-Type: text/plain; charset="UTF-8"
-X-Mailer: Evolution 3.28.5 (3.28.5-16.el8) 
-X-TM-AS-GCONF: 00
-X-Proofpoint-ORIG-GUID: 4_DbnL0LEYui2lYeqbE8yT4i3z_a1Jb2
-X-Proofpoint-GUID: 9Log-g6aWaMUBg8JjxhDYCR2BbjEsiMa
-Content-Transfer-Encoding: 8bit
-X-Proofpoint-UnRewURL: 0 URL was un-rewritten
 MIME-Version: 1.0
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.205,Aquarius:18.0.790,Hydra:6.0.425,FMLib:17.0.607.475
- definitions=2021-11-30_10,2021-12-01_01,2020-04-07_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 spamscore=0 malwarescore=0
- adultscore=0 lowpriorityscore=0 mlxscore=0 priorityscore=1501
- mlxlogscore=999 impostorscore=0 bulkscore=0 phishscore=0 clxscore=1011
- suspectscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2110150000 definitions=main-2112010076
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20211115185304.198460-1-mic@digikod.net>
 
-On Wed, 2021-12-01 at 10:23 +0100, Mickaël Salaün wrote:
-> On 30/11/2021 21:27, Florian Weimer wrote:
-> > * Mickaël Salaün:
-> > 
-> >> Primary goal of trusted_for(2)
-> >> ==============================
-> >>
-> >> This new syscall enables user space to ask the kernel: is this file
-> >> descriptor's content trusted to be used for this purpose?  The set of
-> >> usage currently only contains execution, but other may follow (e.g.
-> >> configuration, sensitive data).  If the kernel identifies the file
-> >> descriptor as trustworthy for this usage, user space should then take
-> >> this information into account.  The "execution" usage means that the
-> >> content of the file descriptor is trusted according to the system policy
-> >> to be executed by user space, which means that it interprets the content
-> >> or (try to) maps it as executable memory.
-> > 
-> > I sketched my ideas about “IMA gadgets” here:
-> > 
-> >    IMA gadgets
-> >    <https://www.openwall.com/lists/oss-security/2021/11/30/1>
-> > 
-> > I still don't think the proposed trusted_for interface is sufficient.
-> > The example I gave is a Perl module that does nothing (on its own) when
-> > loaded as a Perl module (although you probably don't want to sign it
-> > anyway, given what it implements), but triggers an unwanted action when
-> > sourced (using .) as a shell script.
-> 
-> The fact that IMA doesn't cover all metadata, file names nor the file 
-> hierarchies is well known and the solution can be implemented with 
-> dm-verity (which has its own drawbacks).
+On Mon, Nov 15, 2021 at 07:53:01PM +0100, Micka�l Sala�n wrote:
+> Andrew, can you please consider to merge this into your tree?
 
-Thanks, Mickaël, for responding.  I'll go even farther and say that IMA
-wasn't ever meant to protect file metadata.  Another option is EVM,
-which addresses some, but not all of the issues.
+Friendly ping to akpm. :)
 
-thanks,
+Can this start living in -mm, or would a different tree be better?
 
-Mimi
+Thanks!
 
-> 
-> trusted_for is a tool for interpreters to enforce a security policy 
-> centralized by the kernel. The kind of file confusion attacks you are 
-> talking about should be addressed by a system policy. If the mount point 
-> options are not enough to express such policy, then we need to rely on 
-> IMA, SELinux or IPE to reduce the scope of legitimate mapping between 
-> scripts and interpreters.
+-Kees
 
+-- 
+Kees Cook
