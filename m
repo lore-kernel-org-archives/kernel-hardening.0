@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21527-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21528-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 83B60C433F5
-	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Jan 2022 16:03:26 +0000 (UTC)
-Received: (qmail 3674 invoked by uid 550); 5 Jan 2022 16:03:17 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id D5402C433F5
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Jan 2022 16:04:20 +0000 (UTC)
+Received: (qmail 7340 invoked by uid 550); 5 Jan 2022 16:04:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,16 +12,17 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3651 invoked from network); 5 Jan 2022 16:03:15 -0000
+Received: (qmail 7234 invoked from network); 5 Jan 2022 16:03:48 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1641398583;
+	s=mimecast20190719; t=1641398616;
 	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
-	bh=u480/OJwej/j4wzpGe245oMyGEylv5FGLU/iblhaqfE=;
-	b=DBIiaMpLbObhJg+8kvMUlW6avXSq7VRHEpPFcr329lqR7+sjhd1HEx/xHxFIatSS6G+qW8
-	XYx6LX5liF5CeIW1pdgaFvcaNlV/x3l9NDAyaexz1QaI+QPFuRaa4EOO2RClmPV2C8CVqt
-	sA8F0wfJOkhFFvcE2NRS+zvWuhbuiFA=
-X-MC-Unique: t5IN1CUtOdmuiemFARbXUw-1
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=Hkde+7eKZjv80qwsVvmCX2T7y8AoaKGRyE5+tZVJ4q0=;
+	b=UfvotGERhK03kSMVqzkAb3T1aeBE5eyTgHOhyIlJA//JJkYvUlMacCm8xlWQnpT5OenmiF
+	glXYHIvIoezVTl9rQ4ux/v1hjNxrLmnxf6dgbNxW9gGJdvIgu3PxtzWtLUPKuOctYFPVXs
+	01FdNoHtT6RF+7SanpzAXH/cr5kpooE=
+X-MC-Unique: b7RAR5SOOa-mxTpn4XvsZw-1
 From: Florian Weimer <fweimer@redhat.com>
 To: "Andy Lutomirski" <luto@kernel.org>
 Cc: linux-arch@vger.kernel.org,
@@ -32,134 +33,46 @@ Cc: linux-arch@vger.kernel.org,
         <linux-kernel@vger.kernel.org>,
         "Dave Hansen" <dave.hansen@intel.com>,
         "Kees Cook" <keescook@chromium.org>, Andrei Vagin <avagin@gmail.com>
-Subject: [PATCH v3 1/3] x86: Implement arch_prctl(ARCH_VSYSCALL_CONTROL) to
- disable vsyscall
-X-From-Line: 3a1c8280967b491bf6917a18fbff6c9b52e8df24 Mon Sep 17 00:00:00 2001
-Message-Id: <3a1c8280967b491bf6917a18fbff6c9b52e8df24.1641398395.git.fweimer@redhat.com>
-Date: Wed, 05 Jan 2022 17:02:48 +0100
+Subject: [PATCH v3 2/3] selftests/x86/Makefile: Support per-target $(LIBS)
+ configuration
+In-Reply-To: <3a1c8280967b491bf6917a18fbff6c9b52e8df24.1641398395.git.fweimer@redhat.com>
+References: <3a1c8280967b491bf6917a18fbff6c9b52e8df24.1641398395.git.fweimer@redhat.com>
+X-From-Line: 54ae0e1f8928160c1c4120263ea21c8133aa3ec4 Mon Sep 17 00:00:00 2001
+Message-Id: <54ae0e1f8928160c1c4120263ea21c8133aa3ec4.1641398395.git.fweimer@redhat.com>
+Date: Wed, 05 Jan 2022 17:03:15 +0100
 User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/27.2 (gnu/linux)
 MIME-Version: 1.0
 Content-Type: text/plain
-X-Scanned-By: MIMEDefang 2.79 on 10.5.11.11
+X-Scanned-By: MIMEDefang 2.79 on 10.5.11.16
 
-Distributions struggle with changing the default for vsyscall
-emulation because it is a clear break of userspace ABI, something
-that should not happen.
-
-The legacy vsyscall interface is supposed to be used by libcs only,
-not by applications.  This commit adds a new arch_prctl request,
-ARCH_VSYSCALL_CONTROL, with one argument.  If the argument is 0,
-executing vsyscalls will cause the process to terminate.  Argument 1
-turns vsyscall back on (this is mostly for a largely theoretical
-CRIU use case).
-
-Newer libcs can use a zero ARCH_VSYSCALL_CONTROL at startup to disable
-vsyscall for the process.  Legacy libcs do not perform this call, so
-vsyscall remains enabled for them.  This approach should achieves
-backwards compatibility (perfect compatibility if the assumption that
-only libcs use vsyscall is accurate), and it provides full hardening
-for new binaries.
-
-The chosen value of ARCH_VSYSCALL_CONTROL should avoid conflicts
-with other x86-64 arch_prctl requests.  The fact that with
-vsyscall=emulate, reading the vsyscall region is still possible
-even after a zero ARCH_VSYSCALL_CONTROL is considered limitation
-in the current implementation and may change in a future kernel
-version.
-
-Future arch_prctls requests commonly used at process startup can imply
-ARCH_VSYSCALL_CONTROL with a zero argument, so that a separate system
-call for disabling vsyscall is avoided.
+And avoid compiling PCHs by accident.
 
 Signed-off-by: Florian Weimer <fweimer@redhat.com>
-Acked-by: Andrei Vagin <avagin@gmail.com>
 ---
-v3: Remove warning log message.  Split out test.
-v2: ARCH_VSYSCALL_CONTROL instead of ARCH_VSYSCALL_LOCKOUT.  New tests
-    for the toggle behavior.  Implement hiding [vsyscall] in
-    /proc/PID/maps and test it.  Various other test fixes cleanups
-    (e.g., fixed missing second argument to gettimeofday).
+v3: Patch split out.
 
-arch/x86/entry/vsyscall/vsyscall_64.c | 7 ++++++-
- arch/x86/include/asm/mmu.h            | 6 ++++++
- arch/x86/include/uapi/asm/prctl.h     | 2 ++
- arch/x86/kernel/process_64.c          | 7 +++++++
- 4 files changed, 21 insertions(+), 1 deletion(-)
+ tools/testing/selftests/x86/Makefile | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
-diff --git a/arch/x86/entry/vsyscall/vsyscall_64.c b/arch/x86/entry/vsyscall/vsyscall_64.c
-index fd2ee9408e91..6fc524b9f232 100644
---- a/arch/x86/entry/vsyscall/vsyscall_64.c
-+++ b/arch/x86/entry/vsyscall/vsyscall_64.c
-@@ -174,6 +174,9 @@ bool emulate_vsyscall(unsigned long error_code,
+diff --git a/tools/testing/selftests/x86/Makefile b/tools/testing/selftests/x86/Makefile
+index 8a1f62ab3c8e..0993d12f2c38 100644
+--- a/tools/testing/selftests/x86/Makefile
++++ b/tools/testing/selftests/x86/Makefile
+@@ -72,10 +72,12 @@ all_64: $(BINARIES_64)
+ EXTRA_CLEAN := $(BINARIES_32) $(BINARIES_64)
  
- 	tsk = current;
+ $(BINARIES_32): $(OUTPUT)/%_32: %.c helpers.h
+-	$(CC) -m32 -o $@ $(CFLAGS) $(EXTRA_CFLAGS) $^ -lrt -ldl -lm
++	$(CC) -m32 -o $@ $(CFLAGS) $(EXTRA_CFLAGS) $(filter-out %.h, $^) \
++		$(or $(LIBS), -lrt -ldl -lm)
  
-+	if (tsk->mm->context.vsyscall_disabled)
-+		goto sigsegv;
-+
- 	/*
- 	 * Check for access_ok violations and find the syscall nr.
- 	 *
-@@ -316,8 +319,10 @@ static struct vm_area_struct gate_vma __ro_after_init = {
+ $(BINARIES_64): $(OUTPUT)/%_64: %.c helpers.h
+-	$(CC) -m64 -o $@ $(CFLAGS) $(EXTRA_CFLAGS) $^ -lrt -ldl
++	$(CC) -m64 -o $@ $(CFLAGS) $(EXTRA_CFLAGS) $(filter-out %.h, $^) \
++		$(or $(LIBS), -lrt -ldl -lm)
  
- struct vm_area_struct *get_gate_vma(struct mm_struct *mm)
- {
-+	if (!mm || mm->context.vsyscall_disabled)
-+		return NULL;
- #ifdef CONFIG_COMPAT
--	if (!mm || !(mm->context.flags & MM_CONTEXT_HAS_VSYSCALL))
-+	if (!(mm->context.flags & MM_CONTEXT_HAS_VSYSCALL))
- 		return NULL;
- #endif
- 	if (vsyscall_mode == NONE)
-diff --git a/arch/x86/include/asm/mmu.h b/arch/x86/include/asm/mmu.h
-index 5d7494631ea9..3934d6907910 100644
---- a/arch/x86/include/asm/mmu.h
-+++ b/arch/x86/include/asm/mmu.h
-@@ -41,6 +41,12 @@ typedef struct {
- #ifdef CONFIG_X86_64
- 	unsigned short flags;
- #endif
-+#ifdef CONFIG_X86_VSYSCALL_EMULATION
-+	/*
-+	 * Changed by arch_prctl(ARCH_VSYSCALL_CONTROL).
-+	 */
-+	bool vsyscall_disabled;
-+#endif
- 
- 	struct mutex lock;
- 	void __user *vdso;			/* vdso base address */
-diff --git a/arch/x86/include/uapi/asm/prctl.h b/arch/x86/include/uapi/asm/prctl.h
-index 754a07856817..aad0bcfbf49f 100644
---- a/arch/x86/include/uapi/asm/prctl.h
-+++ b/arch/x86/include/uapi/asm/prctl.h
-@@ -18,4 +18,6 @@
- #define ARCH_MAP_VDSO_32	0x2002
- #define ARCH_MAP_VDSO_64	0x2003
- 
-+#define ARCH_VSYSCALL_CONTROL	0x5001
-+
- #endif /* _ASM_X86_PRCTL_H */
-diff --git a/arch/x86/kernel/process_64.c b/arch/x86/kernel/process_64.c
-index 3402edec236c..834bad068211 100644
---- a/arch/x86/kernel/process_64.c
-+++ b/arch/x86/kernel/process_64.c
-@@ -816,6 +816,13 @@ long do_arch_prctl_64(struct task_struct *task, int option, unsigned long arg2)
- 		ret = put_user(base, (unsigned long __user *)arg2);
- 		break;
- 	}
-+#ifdef CONFIG_X86_VSYSCALL_EMULATION
-+	case ARCH_VSYSCALL_CONTROL:
-+		if (unlikely(arg2 > 1))
-+			return -EINVAL;
-+		current->mm->context.vsyscall_disabled = !arg2;
-+		break;
-+#endif
- 
- #ifdef CONFIG_CHECKPOINT_RESTORE
- # ifdef CONFIG_X86_X32_ABI
-
-base-commit: c9e6606c7fe92b50a02ce51dda82586ebdf99b48
+ # x86_64 users should be encouraged to install 32-bit libraries
+ ifeq ($(CAN_BUILD_I386)$(CAN_BUILD_X86_64),01)
 -- 
 2.33.1
 
