@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21526-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21527-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 84842C433F5
-	for <kernel-hardening@archiver.kernel.org>; Tue,  4 Jan 2022 15:46:23 +0000 (UTC)
-Received: (qmail 3231 invoked by uid 550); 4 Jan 2022 15:45:29 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 83B60C433F5
+	for <kernel-hardening@archiver.kernel.org>; Wed,  5 Jan 2022 16:03:26 +0000 (UTC)
+Received: (qmail 3674 invoked by uid 550); 5 Jan 2022 16:03:17 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,579 +12,155 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3150 invoked from network); 4 Jan 2022 15:45:26 -0000
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-To: Al Viro <viro@zeniv.linux.org.uk>,
-	Andrew Morton <akpm@linux-foundation.org>
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
-	Alejandro Colomar <alx.manpages@gmail.com>,
-	Aleksa Sarai <cyphar@cyphar.com>,
-	Andy Lutomirski <luto@kernel.org>,
-	Arnd Bergmann <arnd@arndb.de>,
-	Casey Schaufler <casey@schaufler-ca.com>,
-	Christian Brauner <christian.brauner@ubuntu.com>,
-	Christian Heimes <christian@python.org>,
-	Deven Bowers <deven.desai@linux.microsoft.com>,
-	Dmitry Vyukov <dvyukov@google.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	Eric Chiang <ericchiang@google.com>,
-	Florian Weimer <fweimer@redhat.com>,
-	Geert Uytterhoeven <geert@linux-m68k.org>,
-	James Morris <jmorris@namei.org>,
-	Jan Kara <jack@suse.cz>,
-	Jann Horn <jannh@google.com>,
-	Jonathan Corbet <corbet@lwn.net>,
-	Kees Cook <keescook@chromium.org>,
-	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>,
-	Luis Chamberlain <mcgrof@kernel.org>,
-	"Madhavan T . Venkataraman" <madvenka@linux.microsoft.com>,
-	Matthew Garrett <mjg59@google.com>,
-	Matthew Wilcox <willy@infradead.org>,
-	Miklos Szeredi <mszeredi@redhat.com>,
-	Mimi Zohar <zohar@linux.ibm.com>,
-	Paul Moore <paul@paul-moore.com>,
-	=?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>,
-	Scott Shell <scottsh@microsoft.com>,
-	Shuah Khan <shuah@kernel.org>,
-	Stephen Rothwell <sfr@canb.auug.org.au>,
-	Steve Dower <steve.dower@python.org>,
-	Steve Grubb <sgrubb@redhat.com>,
-	Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>,
-	Vincent Strubel <vincent.strubel@ssi.gouv.fr>,
-	Xiaoming Ni <nixiaoming@huawei.com>,
-	Yin Fengwei <fengwei.yin@intel.com>,
-	kernel-hardening@lists.openwall.com,
-	linux-api@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	linux-integrity@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	=?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@linux.microsoft.com>
-Subject: [PATCH v18 4/4] selftest/interpreter: Add tests for trusted_for(2) policies
-Date: Tue,  4 Jan 2022 16:50:24 +0100
-Message-Id: <20220104155024.48023-5-mic@digikod.net>
-X-Mailer: git-send-email 2.34.1
-In-Reply-To: <20220104155024.48023-1-mic@digikod.net>
-References: <20220104155024.48023-1-mic@digikod.net>
+Received: (qmail 3651 invoked from network); 5 Jan 2022 16:03:15 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1641398583;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
+	bh=u480/OJwej/j4wzpGe245oMyGEylv5FGLU/iblhaqfE=;
+	b=DBIiaMpLbObhJg+8kvMUlW6avXSq7VRHEpPFcr329lqR7+sjhd1HEx/xHxFIatSS6G+qW8
+	XYx6LX5liF5CeIW1pdgaFvcaNlV/x3l9NDAyaexz1QaI+QPFuRaa4EOO2RClmPV2C8CVqt
+	sA8F0wfJOkhFFvcE2NRS+zvWuhbuiFA=
+X-MC-Unique: t5IN1CUtOdmuiemFARbXUw-1
+From: Florian Weimer <fweimer@redhat.com>
+To: "Andy Lutomirski" <luto@kernel.org>
+Cc: linux-arch@vger.kernel.org,
+        "Linux API" <linux-api@vger.kernel.org>,
+        linux-x86_64@vger.kernel.org, kernel-hardening@lists.openwall.com,
+        linux-mm@kvack.org, "the arch/x86 maintainers" <x86@kernel.org>,
+        musl@lists.openwall.com, <libc-alpha@sourceware.org>,
+        <linux-kernel@vger.kernel.org>,
+        "Dave Hansen" <dave.hansen@intel.com>,
+        "Kees Cook" <keescook@chromium.org>, Andrei Vagin <avagin@gmail.com>
+Subject: [PATCH v3 1/3] x86: Implement arch_prctl(ARCH_VSYSCALL_CONTROL) to
+ disable vsyscall
+X-From-Line: 3a1c8280967b491bf6917a18fbff6c9b52e8df24 Mon Sep 17 00:00:00 2001
+Message-Id: <3a1c8280967b491bf6917a18fbff6c9b52e8df24.1641398395.git.fweimer@redhat.com>
+Date: Wed, 05 Jan 2022 17:02:48 +0100
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/27.2 (gnu/linux)
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain
+X-Scanned-By: MIMEDefang 2.79 on 10.5.11.11
 
-From: Mickaël Salaün <mic@linux.microsoft.com>
+Distributions struggle with changing the default for vsyscall
+emulation because it is a clear break of userspace ABI, something
+that should not happen.
 
-Test that checks performed by trusted_for(2) on file descriptors are
-consistent with noexec mount points and file execute permissions,
-according to the policy configured with the fs.trust_policy sysctl.
+The legacy vsyscall interface is supposed to be used by libcs only,
+not by applications.  This commit adds a new arch_prctl request,
+ARCH_VSYSCALL_CONTROL, with one argument.  If the argument is 0,
+executing vsyscalls will cause the process to terminate.  Argument 1
+turns vsyscall back on (this is mostly for a largely theoretical
+CRIU use case).
 
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Arnd Bergmann <arnd@arndb.de>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Shuah Khan <shuah@kernel.org>
-Signed-off-by: Mickaël Salaün <mic@linux.microsoft.com>
-Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Link: https://lore.kernel.org/r/20220104155024.48023-5-mic@digikod.net
+Newer libcs can use a zero ARCH_VSYSCALL_CONTROL at startup to disable
+vsyscall for the process.  Legacy libcs do not perform this call, so
+vsyscall remains enabled for them.  This approach should achieves
+backwards compatibility (perfect compatibility if the assumption that
+only libcs use vsyscall is accurate), and it provides full hardening
+for new binaries.
+
+The chosen value of ARCH_VSYSCALL_CONTROL should avoid conflicts
+with other x86-64 arch_prctl requests.  The fact that with
+vsyscall=emulate, reading the vsyscall region is still possible
+even after a zero ARCH_VSYSCALL_CONTROL is considered limitation
+in the current implementation and may change in a future kernel
+version.
+
+Future arch_prctls requests commonly used at process startup can imply
+ARCH_VSYSCALL_CONTROL with a zero argument, so that a separate system
+call for disabling vsyscall is avoided.
+
+Signed-off-by: Florian Weimer <fweimer@redhat.com>
+Acked-by: Andrei Vagin <avagin@gmail.com>
 ---
+v3: Remove warning log message.  Split out test.
+v2: ARCH_VSYSCALL_CONTROL instead of ARCH_VSYSCALL_LOCKOUT.  New tests
+    for the toggle behavior.  Implement hiding [vsyscall] in
+    /proc/PID/maps and test it.  Various other test fixes cleanups
+    (e.g., fixed missing second argument to gettimeofday).
 
-Changes since v14:
-* Add Reviewed-by Kees Cook.
+arch/x86/entry/vsyscall/vsyscall_64.c | 7 ++++++-
+ arch/x86/include/asm/mmu.h            | 6 ++++++
+ arch/x86/include/uapi/asm/prctl.h     | 2 ++
+ arch/x86/kernel/process_64.c          | 7 +++++++
+ 4 files changed, 21 insertions(+), 1 deletion(-)
 
-Changes since v13:
-* Move -I to CFLAGS (suggested by Kees Cook).
-* Update sysctl name.
-
-Changes since v12:
-* Fix Makefile's license.
-
-Changes since v10:
-* Update selftest Makefile.
-
-Changes since v9:
-* Rename the syscall and the sysctl.
-* Update tests for enum trusted_for_usage
-
-Changes since v8:
-* Update with the dedicated syscall introspect_access(2) and the renamed
-  fs.introspection_policy sysctl.
-* Remove check symlink which can't be use as is anymore.
-* Use socketpair(2) to test UNIX socket.
-
-Changes since v7:
-* Update tests with faccessat2/AT_INTERPRETED, including new ones to
-  check that setting R_OK or W_OK returns EINVAL.
-* Add tests for memfd, pipefs and nsfs.
-* Rename and move back tests to a standalone directory.
-
-Changes since v6:
-* Add full combination tests for all file types, including block
-  devices, character devices, fifos, sockets and symlinks.
-* Properly save and restore initial sysctl value for all tests.
-
-Changes since v5:
-* Refactor with FIXTURE_VARIANT, which make the tests much more easy to
-  read and maintain.
-* Save and restore initial sysctl value (suggested by Kees Cook).
-* Test with a sysctl value of 0.
-* Check errno in sysctl_access_write test.
-* Update tests for the CAP_SYS_ADMIN switch.
-* Update tests to check -EISDIR (replacing -EACCES).
-* Replace FIXTURE_DATA() with FIXTURE() (spotted by Kees Cook).
-* Use global const strings.
-
-Changes since v3:
-* Replace RESOLVE_MAYEXEC with O_MAYEXEC.
-* Add tests to check that O_MAYEXEC is ignored by open(2) and openat(2).
-
-Changes since v2:
-* Move tests from exec/ to openat2/ .
-* Replace O_MAYEXEC with RESOLVE_MAYEXEC from openat2(2).
-* Cleanup tests.
-
-Changes since v1:
-* Move tests from yama/ to exec/ .
-* Fix _GNU_SOURCE in kselftest_harness.h .
-* Add a new test sysctl_access_write to check if CAP_MAC_ADMIN is taken
-  into account.
-* Test directory execution which is always forbidden since commit
-  73601ea5b7b1 ("fs/open.c: allow opening only regular files during
-  execve()"), and also check that even the root user can not bypass file
-  execution checks.
-* Make sure delete_workspace() always as enough right to succeed.
-* Cosmetic cleanup.
----
- tools/testing/selftests/Makefile              |   1 +
- .../testing/selftests/interpreter/.gitignore  |   2 +
- tools/testing/selftests/interpreter/Makefile  |  21 +
- tools/testing/selftests/interpreter/config    |   1 +
- .../selftests/interpreter/trust_policy_test.c | 362 ++++++++++++++++++
- 5 files changed, 387 insertions(+)
- create mode 100644 tools/testing/selftests/interpreter/.gitignore
- create mode 100644 tools/testing/selftests/interpreter/Makefile
- create mode 100644 tools/testing/selftests/interpreter/config
- create mode 100644 tools/testing/selftests/interpreter/trust_policy_test.c
-
-diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
-index d08fe4cfe811..d6a54a1d9d3a 100644
---- a/tools/testing/selftests/Makefile
-+++ b/tools/testing/selftests/Makefile
-@@ -21,6 +21,7 @@ TARGETS += ftrace
- TARGETS += futex
- TARGETS += gpio
- TARGETS += intel_pstate
-+TARGETS += interpreter
- TARGETS += ipc
- TARGETS += ir
- TARGETS += kcmp
-diff --git a/tools/testing/selftests/interpreter/.gitignore b/tools/testing/selftests/interpreter/.gitignore
-new file mode 100644
-index 000000000000..82a4846cbc4b
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/.gitignore
-@@ -0,0 +1,2 @@
-+# SPDX-License-Identifier: GPL-2.0-only
-+/*_test
-diff --git a/tools/testing/selftests/interpreter/Makefile b/tools/testing/selftests/interpreter/Makefile
-new file mode 100644
-index 000000000000..7402fdb6533f
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/Makefile
-@@ -0,0 +1,21 @@
-+# SPDX-License-Identifier: GPL-2.0
+diff --git a/arch/x86/entry/vsyscall/vsyscall_64.c b/arch/x86/entry/vsyscall/vsyscall_64.c
+index fd2ee9408e91..6fc524b9f232 100644
+--- a/arch/x86/entry/vsyscall/vsyscall_64.c
++++ b/arch/x86/entry/vsyscall/vsyscall_64.c
+@@ -174,6 +174,9 @@ bool emulate_vsyscall(unsigned long error_code,
+ 
+ 	tsk = current;
+ 
++	if (tsk->mm->context.vsyscall_disabled)
++		goto sigsegv;
 +
-+CFLAGS += -Wall -O2 -I$(khdr_dir)
-+LDLIBS += -lcap
-+
-+src_test := $(wildcard *_test.c)
-+TEST_GEN_PROGS := $(src_test:.c=)
-+
-+KSFT_KHDR_INSTALL := 1
-+include ../lib.mk
-+
-+khdr_dir = $(top_srcdir)/usr/include
-+
-+$(khdr_dir)/asm-generic/unistd.h: khdr
-+	@:
-+
-+$(khdr_dir)/linux/trusted-for.h: khdr
-+	@:
-+
-+$(OUTPUT)/%_test: %_test.c $(khdr_dir)/asm-generic/unistd.h $(khdr_dir)/linux/trusted-for.h ../kselftest_harness.h
-+	$(LINK.c) $< $(LDLIBS) -o $@
-diff --git a/tools/testing/selftests/interpreter/config b/tools/testing/selftests/interpreter/config
-new file mode 100644
-index 000000000000..dd53c266bf52
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/config
-@@ -0,0 +1 @@
-+CONFIG_SYSCTL=y
-diff --git a/tools/testing/selftests/interpreter/trust_policy_test.c b/tools/testing/selftests/interpreter/trust_policy_test.c
-new file mode 100644
-index 000000000000..b59f07f537ad
---- /dev/null
-+++ b/tools/testing/selftests/interpreter/trust_policy_test.c
-@@ -0,0 +1,362 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Test trusted_for(2) with fs.trusted_for_policy sysctl
-+ *
-+ * Copyright © 2018-2020 ANSSI
-+ *
-+ * Author: Mickaël Salaün <mic@digikod.net>
-+ */
-+
-+#define _GNU_SOURCE
-+#include <asm-generic/unistd.h>
-+#include <errno.h>
-+#include <fcntl.h>
-+#include <linux/trusted-for.h>
-+#include <stdio.h>
-+#include <stdlib.h>
-+#include <sys/capability.h>
-+#include <sys/mman.h>
-+#include <sys/mount.h>
-+#include <sys/socket.h>
-+#include <sys/stat.h>
-+#include <sys/syscall.h>
-+#include <sys/sysmacros.h>
-+#include <sys/types.h>
-+#include <unistd.h>
-+
-+#include "../kselftest_harness.h"
-+
-+#ifndef trusted_for
-+static int trusted_for(const int fd, const enum trusted_for_usage usage,
-+		const __u32 flags)
-+{
-+	errno = 0;
-+	return syscall(__NR_trusted_for, fd, usage, flags);
-+}
-+#endif
-+
-+static const char sysctl_path[] = "/proc/sys/fs/trusted_for_policy";
-+
-+static const char workdir_path[] = "./test-mount";
-+static const char reg_file_path[] = "./test-mount/regular_file";
-+static const char dir_path[] = "./test-mount/directory";
-+static const char block_dev_path[] = "./test-mount/block_device";
-+static const char char_dev_path[] = "./test-mount/character_device";
-+static const char fifo_path[] = "./test-mount/fifo";
-+
-+static void ignore_dac(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[2] = {
-+		CAP_DAC_OVERRIDE,
-+		CAP_DAC_READ_SEARCH,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void ignore_sys_admin(struct __test_metadata *_metadata, int override)
-+{
-+	cap_t caps;
-+	const cap_value_t cap_val[1] = {
-+		CAP_SYS_ADMIN,
-+	};
-+
-+	caps = cap_get_proc();
-+	ASSERT_NE(NULL, caps);
-+	ASSERT_EQ(0, cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_val,
-+				override ? CAP_SET : CAP_CLEAR));
-+	ASSERT_EQ(0, cap_set_proc(caps));
-+	EXPECT_EQ(0, cap_free(caps));
-+}
-+
-+static void test_omx(struct __test_metadata *_metadata,
-+		const char *const path, const int err_access)
-+{
-+	int flags = O_RDONLY | O_CLOEXEC;
-+	int fd, access_ret, access_errno;
-+
-+	/* Do not block on pipes. */
-+	if (path == fifo_path)
-+		flags |= O_NONBLOCK;
-+
-+	fd = open(path, flags);
-+	ASSERT_LE(0, fd) {
-+		TH_LOG("Failed to open %s: %s", path, strerror(errno));
-+	}
-+	access_ret = trusted_for(fd, TRUSTED_FOR_EXECUTION, 0);
-+	access_errno = errno;
-+	if (err_access) {
-+		ASSERT_EQ(err_access, access_errno) {
-+			TH_LOG("Wrong error for trusted_for(2) with %s: %s",
-+					path, strerror(access_errno));
-+		}
-+		ASSERT_EQ(-1, access_ret);
-+	} else {
-+		ASSERT_EQ(0, access_ret) {
-+			TH_LOG("Access denied for %s: %s", path, strerror(access_errno));
-+		}
-+	}
-+
-+	/* Tests unsupported trusted usage. */
-+	access_ret = trusted_for(fd, 0, 0);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+
-+	access_ret = trusted_for(fd, 2, 0);
-+	ASSERT_EQ(-1, access_ret);
-+	ASSERT_EQ(EINVAL, errno);
-+
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+static void test_policy_fd(struct __test_metadata *_metadata, const int fd,
-+		const bool has_policy)
-+{
-+	const int ret = trusted_for(fd, TRUSTED_FOR_EXECUTION, 0);
-+
-+	if (has_policy) {
-+		ASSERT_EQ(-1, ret);
-+		ASSERT_EQ(EACCES, errno) {
-+			TH_LOG("Wrong error for trusted_for(2) with FD: %s", strerror(errno));
-+		}
-+	} else {
-+		ASSERT_EQ(0, ret) {
-+			TH_LOG("Access denied for FD: %s", strerror(errno));
-+		}
-+	}
-+}
-+
-+FIXTURE(access) {
-+	char initial_sysctl_value;
-+	int memfd, pipefd;
-+	int pipe_fds[2], socket_fds[2];
-+};
-+
-+static void test_file_types(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests are performed on a tmpfs mount point. */
-+	test_omx(_metadata, reg_file_path, err_code);
-+	test_omx(_metadata, dir_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, block_dev_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, char_dev_path, has_policy ? EACCES : 0);
-+	test_omx(_metadata, fifo_path, has_policy ? EACCES : 0);
-+
-+	/* Checks that exec is denied for any socket FD. */
-+	test_policy_fd(_metadata, self->socket_fds[0], has_policy);
-+
-+	/* Checks that exec is denied for any memfd. */
-+	test_policy_fd(_metadata, self->memfd, has_policy);
-+
-+	/* Checks that exec is denied for any pipefs FD. */
-+	test_policy_fd(_metadata, self->pipefd, has_policy);
-+}
-+
-+static void test_files(struct __test_metadata *_metadata, FIXTURE_DATA(access) *self,
-+		const int err_code, const bool has_policy)
-+{
-+	/* Tests as root. */
-+	ignore_dac(_metadata, 1);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+
-+	/* Tests without bypass. */
-+	ignore_dac(_metadata, 0);
-+	test_file_types(_metadata, self, err_code, has_policy);
-+}
-+
-+static void sysctl_write_char(struct __test_metadata *_metadata, const char value)
-+{
-+	int fd;
-+
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, write(fd, &value, 1));
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+static char sysctl_read_char(struct __test_metadata *_metadata)
-+{
-+	int fd;
-+	char sysctl_value;
-+
-+	fd = open(sysctl_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ASSERT_EQ(1, read(fd, &sysctl_value, 1));
-+	EXPECT_EQ(0, close(fd));
-+	return sysctl_value;
-+}
-+
-+FIXTURE_VARIANT(access) {
-+	const bool mount_exec;
-+	const bool file_exec;
-+	const int sysctl_err_code[3];
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_exec) {
-+	.mount_exec = true,
-+	.file_exec = true,
-+	.sysctl_err_code = {0, 0, 0},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_exec_file_noexec)
-+{
-+	.mount_exec = true,
-+	.file_exec = false,
-+	.sysctl_err_code = {0, EACCES, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_exec)
-+{
-+	.mount_exec = false,
-+	.file_exec = true,
-+	.sysctl_err_code = {EACCES, 0, EACCES},
-+};
-+
-+FIXTURE_VARIANT_ADD(access, mount_noexec_file_noexec)
-+{
-+	.mount_exec = false,
-+	.file_exec = false,
-+	.sysctl_err_code = {EACCES, EACCES, EACCES},
-+};
-+
-+FIXTURE_SETUP(access)
-+{
-+	int procfd_path_size;
-+	static const char path_template[] = "/proc/self/fd/%d";
-+	char procfd_path[sizeof(path_template) + 10];
-+
+ 	/*
+ 	 * Check for access_ok violations and find the syscall nr.
+ 	 *
+@@ -316,8 +319,10 @@ static struct vm_area_struct gate_vma __ro_after_init = {
+ 
+ struct vm_area_struct *get_gate_vma(struct mm_struct *mm)
+ {
++	if (!mm || mm->context.vsyscall_disabled)
++		return NULL;
+ #ifdef CONFIG_COMPAT
+-	if (!mm || !(mm->context.flags & MM_CONTEXT_HAS_VSYSCALL))
++	if (!(mm->context.flags & MM_CONTEXT_HAS_VSYSCALL))
+ 		return NULL;
+ #endif
+ 	if (vsyscall_mode == NONE)
+diff --git a/arch/x86/include/asm/mmu.h b/arch/x86/include/asm/mmu.h
+index 5d7494631ea9..3934d6907910 100644
+--- a/arch/x86/include/asm/mmu.h
++++ b/arch/x86/include/asm/mmu.h
+@@ -41,6 +41,12 @@ typedef struct {
+ #ifdef CONFIG_X86_64
+ 	unsigned short flags;
+ #endif
++#ifdef CONFIG_X86_VSYSCALL_EMULATION
 +	/*
-+	 * Cleans previous workspace if any error previously happened (don't
-+	 * check errors).
++	 * Changed by arch_prctl(ARCH_VSYSCALL_CONTROL).
 +	 */
-+	umount(workdir_path);
-+	rmdir(workdir_path);
++	bool vsyscall_disabled;
++#endif
+ 
+ 	struct mutex lock;
+ 	void __user *vdso;			/* vdso base address */
+diff --git a/arch/x86/include/uapi/asm/prctl.h b/arch/x86/include/uapi/asm/prctl.h
+index 754a07856817..aad0bcfbf49f 100644
+--- a/arch/x86/include/uapi/asm/prctl.h
++++ b/arch/x86/include/uapi/asm/prctl.h
+@@ -18,4 +18,6 @@
+ #define ARCH_MAP_VDSO_32	0x2002
+ #define ARCH_MAP_VDSO_64	0x2003
+ 
++#define ARCH_VSYSCALL_CONTROL	0x5001
 +
-+	/* Creates a clean mount point. */
-+	ASSERT_EQ(0, mkdir(workdir_path, 00700));
-+	ASSERT_EQ(0, mount("test", workdir_path, "tmpfs", MS_MGC_VAL |
-+				(variant->mount_exec ? 0 : MS_NOEXEC),
-+				"mode=0700,size=4k"));
-+
-+	/* Creates a regular file. */
-+	ASSERT_EQ(0, mknod(reg_file_path, S_IFREG | (variant->file_exec ? 0500 : 0400), 0));
-+	/* Creates a directory. */
-+	ASSERT_EQ(0, mkdir(dir_path, variant->file_exec ? 0500 : 0400));
-+	/* Creates a character device: /dev/null. */
-+	ASSERT_EQ(0, mknod(char_dev_path, S_IFCHR | 0400, makedev(1, 3)));
-+	/* Creates a block device: /dev/loop0 */
-+	ASSERT_EQ(0, mknod(block_dev_path, S_IFBLK | 0400, makedev(7, 0)));
-+	/* Creates a fifo. */
-+	ASSERT_EQ(0, mknod(fifo_path, S_IFIFO | 0400, 0));
-+
-+	/* Creates a regular file without user mount point. */
-+	self->memfd = memfd_create("test-interpreted", MFD_CLOEXEC);
-+	ASSERT_LE(0, self->memfd);
-+	/* Sets mode, which must be ignored by the exec check. */
-+	ASSERT_EQ(0, fchmod(self->memfd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Creates a pipefs file descriptor. */
-+	ASSERT_EQ(0, pipe(self->pipe_fds));
-+	procfd_path_size = snprintf(procfd_path, sizeof(procfd_path),
-+			path_template, self->pipe_fds[0]);
-+	ASSERT_LT(procfd_path_size, sizeof(procfd_path));
-+	self->pipefd = open(procfd_path, O_RDONLY | O_CLOEXEC);
-+	ASSERT_LE(0, self->pipefd);
-+	ASSERT_EQ(0, fchmod(self->pipefd, variant->file_exec ? 0500 : 0400));
-+
-+	/* Creates a socket file descriptor. */
-+	ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0, self->socket_fds));
-+
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+
-+	/* Prepares for sysctl writes. */
-+	ignore_sys_admin(_metadata, 1);
-+}
-+
-+FIXTURE_TEARDOWN(access)
-+{
-+	EXPECT_EQ(0, close(self->memfd));
-+	EXPECT_EQ(0, close(self->pipefd));
-+	EXPECT_EQ(0, close(self->pipe_fds[0]));
-+	EXPECT_EQ(0, close(self->pipe_fds[1]));
-+	EXPECT_EQ(0, close(self->socket_fds[0]));
-+	EXPECT_EQ(0, close(self->socket_fds[1]));
-+
-+	/* Restores initial sysctl value. */
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+
-+	/* There is no need to unlink the test files. */
-+	ASSERT_EQ(0, umount(workdir_path));
-+	ASSERT_EQ(0, rmdir(workdir_path));
-+}
-+
-+TEST_F(access, sysctl_0)
-+{
-+	/* Do not enforce anything. */
-+	sysctl_write_char(_metadata, '0');
-+	test_files(_metadata, self, 0, false);
-+}
-+
-+TEST_F(access, sysctl_1)
-+{
-+	/* Enforces mount exec check. */
-+	sysctl_write_char(_metadata, '1');
-+	test_files(_metadata, self, variant->sysctl_err_code[0], true);
-+}
-+
-+TEST_F(access, sysctl_2)
-+{
-+	/* Enforces file exec check. */
-+	sysctl_write_char(_metadata, '2');
-+	test_files(_metadata, self, variant->sysctl_err_code[1], true);
-+}
-+
-+TEST_F(access, sysctl_3)
-+{
-+	/* Enforces mount and file exec check. */
-+	sysctl_write_char(_metadata, '3');
-+	test_files(_metadata, self, variant->sysctl_err_code[2], true);
-+}
-+
-+FIXTURE(cleanup) {
-+	char initial_sysctl_value;
-+};
-+
-+FIXTURE_SETUP(cleanup)
-+{
-+	/* Saves initial sysctl value. */
-+	self->initial_sysctl_value = sysctl_read_char(_metadata);
-+}
-+
-+FIXTURE_TEARDOWN(cleanup)
-+{
-+	/* Restores initial sysctl value. */
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, self->initial_sysctl_value);
-+}
-+
-+TEST_F(cleanup, sysctl_access_write)
-+{
-+	int fd;
-+	ssize_t ret;
-+
-+	ignore_sys_admin(_metadata, 1);
-+	sysctl_write_char(_metadata, '0');
-+
-+	ignore_sys_admin(_metadata, 0);
-+	fd = open(sysctl_path, O_WRONLY | O_CLOEXEC);
-+	ASSERT_LE(0, fd);
-+	ret = write(fd, "0", 1);
-+	ASSERT_EQ(-1, ret);
-+	ASSERT_EQ(EPERM, errno);
-+	EXPECT_EQ(0, close(fd));
-+}
-+
-+TEST_HARNESS_MAIN
+ #endif /* _ASM_X86_PRCTL_H */
+diff --git a/arch/x86/kernel/process_64.c b/arch/x86/kernel/process_64.c
+index 3402edec236c..834bad068211 100644
+--- a/arch/x86/kernel/process_64.c
++++ b/arch/x86/kernel/process_64.c
+@@ -816,6 +816,13 @@ long do_arch_prctl_64(struct task_struct *task, int option, unsigned long arg2)
+ 		ret = put_user(base, (unsigned long __user *)arg2);
+ 		break;
+ 	}
++#ifdef CONFIG_X86_VSYSCALL_EMULATION
++	case ARCH_VSYSCALL_CONTROL:
++		if (unlikely(arg2 > 1))
++			return -EINVAL;
++		current->mm->context.vsyscall_disabled = !arg2;
++		break;
++#endif
+ 
+ #ifdef CONFIG_CHECKPOINT_RESTORE
+ # ifdef CONFIG_X86_X32_ABI
+
+base-commit: c9e6606c7fe92b50a02ce51dda82586ebdf99b48
 -- 
-2.34.1
+2.33.1
+
 
