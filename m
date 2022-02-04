@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21539-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21540-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 73BCCC433EF
-	for <kernel-hardening@archiver.kernel.org>; Fri, 14 Jan 2022 13:36:53 +0000 (UTC)
-Received: (qmail 19832 invoked by uid 550); 14 Jan 2022 13:36:46 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 7FD9AC433F5
+	for <kernel-hardening@archiver.kernel.org>; Fri,  4 Feb 2022 06:55:21 +0000 (UTC)
+Received: (qmail 15641 invoked by uid 550); 4 Feb 2022 06:55:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,71 +12,125 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19812 invoked from network); 14 Jan 2022 13:36:45 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1642167393;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=n+u9lImGJHsltEhgnOxi+5lKtT79IMZvETmYQxQXldM=;
-	b=Ho1pcNbDqKUWSpdCjhfeO6emBuO6G2ARwfuIgXjrxa19ots/Yo1mrE+SOD0dWf6t16zx6k
-	YXZHSoSqbTAsvJgaGRv9MXXFdTnMWRIVTZ7aVh9q8gpHOYQEG4n32P7eg9z0bDCR/BMBZ0
-	QweIy/+US7QgDYG/NiDwqm2UvrfKkG8=
-X-MC-Unique: eQAah2ufPRiIcSj7ZNrWFg-1
-From: Florian Weimer <fweimer@redhat.com>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: linux-arch@vger.kernel.org,  Linux API <linux-api@vger.kernel.org>,
-  linux-x86_64@vger.kernel.org,  kernel-hardening@lists.openwall.com,
-  linux-mm@kvack.org,  the arch/x86 maintainers <x86@kernel.org>,
-  musl@lists.openwall.com,  libc-alpha@sourceware.org,
-  linux-kernel@vger.kernel.org,  Dave Hansen <dave.hansen@intel.com>,  Kees
- Cook <keescook@chromium.org>,  Andrei Vagin <avagin@gmail.com>
-Subject: Re: [PATCH v3 1/3] x86: Implement arch_prctl(ARCH_VSYSCALL_CONTROL)
- to disable vsyscall
-References: <3a1c8280967b491bf6917a18fbff6c9b52e8df24.1641398395.git.fweimer@redhat.com>
-	<e431fa42-26ec-8ac6-f954-e681b1e0e9a6@kernel.org>
-Date: Fri, 14 Jan 2022 14:36:24 +0100
-In-Reply-To: <e431fa42-26ec-8ac6-f954-e681b1e0e9a6@kernel.org> (Andy
-	Lutomirski's message of "Thu, 13 Jan 2022 13:47:26 -0800")
-Message-ID: <87sftqtp5z.fsf@oldenburg.str.redhat.com>
-User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/27.2 (gnu/linux)
+Received: (qmail 15609 invoked from network); 4 Feb 2022 06:55:11 -0000
+From: "Anton V. Boyarshinov" <boyarsh@altlinux.org>
+To: viro@zeniv.linux.org.uk,
+	linux-fsdevel@vger.kernel.org
+Cc: "Anton V. Boyarshinov" <boyarsh@altlinux.org>,
+	ebiederm@xmission.com,
+	legion@kernel.org,
+	ldv@altlinux.org,
+	linux-kernel@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: [PATCH] Add ability to disallow idmapped mounts
+Date: Fri,  4 Feb 2022 09:53:38 +0300
+Message-Id: <20220204065338.251469-1-boyarsh@altlinux.org>
+X-Mailer: git-send-email 2.25.4
 MIME-Version: 1.0
-Content-Type: text/plain
-X-Scanned-By: MIMEDefang 2.79 on 10.5.11.15
+Content-Transfer-Encoding: 8bit
 
-* Andy Lutomirski:
+Idmapped mounts may have security implications [1] and have
+no knobs to be disallowed at runtime or compile time.
 
-> Is there a reason you didn't just change the check earlier in the
-> function to:
->
-> if (vsyscall_mode == NONE || current->mm->context.vsyscall_disabled)
+This patch adds a sysctl and a config option to set its default value.
 
-Andrei requested that I don't print anything if vsyscall was disabled.
+[1] https://lore.kernel.org/all/m18s7481xc.fsf@fess.ebiederm.org/
 
-The original patch used a different message for better diagnostics.
+Based on work from Alexey Gladkov <legion@kernel.org>.
 
-> Also, I still think the prctl should not be available if
-> vsyscall=emulate.  Either we should fully implement it or we should
-> not implement.  We could even do:
->
-> pr_warn_once("userspace vsyscall hardening request ignored because you
-> have vsyscall=emulate.  Unless you absolutely need vsyscall=emulate, 
-> update your system to use vsyscall=xonly.\n");
->
-> and thus encourage good behavior.
+Signed-off-by: Anton V. Boyarshinov <boyarsh@altlinux.org>
+---
+ Documentation/admin-guide/sysctl/fs.rst | 12 ++++++++++++
+ fs/Kconfig                              |  8 ++++++++
+ fs/namespace.c                          | 21 ++++++++++++++++++++-
+ 3 files changed, 40 insertions(+), 1 deletion(-)
 
-I think there is still some hardening applied even with
-vsyscall=emulate.  The question is what is more important: the
-additional hardening, or clean, easily described behavior of the
-interface.
-
-Maybe ARCH_VSYSCALL_CONTROL could return different values based on to
-what degree it could disable vsyscall?
-
-The pr_warn_once does not seem particularly useful.  Anyone who upgrades
-glibc and still uses vsyscall=emulate will see that, with no way to
-disable it.
-
-Thanks,
-Florian
+diff --git a/Documentation/admin-guide/sysctl/fs.rst b/Documentation/admin-guide/sysctl/fs.rst
+index 2a501c9ddc55..f758c4ae5f66 100644
+--- a/Documentation/admin-guide/sysctl/fs.rst
++++ b/Documentation/admin-guide/sysctl/fs.rst
+@@ -105,6 +105,18 @@ you have some awesome number of simultaneous system users,
+ you might want to raise the limit.
+ 
+ 
++idmap_mounts
++------------
++
++Idmapped mounts may have security implications.
++This knob controls whether creation of idmapped mounts is allowed.
++When set to "1", creation of idmapped mounts is allowed.
++When set to "0", creation of idmapped mounts is not allowed.
++
++The default value is
++* 0, if ``IDMAP_MOUNTS_DEFAULT_OFF`` is enabled in the kernel configuration;
++* 1, otherwise.
++
+ file-max & file-nr
+ ------------------
+ 
+diff --git a/fs/Kconfig b/fs/Kconfig
+index 7a2b11c0b803..d2203ba0183d 100644
+--- a/fs/Kconfig
++++ b/fs/Kconfig
+@@ -385,4 +385,12 @@ source "fs/unicode/Kconfig"
+ config IO_WQ
+ 	bool
+ 
++config IDMAP_MOUNTS_DEFAULT_OFF
++       bool "Disallow idmappad mounts by default"
++       help
++         Idmapped mounts may have security implications.
++         Enable this to disallow idmapped mounts by setting
++         the default value of /proc/sys/fs/idmap_mounts to 0.
++
++
+ endmenu
+diff --git a/fs/namespace.c b/fs/namespace.c
+index 40b994a29e90..66501ad75537 100644
+--- a/fs/namespace.c
++++ b/fs/namespace.c
+@@ -39,6 +39,10 @@
+ /* Maximum number of mounts in a mount namespace */
+ static unsigned int sysctl_mount_max __read_mostly = 100000;
+ 
++/* Whether idmapped mounts are allowed. */
++static int sysctl_idmap_mounts __read_mostly =
++	IS_ENABLED(CONFIG_IDMAP_MOUNTS_DEFAULT_OFF) ? 0 : 1;
++
+ static unsigned int m_hash_mask __read_mostly;
+ static unsigned int m_hash_shift __read_mostly;
+ static unsigned int mp_hash_mask __read_mostly;
+@@ -3965,7 +3969,13 @@ static int can_idmap_mount(const struct mount_kattr *kattr, struct mount *mnt)
+ 	if (!is_anon_ns(mnt->mnt_ns))
+ 		return -EINVAL;
+ 
+-	return 0;
++	/* So far, there are concerns about the safety of idmaps. */
++	if (!sysctl_idmap_mounts) {
++		pr_warn_once("VFS: idmapped mounts are not allowed.\n");
++		return -EPERM;
++	} else {
++		return 0;
++	}
+ }
+ 
+ static struct mount *mount_setattr_prepare(struct mount_kattr *kattr,
+@@ -4631,6 +4641,15 @@ static struct ctl_table fs_namespace_sysctls[] = {
+ 		.proc_handler	= proc_dointvec_minmax,
+ 		.extra1		= SYSCTL_ONE,
+ 	},
++	{
++		.procname       = "idmap_mounts",
++		.data           = &sysctl_idmap_mounts,
++		.maxlen         = sizeof(int),
++		.mode           = 0644,
++		.proc_handler   = proc_dointvec_minmax,
++		.extra1         = SYSCTL_ZERO,
++		.extra2         = SYSCTL_ONE,
++	},
+ 	{ }
+ };
+ 
+-- 
+2.33.0
 
