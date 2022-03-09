@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21547-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21548-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 6167FC433F5
-	for <kernel-hardening@archiver.kernel.org>; Mon,  7 Feb 2022 22:38:50 +0000 (UTC)
-Received: (qmail 9945 invoked by uid 550); 7 Feb 2022 22:38:41 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id C1AF9C433F5
+	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Mar 2022 19:35:58 +0000 (UTC)
+Received: (qmail 22263 invoked by uid 550); 9 Mar 2022 19:35:47 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,134 +12,77 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9922 invoked from network); 7 Feb 2022 22:38:40 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 mail.namei.org 7235C424
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=namei.org; s=2;
-	t=1644272689; bh=0BY/V/NIgDIevFQdF+wBys4ty26sYhLszDEPcdK7lds=;
-	h=Date:From:To:cc:Subject:From;
-	b=1XdVNc4ggTblHTpzOBwW/SI45jMQCePu37bX4zNovZerTp2MOne46L47WP/LiNVcQ
-	 421qWS3h/u+x/sEhDPYdUVx6j1/HOySQeMLRET18Vh6cPbgvFQVHx9SLn8H3N4ca4H
-	 X2un323LTy/67B8EZaOPlHzv6fGuyaWcO3Gq0NjY=
-Date: Tue, 8 Feb 2022 09:24:49 +1100 (AEDT)
-From: James Morris <jmorris@namei.org>
-To: linux-security-module@vger.kernel.org
-cc: linux-kernel@vger.kernel.org, lwn@lwn.net, fedora-selinux-list@redhat.com, 
-    linux-crypto@vger.kernel.org, kernel-hardening@lists.openwall.com, 
-    linux-integrity@vger.kernel.org, selinux@vger.kernel.org, 
-    Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, 
-    keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, 
-    Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>
-Subject: [ANNOUNCE][CFP] Linux Security Summit North America 2022
-Message-ID: <3e5acc67-829-fafb-c82-833fc22b35a@namei.org>
+Received: (qmail 22225 invoked from network); 9 Mar 2022 19:35:46 -0000
+X-Virus-Scanned: amavisd-new at c-s.fr
+X-Virus-Scanned: amavisd-new at c-s.fr
+Message-ID: <d83ff309-faf4-499c-7e97-4b3258ed5723@csgroup.eu>
+Date: Wed, 9 Mar 2022 20:35:35 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-
-==============================================================================
-                   ANNOUNCEMENT AND CALL FOR PARTICIPATION
-
-                   LINUX SECURITY SUMMIT NORTH AMERICA 2022
-                             
-                                 23-24 June
-                           Austin, Texas & Virtual
-==============================================================================
-
-DESCRIPTION
- 
-Linux Security Summit North America (LSS-NA) is a technical forum for
-collaboration between Linux developers, researchers, and end-users.  Its
-primary aim is to foster community efforts in analyzing and solving Linux
-security challenges.
-
- The program committee currently seeks proposals for:
- 
-   * Refereed Presentations:
-     45 minutes in length.
- 
-   * Panel Discussion Topics:
-     45 minutes in length.
- 
-   * Short Topics:
-     30 minutes in total, including at least 10 minutes discussion.
- 
-   * Tutorials
-     90 minutes in length.
- 
-Tutorial sessions should be focused on advanced Linux security defense
-topics within areas such as the kernel, compiler, and security-related
-libraries.  Priority will be given to tutorials created for this conference,
-and those where the presenter a leading subject matter expert on the topic.
- 
-Topic areas include, but are not limited to:
- 
-   * Kernel self-protection
-   * Access control
-   * Cryptography and key management
-   * Integrity policy and enforcement
-   * Hardware Security
-   * IoT and embedded security
-   * Virtualization and containers
-   * System-specific system hardening
-   * Case studies
-   * Security tools
-   * Security UX
-   * Emerging technologies, threats & techniques
-
-  Proposals should be submitted via:
-    https://events.linuxfoundation.org/linux-security-summit-north-america/
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
+ Thunderbird/91.5.0
+Subject: Re: [PATCH] powerpc/32: Stop printing the virtual memory layout
+Content-Language: fr-FR
+To: Arvind Sankar <nivedita@alum.mit.edu>, Kees Cook <keescook@chromium.org>
+Cc: Tycho Andersen <tycho@tycho.ws>, kernel-hardening@lists.openwall.com,
+ linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>,
+ linuxppc-dev@lists.ozlabs.org, "Tobin C . Harding" <me@tobin.cc>
+References: <202003021038.8F0369D907@keescook>
+ <20200305150837.835083-1-nivedita@alum.mit.edu>
+From: Christophe Leroy <christophe.leroy@csgroup.eu>
+In-Reply-To: <20200305150837.835083-1-nivedita@alum.mit.edu>
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 8bit
 
 
-Note that for 2022, we are returning to having both North American and
-European events (LSS-EU will be held in September).
- 
 
-LSS-NA DATES
- 
-  * CFP close:            March 30
-  * CFP notifications:    April 15
-  * Schedule announced:   April 19
-  * Event:                September 23-24
+Le 05/03/2020 à 16:08, Arvind Sankar a écrit :
+> For security, don't display the kernel's virtual memory layout.
+> 
+> Kees Cook points out:
+> "These have been entirely removed on other architectures, so let's
+> just do the same for ia32 and remove it unconditionally."
+> 
+> 071929dbdd86 ("arm64: Stop printing the virtual memory layout")
+> 1c31d4e96b8c ("ARM: 8820/1: mm: Stop printing the virtual memory layout")
+> 31833332f798 ("m68k/mm: Stop printing the virtual memory layout")
+> fd8d0ca25631 ("parisc: Hide virtual kernel memory layout")
+> adb1fe9ae2ee ("mm/page_alloc: Remove kernel address exposure in free_reserved_area()")
+> 
+> Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
 
-WHO SHOULD ATTEND
- 
-We're seeking a diverse range of attendees and welcome participation by
-people involved in Linux security development, operations, and research.
- 
-LSS is a unique global event that provides the opportunity to present and
-discuss your work or research with key Linux security community members and
-maintainers.  It's also useful for those who wish to keep up with the latest
-in Linux security development and to provide input to the development
-process.
+This patch doesn't apply anymore.
 
-WEB SITE
+This patch is referenced in https://github.com/linuxppc/issues/issues/390
 
-    https://events.linuxfoundation.org/linux-security-summit-north-america/
-
-TWITTER
-
-  For event updates and announcements, follow:
-
-    https://twitter.com/LinuxSecSummit
-  
-    #linuxsecuritysummit
-
-PROGRAM COMMITTEE
-
-  The program committee for LSS 2021 is:
-
-    * James Morris, Microsoft
-    * Serge Hallyn, Cisco
-    * Paul Moore, Microsoft
-    * Stephen Smalley, NSA
-    * Elena Reshetova, Intel
-    * John Johansen, Canonical
-    * Kees Cook, Google
-    * Casey Schaufler, Intel
-    * Mimi Zohar, IBM
-    * David A. Wheeler, Linux Foundation
-
-  The program committee may be contacted as a group via email:
-    lss-pc () lists.linuxfoundation.org
-
--- 
-
-
+> ---
+>   arch/powerpc/mm/mem.c | 17 -----------------
+>   1 file changed, 17 deletions(-)
+> 
+> diff --git a/arch/powerpc/mm/mem.c b/arch/powerpc/mm/mem.c
+> index ef7b1119b2e2..df2c143b6bf7 100644
+> --- a/arch/powerpc/mm/mem.c
+> +++ b/arch/powerpc/mm/mem.c
+> @@ -331,23 +331,6 @@ void __init mem_init(void)
+>   #endif
+>   
+>   	mem_init_print_info(NULL);
+> -#ifdef CONFIG_PPC32
+> -	pr_info("Kernel virtual memory layout:\n");
+> -#ifdef CONFIG_KASAN
+> -	pr_info("  * 0x%08lx..0x%08lx  : kasan shadow mem\n",
+> -		KASAN_SHADOW_START, KASAN_SHADOW_END);
+> -#endif
+> -	pr_info("  * 0x%08lx..0x%08lx  : fixmap\n", FIXADDR_START, FIXADDR_TOP);
+> -#ifdef CONFIG_HIGHMEM
+> -	pr_info("  * 0x%08lx..0x%08lx  : highmem PTEs\n",
+> -		PKMAP_BASE, PKMAP_ADDR(LAST_PKMAP));
+> -#endif /* CONFIG_HIGHMEM */
+> -	if (ioremap_bot != IOREMAP_TOP)
+> -		pr_info("  * 0x%08lx..0x%08lx  : early ioremap\n",
+> -			ioremap_bot, IOREMAP_TOP);
+> -	pr_info("  * 0x%08lx..0x%08lx  : vmalloc & ioremap\n",
+> -		VMALLOC_START, VMALLOC_END);
+> -#endif /* CONFIG_PPC32 */
+>   }
+>   
+>   void free_initmem(void)
