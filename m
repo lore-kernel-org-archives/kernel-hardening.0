@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21548-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21549-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id C1AF9C433F5
-	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Mar 2022 19:35:58 +0000 (UTC)
-Received: (qmail 22263 invoked by uid 550); 9 Mar 2022 19:35:47 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id C84E5C433EF
+	for <kernel-hardening@archiver.kernel.org>; Fri, 18 Mar 2022 11:44:26 +0000 (UTC)
+Received: (qmail 10086 invoked by uid 550); 18 Mar 2022 11:41:48 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,77 +12,42 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22225 invoked from network); 9 Mar 2022 19:35:46 -0000
-X-Virus-Scanned: amavisd-new at c-s.fr
-X-Virus-Scanned: amavisd-new at c-s.fr
-Message-ID: <d83ff309-faf4-499c-7e97-4b3258ed5723@csgroup.eu>
-Date: Wed, 9 Mar 2022 20:35:35 +0100
+Received: (qmail 22040 invoked from network); 18 Mar 2022 00:01:23 -0000
+Authentication-Results: smtp.kernel.org;
+	dkim=pass (1024-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="VZ8vdPsd"
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=zx2c4.com; s=20210105;
+	t=1647561669;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
+	bh=uwfZ7u+3OUKgL2+/D4viVTjD3L/cggI1cxQSeUBNcqU=;
+	b=VZ8vdPsdW4WvfTWCZPkBuyeVynesqYbTOhZu8YXFilIQFZHmQnyrK/rvBX/GiAGi5P/J73
+	+IMgJeR4h82Oh6ro7VPXVvu/4ef3gBo7fODxmqqKrgzIiM3K9euepRanv+tC8At3oq+mjB
+	88QCgJ9p98VBW7gKkeCnGYAJpqkfXHE=
+X-Gm-Message-State: AOAM533fTTrvnnNBSMy17dr925gENycjS4x5haJAIBi+rgpKyK+90dFp
+	2bM9i4DfU5VQW/PNQRZQnkwkTSNNTAddFvDS3Ts=
+X-Google-Smtp-Source: ABdhPJwVWHzVA9/oVu+v9YAWochheu96zGoBfiL9ysWNAsJYRohB0h4ZM53akO0WYjRYXdttDZpJBVwPfJnO85MPGHc=
+X-Received: by 2002:a0d:c681:0:b0:2db:9ffe:1f00 with SMTP id
+ i123-20020a0dc681000000b002db9ffe1f00mr9121007ywd.100.1647561668026; Thu, 17
+ Mar 2022 17:01:08 -0700 (PDT)
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
- Thunderbird/91.5.0
-Subject: Re: [PATCH] powerpc/32: Stop printing the virtual memory layout
-Content-Language: fr-FR
-To: Arvind Sankar <nivedita@alum.mit.edu>, Kees Cook <keescook@chromium.org>
-Cc: Tycho Andersen <tycho@tycho.ws>, kernel-hardening@lists.openwall.com,
- linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>,
- linuxppc-dev@lists.ozlabs.org, "Tobin C . Harding" <me@tobin.cc>
-References: <202003021038.8F0369D907@keescook>
- <20200305150837.835083-1-nivedita@alum.mit.edu>
-From: Christophe Leroy <christophe.leroy@csgroup.eu>
-In-Reply-To: <20200305150837.835083-1-nivedita@alum.mit.edu>
-Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 8bit
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Thu, 17 Mar 2022 18:00:57 -0600
+X-Gmail-Original-Message-ID: <CAHmME9q55ifnzxE9zLuLT=Hgjv=qcvjU-O-c8G=_o_V_O+p44Q@mail.gmail.com>
+Message-ID: <CAHmME9q55ifnzxE9zLuLT=Hgjv=qcvjU-O-c8G=_o_V_O+p44Q@mail.gmail.com>
+Subject: Large post detailing recent Linux RNG improvements
+To: LKML <linux-kernel@vger.kernel.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: "Theodore Ts'o" <tytso@mit.edu>
+Content-Type: text/plain; charset="UTF-8"
 
+Hey folks,
 
+Thought I should mention here that I've written up the various RNG
+things I've been working on for 5.17 & 5.18 here:
+https://www.zx2c4.com/projects/linux-rng-5.17-5.18/ .
 
-Le 05/03/2020 à 16:08, Arvind Sankar a écrit :
-> For security, don't display the kernel's virtual memory layout.
-> 
-> Kees Cook points out:
-> "These have been entirely removed on other architectures, so let's
-> just do the same for ia32 and remove it unconditionally."
-> 
-> 071929dbdd86 ("arm64: Stop printing the virtual memory layout")
-> 1c31d4e96b8c ("ARM: 8820/1: mm: Stop printing the virtual memory layout")
-> 31833332f798 ("m68k/mm: Stop printing the virtual memory layout")
-> fd8d0ca25631 ("parisc: Hide virtual kernel memory layout")
-> adb1fe9ae2ee ("mm/page_alloc: Remove kernel address exposure in free_reserved_area()")
-> 
-> Signed-off-by: Arvind Sankar <nivedita@alum.mit.edu>
+Feel free to discuss on list here if you'd like, or if you see
+something you don't like, I'll happily review patches!
 
-This patch doesn't apply anymore.
-
-This patch is referenced in https://github.com/linuxppc/issues/issues/390
-
-> ---
->   arch/powerpc/mm/mem.c | 17 -----------------
->   1 file changed, 17 deletions(-)
-> 
-> diff --git a/arch/powerpc/mm/mem.c b/arch/powerpc/mm/mem.c
-> index ef7b1119b2e2..df2c143b6bf7 100644
-> --- a/arch/powerpc/mm/mem.c
-> +++ b/arch/powerpc/mm/mem.c
-> @@ -331,23 +331,6 @@ void __init mem_init(void)
->   #endif
->   
->   	mem_init_print_info(NULL);
-> -#ifdef CONFIG_PPC32
-> -	pr_info("Kernel virtual memory layout:\n");
-> -#ifdef CONFIG_KASAN
-> -	pr_info("  * 0x%08lx..0x%08lx  : kasan shadow mem\n",
-> -		KASAN_SHADOW_START, KASAN_SHADOW_END);
-> -#endif
-> -	pr_info("  * 0x%08lx..0x%08lx  : fixmap\n", FIXADDR_START, FIXADDR_TOP);
-> -#ifdef CONFIG_HIGHMEM
-> -	pr_info("  * 0x%08lx..0x%08lx  : highmem PTEs\n",
-> -		PKMAP_BASE, PKMAP_ADDR(LAST_PKMAP));
-> -#endif /* CONFIG_HIGHMEM */
-> -	if (ioremap_bot != IOREMAP_TOP)
-> -		pr_info("  * 0x%08lx..0x%08lx  : early ioremap\n",
-> -			ioremap_bot, IOREMAP_TOP);
-> -	pr_info("  * 0x%08lx..0x%08lx  : vmalloc & ioremap\n",
-> -		VMALLOC_START, VMALLOC_END);
-> -#endif /* CONFIG_PPC32 */
->   }
->   
->   void free_initmem(void)
+Regards,
+Jason
