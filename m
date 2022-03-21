@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21551-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21552-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id EDAD0C433EF
-	for <kernel-hardening@archiver.kernel.org>; Sat, 19 Mar 2022 12:13:14 +0000 (UTC)
-Received: (qmail 15435 invoked by uid 550); 19 Mar 2022 12:13:05 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id A2C0FC433F5
+	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Mar 2022 12:26:36 +0000 (UTC)
+Received: (qmail 23568 invoked by uid 550); 21 Mar 2022 12:26:26 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,66 +12,118 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 13849 invoked from network); 19 Mar 2022 12:10:51 -0000
+Received: (qmail 12156 invoked from network); 21 Mar 2022 09:39:58 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20210112;
-        h=mime-version:from:date:message-id:subject:to:cc;
-        bh=sdeJyx83K3lPLVc496VLDfBIQyJhPzjAW0FyOcnIdls=;
-        b=N9ZACpk3BgTaoUzESeEFnqFMhRO478KDS/LJaMvyJ7ynaNF4va6qVzO8R5NeDZHEno
-         zYPyx/+nrYGhtpqz7ZHygtRWW5rMJ2x+PTSmy16VZnV+kguWT+MfDejPIuDrs0DvHiOj
-         D1RxvkdLkdi58dSDLOAD5kwN3Q25oQJWbF6LGxaMhA8fs+j64zphGQyKOCCeKMsNVf4o
-         AZbmUkwOzSNbLJbiqQ7VrIEndeCYEEsa+mtBWOMCHNUrqv20mvbbVrxO009ncQs2jGQc
-         TnsJEO0DIrdVi8ogZwm2mI7LYI9dbq8YUdiAGd6CFqgOFBA1LHnKai0y0/2ocigaaDIC
-         fmVA==
+        h=mime-version:from:date:message-id:subject:to;
+        bh=7/Wy9X3u24DtTwvR5CuDdNX/jv40fdSQGUPbzFCy4CY=;
+        b=IdtcK4ESAv9BjSeYua+7u+8l4qRb/uzglAvhT3xqSpNQbJrgeXKalYgehAFUhRVLd/
+         SbDiXqJUSyvz5uACRh6taL6cd6Eur9T+hctaWJmVpOiwPDGUe8D9uv9ZZZ9gV+gYxC4v
+         Z6tgCVwZrIQ+DJGoFYPlfiIZjD0exu5w5au6bALn6Vlnlm9QuEEAlK2erRCuxJuj4rKZ
+         SsIR9O8lvlrXxXpPNFlPZS9Sz3RDRzuOTlqbJmSIdT3Pm71Po47YHq/S4Ykgb+4N7CaS
+         aPp8wvOi+Tm0jsUe7AECfxn6/MfmYrSleFw7+/6dC61i9yYwC/aRg/3GYg3uXHjMe+sV
+         fVyA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
-        h=x-gm-message-state:mime-version:from:date:message-id:subject:to:cc;
-        bh=sdeJyx83K3lPLVc496VLDfBIQyJhPzjAW0FyOcnIdls=;
-        b=bn7+71CzWw2eChyHfeOydgZfqqXYJNGF3zhlQoIE1xwv4Tx3ixgtQCw1MCXmd+fJ0Z
-         N7RVnCEAeY2NFJuC/XTIZjzNNt70i2611azqUaJ/InZIfS3wEOD2DqbywobZ1zj6JVwb
-         3IGlbiA7YjpjEHXJVi8clTBBYDDEZqDBkfJg/xTaMbK1sNppejj9KwltfVgagYd9tclY
-         W1OCLbNgC5CC+hW2+GJaLen9vAq346JMWakVc7gXGg/eLdCdKR2a8IGIIagE29naSRWt
-         V81TvgxNu9t+/i5nteQYrCRxZa7dDffP9KLJMwgwylVLrcXc5iT5PTa0FososOQkRXre
-         J7rg==
-X-Gm-Message-State: AOAM533ISnWMueFsEzq587fNiZ4CD/SDFrASMmbyulU9ga5olQXh5RFM
-	9HRqX359HyD34uj5YxaRpGa/+0ybyvhd5Lm3yqyz3xA9zYN42g==
-X-Google-Smtp-Source: ABdhPJwMyiTwArSzPLl7HQdHAZ2OzlCKiB5a5Qj8dLen9Ky1FAzQ6SQsFVMsDVhpQ28q5aQL3xdp6Bp1dc8ywDUXfvg=
-X-Received: by 2002:a25:f904:0:b0:628:a84d:a105 with SMTP id
- q4-20020a25f904000000b00628a84da105mr13704142ybe.53.1647691839547; Sat, 19
- Mar 2022 05:10:39 -0700 (PDT)
+        h=x-gm-message-state:mime-version:from:date:message-id:subject:to;
+        bh=7/Wy9X3u24DtTwvR5CuDdNX/jv40fdSQGUPbzFCy4CY=;
+        b=jCLRDg5vGwWmBnO72M6+1FDZPSLMfqnlu0O0i0dZ9vr8hiYvyZoSNJA+eJNs0cOcS/
+         dfkZ9HPdcjZmxcHs/HfJxrizf+AmbdGnZHKRZhnsNdd5BfIvWqdPjtdzXwH9OrlBg5Yj
+         1XY18DALdPc8A6XOVSRJf0iU0ZAapfq5oJaDi7cs5CqGNdVQ7VVnCOPKZl1oxGUunLi8
+         JJRKP+sjdA4SCeA2z83KFFpwWmqKgfHd9GNEfEiYoiVk16Cj90DEJMkD0Mk40FUurRkn
+         47lYXMdfXE9VqfGRkzmoFFtDoaQa9qKBh5xbjjZBJtdKWAn1UgqjjgdExQMAtNiQNEvD
+         7/tA==
+X-Gm-Message-State: AOAM5330PkEX7fJrQ6F2U8NQNrV3PUYoEUmzUOvSx3dUixFiH/e4wsEf
+	hDCYrsA1HOfWEqwqInsAOYAyYZYVAZuCjtmDB5u+0SpO2Y8=
+X-Google-Smtp-Source: ABdhPJxkqXIRWzrLroutDVXnmzGMrLLb9jov2S/0MW78vXchh1LGqHJZFHRG4ZKBxjuf3Vh3IJtP6WEZVyoP8qvXY40=
+X-Received: by 2002:adf:d1e2:0:b0:204:1a8c:7498 with SMTP id
+ g2-20020adfd1e2000000b002041a8c7498mr1384329wrd.530.1647855586036; Mon, 21
+ Mar 2022 02:39:46 -0700 (PDT)
 MIME-Version: 1.0
-From: Derrick McKee <derrick.mckee@gmail.com>
-Date: Sat, 19 Mar 2022 08:10:34 -0400
-Message-ID: <CAJoBWHxmsWThoQXNXRfDwmT2z=iEtwPQMU1iVtTZdNmqaCCaeQ@mail.gmail.com>
-Subject: CVE Proofs of Concept
+From: Marcin Kozlowski <marcinguy@gmail.com>
+Date: Mon, 21 Mar 2022 10:39:35 +0100
+Message-ID: <CAP6wrbVVK1S+oXHVC6hAs8cRR3XHi31ihBzGHn-rcmE_fUjUVQ@mail.gmail.com>
+Subject: OOB accesses in ax88179_rx_fixup() (in USB network card driver) - variants
 To: kernel-hardening@lists.openwall.com
-Cc: linux-hardening@vger.kernel.org
+Content-Type: multipart/alternative; boundary="000000000000d8d19705dab746dc"
+
+--000000000000d8d19705dab746dc
 Content-Type: text/plain; charset="UTF-8"
 
-Hello,
+Hi List,
 
-I am a Ph.D. student at Purdue University researching kernel
-compartmentalization.  I am currently conducting evaluation for a
-follow-up paper to one published at NDSS 22 titled 'Preventing Kernel
-Hacks with HAKC' (see [1]).  We are interested in empirically
-evaluating our compartmentalization policies by determining if targets
-of exploits (which we refer to as exploit sinks) are placed in a
-different compartment from code that accesses the target (which we
-refer to as exploit sources).
+Don't have much experience and knowledge in that area.
 
-To that end, we are looking for a set of kernel exploit proofs of
-concept that we can execute and examine.  I realize such a set could
-be sensitive, and I will follow all safety procedures in the handling
-and execution of any PoC.  In lieu of a set of PoCs, are there any
-statistics of kernel structures that are targeted by attackers?  I
-would imagine, for example, that struct cred would be heavily
-targeted, but how often and what other kernel structures are targeted
-would be invaluable.  Thank you for any insight you might have.
+Found this:
 
-[1] https://www.ndss-symposium.org/ndss2022/accepted-papers/
+https://git.kernel.org/pub/scm/linux/kernel/git/gregkh/usb.git/commit/?h=usb-linus&id=57bc3d3ae8c14df3ceb4e17d26ddf9eeab304581
 
+Checked out a few drivers code and wondered if anybody did a variant
+analysis of this (possibly yes?) However, it seems like Kernel drivers code
+for gl620a.c and lg-vl600.c (quick search) don't "Make sure that the bounds
+of the metadata array are inside the SKB (and in front of the counter at
+the end)."
 
--- 
-Derrick McKee
-Phone: (703) 957-9362
-Email: derrick.mckee@gmail.com
+Example from gl620a.c
+
+https://github.com/torvalds/linux/blob/master/drivers/net/usb/gl620a.c
+
+I think, there is no check for:
+
+/* Make sure that the bounds of the metadata array are inside the SKB
+* (and in front of the counter at the end).
+*/
+if (pkt_cnt * 2 + hdr_off > skb->len)
+return 0;
+
+Most likely false positive. Would be great to verify this and learn about
+it.
+
+Thanks,
+Marcin
+
+--000000000000d8d19705dab746dc
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div>Hi List,</div><div><br></div><div>Don&#39;t have much=
+ experience and knowledge in that area.</div><div><br></div><div>Found this=
+:</div><div><br></div><div><a href=3D"https://git.kernel.org/pub/scm/linux/=
+kernel/git/gregkh/usb.git/commit/?h=3Dusb-linus&amp;id=3D57bc3d3ae8c14df3ce=
+b4e17d26ddf9eeab304581">https://git.kernel.org/pub/scm/linux/kernel/git/gre=
+gkh/usb.git/commit/?h=3Dusb-linus&amp;id=3D57bc3d3ae8c14df3ceb4e17d26ddf9ee=
+ab304581</a></div><div><br></div><div>Checked out a few drivers code and <s=
+pan class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqe=
+eo gmail-r-qvutc0">wondered if anybody did a variant analysis of this (poss=
+ibly yes?) However, it seems like Kernel drivers code for gl620a.c and lg-v=
+l600.c (quick search) don&#39;t &quot;Make sure that the bounds of the meta=
+data array are inside the SKB (and in front of the counter at the end).&quo=
+t; <br></span></div><div><span class=3D"gmail-css-901oao gmail-css-16my406 =
+gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><br></span></div><div><span c=
+lass=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gm=
+ail-r-qvutc0">Example from gl620a.c</span></div><div><span class=3D"gmail-c=
+ss-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><=
+br></span></div><div><span class=3D"gmail-css-901oao gmail-css-16my406 gmai=
+l-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><a href=3D"https://github.com/tor=
+valds/linux/blob/master/drivers/net/usb/gl620a.c">https://github.com/torval=
+ds/linux/blob/master/drivers/net/usb/gl620a.c</a></span></div><div><span cl=
+ass=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gma=
+il-r-qvutc0"><br></span></div><div><span class=3D"gmail-css-901oao gmail-cs=
+s-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">I think, there is n=
+o check for:</span></div><div><span class=3D"gmail-css-901oao gmail-css-16m=
+y406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><br></span></div><div><s=
+pan class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqe=
+eo gmail-r-qvutc0">	/* Make sure that the bounds of the metadata array are =
+inside the SKB<br>	 * (and in front of the counter at the end).<br>	 */<br>=
+	if (pkt_cnt * 2 + hdr_off &gt; skb-&gt;len)<br>		return 0;</span></div><di=
+v><span class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-=
+bcqeeo gmail-r-qvutc0"><br></span></div><div><span class=3D"gmail-css-901oa=
+o gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">Most like=
+ly false positive. Would be great to verify this and learn about it.</span>=
+</div><div><span class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3=
+ gmail-r-bcqeeo gmail-r-qvutc0"><br></span></div><div><span class=3D"gmail-=
+css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">=
+Thanks,</span></div><div><span class=3D"gmail-css-901oao gmail-css-16my406 =
+gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">Marcin<br></span></div></div>
+
+--000000000000d8d19705dab746dc--
