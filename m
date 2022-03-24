@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21552-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21553-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id A2C0FC433F5
-	for <kernel-hardening@archiver.kernel.org>; Mon, 21 Mar 2022 12:26:36 +0000 (UTC)
-Received: (qmail 23568 invoked by uid 550); 21 Mar 2022 12:26:26 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id B3ADAC433F5
+	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Mar 2022 06:52:19 +0000 (UTC)
+Received: (qmail 24379 invoked by uid 550); 24 Mar 2022 06:52:10 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,118 +12,79 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12156 invoked from network); 21 Mar 2022 09:39:58 -0000
+Received: (qmail 24336 invoked from network); 24 Mar 2022 06:52:09 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20210112;
-        h=mime-version:from:date:message-id:subject:to;
-        bh=7/Wy9X3u24DtTwvR5CuDdNX/jv40fdSQGUPbzFCy4CY=;
-        b=IdtcK4ESAv9BjSeYua+7u+8l4qRb/uzglAvhT3xqSpNQbJrgeXKalYgehAFUhRVLd/
-         SbDiXqJUSyvz5uACRh6taL6cd6Eur9T+hctaWJmVpOiwPDGUe8D9uv9ZZZ9gV+gYxC4v
-         Z6tgCVwZrIQ+DJGoFYPlfiIZjD0exu5w5au6bALn6Vlnlm9QuEEAlK2erRCuxJuj4rKZ
-         SsIR9O8lvlrXxXpPNFlPZS9Sz3RDRzuOTlqbJmSIdT3Pm71Po47YHq/S4Ykgb+4N7CaS
-         aPp8wvOi+Tm0jsUe7AECfxn6/MfmYrSleFw7+/6dC61i9yYwC/aRg/3GYg3uXHjMe+sV
-         fVyA==
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=Uv9WDFuf73d36aG534OWTYxmQv2bNKKIk/9hpshgIJU=;
+        b=Kq8gbI9QPeSROVHNU9dFJEHcWJnqsbuUDwE9QvWau9w5fMGGztvKfyqamgfePWtIP2
+         8oUQbzmwhvMTZ9u2HVCqwgMle+PWtNdwGH7Fj7oMF0pqAH35MsL+Or1vbBulcyAt+rvM
+         vc9HCHhIocij9414WGtRFt198fp6E08L02GUCFPiP52kJY/HW+9eFT1mltFFZ3BaG3ln
+         5kqV/NJgdHc6SXLp+Fymz2qAtXl+EUFnP0gtnTg1Wa85RvSt0irE57CUq1s3FJWKFWfW
+         888oKuWc2fQxTuWhxjVsD8mbp8sfCJgRvICccKylPmR/N2tK9/37tW4otVE4laU5vFFv
+         MhzQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
-        h=x-gm-message-state:mime-version:from:date:message-id:subject:to;
-        bh=7/Wy9X3u24DtTwvR5CuDdNX/jv40fdSQGUPbzFCy4CY=;
-        b=jCLRDg5vGwWmBnO72M6+1FDZPSLMfqnlu0O0i0dZ9vr8hiYvyZoSNJA+eJNs0cOcS/
-         dfkZ9HPdcjZmxcHs/HfJxrizf+AmbdGnZHKRZhnsNdd5BfIvWqdPjtdzXwH9OrlBg5Yj
-         1XY18DALdPc8A6XOVSRJf0iU0ZAapfq5oJaDi7cs5CqGNdVQ7VVnCOPKZl1oxGUunLi8
-         JJRKP+sjdA4SCeA2z83KFFpwWmqKgfHd9GNEfEiYoiVk16Cj90DEJMkD0Mk40FUurRkn
-         47lYXMdfXE9VqfGRkzmoFFtDoaQa9qKBh5xbjjZBJtdKWAn1UgqjjgdExQMAtNiQNEvD
-         7/tA==
-X-Gm-Message-State: AOAM5330PkEX7fJrQ6F2U8NQNrV3PUYoEUmzUOvSx3dUixFiH/e4wsEf
-	hDCYrsA1HOfWEqwqInsAOYAyYZYVAZuCjtmDB5u+0SpO2Y8=
-X-Google-Smtp-Source: ABdhPJxkqXIRWzrLroutDVXnmzGMrLLb9jov2S/0MW78vXchh1LGqHJZFHRG4ZKBxjuf3Vh3IJtP6WEZVyoP8qvXY40=
-X-Received: by 2002:adf:d1e2:0:b0:204:1a8c:7498 with SMTP id
- g2-20020adfd1e2000000b002041a8c7498mr1384329wrd.530.1647855586036; Mon, 21
- Mar 2022 02:39:46 -0700 (PDT)
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=Uv9WDFuf73d36aG534OWTYxmQv2bNKKIk/9hpshgIJU=;
+        b=JDLMbfIp+EZrvU2su/rn2qZgM3vfza2J2fgYc1edpJIbicq3HGogxFIYwSww4/j1kd
+         ZX6xgiD2ToIIS+qHvCGKQyILE/JLE14BwOREprNx5R7JHqJXMZaSdGbSyEiGaAJKrehL
+         94qFBnWSNzMvKl0QWeC4ESUaqp9LWqqvoWk3z3BZI2bTQwM5ND7gzdXyr3v9ZhGtEhlj
+         7ExsPmZny3yHwCkwXWTALGZPDNW+5dz5VVQFM3eawJViAuuUMK8MIZ+1CUU9xuUK/SuD
+         GP7+9Twpe+yRaPfCFSD0LGAZFfkxmfn32yuE3V2mRqHeb4gT6dld30xnpXYTyPo53+fp
+         P2kg==
+X-Gm-Message-State: AOAM532dFbF6Bs08M3XqBOqGBydF2V8w9inf8b83PK+Lu6fj14giEgSz
+	B4K5BcrrXqqPL+eajSIRtWG28uTYtBdPNuGclKA=
+X-Google-Smtp-Source: ABdhPJwDfXqglQAx4xkKcgV5qn+FFERkaesBPRjOEZL/Efm6/Fu/ASIYOR/QcdIpx4wkzANYfvK5RODptL0UVCnEAwQ=
+X-Received: by 2002:a05:6512:308e:b0:448:5d75:9729 with SMTP id
+ z14-20020a056512308e00b004485d759729mr2598646lfd.663.1648104717736; Wed, 23
+ Mar 2022 23:51:57 -0700 (PDT)
 MIME-Version: 1.0
-From: Marcin Kozlowski <marcinguy@gmail.com>
-Date: Mon, 21 Mar 2022 10:39:35 +0100
-Message-ID: <CAP6wrbVVK1S+oXHVC6hAs8cRR3XHi31ihBzGHn-rcmE_fUjUVQ@mail.gmail.com>
-Subject: OOB accesses in ax88179_rx_fixup() (in USB network card driver) - variants
-To: kernel-hardening@lists.openwall.com
-Content-Type: multipart/alternative; boundary="000000000000d8d19705dab746dc"
-
---000000000000d8d19705dab746dc
+References: <CAHmME9q55ifnzxE9zLuLT=Hgjv=qcvjU-O-c8G=_o_V_O+p44Q@mail.gmail.com>
+In-Reply-To: <CAHmME9q55ifnzxE9zLuLT=Hgjv=qcvjU-O-c8G=_o_V_O+p44Q@mail.gmail.com>
+From: Sandy Harris <sandyinchina@gmail.com>
+Date: Thu, 24 Mar 2022 14:51:45 +0800
+Message-ID: <CACXcFmnb87qqzVkw9GfojPNh5sDkYGsqq9TYxUXBvrC1R+Lr3w@mail.gmail.com>
+Subject: Re: Large post detailing recent Linux RNG improvements
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, 
+	Kernel Hardening <kernel-hardening@lists.openwall.com>, "Theodore Ts'o" <tytso@mit.edu>
 Content-Type: text/plain; charset="UTF-8"
 
-Hi List,
+Jason A. Donenfeld <Jason@zx2c4.com> wrote:
 
-Don't have much experience and knowledge in that area.
+> Thought I should mention here that I've written up the various RNG
+> things I've been working on for 5.17 & 5.18 here:
+> https://www.zx2c4.com/projects/linux-rng-5.17-5.18/ .
+>
+> Feel free to discuss on list here if you'd like, or if you see
+> something you don't like, I'll happily review patches!
 
-Found this:
+Your code includes:
 
-https://git.kernel.org/pub/scm/linux/kernel/git/gregkh/usb.git/commit/?h=usb-linus&id=57bc3d3ae8c14df3ceb4e17d26ddf9eeab304581
+enum {
+    POOL_BITS = BLAKE2S_HASH_SIZE * 8,
+    POOL_MIN_BITS = POOL_BITS /* No point in settling for less. */
+};
 
-Checked out a few drivers code and wondered if anybody did a variant
-analysis of this (possibly yes?) However, it seems like Kernel drivers code
-for gl620a.c and lg-vl600.c (quick search) don't "Make sure that the bounds
-of the metadata array are inside the SKB (and in front of the counter at
-the end)."
+static struct {
+    struct blake2s_state hash;
+    spinlock_t lock;
+    unsigned int entropy_count;
+} input_pool = {
+    .hash.h = { BLAKE2S_IV0 ^ (0x01010000 | BLAKE2S_HASH_SIZE),
+            BLAKE2S_IV1, BLAKE2S_IV2, BLAKE2S_IV3, BLAKE2S_IV4,
+            BLAKE2S_IV5, BLAKE2S_IV6, BLAKE2S_IV7 },
+    .hash.outlen = BLAKE2S_HASH_SIZE,
+    .lock = __SPIN_LOCK_UNLOCKED(input_pool.lock),
+};
 
-Example from gl620a.c
+As far as I can tell, you have eliminated the 4K-bit input pool
+that this driver has always used & are just using the hash
+context as the input pool. To me, this looks like an error.
 
-https://github.com/torvalds/linux/blob/master/drivers/net/usb/gl620a.c
-
-I think, there is no check for:
-
-/* Make sure that the bounds of the metadata array are inside the SKB
-* (and in front of the counter at the end).
-*/
-if (pkt_cnt * 2 + hdr_off > skb->len)
-return 0;
-
-Most likely false positive. Would be great to verify this and learn about
-it.
-
-Thanks,
-Marcin
-
---000000000000d8d19705dab746dc
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr"><div>Hi List,</div><div><br></div><div>Don&#39;t have much=
- experience and knowledge in that area.</div><div><br></div><div>Found this=
-:</div><div><br></div><div><a href=3D"https://git.kernel.org/pub/scm/linux/=
-kernel/git/gregkh/usb.git/commit/?h=3Dusb-linus&amp;id=3D57bc3d3ae8c14df3ce=
-b4e17d26ddf9eeab304581">https://git.kernel.org/pub/scm/linux/kernel/git/gre=
-gkh/usb.git/commit/?h=3Dusb-linus&amp;id=3D57bc3d3ae8c14df3ceb4e17d26ddf9ee=
-ab304581</a></div><div><br></div><div>Checked out a few drivers code and <s=
-pan class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqe=
-eo gmail-r-qvutc0">wondered if anybody did a variant analysis of this (poss=
-ibly yes?) However, it seems like Kernel drivers code for gl620a.c and lg-v=
-l600.c (quick search) don&#39;t &quot;Make sure that the bounds of the meta=
-data array are inside the SKB (and in front of the counter at the end).&quo=
-t; <br></span></div><div><span class=3D"gmail-css-901oao gmail-css-16my406 =
-gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><br></span></div><div><span c=
-lass=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gm=
-ail-r-qvutc0">Example from gl620a.c</span></div><div><span class=3D"gmail-c=
-ss-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><=
-br></span></div><div><span class=3D"gmail-css-901oao gmail-css-16my406 gmai=
-l-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><a href=3D"https://github.com/tor=
-valds/linux/blob/master/drivers/net/usb/gl620a.c">https://github.com/torval=
-ds/linux/blob/master/drivers/net/usb/gl620a.c</a></span></div><div><span cl=
-ass=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gma=
-il-r-qvutc0"><br></span></div><div><span class=3D"gmail-css-901oao gmail-cs=
-s-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">I think, there is n=
-o check for:</span></div><div><span class=3D"gmail-css-901oao gmail-css-16m=
-y406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0"><br></span></div><div><s=
-pan class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqe=
-eo gmail-r-qvutc0">	/* Make sure that the bounds of the metadata array are =
-inside the SKB<br>	 * (and in front of the counter at the end).<br>	 */<br>=
-	if (pkt_cnt * 2 + hdr_off &gt; skb-&gt;len)<br>		return 0;</span></div><di=
-v><span class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-=
-bcqeeo gmail-r-qvutc0"><br></span></div><div><span class=3D"gmail-css-901oa=
-o gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">Most like=
-ly false positive. Would be great to verify this and learn about it.</span>=
-</div><div><span class=3D"gmail-css-901oao gmail-css-16my406 gmail-r-poiln3=
- gmail-r-bcqeeo gmail-r-qvutc0"><br></span></div><div><span class=3D"gmail-=
-css-901oao gmail-css-16my406 gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">=
-Thanks,</span></div><div><span class=3D"gmail-css-901oao gmail-css-16my406 =
-gmail-r-poiln3 gmail-r-bcqeeo gmail-r-qvutc0">Marcin<br></span></div></div>
-
---000000000000d8d19705dab746dc--
+A side effect of that is losing the latent-entropy attribute
+on input_pool[] so we no longer get initialisation from
+the plugin. Another error.
