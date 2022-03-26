@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21555-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21556-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 03931C433F5
-	for <kernel-hardening@archiver.kernel.org>; Thu, 24 Mar 2022 14:23:21 +0000 (UTC)
-Received: (qmail 21935 invoked by uid 550); 24 Mar 2022 14:23:12 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id A83DFC433EF
+	for <kernel-hardening@archiver.kernel.org>; Sat, 26 Mar 2022 20:41:39 +0000 (UTC)
+Received: (qmail 32034 invoked by uid 550); 26 Mar 2022 20:41:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,83 +12,133 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14152 invoked from network); 24 Mar 2022 14:12:06 -0000
-Authentication-Results: smtp.kernel.org;
-	dkim=pass (1024-bit key) header.d=zx2c4.com header.i=@zx2c4.com header.b="Mpm6rTOw"
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=zx2c4.com; s=20210105;
-	t=1648131110;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Jpvlvyj9ao+OhMQB6o8LnQdN+MDbR6s7x0e59J7p0ZY=;
-	b=Mpm6rTOwHuGlKLWnUUL81ofDk1JhSMKKir9gkyRQ6OfPDnbNocZwkaJ0mOLZG7/0W9Fyuc
-	hIeSUMlIex9yBYBviuXcKSZMWvWOGMPpBcrUNWrQhlSRKXXfBugqRc6HV5OZ8/Rj6LGnsk
-	3ifI6g5URM8jAoRazH0Rl5TPdAz9yOE=
-X-Gm-Message-State: AOAM531GUThdU0zhXgHP4zyWcy6GG1JqVMVdP9R5PiJtp0oagklA+fr1
-	WDAln9wnfibPvsgJP5INA+xDxDON9iH6plh+rVg=
-X-Google-Smtp-Source: ABdhPJxDbDInYKblQShnqKX+H9+RZtESX+eqUXrspeN3TYWTxW+KNmnQt73LTBJo0jrJ3hK3an7ncp+B71xhJYgJbrA=
-X-Received: by 2002:a25:b854:0:b0:633:8a00:707a with SMTP id
- b20-20020a25b854000000b006338a00707amr4723427ybm.637.1648131109009; Thu, 24
- Mar 2022 07:11:49 -0700 (PDT)
+Received: (qmail 28556 invoked from network); 26 Mar 2022 17:09:30 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20210112;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to;
+        bh=RF71MgXr7XLir91b3I4VYxGxZr546UWotKTvj0iechM=;
+        b=MwsR1yqct2uFqZuUZp4IqsQEUK6JqHdrTc7ZAG4BAXRt6N8Ujb3J7Awi81Fr8XfEN+
+         t45I8KQ0aMh21VlIrtnJ/w5p2GAfBeUIT68AHJPSzRkiEGbCqGIC7e5L5n/nIdFRWF8s
+         IdmIwZ+8Pd+HjJnjT3Sl0k4Pj98fWKEsyT6LpQafvPJx2AM2C+AAKaJBZGYh996xgCUg
+         boYXN6KXcXNmcIUV/Uj0StGELHhpvE4Aa6ftlTbafnFgaG8mAwdPVtcMv1SHxUmSnGNz
+         wu4nqcJhDcPBmqvZgDdyY491SiSHGkP5cQf8Jdnp3NRAYpZT8NygQX5TeSRX7p3eon3e
+         nx8Q==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to;
+        bh=RF71MgXr7XLir91b3I4VYxGxZr546UWotKTvj0iechM=;
+        b=K+j8Cxhn65HW0pYlGkZigFJI3bZwAeYCL3SZEjwKA0Rr05tG8sLFfYXBs7nioFx/YW
+         Zm2O/NRl8REnZCJzrKgWR555RBWHWq2Elo0tKGlCArcjEcdfYWjUe8yJuVurynt7WHaA
+         Od6hiU4M21gbFNVRpfqbp3h6vdG+iQAKctQthQbxus7BPSd/+9AQqiaqTS0LdFN/Nj6U
+         V2Eym4GIyj9Ymi5z/cLIWVcuFltPV6QnmllRXDffPTDzdYL67X3yU+0id6AbjE/PiToR
+         hZMALa7gEPPTDEL2VBwHjsc+7rXl3oya0BfNlT25RHeDQLHen4QpUM5uZoVEdv8qE+OW
+         OlfA==
+X-Gm-Message-State: AOAM530mNIolkStzAftch7SuQDuHFj9lAYDqgl6YObDipQsW2MK7MxrT
+	7Qx+DFdXKDvF4gpSmyHXhNqNhySLJ7OYSqqeFEF537Wz
+X-Google-Smtp-Source: ABdhPJyyYqG9Co2OWYqNE7k1bKvWRdTbF3073TLmJBMNYBCSxtxsMtAgCg2OQmnPRDMptkgQQMHbkl171n+HHZbxHy4=
+X-Received: by 2002:adf:f946:0:b0:1f0:62c3:ea2e with SMTP id
+ q6-20020adff946000000b001f062c3ea2emr13922132wrr.348.1648314558327; Sat, 26
+ Mar 2022 10:09:18 -0700 (PDT)
 MIME-Version: 1.0
-References: <CAHmME9q55ifnzxE9zLuLT=Hgjv=qcvjU-O-c8G=_o_V_O+p44Q@mail.gmail.com>
- <CACXcFmnb87qqzVkw9GfojPNh5sDkYGsqq9TYxUXBvrC1R+Lr3w@mail.gmail.com> <CACXcFmnhHpGQdU7ZcYNqjSss8VHMOtTvmJRETn18p0AY3AsEuQ@mail.gmail.com>
-In-Reply-To: <CACXcFmnhHpGQdU7ZcYNqjSss8VHMOtTvmJRETn18p0AY3AsEuQ@mail.gmail.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 24 Mar 2022 08:11:38 -0600
-X-Gmail-Original-Message-ID: <CAHmME9rWxkjgmXet=gQFWvhB6xvPgvAwkadZHRwdWrNGO6LZ0Q@mail.gmail.com>
-Message-ID: <CAHmME9rWxkjgmXet=gQFWvhB6xvPgvAwkadZHRwdWrNGO6LZ0Q@mail.gmail.com>
-Subject: Re: Large post detailing recent Linux RNG improvements
-To: Sandy Harris <sandyinchina@gmail.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, 
-	Kernel Hardening <kernel-hardening@lists.openwall.com>, "Theodore Ts'o" <tytso@mit.edu>
+References: <CAP6wrbVVK1S+oXHVC6hAs8cRR3XHi31ihBzGHn-rcmE_fUjUVQ@mail.gmail.com>
+In-Reply-To: <CAP6wrbVVK1S+oXHVC6hAs8cRR3XHi31ihBzGHn-rcmE_fUjUVQ@mail.gmail.com>
+From: Marcin Kozlowski <marcinguy@gmail.com>
+Date: Sat, 26 Mar 2022 18:09:11 +0100
+Message-ID: <CAP6wrbUVPSEUTm7JkL=zv6nzxRbAr=jNPo9ZPBA-_AXz7yCeKQ@mail.gmail.com>
+Subject: Re: OOB accesses in ax88179_rx_fixup() (in USB network card driver) - variants
+To: kernel-hardening@lists.openwall.com
+Content-Type: multipart/alternative; boundary="000000000000ba2ce205db222353"
+
+--000000000000ba2ce205db222353
 Content-Type: text/plain; charset="UTF-8"
 
-On Thu, Mar 24, 2022 at 4:29 AM Sandy Harris <sandyinchina@gmail.com> wrote:
-> > > Thought I should mention here that I've written up the various RNG
-> > > things I've been working on for 5.17 & 5.18 here:
-> > > https://www.zx2c4.com/projects/linux-rng-5.17-5.18/ .
-> > >
-> > > Feel free to discuss on list here if you'd like, or if you see
-> > > something you don't like, I'll happily review patches!
-> >
-> > Your code includes:
-> >
-> > enum {
-> >     POOL_BITS = BLAKE2S_HASH_SIZE * 8,
-> >     POOL_MIN_BITS = POOL_BITS /* No point in settling for less. */
-> > };
-> >
-> > static struct {
-> >     struct blake2s_state hash;
-> >     spinlock_t lock;
-> >     unsigned int entropy_count;
-> > } input_pool = {
-> >     .hash.h = { BLAKE2S_IV0 ^ (0x01010000 | BLAKE2S_HASH_SIZE),
-> >             BLAKE2S_IV1, BLAKE2S_IV2, BLAKE2S_IV3, BLAKE2S_IV4,
-> >             BLAKE2S_IV5, BLAKE2S_IV6, BLAKE2S_IV7 },
-> >     .hash.outlen = BLAKE2S_HASH_SIZE,
-> >     .lock = __SPIN_LOCK_UNLOCKED(input_pool.lock),
-> > };
-> >
-> > As far as I can tell, you have eliminated the 4K-bit input pool
-> > that this driver has always used & are just using the hash
-> > context as the input pool. To me, this looks like an error.
-> >
-> > A side effect of that is losing the latent-entropy attribute
-> > on input_pool[] so we no longer get initialisation from
-> > the plugin. Another error.
->
-> I could see reasonable arguments for reducing the size of
-> the input pool since that would save both kernel memory
-> and time used by the hash. Personally, though, I would
-> not consider anything < 2Kbits without seeing strong
-> arguments to justify it.
->
-> You seem to have gone to 512 bits without showing
-> any analysis to justify it. Have I just missed them?
+gl620a.c is some usb to usb computer cable, and lg-vl600.c a usb 4g dongle.
+Both drivers seem NOT to use skb metadata (they take packet len and count
+from skb->data directly).
 
-Explanation in <https://git.kernel.org/pub/scm/linux/kernel/git/crng/random.git/commit/?id=6e8ec2552c7d>.
-There's also a link to a paper in there.
+Why would ASIX driver use metadata and others (those 2) don't?
 
-Jason
+Could not find any info on skb Metadata.
+
+Thanks,
+
+Marcin
+
+On Mon, 21 Mar 2022, 10:39 Marcin Kozlowski <marcinguy@gmail.com> wrote:
+
+> Hi List,
+>
+> Don't have much experience and knowledge in that area.
+>
+> Found this:
+>
+>
+> https://git.kernel.org/pub/scm/linux/kernel/git/gregkh/usb.git/commit/?h=usb-linus&id=57bc3d3ae8c14df3ceb4e17d26ddf9eeab304581
+>
+> Checked out a few drivers code and wondered if anybody did a variant
+> analysis of this (possibly yes?) However, it seems like Kernel drivers code
+> for gl620a.c and lg-vl600.c (quick search) don't "Make sure that the bounds
+> of the metadata array are inside the SKB (and in front of the counter at
+> the end)."
+>
+> Example from gl620a.c
+>
+> https://github.com/torvalds/linux/blob/master/drivers/net/usb/gl620a.c
+>
+> I think, there is no check for:
+>
+> /* Make sure that the bounds of the metadata array are inside the SKB
+> * (and in front of the counter at the end).
+> */
+> if (pkt_cnt * 2 + hdr_off > skb->len)
+> return 0;
+>
+> Most likely false positive. Would be great to verify this and learn about
+> it.
+>
+> Thanks,
+> Marcin
+>
+
+--000000000000ba2ce205db222353
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto"><p dir=3D"ltr">gl<a href=3D"tel:620">620</a>a.c is some u=
+sb to usb computer cable, and lg-vl<a href=3D"tel:600">600</a>.c a usb 4g d=
+ongle. Both drivers seem NOT to use skb metadata (they take packet len and =
+count from skb-&gt;data directly).</p><p dir=3D"ltr">Why would ASIX driver =
+use metadata and others (those 2) don&#39;t?=C2=A0</p><p dir=3D"ltr">Could =
+not find any info on skb Metadata.<br></p><p dir=3D"ltr">Thanks,=C2=A0</p><=
+p dir=3D"ltr">Marcin</p></div><br><div class=3D"gmail_quote"><div dir=3D"lt=
+r" class=3D"gmail_attr">On Mon, 21 Mar 2022, 10:39 Marcin Kozlowski &lt;<a =
+href=3D"mailto:marcinguy@gmail.com">marcinguy@gmail.com</a>&gt; wrote:<br><=
+/div><blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-le=
+ft:1px #ccc solid;padding-left:1ex"><div dir=3D"ltr"><div>Hi List,</div><di=
+v><br></div><div>Don&#39;t have much experience and knowledge in that area.=
+</div><div><br></div><div>Found this:</div><div><br></div><div><a href=3D"h=
+ttps://git.kernel.org/pub/scm/linux/kernel/git/gregkh/usb.git/commit/?h=3Du=
+sb-linus&amp;id=3D57bc3d3ae8c14df3ceb4e17d26ddf9eeab304581" target=3D"_blan=
+k" rel=3D"noreferrer">https://git.kernel.org/pub/scm/linux/kernel/git/gregk=
+h/usb.git/commit/?h=3Dusb-linus&amp;id=3D57bc3d3ae8c14df3ceb4e17d26ddf9eeab=
+304581</a></div><div><br></div><div>Checked out a few drivers code and <spa=
+n>wondered if anybody did a variant analysis of this (possibly yes?) Howeve=
+r, it seems like Kernel drivers code for gl620a.c and lg-vl600.c (quick sea=
+rch) don&#39;t &quot;Make sure that the bounds of the metadata array are in=
+side the SKB (and in front of the counter at the end).&quot; <br></span></d=
+iv><div><span><br></span></div><div><span>Example from gl620a.c</span></div=
+><div><span><br></span></div><div><span><a href=3D"https://github.com/torva=
+lds/linux/blob/master/drivers/net/usb/gl620a.c" target=3D"_blank" rel=3D"no=
+referrer">https://github.com/torvalds/linux/blob/master/drivers/net/usb/gl6=
+20a.c</a></span></div><div><span><br></span></div><div><span>I think, there=
+ is no check for:</span></div><div><span><br></span></div><div><span>	/* Ma=
+ke sure that the bounds of the metadata array are inside the SKB<br>	 * (an=
+d in front of the counter at the end).<br>	 */<br>	if (pkt_cnt * 2 + hdr_of=
+f &gt; skb-&gt;len)<br>		return 0;</span></div><div><span><br></span></div>=
+<div><span>Most likely false positive. Would be great to verify this and le=
+arn about it.</span></div><div><span><br></span></div><div><span>Thanks,</s=
+pan></div><div><span>Marcin<br></span></div></div>
+</blockquote></div>
+
+--000000000000ba2ce205db222353--
