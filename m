@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21559-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21560-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mother.openwall.net (mother.openwall.net [195.42.179.200])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 5B3F9C433EF
-	for <kernel-hardening@archiver.kernel.org>; Sun,  8 May 2022 14:58:57 +0000 (UTC)
-Received: (qmail 21517 invoked by uid 550); 8 May 2022 14:58:45 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 05027C433EF
+	for <kernel-hardening@archiver.kernel.org>; Mon,  9 May 2022 21:10:50 +0000 (UTC)
+Received: (qmail 21638 invoked by uid 550); 9 May 2022 21:10:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,130 +12,72 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19749 invoked from network); 8 May 2022 14:56:45 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=arbitrary.ch;
-	s=mx1-arbitrary-ch; t=1652021793;
-	bh=45/69u/Kyw1A3HHSPSfkFbn8AxFRBJSrAkChF2wibpI=;
-	h=Date:From:To:Cc:Subject:From;
-	b=P53WUHv/EG5cqw2Vn/+gR69BnnVreV6ecqcT+FqYOK3SEv5Ufb84ygSR+sBxc+gZy
-	 GTdK9X9YUa142/zTanEu6hjcusvas7Xo5ZsHLbrBy0LGoGdA4Pnb+g1eQ4FpXZIfPG
-	 sgAeI4tcpVyzD7Ymo276lAYI9N2yC4ZaoVHM1u8LONUwA88k9l17xm1N50BLJNZHVT
-	 OEWfjgrlOHt3eS5/daC5kvdDbWcZwF8tK7vtKeCkm0r3nZNTn19Rq+gA3YQOin+GWX
-	 4sV//jYK9rOjU2Lbwd/Q5OAto7NoZoiaReH/9rznJLmz00nkpIjVmQkwenFSIUcP2I
-	 A+JhN0F0cbSnA==
-Message-ID: <8e472c9e-2076-bc25-5912-8433adf7b579@arbitrary.ch>
-Date: Sun, 8 May 2022 16:56:29 +0200
+Received: (qmail 16130 invoked from network); 9 May 2022 20:59:02 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=mime-version:in-reply-to:references:from:user-agent:date:message-id
+         :subject:to:cc;
+        bh=yJKJ2ATgX9mu3/IffO/J0EaKq/jvo17mocUEhwCAE60=;
+        b=XSieEDeLW/rwABKUVPDCvXH0w6sECAEnkGHzfrpHucsx1SHRgM/dcBpPOgHjWjsqCb
+         leo0ETy5XMaX5kEfyv+oImCvgn/Nr2Cc8dOl33/gdLVYmaNnfeGnl1hjnE945VnzLQv+
+         BbtHxr0VqtYXncjJAAbHq+uy1Wp20P5IVOeeI=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=x-gm-message-state:mime-version:in-reply-to:references:from
+         :user-agent:date:message-id:subject:to:cc;
+        bh=yJKJ2ATgX9mu3/IffO/J0EaKq/jvo17mocUEhwCAE60=;
+        b=sCHX7k9YYbB930gn+3Lr7FetZQVj2N6x+Aow6xw4LAIYdKeMbOH6QCx9ZKBwmHu1s+
+         mtR7fOEunEZ61XzTVhVsmzce2bgZMxpMuvQ8xuMJiu58am9tPzuvNRpaP7PcTnIF9JTK
+         dIVBlM2ochybY022XXwRfqpVU4wPhQv20swryQAw/bEz8l0jPRjPXlqHBi0eild1nipd
+         0kR3aKEbk37bx2Bh6Sxdl0o9BZvJM6JmoUh2ZC7cg5nprc5h44Sd8GOF9NxVFnTYZM71
+         e5Gv8VVY6541CTSdV6f5E8syhZlrKQMclsCHQWNPDTDH0tOGSif8z7Coql5+a0FrZEgh
+         QXmQ==
+X-Gm-Message-State: AOAM533tDtvnhZKWlJ9uYWp3tAv3WIGGgv9lrzSq90zpblbvQJ19qUf5
+	7ttiPvvm/juE0N/M+ckyOLRv9kBrJGXQhpLtcT1b5Q==
+X-Google-Smtp-Source: ABdhPJwgrl6Fn8gygCe1A38ovT3ghIsMz7Z+cffAmaDb1TNKssJHWbHAPz8jQeXiKh9qKc+zQcnEutlFHA7Nq+3CFlQ=
+X-Received: by 2002:a4a:6b49:0:b0:329:99cd:4fb8 with SMTP id
+ h9-20020a4a6b49000000b0032999cd4fb8mr6472783oof.25.1652129930567; Mon, 09 May
+ 2022 13:58:50 -0700 (PDT)
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
- Thunderbird/91.8.0
-Content-Language: en-US
-From: Peter Gerber <peter@arbitrary.ch>
-To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org,
- linux-hardening@vger.kernel.org
-Cc: Stephen Boyd <swboyd@chromium.org>, Kees Cook <keescook@chromium.org>
-Subject: [PATCH] Decouple slub_debug= from no_hash_pointers again
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 7bit
+In-Reply-To: <8e472c9e-2076-bc25-5912-8433adf7b579@arbitrary.ch>
+References: <8e472c9e-2076-bc25-5912-8433adf7b579@arbitrary.ch>
+From: Stephen Boyd <swboyd@chromium.org>
+User-Agent: alot/0.10
+Date: Mon, 9 May 2022 16:58:49 -0400
+Message-ID: <CAE-0n53Ou1qgueFZ7zL-rFwsit6XJnYZkRtggdx3XXvL7HWrow@mail.gmail.com>
+Subject: Re: [PATCH] Decouple slub_debug= from no_hash_pointers again
+To: Peter Gerber <peter@arbitrary.ch>, kernel-hardening@lists.openwall.com, 
+	linux-hardening@vger.kernel.org, linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, 
+	Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, 
+	Joonsoo Kim <iamjoonsoo.kim@lge.com>, Vlastimil Babka <vbabka@suse.cz>, linux-mm@kvack.org, 
+	Petr Mladek <pmladek@suse.com>
+Content-Type: text/plain; charset="UTF-8"
 
-While, as mentioned in 792702911f58, no_hash_pointers is what
-one wants for debugging, this option is also used for hardening.
+Quoting Peter Gerber (2022-05-08 07:56:29)
+> While, as mentioned in 792702911f58, no_hash_pointers is what
+> one wants for debugging, this option is also used for hardening.
+>
+> Various places recommend or use slub_debug for hardening:
+>
+> a) The Kernel Self Protection Project lists slub_debug as
+>    a recommended setting. [1]
+> b) Debian offers package hardening-runtime [2] which enables
+>    slub_debug for hardening.
+> c) Security- and privacy-oriented Tails enables slub_debug
+>    by default [3].
+>
+> I understand that encountering hashed pointers during debugging
+> is most unwanted. Thus, I updated the documentation to make
+> it as clear as possible that no_hash_pointers is what one
+> wants when using slub_debug for debugging. I also added a
+> mentioned of the hardening use case in order to discourage
+> any other, well-meant, tries to disable hashing with slub_debug.
 
-Various places recommend or use slub_debug for hardening:
-
-a) The Kernel Self Protection Project lists slub_debug as
-   a recommended setting. [1]
-b) Debian offers package hardening-runtime [2] which enables
-   slub_debug for hardening.
-c) Security- and privacy-oriented Tails enables slub_debug
-   by default [3].
-
-I understand that encountering hashed pointers during debugging
-is most unwanted. Thus, I updated the documentation to make
-it as clear as possible that no_hash_pointers is what one
-wants when using slub_debug for debugging. I also added a
-mentioned of the hardening use case in order to discourage
-any other, well-meant, tries to disable hashing with slub_debug.
-
-[1]: https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings
-[2]: https://packages.debian.org/bullseye/hardening-runtime
-[3]: https://tails.boum.org/contribute/design/kernel_hardening/
-
-Fixes: 792702911f58 ("slub: force on no_hash_pointers when slub_debug is enabled")
-Cc: Stephen Boyd <swboyd@chromium.org>
-Cc: Kees Cook <keescook@chromium.org>
-Link: https://lore.kernel.org/kernel-hardening/202204121715.11B2CA80@keescook/T/#t
----
- Documentation/admin-guide/kernel-parameters.txt |  5 +++--
- Documentation/vm/slub.rst                       | 10 ++++++++++
- include/linux/kernel.h                          |  2 --
- mm/slub.c                                       |  4 ----
- 4 files changed, 13 insertions(+), 8 deletions(-)
-
-diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index 3f1cc5e317ed..8987c07e206c 100644
---- a/Documentation/admin-guide/kernel-parameters.txt
-+++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -5344,8 +5344,9 @@
- 			culprit if slab objects become corrupted. Enabling
- 			slub_debug can create guard zones around objects and
- 			may poison objects when not in use. Also tracks the
--			last alloc / free. For more information see
--			Documentation/vm/slub.rst.
-+			last alloc / free. If used for debugging, rather
-+			than hardening, also set no_hash_pointers.
-+			For more information see Documentation/vm/slub.rst.
- 
- 	slub_max_order= [MM, SLUB]
- 			Determines the maximum allowed order for slabs.
-diff --git a/Documentation/vm/slub.rst b/Documentation/vm/slub.rst
-index d3028554b1e9..1ae6c27d0ff0 100644
---- a/Documentation/vm/slub.rst
-+++ b/Documentation/vm/slub.rst
-@@ -41,6 +41,16 @@ slub_debug=<Debug-Options>,<slab name1>,<slab name2>,...
- 	Enable options only for select slabs (no spaces
- 	after a comma)
- 
-+.. hint::
-+
-+   **Also enable no_hash_pointers** for debugging. Otherwise, only hashed
-+   pointers are printed.
-+
-+   Hashing is disabled by default because this option, despite having
-+   debug in its name, is also in useed to provide `additional hardening`_.
-+
-+.. _additional hardening: https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings
-+
- Multiple blocks of options for all slabs or selected slabs can be given, with
- blocks of options delimited by ';'. The last of "all slabs" blocks is applied
- to all slabs except those that match one of the "select slabs" block. Options
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index fe6efb24d151..e3d9d3879495 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -229,8 +229,6 @@ int sscanf(const char *, const char *, ...);
- extern __scanf(2, 0)
- int vsscanf(const char *, const char *, va_list);
- 
--extern int no_hash_pointers_enable(char *str);
--
- extern int get_option(char **str, int *pint);
- extern char *get_options(const char *str, int nints, int *ints);
- extern unsigned long long memparse(const char *ptr, char **retptr);
-diff --git a/mm/slub.c b/mm/slub.c
-index ed5c2c03a47a..b78ccfde9214 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -4800,10 +4800,6 @@ void __init kmem_cache_init(void)
- 	if (debug_guardpage_minorder())
- 		slub_max_order = 0;
- 
--	/* Print slub debugging pointers without hashing */
--	if (__slub_debug_enabled())
--		no_hash_pointers_enable(NULL);
--
- 	kmem_cache_node = &boot_kmem_cache_node;
- 	kmem_cache = &boot_kmem_cache;
- 
--- 
-2.35.1
-
+Why not add a CONFIG_HARDENED_SLUB option that enables poisoning and
+also makes slub debugging not print any messages to the kernel log
+containing object internal details? Then it can be enabled in the kernel
+config to harden slub and if the flag is enabled we don't hash pointers
+based on 'slub_debug' existing on the commandline? And maybe add some
+commandline argument like 'slub_debug=H' for "hardened" so it can be
+turned off as well if it is built into the config.
