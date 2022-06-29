@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21564-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21565-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 68C9BC433EF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jun 2022 03:29:40 +0000 (UTC)
-Received: (qmail 24417 invoked by uid 550); 29 Jun 2022 03:29:28 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id DF499C433EF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jun 2022 05:11:04 +0000 (UTC)
+Received: (qmail 20344 invoked by uid 550); 29 Jun 2022 05:10:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,58 +12,133 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24382 invoked from network); 29 Jun 2022 03:29:27 -0000
-From: "GONG, Ruiqi" <gongruiqi1@huawei.com>
-To: Kees Cook <keescook@chromium.org>, Marco Elver <elver@google.com>
-CC: Christophe Leroy <christophe.leroy@csgroup.eu>, Xiu Jianfeng
-	<xiujianfeng@huawei.com>, <kernel-hardening@lists.openwall.com>,
-	<linuxppc-dev@lists.ozlabs.org>, <linux-kernel@vger.kernel.org>, Gong Ruiqi
-	<gongruiqi1@huawei.com>
-Subject: [PATCH] stack: Declare {randomize_,}kstack_offset to fix Sparse warnings
-Date: Wed, 29 Jun 2022 11:29:39 +0800
-Message-ID: <20220629032939.2506773-1-gongruiqi1@huawei.com>
-X-Mailer: git-send-email 2.25.1
+Received: (qmail 20308 invoked from network); 29 Jun 2022 05:10:52 -0000
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=FucgXlGXUA1TcnPdKUkcewZgGavHMPNtx4F9OGHeHQVaCLLbArf8aokVlWH0wFfLglfgtZlIAceU7k5+B/vFNbLYhY2MjTTlylKa2AIjCL8ewG+HuVmSRmHRt7G3P+6j8qNjZ0oAtx6iUpXZ/27JXFAcHGSW84RXReXhD/VpzVh7ejmOEFxHev8JdyCW6l2w/jqQXVEGq9sApLLhsiyg1zYM5MzxWvFlxLW0nH3sjiMYBAVZaun5rJ+HcvcnV2/aMk7a629s3ayngyVREd1wyWxJzdoav+MeeDE7lnUsLhGWKZe4cT6Bw02p20NVAj+SjF1XI6cAoosp04NaBWRcCA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=nk7iIOOPMQjKMn4Nf6cQOMGI17SxXJzhDkRkgqLE/yA=;
+ b=DXO+8nXK+N7FFd9r42MOj3qeXEGxKVVMgC4g5RlfKYJBNGQMfokY5EbQf1GyJX7DxFg4K9efD9oTSDudouNEt5P5EX5E6zCm+ywXkqFm8E/muCw49gTtxZ2InLrXHCu8fmL3RK50WE9k4ImDxYNFLWoEuDZKlop/vy0SDPhhPgG5IA1So0tshvO6d/OZ3l2n9oMa+QHSTsKYv8ClBfUBSaYfYgpCcSGKgaCk6POkLsh8zFdTpakpSIR4b8nGvxbSp8e0MmpEizP7OtkuWSJUSiCfNiS2Eac8wokUtvmvv/YlElLDmKh4aFM2WrD0qS1OnIamZx0cQzXBRDvbjXkbBg==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=csgroup.eu; dmarc=pass action=none header.from=csgroup.eu;
+ dkim=pass header.d=csgroup.eu; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=csgroup.eu;
+ s=selector1;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=nk7iIOOPMQjKMn4Nf6cQOMGI17SxXJzhDkRkgqLE/yA=;
+ b=NA786uCwdkmCjgOQ78skrFGOKeykfV2OWT9NAW0uTlVoDqRsuRjIHHsnKBUv1wXUVfGdmjKxesrn8jZLGb35fn/5X6BP6FjTBBMm0w4jDGo6AceyvLl0Y0AosYOcCO0LnY0oTaoNKrZMgJ7SdDLjehxaXrHTLGADH7I/nTrkspoLab8HcH22eeNWPq6qDw8MNLF5hHTSzzaJehETkhmwwUEToFxI5FEoeKFg5JDsiocaTz9m6TMFA7Q8252qfjDVp6EYVrFAe9mRhtSOFhg/ZlB0WVG7HghSkn20v8VfsxfVVgOOlhYonmCzbGo03grcHwhgA6A5Hmw+HVSeDe9G7w==
+From: Christophe Leroy <christophe.leroy@csgroup.eu>
+To: "GONG, Ruiqi" <gongruiqi1@huawei.com>, Kees Cook <keescook@chromium.org>,
+	Marco Elver <elver@google.com>
+CC: Xiu Jianfeng <xiujianfeng@huawei.com>,
+	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
+	"linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>,
+	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Subject: Re: [PATCH] stack: Declare {randomize_,}kstack_offset to fix Sparse
+ warnings
+Thread-Topic: [PATCH] stack: Declare {randomize_,}kstack_offset to fix Sparse
+ warnings
+Thread-Index: AQHYi2q3CbbWycVsL0+lxSnFp6ngM61l1k4A
+Date: Wed, 29 Jun 2022 05:10:39 +0000
+Message-ID: <ca0fa9d2-64dd-0e77-71b6-3673e353c316@csgroup.eu>
+References: <20220629032939.2506773-1-gongruiqi1@huawei.com>
+In-Reply-To: <20220629032939.2506773-1-gongruiqi1@huawei.com>
+Accept-Language: fr-FR, en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+user-agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
+ Thunderbird/91.10.0
+authentication-results: dkim=none (message not signed)
+ header.d=none;dmarc=none action=none header.from=csgroup.eu;
+x-ms-publictraffictype: Email
+x-ms-office365-filtering-correlation-id: 2582af73-5f84-4bb2-f2ef-08da598db589
+x-ms-traffictypediagnostic: PR0P264MB2517:EE_
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam: BCL:0;
+x-microsoft-antispam-message-info:
+ z+sO00V+WrLiFVTxQCZSbBdpTQdAKnCKS/gFLKYLuEga1yknXL9i4j4HhSfUCMwzRN1fUkZNPexM38VtEG9VQfqyGum6wR4ANc4cMP99AwAK/rymJ953WapMihICRC5WogfmyEl+KEWMv4oAhbRt1lWEn4Akc9Ks5i0z9g5Rhv7Nxc8HacB11RbABYuZeof9yCpw360p4+XNLdzomA1oRDtUz8Y8Tprg+w/qRX/1e6x5xgseUsKqzZMnVqoF+RxUBpeNkHGH+iHHYRjw7LBiIEkRiijy5vAoNAYro1wl49P5BIkRDsw8oVheQRvpSKAPBPHZQ8TAugAimJI/EHxu8eqVl4T2n7iDEE1zg6j4yhq+c129VixXlm6FFFW4OX/OaeARR2C9xQ2caodY9fmZ0tQCVsOsM8IgXuiw1xFFBO+udUiupy+meMiOy+Ow+/fU4mBFFjsRtEKkZLi50PnHRoLUrXeYM8G/6KDvEMTXJ6sbAEnQwsgWoUecOKBmoHU/F7YIoDhCpdKKi5OMmH4eDWD6dXU864jfW62XonK+pNozVzIKMm/KjpiFvK+mlokx3j3ctr4ZJiVW3Nr2ixmlPwPQVtR57L6RnWmEh8X7IcajHDgPFaHxYH2ph0TNwuNA9AXEslfcttvq1ogyaiYaH9sWXpJ3R6i3eNAo285XzMdnSIPawEi/CgP0+KvExIoifVCxRD8ZKJD3vPI6f+64PHqTwQHnd7q6Ysot9+xaNo1Mrqzg9HgEql+vWQ+AiuXxFxN/iE+EX1z26FjJTy00U/fJo1K67VBteAEHT2oyxLa7/JWeBbaxvMIajHUkzM9ilTo9oEgH0IphlcRoihGj+FeMm2+nb5j7tbpCdlobNstz6kL7wEeUuUH4cNcx5kSwrUwjJVocyXKSpQmJQYbWIg==
+x-forefront-antispam-report:
+ CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:MRZP264MB2988.FRAP264.PROD.OUTLOOK.COM;PTR:;CAT:NONE;SFS:(13230016)(4636009)(136003)(376002)(346002)(396003)(366004)(39860400002)(66446008)(5660300002)(66476007)(66556008)(83380400001)(66946007)(4326008)(6486002)(110136005)(71200400001)(38070700005)(41300700001)(2616005)(966005)(8936002)(64756008)(44832011)(8676002)(76116006)(38100700002)(186003)(66574015)(478600001)(91956017)(36756003)(122000001)(86362001)(31696002)(2906002)(316002)(6506007)(26005)(6512007)(54906003)(31686004)(45980500001)(43740500002);DIR:OUT;SFP:1101;
+x-ms-exchange-antispam-messagedata-chunkcount: 1
+x-ms-exchange-antispam-messagedata-0:
+ =?utf-8?B?M3JrY005UmJ4TnBzcjJjbFdsZzBFYUxob3NMcFFJZ3JmKzZyYnBjSnhoRXo4?=
+ =?utf-8?B?ZUIwMGxpWUN2TFg2VWxYN3RPN2tFT3RNUWFHb0JYdHlzMHNrNGZZa050RGdt?=
+ =?utf-8?B?M1ZBanRWeGVPYWhtSGNkckMxK2ppcUcwZWxMd2hKeVB2ak9BdFg1MUVXOVQv?=
+ =?utf-8?B?N2hIMDRyLzdoYTI5UFd0QmkvNkpQenpQU0FKREFCNldodEd2TjRJb1gvWGJs?=
+ =?utf-8?B?RklRYWs0VG1VWllxamFpa2R1dXZSa3VJZkdaQ1VqWURJSFhqYnpkYTJLT1dE?=
+ =?utf-8?B?am8rOEVELzdDY1k3OE41VHNRcDNBS3ZFRldDYys5Z0ZCeGNvWVpGMEFyR1VD?=
+ =?utf-8?B?d0Fjb0V4cHpoU1A5Q3MzdXJTbjRIQzg5K3YrWlFsSkd2c2FhdXdEWEVqL1JZ?=
+ =?utf-8?B?bWV1WnNVL1FaRDZUNnB3RURpUldDOWJnK1c4QzlaUENjcElhRWFHV3Q0dE9w?=
+ =?utf-8?B?eWsxdmlveDIxY0N1ZzdxejMzSGNjZDJhTzFVRktQaTkyellWRFZQL0F4NkQw?=
+ =?utf-8?B?VTV3ZEJ2SkZyTmRnNmhaUm1rSkpKdWdXOFYySmRkb0tWWEFBb1VYc1ZXV2xF?=
+ =?utf-8?B?dUJPaDdXcm4rN1QrOWEzSWNVMlFRaCtJTGdOMmxCWmZqMldKYXkzbVcvNk5m?=
+ =?utf-8?B?SjE1UFFWblhzbXV0aG1jWllPdklVbHJHdjJWRXZxR0JNTGJyRDMwcWppMCtR?=
+ =?utf-8?B?Yll0VVIyWXJreG1SSFk4amxZcFJ2UjBzWmp3cTk5U0ZPL3BWNHRpc0ZlODVz?=
+ =?utf-8?B?ZjVuVS8yK1JrYkpSSkJJNHU0NjJaVTBZck9RcDNQdjlQdGNSYXVJMWFKMzR5?=
+ =?utf-8?B?NGlpdWhHR1NPUFJhNHhidTB1NE1vMnV1b3VjQVFkOGtXaUc1NFU3NW51M1pr?=
+ =?utf-8?B?SEFOckNKeFhlMzF3S1drazVudlJ6eUlBOVN2cWo5T05WRWNiNmJ0M2o5dzNm?=
+ =?utf-8?B?M0lMUjc4MEY1R0RHUzlCcXFjalZhUUdITDV0cE9TTEE5WW1pRlJxWmwvMkt1?=
+ =?utf-8?B?QzBOWlR3SHY5bVRpT1Y2NXBoUmUrWUVFQi9jR1p6V2xJQzFUK1pqSVdZUTM2?=
+ =?utf-8?B?VWVGc0dJSGV1bFFXa3hrRDJHZDdmTzNSaERwRVZlZ2JydFhQcnVxMWlRQ1No?=
+ =?utf-8?B?TDM0VVZUU1pSZ2xELzBnYVVLRHZ4R2V0WDRMdlFzem9Mcjd5bFZKYk5yVk1F?=
+ =?utf-8?B?bHI0NzlHUnNqYTIra3o1MDhVdythakZZOGw4VkQrV3YxRFVqTXRobW1GYmVD?=
+ =?utf-8?B?WUJ2bjI5ZGRUMG1nM21OYXMyYm5qVnpOVm9lOG53d0lRL1Q2S0tJRXhrNkY2?=
+ =?utf-8?B?SGp5VU1Rem5IMFJ3bHF5TVJxazk1NWpqMTBkcnhHTXVxVU5kNzkxVDFKOXJ0?=
+ =?utf-8?B?dWJ2Y1NMQmxTY28yU1VWSHpMSnExNGUrbFM5TFIyYXZOYTN4MmZlLy9Ld0NB?=
+ =?utf-8?B?MFpxSWJuaTVJSklKdktNTThacVVIYURTMkptY1FESWVNMkUwY3BKbnhuZ1d2?=
+ =?utf-8?B?ZS9qTVh2T2xySkc0cTN3di94Q3kvRWptdy81OEdqKy91UnJQK1hLc1BLVnFk?=
+ =?utf-8?B?RnMySmZ3WEwweDFYbWM1R1dsazVWWW9CU1FjU29ORXZock91eVpPc0ROYkNi?=
+ =?utf-8?B?Z3FHeGtvNDhFbUU3L1VCNDFVc0pOWGhodTl4SUdkUjd4Vm1xaFEzTE1uOG5T?=
+ =?utf-8?B?c3psQWo4UkdicUczbzBwYU9qdU1qV1BqOHo1Ry9jREZta2pDcUFVaW5PTHdZ?=
+ =?utf-8?B?VXU4bFBLeUdkWVc4eWlGM0h2ZlVUblIyVm5MVkVxdnV0R1FvQUVrRWNFUFVS?=
+ =?utf-8?B?YVJSc0tJVjFiTm1xTFZOMUZTK2dOWUt0TDRpcDJhK05qZXY2RnBPbkFYT1Nq?=
+ =?utf-8?B?b3pSd05mZGpETklVc3o0Yk9KWm5iY09IS1RDTEFzN1lsSitlY1pNVmtjRTJU?=
+ =?utf-8?B?T1M2SG5oZGxGaDlrYWtSMzV3VENkQnBpN3hYM0hkNjZMTC9rUG15cnV1OGVJ?=
+ =?utf-8?B?ajFGb3N6UmpUM1dhZzJtMzIvSmlKdnBOT0dGTGRpMmk5VW9wSmx5SXVLRGU2?=
+ =?utf-8?B?YUZMMU40c3NVRFFqZW9HQzVjYjQwVjdFQ3BtcHNkeStmcHR0Qzh0YnVZNStz?=
+ =?utf-8?B?WWdMNTBCWXBpWVVXa3VIa0VreDhKcEk0djRtMHVIOW01WkNuQmxJM0ExaGFL?=
+ =?utf-8?Q?UuJBgXlU11skj8wPB0OzSPs=3D?=
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <3D61586474E5E24B9F1B126CFE6F71C2@FRAP264.PROD.OUTLOOK.COM>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Content-Type: text/plain
-X-Originating-IP: [10.67.174.33]
-X-ClientProxiedBy: dggems705-chm.china.huawei.com (10.3.19.182) To
- dggpemm500016.china.huawei.com (7.185.36.25)
-X-CFilter-Loop: Reflected
+X-OriginatorOrg: csgroup.eu
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: MRZP264MB2988.FRAP264.PROD.OUTLOOK.COM
+X-MS-Exchange-CrossTenant-Network-Message-Id: 2582af73-5f84-4bb2-f2ef-08da598db589
+X-MS-Exchange-CrossTenant-originalarrivaltime: 29 Jun 2022 05:10:39.7011
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: 9914def7-b676-4fda-8815-5d49fb3b45c8
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: RE7WAvqtsG//J8aMl+/9WLNPkdJHuJ+nApl+vT3M5w7VOID8WEgyGe1128XJOtGwJVnZn3+J8qjevUj7KImgvOX9N0x76u2G07FadaObIf4=
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: PR0P264MB2517
 
-Fix the following Sparse warnings that got noticed when the PPC-dev
-patchwork was checking another patch (see the link below):
-
-init/main.c:862:1: warning: symbol 'randomize_kstack_offset' was not declared. Should it be static?
-init/main.c:864:1: warning: symbol 'kstack_offset' was not declared. Should it be static?
-
-Which in fact are triggered on all architectures that have
-HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET support (for instances x86, arm64
-etc).
-
-Link: https://lore.kernel.org/lkml/e7b0d68b-914d-7283-827c-101988923929@huawei.com/T/#m49b2d4490121445ce4bf7653500aba59eefcb67f
-Cc: Christophe Leroy <christophe.leroy@csgroup.eu>
-Cc: Xiu Jianfeng <xiujianfeng@huawei.com>
-Signed-off-by: GONG, Ruiqi <gongruiqi1@huawei.com>
----
- init/main.c | 4 ++++
- 1 file changed, 4 insertions(+)
-
-diff --git a/init/main.c b/init/main.c
-index e2490387db2b..6aa0fb2340cc 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -101,6 +101,10 @@
- #include <linux/stackdepot.h>
- #include <net/net_namespace.h>
- 
-+#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
-+#include <linux/randomize_kstack.h>
-+#endif
-+
- #include <asm/io.h>
- #include <asm/bugs.h>
- #include <asm/setup.h>
--- 
-2.25.1
-
+DQoNCkxlIDI5LzA2LzIwMjIgw6AgMDU6MjksIEdPTkcsIFJ1aXFpIGEgw6ljcml0wqA6DQo+IEZp
+eCB0aGUgZm9sbG93aW5nIFNwYXJzZSB3YXJuaW5ncyB0aGF0IGdvdCBub3RpY2VkIHdoZW4gdGhl
+IFBQQy1kZXYNCj4gcGF0Y2h3b3JrIHdhcyBjaGVja2luZyBhbm90aGVyIHBhdGNoIChzZWUgdGhl
+IGxpbmsgYmVsb3cpOg0KPiANCj4gaW5pdC9tYWluLmM6ODYyOjE6IHdhcm5pbmc6IHN5bWJvbCAn
+cmFuZG9taXplX2tzdGFja19vZmZzZXQnIHdhcyBub3QgZGVjbGFyZWQuIFNob3VsZCBpdCBiZSBz
+dGF0aWM/DQo+IGluaXQvbWFpbi5jOjg2NDoxOiB3YXJuaW5nOiBzeW1ib2wgJ2tzdGFja19vZmZz
+ZXQnIHdhcyBub3QgZGVjbGFyZWQuIFNob3VsZCBpdCBiZSBzdGF0aWM/DQo+IA0KPiBXaGljaCBp
+biBmYWN0IGFyZSB0cmlnZ2VyZWQgb24gYWxsIGFyY2hpdGVjdHVyZXMgdGhhdCBoYXZlDQo+IEhB
+VkVfQVJDSF9SQU5ET01JWkVfS1NUQUNLX09GRlNFVCBzdXBwb3J0IChmb3IgaW5zdGFuY2VzIHg4
+NiwgYXJtNjQNCj4gZXRjKS4NCj4gDQo+IExpbms6IGh0dHBzOi8vbG9yZS5rZXJuZWwub3JnL2xr
+bWwvZTdiMGQ2OGItOTE0ZC03MjgzLTgyN2MtMTAxOTg4OTIzOTI5QGh1YXdlaS5jb20vVC8jbTQ5
+YjJkNDQ5MDEyMTQ0NWNlNGJmNzY1MzUwMGFiYTU5ZWVmY2I2N2YNCj4gQ2M6IENocmlzdG9waGUg
+TGVyb3kgPGNocmlzdG9waGUubGVyb3lAY3Nncm91cC5ldT4NCj4gQ2M6IFhpdSBKaWFuZmVuZyA8
+eGl1amlhbmZlbmdAaHVhd2VpLmNvbT4NCj4gU2lnbmVkLW9mZi1ieTogR09ORywgUnVpcWkgPGdv
+bmdydWlxaTFAaHVhd2VpLmNvbT4NCj4gLS0tDQo+ICAgaW5pdC9tYWluLmMgfCA0ICsrKysNCj4g
+ICAxIGZpbGUgY2hhbmdlZCwgNCBpbnNlcnRpb25zKCspDQo+IA0KPiBkaWZmIC0tZ2l0IGEvaW5p
+dC9tYWluLmMgYi9pbml0L21haW4uYw0KPiBpbmRleCBlMjQ5MDM4N2RiMmIuLjZhYTBmYjIzNDBj
+YyAxMDA2NDQNCj4gLS0tIGEvaW5pdC9tYWluLmMNCj4gKysrIGIvaW5pdC9tYWluLmMNCj4gQEAg
+LTEwMSw2ICsxMDEsMTAgQEANCj4gICAjaW5jbHVkZSA8bGludXgvc3RhY2tkZXBvdC5oPg0KPiAg
+ICNpbmNsdWRlIDxuZXQvbmV0X25hbWVzcGFjZS5oPg0KPiANCj4gKyNpZmRlZiBDT05GSUdfUkFO
+RE9NSVpFX0tTVEFDS19PRkZTRVQNCg0KWW91IGRvbid0IG5lZWQgdGhpcyAjaWZkZWYsIHRoZXJl
+IGlzIGFscmVhZHkgb25lIGluc2lkZSANCmxpbnV4L3JhbmRvbWl6ZV9rc3RhY2suaA0KDQo+ICsj
+aW5jbHVkZSA8bGludXgvcmFuZG9taXplX2tzdGFjay5oPg0KPiArI2VuZGlmDQo+ICsNCj4gICAj
+aW5jbHVkZSA8YXNtL2lvLmg+DQo+ICAgI2luY2x1ZGUgPGFzbS9idWdzLmg+DQo+ICAgI2luY2x1
+ZGUgPGFzbS9zZXR1cC5oPg0KPiAtLQ0KPiAyLjI1LjENCj4g
