@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21568-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21569-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 2E206C433EF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Jun 2022 11:41:50 +0000 (UTC)
-Received: (qmail 6099 invoked by uid 550); 29 Jun 2022 11:41:40 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id A5157C19F28
+	for <kernel-hardening@archiver.kernel.org>; Wed, 27 Jul 2022 16:24:54 +0000 (UTC)
+Received: (qmail 5988 invoked by uid 550); 27 Jul 2022 16:24:42 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,78 +12,160 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 14065 invoked from network); 29 Jun 2022 05:51:56 -0000
-Message-ID: <6c274345-3370-16c8-f5f1-68521de0f51a@huawei.com>
-Date: Wed, 29 Jun 2022 13:51:15 +0800
+Received: (qmail 1809 invoked from network); 27 Jul 2022 16:17:18 -0000
+Subject: Re: [PATCH] Introduce the pkill_on_warn boot parameter
+To: Linus Torvalds <torvalds@linux-foundation.org>,
+ Petr Mladek <pmladek@suse.com>
+Cc: "Paul E. McKenney" <paulmck@kernel.org>,
+ Alexander Popov <alex.popov@linux.com>, Jonathan Corbet <corbet@lwn.net>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>,
+ Joerg Roedel <jroedel@suse.de>, Maciej Rozycki <macro@orcam.me.uk>,
+ Muchun Song <songmuchun@bytedance.com>,
+ Viresh Kumar <viresh.kumar@linaro.org>, Robin Murphy <robin.murphy@arm.com>,
+ Randy Dunlap <rdunlap@infradead.org>, Lu Baolu <baolu.lu@linux.intel.com>,
+ Kees Cook <keescook@chromium.org>, Luis Chamberlain <mcgrof@kernel.org>,
+ Wei Liu <wl@xen.org>, John Ogness <john.ogness@linutronix.de>,
+ Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
+ Alexey Kardashevskiy <aik@ozlabs.ru>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>,
+ Dave Hansen <dave.hansen@linux.intel.com>,
+ Steven Rostedt <rostedt@goodmis.org>, Thomas Garnier <thgarnie@google.com>,
+ Will Deacon <will.deacon@arm.com>, Ard Biesheuvel
+ <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>,
+ David S Miller <davem@davemloft.net>, Borislav Petkov <bp@alien8.de>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ linux-hardening@vger.kernel.org,
+ "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
+ Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, notify@kernel.org
+References: <20210929185823.499268-1-alex.popov@linux.com>
+ <d290202d-a72d-0821-9edf-efbecf6f6cef@linux.com>
+ <20210929194924.GA880162@paulmck-ThinkPad-P17-Gen-1> <YVWAPXSzFNbHz6+U@alley>
+ <CAHk-=widOm3FXMPXXK0cVaoFuy3jCk65=5VweLceQCuWdep=Hg@mail.gmail.com>
+From: Alexey Khoroshilov <khoroshilov@ispras.ru>
+Autocrypt: addr=khoroshilov@ispras.ru; prefer-encrypt=mutual; keydata=
+ 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
+ kK2E04Fb+Zk1eJvHYRc=
+Message-ID: <7c567acd-1cc1-a480-ca5a-d50a9c5a69ef@ispras.ru>
+Date: Wed, 27 Jul 2022 19:17:04 +0300
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.10.0
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101
- Thunderbird/91.9.0
-Subject: Re: [PATCH] stack: Declare {randomize_,}kstack_offset to fix Sparse
- warnings
+In-Reply-To: <CAHk-=widOm3FXMPXXK0cVaoFuy3jCk65=5VweLceQCuWdep=Hg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
-To: Christophe Leroy <christophe.leroy@csgroup.eu>, Kees Cook
-	<keescook@chromium.org>, Marco Elver <elver@google.com>
-CC: Xiu Jianfeng <xiujianfeng@huawei.com>,
-	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
-	"linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>,
-	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-References: <20220629032939.2506773-1-gongruiqi1@huawei.com>
- <ca0fa9d2-64dd-0e77-71b6-3673e353c316@csgroup.eu>
-From: Gong Ruiqi <gongruiqi1@huawei.com>
-In-Reply-To: <ca0fa9d2-64dd-0e77-71b6-3673e353c316@csgroup.eu>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 8bit
-X-Originating-IP: [10.67.108.157]
-X-ClientProxiedBy: dggems702-chm.china.huawei.com (10.3.19.179) To
- dggpemm500016.china.huawei.com (7.185.36.25)
-X-CFilter-Loop: Reflected
+Content-Transfer-Encoding: 7bit
 
-
-
-On 2022/06/29 13:10, Christophe Leroy wrote:
+On 01.10.2021 22:59, Linus Torvalds wrote:
+> On Thu, Sep 30, 2021 at 2:15 AM Petr Mladek <pmladek@suse.com> wrote:
+>>
+>> Honestly, I am not sure if panic_on_warn() or the new pkill_on_warn()
+>> work as expected. I wonder who uses it in practice and what is
+>> the experience.
 > 
+> Afaik, there are only two valid uses for panic-on-warn:
 > 
-> Le 29/06/2022 à 05:29, GONG, Ruiqi a écrit :
->> Fix the following Sparse warnings that got noticed when the PPC-dev
->> patchwork was checking another patch (see the link below):
->>
->> init/main.c:862:1: warning: symbol 'randomize_kstack_offset' was not declared. Should it be static?
->> init/main.c:864:1: warning: symbol 'kstack_offset' was not declared. Should it be static?
->>
->> Which in fact are triggered on all architectures that have
->> HAVE_ARCH_RANDOMIZE_KSTACK_OFFSET support (for instances x86, arm64
->> etc).
->>
->> Link: https://lore.kernel.org/lkml/e7b0d68b-914d-7283-827c-101988923929@huawei.com/T/#m49b2d4490121445ce4bf7653500aba59eefcb67f
->> Cc: Christophe Leroy <christophe.leroy@csgroup.eu>
->> Cc: Xiu Jianfeng <xiujianfeng@huawei.com>
->> Signed-off-by: GONG, Ruiqi <gongruiqi1@huawei.com>
->> ---
->>   init/main.c | 4 ++++
->>   1 file changed, 4 insertions(+)
->>
->> diff --git a/init/main.c b/init/main.c
->> index e2490387db2b..6aa0fb2340cc 100644
->> --- a/init/main.c
->> +++ b/init/main.c
->> @@ -101,6 +101,10 @@
->>   #include <linux/stackdepot.h>
->>   #include <net/net_namespace.h>
->>
->> +#ifdef CONFIG_RANDOMIZE_KSTACK_OFFSET
+>  (a) test boxes (particularly VM's) that are literally running things
+> like syzbot and want to report any kernel warnings
 > 
-> You don't need this #ifdef, there is already one inside 
-> linux/randomize_kstack.h
+>  (b) the "interchangeable production machinery" fail-fast kind of situation
 > 
+> So in that (a) case, it's literally that you consider a warning to be
+> a failure case, and just want to stop. Very useful as a way to get
+> notified by syzbot that "oh, that assert can actually trigger".
+> 
+> And the (b) case is more of a "we have 150 million machines, we expect
+> about a thousand of them to fail for any random reason any day
+> _anyway_ - perhaps simply due to hardware failure, and we'd rather
+> take a machine down quickly and then perhaps look at why only much
+> later when we have some pattern to the failures".
+> 
+> You shouldn't expect panic-on-warn to ever be the case for any actual
+> production machine that _matters_. If it is, that production
+> maintainer only has themselves to blame if they set that flag.
+> 
+> But yes, the expectation is that warnings are for "this can't happen,
+> but if it does, it's not necessarily fatal, I want to know about it so
+> that I can think about it".
+> 
+> So it might be a case that you don't handle, but that isn't
+> necessarily _wrong_ to not handle. You are ok returning an error like
+> -ENOSYS for that case, for example, but at the same time you are "If
+> somebody uses this, we should perhaps react to it".
+> 
+> In many cases, a "pr_warn()" is much better. But if you are unsure
+> just _how_ the situation can happen, and want a call trace and
+> information about what process did it, and it really is a "this
+> shouldn't ever happen" situation, a WARN_ON() or a WARN_ON_ONCE() is
+> certainly not wrong.
+> 
+> So think of WARN_ON() as basically an assert, but an assert with the
+> intention to be able to continue so that the assert can actually be
+> reported. BUG_ON() and friends easily result in a machine that is
+> dead. That's unacceptable.
 
-Ah yes, I didn't notice the config was there already. I will send a new
-version. Thanks for your reminder!
+Hi Linus,
 
->> +#include <linux/randomize_kstack.h>
->> +#endif
->> +
->>   #include <asm/io.h>
->>   #include <asm/bugs.h>
->>   #include <asm/setup.h>
->> --
->> 2.25.1
+Coming back to the discussion of WARN_ON()/pr_warn("WARNING:") semantics.
+
+We see a number of cases where WARNING is used to inform userspace that
+it is doing something wrong, e.g.
+https://elixir.bootlin.com/linux/v5.19-rc8/source/net/can/j1939/socket.c#L181
+https://elixir.bootlin.com/linux/v5.19-rc8/source/drivers/video/fbdev/core/fbmem.c#L1023
+
+It is definitely useful, but it does not make sense in case of fuzzing
+when the userspace should do wrong things and check if kernel behaves
+correctly.
+
+As a result we have warnings with two different intentions:
+- warn that something wrong happens in kernel, but we are able to continue;
+- warn userspace that it is doing something wrong.
+
+During fuzzing we would like to report the former and to ignore the
+latter. Are any ideas how these intentions can be recognized automatically?
+
+Best regards,
+Alexey
+
