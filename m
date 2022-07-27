@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21572-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21573-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id C5EEBC04A68
-	for <kernel-hardening@archiver.kernel.org>; Wed, 27 Jul 2022 16:43:23 +0000 (UTC)
-Received: (qmail 21727 invoked by uid 550); 27 Jul 2022 16:43:15 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 5F94FC04A68
+	for <kernel-hardening@archiver.kernel.org>; Wed, 27 Jul 2022 17:48:08 +0000 (UTC)
+Received: (qmail 32708 invoked by uid 550); 27 Jul 2022 17:47:57 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,11 +12,10 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 21702 invoked from network); 27 Jul 2022 16:43:14 -0000
+Received: (qmail 32685 invoked from network); 27 Jul 2022 17:47:57 -0000
 Subject: Re: [PATCH] Introduce the pkill_on_warn boot parameter
-To: Jann Horn <jannh@google.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>,
- Petr Mladek <pmladek@suse.com>, "Paul E. McKenney" <paulmck@kernel.org>,
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Petr Mladek <pmladek@suse.com>, "Paul E. McKenney" <paulmck@kernel.org>,
  Alexander Popov <alex.popov@linux.com>, Jonathan Corbet <corbet@lwn.net>,
  Andrew Morton <akpm@linux-foundation.org>,
  Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <peterz@infradead.org>,
@@ -28,8 +27,8 @@ Cc: Linus Torvalds <torvalds@linux-foundation.org>,
  Wei Liu <wl@xen.org>, John Ogness <john.ogness@linutronix.de>,
  Andy Shevchenko <andriy.shevchenko@linux.intel.com>,
  Alexey Kardashevskiy <aik@ozlabs.ru>,
- Christophe Leroy <christophe.leroy@csgroup.eu>,
- Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+ Christophe Leroy <christophe.leroy@csgroup.eu>, Jann Horn
+ <jannh@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
  Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>,
  Dave Hansen <dave.hansen@linux.intel.com>,
  Steven Rostedt <rostedt@goodmis.org>, Thomas Garnier <thgarnie@google.com>,
@@ -39,13 +38,14 @@ Cc: Linus Torvalds <torvalds@linux-foundation.org>,
  Kernel Hardening <kernel-hardening@lists.openwall.com>,
  linux-hardening@vger.kernel.org,
  "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>,
- Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, notify@kernel.org
+ Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, notify@kernel.org,
+ ldv-project@linuxtesting.org
 References: <20210929185823.499268-1-alex.popov@linux.com>
  <d290202d-a72d-0821-9edf-efbecf6f6cef@linux.com>
  <20210929194924.GA880162@paulmck-ThinkPad-P17-Gen-1> <YVWAPXSzFNbHz6+U@alley>
  <CAHk-=widOm3FXMPXXK0cVaoFuy3jCk65=5VweLceQCuWdep=Hg@mail.gmail.com>
  <7c567acd-1cc1-a480-ca5a-d50a9c5a69ef@ispras.ru>
- <CAG48ez2Sh-kngNVeCF9-X550PQMaNnQaEvS+EAiWaDjWnmoHOg@mail.gmail.com>
+ <CAHk-=wgSyNh2gZTnC-EoiGs5WNtVu99jcHXxLRUvwMabm37iKg@mail.gmail.com>
 From: Alexey Khoroshilov <khoroshilov@ispras.ru>
 Autocrypt: addr=khoroshilov@ispras.ru; prefer-encrypt=mutual; keydata=
  xsFNBFtq9eIBEACxmOIPDht+aZvO9DGi4TwnZ1WTDnyDVz3Nnh0rlQCK8IssaT6wE5a95VWo
@@ -90,63 +90,41 @@ Autocrypt: addr=khoroshilov@ispras.ru; prefer-encrypt=mutual; keydata=
  J07KmxgOjrvY8X9WOC3O0k/nFpBbbsM4zUrmF6F5wIYO99xafQOlfpUnVtbo3GnBR2LIcPYj
  SyY3dW28JXo2cftxIOr1edJ+fhcRqYRrPzJrQBZcE2GZjRO8tz6IOMAsc+WMtVfj5grgVHCu
  kK2E04Fb+Zk1eJvHYRc=
-Message-ID: <1fa12030-ba88-e6e8-6aca-4aedac790cc1@ispras.ru>
-Date: Wed, 27 Jul 2022 19:43:01 +0300
+Message-ID: <64be87a7-bb1f-5578-a526-b7d064fcfea3@ispras.ru>
+Date: Wed, 27 Jul 2022 20:47:41 +0300
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
  Thunderbird/68.10.0
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez2Sh-kngNVeCF9-X550PQMaNnQaEvS+EAiWaDjWnmoHOg@mail.gmail.com>
+In-Reply-To: <CAHk-=wgSyNh2gZTnC-EoiGs5WNtVu99jcHXxLRUvwMabm37iKg@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
-Content-Language: ru-RU
+Content-Language: en-US
 Content-Transfer-Encoding: 7bit
 
-On 27.07.2022 19:30, Jann Horn wrote:
-> On Wed, Jul 27, 2022 at 6:17 PM Alexey Khoroshilov
+On 27.07.2022 19:42, Linus Torvalds wrote:
+> On Wed, Jul 27, 2022 at 9:17 AM Alexey Khoroshilov
 > <khoroshilov@ispras.ru> wrote:
->> On 01.10.2021 22:59, Linus Torvalds wrote:
->> Coming back to the discussion of WARN_ON()/pr_warn("WARNING:") semantics.
 >>
 >> We see a number of cases where WARNING is used to inform userspace that
 >> it is doing something wrong, e.g.
 >> https://elixir.bootlin.com/linux/v5.19-rc8/source/net/can/j1939/socket.c#L181
 >> https://elixir.bootlin.com/linux/v5.19-rc8/source/drivers/video/fbdev/core/fbmem.c#L1023
->>
->> It is definitely useful, but it does not make sense in case of fuzzing
->> when the userspace should do wrong things and check if kernel behaves
->> correctly.
->>
->> As a result we have warnings with two different intentions:
->> - warn that something wrong happens in kernel, but we are able to continue;
->> - warn userspace that it is doing something wrong.
->>
->> During fuzzing we would like to report the former and to ignore the
->> latter. Are any ideas how these intentions can be recognized automatically?
 > 
-> https://elixir.bootlin.com/linux/v5.19-rc8/source/include/asm-generic/bug.h#L74
-> says:
+> That first case is entirely bogus.
 > 
->  * WARN(), WARN_ON(), WARN_ON_ONCE, and so on can be used to report
->  * significant kernel issues that need prompt attention if they should ever
->  * appear at runtime.
->  *
->  * Do not use these macros when checking for invalid external inputs
->  * (e.g. invalid system call arguments, or invalid data coming from
->  * network/devices), and on transient conditions like ENOMEM or EAGAIN.
->  * These macros should be used for recoverable kernel issues only.
->  * For invalid external inputs, transient conditions, etc use
->  * pr_err[_once/_ratelimited]() followed by dump_stack(), if necessary.
->  * Do not include "BUG"/"WARNING" in format strings manually to make these
->  * conditions distinguishable from kernel issues.
+> WARN_ON() should only be used for "This cannot happen, but if it does,
+> I want to know how we got here".
 > 
-> So if you see drivers intentionally using WARN() or printing
-> "WARNING:" on codepaths that are reachable with bogus inputs from
-> userspace, those codepaths should be fixed to log warnings in a
-> different format.
+> But the second case is fine: Using "pr_warn()" is fine. A kernel
+> warning (without a backtrace) is a normal thing for something that is
+> deprecated or questionable, and you want to tell the user that "this
+> app is doing something wrong".
 
-Thank you, Jann!
+Agree with the only note that I like the requirement:
 
-I have missed that.
+* Do not include "BUG"/"WARNING" in format strings manually to make
+* these conditions distinguishable from kernel issues.
 
---
+very much.
+
+Thank you,
 Alexey
-
