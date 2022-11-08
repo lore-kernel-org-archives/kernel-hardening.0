@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21582-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21583-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id BC72EC4332F
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Nov 2022 14:54:08 +0000 (UTC)
-Received: (qmail 3901 invoked by uid 550); 8 Nov 2022 14:53:56 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id E564CC433FE
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Nov 2022 17:23:12 +0000 (UTC)
+Received: (qmail 20038 invoked by uid 550); 8 Nov 2022 17:23:01 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,85 +12,55 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3855 invoked from network); 8 Nov 2022 14:53:55 -0000
+Received: (qmail 20001 invoked from network); 8 Nov 2022 17:23:00 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20210112;
-        h=cc:to:subject:message-id:date:from:in-reply-to:references
-         :mime-version:from:to:cc:subject:date:message-id:reply-to;
-        bh=md7pq5Y61523ftXLUcPOT58RE3lJ/xJd5Ph3p8iEops=;
-        b=ZXZdWEAL1R1ZVFA2P8fuWqcX2rj1JRkf1sp5+gC2XB9VDMVOHlyvW06sVoWrr0JeLS
-         tvUZupelkiZrBGHM4LVCUF9TJL0PrccBEvLQqTWDh37RAs+5ZOMQgNgQqZsVeWWTWl20
-         pPi2oeRzwQuqwhUBo7egz7jaC5Dx7kiLJrTQYY5RUrSmxRyaebac4H7gxtQ5lFDXRHkr
-         sDxMbEHOoBWiIPdLSayctyrYpXiHkqYZePXrc4vmmPCakZrhLAjrSdNFi/rT/bSfGjk/
-         fEaa/X6uGH57UhEHgRxznmXcajiDWhf0/RsixaCP39jbo00AGUVbCIRsqQ9c6UeYwnW5
-         V0mA==
+        d=chromium.org; s=google;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
+        bh=lMk4PVCi8MpYMDkTe7xjdobh7931rVJKCrHxnRJEZ/s=;
+        b=hH8t9+Espo0GrgedJ9kMDPtH/SwZJLvzS42Mpnzj25bSeGNKWC/KhRsX+Bk5RGBoYh
+         GS89jcjEhdmZQCZmsXftPjQPRRk67Sp6/5ZHG3Enccq5LOmxhTx1Wil+jM384G6zHYUE
+         HEAuY+LA8P/URl4U6jup79JIboPvC9ydZMpHg=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
-        h=cc:to:subject:message-id:date:from:in-reply-to:references
-         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
-         :reply-to;
-        bh=md7pq5Y61523ftXLUcPOT58RE3lJ/xJd5Ph3p8iEops=;
-        b=QFTJUqUKZa815dAejdityi5KRtM8sXa7K9E0JfoZ5lz92J+UqfN5/NMuVd9uH1EhF9
-         eWD9NYdlfhqUtnn/i0q0Bpz6XGRJGBrsmPujX0Sk4ervVpdAH9ExXuV0oRP3GUy2yAM7
-         OavDV7NCb8BxLCA431sRqUoyZLFai6q+zV9ED3JMrroYSREElHbuDMpIK/e4n22O7XEd
-         UgkKSHuqA0yNYe4nM5XYxN2FmZBkj1wf0fwRm5m52uuXMbYepLV304hXprxUNHnk10rR
-         54S7y4N08jhMVMaBkBzHay4zLLsgLw3c6JZmivUtJbutv3M3fwVtQOv6X1EZ2aFzicAt
-         1F6Q==
-X-Gm-Message-State: ANoB5pnpUiCDvVQ51ja0P+gBUE5QMYUQIMNPRvcFV5a4SnsBwwVEHru7
-	n6PCBHolHVIEAyym6EuWsdoDfJflc5H9IfNDxpq/UA==
-X-Google-Smtp-Source: AA0mqf64FMOjlHNu2kF5bZaWRJmb+rAcbAEZwyePMAW3WnAc6couRpYkD7fasQW1Ra9c+tlJUfPYQqMoNMGd+ru8XS8=
-X-Received: by 2002:a6b:b80a:0:b0:6dd:3f5a:32d6 with SMTP id
- i10-20020a6bb80a000000b006dd3f5a32d6mr2104168iof.154.1667919223019; Tue, 08
- Nov 2022 06:53:43 -0800 (PST)
-MIME-Version: 1.0
-References: <20221107201317.324457-1-jannh@google.com> <3e2f7e2cb4f6451a9ef5d0fb9e1f6080@AcuMS.aculab.com>
-In-Reply-To: <3e2f7e2cb4f6451a9ef5d0fb9e1f6080@AcuMS.aculab.com>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 8 Nov 2022 15:53:07 +0100
-Message-ID: <CAG48ez3AGh-R+deQMbNPt6PCQazOz8a96skW+qP3_HmUaANmmQ@mail.gmail.com>
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=lMk4PVCi8MpYMDkTe7xjdobh7931rVJKCrHxnRJEZ/s=;
+        b=fYdKYBvdtjQV8jZzu97ViN+8M9uACDE+IukFTrfogBGbIBuI1Y4K+7n7QwzJy3Uumy
+         QNx17pA5b/7imYHSLoQ6PlrwgcVRk8OMncbeRW/zOzqzLgnen6A5F8FZWnEyWAaBL7bW
+         MtTsjC34v29SHsPaPZNapKOHLJzNs823ZK9GANUnFgJszaPvqhK929/R32nd5G00N+PX
+         4sUSI5yCl2WtHr8Ye6q/0bITMNWnvqOz3wqulP860EdDDhhzO8MZ0S6vT7lfNOZ29Fjg
+         7F+X+6mHmE8X3FjuYK649hghThyWz+18Xknna4SvUxDg5RUX/RqorQ4XZDxA5TpRC9th
+         VGmA==
+X-Gm-Message-State: ACrzQf31GTUpAi5EoiQS/iEwKJ0eyr7M3HpEGj3sAL5betWmfrA7wJ/V
+	AH5q2PbeU6miTbu4acm8WrVd6w==
+X-Google-Smtp-Source: AMsMyM4Ab4Kr0QUaf2x7BxJa/AITAVTNdya0GPA8aZCXQG+csEC+UsBcfir62wN3+d9ly4DUl+wEDQ==
+X-Received: by 2002:a05:6a02:282:b0:439:7a97:ccd with SMTP id bk2-20020a056a02028200b004397a970ccdmr49560686pgb.297.1667928168583;
+        Tue, 08 Nov 2022 09:22:48 -0800 (PST)
+Date: Tue, 8 Nov 2022 09:22:47 -0800
+From: Kees Cook <keescook@chromium.org>
+To: Jann Horn <jannh@google.com>
+Cc: linux-hardening@vger.kernel.org, kernel-hardening@lists.openwall.com,
+	Greg KH <gregkh@linuxfoundation.org>,
+	Linus Torvalds <torvalds@linuxfoundation.org>,
+	Seth Jenkins <sethjenkins@google.com>,
+	"Eric W . Biederman" <ebiederm@xmission.com>,
+	Andy Lutomirski <luto@kernel.org>, linux-kernel@vger.kernel.org
 Subject: Re: [PATCH] exit: Put an upper limit on how often we can oops
-To: David Laight <David.Laight@aculab.com>
-Cc: Kees Cook <keescook@chromium.org>, 
-	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, 
-	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, 
-	Linus Torvalds <torvalds@linuxfoundation.org>, Seth Jenkins <sethjenkins@google.com>, 
-	"Eric W . Biederman" <ebiederm@xmission.com>, Andy Lutomirski <luto@kernel.org>, 
-	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-Content-Type: text/plain; charset="UTF-8"
+Message-ID: <202211080922.8B4A9A16AA@keescook>
+References: <20221107201317.324457-1-jannh@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20221107201317.324457-1-jannh@google.com>
 
-On Tue, Nov 8, 2022 at 10:26 AM David Laight <David.Laight@aculab.com> wrote:
-> > Many Linux systems are configured to not panic on oops; but allowing an
-> > attacker to oops the system **really** often can make even bugs that look
-> > completely unexploitable exploitable (like NULL dereferences and such) if
-> > each crash elevates a refcount by one or a lock is taken in read mode, and
-> > this causes a counter to eventually overflow.
-> >
-> > The most interesting counters for this are 32 bits wide (like open-coded
-> > refcounts that don't use refcount_t). (The ldsem reader count on 32-bit
-> > platforms is just 16 bits, but probably nobody cares about 32-bit platforms
-> > that much nowadays.)
-> >
-> > So let's panic the system if the kernel is constantly oopsing.
->
-> I think you are pretty much guaranteed to run out of memory
-> (or at least KVA) before any 32bit counter wraps.
+On Mon, Nov 07, 2022 at 09:13:17PM +0100, Jann Horn wrote:
+> @Kees should this go through your tree? (After waiting a while for
+> the inevitable bikeshedding on whether the default limit should be closer
+> to 10000 or 2^31.)
 
-Not if you repeatedly take a reference and then oops without dropping
-the reference, and the oops path cleans up all the resources that were
-allocated for the crashing tasks. In that case, each oops increments
-the reference count by 1 without causing memory allocation.
+Sure, yeah. I can take it.
 
-(Also, as a sidenote: To store 2^32 densely packed pointers, you just
-need around 8 bytes * (2^32) = 32 GiB of RAM. So on a workstation or
-server with a decent amount of RAM, there can already be cases where
-you can overflow a 32-bit reference counter with legitimate references
-- see <https://bugs.chromium.org/p/project-zero/issues/detail?id=809>.
-Another example that needs more RAM is
-<https://bugs.chromium.org/p/project-zero/issues/detail?id=1752>, that
-needs ~140 GiB. Still probably within the realm of what a beefy server
-might have nowadays? Kernel virtual address space is not a meaningful
-limit on x86-64 - even with 4-level paging, the kernel has a 64 TiB
-virtual memory area (the direct mapping) that is used for slab
-allocations and such, see
-<https://www.kernel.org/doc/html/latest/x86/x86_64/mm.html>. With
-5-level paging it's even more, 32 PiB.)
+-- 
+Kees Cook
