@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21583-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21584-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id E564CC433FE
-	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Nov 2022 17:23:12 +0000 (UTC)
-Received: (qmail 20038 invoked by uid 550); 8 Nov 2022 17:23:01 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 5798FC43217
+	for <kernel-hardening@archiver.kernel.org>; Tue,  8 Nov 2022 17:25:03 +0000 (UTC)
+Received: (qmail 22208 invoked by uid 550); 8 Nov 2022 17:24:54 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,55 +12,84 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 20001 invoked from network); 8 Nov 2022 17:23:00 -0000
+Received: (qmail 22175 invoked from network); 8 Nov 2022 17:24:53 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=chromium.org; s=google;
         h=in-reply-to:content-disposition:mime-version:references:message-id
          :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
-        bh=lMk4PVCi8MpYMDkTe7xjdobh7931rVJKCrHxnRJEZ/s=;
-        b=hH8t9+Espo0GrgedJ9kMDPtH/SwZJLvzS42Mpnzj25bSeGNKWC/KhRsX+Bk5RGBoYh
-         GS89jcjEhdmZQCZmsXftPjQPRRk67Sp6/5ZHG3Enccq5LOmxhTx1Wil+jM384G6zHYUE
-         HEAuY+LA8P/URl4U6jup79JIboPvC9ydZMpHg=
+        bh=2jXnwrdOctEAg+6kVY9hCNzqeQ8ppwfCq8v7ax8XLyc=;
+        b=h6D/IhT6OiuD6Oz+6iB4e635Qux6H+f6qBbBPVTGtHvODhDFB2CnQs8vlNB+Nsbafg
+         03RtBAuw9ByoFQs980ux+z2LmzPfeAtYXLRCq6JM5hxHViWryYtF8bTcTb7X1FEzY/K6
+         UORYYY6hBNReHXNzkYb6gfgK1E2XkcDT9Na40=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
         h=in-reply-to:content-disposition:mime-version:references:message-id
          :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
          :message-id:reply-to;
-        bh=lMk4PVCi8MpYMDkTe7xjdobh7931rVJKCrHxnRJEZ/s=;
-        b=fYdKYBvdtjQV8jZzu97ViN+8M9uACDE+IukFTrfogBGbIBuI1Y4K+7n7QwzJy3Uumy
-         QNx17pA5b/7imYHSLoQ6PlrwgcVRk8OMncbeRW/zOzqzLgnen6A5F8FZWnEyWAaBL7bW
-         MtTsjC34v29SHsPaPZNapKOHLJzNs823ZK9GANUnFgJszaPvqhK929/R32nd5G00N+PX
-         4sUSI5yCl2WtHr8Ye6q/0bITMNWnvqOz3wqulP860EdDDhhzO8MZ0S6vT7lfNOZ29Fjg
-         7F+X+6mHmE8X3FjuYK649hghThyWz+18Xknna4SvUxDg5RUX/RqorQ4XZDxA5TpRC9th
-         VGmA==
-X-Gm-Message-State: ACrzQf31GTUpAi5EoiQS/iEwKJ0eyr7M3HpEGj3sAL5betWmfrA7wJ/V
-	AH5q2PbeU6miTbu4acm8WrVd6w==
-X-Google-Smtp-Source: AMsMyM4Ab4Kr0QUaf2x7BxJa/AITAVTNdya0GPA8aZCXQG+csEC+UsBcfir62wN3+d9ly4DUl+wEDQ==
-X-Received: by 2002:a05:6a02:282:b0:439:7a97:ccd with SMTP id bk2-20020a056a02028200b004397a970ccdmr49560686pgb.297.1667928168583;
-        Tue, 08 Nov 2022 09:22:48 -0800 (PST)
-Date: Tue, 8 Nov 2022 09:22:47 -0800
+        bh=2jXnwrdOctEAg+6kVY9hCNzqeQ8ppwfCq8v7ax8XLyc=;
+        b=GW3aFiQIVAVSCyccVl5MrlwAIKW7xW3nMxs2DzzBSnQ/LDA0iDPFJ9dtVXlZhjgWkT
+         VZ5IZ5CWbfaPqha8ZYbr+bZkt/o2zq4Np3kd/PhXhnr7LKGC0DOLh1L01cY48tOnbPpj
+         IdVuRADC+ZgfkOwWfEgJ5OP5uBWHX3gVUj0yKf680uOkhmBK4Sv6+oWlXOk5LlxNH1nY
+         iUtbeBM/GVxu+LHFwDDLqfwqp1ldxp+oR/cD8JGjNdfIuod5wzW3FcC0f7WKLU6PTw9l
+         IO9IJhAvGazla5eygSfJBzZBqf/8gkTG/2mEs1+VnWALb/f8aZr/RnqnX2p61S1kf5pP
+         fpwg==
+X-Gm-Message-State: ACrzQf1M/QVNCgtAATQ97EG1Y5s6+0VkW+1Kv6amg96fwuluavmQagVH
+	Zzv/P2KNb4aojq42OFyvRM7XyA==
+X-Google-Smtp-Source: AMsMyM7BM+yOcGq3Phx6Hb1U5oS2KniFsbemmzg1XGdqd6aw4Uxv40mr3JOyoKudrTJspDw0hxUsMA==
+X-Received: by 2002:a17:90a:d24d:b0:213:d3e4:677a with SMTP id o13-20020a17090ad24d00b00213d3e4677amr49640405pjw.101.1667928281513;
+        Tue, 08 Nov 2022 09:24:41 -0800 (PST)
+Date: Tue, 8 Nov 2022 09:24:40 -0800
 From: Kees Cook <keescook@chromium.org>
 To: Jann Horn <jannh@google.com>
-Cc: linux-hardening@vger.kernel.org, kernel-hardening@lists.openwall.com,
+Cc: Solar Designer <solar@openwall.com>, linux-hardening@vger.kernel.org,
+	kernel-hardening@lists.openwall.com,
 	Greg KH <gregkh@linuxfoundation.org>,
 	Linus Torvalds <torvalds@linuxfoundation.org>,
 	Seth Jenkins <sethjenkins@google.com>,
 	"Eric W . Biederman" <ebiederm@xmission.com>,
 	Andy Lutomirski <luto@kernel.org>, linux-kernel@vger.kernel.org
 Subject: Re: [PATCH] exit: Put an upper limit on how often we can oops
-Message-ID: <202211080922.8B4A9A16AA@keescook>
+Message-ID: <202211080923.8BAEA9980@keescook>
 References: <20221107201317.324457-1-jannh@google.com>
+ <20221107211440.GA4233@openwall.com>
+ <CAG48ez2-xUawSs4ji_+0Bnyn_QTiS930UiOypXreU_RhwhVo_w@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20221107201317.324457-1-jannh@google.com>
+In-Reply-To: <CAG48ez2-xUawSs4ji_+0Bnyn_QTiS930UiOypXreU_RhwhVo_w@mail.gmail.com>
 
-On Mon, Nov 07, 2022 at 09:13:17PM +0100, Jann Horn wrote:
-> @Kees should this go through your tree? (After waiting a while for
-> the inevitable bikeshedding on whether the default limit should be closer
-> to 10000 or 2^31.)
+On Mon, Nov 07, 2022 at 10:48:20PM +0100, Jann Horn wrote:
+> On Mon, Nov 7, 2022 at 10:15 PM Solar Designer <solar@openwall.com> wrote:
+> > On Mon, Nov 07, 2022 at 09:13:17PM +0100, Jann Horn wrote:
+> > > +oops_limit
+> > > +==========
+> > > +
+> > > +Number of kernel oopses after which the kernel should panic when
+> > > +``panic_on_oops`` is not set.
+> >
+> > Rather than introduce this separate oops_limit, how about making
+> > panic_on_oops (and maybe all panic_on_*) take the limit value(s) instead
+> > of being Boolean?  I think this would preserve the current behavior at
+> > panic_on_oops = 0 and panic_on_oops = 1, but would introduce your
+> > desired behavior at panic_on_oops = 10000.  We can make 10000 the new
+> > default.  If a distro overrides panic_on_oops, it probably sets it to 1
+> > like RHEL does.
+> >
+> > Are there distros explicitly setting panic_on_oops to 0?  If so, that
+> > could be a reason to introduce the separate oops_limit.
+> >
+> > I'm not advocating one way or the other - I just felt this should be
+> > explicitly mentioned and decided on.
+> 
+> I think at least internally in the kernel, it probably works better to
+> keep those two concepts separate? For example, sparc has a function
+> die_nmi() that uses panic_on_oops to determine whether the system
+> should panic when a watchdog detects a lockup.
 
-Sure, yeah. I can take it.
+Internally, yes, the kernel should keep "panic_on_oops" to mean "panic
+_NOW_ on oops?" but I would agree with Solar -- this is a counter as far
+as userspace is concerned. "Panic on Oops" after 1 oops, 2, oopses, etc.
+I would like to see this for panic_on_warn too, actually.
 
 -- 
 Kees Cook
