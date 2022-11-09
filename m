@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21586-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21587-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id A61EBC433FE
-	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Nov 2022 09:05:04 +0000 (UTC)
-Received: (qmail 17702 invoked by uid 550); 9 Nov 2022 09:04:51 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 79F39C433FE
+	for <kernel-hardening@archiver.kernel.org>; Wed,  9 Nov 2022 09:34:06 +0000 (UTC)
+Received: (qmail 5123 invoked by uid 550); 9 Nov 2022 09:33:56 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,66 +12,90 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17659 invoked from network); 9 Nov 2022 09:04:50 -0000
-X-MC-Unique: F6hqTQPdMNuxkLz7d09ESQ-1
-From: David Laight <David.Laight@ACULAB.COM>
-To: 'Jann Horn' <jannh@google.com>
-CC: Kees Cook <keescook@chromium.org>, "linux-hardening@vger.kernel.org"
-	<linux-hardening@vger.kernel.org>, "kernel-hardening@lists.openwall.com"
-	<kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>,
-	Linus Torvalds <torvalds@linuxfoundation.org>, Seth Jenkins
-	<sethjenkins@google.com>, "Eric W . Biederman" <ebiederm@xmission.com>, "Andy
- Lutomirski" <luto@kernel.org>, "linux-kernel@vger.kernel.org"
-	<linux-kernel@vger.kernel.org>
-Subject: RE: [PATCH] exit: Put an upper limit on how often we can oops
-Thread-Topic: [PATCH] exit: Put an upper limit on how often we can oops
-Thread-Index: AQHY8uVtJeqm4QnZJEegjt8nfpQUG640wW1QgABcZ4CAAS8xAA==
-Date: Wed, 9 Nov 2022 09:04:36 +0000
-Message-ID: <d88999d8e9ec486bb1a0f75911457985@AcuMS.aculab.com>
-References: <20221107201317.324457-1-jannh@google.com>
- <3e2f7e2cb4f6451a9ef5d0fb9e1f6080@AcuMS.aculab.com>
- <CAG48ez3AGh-R+deQMbNPt6PCQazOz8a96skW+qP3_HmUaANmmQ@mail.gmail.com>
-In-Reply-To: <CAG48ez3AGh-R+deQMbNPt6PCQazOz8a96skW+qP3_HmUaANmmQ@mail.gmail.com>
-Accept-Language: en-GB, en-US
-X-MS-Has-Attach: 
-X-MS-TNEF-Correlator: 
-x-ms-exchange-transport-fromentityheader: Hosted
-x-originating-ip: [10.202.205.107]
+Received: (qmail 4061 invoked from network); 9 Nov 2022 09:33:56 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20210112;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=0IbVjZeeZUd5a3T1kVXY2URyfXn/ZP2LWDBW3L+YLzk=;
+        b=o3ZxD3e0+Zj2SmdDhc6hKxjMHX289z5HSc572OZzcONUeqpCbN9iFjnd/pNOKwVzYf
+         9YTF/LJ/OhKsOZw/miZqAe7y4eeKtduT000SHmFgN3WX7V+CIyqcMuqin+uX6Lch5nDU
+         SAQl6ks4pJN5l+1xi13gAk0kxAmKpJ+44xk4NMvARjlIYa+iafOD/0KgVN/4PlyhrL4i
+         U5Qp+jZt3hRDBjoFwFJyZ/t0xhd0ydQS17ccQRH0PlGk7TQ6OJNRxovFS39lSDqZnUpk
+         /bOoeDBPhUs04jzxtdqq8h+WIHMSlrFHZf7DOIxqWBUBXScgQ8l5us0m+7BPwns7GnGf
+         BKgA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=0IbVjZeeZUd5a3T1kVXY2URyfXn/ZP2LWDBW3L+YLzk=;
+        b=gqhprYJG8GBggsTDY/SH176t7/ULlGHRu3k/4wlHmckMy4LDfGd0gs7rTnLrIRvGtE
+         0npGL44kUem6GJ0CxU5MbQTXMQ7LUzCh+V/+nRyus0/6WW608EKNAcspQ6wU5SqzmXQh
+         SfyDEqxn6Rh+ZX+xnPiSi5okMM4zEJPR58ZjhicbT423FmD3Yf8QnmsQwBhXbmY+l0aN
+         +KnYssfXNkgjQ84wydN/qVC7NivtugdwN3RQtwkxporFKOA18B+vEmkgd2S+LLUZE+7a
+         b8W0yfdipIZkjDNoJcBIXsP8Y0Nwfseqg9BlSV9hQ0HNJ3HuxeGMXX2/kNeLMsIjolgc
+         m1LQ==
+X-Gm-Message-State: ACrzQf2Jseu3zdxsqzTwT8g6KuBzOWBOFBtid/7ZtWFOL5Yhjop+j6dw
+	ePVGAJR0/TlhVNObfsGvpXxOMJiAoGyhaQXRBRr9jg==
+X-Google-Smtp-Source: AMsMyM57CuGAwsh8GlZqWabFTRdKwOzYDnDxAh9Duy8n4B7pDdV1sMgE+4XJj8v4tvq88HofurNZL9VD1MPZFY8CbZA=
+X-Received: by 2002:a05:6e02:966:b0:300:e9f9:8716 with SMTP id
+ q6-20020a056e02096600b00300e9f98716mr14846177ilt.254.1667986422946; Wed, 09
+ Nov 2022 01:33:42 -0800 (PST)
 MIME-Version: 1.0
-X-Mimecast-Spam-Score: 0
-X-Mimecast-Originator: aculab.com
-Content-Language: en-US
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: base64
+References: <20221107201317.324457-1-jannh@google.com> <3e2f7e2cb4f6451a9ef5d0fb9e1f6080@AcuMS.aculab.com>
+ <CAG48ez3AGh-R+deQMbNPt6PCQazOz8a96skW+qP3_HmUaANmmQ@mail.gmail.com> <d88999d8e9ec486bb1a0f75911457985@AcuMS.aculab.com>
+In-Reply-To: <d88999d8e9ec486bb1a0f75911457985@AcuMS.aculab.com>
+From: Jann Horn <jannh@google.com>
+Date: Wed, 9 Nov 2022 10:33:06 +0100
+Message-ID: <CAG48ez3UO03RRMxxj-ZAcw5vhjhPYeoN1DB82s2SAiYm-qWmYw@mail.gmail.com>
+Subject: Re: [PATCH] exit: Put an upper limit on how often we can oops
+To: David Laight <David.Laight@aculab.com>
+Cc: Kees Cook <keescook@chromium.org>, 
+	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, 
+	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, 
+	Linus Torvalds <torvalds@linuxfoundation.org>, Seth Jenkins <sethjenkins@google.com>, 
+	"Eric W . Biederman" <ebiederm@xmission.com>, Andy Lutomirski <luto@kernel.org>, 
+	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 
-RnJvbTogSmFubiBIb3JuDQo+IFNlbnQ6IDA4IE5vdmVtYmVyIDIwMjIgMTQ6NTMNCj4gDQo+IE9u
-IFR1ZSwgTm92IDgsIDIwMjIgYXQgMTA6MjYgQU0gRGF2aWQgTGFpZ2h0IDxEYXZpZC5MYWlnaHRA
-YWN1bGFiLmNvbT4gd3JvdGU6DQo+ID4gPiBNYW55IExpbnV4IHN5c3RlbXMgYXJlIGNvbmZpZ3Vy
-ZWQgdG8gbm90IHBhbmljIG9uIG9vcHM7IGJ1dCBhbGxvd2luZyBhbg0KPiA+ID4gYXR0YWNrZXIg
-dG8gb29wcyB0aGUgc3lzdGVtICoqcmVhbGx5Kiogb2Z0ZW4gY2FuIG1ha2UgZXZlbiBidWdzIHRo
-YXQgbG9vaw0KPiA+ID4gY29tcGxldGVseSB1bmV4cGxvaXRhYmxlIGV4cGxvaXRhYmxlIChsaWtl
-IE5VTEwgZGVyZWZlcmVuY2VzIGFuZCBzdWNoKSBpZg0KPiA+ID4gZWFjaCBjcmFzaCBlbGV2YXRl
-cyBhIHJlZmNvdW50IGJ5IG9uZSBvciBhIGxvY2sgaXMgdGFrZW4gaW4gcmVhZCBtb2RlLCBhbmQN
-Cj4gPiA+IHRoaXMgY2F1c2VzIGEgY291bnRlciB0byBldmVudHVhbGx5IG92ZXJmbG93Lg0KPiA+
-ID4NCj4gPiA+IFRoZSBtb3N0IGludGVyZXN0aW5nIGNvdW50ZXJzIGZvciB0aGlzIGFyZSAzMiBi
-aXRzIHdpZGUgKGxpa2Ugb3Blbi1jb2RlZA0KPiA+ID4gcmVmY291bnRzIHRoYXQgZG9uJ3QgdXNl
-IHJlZmNvdW50X3QpLiAoVGhlIGxkc2VtIHJlYWRlciBjb3VudCBvbiAzMi1iaXQNCj4gPiA+IHBs
-YXRmb3JtcyBpcyBqdXN0IDE2IGJpdHMsIGJ1dCBwcm9iYWJseSBub2JvZHkgY2FyZXMgYWJvdXQg
-MzItYml0IHBsYXRmb3Jtcw0KPiA+ID4gdGhhdCBtdWNoIG5vd2FkYXlzLikNCj4gPiA+DQo+ID4g
-PiBTbyBsZXQncyBwYW5pYyB0aGUgc3lzdGVtIGlmIHRoZSBrZXJuZWwgaXMgY29uc3RhbnRseSBv
-b3BzaW5nLg0KPiA+DQo+ID4gSSB0aGluayB5b3UgYXJlIHByZXR0eSBtdWNoIGd1YXJhbnRlZWQg
-dG8gcnVuIG91dCBvZiBtZW1vcnkNCj4gPiAob3IgYXQgbGVhc3QgS1ZBKSBiZWZvcmUgYW55IDMy
-Yml0IGNvdW50ZXIgd3JhcHMuDQo+IA0KPiBOb3QgaWYgeW91IHJlcGVhdGVkbHkgdGFrZSBhIHJl
-ZmVyZW5jZSBhbmQgdGhlbiBvb3BzIHdpdGhvdXQgZHJvcHBpbmcNCj4gdGhlIHJlZmVyZW5jZSwg
-YW5kIHRoZSBvb3BzIHBhdGggY2xlYW5zIHVwIGFsbCB0aGUgcmVzb3VyY2VzIHRoYXQgd2VyZQ0K
-PiBhbGxvY2F0ZWQgZm9yIHRoZSBjcmFzaGluZyB0YXNrcy4gSW4gdGhhdCBjYXNlLCBlYWNoIG9v
-cHMgaW5jcmVtZW50cw0KPiB0aGUgcmVmZXJlbmNlIGNvdW50IGJ5IDEgd2l0aG91dCBjYXVzaW5n
-IG1lbW9yeSBhbGxvY2F0aW9uLg0KDQpJJ2QgaGF2ZSB0aG91Z2h0IHRoYXQgdGhlIGtlcm5lbCBz
-dGFjayBhbmQgcHJvY2VzcyBhcmVhcyBjb3VsZG4ndA0KYmUgZnJlZWQgYmVjYXVzZSB0aGV5IG1p
-Z2h0IGNvbnRhaW4gJ2xpdmUgZGF0YScuDQpUaGVyZSBpcyBhbHNvIHRoZSBtdWNoIHNtYWxsZXIg
-cGlkX3Qgc3RydWN0dXJlLg0KDQpPZiBjb3Vyc2UgSSBtaWdodCBiZSB3cm9uZy4uLg0KQnV0IEkn
-bSBzdXJlIC9wcm9jL3BpZC9zdGFjayBpcyB2YWxpZCBmb3IgYW4gb29wc2VkIHByb2Nlc3MuDQoN
-CglEYXZpZA0KDQotDQpSZWdpc3RlcmVkIEFkZHJlc3MgTGFrZXNpZGUsIEJyYW1sZXkgUm9hZCwg
-TW91bnQgRmFybSwgTWlsdG9uIEtleW5lcywgTUsxIDFQVCwgVUsNClJlZ2lzdHJhdGlvbiBObzog
-MTM5NzM4NiAoV2FsZXMpDQo=
+On Wed, Nov 9, 2022 at 10:04 AM David Laight <David.Laight@aculab.com> wrote:
+>
+> From: Jann Horn
+> > Sent: 08 November 2022 14:53
+> >
+> > On Tue, Nov 8, 2022 at 10:26 AM David Laight <David.Laight@aculab.com> wrote:
+> > > > Many Linux systems are configured to not panic on oops; but allowing an
+> > > > attacker to oops the system **really** often can make even bugs that look
+> > > > completely unexploitable exploitable (like NULL dereferences and such) if
+> > > > each crash elevates a refcount by one or a lock is taken in read mode, and
+> > > > this causes a counter to eventually overflow.
+> > > >
+> > > > The most interesting counters for this are 32 bits wide (like open-coded
+> > > > refcounts that don't use refcount_t). (The ldsem reader count on 32-bit
+> > > > platforms is just 16 bits, but probably nobody cares about 32-bit platforms
+> > > > that much nowadays.)
+> > > >
+> > > > So let's panic the system if the kernel is constantly oopsing.
+> > >
+> > > I think you are pretty much guaranteed to run out of memory
+> > > (or at least KVA) before any 32bit counter wraps.
+> >
+> > Not if you repeatedly take a reference and then oops without dropping
+> > the reference, and the oops path cleans up all the resources that were
+> > allocated for the crashing tasks. In that case, each oops increments
+> > the reference count by 1 without causing memory allocation.
+>
+> I'd have thought that the kernel stack and process areas couldn't
+> be freed because they might contain 'live data'.
+> There is also the much smaller pid_t structure.
+>
+> Of course I might be wrong...
+> But I'm sure /proc/pid/stack is valid for an oopsed process.
 
+No. It might be in the edgecase where the process oopses, then the
+kernel tries to exit, then it oopses again, and the kernel decides
+that that process is a hazardous mess and can't be cleaned up. But in
+the general case, oopsed processes don't have /proc/$pid/stack
+anymore, they go through the normal exit path, and they get reaped
+normally by their parent.
