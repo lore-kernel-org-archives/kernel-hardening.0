@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21610-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21611-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 422D2C54E94
-	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Jan 2023 16:31:35 +0000 (UTC)
-Received: (qmail 7389 invoked by uid 550); 26 Jan 2023 16:31:24 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id B37CAC05027
+	for <kernel-hardening@archiver.kernel.org>; Thu, 26 Jan 2023 16:36:12 +0000 (UTC)
+Received: (qmail 11566 invoked by uid 550); 26 Jan 2023 16:36:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,98 +12,141 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5848 invoked from network); 26 Jan 2023 16:29:29 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1674750557;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=uQ5AeqRdHoqDiMiO534YbFssRp+d+rc3l3U4CDokNu0=;
-	b=fhQGYpOATd3j+wWS7cdtxzXN9lzb4sNEVHp0geJXFd9BiFFqjsILa6WXtoszo/hmOFgzJ/
-	7ybPyOJxQHjdAUo8C0brOdTOkqvNTvhtV6ZAFpjfNs+JkRlhxnlPHZib/SLyoVrRMjr7mH
-	J1lJYTVBxDSXW5QHuK0kCMJoVFuDFcI=
-X-MC-Unique: 7jKrE0-_OiqEd25yOE3dzg-1
+Received: (qmail 11528 invoked from network); 26 Jan 2023 16:36:03 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
+        bh=dCedkZSub4E7G02ozmeTWJLtnbDkNYV9uv5/ypFjcjs=;
+        b=eVNsUVSbY9fywISASdJ8vOfw38lV1OqgtvUQe/DYuTvRD66m+Qs3gitiyBx71/B0fx
+         biiKsQThZMp1LfHN5EGfeOINKoMSy9g2go3I16WtwwZQpmFQ2IV/8N1oy6n8YhD6UIky
+         WkwjrAgO7QyAPO+kq7hvc2L7BT76y6qkh24as=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
         h=in-reply-to:content-disposition:mime-version:references:message-id
          :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
          :message-id:reply-to;
-        bh=uQ5AeqRdHoqDiMiO534YbFssRp+d+rc3l3U4CDokNu0=;
-        b=LlhIsAZVZsvdreFPcP5vNZLEcTeqJYfsO/ReMpVXyDw6pZb6b9XEeDvvE7QdyfAMxI
-         GNMuysTtJ3aJx7oyaBr76yNSQxlrbjTUaNYUEQ6x4Kk1sPN6w6hTRV3pYDFc+fX0AKww
-         EOhY70OFnF5vMmjPN46lj5CzenDjzRggUqK8gsOppk4jLFfX9MTfHeeck0l935jUW7NP
-         H1ZsJT/ic+U+V/qwTFRTWyNVlZ8zS1lI81jQ4geKJW2iY5bqPDTtToH7bmEhGIH0MU/W
-         HTEWcKlRD2fQVVWUvM3EDNaLWMyT5klJ57odoosRjPbaElH2qxyqLuNMbOJVBrTOgPsi
-         YrLw==
-X-Gm-Message-State: AFqh2kqP9wetAf5ixlYouFnLFGWysyD4hIXEOi0rPcoyal/UkFtElrZM
-	kDZRG7F6hK12araRPMgM+yyPAiqkroM3aFV0I9GboQ+y03wZGEp7AH9lVuKfCAdTcHj84Ix9Xd9
-	BX307vO75yrNiP+xdermdd8dvHmrINXnSfw==
-X-Received: by 2002:a05:600c:1c9d:b0:3da:db4:6105 with SMTP id k29-20020a05600c1c9d00b003da0db46105mr36614918wms.37.1674750554555;
-        Thu, 26 Jan 2023 08:29:14 -0800 (PST)
-X-Google-Smtp-Source: AMrXdXu/XUMPJtU5iYBp8WyqQ43Iwj8Vmxw+tnCVJfRHeV2qUt/JRWJYMx6HGI88x+KBLozOr/fmeg==
-X-Received: by 2002:a05:600c:1c9d:b0:3da:db4:6105 with SMTP id k29-20020a05600c1c9d00b003da0db46105mr36614890wms.37.1674750554324;
-        Thu, 26 Jan 2023 08:29:14 -0800 (PST)
-Date: Thu, 26 Jan 2023 11:29:08 -0500
-From: "Michael S. Tsirkin" <mst@redhat.com>
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Shishkin, Alexander" <alexander.shishkin@intel.com>,
-	"Shutemov, Kirill" <kirill.shutemov@intel.com>,
-	"Kuppuswamy, Sathyanarayanan" <sathyanarayanan.kuppuswamy@intel.com>,
-	"Kleen, Andi" <andi.kleen@intel.com>,
-	"Hansen, Dave" <dave.hansen@intel.com>,
-	Thomas Gleixner <tglx@linutronix.de>,
-	Peter Zijlstra <peterz@infradead.org>,
-	"Wunner, Lukas" <lukas.wunner@intel.com>,
-	Mika Westerberg <mika.westerberg@linux.intel.com>,
-	Jason Wang <jasowang@redhat.com>,
-	"Poimboe, Josh" <jpoimboe@redhat.com>,
-	"aarcange@redhat.com" <aarcange@redhat.com>,
-	Cfir Cohen <cfir@google.com>, Marc Orr <marcorr@google.com>,
-	"jbachmann@google.com" <jbachmann@google.com>,
-	"pgonda@google.com" <pgonda@google.com>,
-	"keescook@chromium.org" <keescook@chromium.org>,
-	James Morris <jmorris@namei.org>,
-	Michael Kelley <mikelley@microsoft.com>,
-	"Lange, Jon" <jlange@microsoft.com>,
-	"linux-coco@lists.linux.dev" <linux-coco@lists.linux.dev>,
-	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-	Kernel Hardening <kernel-hardening@lists.openwall.com>
-Subject: Re: Linux guest kernel threat model for Confidential Computing
-Message-ID: <20230126105618-mutt-send-email-mst@kernel.org>
-References: <DM8PR11MB57505481B2FE79C3D56C9201E7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
- <Y9EkCvAfNXnJ+ATo@kroah.com>
- <DM8PR11MB5750FA4849C3224F597C101AE7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
+        bh=dCedkZSub4E7G02ozmeTWJLtnbDkNYV9uv5/ypFjcjs=;
+        b=vQQy06tV+v8q0qpQCN3OG5zYR/TPM2t8q43INFvrX5s6ddDw82Z4PQKOZqfExhcEV3
+         jlLvc5lpG4LwxPDrPE+inYfO6p7aIAmrP2+h2aYZFNCjxvHDG+DBqPSMS07G1Tw2kMwY
+         OlAtydUdWj1K3w+sHYv7h8UeQ9oJnJTUjs6XLyGIsjqQNWjGIs0qC3/wls1eNYMDk36O
+         oP2qgDk2pIK4i+mI91oIgZdhZVhbT3ed8yG6VCJAf/yXRCkRsS5ymY0F7smRJG7r47HN
+         pPGgERp00rx4OaLCtIk4D67THhUlDry7daHhowAmS+msuFsLwbwrxaydqsSUrMLeUXxT
+         G4pw==
+X-Gm-Message-State: AO0yUKWAL/mRs/QGxPAeH2FSbin8ZF90pup73Z7p40fnROx2EgGxrScZ
+	Tk401pbOfdkSZ895RQm82+w3IQ==
+X-Google-Smtp-Source: AK7set+Avp0tanijMNFBCT+FU9xteiB6gbr+IKCgWeSxaIOPWvlfFL0xvNVSPGxExS539i8F/Vvc1g==
+X-Received: by 2002:a17:902:9a85:b0:196:1d60:b1b1 with SMTP id w5-20020a1709029a8500b001961d60b1b1mr7396425plp.31.1674750950872;
+        Thu, 26 Jan 2023 08:35:50 -0800 (PST)
+Date: Thu, 26 Jan 2023 08:35:49 -0800
+From: Kees Cook <keescook@chromium.org>
+To: Jann Horn <jannh@google.com>
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-hardening@vger.kernel.org,
+	kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH] fs: Use CHECK_DATA_CORRUPTION() when kernel bugs are
+ detected
+Message-ID: <202301260835.61F1C2CA4D@keescook>
+References: <20230116191425.458864-1-jannh@google.com>
 MIME-Version: 1.0
-In-Reply-To: <DM8PR11MB5750FA4849C3224F597C101AE7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
-X-Mimecast-Spam-Score: 0
-X-Mimecast-Originator: redhat.com
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
+In-Reply-To: <20230116191425.458864-1-jannh@google.com>
 
-On Wed, Jan 25, 2023 at 03:29:07PM +0000, Reshetova, Elena wrote:
-> And this is a very special aspect of 'hardening' since it is about hardening a kernel
-> under different threat model/assumptions. 
+On Mon, Jan 16, 2023 at 08:14:25PM +0100, Jann Horn wrote:
+> Currently, filp_close() and generic_shutdown_super() use printk() to log
+> messages when bugs are detected. This is problematic because infrastructure
+> like syzkaller has no idea that this message indicates a bug.
+> In addition, some people explicitly want their kernels to BUG() when kernel
+> data corruption has been detected (CONFIG_BUG_ON_DATA_CORRUPTION).
+> And finally, when generic_shutdown_super() detects remaining inodes on a
+> system without CONFIG_BUG_ON_DATA_CORRUPTION, it would be nice if later
+> accesses to a busy inode would at least crash somewhat cleanly rather than
+> walking through freed memory.
+> 
+> To address all three, use CHECK_DATA_CORRUPTION() when kernel bugs are
+> detected.
 
-I am not sure it's that special in that hardening IMHO is not a specific
-threat model or a set of assumptions. IIUC it's just something that
-helps reduce severity of vulnerabilities.  Similarly, one can use the CC
-hardware in a variety of ways I guess. And one way is just that -
-hardening linux such that ability to corrupt guest memory does not
-automatically escalate into guest code execution.
+Seems reasonable to me. I'll carry this unless someone else speaks up.
+:)
 
-If you put it this way, you get to participate in a well understood
-problem space instead of constantly saying "yes but CC is special".  And
-further, you will now talk about features as opposed to fixing bugs.
-Which will stop annoying people who currently seem annoyed by the
-implication that their code is buggy simply because it does not cache in
-memory all data read from hardware. Finally, you then don't really need
-to explain why e.g. DoS is not a problem but info leak is a problem - when
-for many users it's actually the reverse - the reason is not that it's
-not part of a threat model - which then makes you work hard to define
-the threat model - but simply that CC hardware does not support this
-kind of hardening.
+Reviewed-by: Kees Cook <keescook@chromium.org>
+
+-Kees
+
+> 
+> Signed-off-by: Jann Horn <jannh@google.com>
+> ---
+>  fs/open.c              |  5 +++--
+>  fs/super.c             | 21 +++++++++++++++++----
+>  include/linux/poison.h |  3 +++
+>  3 files changed, 23 insertions(+), 6 deletions(-)
+> 
+> diff --git a/fs/open.c b/fs/open.c
+> index 82c1a28b3308..ceb88ac0ca3b 100644
+> --- a/fs/open.c
+> +++ b/fs/open.c
+> @@ -1411,8 +1411,9 @@ int filp_close(struct file *filp, fl_owner_t id)
+>  {
+>  	int retval = 0;
+>  
+> -	if (!file_count(filp)) {
+> -		printk(KERN_ERR "VFS: Close: file count is 0\n");
+> +	if (CHECK_DATA_CORRUPTION(file_count(filp) == 0,
+> +			"VFS: Close: file count is 0 (f_op=%ps)",
+> +			filp->f_op)) {
+>  		return 0;
+>  	}
+>  
+> diff --git a/fs/super.c b/fs/super.c
+> index 12c08cb20405..cf737ec2bd05 100644
+> --- a/fs/super.c
+> +++ b/fs/super.c
+> @@ -491,10 +491,23 @@ void generic_shutdown_super(struct super_block *sb)
+>  		if (sop->put_super)
+>  			sop->put_super(sb);
+>  
+> -		if (!list_empty(&sb->s_inodes)) {
+> -			printk("VFS: Busy inodes after unmount of %s. "
+> -			   "Self-destruct in 5 seconds.  Have a nice day...\n",
+> -			   sb->s_id);
+> +		if (CHECK_DATA_CORRUPTION(!list_empty(&sb->s_inodes),
+> +				"VFS: Busy inodes after unmount of %s (%s)",
+> +				sb->s_id, sb->s_type->name)) {
+> +			/*
+> +			 * Adding a proper bailout path here would be hard, but
+> +			 * we can at least make it more likely that a later
+> +			 * iput_final() or such crashes cleanly.
+> +			 */
+> +			struct inode *inode;
+> +
+> +			spin_lock(&sb->s_inode_list_lock);
+> +			list_for_each_entry(inode, &sb->s_inodes, i_sb_list) {
+> +				inode->i_op = VFS_PTR_POISON;
+> +				inode->i_sb = VFS_PTR_POISON;
+> +				inode->i_mapping = VFS_PTR_POISON;
+> +			}
+> +			spin_unlock(&sb->s_inode_list_lock);
+>  		}
+>  	}
+>  	spin_lock(&sb_lock);
+> diff --git a/include/linux/poison.h b/include/linux/poison.h
+> index 2d3249eb0e62..0e8a1f2ceb2f 100644
+> --- a/include/linux/poison.h
+> +++ b/include/linux/poison.h
+> @@ -84,4 +84,7 @@
+>  /********** kernel/bpf/ **********/
+>  #define BPF_PTR_POISON ((void *)(0xeB9FUL + POISON_POINTER_DELTA))
+>  
+> +/********** VFS **********/
+> +#define VFS_PTR_POISON ((void *)(0xF5 + POISON_POINTER_DELTA))
+> +
+>  #endif
+> 
+> base-commit: 5dc4c995db9eb45f6373a956eb1f69460e69e6d4
+> -- 
+> 2.39.0.314.g84b9a713c41-goog
+> 
 
 -- 
-MST
-
+Kees Cook
