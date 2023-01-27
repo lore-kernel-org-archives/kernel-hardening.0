@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21623-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21624-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 56322C54EAA
-	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Jan 2023 21:12:33 +0000 (UTC)
-Received: (qmail 16214 invoked by uid 550); 27 Jan 2023 21:12:22 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id DDDF6C54EAA
+	for <kernel-hardening@archiver.kernel.org>; Fri, 27 Jan 2023 21:14:08 +0000 (UTC)
+Received: (qmail 19781 invoked by uid 550); 27 Jan 2023 21:14:00 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,162 +12,237 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 22423 invoked from network); 27 Jan 2023 19:26:22 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : subject :
- from : reply-to : to : cc : date : in-reply-to : references : content-type
- : content-transfer-encoding : mime-version; s=pp1;
- bh=ToKcaXCGHVtx/OUYQA1NFnUlgdSr2VZlO3XcPE9guYE=;
- b=kX22gYODagjRJSs9N7MCO9mQRlzRUEPEYIkWZYSgicuqPorcHV+7Eyg+YW2LfiKr4OwI
- pcak1j+0vLhvgDyebqDoWTC5+cs+NugDYldlhvN3Y2dYW00mMCwO5p1SwNGibvd6iS3I
- K8lmSFqEfJseIoLiPnLg8JaCZQr3UBtQqq0Wnaovbv7j/yEpvwvDFLR8vVDcgJtZdyzT
- ocxz+l8TP5RTMt6ek+fA2Zc4dl9o5Udi9cDN4OsIiAJWPycEPyV3II/u0H9BpiJOVrJN
- QYoj6uO7pgVwEkWpFTOKRDpY606MoOECXb3SnV5IHNsVbc4uxdMqGRHYz+ZxaGV6jz99 LQ== 
-Message-ID: <702f22df28e628d41babcf670c909f1fa1bb3c0c.camel@linux.ibm.com>
+Received: (qmail 32287 invoked from network); 27 Jan 2023 20:51:50 -0000
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=WxRRTZB45rcZnpZaseyl8hSG5tz3uUDgWoUeVz79aE05SUk/a18w+KUdnEkVtoHTjCK/g/BwHXH/XYYQNShQgYeDJKpzPOa2TaZNaGkLgWXuqZh083dORKNbeEwFpty7R/YzVwBZZB1apRCbBP6ex5cPlBzyTHh3OGILIzJG/Q4kfSbGzFHxlYfouiyqHT1j2TPLcL2J4g3rqWBkrH8SBV9GUd/h2y7JmpZ4d48X5eqTG7jd9IpPFY8yvlOUHKSSBfusgOi+O+HACIvVI3F/wDU8sp+GYjoeKDupOcYyHhecQ5am1pLGQfDBV0ttIEwtIpG4C+np7W4LtCaMHHFklg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=/g08Ka1T8trooExdDvFLyyYRF2uLo8e+Dwp4t/0l3HE=;
+ b=e/JyKlVuxNrO0KMNw2g81tH5hus+sXaiPpq3c0erwnD+UknC0GMj2ylRDB8vDm16SI6No4fZ2e848s0xgyOhOydHqra0FsG4Qd7SMeMjBTHBkEQGy37naZL1VGWi+seLwMqOp+ahozo9mvMzh6m1m3/FC0b4BBrYq6AIiwIjQJhQkw1SWI/ScAPTp/vys1pONaJTbkDwGmoKlb3lhcH9LJ29h2p6C7x/v5NzNL8Olx7M6deFJRmzfMhIBOL/AWGoE8Igv6YvutbJ4sBILtw2twBeIK3zODykoJUssF6AhPxEuFDTB7P58C1BJNhxcDZQiqFejYkRb5xg7FYyeeqwsg==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=amd.com; dmarc=pass action=none header.from=amd.com; dkim=pass
+ header.d=amd.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=amd.com; s=selector1;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=/g08Ka1T8trooExdDvFLyyYRF2uLo8e+Dwp4t/0l3HE=;
+ b=toCkGo2vdadpBm0iQFaaRAKhg42sbOtOhW4w0q8hAB+1o2b6w1z3mQF4zQMDrzbiIqCXtIffAj+XO53qrIoAiE30No0wlVF9NL3zVkmsKfI3C8y3JLpv/cOqCbzHIHPTljjqqbAWow6tkhQONKBF2ibuulrNFLEf7CoXj3SBIYk=
+Authentication-Results: dkim=none (message not signed)
+ header.d=none;dmarc=none action=none header.from=amd.com;
+Message-ID: <3850d949-3ae2-e446-de1e-24cf3ba4417d@amd.com>
+Date: Fri, 27 Jan 2023 14:51:31 -0600
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0)
+ Gecko/20100101 Thunderbird/102.6.1
 Subject: Re: Linux guest kernel threat model for Confidential Computing
-From: James Bottomley <jejb@linux.ibm.com>
 To: "Reshetova, Elena" <elena.reshetova@intel.com>,
-        Leon Romanovsky
-	 <leon@kernel.org>
+ "Michael S. Tsirkin" <mst@redhat.com>
 Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-        "Shishkin, Alexander"
- <alexander.shishkin@intel.com>,
-        "Shutemov, Kirill"
- <kirill.shutemov@intel.com>,
-        "Kuppuswamy, Sathyanarayanan"
- <sathyanarayanan.kuppuswamy@intel.com>,
-        "Kleen, Andi"
- <andi.kleen@intel.com>,
-        "Hansen, Dave" <dave.hansen@intel.com>,
-        Thomas
- Gleixner <tglx@linutronix.de>,
-        Peter Zijlstra <peterz@infradead.org>,
-        "Wunner, Lukas" <lukas.wunner@intel.com>,
-        Mika Westerberg
- <mika.westerberg@linux.intel.com>,
-        "Michael S. Tsirkin" <mst@redhat.com>,
-        Jason Wang <jasowang@redhat.com>,
-        "Poimboe, Josh" <jpoimboe@redhat.com>,
-        "aarcange@redhat.com" <aarcange@redhat.com>,
-        Cfir Cohen <cfir@google.com>, Marc Orr <marcorr@google.com>,
-        "jbachmann@google.com"
- <jbachmann@google.com>,
-        "pgonda@google.com" <pgonda@google.com>,
-        "keescook@chromium.org" <keescook@chromium.org>,
-        James Morris
- <jmorris@namei.org>,
-        Michael Kelley <mikelley@microsoft.com>,
-        "Lange, Jon"
- <jlange@microsoft.com>,
-        "linux-coco@lists.linux.dev"
- <linux-coco@lists.linux.dev>,
-        Linux Kernel Mailing List
- <linux-kernel@vger.kernel.org>,
-        Kernel Hardening
- <kernel-hardening@lists.openwall.com>
-Date: Fri, 27 Jan 2023 14:24:55 -0500
-In-Reply-To: <DM8PR11MB57507D9C941D77E148EE9E87E7CF9@DM8PR11MB5750.namprd11.prod.outlook.com>
-References: 
-	<DM8PR11MB57505481B2FE79C3D56C9201E7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
-	 <Y9EkCvAfNXnJ+ATo@kroah.com>
-	 <DM8PR11MB5750FA4849C3224F597C101AE7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
-	 <Y9Jh2x9XJE1KEUg6@unreal>
-	 <DM8PR11MB5750414F6638169C7097E365E7CF9@DM8PR11MB5750.namprd11.prod.outlook.com>
-	 <Y9JyW5bUqV7gWmU8@unreal>
-	 <DM8PR11MB57507D9C941D77E148EE9E87E7CF9@DM8PR11MB5750.namprd11.prod.outlook.com>
-Content-Type: text/plain; charset="UTF-8"
-User-Agent: Evolution 3.42.4 
-X-TM-AS-GCONF: 00
-X-Proofpoint-GUID: kBLf3s8wiJECaATpwbnqac63pWuxSv8m
-X-Proofpoint-ORIG-GUID: c_7tvaSFCnlC7B6dmBcHilT0GExG_s8M
+ "Shishkin, Alexander" <alexander.shishkin@intel.com>,
+ "Shutemov, Kirill" <kirill.shutemov@intel.com>,
+ "Kuppuswamy, Sathyanarayanan" <sathyanarayanan.kuppuswamy@intel.com>,
+ "Kleen, Andi" <andi.kleen@intel.com>, "Hansen, Dave"
+ <dave.hansen@intel.com>, Thomas Gleixner <tglx@linutronix.de>,
+ Peter Zijlstra <peterz@infradead.org>, "Wunner, Lukas"
+ <lukas.wunner@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>,
+ Jason Wang <jasowang@redhat.com>, "Poimboe, Josh" <jpoimboe@redhat.com>,
+ "aarcange@redhat.com" <aarcange@redhat.com>, Cfir Cohen <cfir@google.com>,
+ Marc Orr <marcorr@google.com>, "jbachmann@google.com"
+ <jbachmann@google.com>, "pgonda@google.com" <pgonda@google.com>,
+ "keescook@chromium.org" <keescook@chromium.org>,
+ James Morris <jmorris@namei.org>, Michael Kelley <mikelley@microsoft.com>,
+ "Lange, Jon" <jlange@microsoft.com>,
+ "linux-coco@lists.linux.dev" <linux-coco@lists.linux.dev>,
+ Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>
+References: <DM8PR11MB57505481B2FE79C3D56C9201E7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
+ <Y9EkCvAfNXnJ+ATo@kroah.com>
+ <DM8PR11MB5750FA4849C3224F597C101AE7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
+ <20230126105618-mutt-send-email-mst@kernel.org>
+ <DM8PR11MB5750678B5F639F6C2848FC3CE7CC9@DM8PR11MB5750.namprd11.prod.outlook.com>
+ <20230127044508-mutt-send-email-mst@kernel.org>
+ <DM8PR11MB57501BD39CC1E88206E6CD5FE7CC9@DM8PR11MB5750.namprd11.prod.outlook.com>
+Content-Language: en-US
+From: Carlos Bilbao <carlos.bilbao@amd.com>
+In-Reply-To: <DM8PR11MB57501BD39CC1E88206E6CD5FE7CC9@DM8PR11MB5750.namprd11.prod.outlook.com>
+Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-X-Proofpoint-UnRewURL: 0 URL was un-rewritten
+X-ClientProxiedBy: SA9PR13CA0086.namprd13.prod.outlook.com
+ (2603:10b6:806:23::31) To BL1PR12MB5874.namprd12.prod.outlook.com
+ (2603:10b6:208:396::17)
 MIME-Version: 1.0
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.219,Aquarius:18.0.930,Hydra:6.0.562,FMLib:17.11.122.1
- definitions=2023-01-27_12,2023-01-27_01,2022-06-22_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 phishscore=0
- lowpriorityscore=0 spamscore=0 malwarescore=0 mlxlogscore=999
- clxscore=1011 mlxscore=0 impostorscore=0 adultscore=0 priorityscore=1501
- bulkscore=0 suspectscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2212070000 definitions=main-2301270176
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: BL1PR12MB5874:EE_|SJ1PR12MB6337:EE_
+X-MS-Office365-Filtering-Correlation-Id: f835749d-2c9e-47d6-ad96-08db00a846d3
+X-MS-Exchange-SenderADCheck: 1
+X-MS-Exchange-AntiSpam-Relay: 0
+X-Microsoft-Antispam: BCL:0;
+X-Microsoft-Antispam-Message-Info:
+	K0YVaq+xgsMs39AwxKbxYmLZH9x/tZUMliJCOdYg3Kikc5ExmQpoi6b8uXXr1a0Xq0ti6XAbeSjpWruwsi2GQ1WtNtRcxPFICGbnKJE7Dsr3dDKpO788k5VNA3nGULQ55PNWz5xrFRlvp9g0hsgjgcip8iPbEzgqgZ61vbDCBwoeO3xaZS/HS+y6SSnCt5lQ256pxW+FcIm0GQ7HfCr7O4ZnfexJA5NxVr1D5rZYguCEG0DJ8TrtaWMuZOVxQpNmREDUHQOwcCFAgQWk0dlwc4bWy/wp3yGbx17H8o0qU4tjsKAV8uXlYsvpzTuWKC7fyQLV5r/9ywQtGXkbzdFgE3sYjXeTmqBVt3hxCdYN19pE6cMQjMXwlGEuRvxYQ4kDsFxol5ZsNvhFC6zL1em3zmBaq5VR55aDMfPbthQnKzxRIwhX50kum5plQ7EadWi4vcyUG/YmiMb+g1VDWz+JGBMjlwMeNLnGi2BfwtpNyW6SzADr1wtiSn6rscS8XpJjgklpidLcrhETq55DVBwX9JteqNNOh544ky1v9sG2OQgqV6/j4qaMS82kNusUBUKaXM622UaaaTb8nXzUt+KiyMz3vrSnXZVJ0rUk2vnocqsJCqIO0TRefLt4OpK3/gAQGCKtNre5FO+gzMkM4UxpaPZMEbdrPK4DvYTEFUvpI7mw3Zd9NgUxkrmQaatYUvOkesXd7ba0g5cR8kUj0fS/QZhhFTpAIndsOZzm+T4MQDU=
+X-Forefront-Antispam-Report:
+	CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:BL1PR12MB5874.namprd12.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230025)(4636009)(376002)(396003)(366004)(39860400002)(136003)(346002)(34036004)(451199018)(53546011)(44832011)(7416002)(38100700002)(2906002)(6506007)(186003)(5660300002)(8936002)(6512007)(31686004)(110136005)(54906003)(6666004)(41320700001)(36756003)(41300700001)(2616005)(66946007)(4326008)(66556008)(66476007)(83380400001)(8676002)(86362001)(316002)(31696002)(6486002)(508600001)(45980500001)(43740500002);DIR:OUT;SFP:1101;
+X-MS-Exchange-AntiSpam-MessageData-ChunkCount: 1
+X-MS-Exchange-AntiSpam-MessageData-0:
+	=?utf-8?B?dFZqSjlYcUkzZDdSTHVxTmx4T1oxQXZpcjU3RmdoQU5qZmw1OUVMVDY0R1l3?=
+ =?utf-8?B?SjVzQXduRCtKYWhOU0FQeXRENVNOV0JwUVUwOGVDeG91eHlHSWluYVdCekRN?=
+ =?utf-8?B?STV2MUFrWi9LNVc3UmsyeGJYRTY1bkdRN1lYR0sxaU5jSDBFV1FHM0gxUDk0?=
+ =?utf-8?B?K29WcVU5UTNVNW5GUzFvbk5udmwrVFpHcmg3NUZta1hZSVIrLzVkTUtHMHQ4?=
+ =?utf-8?B?Q0c4d3J3UVNaMWI1SFFGZHZBT1VUczlqUDVvR1dGZllPelRLNWxHM1dYMDZE?=
+ =?utf-8?B?VWNCRkMwVVpxYkdYTk5NNjZUeDZUQTNBNEFyQ1FRWnpIQVMxbWExS0h6dGta?=
+ =?utf-8?B?Z2tFd21EYlZrdy9HOUZmcmEyeEpZVVpFM0lGLy84WVJBTHFuSzAvL3JSc2RY?=
+ =?utf-8?B?dVJRbzVMVG1EYjNLMnFhbElSWFFhcGRpNnplK3FiUjEwdUxtSTdNb0tBOU8z?=
+ =?utf-8?B?R3pQYmtCK21mdDRYa1hydVJtTXlFQldUSGVtRkNUVWppM0ptajhMZEttSDNa?=
+ =?utf-8?B?WUlnVHc2VkQyZUdlRE1wSTFjdnBuZFVjOVg1Z1lQMWV0ancrUnNQQ3BMT3pD?=
+ =?utf-8?B?VlA5QURUT3RBQ1phdDVwdlh0UXN6ZUEwclJoM3lkMkp1MzhMNEFWN3BRd1Q3?=
+ =?utf-8?B?S2xSZ1IxTHg4a2syeDN5RHBLNlNuNkdqMjFkVTVLeVdkbXdsTkFkclIzNFJq?=
+ =?utf-8?B?VkhrMFJXb1JHb3dMNFcrWERWb05uNG9VazYyNWFuWnlHQVcvOXpFTzZabm1n?=
+ =?utf-8?B?T1o3L3BYTmhvMVdic2h2MTRQVTdLT3NXWjFmdmIxd21STXBiK3loT1NjaTNV?=
+ =?utf-8?B?SmU2VUZBb20yeHpGZUMvSTFuMHlqWHZGN3Q0SXE3d0hBTUkzRU5TMG84VFlI?=
+ =?utf-8?B?alc3SGxkMmhaRkJsODFUUytpTUNzdEc0TkRlMm9wMzR1RnQrWE9GZnZLSTZu?=
+ =?utf-8?B?cURrQkFPeVlKY1R0aXduRU5sWm9aRkh1WCswRWlldU1Dc2EyUWtWVEluQjZa?=
+ =?utf-8?B?ZXlIejNLNzFFN3JPM3p2Q201S2RwUGcxWTBSQ0V1WGU3S1FtZVJMc1lFdEcx?=
+ =?utf-8?B?STdOYUpQdUlpdCs2aEZLM2Y3dGR1MUVqY2gycTQ1QnNYSFBXRzVFQUZYR3lG?=
+ =?utf-8?B?K3VCSjA2a2p3Q0VCd0Q1eUVaRW9HSTFyblBRQU9ENGlqTWxlZFFzakI2eEI0?=
+ =?utf-8?B?bkZxLzNveUgyRjhzTFVBNEpacmtQTFlyOGVOYk9Wb3RqSDNETEpaSzczTnFp?=
+ =?utf-8?B?SlA2c0NwM0luRVdCZWw0eXBzM0k3VXQ0b0p5dFhFTXVGQUtIVUZONGFXa1d1?=
+ =?utf-8?B?RjIrYUJYcGo2ZFRoSHlEdHZWTmlQS1NZQjV5eTFEQ1NKNzQxQiszaHQzVXNy?=
+ =?utf-8?B?c0Q1QzFlLzlCU0FsN045Z2NoQUp5RjA4dlhaLzg3b3Jvc0tFTUxZQmFvL3ZR?=
+ =?utf-8?B?K2Z0WkFkbklCaFBtOWlDYURTLzF0Y0R5YS9BRm0zaVJLY2FBMkFBRUlQNEhl?=
+ =?utf-8?B?RU0yaG5iTVViRi92MFlDRmN3NmxIbno1SjNoRWJJYWQ0V0wwZ2JIa1dMZFNY?=
+ =?utf-8?B?RzBTbE01MGhVeW85Um1ZdlFzaEFGaFVDMGpyakRGYWhSUUlYMmlRYzJMbyt1?=
+ =?utf-8?B?MmtJaVFDMDVPRmxzNUZySGZMUlNoNTdQb3JyU2ViQXJEWmtud1NnS0NhNUIv?=
+ =?utf-8?B?dWdqR1lSZXZpZTgyNE9NUTd3Y2JySWlVQ2xrYXFRU3kxSmY3ODJhcmp3aWU4?=
+ =?utf-8?B?WVVnR2hJaGFjbjBLZGVZd0lIQXd4N2VZYnRvUHBrMUIrdnhYanZSVnQwTWRY?=
+ =?utf-8?B?THVRWGF0M3MwUjZIb0krbDF6U2JaWVZzRGZhS3NBb1VydTNUQVRFNFBBU2xr?=
+ =?utf-8?B?OW80dlEzVXo2c3ZIaTdEWU1DT3lUbC9Ma2laZkxiM3hxdjhGaUtRYjBheVRX?=
+ =?utf-8?B?Qmp3ZHhJSUcvWkx4T2hNc3BnOG1XRVY1aEQ4cTJWVUlvL0F4S1cwNk14cXp6?=
+ =?utf-8?B?VmFvS1JXOXAwVDU3WHBDeE0vdGNOTTFmTEZ6VHRURUtQQ00vanRtQkU1WTEr?=
+ =?utf-8?B?YkJEczNGQjNMK3VCTEVRR0pFKzJDYmRLNE1NMk5zOGVSRExOeXNITFdKUENF?=
+ =?utf-8?B?b2xYUkpRK3RZbm5rdVBIT1RTOE1LNDhBNkZhTFEvWWJVTzg4VnZVNVpIYzJQ?=
+ =?utf-8?Q?IWx9ll/1dyOpZFWFvsYpyxAnrb7F9xhGrzio3XzygbTe?=
+X-OriginatorOrg: amd.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: f835749d-2c9e-47d6-ad96-08db00a846d3
+X-MS-Exchange-CrossTenant-AuthSource: BL1PR12MB5874.namprd12.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 27 Jan 2023 20:51:34.8964
+ (UTC)
+X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
+X-MS-Exchange-CrossTenant-Id: 3dd8961f-e488-4e60-8e11-a82d994e183d
+X-MS-Exchange-CrossTenant-MailboxType: HOSTED
+X-MS-Exchange-CrossTenant-UserPrincipalName: Apr+w8m8joBfFjm0m9rX41OOTsb8MRr2GQRbBrN5EtO/tiRRDBJYtfM5GQClIcifbTGtOzJkUY979cza8uZr2w==
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: SJ1PR12MB6337
 
-On Thu, 2023-01-26 at 13:28 +0000, Reshetova, Elena wrote:
-> > On Thu, Jan 26, 2023 at 11:29:20AM +0000, Reshetova, Elena wrote:
-> > > > On Wed, Jan 25, 2023 at 03:29:07PM +0000, Reshetova, Elena
-> > > > wrote:
-> > > > > Replying only to the not-so-far addressed points.
-> > > > > 
-> > > > > > On Wed, Jan 25, 2023 at 12:28:13PM +0000, Reshetova, Elena
-> > > > > > wrote:
-> > > > > > > Hi Greg,
-> > > > 
-> > > > <...>
-> > > > 
-> > > > > > > 3) All the tools are open-source and everyone can start
-> > > > > > > using them right away even without any special HW (readme
-> > > > > > > has description of what is needed).
-> > > > > > > Tools and documentation is here:
-> > > > > > > https://github.com/intel/ccc-linux-guest-hardening
-> > > > > > 
-> > > > > > Again, as our documentation states, when you submit patches
-> > > > > > based on these tools, you HAVE TO document that.  Otherwise
-> > > > > > we think you all are crazy and will get your patches
-> > > > > > rejected.  You all know this, why ignore it?
-> > > > > 
-> > > > > Sorry, I didn’t know that for every bug that is found in
-> > > > > linux kernel when we are submitting a fix that we have to
-> > > > > list the way how it has been found. We will fix this in the
-> > > > > future submissions, but some bugs we have are found by
-> > > > > plain code audit, so 'human' is the tool. 
-> > > > My problem with that statement is that by applying different
-> > > > threat model you "invent" bugs which didn't exist in a first
-> > > > place.
-> > > > 
-> > > > For example, in this [1] latest submission, authors labeled
-> > > > correct behaviour as "bug".
-> > > > 
-> > > > [1] https://lore.kernel.org/all/20230119170633.40944-1-
-> > > > alexander.shishkin@linux.intel.com/
-> > > 
-> > > Hm.. Does everyone think that when kernel dies with unhandled
-> > > page fault (such as in that case) or detection of a KASAN out of
-> > > bounds violation (as it is in some other cases we already have
-> > > fixes or investigating) it represents a correct behavior even if
-> > > you expect that all your pci HW devices are trusted?
-> > 
-> > This is exactly what I said. You presented me the cases which exist
-> > in your invented world. Mentioned unhandled page fault doesn't
-> > exist in real world. If PCI device doesn't work, it needs to be
-> > replaced/blocked and not left to be operable and accessible from
-> > the kernel/user.
+On 1/27/23 6:25 AM, Reshetova, Elena wrote:
 > 
-> Can we really assure correct operation of *all* pci devices out
-> there? How would such an audit be performed given a huge set of them
-> available? Isnt it better instead to make a small fix in the kernel
-> behavior that would guard us from such potentially not correctly
-> operating devices? 
+>> On Fri, Jan 27, 2023 at 08:52:22AM +0000, Reshetova, Elena wrote:
+>>>> On Wed, Jan 25, 2023 at 03:29:07PM +0000, Reshetova, Elena wrote:
+>>>>> And this is a very special aspect of 'hardening' since it is about hardening a
+>>>> kernel
+>>>>> under different threat model/assumptions.
+>>>>
+>>>> I am not sure it's that special in that hardening IMHO is not a specific
+>>>> threat model or a set of assumptions. IIUC it's just something that
+>>>> helps reduce severity of vulnerabilities.  Similarly, one can use the CC
+>>>> hardware in a variety of ways I guess. And one way is just that -
+>>>> hardening linux such that ability to corrupt guest memory does not
+>>>> automatically escalate into guest code execution.
+>>>
+>>> I am not sure if I fully follow you on this. I do agree that it is in principle
+>>> the same 'hardening' that we have been doing in Linux for decades just
+>>> applied to a new attack surface, host <-> guest, vs userspace <->kernel.
+>>
+>> Sorry about being unclear this is not the type of hardening I meant
+>> really.  The "hardening" you meant is preventing kernel vulnerabilities,
+>> right? This is what we've been doing for decades.
+>> But I meant slightly newer things like e.g. KASLR or indeed ASLR generally -
+>> we are trying to reduce a chance a vulnerability causes random
+>> code execution as opposed to a DOS. To think in these terms you do not
+>> need to think about attack surfaces - in the system including
+>> a hypervisor, guest supervisor and guest userspace hiding
+>> one component from others is helpful even if they share
+>> a privelege level.
+> 
+> Do you mean that the fact that CoCo guest has memory encrypted
+> can help even in non-CoCo scenarios? I am sorry, I still seem not to be able
+> to grasp your idea fully. When the privilege level is shared, there is no
+> incentive to perform privilege escalation attacks across components,
+> so why hide them from each other? Data protection? But I don’t think you
+> are talking about this? I do agree that KASLR is stronger when you remove
+> the possibility to read the memory (make sure kernel code is execute only)
+> you are trying to attack, but again not sure if you mean this. 
+> 
+>>
+>>
+>>
+>>> Interfaces have changed, but the types of vulnerabilities, etc are the same.
+>>> The attacker model is somewhat different because we have
+>>> different expectations on what host/hypervisor should be able to do
+>>> to the guest (following business reasons and use-cases), versus what we
+>>> expect normal userspace being able to "do" towards kernel. The host and
+>>> hypervisor still has a lot of control over the guest (ability to start/stop it,
+>>> manage its resources, etc). But the reasons behind this doesn’t come
+>>> from the fact that security CoCo HW not being able to support this stricter
+>>> security model (it cannot now indeed, but this is a design decision), but
+>>> from the fact that it is important for Cloud service providers to retain that
+>>> level of control over their infrastructure.
+>>
+>> Surely they need ability to control resource usage, not ability to execute DOS
+>> attacks. Current hardware just does not have ability to allow the former
+>> without the later.
+> 
+> I don’t see why it cannot be added to HW if requirement comes. However, I think 
+> in cloud provider world being able to control resources equals to being able
+> to deny these resources when required, so being able to denial of service its clients
+> is kind of build-in expectation that everyone just agrees on.  
+> 
 
-I think this is really the wrong question from the confidential
-computing (CC) point of view.  The question shouldn't be about assuring
-that the PCI device is operating completely correctly all the time (for
-some value of correct).  It's if it were programmed to be malicious
-what could it do to us?  If we take all DoS and Crash outcomes off the
-table (annoying but harmless if they don't reveal the confidential
-contents), we're left with it trying to extract secrets from the
-confidential environment.
+Just a thought, but I wouldn't discard availability guarantees like that
+at some point. As a client I would certainly like it, and if it's good
+for business...
 
-The big threat from most devices (including the thunderbolt classes) is
-that they can DMA all over memory.  However, this isn't really a threat
-in CC (well until PCI becomes able to do encrypted DMA) because the
-device has specific unencrypted buffers set aside for the expected DMA.
-If it writes outside that CC integrity will detect it and if it reads
-outside that it gets unintelligible ciphertext.  So we're left with the
-device trying to trick secrets out of us by returning unexpected data.
+>>
+>>>>
+>>>> If you put it this way, you get to participate in a well understood
+>>>> problem space instead of constantly saying "yes but CC is special".  And
+>>>> further, you will now talk about features as opposed to fixing bugs.
+>>>> Which will stop annoying people who currently seem annoyed by the
+>>>> implication that their code is buggy simply because it does not cache in
+>>>> memory all data read from hardware. Finally, you then don't really need
+>>>> to explain why e.g. DoS is not a problem but info leak is a problem - when
+>>>> for many users it's actually the reverse - the reason is not that it's
+>>>> not part of a threat model - which then makes you work hard to define
+>>>> the threat model - but simply that CC hardware does not support this
+>>>> kind of hardening.
+>>>
+>>> But this won't be correct statement, because it is not limitation of HW, but the
+>>> threat and business model that Confidential Computing exists in. I am not
+>>> aware of a single cloud provider who would be willing to use the HW that
+>>> takes the full control of their infrastructure and running confidential guests,
+>>> leaving them with no mechanisms to control the load balancing, enforce
+>>> resource usage, etc. So, given that nobody needs/willing to use such HW,
+>>> such HW simply doesn’t exist.
+>>>
+>>> So, I would still say that the model we operate in CoCo usecases is somewhat
+>>> special, but I do agree that given that we list a couple of these special
+>> assumptions
+>>> (over which ones we have no control or ability to influence, none of us are
+>> business
+>>> people), then the rest becomes just careful enumeration of attack surface
+>> interfaces
+>>> and break up of potential mitigations.
+>>>
+>>> Best Regards,
+>>> Elena.
+>>>
+>>
+>> I'd say each business has a slightly different business model, no?
+>> Finding common ground is what helps us share code ...
+> 
+> Fully agree, and a good discussion with everyone willing to listen and cooperate
+> can go a long way into defining the best implementation. 
+> 
+> Best Regards,
+> Elena. 
 
-If I set this as the problem, verifying device correct operation is a
-possible solution (albeit hugely expensive), but there are likely many
-other cheaper ways to defeat or detect a device trying to trick us into
-revealing something.
+Thanks for sharing the threat model with the list!
 
-James
-
+Carlos
