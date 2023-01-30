@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21625-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21626-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id D3C19C54EAA
-	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Jan 2023 07:43:32 +0000 (UTC)
-Received: (qmail 8102 invoked by uid 550); 30 Jan 2023 07:43:19 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 2E10EC54EAA
+	for <kernel-hardening@archiver.kernel.org>; Mon, 30 Jan 2023 12:42:25 +0000 (UTC)
+Received: (qmail 3743 invoked by uid 550); 30 Jan 2023 12:42:15 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,228 +12,135 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 8080 invoked from network); 30 Jan 2023 07:43:18 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple;
-  d=intel.com; i=@intel.com; q=dns/txt; s=Intel;
-  t=1675064598; x=1706600598;
-  h=from:to:cc:subject:date:message-id:references:
-   in-reply-to:content-transfer-encoding:mime-version;
-  bh=JTvqZsFG2Op8gUiBiq5855+csFauM1Ee/1jcGDEEPg4=;
-  b=LGX7l+NCDsEZwTW3+54LFBl9IIsZQIfpUwHf41Cg6CBPo1gvxlgUw5Gy
-   mcULNsXNAs/N6xKIyVueLdTmWgUoRir5LzVhbAfw8oCGEwT0VeIHwFowQ
-   Gudk+bS9SknMr1DGnkomJyF/lEzxbWhix2dBTKPn+Y0aU5gTNqShmtRot
-   EFcBmw2pbyAxOI+IndWefuIHbkJw1FGtkqpaYqYFqz7oVgH3ANkK+B07w
-   5SJJvoEOu+I3bzO8kKDHtyxPwsWzSVbeeStAGEnsAz+dMjS+DAbx0Y0qh
-   LYXTc7NVrqhcuGAZMXBF226IHdL+txHsIr7g9Mkg5241blsiR94pKIkHw
-   A==;
-X-IronPort-AV: E=McAfee;i="6500,9779,10605"; a="315455691"
-X-IronPort-AV: E=Sophos;i="5.97,257,1669104000"; 
-   d="scan'208";a="315455691"
-X-ExtLoop1: 1
-X-IronPort-AV: E=McAfee;i="6500,9779,10605"; a="665982439"
-X-IronPort-AV: E=Sophos;i="5.97,257,1669104000"; 
-   d="scan'208";a="665982439"
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=DpN+wnaP9Ysj7OtfqKxQNOYZlqQiTVI2IpU/TvFuN5joGlxzBnqGEGfKRVru9bEsu/f2MjP57vAeDEhvkXbVhp2qBIbi/rKhymyCRdrnAb0vFwWfQHvIhK13Jq21oQQseUQ9mkmVcLmHEeOyfwHGeZ6hQE6D6r9hdKZWGfVkROevj8K4S44DK8fA1iLKsipJVeMsj8eR2gg3RsauUXd/JStjsdHHmRYeqaqb0X2aXfATMDnIm2d/2jAi71AELsqLhPl4nlLo5vIN5d2fOX/sJ7tbbWs5cDKqR3dGhjHFxM7ZbVDav6fEjVhD+vlFa6Ibmmnq9uydINnBeJQVnwIfvw==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
- bh=JTvqZsFG2Op8gUiBiq5855+csFauM1Ee/1jcGDEEPg4=;
- b=Q1FBua1uZDgfC9ZDL/ZOZIkcGdyW2rnP74dTbd2X9nP5LE3y7PvcLD1x4BTrNHTfMxW/fC2qVDdQkjazK4ydpA3rxBXBwc0iShkfUP0Y+lEzp14Vf4zVNx6xAr/trVDCwUCpEI05m+3DNDSkf2snf0fhhkxC9wZIK8abjlOV8riQeunbDVtAZnFD7suQjleoFQ/XljXJHeBPLhH/VcpIY3DnNCOrH8HmKIf631dcaQ0S7IGHjhHxf3/H0dAY+1rN+OYvwAjuPRPkf4Fdc4KoKjVzDIQhl3ZV1sCxJ3knDLspDt+Y+Qnlceo+WgdO4SRns4zpXDGhpp/PZzonVRCEOQ==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
- smtp.mailfrom=intel.com; dmarc=pass action=none header.from=intel.com;
- dkim=pass header.d=intel.com; arc=none
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-To: "jejb@linux.ibm.com" <jejb@linux.ibm.com>, Leon Romanovsky
-	<leon@kernel.org>
-CC: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Shishkin, Alexander"
-	<alexander.shishkin@intel.com>, "Shutemov, Kirill"
-	<kirill.shutemov@intel.com>, "Kuppuswamy, Sathyanarayanan"
-	<sathyanarayanan.kuppuswamy@intel.com>, "Kleen, Andi" <andi.kleen@intel.com>,
-	"Hansen, Dave" <dave.hansen@intel.com>, Thomas Gleixner <tglx@linutronix.de>,
-	Peter Zijlstra <peterz@infradead.org>, "Wunner, Lukas"
-	<lukas.wunner@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>,
-	"Michael S. Tsirkin" <mst@redhat.com>, Jason Wang <jasowang@redhat.com>,
-	"Poimboe, Josh" <jpoimboe@redhat.com>, "aarcange@redhat.com"
-	<aarcange@redhat.com>, Cfir Cohen <cfir@google.com>, Marc Orr
-	<marcorr@google.com>, "jbachmann@google.com" <jbachmann@google.com>,
-	"pgonda@google.com" <pgonda@google.com>, "keescook@chromium.org"
-	<keescook@chromium.org>, James Morris <jmorris@namei.org>, Michael Kelley
-	<mikelley@microsoft.com>, "Lange, Jon" <jlange@microsoft.com>,
-	"linux-coco@lists.linux.dev" <linux-coco@lists.linux.dev>, "Linux Kernel
- Mailing List" <linux-kernel@vger.kernel.org>, Kernel Hardening
-	<kernel-hardening@lists.openwall.com>
-Subject: RE: Linux guest kernel threat model for Confidential Computing
-Thread-Topic: Linux guest kernel threat model for Confidential Computing
-Thread-Index: AdkwsXY+8ptYLAlAQXCgWg2jZ1ntPwACTigAAAR067AAKubQgAAALAEwAAJJbIAAAYhDQAA/PSiAAH3FjMA=
-Date: Mon, 30 Jan 2023 07:42:30 +0000
-Message-ID: <DM8PR11MB5750F939C0B70939AD3CBC37E7D39@DM8PR11MB5750.namprd11.prod.outlook.com>
-References: <DM8PR11MB57505481B2FE79C3D56C9201E7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
+Received: (qmail 3721 invoked from network); 30 Jan 2023 12:42:13 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : subject :
+ from : reply-to : to : cc : date : in-reply-to : references : content-type
+ : content-transfer-encoding : mime-version; s=pp1;
+ bh=SmLzzuerEoq5t9Gzjsx9QeubJiRT4pgArGq5OrlmHf0=;
+ b=DHN6SLq/v1laThhBazkHeqiPESPsxOUzaWU1bQuWApwnIHNzb8aj0M+COFKeuaxj+2Th
+ Bk0hV1IsbSJmLZi+PG9W3YVo0vTLg+v1HcYMTOSS9/P4CAay1NGUXNvyMrni9X0LxVWT
+ 4sM4hUTv+WMUzitTrRjBi+6eHCHagh4ln/gOvLjdXOLNG2cd/mJ+tGMzJWDthmGs83Ez
+ 9NS/OshMfRKwSVOfohm53gfD2kimNYGuQlMcyot/dZK2GhYScFFlfMesW66Mwnnw0dP4
+ 7NJonTPMHu5SC/xGBFB201GfQ25tYEusR7MMmHFSgnDbZoCGhfdf2X0jf3Av9dOXIap/ iA== 
+Message-ID: <220b0be95a8c733f0a6eeddc08e37977ee21d518.camel@linux.ibm.com>
+Subject: Re: Linux guest kernel threat model for Confidential Computing
+From: James Bottomley <jejb@linux.ibm.com>
+To: "Reshetova, Elena" <elena.reshetova@intel.com>,
+        Leon Romanovsky
+	 <leon@kernel.org>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+        "Shishkin, Alexander"
+ <alexander.shishkin@intel.com>,
+        "Shutemov, Kirill"
+ <kirill.shutemov@intel.com>,
+        "Kuppuswamy, Sathyanarayanan"
+ <sathyanarayanan.kuppuswamy@intel.com>,
+        "Kleen, Andi"
+ <andi.kleen@intel.com>,
+        "Hansen, Dave" <dave.hansen@intel.com>,
+        Thomas
+ Gleixner <tglx@linutronix.de>,
+        Peter Zijlstra <peterz@infradead.org>,
+        "Wunner, Lukas" <lukas.wunner@intel.com>,
+        Mika Westerberg
+ <mika.westerberg@linux.intel.com>,
+        "Michael S. Tsirkin" <mst@redhat.com>,
+        Jason Wang <jasowang@redhat.com>,
+        "Poimboe, Josh" <jpoimboe@redhat.com>,
+        "aarcange@redhat.com" <aarcange@redhat.com>,
+        Cfir Cohen <cfir@google.com>, Marc Orr <marcorr@google.com>,
+        "jbachmann@google.com"
+ <jbachmann@google.com>,
+        "pgonda@google.com" <pgonda@google.com>,
+        "keescook@chromium.org" <keescook@chromium.org>,
+        James Morris
+ <jmorris@namei.org>,
+        Michael Kelley <mikelley@microsoft.com>,
+        "Lange, Jon"
+ <jlange@microsoft.com>,
+        "linux-coco@lists.linux.dev"
+ <linux-coco@lists.linux.dev>,
+        Linux Kernel Mailing List
+ <linux-kernel@vger.kernel.org>,
+        Kernel Hardening
+ <kernel-hardening@lists.openwall.com>
+Date: Mon, 30 Jan 2023 07:40:47 -0500
+In-Reply-To: <DM8PR11MB5750F939C0B70939AD3CBC37E7D39@DM8PR11MB5750.namprd11.prod.outlook.com>
+References: 
+	<DM8PR11MB57505481B2FE79C3D56C9201E7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
 	 <Y9EkCvAfNXnJ+ATo@kroah.com>
 	 <DM8PR11MB5750FA4849C3224F597C101AE7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
 	 <Y9Jh2x9XJE1KEUg6@unreal>
 	 <DM8PR11MB5750414F6638169C7097E365E7CF9@DM8PR11MB5750.namprd11.prod.outlook.com>
 	 <Y9JyW5bUqV7gWmU8@unreal>
 	 <DM8PR11MB57507D9C941D77E148EE9E87E7CF9@DM8PR11MB5750.namprd11.prod.outlook.com>
- <702f22df28e628d41babcf670c909f1fa1bb3c0c.camel@linux.ibm.com>
-In-Reply-To: <702f22df28e628d41babcf670c909f1fa1bb3c0c.camel@linux.ibm.com>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach:
-X-MS-TNEF-Correlator:
-authentication-results: dkim=none (message not signed)
- header.d=none;dmarc=none action=none header.from=intel.com;
-x-ms-publictraffictype: Email
-x-ms-traffictypediagnostic: DM8PR11MB5750:EE_|CY8PR11MB6938:EE_
-x-ms-office365-filtering-correlation-id: 9ac73411-d90f-4f08-5334-08db02958ac8
-x-ld-processed: 46c98d88-e344-4ed4-8496-4ed7712e255d,ExtAddr
-x-ms-exchange-senderadcheck: 1
-x-ms-exchange-antispam-relay: 0
-x-microsoft-antispam: BCL:0;
-x-microsoft-antispam-message-info: QStC0+/8bvInH6/PIFLIBsjDoFKRHSsQf2LeFeXd5Z5j0+5hsYw6yBjeTI/KNSmeT5vcgYRU5B/jwZXVl5V3eDWSqJFxfBsQVGP/M9dzAv9ngK2ZZXIkolKjg/r8UWUTVGxINLb7ivNgJpFqAxfhiPT6MhCFif97oYHj7DgWKh2WAZKzfF3ivB5fXxV4whMzD80t8oQ1tfvK5YXfPzVvzjfPDKmXmdsOINs6R7oDsoIGTH0Q0iMdQRqSTdUO0PfpAj7H7BnrUl2BobYywW/gnktEx067Z/9rLtll3jUm9hCeumbXSb5p7g17nu7g1vkQrFZxVtJIb/yQR+m4aXaDrfHlbG69Qu143eocasrMrM8qrvG+mq4lqN8RCrFBR38btaGd21X80WG57HHxSnydUtWu1Nm4fSExvfiCCz2FZ2FJFmICwnOUEZoa5QjPFJkSXXU03+KEYr5ttFFF4afVcfb2rGCq7fzirr1rz1kveQ4pgOIq3EZ42QF58FGI4/w9UAbQJibsPHtqflgZcjm7dcOMzv4JR/GeouxH+hwro9MWUcgO7L5wNUduKNVZ8FmCztIhbqlYfElQ4iuDSTmNVjiMq1/m8oRgYXxE7lF2K6JZvh2I3ioCOn/wLZDHTymao2aJRWPRtT2uib7gL+wqYSG8466OcLxzlbb3qru/sgp6aBlTUD5XRQaKPsfRh7hPwnWTB4rHMwmL46e1IgvkqhzdsoiOz5ayzjiqIigAci95AmdCI3LDH2xX/NT/0r8HbbUxpwugifufUllVMzSFxA==
-x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:DM8PR11MB5750.namprd11.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230025)(346002)(39860400002)(136003)(366004)(396003)(376002)(451199018)(7416002)(8936002)(5660300002)(52536014)(2906002)(55016003)(86362001)(83380400001)(41300700001)(6506007)(66556008)(76116006)(33656002)(8676002)(110136005)(54906003)(64756008)(66446008)(66946007)(4326008)(478600001)(66476007)(9686003)(26005)(966005)(186003)(71200400001)(7696005)(38100700002)(38070700005)(82960400001)(316002)(122000001);DIR:OUT;SFP:1102;
-x-ms-exchange-antispam-messagedata-chunkcount: 1
-x-ms-exchange-antispam-messagedata-0: =?utf-8?B?TS9KSEFxRFp6Y2JRRmYrNGNvT2VrMmR3QkZmdmtReEJNc0pVV2Z2WVZSZmE3?=
- =?utf-8?B?L21OMDhqekZ3OTl0RitrbTVNMUE0c2RHL2p3aFNqTjZoYTdITHQ2SzlvVnNr?=
- =?utf-8?B?cE02L3UxTkNtdEIrZkptY0FMNkpoNlJHMXZNMkg0RFUxZVdIMUQvUWZFZklZ?=
- =?utf-8?B?cVF3cXBQZGdjT3gydDBJTFRlcysvd01NSHFlZnlxcmJBSU5uei95V2wxMUdV?=
- =?utf-8?B?K3Yxbkd3anIweHpybnFOM1AyRUo0ZG1oWGtzV3ZMVk9aenIybm5kSHRVSjZo?=
- =?utf-8?B?VjVCY0dzbWRaOHpVUlJLSEJUVjkwQ2U1eUJrNEhSTy9pS3JXWVNtRk9wc0xn?=
- =?utf-8?B?QVUxRUtLZjdrOG4zRkdHUmVpS2xPUVc0K3JMR0draWlzYllvQ2dnZldkNS9S?=
- =?utf-8?B?NEFDejFGTVY0UUZkMk5yYXVxMnRpOWRhK0xyTWQ2WWNTZitMVm8wUlU3L3ds?=
- =?utf-8?B?dGtLYldsNWxvZlRVc0tUNVRKNWdTT3RVMUJyQXNhYlA3dzQrZTRhVDdudHB0?=
- =?utf-8?B?Z1FLRGdWWUpxeFVVNklMNWJtdk5CVmVxb3AxVzl4OWVaS244SVZuUlUvS2Ra?=
- =?utf-8?B?VG40NXNMZ1hVcTNQTHo5eXZGV1ozSkRZcnF0aThvOUo3aGQzSkFXc2lKbUJv?=
- =?utf-8?B?UGFEOUlUM3dwL0gxekpCSC9YTnJYaEl0SWdmS2R5YzJydG9ZQmUxc3ZwWnFB?=
- =?utf-8?B?enVzSHNMQk9GZmh3ZHJVVUExbm1nQjB0M01lbTdxU1J4K2NQRE9RT2R5MHQ3?=
- =?utf-8?B?ZllNZEhzQ3cvb1BZbTJod3I0V1R0amt2S08wWUUvMlc4bW40SnVxSnVLTnlS?=
- =?utf-8?B?NTdReDM0enlITXZ1OE1MVytHakVzNFVxTGliUVVkZEsvNExmYUJ3VytzcEFr?=
- =?utf-8?B?WTRlNUl5SHJmM2dxV21kWU05RExXU2pQSllMbVdEaVcrM25EVVFCWWVjRFJG?=
- =?utf-8?B?UjVWNHl5bWFvTUR1VGkzSUpZWUFyYVE1OG5OVW1aTnNwTk9FRlFLM3dlbVVJ?=
- =?utf-8?B?K1hmV0FxYllkQzFzKzFSZnFtcWF6NjlReWZXaXBobkIxMlZIVERXQ1EwVVFj?=
- =?utf-8?B?Z3JibFg0elNKSUJlT25keFBSQUtpUlJNMFJEM0RROWFEZkc1U2h3Q1VnM3ln?=
- =?utf-8?B?QWNHb0E1MEgwRFZtTVBjRjNrVlVST2tKNC8vaUFVTGNQRDZ0eWF5UnpUTDM2?=
- =?utf-8?B?cDhPSmZPck45Vm1UaFc1THM5cS9ZUGtKOVJzRXFxZVk0R3VSdHlBelNxMFdt?=
- =?utf-8?B?OEYzeERaSXg5MWYzdDhIaENHOEc0enAzN2RKelQvQjZFdkFrN1B3ak8rTFN2?=
- =?utf-8?B?amxmcUpmaWtpNjFIRmJXamViUWZKMW9Fa0lyVDcvR3NjeEhJUVNvN1Y5Z24r?=
- =?utf-8?B?b09RWisyVjBsRFZYdmFTU05ERnoyWEEzL1pXQUZxTFZMZEMydElWTE95Y0Vl?=
- =?utf-8?B?K09GS1lKVWJoejliaTFYVVRRL2IxczNjcWFOZDQyMUpYUEtjSkF2dnRpdEFP?=
- =?utf-8?B?dTRrNjl6TmZIZG52YTBFYWhpV3NObGhIVzdodG9QOURFRG5ROXkrcFZLVW9K?=
- =?utf-8?B?NWtMY3Z4bUF3MDJFTUNnMVpxSEFwcEVGQVpIZTRKYnRldG4vMmoyVTR5aytG?=
- =?utf-8?B?K1JxOU0xRmxrTmFrZ0hkTE9OU09qSStCSWQrVzQ5UzFNajk1ZjBhYnZhRzQ1?=
- =?utf-8?B?RU82bVcrK0UvbElwYXQ1dmhLbWdmM01iQnA4R3YzWW9xUVBvcTZmTDVUdGNX?=
- =?utf-8?B?TG5ZQ0RzUmZCZGdNOVF5dHJoZndPVXZJdUoxT3duUXhSYlY4OXZsQXdOd2Jy?=
- =?utf-8?B?R25aNzdRaG04bjlyakZiOW1Xa0pFMERHbC9oN2F4UzNnaFQrWnFhS3QyK2Vy?=
- =?utf-8?B?eHI2YWV6Q1MreCtWQlRCZXFEd3pOUmtuUGNqcjBtRThGOHRqUEtjaEZlOGVX?=
- =?utf-8?B?WkhiUzNpSS9lVjNnOWVSMEN4eGpFT2xOMVZYWlJObG5jbFBlSm02UmpqN2ps?=
- =?utf-8?B?WEIxdEh4OCs2YXo0R0ZkU0toYzVXbzNiSE5nKzlWUmM1eEhVN1cyZ2hXYW1O?=
- =?utf-8?B?MjhldGNkZ3hzUldSTFdsVll4eGFlalZhbklPekkxZ0hBWnZUS01qRFE1N1Ey?=
- =?utf-8?Q?FMbjblgXuUvz1+UXNDfrJm3H1?=
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+	 <702f22df28e628d41babcf670c909f1fa1bb3c0c.camel@linux.ibm.com>
+	 <DM8PR11MB5750F939C0B70939AD3CBC37E7D39@DM8PR11MB5750.namprd11.prod.outlook.com>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.42.4 
+X-TM-AS-GCONF: 00
+X-Proofpoint-GUID: TrOy0LamtMjgCzcx9x7_zhBWtk8LM61g
+X-Proofpoint-ORIG-GUID: IWo7cP949gYF6c-daYAgZ_ZxUF3I4s-s
+Content-Transfer-Encoding: 8bit
+X-Proofpoint-UnRewURL: 0 URL was un-rewritten
 MIME-Version: 1.0
-X-MS-Exchange-CrossTenant-AuthAs: Internal
-X-MS-Exchange-CrossTenant-AuthSource: DM8PR11MB5750.namprd11.prod.outlook.com
-X-MS-Exchange-CrossTenant-Network-Message-Id: 9ac73411-d90f-4f08-5334-08db02958ac8
-X-MS-Exchange-CrossTenant-originalarrivaltime: 30 Jan 2023 07:42:30.4668
- (UTC)
-X-MS-Exchange-CrossTenant-fromentityheader: Hosted
-X-MS-Exchange-CrossTenant-id: 46c98d88-e344-4ed4-8496-4ed7712e255d
-X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
-X-MS-Exchange-CrossTenant-userprincipalname: MEz92tvdV56+S7WmOK/sVWFV7D7RBBAQfNyWvGW2lFXa7snoNbKrDiRXOmRMTlebHIQ9aBfaMYasDE0bhFdUb1kQl/2ZqflvHXVk65tmBuc=
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: CY8PR11MB6938
-X-OriginatorOrg: intel.com
+X-Proofpoint-Virus-Version: vendor=baseguard
+ engine=ICAP:2.0.219,Aquarius:18.0.930,Hydra:6.0.562,FMLib:17.11.122.1
+ definitions=2023-01-30_10,2023-01-30_01,2022-06-22_01
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 clxscore=1015 adultscore=0
+ phishscore=0 bulkscore=0 malwarescore=0 lowpriorityscore=0
+ priorityscore=1501 spamscore=0 impostorscore=0 mlxscore=0 mlxlogscore=999
+ suspectscore=0 classifier=spam adjust=0 reason=mlx scancount=1
+ engine=8.12.0-2212070000 definitions=main-2301300121
 
-IE9uIFRodSwgMjAyMy0wMS0yNiBhdCAxMzoyOCArMDAwMCwgUmVzaGV0b3ZhLCBFbGVuYSB3cm90
-ZToNCj4gPiA+IE9uIFRodSwgSmFuIDI2LCAyMDIzIGF0IDExOjI5OjIwQU0gKzAwMDAsIFJlc2hl
-dG92YSwgRWxlbmEgd3JvdGU6DQo+ID4gPiA+ID4gT24gV2VkLCBKYW4gMjUsIDIwMjMgYXQgMDM6
-Mjk6MDdQTSArMDAwMCwgUmVzaGV0b3ZhLCBFbGVuYQ0KPiA+ID4gPiA+IHdyb3RlOg0KPiA+ID4g
-PiA+ID4gUmVwbHlpbmcgb25seSB0byB0aGUgbm90LXNvLWZhciBhZGRyZXNzZWQgcG9pbnRzLg0K
-PiA+ID4gPiA+ID4NCj4gPiA+ID4gPiA+ID4gT24gV2VkLCBKYW4gMjUsIDIwMjMgYXQgMTI6Mjg6
-MTNQTSArMDAwMCwgUmVzaGV0b3ZhLCBFbGVuYQ0KPiA+ID4gPiA+ID4gPiB3cm90ZToNCj4gPiA+
-ID4gPiA+ID4gPiBIaSBHcmVnLA0KPiA+ID4gPiA+DQo+ID4gPiA+ID4gPC4uLj4NCj4gPiA+ID4g
-Pg0KPiA+ID4gPiA+ID4gPiA+IDMpIEFsbCB0aGUgdG9vbHMgYXJlIG9wZW4tc291cmNlIGFuZCBl
-dmVyeW9uZSBjYW4gc3RhcnQNCj4gPiA+ID4gPiA+ID4gPiB1c2luZyB0aGVtIHJpZ2h0IGF3YXkg
-ZXZlbiB3aXRob3V0IGFueSBzcGVjaWFsIEhXIChyZWFkbWUNCj4gPiA+ID4gPiA+ID4gPiBoYXMg
-ZGVzY3JpcHRpb24gb2Ygd2hhdCBpcyBuZWVkZWQpLg0KPiA+ID4gPiA+ID4gPiA+IFRvb2xzIGFu
-ZCBkb2N1bWVudGF0aW9uIGlzIGhlcmU6DQo+ID4gPiA+ID4gPiA+ID4gaHR0cHM6Ly9naXRodWIu
-Y29tL2ludGVsL2NjYy1saW51eC1ndWVzdC1oYXJkZW5pbmcNCj4gPiA+ID4gPiA+ID4NCj4gPiA+
-ID4gPiA+ID4gQWdhaW4sIGFzIG91ciBkb2N1bWVudGF0aW9uIHN0YXRlcywgd2hlbiB5b3Ugc3Vi
-bWl0IHBhdGNoZXMNCj4gPiA+ID4gPiA+ID4gYmFzZWQgb24gdGhlc2UgdG9vbHMsIHlvdSBIQVZF
-IFRPIGRvY3VtZW50IHRoYXQuwqAgT3RoZXJ3aXNlDQo+ID4gPiA+ID4gPiA+IHdlIHRoaW5rIHlv
-dSBhbGwgYXJlIGNyYXp5IGFuZCB3aWxsIGdldCB5b3VyIHBhdGNoZXMNCj4gPiA+ID4gPiA+ID4g
-cmVqZWN0ZWQuwqAgWW91IGFsbCBrbm93IHRoaXMsIHdoeSBpZ25vcmUgaXQ/DQo+ID4gPiA+ID4g
-Pg0KPiA+ID4gPiA+ID4gU29ycnksIEkgZGlkbuKAmXQga25vdyB0aGF0IGZvciBldmVyeSBidWcg
-dGhhdCBpcyBmb3VuZCBpbg0KPiA+ID4gPiA+ID4gbGludXgga2VybmVsIHdoZW4gd2UgYXJlIHN1
-Ym1pdHRpbmcgYSBmaXggdGhhdCB3ZSBoYXZlIHRvDQo+ID4gPiA+ID4gPiBsaXN0IHRoZSB3YXkg
-aG93IGl0IGhhcyBiZWVuIGZvdW5kLiBXZSB3aWxsIGZpeCB0aGlzIGluIHRoZQ0KPiA+ID4gPiA+
-ID4gZnV0dXJlIHN1Ym1pc3Npb25zLCBidXQgc29tZSBidWdzIHdlIGhhdmUgYXJlIGZvdW5kIGJ5
-DQo+ID4gPiA+ID4gPiBwbGFpbiBjb2RlIGF1ZGl0LCBzbyAnaHVtYW4nIGlzIHRoZSB0b29sLg0K
-PiA+ID4gPiA+IE15IHByb2JsZW0gd2l0aCB0aGF0IHN0YXRlbWVudCBpcyB0aGF0IGJ5IGFwcGx5
-aW5nIGRpZmZlcmVudA0KPiA+ID4gPiA+IHRocmVhdCBtb2RlbCB5b3UgImludmVudCIgYnVncyB3
-aGljaCBkaWRuJ3QgZXhpc3QgaW4gYSBmaXJzdA0KPiA+ID4gPiA+IHBsYWNlLg0KPiA+ID4gPiA+
-DQo+ID4gPiA+ID4gRm9yIGV4YW1wbGUsIGluIHRoaXMgWzFdIGxhdGVzdCBzdWJtaXNzaW9uLCBh
-dXRob3JzIGxhYmVsZWQNCj4gPiA+ID4gPiBjb3JyZWN0IGJlaGF2aW91ciBhcyAiYnVnIi4NCj4g
-PiA+ID4gPg0KPiA+ID4gPiA+IFsxXSBodHRwczovL2xvcmUua2VybmVsLm9yZy9hbGwvMjAyMzAx
-MTkxNzA2MzMuNDA5NDQtMS0NCj4gPiA+ID4gPiBhbGV4YW5kZXIuc2hpc2hraW5AbGludXguaW50
-ZWwuY29tLw0KPiA+ID4gPg0KPiA+ID4gPiBIbS4uIERvZXMgZXZlcnlvbmUgdGhpbmsgdGhhdCB3
-aGVuIGtlcm5lbCBkaWVzIHdpdGggdW5oYW5kbGVkDQo+ID4gPiA+IHBhZ2UgZmF1bHQgKHN1Y2gg
-YXMgaW4gdGhhdCBjYXNlKSBvciBkZXRlY3Rpb24gb2YgYSBLQVNBTiBvdXQgb2YNCj4gPiA+ID4g
-Ym91bmRzIHZpb2xhdGlvbiAoYXMgaXQgaXMgaW4gc29tZSBvdGhlciBjYXNlcyB3ZSBhbHJlYWR5
-IGhhdmUNCj4gPiA+ID4gZml4ZXMgb3IgaW52ZXN0aWdhdGluZykgaXQgcmVwcmVzZW50cyBhIGNv
-cnJlY3QgYmVoYXZpb3IgZXZlbiBpZg0KPiA+ID4gPiB5b3UgZXhwZWN0IHRoYXQgYWxsIHlvdXIg
-cGNpIEhXIGRldmljZXMgYXJlIHRydXN0ZWQ/DQo+ID4gPg0KPiA+ID4gVGhpcyBpcyBleGFjdGx5
-IHdoYXQgSSBzYWlkLiBZb3UgcHJlc2VudGVkIG1lIHRoZSBjYXNlcyB3aGljaCBleGlzdA0KPiA+
-ID4gaW4geW91ciBpbnZlbnRlZCB3b3JsZC4gTWVudGlvbmVkIHVuaGFuZGxlZCBwYWdlIGZhdWx0
-IGRvZXNuJ3QNCj4gPiA+IGV4aXN0IGluIHJlYWwgd29ybGQuIElmIFBDSSBkZXZpY2UgZG9lc24n
-dCB3b3JrLCBpdCBuZWVkcyB0byBiZQ0KPiA+ID4gcmVwbGFjZWQvYmxvY2tlZCBhbmQgbm90IGxl
-ZnQgdG8gYmUgb3BlcmFibGUgYW5kIGFjY2Vzc2libGUgZnJvbQ0KPiA+ID4gdGhlIGtlcm5lbC91
-c2VyLg0KPiA+DQo+ID4gQ2FuIHdlIHJlYWxseSBhc3N1cmUgY29ycmVjdCBvcGVyYXRpb24gb2Yg
-KmFsbCogcGNpIGRldmljZXMgb3V0DQo+ID4gdGhlcmU/IEhvdyB3b3VsZCBzdWNoIGFuIGF1ZGl0
-IGJlIHBlcmZvcm1lZCBnaXZlbiBhIGh1Z2Ugc2V0IG9mIHRoZW0NCj4gPiBhdmFpbGFibGU/IElz
-bnQgaXQgYmV0dGVyIGluc3RlYWQgdG8gbWFrZSBhIHNtYWxsIGZpeCBpbiB0aGUga2VybmVsDQo+
-ID4gYmVoYXZpb3IgdGhhdCB3b3VsZCBndWFyZCB1cyBmcm9tIHN1Y2ggcG90ZW50aWFsbHkgbm90
-IGNvcnJlY3RseQ0KPiA+IG9wZXJhdGluZyBkZXZpY2VzPw0KPiANCj4gSSB0aGluayB0aGlzIGlz
-IHJlYWxseSB0aGUgd3JvbmcgcXVlc3Rpb24gZnJvbSB0aGUgY29uZmlkZW50aWFsDQo+IGNvbXB1
-dGluZyAoQ0MpIHBvaW50IG9mIHZpZXcuICBUaGUgcXVlc3Rpb24gc2hvdWxkbid0IGJlIGFib3V0
-IGFzc3VyaW5nDQo+IHRoYXQgdGhlIFBDSSBkZXZpY2UgaXMgb3BlcmF0aW5nIGNvbXBsZXRlbHkg
-Y29ycmVjdGx5IGFsbCB0aGUgdGltZSAoZm9yDQo+IHNvbWUgdmFsdWUgb2YgY29ycmVjdCkuICBJ
-dCdzIGlmIGl0IHdlcmUgcHJvZ3JhbW1lZCB0byBiZSBtYWxpY2lvdXMNCj4gd2hhdCBjb3VsZCBp
-dCBkbyB0byB1cz8gIA0KDQpTdXJlLCBidXQgTGVvbiBkaWRu4oCZdCBhZ3JlZSB3aXRoIENDIHRo
-cmVhdCBtb2RlbCB0byBiZWdpbiB3aXRoLCBzbyANCkkgd2FzIHRyeWluZyB0byBhcmd1ZSBoZXJl
-IGhvdyB0aGlzIGZpeCBjYW4gYmUgdXNlZnVsIGZvciBub24tQ0MgdGhyZWF0IA0KbW9kZWwgY2Fz
-ZS4gQnV0IG9idmlvdXNseSBteSBhcmd1bWVudCBmb3Igbm9uLUNDIGNhc2Ugd2Fzbid0IGdvb2Qg
-KA0KZXNwZWNpYWxseSByZWFkaW5nIFRlZCdzIHJlcGx5IGhlcmUgDQpodHRwczovL2xvcmUua2Vy
-bmVsLm9yZy9hbGwvWTlMb253OUh6bG9zVVBuU0BtaXQuZWR1LyApLCBzbyBJIGJldHRlcg0Kc3Rp
-Y2sgdG8gQ0MgdGhyZWF0IG1vZGVsIGNhc2UgaW5kZWVkLiANCg0KPklmIHdlIHRha2UgYWxsIERv
-UyBhbmQgQ3Jhc2ggb3V0Y29tZXMgb2ZmIHRoZQ0KPiB0YWJsZSAoYW5ub3lpbmcgYnV0IGhhcm1s
-ZXNzIGlmIHRoZXkgZG9uJ3QgcmV2ZWFsIHRoZSBjb25maWRlbnRpYWwNCj4gY29udGVudHMpLCB3
-ZSdyZSBsZWZ0IHdpdGggaXQgdHJ5aW5nIHRvIGV4dHJhY3Qgc2VjcmV0cyBmcm9tIHRoZQ0KPiBj
-b25maWRlbnRpYWwgZW52aXJvbm1lbnQuDQoNClllcywgdGhpcyBpcyB0aGUgdWx0aW1hdGUgZW5k
-IGdvYWwuIA0KDQo+IA0KPiBUaGUgYmlnIHRocmVhdCBmcm9tIG1vc3QgZGV2aWNlcyAoaW5jbHVk
-aW5nIHRoZSB0aHVuZGVyYm9sdCBjbGFzc2VzKSBpcw0KPiB0aGF0IHRoZXkgY2FuIERNQSBhbGwg
-b3ZlciBtZW1vcnkuICBIb3dldmVyLCB0aGlzIGlzbid0IHJlYWxseSBhIHRocmVhdA0KPiBpbiBD
-QyAod2VsbCB1bnRpbCBQQ0kgYmVjb21lcyBhYmxlIHRvIGRvIGVuY3J5cHRlZCBETUEpIGJlY2F1
-c2UgdGhlDQo+IGRldmljZSBoYXMgc3BlY2lmaWMgdW5lbmNyeXB0ZWQgYnVmZmVycyBzZXQgYXNp
-ZGUgZm9yIHRoZSBleHBlY3RlZCBETUEuDQo+IElmIGl0IHdyaXRlcyBvdXRzaWRlIHRoYXQgQ0Mg
-aW50ZWdyaXR5IHdpbGwgZGV0ZWN0IGl0IGFuZCBpZiBpdCByZWFkcw0KPiBvdXRzaWRlIHRoYXQg
-aXQgZ2V0cyB1bmludGVsbGlnaWJsZSBjaXBoZXJ0ZXh0LiAgU28gd2UncmUgbGVmdCB3aXRoIHRo
-ZQ0KPiBkZXZpY2UgdHJ5aW5nIHRvIHRyaWNrIHNlY3JldHMgb3V0IG9mIHVzIGJ5IHJldHVybmlu
-ZyB1bmV4cGVjdGVkIGRhdGEuDQoNClllcywgYnkgc3VwcGx5aW5nIHRoZSBpbnB1dCB0aGF0IGhh
-c27igJl0IGJlZW4gZXhwZWN0ZWQuIFRoaXMgaXMgZXhhY3RseSANCnRoZSBjYXNlIHdlIHdlcmUg
-dHJ5aW5nIHRvIGZpeCBoZXJlIGZvciBleGFtcGxlOg0KaHR0cHM6Ly9sb3JlLmtlcm5lbC5vcmcv
-YWxsLzIwMjMwMTE5MTcwNjMzLjQwOTQ0LTItYWxleGFuZGVyLnNoaXNoa2luQGxpbnV4LmludGVs
-LmNvbS8NCkkgZG8gYWdyZWUgdGhhdCB0aGlzIGNhc2UgaXMgbGVzcyBzZXZlcmUgd2hlbiBvdGhl
-cnMgd2hlcmUgbWVtb3J5DQpjb3JydXB0aW9uL2J1ZmZlciBvdmVycnVuIGNhbiBoYXBwZW4sIGxp
-a2UgaGVyZToNCmh0dHBzOi8vbG9yZS5rZXJuZWwub3JnL2FsbC8yMDIzMDExOTEzNTcyMS44MzM0
-NS02LWFsZXhhbmRlci5zaGlzaGtpbkBsaW51eC5pbnRlbC5jb20vDQpCdXQgd2UgYXJlIHRyeWlu
-ZyB0byBmaXggYWxsIGlzc3VlcyB3ZSBzZWUgbm93IChwcmlvcml0aXppbmcgdGhlIHNlY29uZCBv
-bmVzDQp0aG91Z2gpLiANCg0KPiANCj4gSWYgSSBzZXQgdGhpcyBhcyB0aGUgcHJvYmxlbSwgdmVy
-aWZ5aW5nIGRldmljZSBjb3JyZWN0IG9wZXJhdGlvbiBpcyBhDQo+IHBvc3NpYmxlIHNvbHV0aW9u
-IChhbGJlaXQgaHVnZWx5IGV4cGVuc2l2ZSkgYnV0IHRoZXJlIGFyZSBsaWtlbHkgbWFueQ0KPiBv
-dGhlciBjaGVhcGVyIHdheXMgdG8gZGVmZWF0IG9yIGRldGVjdCBhIGRldmljZSB0cnlpbmcgdG8g
-dHJpY2sgdXMgaW50bw0KPiByZXZlYWxpbmcgc29tZXRoaW5nLg0KDQpXaGF0IGRvIHlvdSBoYXZl
-IGluIG1pbmQgaGVyZSBmb3IgdGhlIGFjdHVhbCBkZXZpY2VzIHdlIG5lZWQgdG8gZW5hYmxlIGZv
-ciBDQyBjYXNlcz8NCldlIGhhdmUgYmVlbiB1c2luZyBoZXJlIGEgY29tYmluYXRpb24gb2YgZXh0
-ZW5zaXZlIGZ1enppbmcgYW5kIHN0YXRpYyBjb2RlIGFuYWx5c2lzLg0KDQpCZXN0IFJlZ2FyZHMs
-DQpFbGVuYS4NCg0KDQo=
+On Mon, 2023-01-30 at 07:42 +0000, Reshetova, Elena wrote:
+[...]
+> > The big threat from most devices (including the thunderbolt
+> > classes) is that they can DMA all over memory.  However, this isn't
+> > really a threat in CC (well until PCI becomes able to do encrypted
+> > DMA) because the device has specific unencrypted buffers set aside
+> > for the expected DMA. If it writes outside that CC integrity will
+> > detect it and if it reads outside that it gets unintelligible
+> > ciphertext.  So we're left with the device trying to trick secrets
+> > out of us by returning unexpected data.
+> 
+> Yes, by supplying the input that hasn’t been expected. This is
+> exactly the case we were trying to fix here for example:
+> https://lore.kernel.org/all/20230119170633.40944-2-alexander.shishkin@linux.intel.com/
+> I do agree that this case is less severe when others where memory
+> corruption/buffer overrun can happen, like here:
+> https://lore.kernel.org/all/20230119135721.83345-6-alexander.shishkin@linux.intel.com/
+> But we are trying to fix all issues we see now (prioritizing the
+> second ones though). 
+
+I don't see how MSI table sizing is a bug in the category we've
+defined.  The very text of the changelog says "resulting in a kernel
+page fault in pci_write_msg_msix()."  which is a crash, which I thought
+we were agreeing was out of scope for CC attacks?
+
+> > 
+> > If I set this as the problem, verifying device correct operation is
+> > a possible solution (albeit hugely expensive) but there are likely
+> > many other cheaper ways to defeat or detect a device trying to
+> > trick us into revealing something.
+> 
+> What do you have in mind here for the actual devices we need to
+> enable for CC cases?
+
+Well, the most dangerous devices seem to be the virtio set a CC system
+will rely on to boot up.  After that, there are other ways (like SPDM)
+to verify a real PCI device is on the other end of the transaction.
+
+> We have been using here a combination of extensive fuzzing and static
+> code analysis.
+
+by fuzzing, I assume you mean fuzzing from the PCI configuration space?
+Firstly I'm not so sure how useful a tool fuzzing is if we take Oopses
+off the table because fuzzing primarily triggers those so its hard to
+see what else it could detect given the signal will be smothered by
+oopses and secondly I think the PCI interface is likely the wrong place
+to begin and you should probably begin on the virtio bus and the
+hypervisor generated configuration space.
+
+James
+
