@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21641-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21642-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 11F74C61DA4
-	for <kernel-hardening@archiver.kernel.org>; Fri,  3 Feb 2023 14:06:33 +0000 (UTC)
-Received: (qmail 17535 invoked by uid 550); 3 Feb 2023 14:06:20 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 07D21C05027
+	for <kernel-hardening@archiver.kernel.org>; Mon,  6 Feb 2023 18:59:15 +0000 (UTC)
+Received: (qmail 9917 invoked by uid 550); 6 Feb 2023 18:59:02 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,246 +12,273 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17505 invoked from network); 3 Feb 2023 14:06:18 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple;
-  d=intel.com; i=@intel.com; q=dns/txt; s=Intel;
-  t=1675433178; x=1706969178;
-  h=from:to:cc:subject:date:message-id:references:
-   in-reply-to:content-transfer-encoding:mime-version;
-  bh=W85NxQ5IKgg33UNmQGmEsVe7xqqDjCopP0kPWnYaDME=;
-  b=Li7WFCwCKt7Bg1IjNZc7oMCnsM3fiiAM7j8mbzI1gpttFnO157FAEL69
-   grjNZMsGwywXgroJbPRFoLC3iKeZ/GR0PJ7HD96wSzTK8kgtCmYGgFI7M
-   +zMwA1DK6p4dnFuZKhEO/4KhHpZK3k42pKmlbBWBrPINq3W4SWm5iECYO
-   XmEs2aQ+GVFeIYckTlDqCBdRQXFKlEc0mippamBhoJGIQomKgYg+LbiGM
-   d+uhpwrE5QjCvV+FLKlO93BMpbIb/FUstCQaShHcnQVokkZJMk/XbIrH4
-   608tYzXkEtBE5qPtD5F2oeWh8v53AHLQdCw/qSIIPFJoEZAuj43zqEpvn
-   A==;
-X-IronPort-AV: E=McAfee;i="6500,9779,10610"; a="330039415"
-X-IronPort-AV: E=Sophos;i="5.97,270,1669104000"; 
-   d="scan'208";a="330039415"
-X-ExtLoop1: 1
-X-IronPort-AV: E=McAfee;i="6500,9779,10610"; a="667655604"
-X-IronPort-AV: E=Sophos;i="5.97,270,1669104000"; 
-   d="scan'208";a="667655604"
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=MEIO7MJ3u+KJAbgly1Ho0Yyj6E1y2ol7i3XsbogJmWggmxNeDDNOg2jq2c+zgmGYttkLnZig1qxw9Cjdn9F4+RZHkOxQcIWCpBiaeT2c1PbWm1JUGX/BLOkKpouOYdYWinMMl/MF5MZA1n34XY251D5zxJ5QAm+a8w83eKBfJ9XlvmWKc9zrohfVpH3j4I4M2TyIwbu/Wipm6i1YHg2yBbJcHJEwWQ01ux/XMkU7P77CMczo8wMVmFQgiE6do0jC4NjZLg9xo7j9P6gDS4MzgLjsWYOQXNwpEhF/VnBhJnQo992Q7oWP5Y2QIT1Y6Ge+xOUdcBk1KNLqm/CPRaLxQQ==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
- bh=W85NxQ5IKgg33UNmQGmEsVe7xqqDjCopP0kPWnYaDME=;
- b=W4qe8+0OxzSC/+JGXTZj/QEIwjx/HKO7Y4sGOk9MfXao030Dg5/o92QXRncPaQ49FiJYj5hB+Bly5YVIHXyTHGG7xao0ILgajegboh1HbILvu1crTj7ZDHldwWji8etHV4n3/uy2wi3E9iwFHU0srQn538sj99z7NCc39EeJPpsd6QEBGZCYn7lE2egECWp4k/tn4zTJciOjYq+jZpSfB43cBR9VZRwZwAYEMD4RqGPCbAwE9Q5KOfEboOuwm5534+3bdvLgpPerGAY6MtRHfii+m/1pVzoMbsr5dzkPn4cml6X4u42T978+1ozXwKBaGVQTjmfG61xRcrnNcXsFww==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
- smtp.mailfrom=intel.com; dmarc=pass action=none header.from=intel.com;
- dkim=pass header.d=intel.com; arc=none
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-To: Jeremi Piotrowski <jpiotrowski@linux.microsoft.com>
-CC: "jejb@linux.ibm.com" <jejb@linux.ibm.com>, Leon Romanovsky
-	<leon@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-	"Shishkin, Alexander" <alexander.shishkin@intel.com>, "Shutemov, Kirill"
-	<kirill.shutemov@intel.com>, "Kuppuswamy, Sathyanarayanan"
-	<sathyanarayanan.kuppuswamy@intel.com>, "Kleen, Andi" <andi.kleen@intel.com>,
-	"Hansen, Dave" <dave.hansen@intel.com>, Thomas Gleixner <tglx@linutronix.de>,
-	Peter Zijlstra <peterz@infradead.org>, "Wunner, Lukas"
-	<lukas.wunner@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>,
-	"Michael S. Tsirkin" <mst@redhat.com>, Jason Wang <jasowang@redhat.com>,
-	"Poimboe, Josh" <jpoimboe@redhat.com>, "aarcange@redhat.com"
-	<aarcange@redhat.com>, Cfir Cohen <cfir@google.com>, Marc Orr
-	<marcorr@google.com>, "jbachmann@google.com" <jbachmann@google.com>,
-	"pgonda@google.com" <pgonda@google.com>, "keescook@chromium.org"
-	<keescook@chromium.org>, James Morris <jmorris@namei.org>, Michael Kelley
-	<mikelley@microsoft.com>, "Lange, Jon" <jlange@microsoft.com>,
-	"linux-coco@lists.linux.dev" <linux-coco@lists.linux.dev>, "Linux Kernel
- Mailing List" <linux-kernel@vger.kernel.org>, Kernel Hardening
-	<kernel-hardening@lists.openwall.com>
-Subject: RE: Linux guest kernel threat model for Confidential Computing
-Thread-Topic: Linux guest kernel threat model for Confidential Computing
-Thread-Index: AdkwsXY+8ptYLAlAQXCgWg2jZ1ntPwACTigAAAR067AAKubQgAAALAEwAAJJbIAAAYhDQAA/PSiAAH3FjMAACv0HgAAuiKcwAGzrbwAAMEi6UA==
-Date: Fri, 3 Feb 2023 14:05:56 +0000
-Message-ID: <DM8PR11MB575031CB13ED7347AED1733CE7D79@DM8PR11MB5750.namprd11.prod.outlook.com>
-References: <Y9EkCvAfNXnJ+ATo@kroah.com>
- <DM8PR11MB5750FA4849C3224F597C101AE7CE9@DM8PR11MB5750.namprd11.prod.outlook.com>
- <Y9Jh2x9XJE1KEUg6@unreal>
- <DM8PR11MB5750414F6638169C7097E365E7CF9@DM8PR11MB5750.namprd11.prod.outlook.com>
- <Y9JyW5bUqV7gWmU8@unreal>
- <DM8PR11MB57507D9C941D77E148EE9E87E7CF9@DM8PR11MB5750.namprd11.prod.outlook.com>
- <702f22df28e628d41babcf670c909f1fa1bb3c0c.camel@linux.ibm.com>
- <DM8PR11MB5750F939C0B70939AD3CBC37E7D39@DM8PR11MB5750.namprd11.prod.outlook.com>
- <220b0be95a8c733f0a6eeddc08e37977ee21d518.camel@linux.ibm.com>
+Received: (qmail 9895 invoked from network); 6 Feb 2023 18:59:02 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+	s=mimecast20190719; t=1675709930;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=m16OitzwO71nkhwycKeW6iMhsPFeKDcAk5Zf0tX9cZY=;
+	b=TwT4o9kV52bL04RBU0cVfTQ376jxUCWoXPGpzxtBctOahrG8tIPR4UPOT+nWeBdDnIE3HD
+	MuwTJj1YAEAMj+w5mX1v9CD18Eo7XYBIXvr1gTAJ3WCPijXmOeoaKa1sm2oIsVkIO6+P4x
+	GlzyBrtSoxmhpmXkV3Ppe3lkLiH34kE=
+X-MC-Unique: MhFxJGf9O3e2QAOnF1d44A-1
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=user-agent:in-reply-to:content-transfer-encoding
+         :content-disposition:mime-version:references:message-id:subject:cc
+         :to:from:date:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=m16OitzwO71nkhwycKeW6iMhsPFeKDcAk5Zf0tX9cZY=;
+        b=RjMs/phjM3l9jaKRon8fgH5TZ2XHVlChJN/voI8FvGNrnz9erRvH2gBaRaKRv6BDAt
+         5eNkGZ6K9kJ4LUDX5QaKg57/nL9L5cNZJfJbC/bH51UBsQoPJtAM2ADsUfgIAGJuLCki
+         AQb8l3Pnt25jJnx0m69MOZKsuVt9Ke2lV62ghAdsoY6hWQr1U5793nDLVzTEFO8B/5wS
+         YOsqR2eZZnvhVxoRnrVTMhVrLblESCU2gsLnEm64in6X4YMuvEXQYvMh9o2RyeQscLaK
+         5p9sNbjensyWUKrmBrpDBdJYWZv+ZGILqhYfIRFhwPtcDjFFhVGHDDkTZj9nBXDO79Go
+         h2Gg==
+X-Gm-Message-State: AO0yUKU+3PWO/KrEni8INU+Lk/xTtXYub6KD48DKxjX/kA2WLuoxlVlv
+	jrHfoVZ26d/oWNN4rvRneooYTPl20TXSmPxC8/y/oXWyY+80zctA0f0pSWVVOU5HNn36L+6UiOD
+	2M/5Xt2wu+rdW4Kzry8eR0oSOU499Zq1CMw==
+X-Received: by 2002:a05:6000:69b:b0:2bf:dcdc:afb8 with SMTP id bo27-20020a056000069b00b002bfdcdcafb8mr20030046wrb.64.1675709927235;
+        Mon, 06 Feb 2023 10:58:47 -0800 (PST)
+X-Google-Smtp-Source: AK7set8UHg3rrYoack96/+Aen7rLx+dOSRGVf2dLJL6sX4SVrvCzEJO1dTlVfmXxYWw3BHd7tf86MA==
+X-Received: by 2002:a05:6000:69b:b0:2bf:dcdc:afb8 with SMTP id bo27-20020a056000069b00b002bfdcdcafb8mr20030031wrb.64.1675709926964;
+        Mon, 06 Feb 2023 10:58:46 -0800 (PST)
+Date: Mon, 6 Feb 2023 18:58:44 +0000
+From: "Dr. David Alan Gilbert" <dgilbert@redhat.com>
+To: Christophe de Dinechin <dinechin@redhat.com>
+Cc: "Michael S. Tsirkin" <mst@redhat.com>,
+	James Bottomley <jejb@linux.ibm.com>,
+	"Reshetova, Elena" <elena.reshetova@intel.com>,
+	Leon Romanovsky <leon@kernel.org>,
+	Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
+	"Shishkin, Alexander" <alexander.shishkin@intel.com>,
+	"Shutemov, Kirill" <kirill.shutemov@intel.com>,
+	"Kuppuswamy, Sathyanarayanan" <sathyanarayanan.kuppuswamy@intel.com>,
+	"Kleen, Andi" <andi.kleen@intel.com>,
+	"Hansen, Dave" <dave.hansen@intel.com>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Peter Zijlstra <peterz@infradead.org>,
+	"Wunner, Lukas" <lukas.wunner@intel.com>,
+	Mika Westerberg <mika.westerberg@linux.intel.com>,
+	Jason Wang <jasowang@redhat.com>,
+	"Poimboe, Josh" <jpoimboe@redhat.com>,
+	"aarcange@redhat.com" <aarcange@redhat.com>,
+	Cfir Cohen <cfir@google.com>, Marc Orr <marcorr@google.com>,
+	"jbachmann@google.com" <jbachmann@google.com>,
+	"pgonda@google.com" <pgonda@google.com>,
+	"keescook@chromium.org" <keescook@chromium.org>,
+	James Morris <jmorris@namei.org>,
+	Michael Kelley <mikelley@microsoft.com>,
+	"Lange, Jon" <jlange@microsoft.com>,
+	"linux-coco@lists.linux.dev" <linux-coco@lists.linux.dev>,
+	Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
+	Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: Re: Linux guest kernel threat model for Confidential Computing
+Message-ID: <Y+FN5B9VIKNFijCO@work-vm>
+References: <220b0be95a8c733f0a6eeddc08e37977ee21d518.camel@linux.ibm.com>
  <DM8PR11MB575074D3BCBD02F3DD677A57E7D09@DM8PR11MB5750.namprd11.prod.outlook.com>
- <20230202145154.GA10621@linuxonhyperv3.guj3yctzbm1etfxqx2vob5hsef.xx.internal.cloudapp.net>
-In-Reply-To: <20230202145154.GA10621@linuxonhyperv3.guj3yctzbm1etfxqx2vob5hsef.xx.internal.cloudapp.net>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach:
-X-MS-TNEF-Correlator:
-authentication-results: dkim=none (message not signed)
- header.d=none;dmarc=none action=none header.from=intel.com;
-x-ms-publictraffictype: Email
-x-ms-traffictypediagnostic: DM8PR11MB5750:EE_|PH0PR11MB5109:EE_
-x-ms-office365-filtering-correlation-id: 74365d2f-3798-409a-6043-08db05efc536
-x-ld-processed: 46c98d88-e344-4ed4-8496-4ed7712e255d,ExtAddr
-x-ms-exchange-senderadcheck: 1
-x-ms-exchange-antispam-relay: 0
-x-microsoft-antispam: BCL:0;
-x-microsoft-antispam-message-info: FpbI4ouh8e+0SCndUfFU+dhfYDmgJcKcaPOzCUoEsGy96syoj3y6Xz49M0qUN6g4Zb2jioiNMaGtpKP7slUG2oJ77ABMxTD5EAyUDBkNrCetUVMdYct6Rahllhfvfj7DZuXZCDuaV8ZL5/6mCuqCBGokvi+WCf14ZI1gC+zjuK3tFXhcJNiOk2H/0UuT6Q4GoLB9yHl5Ln7c9cOuBGbilX2CSjgPnTYXmDDR2Ndm+LX3YyTcVyFXHyQxuLdHqy++uMpvdOTuDH+Gf0vE/klS+hI0hxaHmllh/0GVGgEWWM7VctEnpF3RCVln1bLV7vKqQM7jMG9MiG54DIe0zd2CBjgfJV5Qs2z//izVAO+tzIsBa7J3g8g4sEU3sme9bza/WvLUK2iVoPCvYNqzJs0p5+ktj5ZyppqbYki+j+fqV5cn0aUrAmb8MSoVRVkSdsPtNH7lM8SoQshfZ5g8PBXra8CUjiRGcMvFmcIhA3TK+Zjuf6q7+zsLzSHBbO9CtTBsiiNGfEaNWHsrwHkvz3Sz9hRZ0iKRLKxWC5/9PrCcezL/SgqP3foNBNv4hsytud0bWJIrqBHn50RmQroxQReMGFYm84h3JQ7TVX+VfPqEpxJUi9LZ9UUTjCL2lzKWDNIMfwUvvnnvKD/zGatDCHdAABjjFY20JxCLNKAc3GUnGlNnU5YeRqIL948e64W5okxPMRsWPUnf27DWo7ipKO+Q1XJa9XOFbW5nFEa5HOG22N4yAcy/zW9F1VscpOLfoOKhGHNd8YHqKUAxT9mUMjCVUA==
-x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:DM8PR11MB5750.namprd11.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230025)(396003)(136003)(366004)(39860400002)(346002)(376002)(451199018)(38070700005)(38100700002)(122000001)(82960400001)(54906003)(5660300002)(316002)(52536014)(7416002)(83380400001)(33656002)(55016003)(86362001)(7696005)(186003)(9686003)(26005)(2906002)(71200400001)(478600001)(966005)(66946007)(64756008)(66556008)(66476007)(4326008)(66446008)(76116006)(6916009)(6506007)(8676002)(41300700001)(8936002);DIR:OUT;SFP:1102;
-x-ms-exchange-antispam-messagedata-chunkcount: 1
-x-ms-exchange-antispam-messagedata-0: =?utf-8?B?KytFQ21TTDQrb0tCZUtkU0thbkY5WkNVTmQwT2FwWTJpTXZtbGpOUDVsZXVU?=
- =?utf-8?B?L0hkejdrRDJKK2RSamxCZ2FHeG5EdUlha2R4TXlYclBONWZ4VXZkZ0lYN1B1?=
- =?utf-8?B?aE82YjhvMkdPaWN6QnRyaks4Ym5YdXlRUXNVbkVCWWN6Ulg1aFdGV0NDTkxZ?=
- =?utf-8?B?M1c4WkdOQzQ3cG9FY3Z2OU1MbnN5d25PODNLbU5Md1N5bUJVaE5mMWc1b2l0?=
- =?utf-8?B?N282elppU0E2ajgyVmhON1FlR0VrMm5FWWhNZjNzYkJ3ZXdzTTVxT2NVdy9W?=
- =?utf-8?B?dW8vVGY4eHZ1KzRNd1c2MlU5VVNyanlseG1RUkh1aUM1Mmt3dHhtTVlHWllC?=
- =?utf-8?B?UXBtYk11R3kvbjlCSDBYQzFFR040WmRxdVJXWVlqd0VGM2syajRxbEZlY1pu?=
- =?utf-8?B?R3B6dW84aHZESU1ITU9uTkUyUUdxWFhWVjF2VnQwaHFXejgxMHVCcnU0MURv?=
- =?utf-8?B?Ym5LcWdQNHdmM2p0QTIydEtkVzZHSDRqODRNbWhtMEMyYUZQa3pqWHBvd1pw?=
- =?utf-8?B?OTFReVpNd1RVeWFOcEM4U2N4SXh4Rk9ycU9abFN5K1BFU2NoQ2Q1dm4rT1JB?=
- =?utf-8?B?b1BNblNQLzRtc1ovcE5TRXVHWUFlKy83aWRpdzhlZ2hkb0lxQmNaWi81MUxq?=
- =?utf-8?B?b2pZQTVueTl2MmZQMy9QVUlSZ2Vnc1RiNWpsbVlUTUd4YU04eDhVTUdvZzdQ?=
- =?utf-8?B?Um1Lem4yblNIY3ZnNDc1cG5jbWFmRzhYZHRnS1IxVVRJbE1uVkxQTzR3cjZJ?=
- =?utf-8?B?MzI1blRkaWVNM2VZeWtJRTV6TDVISVVnMzNWb0R3aXV3eStUQ09PS3FZM0xi?=
- =?utf-8?B?dHdBTHJvUCt6N2ZIVkwya25SQlVpRzdqb3RDQ1NPZ3pwY0Q4Z2ZoWDNQT3RY?=
- =?utf-8?B?U2pnTmRHLzZLZzdxQVUxY052eFd0TTVPcXZ1N29KaW53SThEVmlkYitoTkRx?=
- =?utf-8?B?WWtMeGI5YS8wWng2S2h1bjVYVjd5SHg2QXMwMFBiaXIwNFMvNVBEVElIdzlX?=
- =?utf-8?B?R2hZNktsakN6RXhIajZUU3hWcndRbzByNTBoYzVPS2dCSTUrYmxmNnE2Tmkv?=
- =?utf-8?B?VmVQT2VQSlIrbGJ4NEVBN0dNUVNEbGptTjQ1ZUZ2RDJKUTZtVmlBOEtZQkpD?=
- =?utf-8?B?bnd4SWpFa1JBU3hnWm0xSFloQTFUSGI0OEhWVDBoaEFMYjRHSGxITWt0aVgr?=
- =?utf-8?B?dkRUMDV5czgzdXJ6alEwV1k2SjlPQmJOSEs5akVDSVJkYTNTL2pPY3hHbXA5?=
- =?utf-8?B?ZGw2NzZSd3RXOXIzR2VUWGZUNmw0YVFKNjZnT0VBN3ZmTkllVnE4VmlLdW5o?=
- =?utf-8?B?eWxKOUxyWmNSeWJvMUk4TlV1UUNxQmRkd1hWWTQ3bjRaZkU4YUJyUGswdXNI?=
- =?utf-8?B?cFYxaHRnbkxUR2grcXFQUVBvTTdtQS9nMTlTR2lod3JmWG1uSzRDeHJ6TlM5?=
- =?utf-8?B?cUJieE1FQjNXQ0IxRnFPbVIyTXZGaFdLRFNkMUlma08wNHY2b3pTOHh1L0dt?=
- =?utf-8?B?SjJsc1lYaTV5eFdKR1lvN1E1SjN4ckNxWFJrK2tjYWdwUDRLaUVYcjZweEpi?=
- =?utf-8?B?bEFjVlpuVzRhMkdSd09zQk4zOSt5RWdhdjJVaDNsdzNlS3I4bFo2VnVoQVdD?=
- =?utf-8?B?V2ZncG93UXMxQ0hyZGU3QUJ6U2w2cUV5c0wvZHh1VHhqWUNvTGNiT2dsNTJj?=
- =?utf-8?B?UUVTV203cGdPQWJodmxDVHljcEtUbDcyRTV4cm93ZTlaa0FLWlFRcER2NFlx?=
- =?utf-8?B?WStRc3JldExoMFlySWY1WWVNQ29YZWlIYUdXdHdnZktqZjNDN0pjS1V3ZWlH?=
- =?utf-8?B?UlRQczBkK0g4akZJNkRTdnZ6ejJlWm1wa0VKdkhzYzBPT3Q2Y1VIdEJDVEN4?=
- =?utf-8?B?SUY5eFduU2M1TmJ5WFNDZksyTWs1YjIxKzNtVmk1V1VtVXJ1VUJNejVBbVV2?=
- =?utf-8?B?ZUMzaDBwVE9JWklWUEVKWjNHbW5hcVg0VWx1QURueXJkNldxRFhocWxjc2s1?=
- =?utf-8?B?QW8zeFFOWXdnTzQ0aWR3aHdKWFRzeVlJYTNhUVRIRHljWnQ3cXR6UDdZSlF0?=
- =?utf-8?B?dHBOVmVObklQYWZnNFJJc2hrbFp2R3NCeTRMQi9tL0tJeGVNN3NvdjZ3SXJo?=
- =?utf-8?Q?ojqPNaDseehpSd5Po56tR8y79?=
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+ <261bc99edc43990eecb1aac4fe8005cedc495c20.camel@linux.ibm.com>
+ <m2h6w6k5on.fsf@redhat.com>
+ <20230131123033-mutt-send-email-mst@kernel.org>
+ <6BCC3285-ACA3-4E38-8811-1A91C9F03852@redhat.com>
+ <20230201055412-mutt-send-email-mst@kernel.org>
+ <4B78D161-2712-434A-8E6F-9D8BA468BB3A@redhat.com>
+ <20230201105305-mutt-send-email-mst@kernel.org>
+ <m2zg9xi8gr.fsf@redhat.com>
 MIME-Version: 1.0
-X-MS-Exchange-CrossTenant-AuthAs: Internal
-X-MS-Exchange-CrossTenant-AuthSource: DM8PR11MB5750.namprd11.prod.outlook.com
-X-MS-Exchange-CrossTenant-Network-Message-Id: 74365d2f-3798-409a-6043-08db05efc536
-X-MS-Exchange-CrossTenant-originalarrivaltime: 03 Feb 2023 14:05:56.6742
- (UTC)
-X-MS-Exchange-CrossTenant-fromentityheader: Hosted
-X-MS-Exchange-CrossTenant-id: 46c98d88-e344-4ed4-8496-4ed7712e255d
-X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
-X-MS-Exchange-CrossTenant-userprincipalname: 3LVXodqk7xMe16S1jVEL3Ox8FoDShT0yDVEdfLHEmf7/bqDc9k0Sp3+ZhyQNM1nawO+2CvOVdRQp1EwPpA2SzkyO+Igtzlu4+XgYniJqelg=
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: PH0PR11MB5109
-X-OriginatorOrg: intel.com
+In-Reply-To: <m2zg9xi8gr.fsf@redhat.com>
+User-Agent: Mutt/2.2.9 (2022-11-12)
+X-Mimecast-Spam-Score: 0
+X-Mimecast-Originator: redhat.com
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
 
-DQo+IE9uIFR1ZSwgSmFuIDMxLCAyMDIzIGF0IDExOjMxOjI4QU0gKzAwMDAsIFJlc2hldG92YSwg
-RWxlbmEgd3JvdGU6DQo+ID4gPiBPbiBNb24sIDIwMjMtMDEtMzAgYXQgMDc6NDIgKzAwMDAsIFJl
-c2hldG92YSwgRWxlbmEgd3JvdGU6DQo+ID4gPiBbLi4uXQ0KPiA+ID4gPiA+IFRoZSBiaWcgdGhy
-ZWF0IGZyb20gbW9zdCBkZXZpY2VzIChpbmNsdWRpbmcgdGhlIHRodW5kZXJib2x0DQo+ID4gPiA+
-ID4gY2xhc3NlcykgaXMgdGhhdCB0aGV5IGNhbiBETUEgYWxsIG92ZXIgbWVtb3J5LsKgIEhvd2V2
-ZXIsIHRoaXMgaXNuJ3QNCj4gPiA+ID4gPiByZWFsbHkgYSB0aHJlYXQgaW4gQ0MgKHdlbGwgdW50
-aWwgUENJIGJlY29tZXMgYWJsZSB0byBkbyBlbmNyeXB0ZWQNCj4gPiA+ID4gPiBETUEpIGJlY2F1
-c2UgdGhlIGRldmljZSBoYXMgc3BlY2lmaWMgdW5lbmNyeXB0ZWQgYnVmZmVycyBzZXQgYXNpZGUN
-Cj4gPiA+ID4gPiBmb3IgdGhlIGV4cGVjdGVkIERNQS4gSWYgaXQgd3JpdGVzIG91dHNpZGUgdGhh
-dCBDQyBpbnRlZ3JpdHkgd2lsbA0KPiA+ID4gPiA+IGRldGVjdCBpdCBhbmQgaWYgaXQgcmVhZHMg
-b3V0c2lkZSB0aGF0IGl0IGdldHMgdW5pbnRlbGxpZ2libGUNCj4gPiA+ID4gPiBjaXBoZXJ0ZXh0
-LsKgIFNvIHdlJ3JlIGxlZnQgd2l0aCB0aGUgZGV2aWNlIHRyeWluZyB0byB0cmljayBzZWNyZXRz
-DQo+ID4gPiA+ID4gb3V0IG9mIHVzIGJ5IHJldHVybmluZyB1bmV4cGVjdGVkIGRhdGEuDQo+ID4g
-PiA+DQo+ID4gPiA+IFllcywgYnkgc3VwcGx5aW5nIHRoZSBpbnB1dCB0aGF0IGhhc27igJl0IGJl
-ZW4gZXhwZWN0ZWQuIFRoaXMgaXMNCj4gPiA+ID4gZXhhY3RseSB0aGUgY2FzZSB3ZSB3ZXJlIHRy
-eWluZyB0byBmaXggaGVyZSBmb3IgZXhhbXBsZToNCj4gPiA+ID4gaHR0cHM6Ly9sb3JlLmtlcm5l
-bC5vcmcvYWxsLzIwMjMwMTE5MTcwNjMzLjQwOTQ0LTItDQo+ID4gPiBhbGV4YW5kZXIuc2hpc2hr
-aW5AbGludXguaW50ZWwuY29tLw0KPiA+ID4gPiBJIGRvIGFncmVlIHRoYXQgdGhpcyBjYXNlIGlz
-IGxlc3Mgc2V2ZXJlIHdoZW4gb3RoZXJzIHdoZXJlIG1lbW9yeQ0KPiA+ID4gPiBjb3JydXB0aW9u
-L2J1ZmZlciBvdmVycnVuIGNhbiBoYXBwZW4sIGxpa2UgaGVyZToNCj4gPiA+ID4gaHR0cHM6Ly9s
-b3JlLmtlcm5lbC5vcmcvYWxsLzIwMjMwMTE5MTM1NzIxLjgzMzQ1LTYtDQo+ID4gPiBhbGV4YW5k
-ZXIuc2hpc2hraW5AbGludXguaW50ZWwuY29tLw0KPiA+ID4gPiBCdXQgd2UgYXJlIHRyeWluZyB0
-byBmaXggYWxsIGlzc3VlcyB3ZSBzZWUgbm93IChwcmlvcml0aXppbmcgdGhlDQo+ID4gPiA+IHNl
-Y29uZCBvbmVzIHRob3VnaCkuDQo+ID4gPg0KPiA+ID4gSSBkb24ndCBzZWUgaG93IE1TSSB0YWJs
-ZSBzaXppbmcgaXMgYSBidWcgaW4gdGhlIGNhdGVnb3J5IHdlJ3ZlDQo+ID4gPiBkZWZpbmVkLiAg
-VGhlIHZlcnkgdGV4dCBvZiB0aGUgY2hhbmdlbG9nIHNheXMgInJlc3VsdGluZyBpbiBhIGtlcm5l
-bA0KPiA+ID4gcGFnZSBmYXVsdCBpbiBwY2lfd3JpdGVfbXNnX21zaXgoKS4iICB3aGljaCBpcyBh
-IGNyYXNoLCB3aGljaCBJIHRob3VnaHQNCj4gPiA+IHdlIHdlcmUgYWdyZWVpbmcgd2FzIG91dCBv
-ZiBzY29wZSBmb3IgQ0MgYXR0YWNrcz8NCj4gPg0KPiA+IEFzIEkgc2FpZCB0aGlzIGlzIGFuIGV4
-YW1wbGUgb2YgYSBjcmFzaCBhbmQgb24gdGhlIGZpcnN0IGxvb2sNCj4gPiBtaWdodCBub3QgbGVh
-ZCB0byB0aGUgZXhwbG9pdGFibGUgY29uZGl0aW9uIChhbGJlaXQgYXR0YWNrZXJzIGFyZSBjcmVh
-dGl2ZSkuDQo+ID4gQnV0IHdlIG5vdGljZWQgdGhpcyBvbmUgd2hpbGUgZnV6emluZyBhbmQgaXQg
-d2FzIGNvbW1vbiBlbm91Z2gNCj4gPiB0aGF0IHByZXZlbnRlZCBmdXp6ZXIgZ29pbmcgZGVlcGVy
-IGludG8gdGhlIHZpcnRpbyBkZXZpY2VzIGRyaXZlciBmdXp6aW5nLg0KPiA+IFRoZSBjb3JlIFBD
-SS9NU0kgZG9lc27igJl0IHNlZW0gdG8gaGF2ZSB0aGF0IG1hbnkgZWFzaWx5IHRyaWdnZXJhYmxl
-DQo+ID4gT3RoZXIgZXhhbXBsZXMgaW4gdmlydGlvIHBhdGNoc2V0IGFyZSBtb3JlIHNldmVyZS4N
-Cj4gPg0KPiA+ID4NCj4gPiA+ID4gPg0KPiA+ID4gPiA+IElmIEkgc2V0IHRoaXMgYXMgdGhlIHBy
-b2JsZW0sIHZlcmlmeWluZyBkZXZpY2UgY29ycmVjdCBvcGVyYXRpb24gaXMNCj4gPiA+ID4gPiBh
-IHBvc3NpYmxlIHNvbHV0aW9uIChhbGJlaXQgaHVnZWx5IGV4cGVuc2l2ZSkgYnV0IHRoZXJlIGFy
-ZSBsaWtlbHkNCj4gPiA+ID4gPiBtYW55IG90aGVyIGNoZWFwZXIgd2F5cyB0byBkZWZlYXQgb3Ig
-ZGV0ZWN0IGEgZGV2aWNlIHRyeWluZyB0bw0KPiA+ID4gPiA+IHRyaWNrIHVzIGludG8gcmV2ZWFs
-aW5nIHNvbWV0aGluZy4NCj4gPiA+ID4NCj4gPiA+ID4gV2hhdCBkbyB5b3UgaGF2ZSBpbiBtaW5k
-IGhlcmUgZm9yIHRoZSBhY3R1YWwgZGV2aWNlcyB3ZSBuZWVkIHRvDQo+ID4gPiA+IGVuYWJsZSBm
-b3IgQ0MgY2FzZXM/DQo+ID4gPg0KPiA+ID4gV2VsbCwgdGhlIG1vc3QgZGFuZ2Vyb3VzIGRldmlj
-ZXMgc2VlbSB0byBiZSB0aGUgdmlydGlvIHNldCBhIENDIHN5c3RlbQ0KPiA+ID4gd2lsbCByZWx5
-IG9uIHRvIGJvb3QgdXAuICBBZnRlciB0aGF0LCB0aGVyZSBhcmUgb3RoZXIgd2F5cyAobGlrZSBT
-UERNKQ0KPiA+ID4gdG8gdmVyaWZ5IGEgcmVhbCBQQ0kgZGV2aWNlIGlzIG9uIHRoZSBvdGhlciBl
-bmQgb2YgdGhlIHRyYW5zYWN0aW9uLg0KPiA+DQo+ID4gWWVzLCBpdCB0aGUgZnV0dXJlLCBidXQg
-bm90IHlldC4gT3RoZXIgdmVuZG9ycyB3aWxsIG5vdCBuZWNlc3NhcnkgYmUNCj4gPiB1c2luZyB2
-aXJ0aW8gZGV2aWNlcyBhdCB0aGlzIHBvaW50LCBzbyB3ZSB3aWxsIGhhdmUgbm9uLXZpcnRpbyBh
-bmQgbm90DQo+ID4gQ0MgZW5hYmxlZCBkZXZpY2VzIHRoYXQgd2Ugd2FudCB0byBzZWN1cmVseSBh
-ZGQgdG8gdGhlIGd1ZXN0Lg0KPiA+DQo+ID4gPg0KPiA+ID4gPiBXZSBoYXZlIGJlZW4gdXNpbmcg
-aGVyZSBhIGNvbWJpbmF0aW9uIG9mIGV4dGVuc2l2ZSBmdXp6aW5nIGFuZCBzdGF0aWMNCj4gPiA+
-ID4gY29kZSBhbmFseXNpcy4NCj4gPiA+DQo+ID4gPiBieSBmdXp6aW5nLCBJIGFzc3VtZSB5b3Ug
-bWVhbiBmdXp6aW5nIGZyb20gdGhlIFBDSSBjb25maWd1cmF0aW9uIHNwYWNlPw0KPiA+ID4gRmly
-c3RseSBJJ20gbm90IHNvIHN1cmUgaG93IHVzZWZ1bCBhIHRvb2wgZnV6emluZyBpcyBpZiB3ZSB0
-YWtlIE9vcHNlcw0KPiA+ID4gb2ZmIHRoZSB0YWJsZSBiZWNhdXNlIGZ1enppbmcgcHJpbWFyaWx5
-IHRyaWdnZXJzIHRob3NlDQo+ID4NCj4gPiBJZiB5b3UgZW5hYmxlIG1lbW9yeSBzYW5pdGl6ZXJz
-IHlvdSBjYW4gZGV0ZWN0IG1vcmUgc2VydmVyIGNvbmRpdGlvbnMgbGlrZQ0KPiA+IG91dCBvZiBi
-b3VuZHMgYWNjZXNzZXMgYW5kIHN1Y2guIEkgdGhpbmsgZ2l2ZW4gdGhhdCB3ZSBoYXZlIGEgd2F5
-IHRvDQo+ID4gdmVyaWZ5IHRoYXQgZnV6emluZyBpcyByZWFjaGluZyB0aGUgY29kZSBsb2NhdGlv
-bnMgd2Ugd2FudCBpdCB0byByZWFjaCwgaXQNCj4gPiBjYW4gYmUgcHJldHR5IGVmZmVjdGl2ZSBt
-ZXRob2QgdG8gZmluZCBhdCBsZWFzdCBsb3ctaGFuZ2luZyBidWdzLiBBbmQgdGhlc2UNCj4gPiB3
-aWxsIGJlIHRoZSBidWdzIHRoYXQgbW9zdCBvZiB0aGUgYXR0YWNrZXJzIHdpbGwgZ28gYWZ0ZXIg
-YXQgdGhlIGZpcnN0IHBsYWNlLg0KPiA+IEJ1dCBvZiBjb3Vyc2UgaXQgaXMgbm90IGEgZm9ybWFs
-IHZlcmlmaWNhdGlvbiBvZiBhbnkga2luZC4NCj4gPg0KPiA+ICBzbyBpdHMgaGFyZCB0bw0KPiA+
-ID4gc2VlIHdoYXQgZWxzZSBpdCBjb3VsZCBkZXRlY3QgZ2l2ZW4gdGhlIHNpZ25hbCB3aWxsIGJl
-IHNtb3RoZXJlZCBieQ0KPiA+ID4gb29wc2VzIGFuZCBzZWNvbmRseSBJIHRoaW5rIHRoZSBQQ0kg
-aW50ZXJmYWNlIGlzIGxpa2VseSB0aGUgd3JvbmcgcGxhY2UNCj4gPiA+IHRvIGJlZ2luIGFuZCB5
-b3Ugc2hvdWxkIHByb2JhYmx5IGJlZ2luIG9uIHRoZSB2aXJ0aW8gYnVzIGFuZCB0aGUNCj4gPiA+
-IGh5cGVydmlzb3IgZ2VuZXJhdGVkIGNvbmZpZ3VyYXRpb24gc3BhY2UuDQo+ID4NCj4gPiBUaGlz
-IGlzIGV4YWN0bHkgd2hhdCB3ZSBkby4gV2UgZG9u4oCZdCBmdXp6IGZyb20gdGhlIFBDSSBjb25m
-aWcgc3BhY2UsDQo+ID4gd2Ugc3VwcGx5IGlucHV0cyBmcm9tIHRoZSBob3N0L3ZtbSB2aWEgdGhl
-IGxlZ2l0aW1hdGUgaW50ZXJmYWNlcyB0aGF0IGl0IGNhbg0KPiA+IGluamVjdCB0aGVtIHRvIHRo
-ZSBndWVzdDogd2hlbmV2ZXIgZ3Vlc3QgcmVxdWVzdHMgYSBwY2kgY29uZmlnIHNwYWNlDQo+ID4g
-KHdoaWNoIGlzIGNvbnRyb2xsZWQgYnkgaG9zdC9oeXBlcnZpc29yIGFzIHlvdSBzYWlkKSByZWFk
-IG9wZXJhdGlvbiwNCj4gPiBpdCBnZXRzIGlucHV0IGluamVjdGVkIGJ5IHRoZSBrYWZsIGZ1enpl
-ci4gIFNhbWUgZm9yIG90aGVyIGludGVyZmFjZXMgdGhhdA0KPiA+IGFyZSB1bmRlciBjb250cm9s
-IG9mIGhvc3QvVk1NIChNU1JzLCBwb3J0IElPLCBNTUlPLCBhbnl0aGluZyB0aGF0IGdvZXMNCj4g
-PiB2aWEgI1ZFIGhhbmRsZXIgaW4gb3VyIGNhc2UpLiBXaGVuIGl0IGNvbWVzIHRvIHZpcnRpbywg
-d2UgZW1wbG95DQo+ID4gdHdvIGRpZmZlcmVudCBmdXp6aW5nIHRlY2huaXF1ZXM6IGRpcmVjdGx5
-IGluamVjdGluZyBrYWZsIGZ1enogaW5wdXQgd2hlbg0KPiA+IHZpcnRpbyBjb3JlIG9yIHZpcnRp
-byBkcml2ZXJzIGdldHMgdGhlIGRhdGEgcmVjZWl2ZWQgZnJvbSB0aGUgaG9zdA0KPiA+ICh2aWEg
-aW5qZWN0aW5nIGlucHV0IGluIGZ1bmN0aW9ucyB2aXJ0aW8xNi8zMi82NF90b19jcHUgYW5kIG90
-aGVycykgYW5kDQo+ID4gZGlyZWN0bHkgZnV6emluZyBETUEgbWVtb3J5IHBhZ2VzIHVzaW5nIGtm
-eCBmdXp6ZXIuDQo+ID4gTW9yZSBpbmZvcm1hdGlvbiBjYW4gYmUgZm91bmQgaW4gaHR0cHM6Ly9p
-bnRlbC5naXRodWIuaW8vY2NjLWxpbnV4LWd1ZXN0LQ0KPiBoYXJkZW5pbmctZG9jcy90ZHgtZ3Vl
-c3QtaGFyZGVuaW5nLmh0bWwjdGQtZ3Vlc3QtZnV6emluZw0KPiA+DQo+ID4gQmVzdCBSZWdhcmRz
-LA0KPiA+IEVsZW5hLg0KPiANCj4gSGkgRWxlbmEsDQoNCkhpIEplcmVtaSwgDQoNCj4gDQo+IEkg
-dGhpbmsgaXQgbWlnaHQgYmUgYSBnb29kIGlkZWEgdG8gbmFycm93IGRvd24gYSBjb25maWd1cmF0
-aW9uIHRoYXQgKmNhbioNCj4gcmVhc29uYWJseSBiZSBoYXJkZW5lZCB0byBiZSBzdWl0YWJsZSBm
-b3IgY29uZmlkZW50aWFsIGNvbXB1dGluZywgYmVmb3JlDQo+IHByb2NlZWRpbmcgd2l0aCBmdXp6
-aW5nLiBFZy4gYSBsb3Qgb2YgdGltZSB3YXMgc3BlbnQgZGlzY3Vzc2luZyBQQ0kgZGV2aWNlcw0K
-PiBpbiB0aGUgY29udGV4dCBvZiB2aXJ0dWFsaXphdGlvbiwgYnV0IHdoYXQgYWJvdXQgdGFraW5n
-IFBDSSBvdXQgb2Ygc2NvcGUNCj4gY29tcGxldGVseSBieSBzd2l0Y2hpbmcgdG8gdmlydGlvLW1t
-aW8gZGV2aWNlcz8NCg0KSSBhZ3JlZSB0aGF0IG5hcnJvd2luZyBkb3duIGlzIGltcG9ydGFudCBh
-bmQgd2Ugc3BlbnQgYSBzaWduaWZpY2FudCBlZmZvcnQNCmluIGRpc2FibGluZyB2YXJpb3VzIGNv
-ZGUgd2UgZG9u4oCZdCBuZWVkIChpbmNsdWRpbmcgUENJIGNvZGUsIGxpa2UgcXVpcmtzLCANCmVh
-cmx5IFBDSSwgZXRjKS4gVGhlIGRlY2lzaW9uIHRvIHVzZSB2aXJ0aW8gb3ZlciBwY2kgdnMuIG1t
-aW8gSSBiZWxpZXZlIGNvbWVzDQpmcm9tIHBlcmZvcm1hbmNlIGFuZCB1c2FnZSBzY2VuYXJpb3Mg
-YW5kIHdlIGhhdmUgdG8gYmVzdCB3ZSBjYW4gd2l0aCB0aGVzZQ0KbGltaXRhdGlvbnMuIA0KDQpN
-b3Jlb3ZlciwgZXZlbiBpZiB3ZSBjb3VsZCByZW1vdmUgUENJIGZvciB0aGUgdmlydGlvIGRldmlj
-ZXMgYnkNCnJlbW92aW5nIHRoZSB0cmFuc3BvcnQgZGVwZW5kZW5jeSwgdGhpcyBpc27igJl0IHBv
-c3NpYmxlIGZvciBvdGhlciBkZXZpY2VzIHRoYXQgd2UNCmtub3cgYXJlIHVzZWQgaW4gc29tZSBD
-QyBzZXR1cHM6IG5vdCBhbGwgQ1NQcyBhcmUgdXNpbmcgdmlydGlvLWJhc2VkIGRyaXZlcnMsDQpz
-byBwcmV0dHkgcXVpY2tseSBQQ0kgY29tZXMgYmFjayBpbnRvIGhhcmRlbmluZyBzY29wZSBhbmQg
-d2UgY2Fubm90IGp1c3QgcmVtb3ZlDQppdCB1bmZvcnR1bmF0ZWx5LiANCg0KQmVzdCBSZWdhcmRz
-LA0KRWxlbmEuIA0K
+* Christophe de Dinechin (dinechin@redhat.com) wrote:
+> 
+> On 2023-02-01 at 11:02 -05, "Michael S. Tsirkin" <mst@redhat.com> wrote...
+> > On Wed, Feb 01, 2023 at 02:15:10PM +0100, Christophe de Dinechin Dupont de Dinechin wrote:
+> >>
+> >>
+> >> > On 1 Feb 2023, at 12:01, Michael S. Tsirkin <mst@redhat.com> wrote:
+> >> >
+> >> > On Wed, Feb 01, 2023 at 11:52:27AM +0100, Christophe de Dinechin Dupont de Dinechin wrote:
+> >> >>
+> >> >>
+> >> >>> On 31 Jan 2023, at 18:39, Michael S. Tsirkin <mst@redhat.com> wrote:
+> >> >>>
+> >> >>> On Tue, Jan 31, 2023 at 04:14:29PM +0100, Christophe de Dinechin wrote:
+> >> >>>> Finally, security considerations that apply irrespective of whether the
+> >> >>>> platform is confidential or not are also outside of the scope of this
+> >> >>>> document. This includes topics ranging from timing attacks to social
+> >> >>>> engineering.
+> >> >>>
+> >> >>> Why are timing attacks by hypervisor on the guest out of scope?
+> >> >>
+> >> >> Good point.
+> >> >>
+> >> >> I was thinking that mitigation against timing attacks is the same
+> >> >> irrespective of the source of the attack. However, because the HV
+> >> >> controls CPU time allocation, there are presumably attacks that
+> >> >> are made much easier through the HV. Those should be listed.
+> >> >
+> >> > Not just that, also because it can and does emulate some devices.
+> >> > For example, are disk encryption systems protected against timing of
+> >> > disk accesses?
+> >> > This is why some people keep saying "forget about emulated devices, require
+> >> > passthrough, include devices in the trust zone".
+> >> >
+> >> >>>
+> >> >>>> </doc>
+> >> >>>>
+> >> >>>> Feel free to comment and reword at will ;-)
+> >> >>>>
+> >> >>>>
+> >> >>>> 3/ PCI-as-a-threat: where does that come from
+> >> >>>>
+> >> >>>> Isn't there a fundamental difference, from a threat model perspective,
+> >> >>>> between a bad actor, say a rogue sysadmin dumping the guest memory (which CC
+> >> >>>> should defeat) and compromised software feeding us bad data? I think there
+> >> >>>> is: at leats inside the TCB, we can detect bad software using measurements,
+> >> >>>> and prevent it from running using attestation.  In other words, we first
+> >> >>>> check what we will run, then we run it. The security there is that we know
+> >> >>>> what we are running. The trust we have in the software is from testing,
+> >> >>>> reviewing or using it.
+> >> >>>>
+> >> >>>> This relies on a key aspect provided by TDX and SEV, which is that the
+> >> >>>> software being measured is largely tamper-resistant thanks to memory
+> >> >>>> encryption. In other words, after you have measured your guest software
+> >> >>>> stack, the host or hypervisor cannot willy-nilly change it.
+> >> >>>>
+> >> >>>> So this brings me to the next question: is there any way we could offer the
+> >> >>>> same kind of service for KVM and qemu? The measurement part seems relatively
+> >> >>>> easy. Thetamper-resistant part, on the other hand, seems quite difficult to
+> >> >>>> me. But maybe someone else will have a brilliant idea?
+> >> >>>>
+> >> >>>> So I'm asking the question, because if you could somehow prove to the guest
+> >> >>>> not only that it's running the right guest stack (as we can do today) but
+> >> >>>> also a known host/KVM/hypervisor stack, we would also switch the potential
+> >> >>>> issues with PCI, MSRs and the like from "malicious" to merely "bogus", and
+> >> >>>> this is something which is evidently easier to deal with.
+> >> >>>
+> >> >>> Agree absolutely that's much easier.
+> >> >>>
+> >> >>>> I briefly discussed this with James, and he pointed out two interesting
+> >> >>>> aspects of that question:
+> >> >>>>
+> >> >>>> 1/ In the CC world, we don't really care about *virtual* PCI devices. We
+> >> >>>>  care about either virtio devices, or physical ones being passed through
+> >> >>>>  to the guest. Let's assume physical ones can be trusted, see above.
+> >> >>>>  That leaves virtio devices. How much damage can a malicious virtio device
+> >> >>>>  do to the guest kernel, and can this lead to secrets being leaked?
+> >> >>>>
+> >> >>>> 2/ He was not as negative as I anticipated on the possibility of somehow
+> >> >>>>  being able to prevent tampering of the guest. One example he mentioned is
+> >> >>>>  a research paper [1] about running the hypervisor itself inside an
+> >> >>>>  "outer" TCB, using VMPLs on AMD. Maybe something similar can be achieved
+> >> >>>>  with TDX using secure enclaves or some other mechanism?
+> >> >>>
+> >> >>> Or even just secureboot based root of trust?
+> >> >>
+> >> >> You mean host secureboot? Or guest?
+> >> >>
+> >> >> If it’s host, then the problem is detecting malicious tampering with
+> >> >> host code (whether it’s kernel or hypervisor).
+> >> >
+> >> > Host.  Lots of existing systems do this.  As an extreme boot a RO disk,
+> >> > limit which packages are allowed.
+> >>
+> >> Is that provable to the guest?
+> >>
+> >> Consider a cloud provider doing that: how do they prove to their guest:
+> >>
+> >> a) What firmware, kernel and kvm they run
+> >>
+> >> b) That what they booted cannot be maliciouly modified, e.g. by a rogue
+> >>    device driver installed by a rogue sysadmin
+> >>
+> >> My understanding is that SecureBoot is only intended to prevent non-verified
+> >> operating systems from booting. So the proof is given to the cloud provider,
+> >> and the proof is that the system boots successfully.
+> >
+> > I think I should have said measured boot not secure boot.
+> 
+> The problem again is how you prove to the guest that you are not lying?
+> 
+> We know how to do that from a guest [1], but you will note that in the
+> normal process, a trusted hardware component (e.g. the PSP for AMD SEV)
+> proves the validity of the measurements of the TCB by encrypting it with an
+> attestation signing key derived from some chip-unique secret. For AMD, this
+> is called the VCEK, and TDX has something similar. In the case of SEV, this
+> goes through firmware, and you have to tell the firmware each time you
+> insert data in the original TCB (using SNP_LAUNCH_UPDATE). This is all tied
+> to a VM execution context. I do not believe there is any provision to do the
+> same thing to measure host data. And again, it would be somewhat pointless
+> if there isn't also a mechanism to ensure the host data is not changed after
+> the measurement.
+> 
+> Now, I don't think it would be super-difficult to add a firmware service
+> that would let the host do some kind of equivalent to PVALIDATE, setting
+> some physical pages aside that then get measured and become inaccessible to
+> the host. The PSP or similar could then integrate these measurements as part
+> of the TCB, and the fact that the pages were "transferred" to this special
+> invariant block would ensure the guests that the code will not change after
+> being measured.
+> 
+> I am not aware that such a mechanism exists on any of the existing CC
+> platforms. Please feel free to enlighten me if I'm wrong.
+> 
+> [1] https://www.redhat.com/en/blog/understanding-confidential-containers-attestation-flow
+> >
+> >>
+> >> After that, I think all bets are off. SecureBoot does little AFAICT
+> >> to prevent malicious modifications of the running system by someone with
+> >> root access, including deliberately loading a malicious kvm-zilog.ko
+> >
+> > So disable module loading then or don't allow root access?
+> 
+> Who would do that?
+> 
+> The problem is that we have a host and a tenant, and the tenant does not
+> trust the host in principle. So it is not sufficient for the host to disable
+> module loading or carefully control root access. It is also necessary to
+> prove to the tenant(s) that this was done.
+> 
+> >
+> >>
+> >> It does not mean it cannot be done, just that I don’t think we
+> >> have the tools at the moment.
+> >
+> > Phones, chromebooks do this all the time ...
+> 
+> Indeed, but there, this is to prove to the phone's real owner (which,
+> surprise, is not the naive person who thought they'd get some kind of
+> ownership by buying the phone) that the software running on the phone has
+> not been replaced by some horribly jailbreaked goo.
+> 
+> In other words, the user of the phone gets no proof whatsoever of anything,
+> except that the phone appears to work. This is somewhat the situation in the
+> cloud today: the owners of the hardware get all sorts of useful checks, from
+> SecureBoot to error-correction for memory or I/O devices. However, someone
+> running in a VM on the cloud gets none of that, just like the user of your
+> phone.
+
+Assuming you do a measured boot, the host OS and firmware is measured into the host TPM;
+people have thought in the past about triggering attestations of the
+host from the guest; then you could have something external attest the
+host and only release keys to the guests disks if the attestation is
+correct; or a key for the guests disks held in the hosts TPM.
+
+Dave
+
+> --
+> Cheers,
+> Christophe de Dinechin (https://c3d.github.io)
+> Theory of Incomplete Measurements (https://c3d.github.io/TIM)
+> 
+> 
+-- 
+Dr. David Alan Gilbert / dgilbert@redhat.com / Manchester, UK
+
