@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21658-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21659-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 66FF6C77B61
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Apr 2023 20:47:40 +0000 (UTC)
-Received: (qmail 1989 invoked by uid 550); 10 Apr 2023 20:47:30 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 71298C77B61
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Apr 2023 21:04:53 +0000 (UTC)
+Received: (qmail 13730 invoked by uid 550); 10 Apr 2023 21:04:45 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,56 +12,56 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1957 invoked from network); 10 Apr 2023 20:47:30 -0000
+Received: (qmail 13698 invoked from network); 10 Apr 2023 21:04:44 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20210112; t=1681159638;
-        h=content-transfer-encoding:in-reply-to:from:content-language
-         :references:cc:to:subject:user-agent:mime-version:date:message-id
+        d=gmail.com; s=20210112; t=1681160673;
+        h=content-transfer-encoding:in-reply-to:from:references:cc:to
+         :content-language:subject:user-agent:mime-version:date:message-id
          :from:to:cc:subject:date:message-id:reply-to;
-        bh=wW2CsOzKco12uWWod+vD1N6uU5SvCHMYgWY1z6r3F6M=;
-        b=kARiaH+sbyA8AN4sXtY86hjyxA0xBZ2CpHN6GsoQ4XqawGohQKf9bcleripc62j98r
-         51+W7GxBOnKKvawhrnucIkpyJ3A05mfeyeh/E0b8Lm3iT/tSNrdoNhbJs2qB4OWtMJJQ
-         nJPG2Nh3s7nV55Hwa7PVtHO2vnm0Q6AcX3a9MekSKmVkruEPlMMp1Jp5ljY822nNyWZj
-         YM3R0QWN8VcmVK3RaZ1bsIGWqqUDQQac/bbsgHpstpJx+XtFcThw06C2+/r0R4lu1FUy
-         DumFfWRhAeFi3mUZtyNB3pnKkW3osBuYCNlV0rhKcS0sZSQ7hxEr1tfj6ciIkd3wJiwX
-         ssPg==
+        bh=ko7QXPbIjeGGHDhMu4npXiL/4qFqfqYW7bib84R6aNU=;
+        b=lpvPFtUOP3XhFCJ7Xk611x6D8hZ+kTQRj1OcX61VyNYNxN/okXXr2n0MjOXIdaRTEX
+         82X3Em+8AMDFbbbRUwRG8a7Xc8Lx6ZScGdRX6NOVgo6/cH1f86RKS1JERLXxS1ee5XPA
+         l0dbCOfG1OLPRgdNiWF/yFY+6oreawyFJAJXcKKVAVFo7+RtnECs3NkVfComi6WdiG/E
+         PHbInMiKfIX1fVzaco+up5yfev/cckrlYksisO9zJeMW2s46ujRMdGzrULItwIOWAlGv
+         FFwrQLY6qXbV7HTnuOXTLPO5fGmROzrgTQDGxMwKcvu4vXJRa3VB2WCbx8Y2YF4vFlGP
+         OE+g==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20210112; t=1681159638;
-        h=content-transfer-encoding:in-reply-to:from:content-language
-         :references:cc:to:subject:user-agent:mime-version:date:message-id
+        d=1e100.net; s=20210112; t=1681160673;
+        h=content-transfer-encoding:in-reply-to:from:references:cc:to
+         :content-language:subject:user-agent:mime-version:date:message-id
          :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
-        bh=wW2CsOzKco12uWWod+vD1N6uU5SvCHMYgWY1z6r3F6M=;
-        b=uBZiqSRNFA939DYuBxa8vuhWzNuij292ImJRWcSx564Agh1GUUEf8medMta87ScMeq
-         RTQaji1AQloK40IabmRNPiu/CACAbeLbW/tDdWteTuMdI8N2v3Gh3j9q7Ncb4oh1VV5Q
-         dZo9Q2VXWyu/WyVmJuw2OuvlROLFCcp720rUQ8Wn7ZbS+pVnGbN+IUah9kgdhYSynAN8
-         MhuKJx+5d8NBzUyesoHzXR0wIyT4o5PE/Vl60TORdoIEyYoUF25y9/6wGbBqbShmWwQy
-         4idiQV+aa479sqlEYv9gAu2vKNl45WgInW41FJxeGvzwOiOP3j13vccxRz8gyv50yd2R
-         kPWg==
-X-Gm-Message-State: AAQBX9cHHEe/DN6Olny5gGm/1b++cX8hw2Q4fpy+lCBOXavh78X8S/vQ
-	Gi+QpKGa7Iib2xNbjZ4wj40=
-X-Google-Smtp-Source: AKy350ZRoGOHgWT/YIps4oRfYxG3Kfq7547hKudtc2Dk4JnS+x9QrNS/nkbYFw1ze1+U5mFuTq2qBw==
-X-Received: by 2002:a19:f712:0:b0:4e9:59cd:416c with SMTP id z18-20020a19f712000000b004e959cd416cmr2491997lfe.0.1681159637987;
-        Mon, 10 Apr 2023 13:47:17 -0700 (PDT)
-Message-ID: <4017c904-9918-3e0c-b687-f55cfc5c4f4d@gmail.com>
-Date: Mon, 10 Apr 2023 23:47:16 +0300
+        bh=ko7QXPbIjeGGHDhMu4npXiL/4qFqfqYW7bib84R6aNU=;
+        b=h+6uZR1fO6qODNjhiZhQPrl3aixC3VrmXP2PQleXbKwZBvQf6aQ4emBY3ei+aiRQMF
+         c0SDXAIoMRSsEvR4gQLERMplmH1HOb936ZQS7Xkf3r0BEvzCsNJhpDBDsdA1OjrFai0u
+         vDeZbg4JJd6Er4UWYKV7bf7F3KT/uh9DIIJs3k623wd1T1A2dY2j4wDSFiRCqBL0kAwz
+         wvEtbe2Q3mqY0v1wkwkAgzZFXGl0Yla5PYvoelBcDelKq/1NJoYFB7qRML/zbo4j1n6q
+         4GBvy+iaDBwN1pK8vlefVrfIQ1/wxRNGlVHLJDxR3YncAA5aZOMBRhaXWa+2dD/G1WLU
+         N9sQ==
+X-Gm-Message-State: AAQBX9eHzRzy6RNBiyZa+IOvCeISTbNY+4GGPv8yjwVun6CypUSqDub3
+	JkP/QCI0vKkoso3yJSTpGIo=
+X-Google-Smtp-Source: AKy350aaXf7tXMoq/bDIX5RcTUjwlvNj4/ZV58esCJnG/KA/wgu03yQ50TGQoFVlOrSEBxSV3L5hJg==
+X-Received: by 2002:ac2:5929:0:b0:4dc:828f:ef97 with SMTP id v9-20020ac25929000000b004dc828fef97mr3028369lfi.60.1681160672813;
+        Mon, 10 Apr 2023 14:04:32 -0700 (PDT)
+Message-ID: <52301293-0e21-2885-904b-776b82d5a18d@gmail.com>
+Date: Tue, 11 Apr 2023 00:04:31 +0300
 MIME-Version: 1.0
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101
  Thunderbird/102.9.0
 Subject: Re: Per-process flag set via prctl() to deny module loading?
-To: Tycho Andersen <tycho@tycho.pizza>
+Content-Language: en-US
+To: Greg KH <gregkh@linuxfoundation.org>
 Cc: linux-modules <linux-modules@vger.kernel.org>,
  Kernel Hardening <kernel-hardening@lists.openwall.com>,
  "linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>,
  "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 References: <640c4327-0b40-f964-0b5b-c978683ac9ba@gmail.com>
- <ZDQQ0B35NcYwQMyy@tycho.pizza>
-Content-Language: en-US
+ <2023041010-vacation-scribble-ba46@gregkh>
 From: Topi Miettinen <toiwoton@gmail.com>
-In-Reply-To: <ZDQQ0B35NcYwQMyy@tycho.pizza>
+In-Reply-To: <2023041010-vacation-scribble-ba46@gregkh>
 Content-Type: text/plain; charset=UTF-8; format=flowed
 Content-Transfer-Encoding: 7bit
 
-On 10.4.2023 16.36, Tycho Andersen wrote:
+On 10.4.2023 21.37, Greg KH wrote:
 > On Mon, Apr 10, 2023 at 01:06:00PM +0300, Topi Miettinen wrote:
 >> I'd propose to add a per-process flag to irrevocably deny any loading of
 >> kernel modules for the process and its children. The flag could be set (but
@@ -71,20 +71,19 @@ On 10.4.2023 16.36, Tycho Andersen wrote:
 >> isn't namespaced.
 >>
 >> The implementation should be very simple.
->>
->> Preferably the flag, when configured, would be set by systemd, Firejail and
->> maybe also container managers. The expectation would be that the permission
->> to load modules would be retained only by udev and where SUID needs to be
->> allowed (NoNewPrivileges unset).
 > 
-> You can do something like this today via STATIC_USERMODEHELPER without
-> the need for kernel patches. It is a bit heavyweight for a
-> general-purpose system though.
+> Patches are always welcome to be reviewed.
+> 
+> But note, please watch out for processes that cause devices to be found,
+> and then modules to be loaded that way, it's not going to be as simple
+> as you might have imagined...
 
-So the user mode helper would be launched whenever there is a module 
-request and it would check whether the process is allowed to load 
-modules or not? Does it know which process caused the module to be 
-loaded and what were its credentials at that time?
+A very simple version would only add a simple check like 
+!current->allow_module_load after every !capable(CAP_SYS_MODULE). It 
+wouldn't block all the ways how modules could be caused to be loaded 
+indirectly.
+
+I think a less simple version could also do the check at __request_module().
 
 -Topi
 
