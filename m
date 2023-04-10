@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21654-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21655-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 3165FC76188
-	for <kernel-hardening@archiver.kernel.org>; Tue,  4 Apr 2023 21:55:27 +0000 (UTC)
-Received: (qmail 7651 invoked by uid 550); 4 Apr 2023 21:55:17 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id A0F37C77B61
+	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Apr 2023 10:06:24 +0000 (UTC)
+Received: (qmail 22318 invoked by uid 550); 10 Apr 2023 10:06:14 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,81 +12,63 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7616 invoked from network); 4 Apr 2023 21:55:16 -0000
-Date: Tue, 04 Apr 2023 21:54:50 +0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=protonmail.ch;
-	s=protonmail3; t=1680645304; x=1680904504;
-	bh=NpQ92rNGfAqVgwg/jEbrLTBw0yxaLRnii1wIBG4JYYY=;
-	h=Date:To:From:Cc:Subject:Message-ID:In-Reply-To:References:
-	 Feedback-ID:From:To:Cc:Date:Subject:Reply-To:Feedback-ID:
-	 Message-ID:BIMI-Selector;
-	b=fVUcn5P8FXGrSa403ClzGxpYot7ohBiim7KDq5cYllyoW/vDwKGplguC9Zhf49aKB
-	 g7bfg2jTs2jRo7CmZ4+P50pZunS3czZukjr4neaQeQoZb3Js+KWR4A2LKG4J0UPtvd
-	 aQ5XL/FkkgLecSFzFCOVM4kP9PJxWBSUgDAQeGKqroEJXpeLx1mfDWblc3RJb8RcWy
-	 i4iXGswj6SKhgU4FnfazB1hVTgil/99bjbACV/o3fF6IAA3yL0LrkBLz1qVzvBNHFI
-	 +vSq/r0ZOxNkgmFGB16i0cW1cD4UsWum3pebtvtn0st48H6MssM47N9ZsSxbZa48/U
-	 eSaCTVRiNZKww==
-To: Greg KH <gregkh@linuxfoundation.org>
-From: Jordan Glover <Golden_Miller83@protonmail.ch>
-Cc: =?utf-8?Q?Hanno_B=C3=B6ck?= <hanno@hboeck.de>, kernel-hardening@lists.openwall.com
-Subject: Re: [PATCH] Restrict access to TIOCLINUX
-Message-ID: <FOFeJXer4RVQAe5RPxTFP5O4QbHgzTJ-HjZSftfcdO9dK5OMKEfaD2iJ8BiOWxtzfbpGl_t0hcsPrQToQ72Dc3D3seQ5joggnqEmuKOLBcg=@protonmail.ch>
-In-Reply-To: <2023040237-empty-etching-c988@gregkh>
-References: <20230402160815.74760f87.hanno@hboeck.de> <2023040232-untainted-duration-daf6@gregkh> <20230402191652.747b6acc.hanno@hboeck.de> <2023040207-pretender-legislate-2e8b@gregkh> <20230402193310.0e2be5bb.hanno@hboeck.de> <2023040237-empty-etching-c988@gregkh>
-Feedback-ID: 3367390:user:proton
+Received: (qmail 22284 invoked from network); 10 Apr 2023 10:06:13 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20210112; t=1681121162;
+        h=content-transfer-encoding:subject:from:to:content-language
+         :user-agent:mime-version:date:message-id:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=ATMiUtX64qR0hwTrZDgb3RHiSTdBt+7AzkUE71TDEpA=;
+        b=gct+lbvYlrtdNbqog/h6bLfpEnPaE247rt+vXA19R+KcjQa2tfFmZW17wCi4DI9Ti1
+         hf5KHwycpKXUFQWY4eUvBpNGZq/47owrFhn85GJ9S6WEvuSsOJBYMo1UUfExhdZzPj0U
+         tvOZsbj2dKAnPc5e8c57rBnL4OcmZ1vcUf1DJWX7vPWA1Mk3ItkqvapId+/mnH0FXCoU
+         XeFC43Ej3DdXAc178xiG7+75caZijBIu3eBZni+DJ8PT7plHTJEwbJJ3eyhM1fEMSkkR
+         7hxoV1avDx5u2igYk860iu5jn0l2Wx2U3/rYawuYr3rP7Wkqhj/HU0J22gWTf+JN6Mek
+         /aBg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112; t=1681121162;
+        h=content-transfer-encoding:subject:from:to:content-language
+         :user-agent:mime-version:date:message-id:x-gm-message-state:from:to
+         :cc:subject:date:message-id:reply-to;
+        bh=ATMiUtX64qR0hwTrZDgb3RHiSTdBt+7AzkUE71TDEpA=;
+        b=IJjbpW8OSOAiyEXcq3oeG60xK/2QyKgnN71PwJGwQQFiP+20SXaYqS1qfcRX2bV/sU
+         G+sPE3wr4yJV2Mc3rPcGUIpUD9Ws4Bcv5D418x6WRxo1FInqWOFSl0XzXTyAl59Q55x8
+         3j9NP/kodqvUC4C7rjuBZFW+mNIQLc5z0+od5+nqCfzKlOPB74nPSflj18rPQWEZLG/l
+         Cw05KIlbWTDnCHdbg3H1gD9+F/MRDalkXgXSHkHH3TlIfd/zXkaTYkZ6GB5ZwNz1v7KQ
+         KX4ly+1ehO7ePFT9CaS02sBSpVb/DeTjx6MBciNCRNmSPhqDZi2l2CJtBxusSCHUm1jv
+         i+8Q==
+X-Gm-Message-State: AAQBX9d6c4TbuX8FN1uuzL3tzFT06yb/RFCiaH2EN5KyIz4EvivUBHbj
+	6lZlJz5zTvuhj6xIQj75xOhLDNv7dSY=
+X-Google-Smtp-Source: AKy350YPnoDYffi3mvhIikGdK6c67KY+WRWZhkyE4MK7NQ5GJr5B2lpdmBmV9SkFOP/gf5oNz80bJg==
+X-Received: by 2002:ac2:42c6:0:b0:4dd:cbf3:e981 with SMTP id n6-20020ac242c6000000b004ddcbf3e981mr2448219lfl.28.1681121162052;
+        Mon, 10 Apr 2023 03:06:02 -0700 (PDT)
+Message-ID: <640c4327-0b40-f964-0b5b-c978683ac9ba@gmail.com>
+Date: Mon, 10 Apr 2023 13:06:00 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101
+ Thunderbird/102.9.0
+Content-Language: en-US
+To: linux-modules <linux-modules@vger.kernel.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ "linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>,
+ "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+From: Topi Miettinen <toiwoton@gmail.com>
+Subject: Per-process flag set via prctl() to deny module loading?
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
 
-On Sunday, April 2nd, 2023 at 7:44 PM, Greg KH <gregkh@linuxfoundation.org>=
- wrote:
+I'd propose to add a per-process flag to irrevocably deny any loading of 
+kernel modules for the process and its children. The flag could be set 
+(but not unset) via prctl() and for unprivileged processes, only when 
+NoNewPrivileges is also set. This would be similar to CAP_SYS_MODULE, 
+but unlike capabilities, there would be no issues with namespaces since 
+the flag isn't namespaced.
 
+The implementation should be very simple.
 
-> On Sun, Apr 02, 2023 at 07:33:10PM +0200, Hanno B=C3=B6ck wrote:
->=20
-> > On Sun, 2 Apr 2023 19:23:44 +0200
-> > Greg KH gregkh@linuxfoundation.org wrote:
-> >=20
-> > > > Do you have other proposals how to fix this issue? One could
-> > > > introduce an option like for TIOCSTI that allows disabling
-> > > > selection features by default.
-> > >=20
-> > > What exact issue are you trying to fix here?
-> >=20
-> > The fact that the selection features of TIOCLINUX can be used for
-> > privilege escalation.
->=20
->=20
-> Only if you had root permissions already, and then go to try to run
-> something using su or sudo as someone with less permission, right?
->=20
-> And as you already had permissions before, it's not really an
-> excalation, or am I missing something?
->=20
-> > I already mentioned this in the original patch description, but I think
-> > the minitty.c example here illustrates this well:
-> > https://www.openwall.com/lists/oss-security/2023/03/14/3
-> >=20
-> > Compile it, do
-> > sudo -u [anynonprivilegeduser] ./minitty
-> >=20
-> > It'll execute shell code with root permission.
->=20
->=20
-> That doesn't work if you run it from a user without root permissions to
-> start with, right?
->=20
-> thanks,
->=20
-> greg k-h
+Preferably the flag, when configured, would be set by systemd, Firejail 
+and maybe also container managers. The expectation would be that the 
+permission to load modules would be retained only by udev and where SUID 
+needs to be allowed (NoNewPrivileges unset).
 
-The problem in the example is that sudo executed unpriv process which then =
-re-gained the privs of sudo itself. It doesn't need to be sudo or even root=
- - the same problem affects all containers/sandboxes (privileged or not) in=
- linux - the (supposedly) contained process can use TIOCSTI/TIOCLINUX to br=
-eak out of the container/sandbox (unless they're blocked as well).
-
-BTW: you seem in favor of restricting TIOCSTI [1] which landed in kernel so=
- why suddenly question same problem here?
-
-[1] https://lore.kernel.org/all/Y0pIRKpPwqk2Igu%2F@kroah.com/raw
+-Topi
