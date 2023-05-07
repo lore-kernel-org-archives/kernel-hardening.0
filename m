@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21668-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21669-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 9B35AC7EE22
-	for <kernel-hardening@archiver.kernel.org>; Sat,  6 May 2023 07:05:25 +0000 (UTC)
-Received: (qmail 25729 invoked by uid 550); 6 May 2023 07:05:13 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 7B855C77B7D
+	for <kernel-hardening@archiver.kernel.org>; Sun,  7 May 2023 19:53:41 +0000 (UTC)
+Received: (qmail 13995 invoked by uid 550); 7 May 2023 19:53:29 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,29 +12,48 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25709 invoked from network); 6 May 2023 07:05:12 -0000
-X-CMAE-Analysis: v=2.4 cv=Lo1UiFRc c=1 sm=1 tr=0 ts=6455fc1c
- a=9JKJlijexIvT1S7cpBUTgA==:117 a=IkcTkHD0fZMA:10 a=P0xRbXHiH_UA:10
- a=xVhDTqbCAAAA:8 a=20KFwNOVAAAA:8 a=rDwt1Zk6MRkbpbuKzqYA:9 a=QEXdDO2ut3YA:10
- a=GrmWmAYt4dzCMttCBZOh:22
-X-SECURESERVER-ACCT: kaiwan@kaiwantech.com
-X-Gm-Message-State: AC+VfDzFVTC+L4jjEr1ns5uUTIkTcIssQ9x9Pz4t6WhJVDrZhGnRnKBW
-	0OMz4ERyrQdpu1ACpIZFHUHThMvoRljcokPzQOQ=
-X-Google-Smtp-Source: ACHHUZ62GVBTMauDj5I48KnvfLs0gNpt0Jrh6TAkoSyEVAeNlL8OxCphSpqv3XTKacR+8uhZXSKmFENDlCZxOsMFjyw=
-X-Received: by 2002:a17:907:70a:b0:953:9024:1b50 with SMTP id
- xb10-20020a170907070a00b0095390241b50mr2753174ejb.74.1683356699105; Sat, 06
- May 2023 00:04:59 -0700 (PDT)
+Received: (qmail 13975 invoked from network); 7 May 2023 19:53:28 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=paul-moore.com; s=google; t=1683489196; x=1686081196;
+        h=content-transfer-encoding:cc:to:subject:message-id:date:from
+         :in-reply-to:references:mime-version:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=Zyj2EiCvdTduHLqcmu7mXgIBGvXlvMB1pane2tqkF7E=;
+        b=HovbGonvcX5N33ZjAIXpk4nBo33sAlxq1QGT9NpuhVKTsJ+IPtEw9Cp0pK3vMQqZCX
+         yMERRh6IsK8ylRf73EWSXkyxzpndyvw9zupn3p6xHJtD6gh6YQnVVMmrhzQzNnp/3k82
+         WvBn7PioMWALD9g+ebvbodFgl7/8Zdu91Kkz7apHZvluX0naIRyiebich3A8BibOJ5ud
+         x4u598AtsP929aBszW6HtQkOJeQzHnv9lc7PiAdtQJiyGXVl7j2NvQew1QYm2We4ZngS
+         cmO8wXENruc4TD8Z4g4R0Ngf5MD+xWtep2Y3ix0agt9ARcjjDYtovnqY7/J87qqW4DWg
+         MMMw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20221208; t=1683489196; x=1686081196;
+        h=content-transfer-encoding:cc:to:subject:message-id:date:from
+         :in-reply-to:references:mime-version:x-gm-message-state:from:to:cc
+         :subject:date:message-id:reply-to;
+        bh=Zyj2EiCvdTduHLqcmu7mXgIBGvXlvMB1pane2tqkF7E=;
+        b=kv9T2lP5291hENwF+/3g4SBsOqzRhiTinApbHiPci3sbdjTJoc4Lg/9lYQeNaEh1yS
+         v9CP0js/63S+jh+MYAvnpje27k8XGmSxT33L57ehTFkA8YnOEtvSUNgFU1HW/kC9qghJ
+         CszM17lqttYCAOniPUA0tvwcH2zcApd7CnM03V/SUkJGccVpLeu4foYSix7qfMwWlRsV
+         sJOVuvra7VVj3Fo8iApBPmM6a5uNMG96H8S+jDU+MxU8LmV/zemu5WkUrlJ/vfU4o43i
+         8cgBT9e5Fs/wbseacc5+NBTyCJNAu9ikdzTisIw/wqSG/NVJWS/pOsuyk26REACorL2z
+         SjhQ==
+X-Gm-Message-State: AC+VfDyE/3LREtdMN+5J7uq5w+3IMLVB4otaI0yZG4O8QYRQehj8zzMO
+	KlaijpNTtH/2tt7kvs3LsRijzzAHdHTuVWYqE06Y
+X-Google-Smtp-Source: ACHHUZ7pNs3NaZ4FLiSZ/VNIGrR4CzLJdGR6zgvUQNMJX+pul+3P3AfyeKE5TmTF6NGa13Y4VaviefX/KFQw2NkRUEs=
+X-Received: by 2002:a0d:ea4b:0:b0:55a:20a1:4ba6 with SMTP id
+ t72-20020a0dea4b000000b0055a20a14ba6mr8815170ywe.25.1683489196101; Sun, 07
+ May 2023 12:53:16 -0700 (PDT)
 MIME-Version: 1.0
 References: <20230504213002.56803-1-michael.mccracken@gmail.com>
  <fbf37518-328d-c08c-7140-5d09d7a2674f@redhat.com> <87pm7f9q3q.fsf@gentoo.org>
  <c50ac5e4-3f84-c52a-561d-de6530e617d7@redhat.com> <CAHC9VhTX3ohxL0i3vT8sObQ+v+-TOK95+EH1DtJZdyMmrm3A2A@mail.gmail.com>
-In-Reply-To: <CAHC9VhTX3ohxL0i3vT8sObQ+v+-TOK95+EH1DtJZdyMmrm3A2A@mail.gmail.com>
-From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Date: Sat, 6 May 2023 12:34:41 +0530
-X-Gmail-Original-Message-ID: <CAPDLWs-=C_UTKPTqwRbx70h=DaodF8LVV3-8n=J3u=L+kJ_1sg@mail.gmail.com>
-Message-ID: <CAPDLWs-=C_UTKPTqwRbx70h=DaodF8LVV3-8n=J3u=L+kJ_1sg@mail.gmail.com>
+ <CAPDLWs-=C_UTKPTqwRbx70h=DaodF8LVV3-8n=J3u=L+kJ_1sg@mail.gmail.com>
+In-Reply-To: <CAPDLWs-=C_UTKPTqwRbx70h=DaodF8LVV3-8n=J3u=L+kJ_1sg@mail.gmail.com>
+From: Paul Moore <paul@paul-moore.com>
+Date: Sun, 7 May 2023 15:53:05 -0400
+Message-ID: <CAHC9VhSfrAUJaP-MbTXFyLgAz5P3McjD0eouj+-7QwOrrYt8MQ@mail.gmail.com>
 Subject: Re: [PATCH] sysctl: add config to make randomize_va_space RO
-To: Paul Moore <paul@paul-moore.com>
+To: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
 Cc: David Hildenbrand <david@redhat.com>, Sam James <sam@gentoo.org>, 
 	Michael McCracken <michael.mccracken@gmail.com>, linux-kernel@vger.kernel.org, 
 	serge@hallyn.com, tycho@tycho.pizza, Luis Chamberlain <mcgrof@kernel.org>, 
@@ -43,46 +62,44 @@ Cc: David Hildenbrand <david@redhat.com>, Sam James <sam@gentoo.org>,
 	linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
-X-CMAE-Envelope: MS4xfLkflY78BI8MY6gKI20/XCHUV+Pz0O8qyh1taIvxmYimJe0WdrlWik2Z8jgSzTlpkvl4AN2/sV1NEA18lAyiggLUWjEPMTQzTJj2BpmUN5Qcc92ekD2m
- 34UN0NF5zse+FuNZT1DuG1EKN4lPJ1kxQ1amC0VT3xZlTUWQ5FDZh7b42/R82aXuFl40CuCGrzkfM7NR8yxRmWkVGUyNtVvrKhQ1HfkWV1K4dpQZ4HIo2fqG
 
-On Fri, May 5, 2023 at 8:53=E2=80=AFPM Paul Moore <paul@paul-moore.com> wro=
-te:
+On Sat, May 6, 2023 at 3:05=E2=80=AFAM Kaiwan N Billimoria
+<kaiwan@kaiwantech.com> wrote:
+> On Fri, May 5, 2023 at 8:53=E2=80=AFPM Paul Moore <paul@paul-moore.com> w=
+rote:
+> >
+> > On Fri, May 5, 2023 at 11:15=E2=80=AFAM David Hildenbrand <david@redhat=
+.com> wrote:
+> > > On 05.05.23 09:46, Sam James wrote:
+> > > > David Hildenbrand <david@redhat.com> writes:
+> > > >> On 04.05.23 23:30, Michael McCracken wrote:
+> > > >>> Add config RO_RANDMAP_SYSCTL to set the mode of the randomize_va_=
+space
+> > > >>> sysctl to 0444 to disallow all runtime changes. This will prevent
+> > > >>> accidental changing of this value by a root service.
+> > > >>> The config is disabled by default to avoid surprises.
+> >
+> > ...
+> >
+> > > If we really care, not sure what's better: maybe we want to disallow
+> > > disabling it only in a security lockdown kernel?
+> >
+> > If we're bringing up the idea of Lockdown, controlling access to
+> > randomize_va_space is possible with the use of LSMs.  One could easily
+> > remove write access to randomize_va_space, even for tasks running as
+> > root.
 >
-> On Fri, May 5, 2023 at 11:15=E2=80=AFAM David Hildenbrand <david@redhat.c=
-om> wrote:
-> > On 05.05.23 09:46, Sam James wrote:
-> > > David Hildenbrand <david@redhat.com> writes:
-> > >> On 04.05.23 23:30, Michael McCracken wrote:
-> > >>> Add config RO_RANDMAP_SYSCTL to set the mode of the randomize_va_sp=
-ace
-> > >>> sysctl to 0444 to disallow all runtime changes. This will prevent
-> > >>> accidental changing of this value by a root service.
-> > >>> The config is disabled by default to avoid surprises.
->
-> ...
->
-> > If we really care, not sure what's better: maybe we want to disallow
-> > disabling it only in a security lockdown kernel?
->
-> If we're bringing up the idea of Lockdown, controlling access to
-> randomize_va_space is possible with the use of LSMs.  One could easily
-> remove write access to randomize_va_space, even for tasks running as
-> root.
-IMO, don't _move_ the sysctl to LSM(s). There are legitimate scenarios
-(typically debugging) where root needs to disable/enable ASLR.
-I think the key thing is the file ownership; being root-writable takes
-care of security concerns... (as David says, if root screws around we
-can't do much)..
-If one argues for changing the mode from 0644 to 0444, what prevents
-all the other dozens of sysctls - owned by root mind you - from not
-wanting the same treatment?
-Where does one draw the line?
-- Kaiwan.
->
-> (On my Rawhide system with SELinux enabled)
-> % ls -Z /proc/sys/kernel/randomize_va_space
-> system_u:object_r:proc_security_t:s0 /proc/sys/kernel/randomize_va_space
->
-> --
-> paul-moore.com
+> IMO, don't _move_ the sysctl to LSM(s).
+
+There is nothing to move, the ability to restrict access to
+randomize_va_space exists today, it is simply a matter of if the
+security policy author or admin wants to enable it.
+
+If you are like Michael and you want to block write access, even when
+running as root, you can do so with an LSM.  You can also allow write
+access.  With SELinux you can allow/disallow the privilege on a
+task-by-task basis to meet individual usability and security
+requirements.
+
+--=20
+paul-moore.com
