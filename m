@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21682-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21683-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 42390C83F12
-	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Aug 2023 12:21:58 +0000 (UTC)
-Received: (qmail 3183 invoked by uid 550); 28 Aug 2023 12:21:47 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 10423C71153
+	for <kernel-hardening@archiver.kernel.org>; Mon, 28 Aug 2023 12:22:09 +0000 (UTC)
+Received: (qmail 4004 invoked by uid 550); 28 Aug 2023 12:21:59 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,42 +12,45 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 3148 invoked from network); 28 Aug 2023 12:21:46 -0000
+Received: (qmail 3968 invoked from network); 28 Aug 2023 12:21:59 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20221208; t=1693225295; x=1693830095;
-        h=content-transfer-encoding:cc:to:from:subject:mime-version
-         :message-id:date:from:to:cc:subject:date:message-id:reply-to;
-        bh=0fazXoo+ou5IcbHLqcGgvL3F6Iss6gQV1TDIxc8Xgko=;
-        b=DSjCX5zVXq5aronukNbxD5A+wTeyyDEhRsedv45rBILJkVCXeYCA7vvi/MsygbsJcC
-         yjYd0kh14W6mzHeHJnhyLyKA8tIuSGhQc6bUV3XVrONKdKtMEAszNkvh0argKhLNl1Zp
-         BXmGMLv6t3Zjojb0eFnEfdShmIPrifZsUUdQWYAD10A4zKXnm3JWV0s1FIZUCWjdpDmd
-         DsERuJrc/UnJC+I8NwWAwpL82fvFOBBvu7ga7LjIDrrV7k/9bm80bmqe1ExtIs+CeKjI
-         gPfaZ+ueCqtuVoqQtzbDrdvAs6tFEhUmyY29aRluO9iG3OCGs3txSwfqGClRIRek2KYh
-         lfMQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20221208; t=1693225295; x=1693830095;
-        h=content-transfer-encoding:cc:to:from:subject:mime-version
-         :message-id:date:x-gm-message-state:from:to:cc:subject:date
+        d=google.com; s=20221208; t=1693225307; x=1693830107;
+        h=content-transfer-encoding:cc:to:from:subject:references
+         :mime-version:message-id:in-reply-to:date:from:to:cc:subject:date
          :message-id:reply-to;
-        bh=0fazXoo+ou5IcbHLqcGgvL3F6Iss6gQV1TDIxc8Xgko=;
-        b=Wqm8oEuUrevLFL5ceKdy1TJwJ2AhdRUPxMgZa/GSNjjzAzFkXNf/u/0X+GiLb7X0ZN
-         JSkl0KBNJTY4+POppbAY82i/x1IYtj0sW2d9uHLAKOZ5HRuEaMOx8hP7B3Qwt/sqWh1t
-         83d0TVcQmNI8qaFB6vwWAOV4fLL0DOPqrpF3fZgkSUFQdYpAEH7wyzk+jwFsB4FnP2iN
-         aaagn9n4tHtAesOGbnDJpTycc3uNu+e5kjzfJEvLNBauDVr3fwU3FOcA92JzJmreQIBx
-         zsgqSGfLCZHnofO1Fla5OBhDf9gka8bUqVv5IDx2aT/JPz7sdyFpQXhBrG5j2THROcfo
-         VmRw==
-X-Gm-Message-State: AOJu0YxYV9qdApFzO64sY96Kn4FTSCzf7u9zIOQ9psiNCnPrUSgJegPa
-	l8C5PdCo2GTKi9Nqn6kfneNCl7epNGw=
-X-Google-Smtp-Source: AGHT+IHkPB/b0nsyOgPx0t2SavNcBfJG2ypRE23GdFMKVZyoPH3h9lbtsnHQphsCbtz0nJRuwESrD7X69PU=
+        bh=q6znZ4h/bFO0y4zxr99DQkfyX6CJsaAjv1JSqCiqfzY=;
+        b=tcDFddHMmh+M9w5NEw8wAOXudh9wwAmq46gwowxIV+qv6GyW/K/e56imKh+NXYRBqC
+         eXT4EL4UqWOWnf7cPw1Z6X2jl69QN3SZ/zkuVszhjtKaEB71vWtJ6ALRXd9kxr9YQpDg
+         55MNNACAfc9BFVpdSMJTcVhogfIMD/wkRf60fBEmLro4fUS981CdvMzWk42K3UVsZZBL
+         XzgD0FXYWQWDjQ1z2AL+k+oJ+0W2gVXZeJUzF7hBpb3oF1AJTQF5PIm0PVsuYvYAncsG
+         Cc63EkCA9GLX8s6PNpyTDylfrbIZHgE+s0OLzMQR6pOZcSCsBwyQSo/DVA+57OhA7fuk
+         LLNw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20221208; t=1693225307; x=1693830107;
+        h=content-transfer-encoding:cc:to:from:subject:references
+         :mime-version:message-id:in-reply-to:date:x-gm-message-state:from:to
+         :cc:subject:date:message-id:reply-to;
+        bh=q6znZ4h/bFO0y4zxr99DQkfyX6CJsaAjv1JSqCiqfzY=;
+        b=TqTCbHqtRz5vg3+eNuJ/7JkiuTGWKlMAOha1ISPOAxohTyu2+WvlQZj+v+GppYgWXD
+         AJtAq1+Jr5PsMl5RJLGy6fGbQlfRrOveXnWoLdC/mPWla7L8I6ocFeWFg9MDhIpyC3Dr
+         4hKrDnehZydZdS6ayVUWtgGSXsl11O11wYMKjcIGwqfWlh6fn4lLz3eEVIUJQWR0S8wJ
+         om+KGr4Oj47AoclVZji9O0n60/6WnIndxsJDmzNwbJjLV1R/J1oku4XYO8WFbMJVscxF
+         MzWGn3pK/d/4Fn/rv67Otc7TgXmTRUG6UKQPWuBvcNTxGC7dYB65kFwE7vOz2PficCCK
+         25DQ==
+X-Gm-Message-State: AOJu0YxKqwUdd3e299/oNGH5Adsvi5jjNAyMBb2zokTWziZXvymIVdUd
+	T3jP9WEss8EkfrgOZczspzMg2aj1P8U=
+X-Google-Smtp-Source: AGHT+IE88Atx2Kl8Xffh+ob+U1ncS/6fC4lpLtDEHx5q8BAYotEQ5Z4agnF24PO1fxpIf9JAc3NcrrV8vrw=
 X-Received: from sport.zrh.corp.google.com ([2a00:79e0:9d:4:d62e:36f4:33c6:e661])
- (user=gnoack job=sendgmr) by 2002:a05:6902:106:b0:d77:984e:c770 with SMTP id
- o6-20020a056902010600b00d77984ec770mr721344ybh.5.1693225294898; Mon, 28 Aug
- 2023 05:21:34 -0700 (PDT)
-Date: Mon, 28 Aug 2023 14:21:08 +0200
-Message-Id: <20230828122109.3529221-1-gnoack@google.com>
+ (user=gnoack job=sendgmr) by 2002:a17:907:6215:b0:9a1:b54e:4e5a with SMTP id
+ ms21-20020a170907621500b009a1b54e4e5amr352372ejc.6.1693225307406; Mon, 28 Aug
+ 2023 05:21:47 -0700 (PDT)
+Date: Mon, 28 Aug 2023 14:21:09 +0200
+In-Reply-To: <20230828122109.3529221-1-gnoack@google.com>
+Message-Id: <20230828122109.3529221-2-gnoack@google.com>
 Mime-Version: 1.0
+References: <20230828122109.3529221-1-gnoack@google.com>
 X-Mailer: git-send-email 2.42.0.rc2.253.gd59a3bf2b4-goog
-Subject: [PATCH v2 0/1] Restrict access to TIOCLINUX
+Subject: [PATCH v2 1/1] tty: Restrict access to TIOCLINUX' copy-and-paste subcommands
 From: "=?UTF-8?q?G=C3=BCnther=20Noack?=" <gnoack@google.com>
 To: Greg KH <gregkh@linuxfoundation.org>
 Cc: "=?UTF-8?q?Hanno=20B=C3=B6ck?=" <hanno@hboeck.de>, kernel-hardening@lists.openwall.com, 
@@ -61,56 +64,70 @@ Cc: "=?UTF-8?q?Hanno=20B=C3=B6ck?=" <hanno@hboeck.de>, kernel-hardening@lists.op
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-Hello!
+From: Hanno B=C3=B6ck <hanno@hboeck.de>
 
-This is a re-send of a patch by Hanno B=C3=B6ck from 2023-04-02 [1], to res=
-trict the
-use of the copy-and-paste functionality in the TIOCLINUX IOCTL.
+TIOCLINUX can be used for privilege escalation on virtual terminals when
+code is executed via tools like su/sudo and sandboxing tools.
 
-These copy-and-paste operations can be misused in the same way as the TIOCS=
-TI
-IOCTL, which can be disabled with a CONFIG option, since commit 83efeeeb3d0=
-4
-("tty: Allow TIOCSTI to be disabled") and commit 690c8b804ad2 ("TIOCSTI: al=
-ways
-enable for CAP_SYS_ADMIN").  With this option set to N, the use of TIOCSTI
-requires CAP_SYS_ADMIN.
+By abusing the selection features, a lower-privileged application can
+write content to the console, select and copy/paste that content and
+thereby executing code on the privileged account. See also the poc
+here:
 
-We believe that it should be OK to not make this configurable: For TIOCLINU=
-X's
-copy-and-paste subcommands, the only known usage so far is GPM.  I have
-personally verified that this continues to work, as GPM runs as root.
+  https://www.openwall.com/lists/oss-security/2023/03/14/3
 
-The number of affected programs should be much lower than it was the case f=
-or
-TIOCSTI (as TIOCLINUX only applies to virtual terminals), and even in the
-TIOCLINUX case, only a handful of legitimate use cases were mentioned.  (BR=
-LTTY,
-tcsh, Emacs, special versions of "mail").  I have high confidence that GPM =
-is
-the only existing usage of that copy-and-paste feature.
+Selection is usually used by tools like gpm that provide mouse features
+on the virtual console. gpm already runs as root (due to earlier
+changes that restrict access to a user on the current TTY), therefore
+it will still work with this change.
 
-(If configurability is really required, the way to be absolutely sure would=
- be
-to introduce a CONFIG option for it as well -- but it would be a pretty obs=
-cure
-option to have, but we can do that if needed.)
+With this change, the following TIOCLINUX subcommands require
+CAP_SYS_ADMIN:
 
-Changes in v2:
- - Rebased to Linux v6.5
- - Reworded commit message a bit
- - Added Tested-By
+ * TIOCL_SETSEL - setting the selected region on the terminal
+ * TIOCL_PASTESEL - pasting the contents of the selected region into
+   the input buffer
+ * TIOCL_SELLOADLUT - changing word-by-word selection behaviour
 
-[1] https://lore.kernel.org/all/20230402160815.74760f87.hanno@hboeck.de/
+The security problem mitigated is similar to the security risks caused
+by TIOCSTI, which, since kernel 6.2, can be disabled with
+CONFIG_LEGACY_TIOCSTI=3Dn.
 
-Hanno B=C3=B6ck (1):
-  tty: Restrict access to TIOCLINUX' copy-and-paste subcommands
-
+Signed-off-by: Hanno B=C3=B6ck <hanno@hboeck.de>
+Tested-by: G=C3=BCnther Noack <gnoack@google.com>
+---
  drivers/tty/vt/vt.c | 6 ++++++
  1 file changed, 6 insertions(+)
 
-
-base-commit: 2dde18cd1d8fac735875f2e4987f11817cc0bc2c
+diff --git a/drivers/tty/vt/vt.c b/drivers/tty/vt/vt.c
+index 1e8e57b45688..1eb30ed1118d 100644
+--- a/drivers/tty/vt/vt.c
++++ b/drivers/tty/vt/vt.c
+@@ -3156,9 +3156,13 @@ int tioclinux(struct tty_struct *tty, unsigned long =
+arg)
+=20
+ 	switch (type) {
+ 	case TIOCL_SETSEL:
++		if (!capable(CAP_SYS_ADMIN))
++			return -EPERM;
+ 		return set_selection_user((struct tiocl_selection
+ 					 __user *)(p+1), tty);
+ 	case TIOCL_PASTESEL:
++		if (!capable(CAP_SYS_ADMIN))
++			return -EPERM;
+ 		return paste_selection(tty);
+ 	case TIOCL_UNBLANKSCREEN:
+ 		console_lock();
+@@ -3166,6 +3170,8 @@ int tioclinux(struct tty_struct *tty, unsigned long a=
+rg)
+ 		console_unlock();
+ 		break;
+ 	case TIOCL_SELLOADLUT:
++		if (!capable(CAP_SYS_ADMIN))
++			return -EPERM;
+ 		console_lock();
+ 		ret =3D sel_loadlut(p);
+ 		console_unlock();
 --=20
 2.42.0.rc2.253.gd59a3bf2b4-goog
 
