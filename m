@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21702-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21703-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id B7E7ACD98F5
-	for <kernel-hardening@archiver.kernel.org>; Wed, 11 Oct 2023 06:23:16 +0000 (UTC)
-Received: (qmail 32216 invoked by uid 550); 11 Oct 2023 06:23:06 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 53E49CD6E7E
+	for <kernel-hardening@archiver.kernel.org>; Wed, 11 Oct 2023 15:50:18 +0000 (UTC)
+Received: (qmail 32501 invoked by uid 550); 11 Oct 2023 15:50:07 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,17 +12,35 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32173 invoked from network); 11 Oct 2023 06:23:05 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=linuxfoundation.org;
-	s=korg; t=1697005373;
-	bh=KIZ1z5rP2ER72XHcOe0n8lVt3ytbj2Ymn2aq7MUDOW0=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=Pp5QIixwZIz8xmbl9a+zXId2vWz9J2CUzWM4m+6C9D9tqRJXGwODEyD5NQSzPKA95
-	 3SbIf7N02aOdRmn7GleKhos8jkE5vNO1HFQ2sdl3iyayHYfM4lfLebQCBvayOklKFX
-	 12jhykOmAlK2BhtI0KBODmec6S6pWdaVTSJMi/2M=
-Date: Wed, 11 Oct 2023 08:22:49 +0200
-From: Greg KH <gregkh@linuxfoundation.org>
-To: Kees Cook <keescook@chromium.org>
+Received: (qmail 32457 invoked from network); 11 Oct 2023 15:50:06 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google; t=1697039394; x=1697644194; darn=lists.openwall.com;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
+        bh=tt8MwjCSYr74Or48iYM/l/RqNnasbGQn1+JY5bpViwY=;
+        b=Lr8h/8DfxBDOqwxuOKi8S7i0T/6kIhwkmZqrKCB/ImN6BtHEabDxEuXW+e2HG0ZlYG
+         TX/B64vFBTvI7KD7WddtqTgk4C/lezm1TW1ABLCKAwQ8wzOW5hnkXxjB45aCobM3acQ6
+         B2JV5g/bPIjVKi1F+M3aHtXMV199zli3omlB0=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1697039394; x=1697644194;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=tt8MwjCSYr74Or48iYM/l/RqNnasbGQn1+JY5bpViwY=;
+        b=lu0IX2l693+Pik2lc/dwfCdInAYPhNz0ONMrtyEV2m4QCDpziSpA9fIcw4PysFsFCw
+         0t3wMHoPFfc0knfIf9edy4dBB1J8Ihv6VhpUf5tlKIrvqbdaHGOGTDQDH4sSKer4qV2D
+         A9f97//Zlsz3onKjQ6EUG3uqTPwqL0QJ1RauumT0wPtvQBvdogBJoqi7nWkfgDZvsJTa
+         yyi7JLdzXlDUvwDwde7KCvrZL89oe3Bti8LKlVhczCMx2jutSwYL2/rUXcQ2/b0v/kpJ
+         5a207+Mp/MtmdoIu1Q9kjYp8vX1ZSssn/cEsIb7yHVSHA+twt5ES7zD8HW9OF2exbPDG
+         TMug==
+X-Gm-Message-State: AOJu0YyCRnbuOrgZ7fIhDnmkbF/W2H83G23ZRvxeR6lcvBLpMMP5q1nB
+	bXY6wwwtAFrH/CIjkEWiRJI/AA==
+X-Google-Smtp-Source: AGHT+IGoql2BOZW/W94u3YHjsRu7KtNzNIs8R3v+AEXpI8EmWBmEOIJfDUTYbIgJ3eZ64AGhslXtHw==
+X-Received: by 2002:a17:903:187:b0:1bc:2d43:c747 with SMTP id z7-20020a170903018700b001bc2d43c747mr28217831plg.38.1697039394124;
+        Wed, 11 Oct 2023 08:49:54 -0700 (PDT)
+Date: Wed, 11 Oct 2023 08:49:51 -0700
+From: Kees Cook <keescook@chromium.org>
+To: Greg KH <gregkh@linuxfoundation.org>
 Cc: =?iso-8859-1?Q?G=FCnther?= Noack <gnoack@google.com>,
 	Samuel Thibault <samuel.thibault@ens-lyon.org>,
 	Hanno =?iso-8859-1?Q?B=F6ck?= <hanno@hboeck.de>,
@@ -36,8 +54,9 @@ Cc: =?iso-8859-1?Q?G=FCnther?= Noack <gnoack@google.com>,
 	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>,
 	KP Singh <kpsingh@google.com>,
 	Nico Schottelius <nico-gpm2008@schottelius.org>
-Subject: Re: [PATCH v3 0/1] Restrict access to TIOCLINUX
-Message-ID: <2023101158-esteemed-condiment-1dd6@gregkh>
+Subject: sending commit notification to patch thread (was "Re: [PATCH v3 0/1]
+ Restrict access to TIOCLINUX")
+Message-ID: <202310110847.1BDD74DB@keescook>
 References: <20230828164117.3608812-1-gnoack@google.com>
  <20230828164521.tpvubdufa62g7zwc@begin>
  <ZO3r42zKRrypg/eM@google.com>
@@ -45,96 +64,18 @@ References: <20230828164117.3608812-1-gnoack@google.com>
  <202310091319.F1D49BC30B@keescook>
  <2023101045-stride-auction-1b9e@gregkh>
  <202310101522.A4446CF1D@keescook>
+ <2023101158-esteemed-condiment-1dd6@gregkh>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <202310101522.A4446CF1D@keescook>
+In-Reply-To: <2023101158-esteemed-condiment-1dd6@gregkh>
 
-On Tue, Oct 10, 2023 at 03:23:42PM -0700, Kees Cook wrote:
-> On Tue, Oct 10, 2023 at 08:17:42AM +0200, Greg KH wrote:
-> > On Mon, Oct 09, 2023 at 01:19:47PM -0700, Kees Cook wrote:
-> > > On Fri, Sep 15, 2023 at 03:32:29PM +0200, Günther Noack wrote:
-> > > > On Tue, Aug 29, 2023 at 03:00:19PM +0200, Günther Noack wrote:
-> > > > > Let me update the list of known usages then: The TIOCL_SETSEL, TIOCL_PASTESEL
-> > > > > and TIOCL_SELLOADLUT mentions found on codesearch.debian.net are:
-> > > > > 
-> > > > > (1) Actual invocations:
-> > > > > 
-> > > > >  * consolation:
-> > > > >      "consolation" is a gpm clone, which also runs as root.
-> > > > >      (I have not had the chance to test this one yet.)
-> > > > 
-> > > > I have tested the consolation program with a kernel that has the patch, and it
-> > > > works as expected -- you can copy and paste on the console.
-> > > > 
-> > > > 
-> > > > >  * BRLTTY:
-> > > > >      Uses TIOCL_SETSEL as a means to highlight portions of the screen.
-> > > > >      The TIOCSTI patch made BRLTTY work by requiring CAP_SYS_ADMIN,
-> > > > >      so we know that BRLTTY has that capability (it runs as root and
-> > > > >      does not drop it).
-> > > > > 
-> > > > > (2) Some irrelevant matches:
-> > > > > 
-> > > > >  * snapd: has a unit test mentioning it, to test their seccomp filters
-> > > > >  * libexplain: mentions it, but does not call it (it's a library for
-> > > > >    human-readably decoding system calls)
-> > > > >  * manpages: documentation
-> > > > > 
-> > > > > 
-> > > > > *Outside* of codesearch.debian.org:
-> > > > > 
-> > > > >  * gpm:
-> > > > >      I've verified that this works with the patch.
-> > > > >      (To my surprise, Debian does not index this project's code.)
-> > > > 
-> > > > (As Samuel pointed out, I was wrong there - Debian does index it, but it does
-> > > > not use the #defines from the headers... who would have thought...)
-> > > > 
-> > > > 
-> > > > > FWIW, I also briefly looked into "jamd" (https://jamd.sourceforge.net/), which
-> > > > > was mentioned as similar in the manpage for "consolation", but that software
-> > > > > does not use any ioctls at all.
-> > > > > 
-> > > > > So overall, it still seems like nothing should break. 👍
-> > > > 
-> > > > Summarizing the above - the only three programs which are known to use the
-> > > > affected TIOCLINUX subcommands are:
-> > > > 
-> > > > * consolation (tested)
-> > > > * gpm (tested)
-> > > > * BRLTTY (known to work with TIOCSTI, where the same CAP_SYS_ADMIN requirement
-> > > >   is imposed for a while now)
-> > > > 
-> > > > I think that this is a safe change for the existing usages and that we have done
-> > > > the due diligence required to turn off these features.
-> > > > 
-> > > > Greg, could you please have another look?
-> > > 
-> > > Can you spin a v4 with all these details collected into the commit log?
-> > > That should be sufficient information for Greg, I would think.
-> > 
-> > This is already commit 8d1b43f6a6df ("tty: Restrict access to TIOCLINUX'
-> > copy-and-paste subcommands") in my tty-next tree, and in linux-next.
-> > It's been there for 5 days now :)
-> 
-> Oh perfect! Thanks.
-> 
-> On a related topic, I wonder if you can change your scripting to reply
-> to the original patch thread when something lands? This is helpful when
-> going back over old threads, etc. (This is what the various other bots
-> and b4 tooling does...)
+On Wed, Oct 11, 2023 at 08:22:49AM +0200, Greg KH wrote:
+> What b4 option does a "I applied this patch" response?  The
+> --cc-trailers option to 'shazam'?  Or something else?
 
-My script picks the emails out of the patch that is committed, it
-doesn't know anything about the original email anymore (as sometimes it
-is days later when it propagates to a non-rebasable-branch).  I use b4
-to suck down the patch originally and it will add all of the people who
-reviewed it or gave any other "tag" to it.
+If you're using "b4 shazam", then it'll keep a record of it already and
+you can use "b4 ty" to send the "thank you" email to the thread.
 
-What b4 option does a "I applied this patch" response?  The
---cc-trailers option to 'shazam'?  Or something else?
-
-thanks,
-
-greg k-h
+-- 
+Kees Cook
