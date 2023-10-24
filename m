@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21703-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21704-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 53E49CD6E7E
-	for <kernel-hardening@archiver.kernel.org>; Wed, 11 Oct 2023 15:50:18 +0000 (UTC)
-Received: (qmail 32501 invoked by uid 550); 11 Oct 2023 15:50:07 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 2350BC25B48
+	for <kernel-hardening@archiver.kernel.org>; Tue, 24 Oct 2023 13:46:34 +0000 (UTC)
+Received: (qmail 24188 invoked by uid 550); 24 Oct 2023 13:46:21 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,70 +12,44 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 32457 invoked from network); 11 Oct 2023 15:50:06 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google; t=1697039394; x=1697644194; darn=lists.openwall.com;
-        h=in-reply-to:content-disposition:mime-version:references:message-id
-         :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
-        bh=tt8MwjCSYr74Or48iYM/l/RqNnasbGQn1+JY5bpViwY=;
-        b=Lr8h/8DfxBDOqwxuOKi8S7i0T/6kIhwkmZqrKCB/ImN6BtHEabDxEuXW+e2HG0ZlYG
-         TX/B64vFBTvI7KD7WddtqTgk4C/lezm1TW1ABLCKAwQ8wzOW5hnkXxjB45aCobM3acQ6
-         B2JV5g/bPIjVKi1F+M3aHtXMV199zli3omlB0=
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1697039394; x=1697644194;
-        h=in-reply-to:content-disposition:mime-version:references:message-id
-         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
-         :message-id:reply-to;
-        bh=tt8MwjCSYr74Or48iYM/l/RqNnasbGQn1+JY5bpViwY=;
-        b=lu0IX2l693+Pik2lc/dwfCdInAYPhNz0ONMrtyEV2m4QCDpziSpA9fIcw4PysFsFCw
-         0t3wMHoPFfc0knfIf9edy4dBB1J8Ihv6VhpUf5tlKIrvqbdaHGOGTDQDH4sSKer4qV2D
-         A9f97//Zlsz3onKjQ6EUG3uqTPwqL0QJ1RauumT0wPtvQBvdogBJoqi7nWkfgDZvsJTa
-         yyi7JLdzXlDUvwDwde7KCvrZL89oe3Bti8LKlVhczCMx2jutSwYL2/rUXcQ2/b0v/kpJ
-         5a207+Mp/MtmdoIu1Q9kjYp8vX1ZSssn/cEsIb7yHVSHA+twt5ES7zD8HW9OF2exbPDG
-         TMug==
-X-Gm-Message-State: AOJu0YyCRnbuOrgZ7fIhDnmkbF/W2H83G23ZRvxeR6lcvBLpMMP5q1nB
-	bXY6wwwtAFrH/CIjkEWiRJI/AA==
-X-Google-Smtp-Source: AGHT+IGoql2BOZW/W94u3YHjsRu7KtNzNIs8R3v+AEXpI8EmWBmEOIJfDUTYbIgJ3eZ64AGhslXtHw==
-X-Received: by 2002:a17:903:187:b0:1bc:2d43:c747 with SMTP id z7-20020a170903018700b001bc2d43c747mr28217831plg.38.1697039394124;
-        Wed, 11 Oct 2023 08:49:54 -0700 (PDT)
-Date: Wed, 11 Oct 2023 08:49:51 -0700
-From: Kees Cook <keescook@chromium.org>
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: =?iso-8859-1?Q?G=FCnther?= Noack <gnoack@google.com>,
-	Samuel Thibault <samuel.thibault@ens-lyon.org>,
-	Hanno =?iso-8859-1?Q?B=F6ck?= <hanno@hboeck.de>,
-	kernel-hardening@lists.openwall.com,
-	Jiri Slaby <jirislaby@kernel.org>,
-	Geert Uytterhoeven <geert@linux-m68k.org>,
-	Paul Moore <paul@paul-moore.com>,
-	David Laight <David.Laight@aculab.com>,
-	Simon Brand <simon.brand@postadigitale.de>,
-	Dave Mielke <Dave@mielke.cc>,
-	=?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>,
-	KP Singh <kpsingh@google.com>,
-	Nico Schottelius <nico-gpm2008@schottelius.org>
-Subject: sending commit notification to patch thread (was "Re: [PATCH v3 0/1]
- Restrict access to TIOCLINUX")
-Message-ID: <202310110847.1BDD74DB@keescook>
-References: <20230828164117.3608812-1-gnoack@google.com>
- <20230828164521.tpvubdufa62g7zwc@begin>
- <ZO3r42zKRrypg/eM@google.com>
- <ZQRc7e0l2SjsCB5m@google.com>
- <202310091319.F1D49BC30B@keescook>
- <2023101045-stride-auction-1b9e@gregkh>
- <202310101522.A4446CF1D@keescook>
- <2023101158-esteemed-condiment-1dd6@gregkh>
+Received: (qmail 24156 invoked from network); 24 Oct 2023 13:46:20 -0000
+Date: Tue, 24 Oct 2023 08:46:08 -0500
+From: "Serge E. Hallyn" <serge@hallyn.com>
+To: Stefan Bavendiek <stefan.bavendiek@mailbox.org>
+Cc: kernel-hardening@lists.openwall.com, linux-hardening@vger.kernel.org
+Subject: Re: Isolating abstract sockets
+Message-ID: <20231024134608.GC320399@mail.hallyn.com>
+References: <Y59qBh9rRDgsIHaj@mailbox.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <2023101158-esteemed-condiment-1dd6@gregkh>
+In-Reply-To: <Y59qBh9rRDgsIHaj@mailbox.org>
 
-On Wed, Oct 11, 2023 at 08:22:49AM +0200, Greg KH wrote:
-> What b4 option does a "I applied this patch" response?  The
-> --cc-trailers option to 'shazam'?  Or something else?
+On Sun, Dec 18, 2022 at 08:29:10PM +0100, Stefan Bavendiek wrote:
+> When building userspace application sandboxes, one issue that does not seem trivial to solve is the isolation of abstract sockets.
 
-If you're using "b4 shazam", then it'll keep a record of it already and
-you can use "b4 ty" to send the "thank you" email to the thread.
+Veeery late reply.  Have you had any productive discussions about this in
+other threads or venues?
 
--- 
-Kees Cook
+> While most IPC mechanism can be isolated by mechanisms like mount namespaces, abstract sockets are part of the network namespace.
+> It is possible to isolate abstract sockets by using a new network namespace, however, unprivileged processes can only create a new empty network namespace, which removes network access as well and makes this useless for network clients.
+> 
+> Same linux sandbox projects try to solve this by bridging the existing network interfaces into the new namespace or use something like slirp4netns to archive this, but this does not look like an ideal solution to this problem, especially since sandboxing should reduce the kernel attack surface without introducing more complexity.
+> 
+> Aside from containers using namespaces, sandbox implementations based on seccomp and landlock would also run into the same problem, since landlock only provides file system isolation and seccomp cannot filter the path argument and therefore it can only be used to block new unix domain socket connections completely.
+> 
+> Currently there does not seem to be any way to disable network namespaces in the kernel without also disabling unix domain sockets.
+> 
+> The question is how to solve the issue of abstract socket isolation in a clean and efficient way, possibly even without namespaces.
+> What would be the ideal way to implement a mechanism to disable abstract sockets either globally or even better, in the context of a process.
+> And would such a patch have a realistic chance to make it into the kernel?
+
+Disabling them altogether would break lots of things depending on them,
+like X :)  (@/tmp/.X11-unix/X0).  The other path is to reconsider network
+namespaces.  There are several directions this could lead.  For one, as
+Dinesh Subhraveti often points out, the current "network" namespace is
+really a network device namespace.  If we instead namespace at the
+bind/connect/etc calls, we end up with much different abilities.  You
+can implement something like this today using seccomp-filter.
+
+-serge
