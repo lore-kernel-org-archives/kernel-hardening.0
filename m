@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21720-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21721-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 84214C4332F
-	for <kernel-hardening@archiver.kernel.org>; Thu,  2 Nov 2023 14:51:13 +0000 (UTC)
-Received: (qmail 7859 invoked by uid 550); 2 Nov 2023 14:51:00 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 2278EC4167B
+	for <kernel-hardening@archiver.kernel.org>; Wed, 29 Nov 2023 21:19:53 +0000 (UTC)
+Received: (qmail 24028 invoked by uid 550); 29 Nov 2023 21:19:44 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,104 +12,135 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7824 invoked from network); 2 Nov 2023 14:51:00 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=digikod.net;
-	s=20191114; t=1698936648;
-	bh=46MvR33ToQtq+GKZ/zeDIFhOwJkpgIN4XpvCQA5qzoI=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-	b=zQxdPL5O1P4PynsfsTd7keBW914GsYcJ7Wm+g3CZPmcYMyOkwNQYmtLyMKDadzApZ
-	 MPMK6TfngZXaAv1EwB82Hlc08m+X4G0mzwnH+VYaSNZEgwgJNwRYdC0oBSngxMEN6/
-	 +iDAanTpUhSssvYITN9+VhYh/wK+obboCBlgMbtU=
-Date: Thu, 2 Nov 2023 15:50:44 +0100
-From: =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>
-To: Jann Horn <jannh@google.com>
-Cc: Stefan Bavendiek <stefan.bavendiek@mailbox.org>, 
-	"Serge E. Hallyn" <serge@hallyn.com>, kernel-hardening@lists.openwall.com, 
-	linux-hardening@vger.kernel.org, Konstantin Meskhidze <konstantin.meskhidze@huawei.com>, 
-	=?utf-8?Q?G=C3=BCnther?= Noack <gnoack@google.com>
-Subject: Re: Isolating abstract sockets
-Message-ID: <20231102.MaeWaepav8nu@digikod.net>
-References: <Y59qBh9rRDgsIHaj@mailbox.org>
- <20231024134608.GC320399@mail.hallyn.com>
- <CAHC9VhRCJfBRu8172=5jF_gFhv2znQXTnGs_c_ae1G3rk_Dc-g@mail.gmail.com>
- <20231024141807.GB321218@mail.hallyn.com>
- <CAHC9VhQaotVPGzWFFzRCgw9mDDc2tu6kmGHioMBghj-ybbYx1Q@mail.gmail.com>
- <20231024160714.GA323539@mail.hallyn.com>
- <ZUFmW8DrxrhOhuVs@mailbox.org>
- <20231101.eeshae5Ahpei@digikod.net>
- <CAG48ez0wQ3LFxZ2jWj1sTZngTg4fEmx1=dXYuRbMMFk5CiYVbg@mail.gmail.com>
+Received: (qmail 24005 invoked from network); 29 Nov 2023 21:19:44 -0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 mail.namei.org AD5651E9
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=namei.org; s=2;
+	t=1701292771; bh=a4+Bn7RqABOY0GmF4sZWzB4XQIxtLMsIpqqVdVd/R/g=;
+	h=Date:From:To:cc:Subject:From;
+	b=esqokkU6m4nf9dlOK918bRvVgtUX1grKBeAa/6AFK1BFKHD7FLB9T9rZnn2FQju4M
+	 FQMGgT6R/+KJxex7roE249lEkPpcB7d7oKrbBWUBxuegkHAwBnS5v3JvCOMceY8GGB
+	 OUsmld/soqMTAIKUeFJ3nijvJUEmUYv4888HBa2I=
+Date: Wed, 29 Nov 2023 13:19:31 -0800 (PST)
+From: James Morris <jmorris@namei.org>
+To: linux-security-module@vger.kernel.org
+cc: Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>, 
+    lwn@lwn.net, linux-kernel@vger.kernel.org, linux-crypto@vger.kernel.org, 
+    kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, 
+    Audit-ML <linux-audit@redhat.com>
+Subject: [ANNOUNCE] CFP: Linux Security Summit North America 2024
+Message-ID: <826fd432-1acf-16be-e7a9-d692aeed23f0@namei.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAG48ez0wQ3LFxZ2jWj1sTZngTg4fEmx1=dXYuRbMMFk5CiYVbg@mail.gmail.com>
-X-Infomaniak-Routing: alpha
+Content-Type: text/plain; charset=US-ASCII
 
-On Wed, Nov 01, 2023 at 05:23:12PM +0100, Jann Horn wrote:
-> On Wed, Nov 1, 2023 at 11:57 AM Mickaël Salaün <mic@digikod.net> wrote:
-> > On Tue, Oct 31, 2023 at 09:40:59PM +0100, Stefan Bavendiek wrote:
-> > > On Tue, Oct 24, 2023 at 11:07:14AM -0500, Serge E. Hallyn wrote:
-> > > > In 2005, before namespaces were upstreamed, I posted the 'bsdjail' LSM,
-> > > > which briefly made it into the -mm kernel, but was eventually rejected as
-> > > > being an abuse of the LSM interface for OS level virtualization :)
-> > > >
-> > > > It's not 100% clear to me whether Stefan only wants isolation, or
-> > > > wants something closer to virtualization.
-> > > >
-> > > > Stefan, would an LSM allowing you to isolate certain processes from
-> > > > some abstract unix socket paths (or by label, whatever0 suffice for you?
-> > > >
-> > >
-> > > My intention was to find a clean way to isolate abstract sockets in network
-> > > applications without adding dependencies like LSMs. However the entire approach
-> > > of using namespaces for this is something I have mostly abandoned. LSMs like
-> > > Apparmor and SELinux would work fine for process isolation when you can control
-> > > the target system, but for general deployment of sandboxed processes, I found it
-> > > to be significantly easier (and more effective) to build this into the
-> > > application itself by using a multi process approach with seccomp (Basically how
-> > > OpenSSH did it)
-> >
-> > I agree that for sandbox use cases embedding such security policy into
-> > the application itself makes sense. Landlock works the same way as
-> > seccomp but it sandboxes applications according to the kernel semantic
-> > (e.g. process, socket). The LSM framework is just a kernel
-> > implementation detail. ;)
-> 
-> (Related, it might be nice if Landlock had a way to completely deny
-> access to abstract unix sockets,
 
-I think it would make more sense to scope access to abstract unix
-sockets: https://lore.kernel.org/all/20231025.eecai4uGh5Ie@digikod.net/
+==============================================================================
+                   ANNOUNCEMENT AND CALL FOR PARTICIPATION
 
-A complementary approach would be to restrict socket creation according
-to their properties:
-https://lore.kernel.org/all/b8a2045a-e7e8-d141-7c01-bf47874c7930@digikod.net/
+                   LINUX SECURITY SUMMIT NORTH AMERICA 2024
+                             
+                                 April 18-19
+                              Seattle, WA, USA
+==============================================================================
 
-> and a way to restrict filesystem unix
-> sockets with filesystem rules... LANDLOCK_ACCESS_FS_MAKE_SOCK exists
-> for restricting bind(), but I don't think there's an analogous
-> permission for connect().
+DESCRIPTION
+ 
+Linux Security Summit North America 2024 is a technical forum for
+collaboration between Linux developers, researchers, and end-users.  Its
+primary aim is to foster community efforts in deeply analyzing and solving
+Linux operating system security challenges, including those in the Linux
+kernel.
 
-I agree. It should not be too difficult to add a new LSM path hook for
-connect (and sendmsg) to named unix socket with the related access
-rights.  We should be careful about the impact on sendmsg calls though.
+Presentations are expected to focus deeply on new or improved technology and
+how it advances the state of practice for addressing these challenges.
 
-> 
-> Currently, when you try to sandbox an application with Landlock, you
-> have to use seccomp to completely block access to unix domain sockets,
-> or alternatively use something like the seccomp_unotify feature to
-> interactively filter connect() calls.
-> 
-> On the other hand, maybe such a feature would be a bit superfluous
-> when we have seccomp_unotify already... idk.)
+The program committee currently seeks proposals for:
+ 
+   * Refereed Presentations:
+     45 minutes in length.
+ 
+   * Panel Discussion Topics:
+     45 minutes in length.
+ 
+   * Short Topics:
+     30 minutes in total, including at least 10 minutes discussion.
+ 
+   * Tutorials
+     90 minutes in length.
 
-seccomp_unotify enables user space to emulate syscalls, which requires a
-service per sandbox. seccomp is useful but will always be delicate to
-use and to maintain the related filters for sandboxing use cases:
-https://www.ndss-symposium.org/ndss2003/traps-and-pitfalls-practical-problems-system-call-interposition-based-security-tools/
+Tutorial sessions should be focused on advanced Linux security defense
+topics within areas such as the kernel, compiler, and security-related
+libraries.  Priority will be given to tutorials created for this conference,
+and those where the presenter is a leading subject matter expert on the
+topic.
+ 
+Topic areas include, but are not limited to:
 
-Anyway, I'd be happy to help improve Landlock with new access control
-types.
+    * Access Control
+    * Case Studies
+    * Cryptography and Key Management
+    * Emerging Technologies, Threats & Techniques
+    * Hardware Security
+    * IoT and Embedded Security
+    * Integrity Policy and Enforcement
+    * Open Source Supply Chain for the Linux OS
+    * Security Tools
+    * Security UX
+    * Linux OS Hardening
+    * Virtualization and Containers
 
-FYI, TCP connect and bind access control should be part of Linux 6.7:
-https://lore.kernel.org/all/20231102131354.263678-1-mic@digikod.net/
+Proposals should be submitted via:
+    https://events.linuxfoundation.org/linux-security-summit-north-america/
+
+
+LSS-NA DATES
+ 
+  * CFP close:            Jan 21, 2024
+  * CFP notifications:    Feb 06, 2024
+  * Schedule announced:   Feb 08, 2024
+  * Event:                Apr 18-19, 2024
+
+
+WHO SHOULD ATTEND
+ 
+We're seeking a diverse range of attendees and welcome participation by
+people involved in Linux security development, operations, and research.
+ 
+LSS is a unique global event that provides the opportunity to present and
+discuss your work or research with key Linux security community members and
+maintainers.  It's also useful for those who wish to keep up with the latest
+in Linux security development and to provide input to the development
+process.
+
+
+WEB SITE
+
+    https://events.linuxfoundation.org/linux-security-summit-north-america/
+
+
+MASTODON
+
+  For event updates and announcements, follow:
+    
+    https://social.kernel.org/LinuxSecSummit
+  
+  #linuxsecuritysummit
+
+
+PROGRAM COMMITTEE
+
+  The program committee for LSS 2024 is:
+
+    * James Morris, Microsoft
+    * Serge Hallyn, Cisco
+    * Paul Moore, Microsoft
+    * Stephen Smalley, NSA
+    * Elena Reshetova, Intel
+    * John Johansen, Canonical
+    * Kees Cook, Google
+    * Casey Schaufler
+    * Mimi Zohar, IBM
+    * David A. Wheeler, Linux Foundation
+
+  The program committee may be contacted as a group via email:
+    lss-pc () lists.linuxfoundation.org
+
