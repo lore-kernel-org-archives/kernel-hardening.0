@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21725-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21726-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 26C9DC54E60
-	for <kernel-hardening@archiver.kernel.org>; Thu, 14 Mar 2024 18:26:23 +0000 (UTC)
-Received: (qmail 7239 invoked by uid 550); 14 Mar 2024 18:21:58 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 81BBFC54E60
+	for <kernel-hardening@archiver.kernel.org>; Thu, 14 Mar 2024 21:03:28 +0000 (UTC)
+Received: (qmail 23613 invoked by uid 550); 14 Mar 2024 20:59:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,157 +12,202 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7207 invoked from network); 14 Mar 2024 18:21:58 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple;
-  d=intel.com; i=@intel.com; q=dns/txt; s=Intel;
-  t=1710440774; x=1741976774;
-  h=date:from:to:cc:subject:message-id:references:
-   in-reply-to:mime-version;
-  bh=fOmK+Udmw7Av0zpZN0kTZuY9LLBlbX8pZr052SYheOY=;
-  b=gwGkV52TTS77ty2KK/gd03rtapC1h/kIdOf2hIL3RMgic0p7PmsTwdHK
-   4pLMj8Y3uk5MLO8vPO1otV4Eg5ozzQd4K917RP9AxT4OA3FI4rcivCkZ0
-   O4DoxqQ/q8BpsxyRfhJGgedobggzNy9bfcox2bMDLqkaIiDtUSB5NKDlS
-   QUIdm5EdPftsHe8JwOUFBC9lTAHBNuHoxRClErLO06KSkJhN11jTtIVTO
-   mkPBWV5xcSP++CvFL+LQvSFKZPT8gRzPdvOOIwuVubznqom4ziUjqNlNc
-   3PfkH2ZCv1Y9PGePPBW9jWSOYcDqV6VeCF4eXEvj1cB0yfXtI8hKGqL8K
-   A==;
-X-IronPort-AV: E=McAfee;i="6600,9927,11013"; a="5884381"
-X-IronPort-AV: E=Sophos;i="6.07,126,1708416000"; 
-   d="scan'208";a="5884381"
-X-ExtLoop1: 1
-X-IronPort-AV: E=Sophos;i="6.07,126,1708416000"; 
-   d="scan'208";a="12828279"
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=RZtlG0Qe2fOSv6S/aGlAz5j0V0kfByWnzxXmb4GTs1mSC2A80LVt6NEuTPBCZ8ZpwiHJfxsq3SsYVOsBNJLeoGSutkK2/S8m0MmxcVWWQksh606TgyHmy/AgaqDruGD/NHIvo5PFuQ7mGM55nWsx14bu2AkDoGqFaEHkpWgDH63M8K9TGa1oXrk0hC7eM7XugBRJn5CcYTWdO2p4rm2rqb8kZ913vcbluezvF7PqgamQjkLVDlRwKGDWgRzIDyqitCXnGBtU+DQ4/rr1bEahn4l+v8XZpIli3mrQX/XZn6Ur/qsq+HMnjwG+YJK0QAIn4y5NgnrBeDicwZ/wXyTJmQ==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
- bh=46dH6eud1Ey2LL4VFT879hjXXyVPtjUIDTbhoU7ePaU=;
- b=P8hkJ35os7Xmbp4340jriBaY8/c+/Smf/FLWaM/n5MC+JCfSLhtW53FPYkn+bdhHEQ7byStxQBctstjKxsVBGmZn9ajbcAvNLmMHNW39KKsmc9NNCrwXUSF6j9BO9sJ+O5srWnWbTADvOTYIszTwyigPTaio+1XHvPLTmnR3yDBBTd3CokgF20Mga9KTE6V+wHC9SGWHwu99QKZ82tTTg/2BTAs5iohiye6K6vtHE/tB/Pkrr2zgEt8BuLHyiFzEsbAI48kBzOmFogOCcFz7q0pXP+9GktSMAbmG/qpoKLbfwr4OOQjKmOhrV9y/NleBMCq3dhD6k28ysJIppyGhkQ==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
- smtp.mailfrom=intel.com; dmarc=pass action=none header.from=intel.com;
- dkim=pass header.d=intel.com; arc=none
-Authentication-Results: dkim=none (message not signed)
- header.d=none;dmarc=none action=none header.from=intel.com;
-Date: Thu, 14 Mar 2024 11:25:50 -0700
-From: Ira Weiny <ira.weiny@intel.com>
-To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>, "keescook@chromium.org"
-	<keescook@chromium.org>
-CC: "kernel-hardening@lists.openwall.com"
-	<kernel-hardening@lists.openwall.com>, "luto@kernel.org" <luto@kernel.org>,
-	"Hansen, Dave" <dave.hansen@intel.com>, "x86@kernel.org" <x86@kernel.org>,
-	"akpm@linux-foundation.org" <akpm@linux-foundation.org>,
-	"peterz@infradead.org" <peterz@infradead.org>, "linux-mm@kvack.org"
-	<linux-mm@kvack.org>, "rppt@kernel.org" <rppt@kernel.org>, "vbabka@suse.cz"
-	<vbabka@suse.cz>, "linux-hardening@vger.kernel.org"
-	<linux-hardening@vger.kernel.org>, "shakeelb@google.com"
-	<shakeelb@google.com>, "Weiny, Ira" <ira.weiny@intel.com>,
-	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Williams, Dan
- J" <dan.j.williams@intel.com>, "ardb@google.com" <ardb@google.com>
-Subject: Re: [RFC PATCH v2 00/19] PKS write protected page tables
-Message-ID: <65f3412e598c8_13f3a29410@iweiny-mobl.notmuch>
-References: <20210830235927.6443-1-rick.p.edgecombe@intel.com>
- <202403140927.5A5F290@keescook>
- <3b3c941f1fb69d67706457a30cecc96bfde57353.camel@intel.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-Disposition: inline
-In-Reply-To: <3b3c941f1fb69d67706457a30cecc96bfde57353.camel@intel.com>
-X-ClientProxiedBy: BYAPR05CA0086.namprd05.prod.outlook.com
- (2603:10b6:a03:e0::27) To SA1PR11MB6733.namprd11.prod.outlook.com
- (2603:10b6:806:25c::17)
+Received: (qmail 23574 invoked from network); 14 Mar 2024 20:59:04 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=sempervictus-com.20230601.gappssmtp.com; s=20230601; t=1710450190; x=1711054990; darn=lists.openwall.com;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=AzuHIDVnpodvf8Yk4kbRsSjN+JkysTBQ+d66KpBJz9I=;
+        b=HmhogfSOD3nUcavJezU1pOgyD3WuS42O7abuf/4y3IdOGsErHLnUQr+aEli38KlXwj
+         TfqJxl/mh8ZxGvlXZZd4bIHvn1y9zsoFZNhDbCFq69QwU8tdAjZeyozssTnpcbBV9vIw
+         morx7PGqDzsJwMP1zZjiWp3oeFO1n4ee959nf5sUcXkJV+xeBOup67SY/wdY3g3NbmMR
+         7+w0dCf5SdFdydxtB0GT7Hrp86BMd8vczbxu4Ob0E9gv3z1CNq4c6a8VQkreIXtQejxe
+         EEdYWNKY1+7+KQmQminKEBDorvA8ILUTGk7N61EX7btzUlh5bZ7EXvL31aIiEDF0w3Yd
+         CTrQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1710450190; x=1711054990;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=AzuHIDVnpodvf8Yk4kbRsSjN+JkysTBQ+d66KpBJz9I=;
+        b=BMTYxKG+Bb/+VHis5q2apubM6CvOD8AjHE/odYdRFM3huZw04tx7v5OQ/LT2vVMir5
+         SdtKg/ov6tXouGKjzcyAk9sGhlTdCFu3Sg4pmFSf+DwgXmpt9bQ3aFC2zzM6cFBrjB9C
+         DtsgfaiUqmG5JsfRgfUNjbvxtfLKfJKbuWHilXqv9yWmr6R+Ltg6OBxZXgUwZF3lOr9l
+         0xmqdLnNCcApCky77SrAz3pbuEZ9PLj7HktnAIRGXCZThXJChd+WilubfnIyS+3z7vJt
+         Bck2WVQ3v496IN3vQjtuD+yExOjbbgs4ot7CMocAjU/huI/atV9X/oXfsRSKiBFdDc06
+         N+mw==
+X-Forwarded-Encrypted: i=1; AJvYcCUSPaqHj1foCXMXH4RDLeyjxEABR2bMKuXovzGfrm3E2Inl3Ql5+2whPAY8vcysbFEjTkArqN2x1B5UIcCXAVfsH6Snr4VES0CegQq3agZPvkHLmw==
+X-Gm-Message-State: AOJu0YzXW7b4fgJA1bw3hPzDhB9yleirhoMVI3nQ3SXZbFV+OzGV/DBm
+	Az7r7wzMCDmYeVn8Bu+TFcgOvdHEz6RiUkOYzvPGqLCfa7MtoEytuw3Yg6YY3Y7SJXZas3DYwRt
+	m3do43yaz8Utbvj38kUflIaJh6xg12w0zIgRlzJdt+US2RTSuYtM=
+X-Google-Smtp-Source: AGHT+IGMBFRkxWjovdYSwAgw4fKNsLNeovNhukMUMNExBSIAMrIyRb0al87GLoaAFe3JL0D53s8FU083uXXQJmIWDdM=
+X-Received: by 2002:a25:aaec:0:b0:dc2:40d8:ac5e with SMTP id
+ t99-20020a25aaec000000b00dc240d8ac5emr3170960ybi.1.1710450189781; Thu, 14 Mar
+ 2024 14:03:09 -0700 (PDT)
 MIME-Version: 1.0
-X-MS-PublicTrafficType: Email
-X-MS-TrafficTypeDiagnostic: SA1PR11MB6733:EE_|SJ2PR11MB7714:EE_
-X-MS-Office365-Filtering-Correlation-Id: 5ce4f391-ad37-4903-106e-08dc44543019
-X-LD-Processed: 46c98d88-e344-4ed4-8496-4ed7712e255d,ExtAddr
-X-MS-Exchange-SenderADCheck: 1
-X-MS-Exchange-AntiSpam-Relay: 0
-X-Microsoft-Antispam: BCL:0;
-X-Microsoft-Antispam-Message-Info: RQc2sb60WwFxZD2555C0SstnYpN7QGGGLNg/QmrYDG4mF/RhutZU6VCSTFgHAI1KOE6M/meMN408mLrdhPfStqHsyGNLBQkHdBPZQj+eXxAuH3lfCIcVWRui+diLw4Pcw9phhC8QEPFBEpPxgHkHWUDDEMNhl/lgBwo7kw3Vkq4orkYBXt7VqqCX5yTLXgMjcVfWsEZaZlaa86sZ55OH6XUbIDlu1jFzxQX6gVGvjwKxIFUeoLUwBxlD1ooFEdtMG1KLMJy/pkjPAtp3nazFsmJ4U+UkuB4f5tutTeSWIC/ozX4iaPEEW7UptpDKFMM3ly1fycDvzJFzGjANgiL8U2+x1BHWYBZ4GvZcxqytEOv5NJy75qBxEJr0pvcdyobD6qdUhqyCTGn+ZiIUvkl/G3DIMr/E5GW59kYVTjFSy9bj3viVhM+XrzdeJiQ+9cydwCBAXFy/53BVYQ1rujAwlZb0XZ9ltI+98mqvqM6lBd3NYN2J4yctZYY5FIc9Nrhtrn9xPCs6IzVxiAAQtDHrnroznquHitxP7eCFXV6b1pxtEhveXGUounoACtjoDNgxcoASsZ9K4TQKrURaG1TW5d66dUIlEOXUxxprGbHtli4=
-X-Forefront-Antispam-Report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:SA1PR11MB6733.namprd11.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230031)(7416005)(1800799015)(376005);DIR:OUT;SFP:1101;
-X-MS-Exchange-AntiSpam-MessageData-ChunkCount: 1
-X-MS-Exchange-AntiSpam-MessageData-0: =?us-ascii?Q?ooZkKFkMuTazgM2B8m1uNdbsOWR1JLyTs7hSw3gN9Ow+jPagSbYoTWIVoUg3?=
- =?us-ascii?Q?gnwsgr0+sWkYjgBwLP8kK0KXSnTrEmHzuv0XHSGRsDAqInPMe40e8uFF/W6v?=
- =?us-ascii?Q?3yIvle9PqjgExJEdOHD8qCzdj5ylg1qCGxlRTVTT82eAGpNpH62vGlT8v19p?=
- =?us-ascii?Q?CDmuo7ooRDPyQsaehpafH26KUczgovF3BGO8JDXrNiHEe0UUDLBg1x/JtOUS?=
- =?us-ascii?Q?csS6WnOfErDdO8QV371vZFFPUgWG4k68bdqsDGcqbPGwH1R2n89G2vTdQHJ0?=
- =?us-ascii?Q?Qq1cXdmy5UUOxaTlYuY0R6gUdqaVRvFZvKBdfeT8nvSOQNSG+gMRu4cqldmt?=
- =?us-ascii?Q?2b3OfOZSJ5pYrlhVxNZWaK7LVYUhWx88DW1hMPedDybNjEWOA5tMA1wl4xPz?=
- =?us-ascii?Q?guNV64fwSDH5/AtngVHoMMmZmcDMdpRDUuUBaOy2/omN+XyshKD5iwXFCQXT?=
- =?us-ascii?Q?OdD9Pue1SPKHmWmOH/iMUObdzVj0H3c0SR6kfkn+R90st3EE7cwJAL2AW0V7?=
- =?us-ascii?Q?cH9PtwTocrY7RMnpps+Yg5RLPvCUrU9CYRgCvocH5w/WYEZ/1GnYv0XMRAWg?=
- =?us-ascii?Q?VLXCurrSF/fPHE+VOIi0FoY+YufERRBew1y+cQWaD9JB65MhEaz/nBOe4uXn?=
- =?us-ascii?Q?lrztJhHr0lcxS8BMyXnEObbJURTAPLA3kxLM+IkLPIUGnupR/dLKVrHb+CPi?=
- =?us-ascii?Q?vYq2Lia+M+KeEdtCysGSPdAGFsyFy7OzScJXdTUHalLo+MB6/ebkltrqIMfY?=
- =?us-ascii?Q?Ud/ce9LoUgbUTZ6vUxZeKFBwngCoxxU+Ukkdpd6kLI2cok8um2mWRTXLry6N?=
- =?us-ascii?Q?ietHjZuRQZ2t3H8zvIQSA/6QTlxpCJsYHe9SCg3zyB34HHO4K6PLp7xtPUV4?=
- =?us-ascii?Q?ef9j9Er9cnU89YoHrVDP0GzcT+N1fMYdfOrwJHVg8rLmx4gJXiiYogMcS5T4?=
- =?us-ascii?Q?fKwV1KRoNX+cZgK00spOv2IzuI7ErnB4/FyDzB+Oz9B3Nj5Fi6isOfmOs+nP?=
- =?us-ascii?Q?QGMMYjbZOOXR7s9/fWmL96xFQJCYGgEM4IrPkRBkNeCY6vJL/0mutkKZdFFw?=
- =?us-ascii?Q?JMXTnAibA5lbnhF1OgYbUq4Z+urz+dQ5uqlGBRilaWFGeZhZ9P6Cz1+Z6el4?=
- =?us-ascii?Q?VQbJFXb+ZjiWAvJS9QpuVkigdqvuEc1Q+QJCHNmWzzWK6kofrU34ZBkWVTMo?=
- =?us-ascii?Q?xajYgaX7d5MZPu4xkMW0gBFSQr8ri6SuRdwAZPgea7TFHdw1GSMKWeJR22RY?=
- =?us-ascii?Q?8MQThpDhZ8XOLIIL4kNzRGKVsYVgBn5gzDamDiLkJUxblmKbDCB9JKr44W1q?=
- =?us-ascii?Q?xhfSPc/SIoe0G4sfBcNKtQPDv5WpjPrOjbdNwedXXZsXodraiareBIzJX6U7?=
- =?us-ascii?Q?aJMn7WRJH/+CMB16XF/di/g8153LdB5BXclLbPu+hSvixONp30LModfUVAzC?=
- =?us-ascii?Q?kGBE0Z6ntnV5nTfnyXzLMtLkpU1rHWDnxmdqIKuBqBdCPRofnOpbXf+G3SbR?=
- =?us-ascii?Q?VYw8+Voa87+i3HrdsVCJ681JBLzmw/sjYSslDRAl/O9xnqC781pSQcMM/5f5?=
- =?us-ascii?Q?LmAxJjPZFvYy1hXd0eyc2JTA+I8tOw8djOOza3ic?=
-X-MS-Exchange-CrossTenant-Network-Message-Id: 5ce4f391-ad37-4903-106e-08dc44543019
-X-MS-Exchange-CrossTenant-AuthSource: SA1PR11MB6733.namprd11.prod.outlook.com
-X-MS-Exchange-CrossTenant-AuthAs: Internal
-X-MS-Exchange-CrossTenant-OriginalArrivalTime: 14 Mar 2024 18:25:55.6460
- (UTC)
-X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
-X-MS-Exchange-CrossTenant-Id: 46c98d88-e344-4ed4-8496-4ed7712e255d
-X-MS-Exchange-CrossTenant-MailboxType: HOSTED
-X-MS-Exchange-CrossTenant-UserPrincipalName: balx622iOidQ3dGYbJg8CpTQcTpb//zjo5nc/xCKElgt0cKkyu4tOxnAPhlZUKpu70IS7/164HJWyT4Px9H5gw==
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: SJ2PR11MB7714
-X-OriginatorOrg: intel.com
+References: <20210830235927.6443-1-rick.p.edgecombe@intel.com>
+ <202403140927.5A5F290@keescook> <3b3c941f1fb69d67706457a30cecc96bfde57353.camel@intel.com>
+ <65f3412e598c8_13f3a29410@iweiny-mobl.notmuch>
+In-Reply-To: <65f3412e598c8_13f3a29410@iweiny-mobl.notmuch>
+From: Boris Lukashev <blukashev@sempervictus.com>
+Date: Thu, 14 Mar 2024 17:02:58 -0400
+Message-ID: <CAFUG7CfTETMzj2ofF+jmUxRrtbEhNDO7U5N0ftKbA8_t6WS2-w@mail.gmail.com>
+Subject: Re: [RFC PATCH v2 00/19] PKS write protected page tables
+To: Ira Weiny <ira.weiny@intel.com>
+Cc: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>, 
+	"keescook@chromium.org" <keescook@chromium.org>, 
+	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "luto@kernel.org" <luto@kernel.org>, 
+	"Hansen, Dave" <dave.hansen@intel.com>, "x86@kernel.org" <x86@kernel.org>, 
+	"akpm@linux-foundation.org" <akpm@linux-foundation.org>, "peterz@infradead.org" <peterz@infradead.org>, 
+	"linux-mm@kvack.org" <linux-mm@kvack.org>, "rppt@kernel.org" <rppt@kernel.org>, "vbabka@suse.cz" <vbabka@suse.cz>, 
+	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, 
+	"shakeelb@google.com" <shakeelb@google.com>, 
+	"linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Williams, Dan J" <dan.j.williams@intel.com>, 
+	"ardb@google.com" <ardb@google.com>
+Content-Type: multipart/alternative; boundary="000000000000f7ef5e0613a537e6"
 
-Edgecombe, Rick P wrote:
-> On Thu, 2024-03-14 at 09:27 -0700, Kees Cook wrote:
-> > On Mon, Aug 30, 2021 at 04:59:08PM -0700, Rick Edgecombe wrote:
-> > > This is a second RFC for the PKS write protected tables concept.
-> > > I'm sharing to
-> > > show the progress to interested people. I'd also appreciate any
-> > > comments,
-> > > especially on the direct map page table protection solution (patch
-> > > 17).
-> > 
-> > *thread necromancy*
-> > 
-> > Hi,
-> > 
-> > Where does this series stand? I don't think it ever got merged?
-> 
-> There are sort of three components to this:
-> 1. Basic PKS support. It was dropped after the main use case was
-> rejected (pmem stray write protection).
+--000000000000f7ef5e0613a537e6
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-This was the main reason it got dropped.
+IIRC shoot-downs are one of the reasons for using per-cpu PGDs which would
+be a hard sell to some people.
+https://forum.osdev.org/viewtopic.php?f=3D15&t=3D29661
 
-> 2. Solution for applying direct map permissions efficiently. This
-> includes avoiding excessive kernel shootdowns, as well as avoiding
-> direct map fragmentation. rppt continued to look at the fragmentation
-> part of the problem and ended up arguing that it actually isn't an
-> issue [0]. Regardless, the shootdown problem remains for usages like
-> PKS tables that allocate so frequently. There is an attempt to address
-> both in this series. But given the above, there may be lots of debate
-> and opinions.
-> 3. The actual protection of the PKS tables (most of this series). It
-> got paused when I started to work on CET. In the meantime 1 was
-> dropped, and 2 is still open(?). So there is more to work through now,
-> then when it was dropped.
-> 
-> If anyone wants to pick it up, it is fine by me. I can help with
-> reviews.
+-Boris
 
-I can help with reviews as well,
-Ira
+On Thu, Mar 14, 2024 at 2:26=E2=80=AFPM Ira Weiny <ira.weiny@intel.com> wro=
+te:
 
-> 
-> 
-> [0] https://lwn.net/Articles/931406/
+> Edgecombe, Rick P wrote:
+> > On Thu, 2024-03-14 at 09:27 -0700, Kees Cook wrote:
+> > > On Mon, Aug 30, 2021 at 04:59:08PM -0700, Rick Edgecombe wrote:
+> > > > This is a second RFC for the PKS write protected tables concept.
+> > > > I'm sharing to
+> > > > show the progress to interested people. I'd also appreciate any
+> > > > comments,
+> > > > especially on the direct map page table protection solution (patch
+> > > > 17).
+> > >
+> > > *thread necromancy*
+> > >
+> > > Hi,
+> > >
+> > > Where does this series stand? I don't think it ever got merged?
+> >
+> > There are sort of three components to this:
+> > 1. Basic PKS support. It was dropped after the main use case was
+> > rejected (pmem stray write protection).
+>
+> This was the main reason it got dropped.
+>
+> > 2. Solution for applying direct map permissions efficiently. This
+> > includes avoiding excessive kernel shootdowns, as well as avoiding
+> > direct map fragmentation. rppt continued to look at the fragmentation
+> > part of the problem and ended up arguing that it actually isn't an
+> > issue [0]. Regardless, the shootdown problem remains for usages like
+> > PKS tables that allocate so frequently. There is an attempt to address
+> > both in this series. But given the above, there may be lots of debate
+> > and opinions.
+> > 3. The actual protection of the PKS tables (most of this series). It
+> > got paused when I started to work on CET. In the meantime 1 was
+> > dropped, and 2 is still open(?). So there is more to work through now,
+> > then when it was dropped.
+> >
+> > If anyone wants to pick it up, it is fine by me. I can help with
+> > reviews.
+>
+> I can help with reviews as well,
+> Ira
+>
+> >
+> >
+> > [0] https://lwn.net/Articles/931406/
+>
+>
+>
 
+--=20
+Boris Lukashev
+Systems Architect
+Semper Victus <https://www.sempervictus.com>
 
+--000000000000f7ef5e0613a537e6
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div>IIRC shoot-downs are one of the reasons for using per=
+-cpu PGDs which would be a hard sell to some people.</div><div><a href=3D"h=
+ttps://forum.osdev.org/viewtopic.php?f=3D15&amp;t=3D29661">https://forum.os=
+dev.org/viewtopic.php?f=3D15&amp;t=3D29661</a></div><div><br></div><div>-Bo=
+ris<br></div></div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D=
+"gmail_attr">On Thu, Mar 14, 2024 at 2:26=E2=80=AFPM Ira Weiny &lt;<a href=
+=3D"mailto:ira.weiny@intel.com">ira.weiny@intel.com</a>&gt; wrote:<br></div=
+><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border=
+-left:1px solid rgb(204,204,204);padding-left:1ex">Edgecombe, Rick P wrote:=
+<br>
+&gt; On Thu, 2024-03-14 at 09:27 -0700, Kees Cook wrote:<br>
+&gt; &gt; On Mon, Aug 30, 2021 at 04:59:08PM -0700, Rick Edgecombe wrote:<b=
+r>
+&gt; &gt; &gt; This is a second RFC for the PKS write protected tables conc=
+ept.<br>
+&gt; &gt; &gt; I&#39;m sharing to<br>
+&gt; &gt; &gt; show the progress to interested people. I&#39;d also appreci=
+ate any<br>
+&gt; &gt; &gt; comments,<br>
+&gt; &gt; &gt; especially on the direct map page table protection solution =
+(patch<br>
+&gt; &gt; &gt; 17).<br>
+&gt; &gt; <br>
+&gt; &gt; *thread necromancy*<br>
+&gt; &gt; <br>
+&gt; &gt; Hi,<br>
+&gt; &gt; <br>
+&gt; &gt; Where does this series stand? I don&#39;t think it ever got merge=
+d?<br>
+&gt; <br>
+&gt; There are sort of three components to this:<br>
+&gt; 1. Basic PKS support. It was dropped after the main use case was<br>
+&gt; rejected (pmem stray write protection).<br>
+<br>
+This was the main reason it got dropped.<br>
+<br>
+&gt; 2. Solution for applying direct map permissions efficiently. This<br>
+&gt; includes avoiding excessive kernel shootdowns, as well as avoiding<br>
+&gt; direct map fragmentation. rppt continued to look at the fragmentation<=
+br>
+&gt; part of the problem and ended up arguing that it actually isn&#39;t an=
+<br>
+&gt; issue [0]. Regardless, the shootdown problem remains for usages like<b=
+r>
+&gt; PKS tables that allocate so frequently. There is an attempt to address=
+<br>
+&gt; both in this series. But given the above, there may be lots of debate<=
+br>
+&gt; and opinions.<br>
+&gt; 3. The actual protection of the PKS tables (most of this series). It<b=
+r>
+&gt; got paused when I started to work on CET. In the meantime 1 was<br>
+&gt; dropped, and 2 is still open(?). So there is more to work through now,=
+<br>
+&gt; then when it was dropped.<br>
+&gt; <br>
+&gt; If anyone wants to pick it up, it is fine by me. I can help with<br>
+&gt; reviews.<br>
+<br>
+I can help with reviews as well,<br>
+Ira<br>
+<br>
+&gt; <br>
+&gt; <br>
+&gt; [0] <a href=3D"https://lwn.net/Articles/931406/" rel=3D"noreferrer" ta=
+rget=3D"_blank">https://lwn.net/Articles/931406/</a><br>
+<br>
+<br>
+</blockquote></div><br clear=3D"all"><br><span class=3D"gmail_signature_pre=
+fix">-- </span><br><div dir=3D"ltr" class=3D"gmail_signature"><div dir=3D"l=
+tr"><div><div dir=3D"ltr"><div><div dir=3D"ltr">Boris Lukashev<br>Systems A=
+rchitect<br><a href=3D"https://www.sempervictus.com" target=3D"_blank">Semp=
+er Victus</a><br></div></div></div></div></div></div>
+
+--000000000000f7ef5e0613a537e6--
