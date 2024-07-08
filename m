@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21755-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21756-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 75D3EC3271E
-	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jul 2024 17:33:58 +0000 (UTC)
-Received: (qmail 28533 invoked by uid 550); 8 Jul 2024 17:33:47 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 31FCCC3271E
+	for <kernel-hardening@archiver.kernel.org>; Mon,  8 Jul 2024 17:36:03 +0000 (UTC)
+Received: (qmail 1231 invoked by uid 550); 8 Jul 2024 17:35:47 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,38 +12,27 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 28513 invoked from network); 8 Jul 2024 17:33:47 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1720460018;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=NzysFrdc8w10bKEbWw8ppHuT/B9oi64/ANDYqxDHLjs=;
-	b=Uz0YzfUVuKDeOnpVNFZ8H88BQE4hpakzGXA8XkQPG09PwbWl7zlIi5iVwo3GROYxgCns4E
-	o0IRNl7qBwiH0cjsezBb5vKC5oKo86ORTQtYCVGjRb5F6kdX/zq3y5pIfJyZeJMl44XO71
-	9wrfAIttHz3TKjwZFemGFrg96KVxIeA=
-X-MC-Unique: i2EE8bhrPTu-d51vmcgTDg-1
-From: Florian Weimer <fweimer@redhat.com>
-To: Jeff Xu <jeffxu@google.com>
+Received: (qmail 1197 invoked from network); 8 Jul 2024 17:35:46 -0000
+From: "Eric W. Biederman" <ebiederm@xmission.com>
+To: Florian Weimer <fweimer@redhat.com>
 Cc: =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>,  Al Viro
  <viro@zeniv.linux.org.uk>,
   Christian Brauner <brauner@kernel.org>,  Kees Cook
  <keescook@chromium.org>,  Linus Torvalds <torvalds@linux-foundation.org>,
-  Paul Moore <paul@paul-moore.com>,  "Theodore Ts'o" <tytso@mit.edu>,
-  Alejandro Colomar <alx.manpages@gmail.com>,  Aleksa Sarai
- <cyphar@cyphar.com>,  Andrew Morton <akpm@linux-foundation.org>,  Andy
- Lutomirski <luto@kernel.org>,  Arnd Bergmann <arnd@arndb.de>,  Casey
- Schaufler <casey@schaufler-ca.com>,  Christian Heimes
- <christian@python.org>,  Dmitry Vyukov <dvyukov@google.com>,  Eric Biggers
- <ebiggers@kernel.org>,  Eric Chiang <ericchiang@google.com>,  Fan Wu
- <wufan@linux.microsoft.com>,  Geert Uytterhoeven <geert@linux-m68k.org>,
-  James Morris <jamorris@linux.microsoft.com>,  Jan Kara <jack@suse.cz>,
-  Jann Horn <jannh@google.com>,  Jonathan Corbet <corbet@lwn.net>,  Jordan
- R Abrahams <ajordanr@google.com>,  Lakshmi Ramasubramanian
- <nramas@linux.microsoft.com>,  Luca Boccassi <bluca@debian.org>,  Luis
- Chamberlain <mcgrof@kernel.org>,  "Madhavan T . Venkataraman"
- <madvenka@linux.microsoft.com>,  Matt Bobrowski
+  Paul Moore <paul@paul-moore.com>,  Theodore Ts'o <tytso@mit.edu>,
+  Alejandro Colomar <alx@kernel.org>,  Aleksa Sarai <cyphar@cyphar.com>,
+  Andrew Morton <akpm@linux-foundation.org>,  Andy Lutomirski
+ <luto@kernel.org>,  Arnd Bergmann <arnd@arndb.de>,  Casey Schaufler
+ <casey@schaufler-ca.com>,  Christian Heimes <christian@python.org>,
+  Dmitry Vyukov <dvyukov@google.com>,  Eric Biggers <ebiggers@kernel.org>,
+  Eric Chiang <ericchiang@google.com>,  Fan Wu <wufan@linux.microsoft.com>,
+  Geert Uytterhoeven <geert@linux-m68k.org>,  James Morris
+ <jamorris@linux.microsoft.com>,  Jan Kara <jack@suse.cz>,  Jann Horn
+ <jannh@google.com>,  Jeff Xu <jeffxu@google.com>,  Jonathan Corbet
+ <corbet@lwn.net>,  Jordan R Abrahams <ajordanr@google.com>,  Lakshmi
+ Ramasubramanian <nramas@linux.microsoft.com>,  Luca Boccassi
+ <bluca@debian.org>,  Luis Chamberlain <mcgrof@kernel.org>,  "Madhavan T .
+ Venkataraman" <madvenka@linux.microsoft.com>,  Matt Bobrowski
  <mattbobrowski@google.com>,  Matthew Garrett <mjg59@srcf.ucam.org>,
   Matthew Wilcox <willy@infradead.org>,  Miklos Szeredi
  <mszeredi@redhat.com>,  Mimi Zohar <zohar@linux.ibm.com>,  Nicolas
@@ -56,44 +45,199 @@ Cc: =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>,  Al Viro
  Fengwei <fengwei.yin@intel.com>,  kernel-hardening@lists.openwall.com,
   linux-api@vger.kernel.org,  linux-fsdevel@vger.kernel.org,
   linux-integrity@vger.kernel.org,  linux-kernel@vger.kernel.org,
-  linux-security-module@vger.kernel.org
-Subject: Re: [RFC PATCH v19 1/5] exec: Add a new AT_CHECK flag to execveat(2)
-In-Reply-To: <CALmYWFvkUnevm=npBeaZVkK_PXm=A8MjgxFXkASnERxoMyhYBg@mail.gmail.com>
-	(Jeff Xu's message of "Mon, 8 Jul 2024 09:40:45 -0700")
+  linux-security-module@vger.kernel.org,  linux-mm@kvack.org
 References: <20240704190137.696169-1-mic@digikod.net>
 	<20240704190137.696169-2-mic@digikod.net>
 	<87bk3bvhr1.fsf@oldenburg.str.redhat.com>
-	<CALmYWFu_JFyuwYhDtEDWxEob8JHFSoyx_SCcsRVKqSYyyw30Rg@mail.gmail.com>
-	<87ed83etpk.fsf@oldenburg.str.redhat.com>
-	<CALmYWFvkUnevm=npBeaZVkK_PXm=A8MjgxFXkASnERxoMyhYBg@mail.gmail.com>
-Date: Mon, 08 Jul 2024 19:33:03 +0200
-Message-ID: <87r0c3dc1c.fsf@oldenburg.str.redhat.com>
-User-Agent: Gnus/5.13 (Gnus v5.13)
+	<20240706.poo9ahd3La9b@digikod.net>
+	<871q46bkoz.fsf@oldenburg.str.redhat.com>
+	<20240708.zooj9Miaties@digikod.net>
+	<878qybet6t.fsf_-_@oldenburg.str.redhat.com>
+Date: Mon, 08 Jul 2024 12:34:28 -0500
+In-Reply-To: <878qybet6t.fsf_-_@oldenburg.str.redhat.com> (Florian Weimer's
+	message of "Mon, 08 Jul 2024 18:37:14 +0200")
+Message-ID: <87cynn3hzv.fsf@email.froward.int.ebiederm.org>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/28.2 (gnu/linux)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-X-Scanned-By: MIMEDefang 3.0 on 10.30.177.12
+X-XM-SPF: eid=1sQsGg-009Wzz-4Z;;;mid=<87cynn3hzv.fsf@email.froward.int.ebiederm.org>;;;hst=in02.mta.xmission.com;;;ip=68.227.165.127;;;frm=ebiederm@xmission.com;;;spf=pass
+X-XM-AID: U2FsdGVkX19HTToYa5/poe3TSuCfV/i9WSH+lfvgNyM=
+X-SA-Exim-Connect-IP: 68.227.165.127
+X-SA-Exim-Mail-From: ebiederm@xmission.com
+Subject: Re: [PATCH] binfmt_elf: Fail execution of shared objects with ELIBEXEC
+X-SA-Exim-Version: 4.2.1 (built Sat, 08 Feb 2020 21:53:50 +0000)
+X-SA-Exim-Scanned: Yes (on in02.mta.xmission.com)
 
-* Jeff Xu:
 
-> On Mon, Jul 8, 2024 at 9:26=E2=80=AFAM Florian Weimer <fweimer@redhat.com=
-> wrote:
+Florian Weimer <fweimer@redhat.com> writes:
+
+> * Micka=C3=ABl Sala=C3=BCn:
+>
+>> On Sat, Jul 06, 2024 at 05:32:12PM +0200, Florian Weimer wrote:
+>>> * Micka=C3=ABl Sala=C3=BCn:
+>>>=20
+>>> > On Fri, Jul 05, 2024 at 08:03:14PM +0200, Florian Weimer wrote:
+>>> >> * Micka=C3=ABl Sala=C3=BCn:
+>>> >>=20
+>>> >> > Add a new AT_CHECK flag to execveat(2) to check if a file would be
+>>> >> > allowed for execution.  The main use case is for script interprete=
+rs and
+>>> >> > dynamic linkers to check execution permission according to the ker=
+nel's
+>>> >> > security policy. Another use case is to add context to access logs=
+ e.g.,
+>>> >> > which script (instead of interpreter) accessed a file.  As any
+>>> >> > executable code, scripts could also use this check [1].
+>>> >>=20
+>>> >> Some distributions no longer set executable bits on most shared obje=
+cts,
+>>> >> which I assume would interfere with AT_CHECK probing for shared obje=
+cts.
+>>> >
+>>> > A file without the execute permission is not considered as executable=
+ by
+>>> > the kernel.  The AT_CHECK flag doesn't change this semantic.  Please
+>>> > note that this is just a check, not a restriction.  See the next patch
+>>> > for the optional policy enforcement.
+>>> >
+>>> > Anyway, we need to define the policy, and for Linux this is done with
+>>> > the file permission bits.  So for systems willing to have a consistent
+>>> > execution policy, we need to rely on the same bits.
+>>>=20
+>>> Yes, that makes complete sense.  I just wanted to point out the odd
+>>> interaction with the old binutils bug and the (sadly still current)
+>>> kernel bug.
+>>>=20
+>>> >> Removing the executable bit is attractive because of a combination of
+>>> >> two bugs: a binutils wart which until recently always set the entry
+>>> >> point address in the ELF header to zero, and the kernel not checking=
+ for
+>>> >> a zero entry point (maybe in combination with an absent program
+>>> >> interpreter) and failing the execve with ELIBEXEC, instead of doing =
+the
+>>> >> execve and then faulting at virtual address zero.  Removing the
+>>> >> executable bit is currently the only way to avoid these confusing
+>>> >> crashes, so I understand the temptation.
+>>> >
+>>> > Interesting.  Can you please point to the bug report and the fix?  I
+>>> > don't see any ELIBEXEC in the kernel.
+>>>=20
+>>> The kernel hasn't been fixed yet.  I do think this should be fixed, so
+>>> that distributions can bring back the executable bit.
 >>
->> * Jeff Xu:
->>
->> > Will dynamic linkers use the execveat(AT_CHECK) to check shared
->> > libraries too ?  or just the main executable itself.
->>
->> I expect that dynamic linkers will have to do this for everything they
->> map.
-> Then all the objects (.so, .sh, etc.) will go through  the check from
-> execveat's main  to security_bprm_creds_for_exec(), some of them might
-> be specific for the main executable ?
+>> Can you please point to the mailing list discussion or the bug report?
+>
+> I'm not sure if this was ever reported upstream as an RFE to fail with
+> ELIBEXEC.  We have downstream bug report:
+>
+>   Prevent executed .so files with e_entry =3D=3D 0 from attempting to bec=
+ome
+>   a process.
+>   <https://bugzilla.redhat.com/show_bug.cgi?id=3D2004942>
+>
+> I've put together a patch which seems to work, see below.
+>
+> I don't think there's any impact on AT_CHECK with execveat because that
+> mode will never get to this point.
+>
+> Thanks,
+> Florian
+>
+> ---8<-----------------------------------------------------------------
+> Subject: binfmt_elf: Fail execution of shared objects with ELIBEXEC
+>=20=20=20=20=20
+> Historically, binutils has used the start of the text segment as the
+> entry point if _start was not defined.  Executing such files results
+> in crashes with random effects, depending on what code resides there.
+> However, starting with binutils 2.38, BFD ld uses a zero entry point,
+> due to commit 5226a6a892f922ea672e5775c61776830aaf27b7 ("Change the
+> linker's heuristic for computing the entry point for binaries so that
+> shared libraries default to an entry point of 0.").  This means
+> that shared objects with zero entry points are becoming more common,
+> and it makes sense for the kernel to recognize them and refuse
+> to execute them.
+>
+> For backwards compatibility, if a load segment does not map the ELF
+> header at file offset zero, the kernel still proceeds as before, in
+> case the file is very non-standard and can actually start executing
+> at virtual offset zero.
 
-If we want to avoid that, we could have an agreed-upon error code which
-the LSM can signal that it'll never fail AT_CHECK checks, so we only
-have to perform the extra system call once.
 
-Thanks,
-Florian
+As written I find the logic of the patch confusing, and slightly wrong.
 
+The program header value e_entry is a virtual address, possibly adjusted
+by load_bias.  Which makes testing it against the file offset of a
+PT_LOAD segment wrong.  It needs to test against elf_ppnt->p_vaddr.
+
+I think performing an early sanity check to avoid very confusing crashes
+seems sensible (as long as it is inexpensive).  This appears inexpensive
+enough that we don't care.  This code is also before begin_new_exec
+so it is early enough to be meaningful.
+
+I think the check should simply test if e_entry is mapped.  So a range
+check please to see if e_entry falls in a PT_LOAD segment.
+
+Having code start at virtual address 0 is a perfectly fine semantically
+and might happen in embedded scenarios.
+
+The program header is not required to be mapped or be first, (AKA
+p_offset and p_vaddr can have a somewhat arbitrary relationship) so any
+mention of the program header in your logic seems confusing to me.
+
+I think your basic structure will work.  Just the first check needs to
+check if e_entry is lands inside the virtual address of a PT_LOAD
+segment.  The second check should just be checking a variable to see if
+e_entry was inside any PT_LOAD segment, and there is no interpreter.
+
+Does that make sense?
+
+Eric
+
+
+>
+> Signed-off-by: Florian Weimer <fweimer@redhat.com>
+>
+> diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+> index a43897b03ce9..ebd7052eb616 100644
+> --- a/fs/binfmt_elf.c
+> +++ b/fs/binfmt_elf.c
+> @@ -830,6 +830,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
+>  	unsigned long e_entry;
+>  	unsigned long interp_load_addr =3D 0;
+>  	unsigned long start_code, end_code, start_data, end_data;
+> +	bool elf_header_mapped =3D false;
+>  	unsigned long reloc_func_desc __maybe_unused =3D 0;
+>  	int executable_stack =3D EXSTACK_DEFAULT;
+>  	struct elfhdr *elf_ex =3D (struct elfhdr *)bprm->buf;
+> @@ -865,6 +866,9 @@ static int load_elf_binary(struct linux_binprm *bprm)
+>  			continue;
+>  		}
+>=20=20
+> +		if (elf_ppnt->p_type =3D=3D PT_LOAD && !elf_ppnt->p_offset)
+> +			elf_header_mapped =3D true;
+> +
+>  		if (elf_ppnt->p_type !=3D PT_INTERP)
+>  			continue;
+>=20=20
+> @@ -921,6 +925,20 @@ static int load_elf_binary(struct linux_binprm *bprm)
+>  		goto out_free_ph;
+>  	}
+>=20=20
+> +	/*
+> +	 * A zero value for e_entry means that the ELF file has no
+> +	 * entry point.  If the ELF header is mapped, this is
+> +	 * guaranteed to crash (often even on the first instruction),
+> +	 * so fail the execve system call instead.  (This is most
+> +	 * likely to happen for a shared object.)  If the object has a
+> +	 * program interpreter, dealing with the situation is its
+> +	 * responsibility.
+> +	 */
+> +	if (elf_header_mapped && !elf_ex->e_entry && !interpreter) {
+> +		retval =3D -ELIBEXEC;
+> +		goto out_free_dentry;
+> +	}
+> +
+>  	elf_ppnt =3D elf_phdata;
+>  	for (i =3D 0; i < elf_ex->e_phnum; i++, elf_ppnt++)
+>  		switch (elf_ppnt->p_type) {
