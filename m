@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21787-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21788-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 92EAEC3DA59
-	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Jul 2024 16:11:48 +0000 (UTC)
-Received: (qmail 15580 invoked by uid 550); 16 Jul 2024 16:11:32 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id E0D01C3DA49
+	for <kernel-hardening@archiver.kernel.org>; Tue, 16 Jul 2024 16:13:23 +0000 (UTC)
+Received: (qmail 20102 invoked by uid 550); 16 Jul 2024 16:13:05 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,12 +12,27 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 19661 invoked from network); 16 Jul 2024 15:58:22 -0000
-Message-ID: <9e3df65c2bf060b5833558e9f8d82dcd2fe9325a.camel@huaweicloud.com>
+Received: (qmail 20079 invoked from network); 16 Jul 2024 16:13:04 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple;
+	d=hansenpartnership.com; s=20151216; t=1721146374;
+	bh=uVjkJ49b/yBaPoybzQj8BJWIAtzJ2A0MyWEfn24MNKA=;
+	h=Message-ID:Subject:From:To:Date:In-Reply-To:References:From;
+	b=w5Ti5JRE//Vx3a3OuzV8wkqcdM9o25BnWOnkKOIPpVYAihmxEB6ByOff1/m10QOAj
+	 py6wkR3M3X1tu+AvcVcI5EL3dTrPfor6U3VAEPlCcFsgi7fevJCeZzukaGyok6HDG+
+	 6u+uHdCeyHj5/D5TVEJ6WZRd2Ek87OwEv4EI0nis=
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple;
+	d=hansenpartnership.com; s=20151216; t=1721146374;
+	bh=uVjkJ49b/yBaPoybzQj8BJWIAtzJ2A0MyWEfn24MNKA=;
+	h=Message-ID:Subject:From:To:Date:In-Reply-To:References:From;
+	b=w5Ti5JRE//Vx3a3OuzV8wkqcdM9o25BnWOnkKOIPpVYAihmxEB6ByOff1/m10QOAj
+	 py6wkR3M3X1tu+AvcVcI5EL3dTrPfor6U3VAEPlCcFsgi7fevJCeZzukaGyok6HDG+
+	 6u+uHdCeyHj5/D5TVEJ6WZRd2Ek87OwEv4EI0nis=
+Message-ID: <ee1ae815b6e75021709612181a6a4415fda543a4.camel@HansenPartnership.com>
 Subject: Re: [RFC PATCH v19 0/5] Script execution control (was O_MAYEXEC)
-From: Roberto Sassu <roberto.sassu@huaweicloud.com>
-To: =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, Mimi Zohar
-	 <zohar@linux.ibm.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+To: Roberto Sassu <roberto.sassu@huaweicloud.com>, 
+	=?ISO-8859-1?Q?Micka=EBl_Sala=FCn?=
+	 <mic@digikod.net>, Mimi Zohar <zohar@linux.ibm.com>
 Cc: Al Viro <viro@zeniv.linux.org.uk>, Christian Brauner
  <brauner@kernel.org>,  Kees Cook <keescook@chromium.org>, Linus Torvalds
  <torvalds@linux-foundation.org>, Paul Moore <paul@paul-moore.com>, Theodore
@@ -46,225 +61,34 @@ Cc: Al Viro <viro@zeniv.linux.org.uk>, Christian Brauner
  kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, 
  linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org, 
  linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
-Date: Tue, 16 Jul 2024 17:57:39 +0200
-In-Reply-To: <20240709.AhJ7oTh1biej@digikod.net>
+Date: Tue, 16 Jul 2024 12:12:49 -0400
+In-Reply-To: <9e3df65c2bf060b5833558e9f8d82dcd2fe9325a.camel@huaweicloud.com>
 References: <20240704190137.696169-1-mic@digikod.net>
 	 <55b4f6291e8d83d420c7d08f4233b3d304ce683d.camel@linux.ibm.com>
 	 <20240709.AhJ7oTh1biej@digikod.net>
+	 <9e3df65c2bf060b5833558e9f8d82dcd2fe9325a.camel@huaweicloud.com>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-User-Agent: Evolution 3.44.4-0ubuntu2 
+User-Agent: Evolution 3.42.4 
 MIME-Version: 1.0
-X-CM-TRANSID:GxC2BwA35i93mJZmA3M7AA--.19133S2
-X-Coremail-Antispam: 1UD129KBjvJXoW3AFy7ZFWrJryfuF4xCr1kuFg_yoWxXFWfpa
-	naga12kF4kGF18Arn7K3WfuF1Sgws5JFW5Wrn8WryrZas0yr10qr4Svr15uFyDJFWFya42
-	vr4avr9xZw1qyrJanT9S1TB71UUUUU7qnTZGkaVYY2UrUUUUjbIjqfuFe4nvWSU5nxnvy2
-	9KBjDU0xBIdaVrnRJUUUvCb4IE77IF4wAFF20E14v26rWj6s0DM7CY07I20VC2zVCF04k2
-	6cxKx2IYs7xG6rWj6s0DM7CIcVAFz4kK6r1j6r18M28lY4IEw2IIxxk0rwA2F7IY1VAKz4
-	vEj48ve4kI8wA2z4x0Y4vE2Ix0cI8IcVAFwI0_Jr0_JF4l84ACjcxK6xIIjxv20xvEc7Cj
-	xVAFwI0_Cr0_Gr1UM28EF7xvwVC2z280aVAFwI0_Gr0_Cr1l84ACjcxK6I8E87Iv6xkF7I
-	0E14v26r4j6r4UJwAS0I0E0xvYzxvE52x082IY62kv0487Mc02F40EFcxC0VAKzVAqx4xG
-	6I80ewAv7VC0I7IYx2IY67AKxVWUJVWUGwAv7VC2z280aVAFwI0_Jr0_Gr1lOx8S6xCaFV
-	Cjc4AY6r1j6r4UM4x0Y48IcVAKI48JM4IIrI8v6xkF7I0E8cxan2IY04v7MxkF7I0En4kS
-	14v26rWY6Fy7MxAIw28IcxkI7VAKI48JMxC20s026xCaFVCjc4AY6r1j6r4UMI8I3I0E5I
-	8CrVAFwI0_Jr0_Jr4lx2IqxVCjr7xvwVAFwI0_JrI_JrWlx4CE17CEb7AF67AKxVWrXVW8
-	Jr1lIxkvb40E47kJMIIYrxkI7VAKI48JMIIF0xvE2Ix0cI8IcVAFwI0_Jr0_JF4lIxAIcV
-	C0I7IYx2IY6xkF7I0E14v26F4j6r4UJwCI42IY6xAIw20EY4v20xvaj40_Jr0_JF4lIxAI
-	cVC2z280aVAFwI0_Jr0_Gr1lIxAIcVC2z280aVCY1x0267AKxVW8JVW8JrUvcSsGvfC2Kf
-	nxnUUI43ZEXa7IUYt5r7UUUUU==
-X-CM-SenderInfo: purev21wro2thvvxqx5xdzvxpfor3voofrz/1tbiAQAGBGaV1uwLqwAAsq
+Content-Transfer-Encoding: 7bit
 
-On Tue, 2024-07-09 at 22:43 +0200, Micka=C3=ABl Sala=C3=BCn wrote:
-> On Mon, Jul 08, 2024 at 04:35:38PM -0400, Mimi Zohar wrote:
-> > Hi Micka=C3=ABl,
-> >=20
-> > On Thu, 2024-07-04 at 21:01 +0200, Micka=C3=ABl Sala=C3=BCn wrote:
-> > > Hi,
-> > >=20
-> > > The ultimate goal of this patch series is to be able to ensure that
-> > > direct file execution (e.g. ./script.sh) and indirect file execution
-> > > (e.g. sh script.sh) lead to the same result, especially from a securi=
-ty
-> > > point of view.
-> > >=20
-> > > Overview
-> > > --------
-> > >=20
-> > > This patch series is a new approach of the initial O_MAYEXEC feature,
-> > > and a revamp of the previous patch series.  Taking into account the l=
-ast
-> > > reviews [1], we now stick to the kernel semantic for file executabili=
-ty.
-> > > One major change is the clear split between access check and policy
-> > > management.
-> > >=20
-> > > The first patch brings the AT_CHECK flag to execveat(2).  The goal is=
- to
-> > > enable user space to check if a file could be executed (by the kernel=
-).
-> > > Unlike stat(2) that only checks file permissions, execveat2(2) +
-> > > AT_CHECK take into account the full context, including mount points
-> > > (noexec), caller's limits, and all potential LSM extra checks (e.g.
-> > > argv, envp, credentials).
-> > >=20
-> > > The second patch brings two new securebits used to set or get a secur=
-ity
-> > > policy for a set of processes.  For this to be meaningful, all
-> > > executable code needs to be trusted.  In practice, this means that
-> > > (malicious) users can be restricted to only run scripts provided (and
-> > > trusted) by the system.
-> > >=20
-> > > [1] https://lore.kernel.org/r/CAHk-=3DwjPGNLyzeBMWdQu+kUdQLHQugznwY7C=
-vWjmvNW47D5sog@mail.gmail.com
-> > >=20
-> > > Script execution
-> > > ----------------
-> > >=20
-> > > One important thing to keep in mind is that the goal of this patch
-> > > series is to get the same security restrictions with these commands:
-> > > * ./script.py
-> > > * python script.py
-> > > * python < script.py
-> > > * python -m script.pyT
-> >=20
-> > This is really needed, but is it the "only" purpose of this patch set o=
-r can it
-> > be used to also monitor files the script opens (for read) with the inte=
-ntion of
-> > executing.
->=20
-> This feature can indeed also be used to monitor files requested by
-> scripts to be executed e.g. using
-> https://docs.python.org/3/library/io.html#io.open_code
->=20
-> IMA/EVM can include this check in its logs.
->=20
-> >=20
-> > >=20
-> > > However, on secure systems, we should be able to forbid these command=
-s
-> > > because there is no way to reliably identify the origin of the script=
-:
-> > > * xargs -a script.py -d '\r' -- python -c
-> > > * cat script.py | python
-> > > * python
-> > >=20
-> > > Background
-> > > ----------
-> > >=20
-> > > Compared to the previous patch series, there is no more dedicated
-> > > syscall nor sysctl configuration.  This new patch series only add new
-> > > flags: one for execveat(2) and four for prctl(2).
-> > >=20
-> > > This kind of script interpreter restriction may already be used in
-> > > hardened systems, which may need to fork interpreters and install
-> > > different versions of the binaries.  This mechanism should enable to
-> > > avoid the use of duplicate binaries (and potential forked source code=
-)
-> > > for secure interpreters (e.g. secure Python [2]) by making it possibl=
-e
-> > > to dynamically enforce restrictions or not.
-> > >=20
-> > > The ability to control script execution is also required to close a
-> > > major IMA measurement/appraisal interpreter integrity [3].
-> >=20
-> > Definitely.  But it isn't limited to controlling script execution, but =
-also
-> > measuring the script.  Will it be possible to measure and appraise the =
-indirect
-> > script calls with this patch set?
->=20
-> Yes. You should only need to implement security_bprm_creds_for_exec()
-> for IMA/EVM.
->=20
-> BTW, I noticed that IMA only uses the security_bprm_check() hook (which
-> can be called several times for one execve), but
-> security_bprm_creds_for_exec() might be more appropriate.
+On Tue, 2024-07-16 at 17:57 +0200, Roberto Sassu wrote:
+> But the Clip OS 4 patch does not cover the redirection case:
+> 
+> # ./bash < /root/test.sh
+> Hello World
+> 
+> Do you have a more recent patch for that?
 
-Ok, I tried a trivial modification to have this working:
+How far down the rabbit hole do you want to go?  You can't forbid a
+shell from executing commands from stdin because logging in then won't
+work.  It may be possible to allow from a tty backed file and not from
+a file backed one, but you still have the problem of the attacker
+manually typing in the script.
 
-diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima=
-_main.c
-index f04f43af651c..2a6b04c91601 100644
---- a/security/integrity/ima/ima_main.c
-+++ b/security/integrity/ima/ima_main.c
-@@ -554,6 +554,14 @@ static int ima_bprm_check(struct linux_binprm *bprm)
-                                   MAY_EXEC, CREDS_CHECK);
- }
-=20
-+static int ima_bprm_creds_for_exec(struct linux_binprm *bprm)
-+{
-+       if (!bprm->is_check)
-+               return 0;
-+
-+       return ima_bprm_check(bprm);
-+}
-+
- /**
-  * ima_file_check - based on policy, collect/store measurement.
-  * @file: pointer to the file to be measured
-@@ -1177,6 +1185,7 @@ static int __init init_ima(void)
-=20
- static struct security_hook_list ima_hooks[] __ro_after_init =3D {
-        LSM_HOOK_INIT(bprm_check_security, ima_bprm_check),
-+       LSM_HOOK_INIT(bprm_creds_for_exec, ima_bprm_creds_for_exec),
-        LSM_HOOK_INIT(file_post_open, ima_file_check),
-        LSM_HOOK_INIT(inode_post_create_tmpfile, ima_post_create_tmpfile),
-        LSM_HOOK_INIT(file_release, ima_file_free),
+The saving grace for this for shells is that they pretty much do
+nothing on their own (unlike python) so you can still measure all the
+executables they call out to, which provides reasonable safety.
 
-
-I also adapted the Clip OS 4 patch for bash.
-
-The result seems good so far:
-
-# echo "measure fowner=3D2000 func=3DBPRM_CHECK" > /sys/kernel/security/ima=
-/policy
-
-# ./bash /root/test.sh
-Hello World
-
-# cat /sys/kernel/security/ima/ascii_runtime_measurements
-10 35435d0858d895b90097306171a2e5fcc7f5da9e ima-ng sha256:0e4acf326a82c6bde=
-d9d86f48d272d7a036b6490081bb6466ecc2a0e416b244a boot_aggregate
-10 4cd9df168a2cf8d18be46543e66c76a53ca6a03d ima-ng sha256:e7f3c2dab66f56fef=
-963fbab55fc6d64bc22a5f900c29042e6ecd87e08f2b535 /root/test.sh
-
-So, it is there.
-
-It works only with +x permission. If not, I get:
-
-# ./bash /root/test.sh
-./bash: /root/test.sh: Permission denied
-
-But the Clip OS 4 patch does not cover the redirection case:
-
-# ./bash < /root/test.sh
-Hello World
-
-Do you have a more recent patch for that?
-
-Thanks
-
-Roberto
-
-> >=20
-> > Mimi
-> >=20
-> > > This new execveat + AT_CHECK should not be confused with the O_EXEC f=
-lag
-> > > (for open) which is intended for execute-only, which obviously doesn'=
-t
-> > > work for scripts.
-> > >=20
-> > > I gave a talk about controlling script execution where I explain the
-> > > previous approaches [4].  The design of the WIP RFC I talked about
-> > > changed quite a bit since then.
-> > >=20
-> > > [2] https://github.com/zooba/spython
-> > > [3] https://lore.kernel.org/lkml/20211014130125.6991-1-zohar@linux.ib=
-m.com/
-> > > [4] https://lssna2023.sched.com/event/1K7bO
-> > >=20
-> >=20
-> >=20
+James
 
