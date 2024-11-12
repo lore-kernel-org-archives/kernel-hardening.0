@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21852-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21853-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 8B038D32D93
-	for <kernel-hardening@archiver.kernel.org>; Tue, 12 Nov 2024 19:20:14 +0000 (UTC)
-Received: (qmail 5696 invoked by uid 550); 12 Nov 2024 19:19:31 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 6966AD42BBF
+	for <kernel-hardening@archiver.kernel.org>; Tue, 12 Nov 2024 19:20:25 +0000 (UTC)
+Received: (qmail 5898 invoked by uid 550); 12 Nov 2024 19:19:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,14 +12,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5658 invoked from network); 12 Nov 2024 19:19:30 -0000
+Received: (qmail 5861 invoked from network); 12 Nov 2024 19:19:32 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=digikod.net;
-	s=20191114; t=1731439162;
-	bh=W6EP0Gs1jrCUn7ogO4gOiMXjifVTH40IdORHs0QjdaQ=;
+	s=20191114; t=1731439164;
+	bh=qOU7JMAOgtDevc3iDrH7eY0FFQEFgp7A03ux9bXw1eM=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=Q/Ukb1J0l0OQsCfqyvp37pt4MsjScaYnjnCSs2cwyFS8Wio2siEgoDhtkN11CbVk+
-	 tSGOObMzxLnoza/ef1eKKmXNLKOftoX9LLa8+hCURfDLH4+lqahTr5PINDtnMNo5oA
-	 T28OE1jwcUIvUH4Sp1xlawjbXlS9L12TqogMmDGk=
+	b=g/jVHLY5Fhla+cIXWezLd9tf0LKryAyv25GdTmkPpjcTQr/9lhFC8gw65PihGLOH5
+	 fyC+md1Q4VyCbN5g0XnEoJxmQJZlZywc7WCQRP/Zp7gmTrKT3l88F03W8s6/NQos7d
+	 ZYX0paG5BFSvNa+h5PLVaQLyLoBE8b1c6Ptj0rgw=
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: Al Viro <viro@zeniv.linux.org.uk>,
 	Christian Brauner <brauner@kernel.org>,
@@ -74,11 +74,10 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-fsdevel@vger.kernel.org,
 	linux-integrity@vger.kernel.org,
 	linux-kernel@vger.kernel.org,
-	linux-security-module@vger.kernel.org,
-	=?UTF-8?q?G=C3=BCnther=20Noack?= <gnoack@google.com>
-Subject: [PATCH v21 4/6] selftests/landlock: Add tests for execveat + AT_EXECVE_CHECK
-Date: Tue, 12 Nov 2024 20:18:56 +0100
-Message-ID: <20241112191858.162021-5-mic@digikod.net>
+	linux-security-module@vger.kernel.org
+Subject: [PATCH v21 5/6] samples/check-exec: Add set-exec
+Date: Tue, 12 Nov 2024 20:18:57 +0100
+Message-ID: <20241112191858.162021-6-mic@digikod.net>
 In-Reply-To: <20241112191858.162021-1-mic@digikod.net>
 References: <20241112191858.162021-1-mic@digikod.net>
 MIME-Version: 1.0
@@ -86,89 +85,182 @@ Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 X-Infomaniak-Routing: alpha
 
-Extend layout1.execute with the new AT_EXECVE_CHECK flag.  The semantic
-with AT_EXECVE_CHECK is the same as with a simple execve(2),
-LANDLOCK_ACCESS_FS_EXECUTE is enforced the same way.
+Add a simple tool to set SECBIT_EXEC_RESTRICT_FILE or
+SECBIT_EXEC_DENY_INTERACTIVE before executing a command.  This is useful
+to easily test against enlighten script interpreters.
 
-Cc: Günther Noack <gnoack@google.com>
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: Christian Brauner <brauner@kernel.org>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Paul Moore <paul@paul-moore.com>
+Cc: Serge Hallyn <serge@hallyn.com>
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Link: https://lore.kernel.org/r/20241112191858.162021-5-mic@digikod.net
+Link: https://lore.kernel.org/r/20241112191858.162021-6-mic@digikod.net
 ---
 
-Changes since v20:
-* Rename AT_CHECK to AT_EXECVE_CHECK.
+Changes since v19:
+* Rename file and directory.
+* Update securebits and related arguments.
+* Remove useless call to prctl() when securebits are unchanged.
 ---
- tools/testing/selftests/landlock/fs_test.c | 27 ++++++++++++++++++++++
- 1 file changed, 27 insertions(+)
+ samples/Kconfig               |  7 +++
+ samples/Makefile              |  1 +
+ samples/check-exec/.gitignore |  1 +
+ samples/check-exec/Makefile   | 14 ++++++
+ samples/check-exec/set-exec.c | 85 +++++++++++++++++++++++++++++++++++
+ 5 files changed, 108 insertions(+)
+ create mode 100644 samples/check-exec/.gitignore
+ create mode 100644 samples/check-exec/Makefile
+ create mode 100644 samples/check-exec/set-exec.c
 
-diff --git a/tools/testing/selftests/landlock/fs_test.c b/tools/testing/selftests/landlock/fs_test.c
-index 6788762188fe..cd66901be612 100644
---- a/tools/testing/selftests/landlock/fs_test.c
-+++ b/tools/testing/selftests/landlock/fs_test.c
-@@ -37,6 +37,10 @@
- #include <linux/fs.h>
- #include <linux/mount.h>
+diff --git a/samples/Kconfig b/samples/Kconfig
+index b288d9991d27..efa28ceadc42 100644
+--- a/samples/Kconfig
++++ b/samples/Kconfig
+@@ -291,6 +291,13 @@ config SAMPLE_CGROUP
+ 	help
+ 	  Build samples that demonstrate the usage of the cgroup API.
  
-+/* Defines AT_EXECVE_CHECK without type conflicts. */
-+#define _ASM_GENERIC_FCNTL_H
-+#include <linux/fcntl.h>
++config SAMPLE_CHECK_EXEC
++	bool "Exec secure bits examples"
++	depends on CC_CAN_LINK && HEADERS_INSTALL
++	help
++	  Build a tool to easily configure SECBIT_EXEC_RESTRICT_FILE and
++	  SECBIT_EXEC_DENY_INTERACTIVE.
 +
- #include "common.h"
+ source "samples/rust/Kconfig"
  
- #ifndef renameat2
-@@ -2008,6 +2012,22 @@ static void test_execute(struct __test_metadata *const _metadata, const int err,
- 	};
- }
+ endif # SAMPLES
+diff --git a/samples/Makefile b/samples/Makefile
+index b85fa64390c5..f988202f3a30 100644
+--- a/samples/Makefile
++++ b/samples/Makefile
+@@ -3,6 +3,7 @@
  
-+static void test_check_exec(struct __test_metadata *const _metadata,
-+			    const int err, const char *const path)
+ subdir-$(CONFIG_SAMPLE_AUXDISPLAY)	+= auxdisplay
+ subdir-$(CONFIG_SAMPLE_ANDROID_BINDERFS) += binderfs
++subdir-$(CONFIG_SAMPLE_CHECK_EXEC)	+= check-exec
+ subdir-$(CONFIG_SAMPLE_CGROUP) += cgroup
+ obj-$(CONFIG_SAMPLE_CONFIGFS)		+= configfs/
+ obj-$(CONFIG_SAMPLE_CONNECTOR)		+= connector/
+diff --git a/samples/check-exec/.gitignore b/samples/check-exec/.gitignore
+new file mode 100644
+index 000000000000..3f8119112ccf
+--- /dev/null
++++ b/samples/check-exec/.gitignore
+@@ -0,0 +1 @@
++/set-exec
+diff --git a/samples/check-exec/Makefile b/samples/check-exec/Makefile
+new file mode 100644
+index 000000000000..d9f976e3ff98
+--- /dev/null
++++ b/samples/check-exec/Makefile
+@@ -0,0 +1,14 @@
++# SPDX-License-Identifier: BSD-3-Clause
++
++userprogs-always-y := \
++	set-exec
++
++userccflags += -I usr/include
++
++.PHONY: all clean
++
++all:
++	$(MAKE) -C ../.. samples/check-exec/
++
++clean:
++	$(MAKE) -C ../.. M=samples/check-exec/ clean
+diff --git a/samples/check-exec/set-exec.c b/samples/check-exec/set-exec.c
+new file mode 100644
+index 000000000000..ba86a60a20dd
+--- /dev/null
++++ b/samples/check-exec/set-exec.c
+@@ -0,0 +1,85 @@
++// SPDX-License-Identifier: BSD-3-Clause
++/*
++ * Simple tool to set SECBIT_EXEC_RESTRICT_FILE, SECBIT_EXEC_DENY_INTERACTIVE,
++ * before executing a command.
++ *
++ * Copyright © 2024 Microsoft Corporation
++ */
++
++#define _GNU_SOURCE
++#define __SANE_USERSPACE_TYPES__
++#include <errno.h>
++#include <linux/prctl.h>
++#include <linux/securebits.h>
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/prctl.h>
++#include <unistd.h>
++
++static void print_usage(const char *argv0)
 +{
-+	int ret;
-+	char *const argv[] = { (char *)path, NULL };
-+
-+	ret = execveat(AT_FDCWD, path, argv, NULL,
-+		       AT_EMPTY_PATH | AT_EXECVE_CHECK);
-+	if (err) {
-+		EXPECT_EQ(-1, ret);
-+		EXPECT_EQ(errno, err);
-+	} else {
-+		EXPECT_EQ(0, ret);
-+	}
++	fprintf(stderr, "usage: %s -f|-i -- <cmd> [args]...\n\n", argv0);
++	fprintf(stderr, "Execute a command with\n");
++	fprintf(stderr, "- SECBIT_EXEC_RESTRICT_FILE set: -f\n");
++	fprintf(stderr, "- SECBIT_EXEC_DENY_INTERACTIVE set: -i\n");
 +}
 +
- TEST_F_FORK(layout1, execute)
- {
- 	const struct rule rules[] = {
-@@ -2025,20 +2045,27 @@ TEST_F_FORK(layout1, execute)
- 	copy_binary(_metadata, file1_s1d2);
- 	copy_binary(_metadata, file1_s1d3);
- 
-+	/* Checks before file1_s1d1 being denied. */
-+	test_execute(_metadata, 0, file1_s1d1);
-+	test_check_exec(_metadata, 0, file1_s1d1);
++int main(const int argc, char *const argv[], char *const *const envp)
++{
++	const char *cmd_path;
++	char *const *cmd_argv;
++	int opt, secbits_cur, secbits_new;
++	bool has_policy = false;
 +
- 	enforce_ruleset(_metadata, ruleset_fd);
- 	ASSERT_EQ(0, close(ruleset_fd));
- 
- 	ASSERT_EQ(0, test_open(dir_s1d1, O_RDONLY));
- 	ASSERT_EQ(0, test_open(file1_s1d1, O_RDONLY));
- 	test_execute(_metadata, EACCES, file1_s1d1);
-+	test_check_exec(_metadata, EACCES, file1_s1d1);
- 
- 	ASSERT_EQ(0, test_open(dir_s1d2, O_RDONLY));
- 	ASSERT_EQ(0, test_open(file1_s1d2, O_RDONLY));
- 	test_execute(_metadata, 0, file1_s1d2);
-+	test_check_exec(_metadata, 0, file1_s1d2);
- 
- 	ASSERT_EQ(0, test_open(dir_s1d3, O_RDONLY));
- 	ASSERT_EQ(0, test_open(file1_s1d3, O_RDONLY));
- 	test_execute(_metadata, 0, file1_s1d3);
-+	test_check_exec(_metadata, 0, file1_s1d3);
- }
- 
- TEST_F_FORK(layout1, link)
++	secbits_cur = prctl(PR_GET_SECUREBITS);
++	if (secbits_cur == -1) {
++		/*
++		 * This should never happen, except with a buggy seccomp
++		 * filter.
++		 */
++		perror("ERROR: Failed to get securebits");
++		return 1;
++	}
++
++	secbits_new = secbits_cur;
++	while ((opt = getopt(argc, argv, "fi")) != -1) {
++		switch (opt) {
++		case 'f':
++			secbits_new |= SECBIT_EXEC_RESTRICT_FILE |
++				       SECBIT_EXEC_RESTRICT_FILE_LOCKED;
++			has_policy = true;
++			break;
++		case 'i':
++			secbits_new |= SECBIT_EXEC_DENY_INTERACTIVE |
++				       SECBIT_EXEC_DENY_INTERACTIVE_LOCKED;
++			has_policy = true;
++			break;
++		default:
++			print_usage(argv[0]);
++			return 1;
++		}
++	}
++
++	if (!argv[optind] || !has_policy) {
++		print_usage(argv[0]);
++		return 1;
++	}
++
++	if (secbits_cur != secbits_new &&
++	    prctl(PR_SET_SECUREBITS, secbits_new)) {
++		perror("Failed to set secure bit(s).");
++		fprintf(stderr,
++			"Hint: The running kernel may not support this feature.\n");
++		return 1;
++	}
++
++	cmd_path = argv[optind];
++	cmd_argv = argv + optind;
++	fprintf(stderr, "Executing command...\n");
++	execvpe(cmd_path, cmd_argv, envp);
++	fprintf(stderr, "Failed to execute \"%s\": %s\n", cmd_path,
++		strerror(errno));
++	return 1;
++}
 -- 
 2.47.0
 
