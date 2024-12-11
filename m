@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21895-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21896-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 11CF7E7717D
-	for <kernel-hardening@archiver.kernel.org>; Wed, 11 Dec 2024 05:58:51 +0000 (UTC)
-Received: (qmail 5624 invoked by uid 550); 11 Dec 2024 05:58:43 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 7B96EE7717D
+	for <kernel-hardening@archiver.kernel.org>; Wed, 11 Dec 2024 06:13:02 +0000 (UTC)
+Received: (qmail 1264 invoked by uid 550); 11 Dec 2024 06:12:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,58 +12,60 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 5595 invoked from network); 11 Dec 2024 05:58:42 -0000
+Received: (qmail 1235 invoked from network); 11 Dec 2024 06:12:53 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=chromium.org; s=google; t=1733896712; x=1734501512; darn=lists.openwall.com;
+        d=chromium.org; s=google; t=1733897563; x=1734502363; darn=lists.openwall.com;
         h=content-transfer-encoding:cc:to:subject:message-id:date:from
          :in-reply-to:references:mime-version:from:to:cc:subject:date
          :message-id:reply-to;
-        bh=p0sAJv/zc11a1dyl/0kh6A++rdaAgBOXFp2owb4QL9A=;
-        b=I+3Lh8K1tzL7T0lov0hhVsDJ2PPdkj+xK1ugdAeN58SD0QMFxZ2g0wo/9F8xOqGweH
-         5mCx5X3spr79JMRJND6vq9ZP+TC//rnO8JI9kTf2EqkFAoh3qMc4H53/J5MK/Ka/ff6s
-         fqvNDbyqxLciNmzRt0noiDjB5Y7LLJt7gdlCA=
+        bh=LrstZ9FI7oDoywTSDKrx13VheyHzF0xgj4Fa7hmhx4k=;
+        b=ZBdYdcyD7t49TBWFqsQ4czjPD6Ha2n/ufC8wtm8Pl7Ej0P4TJIDgjK7M8gjzPb7KKP
+         ucGP3gMHuGF0LVuQf5TScEAp0SXMcFZf1ndGdN3zMQyCDrXPI7orYGEAyZLOEUiX/qaI
+         1i7phvkb+/H7HXY0YJCGEX2DclySiwbGCVHT8=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1733896712; x=1734501512;
+        d=1e100.net; s=20230601; t=1733897563; x=1734502363;
         h=content-transfer-encoding:cc:to:subject:message-id:date:from
          :in-reply-to:references:mime-version:x-gm-message-state:from:to:cc
          :subject:date:message-id:reply-to;
-        bh=p0sAJv/zc11a1dyl/0kh6A++rdaAgBOXFp2owb4QL9A=;
-        b=qgZL4awNOsuXOhV6Be4vQNGay7HJ5gBUpLG33Xl1wwkt5i9xvXmNjAqqyQ1HVTzOVV
-         6yomzjzu1CVaePLDLWs01cDItr8KNNOXjXPwzjcGst/YMPVEKG0WA+lGl1zEEa+LVtxE
-         TrZQaoRvnWvk4FjbYBOPeLD8PebZ0hsx/Lsf1GFuCmSJE6SsOEUgR18nUq0rGPhq7uHT
-         PkApK6PYwJjZGB0Ywz/dvPFG3WMx8qt2ZX/nuicgQaBBY0kKPmhKUS8u91KxKhWbeXg0
-         6DsyyqzL4WoHO5IUQTHd4fkMYm1/r6XzJA5RQKQ6nmDkSc3bDM2lhRfU+Q+AmiIMhGbe
-         BiZw==
-X-Forwarded-Encrypted: i=1; AJvYcCVaZXYeb4+y/+zkcSFc+EYqf9jFNzZ9n/QSAnZX9toQzUcpFwQMj2nukWq1pSC8/rN4kV68OxS3A/SdO43x6Zpo@lists.openwall.com
-X-Gm-Message-State: AOJu0YwlceuNCFvHRMRk3UTgIwWHWdCjqWM2uEN8jkAXSvpxcXdb+ola
-	ec0HX5Yyd4ddwfIarSd1DF5RW3QxxWD/s4UGCjTQGKtK9e4XMxcUL/7ksZW4T7nCG9vt09kva6M
-	jz8WU4u44KqFQsEtbqlxKFwOjHZy3/mmoqbdK
-X-Gm-Gg: ASbGnctDwMA7ZEM592oME2Ovt/4bcee0kpXVvs4jTnU4VAQW2444M/2dkIz92xsvMar
-	WzHywfrBMZ0a1wYUTqlStlebKI5R+lgJgrgtdglwz27n4AAdjeVF2f8StnMYNU1+p
-X-Google-Smtp-Source: AGHT+IFWzRyo3sigjXQaXNRE0zJOKdOE97zQB8Qb/LzAWIR5oIPzvwnBYUV8BligiFsQCjyK8c4pDf7RW5TR0gaPX8M=
-X-Received: by 2002:a05:6870:1584:b0:29e:32e7:5f0d with SMTP id
- 586e51a60fabf-2a012f34085mr305197fac.10.1733896712155; Tue, 10 Dec 2024
- 21:58:32 -0800 (PST)
+        bh=LrstZ9FI7oDoywTSDKrx13VheyHzF0xgj4Fa7hmhx4k=;
+        b=Sc+85zqa5O+JRntWRNxmFuMCXBfTmkwDv5hDOr3+z8jSWpJONSx8CTdG8YDIN7xj2E
+         j2SvyGfdq17HWl/8z4w3hFqrE5NFRbQ62u7zs9oJ/DIP0IFEqMvBvm4rdvKUCwSisubX
+         bgQIJ2i8pWYAtDuG/0kFpnOHeJbwRUdhi9/Ru59vXPeuIvs/DEM1dRfyZ4Z/EGITeAm/
+         unGUsMIqj+sTfSogvnXYfyU5KuQ+lLa+H/X/B51RfmOEaJGC0peuEanqKFAkVOSbK0mO
+         PP+GNQXZklr5FciNRLPT4KMii0Er65lCTTSBzt87XId68wiV/IJxlnOzGWKD3xjwq/T+
+         B5sA==
+X-Forwarded-Encrypted: i=1; AJvYcCWlKYzo0khTDVVcS/PvLHfCgHDs6tuOCzHg4NjX1w97ktdV0jB6AFrvc6UJ+IPOzSZHzsNi2gBL/N6+7bWhqnoD@lists.openwall.com
+X-Gm-Message-State: AOJu0Yw+1BrHJNy92BkZgBCpLxdQ7EIMJ4wqx64SnUoLQ1gcWgemqYQX
+	IyqsNazE+G7Av2no/q/ka5b5hAIhdQHCS7TKmacbM2gMLjBR88JRfVrb6vJs29IsjUDLg0RZk+D
+	/dLRreDbVr4ZIAzDkEFIdQ0adbyiDajmPO59s
+X-Gm-Gg: ASbGnctlJgxrlveEzM/9vLoTYbuQRnLQL6BtPaXgpq6Qq7W1pMf4vA96AU3+FvGRu+U
+	6Oq/08zNw6p3rd9qHkKnupdPUrU3ainTY15ojrvQTWHwh+D3P8p3waniaE6MxQKJ5
+X-Google-Smtp-Source: AGHT+IFjzapg7E7fLM9DyXss2TEsc/ZVX4eep97+cVt6UEkJnt1fbUvoixTfgps7XXEw1DxxiLeKZ98SLq3qa7Gdo5I=
+X-Received: by 2002:a05:6870:c153:b0:295:f266:8aee with SMTP id
+ 586e51a60fabf-2a012db100emr341140fac.5.1733897562659; Tue, 10 Dec 2024
+ 22:12:42 -0800 (PST)
 MIME-Version: 1.0
-References: <20241205160925.230119-1-mic@digikod.net> <20241205160925.230119-2-mic@digikod.net>
-In-Reply-To: <20241205160925.230119-2-mic@digikod.net>
+References: <20241205160925.230119-1-mic@digikod.net> <20241205160925.230119-3-mic@digikod.net>
+ <20241210.FahfahPu5dae@digikod.net>
+In-Reply-To: <20241210.FahfahPu5dae@digikod.net>
 From: Jeff Xu <jeffxu@chromium.org>
-Date: Tue, 10 Dec 2024 21:58:21 -0800
-Message-ID: <CABi2SkUjvPKOr2H6f7i=iRdzc=w1+LVDziU1QKZTFwkhccqrew@mail.gmail.com>
-Subject: Re: [PATCH v22 1/8] exec: Add a new AT_EXECVE_CHECK flag to execveat(2)
+Date: Tue, 10 Dec 2024 22:12:31 -0800
+Message-ID: <CABi2SkXMKtD-_3s-HK6W2Qp2-+GaQfckVbXwsaX5FRJGnD_irQ@mail.gmail.com>
+Subject: Re: [PATCH v22 2/8] security: Add EXEC_RESTRICT_FILE and
+ EXEC_DENY_INTERACTIVE securebits
 To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Christian Brauner <brauner@kernel.org>, 
-	Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, 
-	Serge Hallyn <serge@hallyn.com>, Adhemerval Zanella Netto <adhemerval.zanella@linaro.org>, 
-	Alejandro Colomar <alx@kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, 
-	Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, 
-	Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, 
-	Christian Heimes <christian@python.org>, Dmitry Vyukov <dvyukov@google.com>, 
-	Elliott Hughes <enh@google.com>, Eric Biggers <ebiggers@kernel.org>, 
+Cc: Jeff Xu <jeffxu@google.com>, Al Viro <viro@zeniv.linux.org.uk>, 
+	Christian Brauner <brauner@kernel.org>, Kees Cook <keescook@chromium.org>, 
+	Paul Moore <paul@paul-moore.com>, Serge Hallyn <serge@hallyn.com>, 
+	Adhemerval Zanella Netto <adhemerval.zanella@linaro.org>, Alejandro Colomar <alx@kernel.org>, 
+	Aleksa Sarai <cyphar@cyphar.com>, Andrew Morton <akpm@linux-foundation.org>, 
+	Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, 
+	Casey Schaufler <casey@schaufler-ca.com>, Christian Heimes <christian@python.org>, 
+	Dmitry Vyukov <dvyukov@google.com>, Elliott Hughes <enh@google.com>, Eric Biggers <ebiggers@kernel.org>, 
 	Eric Chiang <ericchiang@google.com>, Fan Wu <wufan@linux.microsoft.com>, 
 	Florian Weimer <fweimer@redhat.com>, Geert Uytterhoeven <geert@linux-m68k.org>, 
 	James Morris <jamorris@linux.microsoft.com>, Jan Kara <jack@suse.cz>, 
-	Jann Horn <jannh@google.com>, Jeff Xu <jeffxu@google.com>, Jonathan Corbet <corbet@lwn.net>, 
+	Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>, 
 	Jordan R Abrahams <ajordanr@google.com>, Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, 
 	Linus Torvalds <torvalds@linux-foundation.org>, Luca Boccassi <bluca@debian.org>, 
 	Luis Chamberlain <mcgrof@kernel.org>, 
@@ -79,307 +81,288 @@ Cc: Al Viro <viro@zeniv.linux.org.uk>, Christian Brauner <brauner@kernel.org>,
 	Yin Fengwei <fengwei.yin@intel.com>, kernel-hardening@lists.openwall.com, 
 	linux-api@vger.kernel.org, linux-fsdevel@vger.kernel.org, 
 	linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, 
-	linux-security-module@vger.kernel.org
+	linux-security-module@vger.kernel.org, Andy Lutomirski <luto@amacapital.net>
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-On Thu, Dec 5, 2024 at 8:10=E2=80=AFAM Micka=C3=ABl Sala=C3=BCn <mic@digiko=
-d.net> wrote:
+On Tue, Dec 10, 2024 at 8:48=E2=80=AFAM Micka=C3=ABl Sala=C3=BCn <mic@digik=
+od.net> wrote:
 >
-> Add a new AT_EXECVE_CHECK flag to execveat(2) to check if a file would
-> be allowed for execution.  The main use case is for script interpreters
-> and dynamic linkers to check execution permission according to the
-> kernel's security policy. Another use case is to add context to access
-> logs e.g., which script (instead of interpreter) accessed a file.  As
-> any executable code, scripts could also use this check [1].
+> On Thu, Dec 05, 2024 at 05:09:19PM +0100, Micka=C3=ABl Sala=C3=BCn wrote:
+> > The new SECBIT_EXEC_RESTRICT_FILE, SECBIT_EXEC_DENY_INTERACTIVE, and
+> > their *_LOCKED counterparts are designed to be set by processes setting
+> > up an execution environment, such as a user session, a container, or a
+> > security sandbox.  Unlike other securebits, these ones can be set by
+> > unprivileged processes.  Like seccomp filters or Landlock domains, the
+> > securebits are inherited across processes.
+> >
+> > When SECBIT_EXEC_RESTRICT_FILE is set, programs interpreting code shoul=
+d
+> > control executable resources according to execveat(2) + AT_EXECVE_CHECK
+> > (see previous commit).
+> >
+> > When SECBIT_EXEC_DENY_INTERACTIVE is set, a process should deny
+> > execution of user interactive commands (which excludes executable
+> > regular files).
+> >
+> > Being able to configure each of these securebits enables system
+> > administrators or owner of image containers to gradually validate the
+> > related changes and to identify potential issues (e.g. with interpreter
+> > or audit logs).
+> >
+> > It should be noted that unlike other security bits, the
+> > SECBIT_EXEC_RESTRICT_FILE and SECBIT_EXEC_DENY_INTERACTIVE bits are
+> > dedicated to user space willing to restrict itself.  Because of that,
+> > they only make sense in the context of a trusted environment (e.g.
+> > sandbox, container, user session, full system) where the process
+> > changing its behavior (according to these bits) and all its parent
+> > processes are trusted.  Otherwise, any parent process could just execut=
+e
+> > its own malicious code (interpreting a script or not), or even enforce =
+a
+> > seccomp filter to mask these bits.
+> >
+> > Such a secure environment can be achieved with an appropriate access
+> > control (e.g. mount's noexec option, file access rights, LSM policy) an=
+d
+> > an enlighten ld.so checking that libraries are allowed for execution
+> > e.g., to protect against illegitimate use of LD_PRELOAD.
+> >
+> > Ptrace restrictions according to these securebits would not make sense
+> > because of the processes' trust assumption.
+> >
+> > Scripts may need some changes to deal with untrusted data (e.g. stdin,
+> > environment variables), but that is outside the scope of the kernel.
+> >
+> > See chromeOS's documentation about script execution control and the
+> > related threat model:
+> > https://www.chromium.org/chromium-os/developer-library/guides/security/=
+noexec-shell-scripts/
+> >
+> > Cc: Al Viro <viro@zeniv.linux.org.uk>
+> > Cc: Andy Lutomirski <luto@amacapital.net>
+> > Cc: Christian Brauner <brauner@kernel.org>
+> > Cc: Kees Cook <keescook@chromium.org>
+> > Cc: Paul Moore <paul@paul-moore.com>
+> > Reviewed-by: Serge Hallyn <serge@hallyn.com>
+> > Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
+> > Link: https://lore.kernel.org/r/20241205160925.230119-3-mic@digikod.net
+> > ---
+> >
+> > Changes since v21:
+> > * Extend user documentation with exception regarding tailored execution
+> >   environments (e.g. chromeOS's libc) as discussed with Jeff.
+> >
+> > Changes since v20:
+> > * Move UAPI documentation to a dedicated RST file and format it.
+> >
+> > Changes since v19:
+> > * Replace SECBIT_SHOULD_EXEC_CHECK and SECBIT_SHOULD_EXEC_RESTRICT with
+> >   SECBIT_EXEC_RESTRICT_FILE and SECBIT_EXEC_DENY_INTERACTIVE:
+> >   https://lore.kernel.org/all/20240710.eiKohpa4Phai@digikod.net/
+> > * Remove the ptrace restrictions, suggested by Andy.
+> > * Improve documentation according to the discussion with Jeff.
+> >
+> > New design since v18:
+> > https://lore.kernel.org/r/20220104155024.48023-3-mic@digikod.net
+> > ---
+> >  Documentation/userspace-api/check_exec.rst | 107 +++++++++++++++++++++
+> >  include/uapi/linux/securebits.h            |  24 ++++-
+> >  security/commoncap.c                       |  29 ++++--
+> >  3 files changed, 153 insertions(+), 7 deletions(-)
+> >
+> > diff --git a/Documentation/userspace-api/check_exec.rst b/Documentation=
+/userspace-api/check_exec.rst
+> > index 393dd7ca19c4..05dfe3b56f71 100644
+> > --- a/Documentation/userspace-api/check_exec.rst
+> > +++ b/Documentation/userspace-api/check_exec.rst
+> > @@ -5,6 +5,31 @@
+> >  Executability check
+> >  =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+> >
+> > +The ``AT_EXECVE_CHECK`` :manpage:`execveat(2)` flag, and the
+> > +``SECBIT_EXEC_RESTRICT_FILE`` and ``SECBIT_EXEC_DENY_INTERACTIVE`` sec=
+urebits
+> > +are intended for script interpreters and dynamic linkers to enforce a
+> > +consistent execution security policy handled by the kernel.  See the
+> > +`samples/check-exec/inc.c`_ example.
+> > +
+> > +Whether an interpreter should check these securebits or not depends on=
+ the
+> > +security risk of running malicious scripts with respect to the executi=
+on
+> > +environment, and whether the kernel can check if a script is trustwort=
+hy or
+> > +not.  For instance, Python scripts running on a server can use arbitra=
+ry
+> > +syscalls and access arbitrary files.  Such interpreters should then be
+> > +enlighten to use these securebits and let users define their security =
+policy.
+> > +However, a JavaScript engine running in a web browser should already b=
+e
+> > +sandboxed and then should not be able to harm the user's environment.
+> > +
+> > +Script interpreters or dynamic linkers built for tailored execution en=
+vironments
+> > +(e.g. hardened Linux distributions or hermetic container images) could=
+ use
+> > +``AT_EXECVE_CHECK`` without checking the related securebits if backwar=
+d
+> > +compatibility is handled by something else (e.g. atomic update ensurin=
+g that
+> > +all legitimate libraries are allowed to be executed).  It is then reco=
+mmended
+> > +for script interpreters and dynamic linkers to check the securebits at=
+ run time
+> > +by default, but also to provide the ability for custom builds to behav=
+e like if
+> > +``SECBIT_EXEC_RESTRICT_FILE`` or ``SECBIT_EXEC_DENY_INTERACTIVE`` were=
+ always
+> > +set to 1 (i.e. always enforce restrictions).
 >
-> This is different from faccessat(2) + X_OK which only checks a subset of
-> access rights (i.e. inode permission and mount options for regular
-> files), but not the full context (e.g. all LSM access checks).  The main
-> use case for access(2) is for SUID processes to (partially) check access
-> on behalf of their caller.  The main use case for execveat(2) +
-> AT_EXECVE_CHECK is to check if a script execution would be allowed,
-> according to all the different restrictions in place.  Because the use
-> of AT_EXECVE_CHECK follows the exact kernel semantic as for a real
-> execution, user space gets the same error codes.
+> Jeff, does this work for you?
 >
-> An interesting point of using execveat(2) instead of openat2(2) is that
-> it decouples the check from the enforcement.  Indeed, the security check
-> can be logged (e.g. with audit) without blocking an execution
-> environment not yet ready to enforce a strict security policy.
+Yes. Thanks for updating this section.
+
+
+> I'll update the IMA patch with a last version but otherwise it should be
+> good: https://lore.kernel.org/all/20241210.Wie6ion7Aich@digikod.net/
 >
-> LSMs can control or log execution requests with
-> security_bprm_creds_for_exec().  However, to enforce a consistent and
-> complete access control (e.g. on binary's dependencies) LSMs should
-> restrict file executability, or measure executed files, with
-> security_file_open() by checking file->f_flags & __FMODE_EXEC.
->
-> Because AT_EXECVE_CHECK is dedicated to user space interpreters, it
-> doesn't make sense for the kernel to parse the checked files, look for
-> interpreters known to the kernel (e.g. ELF, shebang), and return ENOEXEC
-> if the format is unknown.  Because of that, security_bprm_check() is
-> never called when AT_EXECVE_CHECK is used.
->
-> It should be noted that script interpreters cannot directly use
-> execveat(2) (without this new AT_EXECVE_CHECK flag) because this could
-> lead to unexpected behaviors e.g., `python script.sh` could lead to Bash
-> being executed to interpret the script.  Unlike the kernel, script
-> interpreters may just interpret the shebang as a simple comment, which
-> should not change for backward compatibility reasons.
->
-> Because scripts or libraries files might not currently have the
-> executable permission set, or because we might want specific users to be
-> allowed to run arbitrary scripts, the following patch provides a dynamic
-> configuration mechanism with the SECBIT_EXEC_RESTRICT_FILE and
-> SECBIT_EXEC_DENY_INTERACTIVE securebits.
->
-> This is a redesign of the CLIP OS 4's O_MAYEXEC:
-> https://github.com/clipos-archive/src_platform_clip-patches/blob/f5cb330d=
-6b684752e403b4e41b39f7004d88e561/1901_open_mayexec.patch
-> This patch has been used for more than a decade with customized script
-> interpreters.  Some examples can be found here:
-> https://github.com/clipos-archive/clipos4_portage-overlay/search?q=3DO_MA=
-YEXEC
->
-> Cc: Al Viro <viro@zeniv.linux.org.uk>
-> Cc: Christian Brauner <brauner@kernel.org>
-> Cc: Kees Cook <keescook@chromium.org>
-> Acked-by: Paul Moore <paul@paul-moore.com>
-> Reviewed-by: Serge Hallyn <serge@hallyn.com>
-> Link: https://docs.python.org/3/library/io.html#io.open_code [1]
-> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
-> Link: https://lore.kernel.org/r/20241205160925.230119-2-mic@digikod.net
-> ---
->
-> Changes since v21:
-> * Remove the audit changes, requested by Paul.
-> * Add Acked-by: Paul Moore.
-> * Fix a typo in comments and in commit message.
-> * Add SPDX-License-Identifier header to the documentation.
-> * Rebase on v6.13-rc1 .
->
-> Changes since v20:
-> * Rename AT_CHECK to AT_EXECVE_CHECK, requested by Amir Goldstein and
->   Serge Hallyn.
-> * Move the UAPI documentation to a dedicated RST file.
-> * Add Reviewed-by: Serge Hallyn
->
-> Changes since v19:
-> * Remove mention of "role transition" as suggested by Andy.
-> * Highlight the difference between security_bprm_creds_for_exec() and
->   the __FMODE_EXEC check for LSMs (in commit message and LSM's hooks) as
->   discussed with Jeff.
-> * Improve documentation both in UAPI comments and kernel comments
->   (requested by Kees).
->
-> New design since v18:
-> https://lore.kernel.org/r/20220104155024.48023-3-mic@digikod.net
-> ---
->  Documentation/userspace-api/check_exec.rst | 37 ++++++++++++++++++++++
->  Documentation/userspace-api/index.rst      |  1 +
->  fs/exec.c                                  | 20 ++++++++++--
->  include/linux/binfmts.h                    |  7 +++-
->  include/uapi/linux/fcntl.h                 |  4 +++
->  security/security.c                        | 10 ++++++
->  6 files changed, 76 insertions(+), 3 deletions(-)
->  create mode 100644 Documentation/userspace-api/check_exec.rst
->
-> diff --git a/Documentation/userspace-api/check_exec.rst b/Documentation/u=
-serspace-api/check_exec.rst
-> new file mode 100644
-> index 000000000000..393dd7ca19c4
-> --- /dev/null
-> +++ b/Documentation/userspace-api/check_exec.rst
-> @@ -0,0 +1,37 @@
-> +.. SPDX-License-Identifier: GPL-2.0
-> +.. Copyright =C2=A9 2024 Microsoft Corporation
-> +
-> +=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
-> +Executability check
-> +=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
-> +
-> +AT_EXECVE_CHECK
-> +=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
-> +
-> +Passing the ``AT_EXECVE_CHECK`` flag to :manpage:`execveat(2)` only perf=
-orms a
-> +check on a regular file and returns 0 if execution of this file would be
-> +allowed, ignoring the file format and then the related interpreter depen=
-dencies
-> +(e.g. ELF libraries, script's shebang).
-> +
-> +Programs should always perform this check to apply kernel-level checks a=
-gainst
-> +files that are not directly executed by the kernel but passed to a user =
-space
-> +interpreter instead.  All files that contain executable code, from the p=
-oint of
-> +view of the interpreter, should be checked.  However the result of this =
-check
-> +should only be enforced according to ``SECBIT_EXEC_RESTRICT_FILE`` or
-> +``SECBIT_EXEC_DENY_INTERACTIVE.``.
-> +
-> +The main purpose of this flag is to improve the security and consistency=
- of an
-> +execution environment to ensure that direct file execution (e.g.
-> +``./script.sh``) and indirect file execution (e.g. ``sh script.sh``) lea=
-d to
-> +the same result.  For instance, this can be used to check if a file is
-> +trustworthy according to the caller's environment.
-> +
-> +In a secure environment, libraries and any executable dependencies shoul=
-d also
-> +be checked.  For instance, dynamic linking should make sure that all lib=
-raries
-> +are allowed for execution to avoid trivial bypass (e.g. using ``LD_PRELO=
-AD``).
-> +For such secure execution environment to make sense, only trusted code s=
-hould
-> +be executable, which also requires integrity guarantees.
-> +
-> +To avoid race conditions leading to time-of-check to time-of-use issues,
-> +``AT_EXECVE_CHECK`` should be used with ``AT_EMPTY_PATH`` to check again=
-st a
-> +file descriptor instead of a path.
-> diff --git a/Documentation/userspace-api/index.rst b/Documentation/usersp=
-ace-api/index.rst
-> index 274cc7546efc..6272bcf11296 100644
-> --- a/Documentation/userspace-api/index.rst
-> +++ b/Documentation/userspace-api/index.rst
-> @@ -35,6 +35,7 @@ Security-related interfaces
->     mfd_noexec
->     spec_ctrl
->     tee
-> +   check_exec
->
->  Devices and I/O
->  =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
-> diff --git a/fs/exec.c b/fs/exec.c
-> index 98cb7ba9983c..e3f461096e84 100644
-> --- a/fs/exec.c
-> +++ b/fs/exec.c
-> @@ -892,7 +892,8 @@ static struct file *do_open_execat(int fd, struct fil=
-ename *name, int flags)
->                 .lookup_flags =3D LOOKUP_FOLLOW,
->         };
->
-> -       if ((flags & ~(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH)) !=3D 0)
-> +       if ((flags &
-> +            ~(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH | AT_EXECVE_CHECK)) !=
-=3D 0)
->                 return ERR_PTR(-EINVAL);
->         if (flags & AT_SYMLINK_NOFOLLOW)
->                 open_exec_flags.lookup_flags &=3D ~LOOKUP_FOLLOW;
-> @@ -1541,6 +1542,21 @@ static struct linux_binprm *alloc_bprm(int fd, str=
-uct filename *filename, int fl
->         }
->         bprm->interp =3D bprm->filename;
->
-> +       /*
-> +        * At this point, security_file_open() has already been called (w=
-ith
-> +        * __FMODE_EXEC) and access control checks for AT_EXECVE_CHECK wi=
-ll
-> +        * stop just after the security_bprm_creds_for_exec() call in
-> +        * bprm_execve().  Indeed, the kernel should not try to parse the
-> +        * content of the file with exec_binprm() nor change the calling
-> +        * thread, which means that the following security functions will=
- not
-> +        * be called:
-> +        * - security_bprm_check()
-> +        * - security_bprm_creds_from_file()
-> +        * - security_bprm_committing_creds()
-> +        * - security_bprm_committed_creds()
-> +        */
-> +       bprm->is_check =3D !!(flags & AT_EXECVE_CHECK);
-> +
->         retval =3D bprm_mm_init(bprm);
->         if (!retval)
->                 return bprm;
-> @@ -1836,7 +1852,7 @@ static int bprm_execve(struct linux_binprm *bprm)
->
->         /* Set the unchanging part of bprm->cred */
->         retval =3D security_bprm_creds_for_exec(bprm);
-> -       if (retval)
-> +       if (retval || bprm->is_check)
->                 goto out;
->
->         retval =3D exec_binprm(bprm);
-> diff --git a/include/linux/binfmts.h b/include/linux/binfmts.h
-> index e6c00e860951..8ff0eb3644a1 100644
-> --- a/include/linux/binfmts.h
-> +++ b/include/linux/binfmts.h
-> @@ -42,7 +42,12 @@ struct linux_binprm {
->                  * Set when errors can no longer be returned to the
->                  * original userspace.
->                  */
-> -               point_of_no_return:1;
-> +               point_of_no_return:1,
-> +               /*
-> +                * Set by user space to check executability according to =
+> > +
+> >  AT_EXECVE_CHECK
+> >  =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+> >
+> > @@ -35,3 +60,85 @@ be executable, which also requires integrity guarant=
+ees.
+> >  To avoid race conditions leading to time-of-check to time-of-use issue=
+s,
+> >  ``AT_EXECVE_CHECK`` should be used with ``AT_EMPTY_PATH`` to check aga=
+inst a
+> >  file descriptor instead of a path.
+> > +
+> > +SECBIT_EXEC_RESTRICT_FILE and SECBIT_EXEC_DENY_INTERACTIVE
+> > +=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+> > +
+> > +When ``SECBIT_EXEC_RESTRICT_FILE`` is set, a process should only inter=
+pret or
+> > +execute a file if a call to :manpage:`execveat(2)` with the related fi=
+le
+> > +descriptor and the ``AT_EXECVE_CHECK`` flag succeed.
+> > +
+> > +This secure bit may be set by user session managers, service managers,
+> > +container runtimes, sandboxer tools...  Except for test environments, =
 the
-> +                * caller's environment.
-> +                */
-> +               is_check:1;
->         struct file *executable; /* Executable to pass to the interpreter=
- */
->         struct file *interpreter;
->         struct file *file;
-> diff --git a/include/uapi/linux/fcntl.h b/include/uapi/linux/fcntl.h
-> index 6e6907e63bfc..a15ac2fa4b20 100644
-> --- a/include/uapi/linux/fcntl.h
-> +++ b/include/uapi/linux/fcntl.h
-> @@ -155,4 +155,8 @@
->  #define AT_HANDLE_MNT_ID_UNIQUE        0x001   /* Return the u64 unique =
-mount ID. */
->  #define AT_HANDLE_CONNECTABLE  0x002   /* Request a connectable file han=
-dle */
->
-> +/* Flags for execveat2(2). */
-> +#define AT_EXECVE_CHECK                0x10000 /* Only perform a check i=
-f execution
-> +                                          would be allowed. */
-> +
->  #endif /* _UAPI_LINUX_FCNTL_H */
-> diff --git a/security/security.c b/security/security.c
-> index 09664e09fec9..dae7e903947f 100644
-> --- a/security/security.c
-> +++ b/security/security.c
-> @@ -1248,6 +1248,12 @@ int security_vm_enough_memory_mm(struct mm_struct =
-*mm, long pages)
->   * to 1 if AT_SECURE should be set to request libc enable secure mode.  =
-@bprm
->   * contains the linux_binprm structure.
->   *
-> + * If execveat(2) is called with the AT_EXECVE_CHECK flag, bprm->is_chec=
-k is
-> + * set.  The result must be the same as without this flag even if the ex=
-ecution
-> + * will never really happen and @bprm will always be dropped.
-> + *
-> + * This hook must not change current->cred, only @bprm->cred.
-> + *
->   * Return: Returns 0 if the hook is successful and permission is granted=
+> > +related ``SECBIT_EXEC_RESTRICT_FILE_LOCKED`` bit should also be set.
+> > +
+> > +Programs should only enforce consistent restrictions according to the
+> > +securebits but without relying on any other user-controlled configurat=
+ion.
+> > +Indeed, the use case for these securebits is to only trust executable =
+code
+> > +vetted by the system configuration (through the kernel), so we should =
+be
+> > +careful to not let untrusted users control this configuration.
+> > +
+> > +However, script interpreters may still use user configuration such as
+> > +environment variables as long as it is not a way to disable the secure=
+bits
+> > +checks.  For instance, the ``PATH`` and ``LD_PRELOAD`` variables can b=
+e set by
+> > +a script's caller.  Changing these variables may lead to unintended co=
+de
+> > +executions, but only from vetted executable programs, which is OK.  Fo=
+r this to
+> > +make sense, the system should provide a consistent security policy to =
+avoid
+> > +arbitrary code execution e.g., by enforcing a write xor execute policy=
 .
->   */
->  int security_bprm_creds_for_exec(struct linux_binprm *bprm)
-> @@ -3098,6 +3104,10 @@ int security_file_receive(struct file *file)
->   * Save open-time permission checking state for later use upon file_perm=
-ission,
->   * and recheck access if anything has changed since inode_permission.
->   *
-> + * We can check if a file is opened for execution (e.g. execve(2) call),=
- either
-> + * directly or indirectly (e.g. ELF's ld.so) by checking file->f_flags &
-> + * __FMODE_EXEC .
-> + *
->   * Return: Returns 0 if permission is granted.
->   */
->  int security_file_open(struct file *file)
-> --
-> 2.47.1
+> > +
+> > +When ``SECBIT_EXEC_DENY_INTERACTIVE`` is set, a process should never i=
+nterpret
+> > +interactive user commands (e.g. scripts).  However, if such commands a=
+re passed
+> > +through a file descriptor (e.g. stdin), its content should be interpre=
+ted if a
+> > +call to :manpage:`execveat(2)` with the related file descriptor and th=
+e
+> > +``AT_EXECVE_CHECK`` flag succeed.
+> > +
+> > +For instance, script interpreters called with a script snippet as argu=
+ment
+> > +should always deny such execution if ``SECBIT_EXEC_DENY_INTERACTIVE`` =
+is set.
+> > +
+> > +This secure bit may be set by user session managers, service managers,
+> > +container runtimes, sandboxer tools...  Except for test environments, =
+the
+> > +related ``SECBIT_EXEC_DENY_INTERACTIVE_LOCKED`` bit should also be set=
+.
+> > +
+> > +Here is the expected behavior for a script interpreter according to co=
+mbination
+> > +of any exec securebits:
+> > +
+> > +1. ``SECBIT_EXEC_RESTRICT_FILE=3D0`` and ``SECBIT_EXEC_DENY_INTERACTIV=
+E=3D0``
+> > +
+> > +   Always interpret scripts, and allow arbitrary user commands (defaul=
+t).
+> > +
+> > +   No threat, everyone and everything is trusted, but we can get ahead=
+ of
+> > +   potential issues thanks to the call to :manpage:`execveat(2)` with
+> > +   ``AT_EXECVE_CHECK`` which should always be performed but ignored by=
+ the
+> > +   script interpreter.  Indeed, this check is still important to enabl=
+e systems
+> > +   administrators to verify requests (e.g. with audit) and prepare for
+> > +   migration to a secure mode.
+> > +
+> > +2. ``SECBIT_EXEC_RESTRICT_FILE=3D1`` and ``SECBIT_EXEC_DENY_INTERACTIV=
+E=3D0``
+> > +
+> > +   Deny script interpretation if they are not executable, but allow
+> > +   arbitrary user commands.
+> > +
+> > +   The threat is (potential) malicious scripts run by trusted (and not=
+ fooled)
+> > +   users.  That can protect against unintended script executions (e.g.=
+ ``sh
+> > +   /tmp/*.sh``).  This makes sense for (semi-restricted) user sessions=
+.
+> > +
+> > +3. ``SECBIT_EXEC_RESTRICT_FILE=3D0`` and ``SECBIT_EXEC_DENY_INTERACTIV=
+E=3D1``
+> > +
+> > +   Always interpret scripts, but deny arbitrary user commands.
+> > +
+> > +   This use case may be useful for secure services (i.e. without inter=
+active
+> > +   user session) where scripts' integrity is verified (e.g.  with IMA/=
+EVM or
+> > +   dm-verity/IPE) but where access rights might not be ready yet.  Ind=
+eed,
+> > +   arbitrary interactive commands would be much more difficult to chec=
+k.
+> > +
+> > +4. ``SECBIT_EXEC_RESTRICT_FILE=3D1`` and ``SECBIT_EXEC_DENY_INTERACTIV=
+E=3D1``
+> > +
+> > +   Deny script interpretation if they are not executable, and also den=
+y
+> > +   any arbitrary user commands.
+> > +
+> > +   The threat is malicious scripts run by untrusted users (but trusted=
+ code).
+> > +   This makes sense for system services that may only execute trusted =
+scripts.
+> > +
+> > +.. Links
+> > +.. _samples/check-exec/inc.c:
+> > +   https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/=
+tree/samples/check-exec/inc.c
 >
 Reviewed-by: Jeff Xu < jeffxu@chromium.org>
 Tested-by: Jeff Xu <jeffxu@chromium.org>
-
->
