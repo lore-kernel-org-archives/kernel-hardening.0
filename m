@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21910-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21911-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 1CB15E7718B
-	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Dec 2024 16:27:06 +0000 (UTC)
-Received: (qmail 11499 invoked by uid 550); 23 Dec 2024 16:26:55 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 1FEF3E7718B
+	for <kernel-hardening@archiver.kernel.org>; Mon, 23 Dec 2024 16:29:21 +0000 (UTC)
+Received: (qmail 23578 invoked by uid 550); 23 Dec 2024 16:29:11 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,27 +12,27 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 16343 invoked from network); 23 Dec 2024 16:21:12 -0000
+Received: (qmail 19568 invoked from network); 23 Dec 2024 16:28:23 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ethancedwards.com;
-	s=protonmail3; t=1734970863; x=1735230063;
-	bh=akUmr6bOc+fOEizuHMtWgqa48aPdr3+dMVwuE/0mScA=;
+	s=protonmail3; t=1734971294; x=1735230494;
+	bh=bqyMZPUwM8jdoQ7R6OfI9h6Twr/FyoQIi75Q+q7W9u4=;
 	h=Date:To:From:Cc:Subject:Message-ID:Feedback-ID:From:To:Cc:Date:
 	 Subject:Reply-To:Feedback-ID:Message-ID:BIMI-Selector:
 	 List-Unsubscribe:List-Unsubscribe-Post;
-	b=oFCLbqr9g9+kYm/ypdy6ge5KsZFsBMbilXsEOYPmrnEQrrMf0GF2+H4praGOc5Adq
-	 +HGnjKtYFT5Z/kEt00aRVBhBYbkmoNPoecL8XnwSSwBC/QiNH0mnvxKohIRFx2HT3m
-	 Dto1akoMjsXdHdbrSivAd0NtCDqSTLwLqdeh80h0msQvOwx7eHvj/ZvhE5TFf8eM4J
-	 ql7FckkUEdbKv+MVsb9Nrz7wFVgamO1gQM0v+SOZJZjBhPp4GKotMmfuqG1tpsoa6v
-	 NnFxEypOeGneUly5vgdoGAiS/+nXIZ587tqmugORQCkoaVepCjqYDcDoiGcf3SRd57
-	 BQFPdqc5EfmOg==
-Date: Mon, 23 Dec 2024 16:20:59 +0000
+	b=dKhJz62UltxDlEmpJaPB4/KU5pncU8BXKp64nZSktCoyu/p2SxGL/p6GJpNE+niVM
+	 oRTB6rnkEDxmmsmUR26ZKa7rx4G5gMHFNNYG1jmZCQJV1j3uAyYOLrg0nnXiVGQbDg
+	 uBrJVPK+TDnUpBmeW+AZK6tB0Q1bmA+R35d0U1jSf6EJlRN6MyUbjlWv2Mn8OG11eQ
+	 r7eWB6KuwZlt51nk/OU7MIERljnMPVX34wr7tabRX/v0mbScPuoxmLBzDBUcVfzww8
+	 QwNbJIK/88VBZ7bj63gGpgObQkEzDPpHV/+uE+Et5eWYk48xb9xp2xxkBTFj0VLehv
+	 40ntThRWXFv+g==
+Date: Mon, 23 Dec 2024 16:28:09 +0000
 To: "rafael@kernel.org" <rafael@kernel.org>
 From: Ethan Carter Edwards <ethan@ethancedwards.com>
-Cc: "linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "daniel.lezcano@linaro.org" <daniel.lezcano@linaro.org>
-Subject: [PATCH] thermal/debugfs: change kzalloc to kcalloc
-Message-ID: <LD_0bVRqzr2SEjrmrDHAWn0PurFdkgxZD6QS2zowUh5uqA7or1pd88vdA5wyXbTx1Z6dfZzt7pq6xfQ1EnvD4fIt26nWG5-zGEmNLhIcXTE=@ethancedwards.com>
+Cc: "daniel.lezcano@linaro.org" <daniel.lezcano@linaro.org>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>
+Subject: [PATCH v2] thermal/debugfs: change kzalloc to kcalloc
+Message-ID: <LrNqRlU9exQU3mj1YCsmuWHYkpX3ZtUkks2ajMaCbmODAmeO0U0zMIDUVOsIjUyVMaImb67YdBy6M5NFOUqrkdmzgIxILRxZ_pbhOsOvtcI=@ethancedwards.com>
 Feedback-ID: 28410670:user:proton
-X-Pm-Message-ID: ef2dd8441b364721ef05f54745cd160004b2625f
+X-Pm-Message-ID: 7953223c63a835d43bd4e9b315c0fdf4d734ad51
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
@@ -61,8 +61,8 @@ z)
 
 -       tz_dbg->trips_crossed =3D kzalloc(sizeof(int) * tz->num_trips, GFP_=
 KERNEL);
-+       tz_dbg->trips_crossed =3D kcalloc(z->num_trips, sizeof(int), GFP_KE=
-RNEL);
++       tz_dbg->trips_crossed =3D kcalloc(tz->num_trips, sizeof(int), GFP_K=
+ERNEL);
         if (!tz_dbg->trips_crossed) {
                 thermal_debugfs_remove_id(thermal_dbg);
                 return;
