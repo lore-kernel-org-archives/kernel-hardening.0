@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21913-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21914-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id F2298E7718B
-	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Dec 2024 03:27:32 +0000 (UTC)
-Received: (qmail 8094 invoked by uid 550); 25 Dec 2024 03:27:19 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 6FB60E7718D
+	for <kernel-hardening@archiver.kernel.org>; Wed, 25 Dec 2024 03:28:04 +0000 (UTC)
+Received: (qmail 11950 invoked by uid 550); 25 Dec 2024 03:27:53 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,33 +12,33 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1474 invoked from network); 24 Dec 2024 22:13:33 -0000
+Received: (qmail 5508 invoked from network); 25 Dec 2024 00:12:08 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ethancedwards.com;
-	s=protonmail3; t=1735078405; x=1735337605;
-	bh=s8tMHzHmmJ+SEcYAfDqFaGKe7WAZQZkom1vhjssxqCQ=;
+	s=protonmail3; t=1735085519; x=1735344719;
+	bh=aqQEz69ffLO060AUloP0QtKMe9LzDhvaV6vqYUa50co=;
 	h=Date:To:From:Cc:Subject:Message-ID:Feedback-ID:From:To:Cc:Date:
 	 Subject:Reply-To:Feedback-ID:Message-ID:BIMI-Selector:
 	 List-Unsubscribe:List-Unsubscribe-Post;
-	b=g28Ue7yOjQ6O1kcuB8CWz0KBgP2K6zpLG0B477sgyMzxUOqKIPxfPYqtu9begsRmg
-	 4ePlIlZ5EcqlxNl3swuVONFkjxzbhUZoRL6+2tFh+JqZLJTkg6bYzBEIE8b5qjHFts
-	 MhkqI4iCUmUYBAaZf1ljmRMLyAF5DUS0x+FGbm+eYoX+y5SvSofpwxXzLD+2Sqv9Qr
-	 8ADd3NUbxgwi3ZpvyUE9I6Y7viRQ9w+mFzD7GVkJdQBYLTdzzjdp4KZ5rcdaX/lV3/
-	 EEcVcR81nCkPhu+ukXTZUFmDRv4Y5DW8/ESj6ARmNVvwTVe6ErwnHGfj9ZErsq/R5V
-	 ODtgGAMW/u0lw==
-Date: Tue, 24 Dec 2024 22:13:21 +0000
-To: "agk@redhat.com" <agk@redhat.com>
+	b=J11nNlGVO0MjJJ7de95ffDB1tAyZHYd+MdtQhmugwsoAOaNW3OUmjG7Umdd9DlMTh
+	 F97zS7VzPww5y8adSE47oLkQ3vwN3isOnjTROCaoNad0cFE00kbdY8Xh9evlLCGVNE
+	 99SURrrgk4N0KBHV4sRybaAH/BAGpvmn1QG332JBYOI2MLDJYh4/5zfiWAO7xFbDGV
+	 iXj95eNuswt5lgjzhxzK2WQ7Bei40e7PHyZHYxC6fmnU23czoPyC6DU20j8fXNxkhu
+	 BXBLsj1+FTJifBFvElKt8KfeIVNNsgXKu/VUuUjGNiiAgYoi273Df5+xSsVMq/7OuM
+	 Koz+quz+aieTQ==
+Date: Wed, 25 Dec 2024 00:11:55 +0000
+To: "mingo@redhat.com" <mingo@redhat.com>
 From: Ethan Carter Edwards <ethan@ethancedwards.com>
-Cc: "snitzer@kernel.org" <snitzer@kernel.org>, "dm-devel@lists.linux.dev" <dm-devel@lists.linux.dev>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, "mpatocka@redhat.com" <mpatocka@redhat.com>
-Subject: [PATCH] dm: change kzalloc to kcalloc
-Message-ID: <Z7XWRfRi3Fn25wT4Dg19JRN4xrKcCt3TxaxZwsR_0LDR2C6fQxCiLrsMBfJg8f_ZqSAx3u6aPm-TR02dC6bLpMmqSI_jp_ADiJ_qW_27puk=@ethancedwards.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "bsegall@google.com" <bsegall@google.com>, "peterz@infradead.org" <peterz@infradead.org>
+Subject: [PATCH] sched/topology: change kzalloc to kcalloc
+Message-ID: <ieLySO0wXjkbKYOTqu2fRbPKXUdAB6xw5zDQedqQEpBKTD4t61myv42eN9b14T6nmoBd6lb45oK5_2rQ9mYKrNCTs76PrDVpLjk8CFf95E0=@ethancedwards.com>
 Feedback-ID: 28410670:user:proton
-X-Pm-Message-ID: 1bd655178d25c363227416789bb2d5305d0fba03
+X-Pm-Message-ID: 4a1a081b6666111f8b3515a3da1c822a8b2e5127
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-Use 2-factor multiplication argument form kcalloc() instead
-of instead of the deprecated kzalloc() [1].
+We are replacing any instances of kzalloc(size * count, ...) with
+kcalloc(count, size, ...) due to risk of overflow [1].
 
 [1] https://www.kernel.org/doc/html/next/process/deprecated.html#open-coded=
 -arithmetic-in-allocator-arguments
@@ -46,23 +46,30 @@ Link: https://github.com/KSPP/linux/issues/162
 
 Signed-off-by: Ethan Carter Edwards <ethan@ethancedwards.com>
 ---
- drivers/md/dm-ps-io-affinity.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ kernel/sched/topology.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/md/dm-ps-io-affinity.c b/drivers/md/dm-ps-io-affinity.=
-c
-index 461ee6b2044d..716807e511ee 100644
---- a/drivers/md/dm-ps-io-affinity.c
-+++ b/drivers/md/dm-ps-io-affinity.c
-@@ -116,7 +116,7 @@ static int ioa_create(struct path_selector *ps, unsigne=
-d int argc, char **argv)
- =09if (!s)
- =09=09return -ENOMEM;
+diff --git a/kernel/sched/topology.c b/kernel/sched/topology.c
+index 9748a4c8d668..17eb12819563 100644
+--- a/kernel/sched/topology.c
++++ b/kernel/sched/topology.c
+@@ -1920,7 +1920,7 @@ void sched_init_numa(int offline_node)
+ =09*/
+ =09sched_domains_numa_levels =3D 0;
 =20
--=09s->path_map =3D kzalloc(nr_cpu_ids * sizeof(struct path_info *),
-+=09s->path_map =3D kcalloc(nr_cpu_ids, sizeof(struct path_info *),
- =09=09=09     GFP_KERNEL);
- =09if (!s->path_map)
- =09=09goto free_selector;
+-=09masks =3D kzalloc(sizeof(void *) * nr_levels, GFP_KERNEL);
++=09masks =3D kcalloc(nr_levels, sizeof(void *), GFP_KERNEL);
+ =09if (!masks)
+ =09=09return;
+=20
+@@ -1929,7 +1929,7 @@ void sched_init_numa(int offline_node)
+ =09* CPUs of nodes that are that many hops away from us.
+ =09*/
+ =09for (i =3D 0; i < nr_levels; i++) {
+-=09=09masks[i] =3D kzalloc(nr_node_ids * sizeof(void *), GFP_KERNEL);
++=09=09masks[i] =3D kcalloc(nr_node_ids, sizeof(void *), GFP_KERNEL);
+ =09=09if (!masks[i])
+ =09=09=09return;
+=20
 --=20
 2.47.1
