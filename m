@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21920-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21921-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 97107C02188
-	for <kernel-hardening@archiver.kernel.org>; Sun, 19 Jan 2025 18:35:22 +0000 (UTC)
-Received: (qmail 1910 invoked by uid 550); 19 Jan 2025 18:35:12 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 59BE3C02187
+	for <kernel-hardening@archiver.kernel.org>; Mon, 20 Jan 2025 01:32:46 +0000 (UTC)
+Received: (qmail 7431 invoked by uid 550); 20 Jan 2025 01:32:33 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,30 +12,30 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1878 invoked from network); 19 Jan 2025 18:35:12 -0000
+Received: (qmail 7396 invoked from network); 20 Jan 2025 01:32:33 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ethancedwards.com;
-	s=MBO0001; t=1737311701;
+	s=MBO0001; t=1737336744;
 	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
 	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
-	bh=4V7XghkPcR0oVjcTycJK4e/iLGu3i4fave38Oa1IOEA=;
-	b=Jq01H3T1i9TakgR4RHf/FVBZk0960qa693M6NsvAv6GK9k8MblXPQMkB27j/F+tgncsZcJ
-	yX6RhpekAyKhyE4qM3b6xgw8fBgCoF2oYUvVulZk9qHKQEr4v/1TKeUJFk1eiSkSpLXi7K
-	BdPHE3W3E0ci+N1LP4ADU6WOUKMLacgvXFcfIweOj9oC0MnS+Ind3I4i7gM7Gkjkh5/uOZ
-	b1qF9FwuoxPCMVauv8cb8X9BkZKj0Rl5j07Bl4zLg5l33xh8cnC4r2v7FwY5TkL6e55OdN
-	CZ5uG9LchWBYO9FhmgDlXXOSQYfpNxRug1dQpqlYVCPHrMNOz6o0SvZ9VHejDQ==
-Date: Sun, 19 Jan 2025 13:34:58 -0500
+	bh=MURBR24qYXT3/f8sCeWQJ7YPDGGyUpvtE3SYqUTxqvQ=;
+	b=h0drQtDovTBO7uHETN8Za+YBwL0zDszLnB+Z/77N6gARwCM/XRU3tn8ZdBPUotN0vpOzN2
+	nKFySYL6Na3gd1lvvxUpMfbZU6rDRc6OYZ2ZGKQD0vAidNZpLFOm5SNb5YOU7kjGh+tbyq
+	MGTncgPZjqBrPl0sspD9ssKicKo8u4akmFS/+dTUfkYhSdLNJp82Vj1PfsruXaHxvp55CM
+	dMWjK3y9AREm0n15gF8tmHNyHxMn6rYq4erTD1CJGGQbJG3bKM9r6T6oP2aP/rcEw896d3
+	mg6vYjLsLU9SS3vitUBb77Puv0v5Kytfm0y9h/ba3ya5aMIDLgT7HuCmYbCXbw==
+Date: Sun, 19 Jan 2025 20:32:20 -0500
 From: Ethan Carter Edwards <ethan@ethancedwards.com>
-To: "rafael@kernel.org" <rafael@kernel.org>
-Cc: "daniel.lezcano@linaro.org" <daniel.lezcano@linaro.org>, 
-	"linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, 
-	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, 
-	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>
-Subject: [PATCH v3] thermal/debugfs: change kzalloc to kcalloc
-Message-ID: <dmv2euctawmijgffigu7qr4yn7jtby4afuy5fgymq6s35c5elu@inovmydfkaez>
+To: Srinivas Kandagatla <srinivas.kandagatla@linaro.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, 
+	"linux-hardening@vger.kernel.org" <linux-hardening@vger.kernel.org>, 
+	"kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-sound@vger.kernel.org, linux-arm-msm@vger.kernel.org, 
+	Takashi Iwai <tiwai@suse.com>
+Subject: [PATCH] ASoC: q6dsp: q6apm: change kzalloc to kcalloc
+Message-ID: <s6duijftssuzy34ilogc5ggfyukfqxmbflhllyzjlu4ki3xoo4@ci57esahvmxn>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-X-Rspamd-Queue-Id: 4YbhwP5Kw7z9scJ
+X-Rspamd-Queue-Id: 4Ybt9z5g4Fz9sTM
 
 We are replacing any instances of kzalloc(size * count, ...) with
 kcalloc(count, size, ...) due to risk of overflow [1].
@@ -45,24 +45,22 @@ Link: https://github.com/KSPP/linux/issues/162
 
 Signed-off-by: Ethan Carter Edwards <ethan@ethancedwards.com>
 ---
- v3: fix description and email client formatting
- v2: fix typo
- drivers/thermal/thermal_debugfs.c | 2 +-
+ sound/soc/qcom/qdsp6/q6apm.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/thermal/thermal_debugfs.c b/drivers/thermal/thermal_debugfs.c
-index c800504c3cfe..29dc1431a252 100644
---- a/drivers/thermal/thermal_debugfs.c
-+++ b/drivers/thermal/thermal_debugfs.c
-@@ -876,7 +876,7 @@ void thermal_debug_tz_add(struct thermal_zone_device *tz)
+diff --git a/sound/soc/qcom/qdsp6/q6apm.c b/sound/soc/qcom/qdsp6/q6apm.c
+index 2a2a5bd98110..11e252a70f69 100644
+--- a/sound/soc/qcom/qdsp6/q6apm.c
++++ b/sound/soc/qcom/qdsp6/q6apm.c
+@@ -230,7 +230,7 @@ int q6apm_map_memory_regions(struct q6apm_graph *graph, unsigned int dir, phys_a
+ 		return 0;
+ 	}
  
- 	tz_dbg->tz = tz;
- 
--	tz_dbg->trips_crossed = kzalloc(sizeof(int) * tz->num_trips, GFP_KERNEL);
-+	tz_dbg->trips_crossed = kcalloc(tz->num_trips, sizeof(int), GFP_KERNEL);
- 	if (!tz_dbg->trips_crossed) {
- 		thermal_debugfs_remove_id(thermal_dbg);
- 		return;
+-	buf = kzalloc(((sizeof(struct audio_buffer)) * periods), GFP_KERNEL);
++	buf = kcalloc(periods, sizeof(struct audio_buffer), GFP_KERNEL);
+ 	if (!buf) {
+ 		mutex_unlock(&graph->lock);
+ 		return -ENOMEM;
 -- 
-2.47.1
+2.48.0
 
