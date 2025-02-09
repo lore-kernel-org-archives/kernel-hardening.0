@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21929-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21930-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 146A7C02199
-	for <kernel-hardening@archiver.kernel.org>; Sun,  9 Feb 2025 04:06:44 +0000 (UTC)
-Received: (qmail 11510 invoked by uid 550); 9 Feb 2025 04:06:33 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 96790C02199
+	for <kernel-hardening@archiver.kernel.org>; Sun,  9 Feb 2025 10:16:43 +0000 (UTC)
+Received: (qmail 7708 invoked by uid 550); 9 Feb 2025 10:16:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,103 +12,91 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 11479 invoked from network); 9 Feb 2025 04:06:33 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ethancedwards.com;
-	s=MBO0001; t=1739073984;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type;
-	bh=ltjFoxTAxyndszAucu/FRvuWcGA6M5KNw2ipIWnLj0A=;
-	b=PSuJR+CM26cpujHSJeXkJIfkU3Tvq67PL2aXfCj2drNPGQB7FampRgON82ZCdLyzwu2t1Q
-	EtCdY2toTlu6+4U3UyP+/IPc/cy0nYUW5WtFOzuy72LkpEBCshokE4t9fjPXLHJY010TSo
-	9B8ynHCqfFY6VQgB0cCfS2+06PsIgzuCaYl/vo0Lm6c1UfimIGMgu5oZH9i+myBURe4MEY
-	yUZ7Dn6yNVyFSd0Kani0c1psdHj9ZCq4lL1DoPFPNMEYYPcPGIj5R1E06mMQQeI0KwYR1r
-	+n4fVRiWRhNNAzljKs5E4XoeEUkKqqiAgECB0RM+lF2cNkW3F5fHvxIfH0z3JA==
-Date: Sat, 8 Feb 2025 23:06:21 -0500
-From: Ethan Carter Edwards <ethan@ethancedwards.com>
-To: Dan Carpenter <dan.carpenter@linaro.org>
-Cc: linux-kernel@vger.kernel.org, netdev@vger.kernel.org, 
-	linux-hams@vger.kernel.org, pabeni@redhat.com, linux-hardening@vger.kernel.org, 
-	kernel-hardening@lists.openwall.com
-Subject: [PATCH v3] hamradio: baycom: replace strcpy() with strscpy()
-Message-ID: <3qo3fbrak7undfgocsi2s74v4uyjbylpdqhie4dohfoh4welfn@joq7up65ug6v>
+Received: (qmail 7688 invoked from network); 9 Feb 2025 10:16:32 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=web.de;
+	s=s29768273; t=1739096168; x=1739700968; i=markus.elfring@web.de;
+	bh=F3bDdKl8eATlDg8WYVq5TTuNjlsg7scF7CmaxNIlem4=;
+	h=X-UI-Sender-Class:Message-ID:Date:MIME-Version:To:Cc:References:
+	 Subject:From:In-Reply-To:Content-Type:Content-Transfer-Encoding:
+	 cc:content-transfer-encoding:content-type:date:from:message-id:
+	 mime-version:reply-to:subject:to;
+	b=e8KWJk7KnQ+x/X/TSMhk/eufCcaY5Dw8k2LN0Acynm5KxjdmIHZuxQFlQnOHSkhF
+	 0M+vyHWXRKV3SDHtoQcZpuGaENaiCNnUaHeXktQjNP3IyjvPSFvOnufNDxxuO27fL
+	 d7hNznti5Pyljzu1GDCER/JQDLwyFiErAGMPKQWK+wLupNBcg4N6Y8wslhdS5r8yB
+	 dkhToCQwTBjXVesvsm5nO+pArfDj81n3fx6/U4uWwPIKKJ81V54560XQFtsMrz2GY
+	 OqHV9wAMm8njp1ki85/Rxh6ANtddENq/XR5k2X6MYSCp3dduc1fa+wkHhHLX6zthL
+	 pIaO9nfvz2C9Jh6LLQ==
+X-UI-Sender-Class: 814a7b36-bfc1-4dae-8640-3722d8ec6cd6
+Message-ID: <797c061c-7324-42e2-b4bd-fd93cf4ff0d0@web.de>
+Date: Sun, 9 Feb 2025 11:15:59 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-X-Rspamd-Queue-Id: 4YrDfS3YsSz9skQ
+User-Agent: Mozilla Thunderbird
+To: Ethan Carter Edwards <ethan@ethancedwards.com>,
+ kernel-hardening@lists.openwall.com, linux-hardening@vger.kernel.org,
+ linux-sound@vger.kernel.org, linux-arm-msm@vger.kernel.org,
+ Srinivas Kandagatla <srinivas.kandagatla@linaro.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Takashi Iwai <tiwai@suse.com>
+References: <s6duijftssuzy34ilogc5ggfyukfqxmbflhllyzjlu4ki3xoo4@ci57esahvmxn>
+Subject: Re: [PATCH] ASoC: q6dsp: q6apm: change kzalloc to kcalloc
+Content-Language: en-GB
+From: Markus Elfring <Markus.Elfring@web.de>
+In-Reply-To: <s6duijftssuzy34ilogc5ggfyukfqxmbflhllyzjlu4ki3xoo4@ci57esahvmxn>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+X-Provags-ID: V03:K1:9qLT0/6znlrr/UX2FzpFVqVWgiJtm9nEXtNZITfFV7q0fA3urLi
+ ocRmNq9WCEz2HCQzKkoSyn47v8HjzCebI+Oj/qtjnE1FRMWmyCFf5dfO26MJbnfgAdHHFln
+ 2zjuGAn5UCfMW4tm07CItXxbmqYohhCD4zdFou4/hoh/3/D+Aho/Ns3Il7nnGOa3yYMxaIw
+ 3PcJMFAN2O6SUFKgFFUPQ==
+UI-OutboundReport: notjunk:1;M01:P0:sSj4urlGScs=;aYQ2CVZDDz1kQzwhW3MloEE1199
+ 3bTjnrHI7d3xVZuOLLFf1VDWX062zj02hYmpGEh8PFSaH4NZSPV0L6O37cq5eA5FrpRnY6hUM
+ Ses7fbc00O6fLHuruFIMZwAPXEaNOkMLntvEF/bPkzpHu17d9QVNfdQb5zWHtTLurnJcBUsQ+
+ Ug2KU3fYOEdDiwkPZfXfZ5PTiaq7GiZV2FEuqUBE88JuFw2rhJdPxs/si8yqUoL6VW3BC6BV5
+ /qHUsvSbyzjvWsTkk6HqiIQNV43xLtC4uFLHoCxZvQqEFp9NhfumITFGqSEIwB5mi+Fn6g91o
+ G5vyAwyezRK/ED9Xa53W0JnI3ak8kxxOIaxCfDT8L375f4tsfZGJ2wTO36xQ5QRN0aY0zxqo2
+ dd4hHSZk34h6Az+pZbds8+TvN/DM1YiqU61ySMGM83wlJGHijYcTk1UnBLpCCFoaM+wR7M+vI
+ YwY9e1PYoQkBcU9fuhB3e2qdmAjIYKxUV9Zv9BHPcZByWQmpWmI6Fk5xsXQMI+Z8xDrAOmxaT
+ wPLL6YJpmIBfyXebgUmB+SJctSZw0sdKawZPNmVh4Q8UAQ3l0tF3l8HGSmDlvo4FQky9DDHqY
+ +dpPE1RRjxwkXvAiWUnw+uKWYSJi4APeLlVJzeGX0a5ZU9aF6FfgVzUCAM7my2TCtGFVWsiFd
+ ap2nLz3jTA0+vIPW0Q6j6bvgg/ruXVq14NQlIwe4S0UXXlH8R18I2VIwZ1VbMoqU2qau2vAHk
+ +y43sExq+zW3g2K4OXXXYmqo4y+AYuXROJhLW72Vjpun7hJUIGYtW1Kxbwz7WOT0NJ5uM8P3S
+ 3v0xmak90lMqOom4zR+V3PJD5rkBRnBA9Czp9b35VJ+nHqozR2uNxdlwiaNWZlwHUMfKZV1IM
+ 9Uy1hWtpkGoMADutt6LhzW4iUW/9ASkyZ2Ra12u3USd5u1YwiayZ6EOdkQ5Kbbf5yEIZQGdKI
+ kvOzCS6yLogdSoo7b9a4K/RuPPxOsESr3lPzwbrkMY+eu87/CgeGdGUls838JJ6mlu/YSAMl0
+ xF2KNIYyqHcdY0bi+BkH7du5ufBnUZ3+N9+OY02OWrwaw1pAkgAkOMDtqLRBe1kcaL7zWIYSA
+ m/au2iaUvmcQdRv0O+Uc9G+1ISV85zD6eebAt6JLiIpOt7/V0lf+c2XFc6lr8qeEHKHZI7HIO
+ o7YlJaegmMXffKFlK4fIW9cgdKydK/s24g38UlWDW2Nk7wq2NwgUwnsxXbLnBHMLaag/cRS+p
+ p3bQNbh+onsXAtr2xyej2FeBbW1UXQtiaB6mR80NKfwT+1p32mIBSsvXjBsnCqmXl4x7UJTBO
+ tp+3UUBRPCLWazFoMssAqKOFtzvpJlc4i8aTcN1pr6NPVExOWDXU06W+fuCaRDxmcvpwU6bXp
+ D45YEcGOmQ3aPNw3r/OW3noIPaLCuRgukot7yICaD44BJSI0K6LSGbdOYkQ8CS0lEGMpTdBHj
+ 3U7JovgvjF0/MIpPWUdKJvM8Avig=
 
-The strcpy() function has been deprecated and replaced with strscpy().
-There is an effort to make this change treewide:
-https://github.com/KSPP/linux/issues/88.
+> We are replacing any instances of kzalloc(size * count, ...) with
+> kcalloc(count, size, ...) due to risk of overflow [1].
 
-Signed-off-by: Ethan Carter Edwards <ethan@ethancedwards.com>
-Reviewed-by: Dan Carpenter <dan.carpenter@linaro.org>
----
- v3: resend after merge window ends
- Link to v2: https://lore.kernel.org/lkml/62yrwnnvqtwv4etjeaatms5xwiixirkbm6f7urmijwp7kk7bio@r2ric7eqhsvf/T/#u
- v2: reduce verbosity
- Link to v1: https://lore.kernel.org/lkml/bqKL4XKDGLWNih2jsEzZYpBSHG6Ux5mLZfDBIgHckEUxDq4l4pPgQPEXEqKRE7pUwMrXZBVeko9aYr1w_E5h5r_R_YFA46G8dGhV1id7zy4=@ethancedwards.com/
- drivers/net/hamradio/baycom_par.c     | 4 ++--
- drivers/net/hamradio/baycom_ser_fdx.c | 2 +-
- drivers/net/hamradio/baycom_ser_hdx.c | 4 ++--
- 3 files changed, 5 insertions(+), 5 deletions(-)
+See also:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Do=
+cumentation/process/submitting-patches.rst?h=3Dv6.13#n94
 
-diff --git a/drivers/net/hamradio/baycom_par.c b/drivers/net/hamradio/baycom_par.c
-index 00ebc25d0b22..47bc74d3ad8c 100644
---- a/drivers/net/hamradio/baycom_par.c
-+++ b/drivers/net/hamradio/baycom_par.c
-@@ -427,7 +427,7 @@ static int baycom_ioctl(struct net_device *dev, void __user *data,
- 		break;
- 
- 	case HDLCDRVCTL_GETMODE:
--		strcpy(hi->data.modename, bc->options ? "par96" : "picpar");
-+		strscpy(hi->data.modename, bc->options ? "par96" : "picpar");
- 		if (copy_to_user(data, hi, sizeof(struct hdlcdrv_ioctl)))
- 			return -EFAULT;
- 		return 0;
-@@ -439,7 +439,7 @@ static int baycom_ioctl(struct net_device *dev, void __user *data,
- 		return baycom_setmode(bc, hi->data.modename);
- 
- 	case HDLCDRVCTL_MODELIST:
--		strcpy(hi->data.modename, "par96,picpar");
-+		strscpy(hi->data.modename, "par96,picpar");
- 		if (copy_to_user(data, hi, sizeof(struct hdlcdrv_ioctl)))
- 			return -EFAULT;
- 		return 0;
-diff --git a/drivers/net/hamradio/baycom_ser_fdx.c b/drivers/net/hamradio/baycom_ser_fdx.c
-index 799f8ece7824..3dda6b215fe3 100644
---- a/drivers/net/hamradio/baycom_ser_fdx.c
-+++ b/drivers/net/hamradio/baycom_ser_fdx.c
-@@ -531,7 +531,7 @@ static int baycom_ioctl(struct net_device *dev, void __user *data,
- 		return baycom_setmode(bc, hi->data.modename);
- 
- 	case HDLCDRVCTL_MODELIST:
--		strcpy(hi->data.modename, "ser12,ser3,ser24");
-+		strscpy(hi->data.modename, "ser12,ser3,ser24");
- 		if (copy_to_user(data, hi, sizeof(struct hdlcdrv_ioctl)))
- 			return -EFAULT;
- 		return 0;
-diff --git a/drivers/net/hamradio/baycom_ser_hdx.c b/drivers/net/hamradio/baycom_ser_hdx.c
-index 5d1ab4840753..4f058f61659e 100644
---- a/drivers/net/hamradio/baycom_ser_hdx.c
-+++ b/drivers/net/hamradio/baycom_ser_hdx.c
-@@ -570,7 +570,7 @@ static int baycom_ioctl(struct net_device *dev, void __user *data,
- 		break;
- 
- 	case HDLCDRVCTL_GETMODE:
--		strcpy(hi->data.modename, "ser12");
-+		strscpy(hi->data.modename, "ser12");
- 		if (bc->opt_dcd <= 0)
- 			strcat(hi->data.modename, (!bc->opt_dcd) ? "*" : (bc->opt_dcd == -2) ? "@" : "+");
- 		if (copy_to_user(data, hi, sizeof(struct hdlcdrv_ioctl)))
-@@ -584,7 +584,7 @@ static int baycom_ioctl(struct net_device *dev, void __user *data,
- 		return baycom_setmode(bc, hi->data.modename);
- 
- 	case HDLCDRVCTL_MODELIST:
--		strcpy(hi->data.modename, "ser12");
-+		strscpy(hi->data.modename, "ser12");
- 		if (copy_to_user(data, hi, sizeof(struct hdlcdrv_ioctl)))
- 			return -EFAULT;
- 		return 0;
--- 
-2.47.1
 
+=E2=80=A6
+> +++ b/sound/soc/qcom/qdsp6/q6apm.c
+> @@ -230,7 +230,7 @@ int q6apm_map_memory_regions(struct q6apm_graph *gra=
+ph, unsigned int dir, phys_a
+>  		return 0;
+>  	}
+>
+> -	buf =3D kzalloc(((sizeof(struct audio_buffer)) * periods), GFP_KERNEL)=
+;
+> +	buf =3D kcalloc(periods, sizeof(struct audio_buffer), GFP_KERNEL);
+=E2=80=A6
+
+See also:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Do=
+cumentation/process/coding-style.rst?h=3Dv6.13#n941
+
+
+How do you think about to increase the application of scope-based resource=
+ management?
+
+Regards,
+Markus
