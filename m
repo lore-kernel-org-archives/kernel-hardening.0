@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21935-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21936-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 4BCC5C0219B
-	for <kernel-hardening@archiver.kernel.org>; Sun,  9 Feb 2025 19:33:10 +0000 (UTC)
-Received: (qmail 25776 invoked by uid 550); 9 Feb 2025 19:33:01 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 93B98C0219B
+	for <kernel-hardening@archiver.kernel.org>; Sun,  9 Feb 2025 21:58:03 +0000 (UTC)
+Received: (qmail 3958 invoked by uid 550); 9 Feb 2025 21:57:51 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,51 +12,52 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 25753 invoked from network); 9 Feb 2025 19:33:01 -0000
+Received: (qmail 3932 invoked from network); 9 Feb 2025 21:57:51 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linux-foundation.org; s=google; t=1739129573; x=1739734373; darn=lists.openwall.com;
+        d=linux-foundation.org; s=google; t=1739138263; x=1739743063; darn=lists.openwall.com;
         h=cc:to:subject:message-id:date:from:in-reply-to:references
          :mime-version:from:to:cc:subject:date:message-id:reply-to;
-        bh=3OYZn6iFxER/JL2avDuYDbzyExRqovS2QnLbQ0tqh0Y=;
-        b=iE1bkbiqAg3FQUSNbOJHFIIABNjf+nAaOl4Ko+bndMuqXf34FjUj1JMU89JsVhnE8p
-         VGX6YpWHdBCm/M93NE7IHPmY0w272csg6+kyN4KeFd2XAUTgkeRBeLzREOmXDM+pf+If
-         tgzeldSjkd8GjEQXe2h5aXU+tm8k6XGxqnFQ0=
+        bh=A2PLT/XZrOM9Aa/16QfAGDi7D1uHeStXqgrW7NE/z7I=;
+        b=EENldnJWgVrnZScnEsz9GJngwMC1/4qm8hM/FDfcuSo5TNMQLnop8wLALuku941kgO
+         6QN1xdn8YrAndSDrk0Q7gWC8GXh/niz2clw2EGI3F3aaBkZIltDk6O5WYBATcrS1pbBX
+         sYyLGhr5eBikcQ9y4qFjtQjWUQtsnatsWwUWI=
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1739129573; x=1739734373;
+        d=1e100.net; s=20230601; t=1739138263; x=1739743063;
         h=cc:to:subject:message-id:date:from:in-reply-to:references
          :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
          :reply-to;
-        bh=3OYZn6iFxER/JL2avDuYDbzyExRqovS2QnLbQ0tqh0Y=;
-        b=JkA3wKSYfVKaZ9JWahp35ANa8XYNXmHhwz/+xC4ZWLrL6jQKnVPBmx788A6CVNCF12
-         WgDnVX/8pPXZZ4OANi2IDjIxIRh7ohRwp2+iIRg4lC+oLx1TXAQVgAUVEaMRsVir2G2V
-         RMLoItOQV6NNGrXFV6oenRdZ0UHdTxZf6Uld3GUltibK60ll+XUn0mn3DDU4jDAJ57tS
-         A5v1YISP5VhoG0/A7MCQvlI/guIwYQ5zenBCQwvs6k9LM/2fVqJgWTJ//m8XwzEb799s
-         +inmyuGpYONS0dvpCYJwbN2OhylLNv5cYkyQFgLQUW1LTUYgsNvXpeO1T+idtqGI9gMr
-         wdIA==
-X-Forwarded-Encrypted: i=1; AJvYcCUOBYzYNODMSmnM7ATfTOjOWyANDEBfwHZxiYVGIlL0zB1am9xveWm9rLisbe0yDjypHw/kWnuZh/Y8QJzo6g80@lists.openwall.com
-X-Gm-Message-State: AOJu0YxBqSxjRbwkxt3gMxZu9YKTqKimblWb9Ck8nvXtlwVHw3IBTmpx
-	1TL2hErTTsImyLH8mASZjNpvaRcrF4/j/a7kHdZ0o1tWv/q4391lMSkjckQ2kvy04iz9JZa9m4E
-	jBFw=
-X-Gm-Gg: ASbGncufLi6teXTLUOwNXvRoAYQUoT64j9ERERUldE2wa/mXzKZkRkqQRO98tsOv+fh
-	wrR/nAlf6A4E6wbUxCUzn4eaUcuEFR9ME5XENir6UDkRqK8XQbl/k2TT/urZPG9gYOKyMzWm3BT
-	aQSNaxyPadmRP88eKKcrsDAYbitObS2j2RqhRXV8i+xVctmXaZ3b33/ZB7tuclATAbVwetdMN3k
-	JkTmLqRFgmjgfK4H4J8aSMjcSdLDgGqjgWv5Uy+8WG0qVlj/FTqRgzmpvMjw8jA9MbPvuVaHqNz
-	Y59u63pNZvW2qLInimG72Re5IMmAXjp3GbOFcHg2N1mY99KXBusVfisctyU2EhPvxQ==
-X-Google-Smtp-Source: AGHT+IFreVMPUsfycK3P8Bnsff1EDNKZo/edYKM+q8ryq06bi2Afn/2vzLZF+nIav44YtfmNXtLTSA==
-X-Received: by 2002:a17:907:1b0f:b0:ab2:b84b:2dab with SMTP id a640c23a62f3a-ab789b9c605mr1352396466b.30.1739129572565;
-        Sun, 09 Feb 2025 11:32:52 -0800 (PST)
-X-Forwarded-Encrypted: i=1; AJvYcCXp54JBnF6EEUGjj7B0FAJOpHvi+Qo0V08pQNP0VsJ44rTjZnDlxs5C1wUBKztePCSwYu0YN/uctrCpyyWrZHBK@lists.openwall.com
-X-Received: by 2002:a17:907:7e92:b0:aaf:c259:7f6 with SMTP id
- a640c23a62f3a-ab789c627e1mr1220851466b.45.1739129569271; Sun, 09 Feb 2025
- 11:32:49 -0800 (PST)
+        bh=A2PLT/XZrOM9Aa/16QfAGDi7D1uHeStXqgrW7NE/z7I=;
+        b=jJ6kRS9e7uByMiZIo4w1Wk6B3Sde+VlI/kWIHzE8NQxRY0K9JYsWhBVBU3sxMEf6rb
+         Nu9lGIhNu3ix73VYNXKk4FGyO+j+ktOMh6dtc4UPhFY4GpRts/AX0j08qChVzqEn+2Qu
+         AYJWUXHxJrbAXx0gty68XV3UOTXZ04nF5QL3YGEdaZy4aQo1+I7y+/HAskgyQ99Z6XbP
+         KJA0z9NvKEXdaJ3l3DejNcCKFb82X8Za9RFgwdug/Lfp4oVjjAV/GSI4+wY9l7Lfk/Sl
+         dDvjLmrcGXPfeLQmr+8NOEBFU1v6SNq96efE/T4wOc7O0w1IuHCsFwEFbGMYznv3KcOl
+         GjUA==
+X-Forwarded-Encrypted: i=1; AJvYcCUBLWoqJblzw0xBeqy5MKD2JyyTTJL5q3ZBBRTdvk60DnkGhEiOLP80Z/wNRkL3swEtOAPQfIhU2B5KtG5P8MKo@lists.openwall.com
+X-Gm-Message-State: AOJu0Yy7hahNB1Uzo4iVCTVnlFWImTsCVBCyXujyBOPo29PARTCI2tWa
+	PKSHyewB48fQ+7PkVxbXdLVR/8mbHn0Ml9+6GZXFB6FFLlAMmMgPzNopDH1qCeSTkgMWN0Y7q3x
+	zaeU=
+X-Gm-Gg: ASbGnctZ9RyH1aKxLcc8pJuuv++OTrkXtqfUylCHOoAhzKUlW7vC9AGAIO+aRoJ+CKO
+	jhT6qpb12YTmTA1jEAQ/5wJ+DB0tnDXaXZZiKxO6VvRCCf95q38zWx7eFsAUeVlU9TNbKQOnaKA
+	xgJOA52ywOwFcTfYFCabY62F3g9cW43i1S25qYSMHL6soVYtGbes4HI2L1RI2uK1S5RTIbJ6+DE
+	tneDn/yIA2PZZe7RoEGwq+xDmDq+z0+qA79tRUQ7hEfcEF+GT4HK12i4OkQcG6Xnj6FFUq47iZn
+	bHnIcLkFw+5/8pniK4/Gn7h5ilErp7E2ZmMempjK9u6JeDPS84m0P8YpxK9JGUj2/Q==
+X-Google-Smtp-Source: AGHT+IF9jA/Jlo61MLT0lc5v4xKIhBuqefEZaGsQQ6loZ9tW4a/nL84raDfcqunMOS6vrlSdyD6IMg==
+X-Received: by 2002:a17:907:6eac:b0:aa6:5910:49af with SMTP id a640c23a62f3a-ab789b1f93cmr1212400466b.24.1739138263282;
+        Sun, 09 Feb 2025 13:57:43 -0800 (PST)
+X-Forwarded-Encrypted: i=1; AJvYcCV0E/yMZ7b1W1CGVJfa7z93/sebTQ0BKwT9KjJV7cVQ4UZH9xS8vgVQcoIwmzC5FWvSK/fztcNx2VKRrPlyQceB@lists.openwall.com
+X-Received: by 2002:a05:6402:4608:b0:5de:42f5:817b with SMTP id
+ 4fb4d7f45d1cf-5de450b1c5dmr11409992a12.31.1739138261105; Sun, 09 Feb 2025
+ 13:57:41 -0800 (PST)
 MIME-Version: 1.0
 References: <20250209191008.142153-1-david.laight.linux@gmail.com>
-In-Reply-To: <20250209191008.142153-1-david.laight.linux@gmail.com>
+ <CAHk-=wiQQQ9yo84KCk=Y_61siPsrH=dF9t5LPva0Sbh_RZ0-3Q@mail.gmail.com> <20250209214047.4552e806@pumpkin>
+In-Reply-To: <20250209214047.4552e806@pumpkin>
 From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Sun, 9 Feb 2025 11:32:32 -0800
-X-Gmail-Original-Message-ID: <CAHk-=wiQQQ9yo84KCk=Y_61siPsrH=dF9t5LPva0Sbh_RZ0-3Q@mail.gmail.com>
-X-Gm-Features: AWEUYZkIEyygdjdtgqEM9UjeSXpn0CystKuNI2lg08YFjtDgCkT1DG_hRzS76Rc
-Message-ID: <CAHk-=wiQQQ9yo84KCk=Y_61siPsrH=dF9t5LPva0Sbh_RZ0-3Q@mail.gmail.com>
+Date: Sun, 9 Feb 2025 13:57:24 -0800
+X-Gmail-Original-Message-ID: <CAHk-=wiSnNEWsvDariBQ4O-mz7Nc7LbkdKUQntREVCFWiMe9zw@mail.gmail.com>
+X-Gm-Features: AWEUYZlCxkYto5CUq_vVIa6_VQHZVTdppz3dRgjcGRBwEP6eBd4ulJsXEl4hnJA
+Message-ID: <CAHk-=wiSnNEWsvDariBQ4O-mz7Nc7LbkdKUQntREVCFWiMe9zw@mail.gmail.com>
 Subject: Re: [PATCH 1/1] x86: In x86-64 barrier_nospec can always be lfence
 To: David Laight <david.laight.linux@gmail.com>
 Cc: x86@kernel.org, linux-kernel@vger.kernel.org, 
@@ -69,52 +70,63 @@ Cc: x86@kernel.org, linux-kernel@vger.kernel.org,
 	kernel-hardening@lists.openwall.com
 Content-Type: text/plain; charset="UTF-8"
 
-On Sun, 9 Feb 2025 at 11:10, David Laight <david.laight.linux@gmail.com> wrote:
+On Sun, 9 Feb 2025 at 13:40, David Laight <david.laight.linux@gmail.com> wrote:
 >
-> +#define barrier_nospec() __rmb()
+> Any idea what the one used to synchronise rdtsc should be?
+> 'lfence' is the right instruction (give or take), but it isn't
+> a speculation issue.
+> It really is 'wait for all memory accesses to finish' to give
+> a sensible(ish) answer for cycle timing.
 
-This is one of those "it happens to work, but it's wrong" things.
+No, even that is actually very different.
 
-Just make it explicit that it's "lfence" in the current implementation.
+What happened was that 'lfence' was designed and documented - and
+named - as a memory fencing thing, but the *implementation* of it was
+basically about the front-end pipeline.
 
-Is __rmb() also an lfence? Yes. And that's actually very confusing too
-too. Because on x86, a regular read barrier is a no-op, and the "main"
-rmb definition is actually this:
+IOW, ignore the name or the documentation. Think of "lfence" as a
+"this stops the pipeline until all previous instructions have
+retired". Because that is what it *is*.
 
-  #define __dma_rmb()     barrier()
-  #define __smp_rmb()     dma_rmb()
+So it's basically a synchronization instruction *regardless* of memory accesses.
 
-so that it's only a compiler barrier.
+Which is why it was then used for the rdtsc serialization - it
+basically says "don't *actually* read the TSC until you've finished
+everything you've started".
 
-And yes, __rmb() exists as the architecture-specific helper for "I
-need to synchronize with unordered IO accesses" and is purely about
-driver IO.
+And which is why it ended up being used for speculation control, even
+though the instructions it serializes are *not* necessarily memory
+accesses at all, but things like the address conditional that precedes
+it.
 
-We should have called it "relaxed_rmb()" or "io_rmb()" or something
-like that, but the IO memory ordering issues actually came up before
-the modern SMP ordering issues, so due to that historical thing,
-"rmb()" ends up being about the IO ordering.
+So the speculation control use is literally "wait for the previous
+conditional branches to retire before continuing". Yes, the
+"continuing" tends to be a load, but that's almost incidental.
 
-It's confusing, I know. And historical. And too painful to change
-because it all works and lots of people know the rules (except looking
-around, it seems possibly the sunrpc code is confused, and uses
-"rmb()" for SMP synchronization)
+> And on old cpu you want nothing - not a locked memory access.
 
-But basically a barrier_nospec() is not a IO read barrier, and an IO
-read barrier is not a barrier_nospec().
+Well, back in the day, those locked instructions did the same thing.
 
-They just happen to be implemented using the same instruction because
-an existing instruction - that nobody uses in normal situations -
-ended up effectively doing what that nospec barrier needed to do.
+> I couldn't work out why __smp_mb() is so much stronger than the rmb()
+> and wmb() forms - I presume the is history there I wasn't looking for.
 
-And some day in the future, maybe even that implementation equivalence
-ends up going away again, and we end up with new barrier instructions
-that depend on new CPU capabilities (or fake software capabilities:
-kernel bootup flags that say "don't bother with the nospec
-barriers").,
+So on x86, both read and write barriers are complete no-ops, because
+all reads are ordered, and all writes are ordered. So those only need
+compiler barriers to guarantee that the compiler itself doesn't
+re-order them.
 
-So please keep the __rmb() and the barrier_nospec() separate, don't
-tie them together. They just have *soo* many differences, both
-conceptual and practical.
+(Side note: earlier reads are also guaranteed to happen before later
+writes, so it's really only writes that can be delayed past reads, but
+we don't haev a barrier for that situation anyway. Also note that all
+of this is not "real" ordering, but only a guarantee that the
+user-visible semantics are AS IF they were actually ordered - if
+things are local in cache, ordering doesn't matter because no external
+CPU can *see* what the ordering was).
 
-             Linus
+So basically the only memory barriers that matter on x86 are the full
+"smp_mb()" that orders reads vs writes, and the ordering for
+non-ordered accesses used for IO.
+
+And then lfence is basically used for non-memory ordering too.
+
+                Linus
