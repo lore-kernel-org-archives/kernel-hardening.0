@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21942-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21943-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 3C6B7C0219D
-	for <kernel-hardening@archiver.kernel.org>; Mon, 10 Feb 2025 21:03:24 +0000 (UTC)
-Received: (qmail 12286 invoked by uid 550); 10 Feb 2025 21:03:11 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 45496C0219B
+	for <kernel-hardening@archiver.kernel.org>; Wed, 12 Feb 2025 01:04:10 +0000 (UTC)
+Received: (qmail 30215 invoked by uid 550); 12 Feb 2025 01:03:47 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,63 +12,54 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 12251 invoked from network); 10 Feb 2025 21:03:11 -0000
-DKIM-Filter: OpenDKIM Filter v2.11.0 mail.namei.org 6B6F6C9
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=namei.org; s=2;
-	t=1739221382; bh=h3x3P3W8K+9OlCaN6BjlODAjJulvwo/lejT6q6M/Los=;
-	h=Date:From:To:cc:Subject:From;
-	b=ZyGYKtxXADc7f/1Rh/aC10cIngjwj16ltm/q3MfCt8DpEmDiqR+PtyGUWVSR0kvRz
-	 WXzo9JxxhLYZGiDmsn7pRtZqTKtOIt2S8lftxNWQi+yDOhiUqDdhK6GX2dF3J+WjHA
-	 woDtfm+66JQFoacJ2svGVd5rL0o5ADlT7Wh/OkFs=
-Date: Mon, 10 Feb 2025 13:03:02 -0800 (PST)
-From: James Morris <jmorris@namei.org>
-To: linux-security-module@vger.kernel.org
-cc: Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>, 
-    linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, 
-    linux-integrity@vger.kernel.org, lwn@lwn.net
-Subject: [Announce] Linux Security Summit North America 2025 CfP
-Message-ID: <35b17495-427f-549f-6e46-619c56545b34@namei.org>
+Received: (qmail 15912 invoked from network); 12 Feb 2025 00:40:18 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=k20201202; t=1739320810;
+	bh=o6jacl+8YFQgDkweUrSEzGvajj1U6xTIXTLU27ON87Q=;
+	h=Subject:From:Date:References:In-Reply-To:To:Cc:From;
+	b=horZP85LlDZ86QCZvtw15CDgr1Mo8OW5HZQj5/HiaQVmg7YZ67A4QfVf8N8Cq+dLq
+	 8lXcGDK/rJG15Bh+HNw4ajUaUcUQq1g054DSKqAk2K+VTPbsHI7RYYMoQ5d91WlVh6
+	 UIYyU150aJfGduKkNmkUsfItaidd9JwO0EWrVUmQGv+XmQPTZShTS+DZcaLL4INVrv
+	 eZ2DTondLlJS1nBFz3UUeJpoTdkjt8DIUy6PxJHAWvMiPmrYUJ6JZ/wjUq1Vt+Mdy2
+	 J8QPCNfhSstwU+4kVTjdOZV335c5rKRylDlEuEpGdWriFbr+9QU+IqgZmwmL6UMRky
+	 lP/AH5scUBhMA==
+Content-Type: text/plain; charset="utf-8"
 MIME-Version: 1.0
-Content-Type: multipart/mixed; BOUNDARY="1665246916-1759655948-1739221181=:1918214"
-Content-ID: <1eebfa2-83a-d771-38e3-a986f4542214@namei.org>
+Content-Transfer-Encoding: 8bit
+Subject: Re: [PATCH v3] hamradio: baycom: replace strcpy() with strscpy()
+From: patchwork-bot+netdevbpf@kernel.org
+Message-Id: 
+ <173932083925.51333.16699116613029373811.git-patchwork-notify@kernel.org>
+Date: Wed, 12 Feb 2025 00:40:39 +0000
+References: <3qo3fbrak7undfgocsi2s74v4uyjbylpdqhie4dohfoh4welfn@joq7up65ug6v>
+In-Reply-To: <3qo3fbrak7undfgocsi2s74v4uyjbylpdqhie4dohfoh4welfn@joq7up65ug6v>
+To: Ethan Carter Edwards <ethan@ethancedwards.com>
+Cc: dan.carpenter@linaro.org, linux-kernel@vger.kernel.org,
+ netdev@vger.kernel.org, linux-hams@vger.kernel.org, pabeni@redhat.com,
+ linux-hardening@vger.kernel.org, kernel-hardening@lists.openwall.com
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
+Hello:
 
---1665246916-1759655948-1739221181=:1918214
-Content-Type: text/plain; CHARSET=UTF-8
-Content-Transfer-Encoding: 8BIT
-Content-ID: <30fe1e86-d93-3681-6dff-9a32f4d6df6@namei.org>
+This patch was applied to netdev/net-next.git (main)
+by Jakub Kicinski <kuba@kernel.org>:
 
-The Call for Participation for the 2025 Linux Security Summit North 
-America (LSS-NA) is now open.
+On Sat, 8 Feb 2025 23:06:21 -0500 you wrote:
+> The strcpy() function has been deprecated and replaced with strscpy().
+> There is an effort to make this change treewide:
+> https://github.com/KSPP/linux/issues/88.
+> 
+> Signed-off-by: Ethan Carter Edwards <ethan@ethancedwards.com>
+> Reviewed-by: Dan Carpenter <dan.carpenter@linaro.org>
+> 
+> [...]
 
-LSS-NA 2025 is a technical forum for collaboration between Linux 
-developers, researchers, and end-users. Its primary aim is to foster 
-community efforts in deeply analyzing and solving Linux operating system 
-security challenges, including those in the Linux kernel. Presentations 
-are expected to focus deeply on new or improved technology and how it 
-advances the state of practice for addressing these challenges.
+Here is the summary with links:
+  - [v3] hamradio: baycom: replace strcpy() with strscpy()
+    https://git.kernel.org/netdev/net-next/c/3b147be9ef08
 
-Key dates:
-
-    - CFP Closes:  Monday, March 10 at 11:59 PM MDT / 10:59 PM PDT
-    - CFP Notifications: Monday, March 31
-    - Schedule Announcement: Wednesday, April 2
-    - Presentation Slide Due Date: Tuesday, June 24
-    - Event Dates: Thursday, June 26 – Friday, June 27
-
-Location: Denver, Colorado, USA (co-located with OSS).
-
-Full details may be found here: 
-https://events.linuxfoundation.org/linux-security-summit-north-america/
-
-Follow LSS event updates here:
-https://social.kernel.org/LinuxSecSummit
-
-
-
+You are awesome, thank you!
 -- 
-James Morris
-<jmorris@namei.org>
---1665246916-1759655948-1739221181=:1918214--
+Deet-doot-dot, I am a bot.
+https://korg.docs.kernel.org/patchwork/pwbot.html
+
+
