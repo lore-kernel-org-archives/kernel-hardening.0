@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21963-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21964-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 15D09CA0EEB
-	for <kernel-hardening@archiver.kernel.org>; Fri, 22 Aug 2025 17:08:39 +0000 (UTC)
-Received: (qmail 24182 invoked by uid 550); 22 Aug 2025 17:08:21 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id EEAAACA0EED
+	for <kernel-hardening@archiver.kernel.org>; Fri, 22 Aug 2025 17:08:48 +0000 (UTC)
+Received: (qmail 24408 invoked by uid 550); 22 Aug 2025 17:08:23 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,14 +12,14 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 24134 invoked from network); 22 Aug 2025 17:08:21 -0000
+Received: (qmail 24363 invoked from network); 22 Aug 2025 17:08:22 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=digikod.net;
-	s=20191114; t=1755882491;
-	bh=5o2Snc62pQDeQeVLTbKOiBddxc56vMXJxU1FHFkA7Dg=;
+	s=20191114; t=1755882493;
+	bh=4Pohfi350pEoPU/zQg61jutpwKFWUO6VrrmrOVVvjEM=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=CL0DjqcSBYJJIhJfdzz2FzDPpC3tpbvLbbM6cbWkA+SacJfY8HFZa9H5ILY4C0yX3
-	 mSOoJdW2r3Kz1QsaWiWAOjtQwd9VA1S2ej8RoBbm3ro1oxUHQvbx6B3O8FFn+XhHJV
-	 /NxPrguHkgRpzlAPYrS502DKeqq/Jr4JEV/uGRCg=
+	b=APfe4TuRZ8GRVIc6wtAriNhinbsnaFb80/g+PAYZK5y1ijvDyKgUrOGg8Z6sMzHBm
+	 XUzd6/DsMx4itm5EMSqx1SxeYAwh4mcvdQnzQz/BLDE6sxYHAQ7GayducB/U4S3NVL
+	 L5Vp0PIJThySseul7YYLSaDqfOgnaBC25FoZbeC0=
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 To: Al Viro <viro@zeniv.linux.org.uk>,
 	Christian Brauner <brauner@kernel.org>,
@@ -57,9 +57,9 @@ Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>,
 	linux-security-module@vger.kernel.org,
 	Andy Lutomirski <luto@amacapital.net>,
 	Jeff Xu <jeffxu@chromium.org>
-Subject: [RFC PATCH v1 1/2] fs: Add O_DENY_WRITE
-Date: Fri, 22 Aug 2025 19:07:59 +0200
-Message-ID: <20250822170800.2116980-2-mic@digikod.net>
+Subject: [RFC PATCH v1 2/2] selftests/exec: Add O_DENY_WRITE tests
+Date: Fri, 22 Aug 2025 19:08:00 +0200
+Message-ID: <20250822170800.2116980-3-mic@digikod.net>
 In-Reply-To: <20250822170800.2116980-1-mic@digikod.net>
 References: <20250822170800.2116980-1-mic@digikod.net>
 MIME-Version: 1.0
@@ -67,18 +67,13 @@ Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 X-Infomaniak-Routing: alpha
 
-Add a new O_DENY_WRITE flag usable at open time and on opened file (e.g.
-passed file descriptors).  This changes the state of the opened file by
-making it read-only until it is closed.  The main use case is for script
-interpreters to get the guarantee that script' content cannot be altered
-while being read and interpreted.  This is useful for generic distros
-that may not have a write-xor-execute policy.  See commit a5874fde3c08
-("exec: Add a new AT_EXECVE_CHECK flag to execveat(2)")
+Add 6 test suites to check O_DENY_WRITE used through open(2) and
+fcntl(2).  Check that it fills its purpose, that it only applies to
+regular files, and that setting this flag several times is not an issue.
 
-Both execve(2) and the IOCTL to enable fsverity can already set this
-property on files with deny_write_access().  This new O_DENY_WRITE make
-it widely available.  This is similar to what other OSs may provide
-e.g., opening a file with only FILE_SHARE_READ on Windows.
+The O_DENY_WRITE flag is useful in conjunction with AT_EXECVE_CHECK for
+systems that don't enforce a write-xor-execute policy.  Extend related
+tests to also use them as examples.
 
 Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: Andy Lutomirski <luto@amacapital.net>
@@ -86,129 +81,251 @@ Cc: Christian Brauner <brauner@kernel.org>
 Cc: Jeff Xu <jeffxu@chromium.org>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Paul Moore <paul@paul-moore.com>
+Cc: Robert Waite <rowait@microsoft.com>
 Cc: Serge Hallyn <serge@hallyn.com>
-Reported-by: Robert Waite <rowait@microsoft.com>
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Link: https://lore.kernel.org/r/20250822170800.2116980-2-mic@digikod.net
+Link: https://lore.kernel.org/r/20250822170800.2116980-3-mic@digikod.net
 ---
- fs/fcntl.c                       | 26 ++++++++++++++++++++++++--
- fs/file_table.c                  |  2 ++
- fs/namei.c                       |  6 ++++++
- include/linux/fcntl.h            |  2 +-
- include/uapi/asm-generic/fcntl.h |  4 ++++
- 5 files changed, 37 insertions(+), 3 deletions(-)
+ tools/testing/selftests/exec/check-exec.c | 219 ++++++++++++++++++++++
+ 1 file changed, 219 insertions(+)
 
-diff --git a/fs/fcntl.c b/fs/fcntl.c
-index 5598e4d57422..0c80c0fbc706 100644
---- a/fs/fcntl.c
-+++ b/fs/fcntl.c
-@@ -34,7 +34,8 @@
- 
- #include "internal.h"
- 
--#define SETFL_MASK (O_APPEND | O_NONBLOCK | O_NDELAY | O_DIRECT | O_NOATIME)
-+#define SETFL_MASK (O_APPEND | O_NONBLOCK | O_NDELAY | O_DIRECT | O_NOATIME | \
-+	O_DENY_WRITE)
- 
- static int setfl(int fd, struct file * filp, unsigned int arg)
- {
-@@ -80,8 +81,29 @@ static int setfl(int fd, struct file * filp, unsigned int arg)
- 			error = 0;
- 	}
- 	spin_lock(&filp->f_lock);
-+
-+	if (arg & O_DENY_WRITE) {
-+		/* Only regular files. */
-+		if (!S_ISREG(inode->i_mode)) {
-+			error = -EINVAL;
-+			goto unlock;
-+		}
-+
-+		/* Only sets once. */
-+		if (!(filp->f_flags & O_DENY_WRITE)) {
-+			error = exe_file_deny_write_access(filp);
-+			if (error)
-+				goto unlock;
-+		}
-+	} else {
-+		if (filp->f_flags & O_DENY_WRITE)
-+			exe_file_allow_write_access(filp);
-+	}
-+
- 	filp->f_flags = (arg & SETFL_MASK) | (filp->f_flags & ~SETFL_MASK);
- 	filp->f_iocb_flags = iocb_flags(filp);
-+
-+unlock:
- 	spin_unlock(&filp->f_lock);
- 
-  out:
-@@ -1158,7 +1180,7 @@ static int __init fcntl_init(void)
- 	 * Exceptions: O_NONBLOCK is a two bit define on parisc; O_NDELAY
- 	 * is defined as O_NONBLOCK on some platforms and not on others.
- 	 */
--	BUILD_BUG_ON(20 - 1 /* for O_RDONLY being 0 */ !=
-+	BUILD_BUG_ON(21 - 1 /* for O_RDONLY being 0 */ !=
- 		HWEIGHT32(
- 			(VALID_OPEN_FLAGS & ~(O_NONBLOCK | O_NDELAY)) |
- 			__FMODE_EXEC));
-diff --git a/fs/file_table.c b/fs/file_table.c
-index 81c72576e548..6ba896b6a53f 100644
---- a/fs/file_table.c
-+++ b/fs/file_table.c
-@@ -460,6 +460,8 @@ static void __fput(struct file *file)
- 	locks_remove_file(file);
- 
- 	security_file_release(file);
-+	if (unlikely(file->f_flags & O_DENY_WRITE))
-+		exe_file_allow_write_access(file);
- 	if (unlikely(file->f_flags & FASYNC)) {
- 		if (file->f_op->fasync)
- 			file->f_op->fasync(-1, file, 0);
-diff --git a/fs/namei.c b/fs/namei.c
-index cd43ff89fbaa..366530bf937d 100644
---- a/fs/namei.c
-+++ b/fs/namei.c
-@@ -3885,6 +3885,12 @@ static int do_open(struct nameidata *nd,
- 	error = may_open(idmap, &nd->path, acc_mode, open_flag);
- 	if (!error && !(file->f_mode & FMODE_OPENED))
- 		error = vfs_open(&nd->path, file);
-+	if (!error && (open_flag & O_DENY_WRITE)) {
-+		if (S_ISREG(file_inode(file)->i_mode))
-+			error = exe_file_deny_write_access(file);
-+		else
-+			error = -EINVAL;
-+	}
- 	if (!error)
- 		error = security_file_post_open(file, op->acc_mode);
- 	if (!error && do_truncate)
-diff --git a/include/linux/fcntl.h b/include/linux/fcntl.h
-index a332e79b3207..dad14101686f 100644
---- a/include/linux/fcntl.h
-+++ b/include/linux/fcntl.h
-@@ -10,7 +10,7 @@
- 	(O_RDONLY | O_WRONLY | O_RDWR | O_CREAT | O_EXCL | O_NOCTTY | O_TRUNC | \
- 	 O_APPEND | O_NDELAY | O_NONBLOCK | __O_SYNC | O_DSYNC | \
- 	 FASYNC	| O_DIRECT | O_LARGEFILE | O_DIRECTORY | O_NOFOLLOW | \
--	 O_NOATIME | O_CLOEXEC | O_PATH | __O_TMPFILE)
-+	 O_NOATIME | O_CLOEXEC | O_PATH | __O_TMPFILE | O_DENY_WRITE)
- 
- /* List of all valid flags for the how->resolve argument: */
- #define VALID_RESOLVE_FLAGS \
-diff --git a/include/uapi/asm-generic/fcntl.h b/include/uapi/asm-generic/fcntl.h
-index 613475285643..facd9136f5af 100644
---- a/include/uapi/asm-generic/fcntl.h
-+++ b/include/uapi/asm-generic/fcntl.h
-@@ -91,6 +91,10 @@
- /* a horrid kludge trying to make sure that this will fail on old kernels */
- #define O_TMPFILE (__O_TMPFILE | O_DIRECTORY)
+diff --git a/tools/testing/selftests/exec/check-exec.c b/tools/testing/selftests/exec/check-exec.c
+index 55bce47e56b7..9db1d7b9aa97 100644
+--- a/tools/testing/selftests/exec/check-exec.c
++++ b/tools/testing/selftests/exec/check-exec.c
+@@ -30,6 +30,10 @@
+ #define _ASM_GENERIC_FCNTL_H
+ #include <linux/fcntl.h>
  
 +#ifndef O_DENY_WRITE
-+#define O_DENY_WRITE	040000000
++#define O_DENY_WRITE 040000000
 +#endif
 +
- #ifndef O_NDELAY
- #define O_NDELAY	O_NONBLOCK
- #endif
+ #include "../kselftest_harness.h"
+ 
+ static int sys_execveat(int dirfd, const char *pathname, char *const argv[],
+@@ -319,6 +323,221 @@ TEST_F(access, non_regular_files)
+ 	test_exec_fd(_metadata, self->pipefd, EACCES);
+ }
+ 
++TEST_F(access, deny_write_check_open)
++{
++	int fd_deny, fd_read, fd_write;
++
++	fd_deny = open(reg_file_path, O_DENY_WRITE | O_RDONLY | O_CLOEXEC);
++	ASSERT_LE(0, fd_deny);
++
++	/* Concurrent reads are always allowed. */
++	fd_read = open(reg_file_path, O_RDONLY | O_CLOEXEC);
++	EXPECT_LE(0, fd_read);
++	EXPECT_EQ(0, close(fd_read));
++
++	/* Concurrent writes are denied. */
++	fd_write = open(reg_file_path, O_WRONLY | O_CLOEXEC);
++	EXPECT_EQ(-1, fd_write);
++	EXPECT_EQ(ETXTBSY, errno);
++
++	/* Drops O_DENY_WRITE. */
++	EXPECT_EQ(0, close(fd_deny));
++
++	/* The restriction is now gone. */
++	fd_write = open(reg_file_path, O_WRONLY | O_CLOEXEC);
++	EXPECT_LE(0, fd_write);
++	EXPECT_EQ(0, close(fd_write));
++}
++
++TEST_F(access, deny_write_check_open_and_fcntl)
++{
++	int fd_deny, fd_read, fd_write, flags;
++
++	fd_deny = open(reg_file_path, O_DENY_WRITE | O_RDONLY | O_CLOEXEC);
++	ASSERT_LE(0, fd_deny);
++
++	/* Sets O_DENY_WRITE a "second" time. */
++	flags = fcntl(fd_deny, F_GETFL);
++	ASSERT_NE(-1, flags);
++	EXPECT_EQ(0, fcntl(fd_deny, F_SETFL, flags | O_DENY_WRITE));
++
++	/* Concurrent reads are always allowed. */
++	fd_read = open(reg_file_path, O_RDONLY | O_CLOEXEC);
++	EXPECT_LE(0, fd_read);
++	EXPECT_EQ(0, close(fd_read));
++
++	/* Concurrent writes are denied. */
++	fd_write = open(reg_file_path, O_WRONLY | O_CLOEXEC);
++	EXPECT_EQ(-1, fd_write);
++	EXPECT_EQ(ETXTBSY, errno);
++
++	/* Drops O_DENY_WRITE. */
++	EXPECT_EQ(0, close(fd_deny));
++
++	/* The restriction is now gone. */
++	fd_write = open(reg_file_path, O_WRONLY | O_CLOEXEC);
++	EXPECT_LE(0, fd_write);
++	EXPECT_EQ(0, close(fd_write));
++}
++
++TEST_F(access, deny_write_check_fcntl)
++{
++	int fd_deny, fd_read, fd_write, flags;
++
++	fd_deny = open(reg_file_path, O_RDONLY | O_CLOEXEC);
++	ASSERT_LE(0, fd_deny);
++
++	/* Sets O_DENY_WRITE a first time. */
++	flags = fcntl(fd_deny, F_GETFL);
++	ASSERT_NE(-1, flags);
++	EXPECT_EQ(0, fcntl(fd_deny, F_SETFL, flags | O_DENY_WRITE));
++
++	/* Sets O_DENY_WRITE a "second" time. */
++	EXPECT_EQ(0, fcntl(fd_deny, F_SETFL, flags | O_DENY_WRITE));
++
++	/* Concurrent reads are always allowed. */
++	fd_read = open(reg_file_path, O_RDONLY | O_CLOEXEC);
++	EXPECT_LE(0, fd_read);
++	EXPECT_EQ(0, close(fd_read));
++
++	/* Concurrent writes are denied. */
++	fd_write = open(reg_file_path, O_WRONLY | O_CLOEXEC);
++	EXPECT_EQ(-1, fd_write);
++	EXPECT_EQ(ETXTBSY, errno);
++
++	/* Drops O_DENY_WRITE. */
++	EXPECT_EQ(0, fcntl(fd_deny, F_SETFL, flags & ~O_DENY_WRITE));
++
++	/* The restriction is now gone. */
++	fd_write = open(reg_file_path, O_WRONLY | O_CLOEXEC);
++	EXPECT_LE(0, fd_write);
++	EXPECT_EQ(0, close(fd_write));
++
++	EXPECT_EQ(0, close(fd_deny));
++}
++
++static void test_deny_write_open(struct __test_metadata *_metadata,
++				 const char *const path, int flags,
++				 const int err_code)
++{
++	int fd;
++
++	flags |= O_CLOEXEC;
++
++	/* Do not block on pipes. */
++	if (path == fifo_path)
++		flags |= O_NONBLOCK;
++
++	fd = open(path, flags | O_RDONLY);
++	if (err_code) {
++		ASSERT_EQ(-1, fd)
++		{
++			TH_LOG("Successfully opened %s", path);
++		}
++		EXPECT_EQ(errno, err_code)
++		{
++			TH_LOG("Wrong error code for %s: %s", path,
++			       strerror(errno));
++		}
++	} else {
++		ASSERT_LE(0, fd)
++		{
++			TH_LOG("Failed to open %s: %s", path, strerror(errno));
++		}
++		EXPECT_EQ(0, close(fd));
++	}
++}
++
++TEST_F(access, deny_write_type_open)
++{
++	test_deny_write_open(_metadata, reg_file_path, O_DENY_WRITE, 0);
++	test_deny_write_open(_metadata, dir_path, O_DENY_WRITE, EINVAL);
++	test_deny_write_open(_metadata, block_dev_path, O_DENY_WRITE, EINVAL);
++	test_deny_write_open(_metadata, char_dev_path, O_DENY_WRITE, EINVAL);
++	test_deny_write_open(_metadata, fifo_path, O_DENY_WRITE, EINVAL);
++}
++
++static void test_deny_write_fcntl(struct __test_metadata *_metadata,
++				  const char *const path, int setfl,
++				  const int err_code)
++{
++	int fd, ret;
++	int getfl, flags = O_CLOEXEC;
++
++	/* Do not block on pipes. */
++	if (path == fifo_path)
++		flags |= O_NONBLOCK;
++
++	fd = open(path, flags | O_RDONLY);
++	ASSERT_LE(0, fd)
++	{
++		TH_LOG("Failed to open %s: %s", path, strerror(errno));
++	}
++	getfl = fcntl(fd, F_GETFL);
++	ASSERT_NE(-1, getfl);
++	ret = fcntl(fd, F_SETFL, getfl | setfl);
++	if (err_code) {
++		ASSERT_EQ(-1, ret)
++		{
++			TH_LOG("Successfully updated flags for %s", path);
++		}
++		EXPECT_EQ(errno, err_code)
++		{
++			TH_LOG("Wrong error code for %s: %s", path,
++			       strerror(errno));
++		}
++	} else {
++		ASSERT_LE(0, ret)
++		{
++			TH_LOG("Failed to update flags for %s: %s", path,
++			       strerror(errno));
++		}
++		EXPECT_EQ(0, close(fd));
++	}
++}
++
++TEST_F(access, deny_write_type_fcntl)
++{
++	int flags;
++
++	test_deny_write_fcntl(_metadata, reg_file_path, O_DENY_WRITE, 0);
++	test_deny_write_fcntl(_metadata, dir_path, O_DENY_WRITE, EINVAL);
++	test_deny_write_fcntl(_metadata, block_dev_path, O_DENY_WRITE, EINVAL);
++	test_deny_write_fcntl(_metadata, char_dev_path, O_DENY_WRITE, EINVAL);
++	test_deny_write_fcntl(_metadata, fifo_path, O_DENY_WRITE, EINVAL);
++
++	flags = fcntl(self->socket_fds[0], F_GETFL);
++	ASSERT_NE(-1, flags);
++	EXPECT_EQ(-1,
++		  fcntl(self->socket_fds[0], F_SETFL, flags | O_DENY_WRITE));
++	EXPECT_EQ(EINVAL, errno);
++
++	flags = fcntl(self->pipefd, F_GETFL);
++	ASSERT_NE(-1, flags);
++	EXPECT_EQ(-1, fcntl(self->pipefd, F_SETFL, flags | O_DENY_WRITE));
++	EXPECT_EQ(EINVAL, errno);
++}
++
++TEST_F(access, allow_write_type_fcntl)
++{
++	int flags;
++
++	test_deny_write_fcntl(_metadata, reg_file_path, 0, 0);
++	test_deny_write_fcntl(_metadata, dir_path, 0, 0);
++	test_deny_write_fcntl(_metadata, block_dev_path, 0, 0);
++	test_deny_write_fcntl(_metadata, char_dev_path, 0, 0);
++	test_deny_write_fcntl(_metadata, fifo_path, 0, 0);
++
++	flags = fcntl(self->socket_fds[0], F_GETFL);
++	ASSERT_NE(-1, flags);
++	EXPECT_EQ(0,
++		  fcntl(self->socket_fds[0], F_SETFL, flags & ~O_DENY_WRITE));
++
++	flags = fcntl(self->pipefd, F_GETFL);
++	ASSERT_NE(-1, flags);
++	EXPECT_EQ(0, fcntl(self->pipefd, F_SETFL, flags & ~O_DENY_WRITE));
++}
++
+ /* clang-format off */
+ FIXTURE(secbits) {};
+ /* clang-format on */
 -- 
 2.50.1
 
