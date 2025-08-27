@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21986-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21987-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 0D3B1CA0EFF
-	for <kernel-hardening@archiver.kernel.org>; Wed, 27 Aug 2025 10:30:20 +0000 (UTC)
-Received: (qmail 17800 invoked by uid 550); 27 Aug 2025 10:30:12 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 7234FCA0EFF
+	for <kernel-hardening@archiver.kernel.org>; Wed, 27 Aug 2025 17:36:04 +0000 (UTC)
+Received: (qmail 14328 invoked by uid 550); 27 Aug 2025 17:35:52 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,247 +12,131 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17769 invoked from network); 27 Aug 2025 10:30:12 -0000
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=cyphar.com; s=MBO0001;
-	t=1756290599;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=m6kfYmEF60frm5ESfpqkpSIWm2QXtU3dm6hKsbfysq8=;
-	b=bL/I88CmRYJ0Ggq1FHXs6ULLcJ/6/cCF893rzC33wQuoMO7fgAYlRJvmJHgkiJMMA7amV7
-	SyptXzg8agcA2szr8KRoHtPzi6AVHAiushOPKtAFEvlJ4YECDJCPOG9it6zxTM8TmxXOxU
-	9EWrueILRyWBPgBd1/GomMLB5oaJpL4NnsQJrcwwcUhnys3p+nWCw9br7FCw8b2jkD061V
-	JO5DsolO7kNGc3pnuvTcEk34Fn4MagnYML/AQQolng4gmmFRqXo6HRv69O0tFhdtI4cyMe
-	SgOvy8acEtwhXDLNG/4OggYt/N9uUq4IMoxa86NsyvEh++Z+OgBynbsrb7EQkg==
-Date: Wed, 27 Aug 2025 20:29:38 +1000
-From: Aleksa Sarai <cyphar@cyphar.com>
-To: =?utf-8?Q?Micka=C3=ABl_Sala=C3=BCn?= <mic@digikod.net>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, 
-	Christian Brauner <brauner@kernel.org>, Kees Cook <keescook@chromium.org>, 
-	Paul Moore <paul@paul-moore.com>, Serge Hallyn <serge@hallyn.com>, 
-	Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, 
+Received: (qmail 14295 invoked from network); 27 Aug 2025 17:35:52 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=k20201202; t=1756316142;
+	bh=FIed+i9mU8QVyJwJUuYJhiPLw4w7Z4LZFu4tEeKK2tQ=;
+	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
+	b=rxcM90Mr7RLpuUh7uleG8dKJQyT7RaI0Xnq+WTZK+85Dx6J+7v5UhTymmilOudGvS
+	 ENBzUWXBQnykk4ork6goPhQrsRxhXqB2KsqXdzcG4yroDdvgKUquOIKsCddJcgFMWb
+	 /REcfpuedCSwUMesMYQ7NwIBx5iJocUbOmIc7TKXfVe13ej6qwy+8GoE635+Gqfbjb
+	 u/KG7s55NH8OQP7pfd7isrbxhlS9N9DX51mGcNacb5BE6piKCAhMfeEN0RU0kMkA5o
+	 m+XoPDLBkZocfzA+N2LEXxhOhcKzsaqUVALdAf/aFRL5emh1HAiw3MHPPEip45MW+E
+	 g6Gi4J1spr58w==
+X-Forwarded-Encrypted: i=1; AJvYcCWTjJxiEWTzBKrj6+nElIjbzsOi2wS4snOK48rBT6IuY2S6iKXBUG3+oSjvy7ZmOWPXjcB6v5iAzUsVFNP4ko/C@lists.openwall.com
+X-Gm-Message-State: AOJu0YyxuxFVS/p35rZ4lP4OkRQ83UH9egZ7DWmliGLai91ANrpoZP46
+	08iq1y4DAuICtz5gd/heqCCMOnqcBC4xvLA82+W5gr/plRpUR9nHu8XntXlbI2lDm0Ni5WTPYCX
+	pnckMggY5OPj5GrnjcHUvLQFXx+sklHG2wjzHD5PD
+X-Google-Smtp-Source: AGHT+IHUn8MO0aESC/OldXVkEKhuKEEb6fGxgOuf4xrzSp6WeZVtALeUAoQkfV5FV3cUoazA0fJyWvYRcGm5SnNCYls=
+X-Received: by 2002:a05:651c:23d2:10b0:333:f086:3092 with SMTP id
+ 38308e7fff4ca-33650e704femr46730461fa.11.1756316140285; Wed, 27 Aug 2025
+ 10:35:40 -0700 (PDT)
+MIME-Version: 1.0
+References: <20250822170800.2116980-1-mic@digikod.net> <20250826-skorpion-magma-141496988fdc@brauner>
+ <20250826.aig5aiShunga@digikod.net> <20250826123041.GB1603531@mit.edu> <20250826.iewie7Et5aiw@digikod.net>
+In-Reply-To: <20250826.iewie7Et5aiw@digikod.net>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Wed, 27 Aug 2025 10:35:28 -0700
+X-Gmail-Original-Message-ID: <CALCETrW=V9vst_ho2Q4sQUJ5uZECY5h7TnF==sG4JWq8PsWb8Q@mail.gmail.com>
+X-Gm-Features: Ac12FXxYtvycqmWfxuJptxMotttRmHwSaZZf5AQ5i4iJuwxj-1Y4BGUYtJz7etM
+Message-ID: <CALCETrW=V9vst_ho2Q4sQUJ5uZECY5h7TnF==sG4JWq8PsWb8Q@mail.gmail.com>
+Subject: Re: [RFC PATCH v1 0/2] Add O_DENY_WRITE (complement AT_EXECVE_CHECK)
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: "Theodore Ts'o" <tytso@mit.edu>, Christian Brauner <brauner@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, 
+	Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, 
+	Serge Hallyn <serge@hallyn.com>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, 
 	Christian Heimes <christian@python.org>, Dmitry Vyukov <dvyukov@google.com>, 
 	Elliott Hughes <enh@google.com>, Fan Wu <wufan@linux.microsoft.com>, 
 	Florian Weimer <fweimer@redhat.com>, Jann Horn <jannh@google.com>, Jeff Xu <jeffxu@google.com>, 
 	Jonathan Corbet <corbet@lwn.net>, Jordan R Abrahams <ajordanr@google.com>, 
 	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, Luca Boccassi <bluca@debian.org>, 
 	Matt Bobrowski <mattbobrowski@google.com>, Miklos Szeredi <mszeredi@redhat.com>, 
-	Mimi Zohar <zohar@linux.ibm.com>, Nicolas Bouchinet <nicolas.bouchinet@oss.cyber.gouv.fr>, 
-	Robert Waite <rowait@microsoft.com>, Roberto Sassu <roberto.sassu@huawei.com>, 
-	Scott Shell <scottsh@microsoft.com>, Steve Dower <steve.dower@python.org>, 
-	Steve Grubb <sgrubb@redhat.com>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, 
-	linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, 
-	linux-security-module@vger.kernel.org, Andy Lutomirski <luto@amacapital.net>, 
-	Jeff Xu <jeffxu@chromium.org>
-Subject: Re: [RFC PATCH v1 1/2] fs: Add O_DENY_WRITE
-Message-ID: <2025-08-27-needy-drab-puritan-rebates-tHEaFw@cyphar.com>
-References: <20250822170800.2116980-1-mic@digikod.net>
- <20250822170800.2116980-2-mic@digikod.net>
-MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha512;
-	protocol="application/pgp-signature"; boundary="psrvdihhhcwoejuq"
-Content-Disposition: inline
-In-Reply-To: <20250822170800.2116980-2-mic@digikod.net>
-
-
---psrvdihhhcwoejuq
-Content-Type: text/plain; protected-headers=v1; charset=iso-8859-1
-Content-Disposition: inline
+	Mimi Zohar <zohar@linux.ibm.com>, 
+	Nicolas Bouchinet <nicolas.bouchinet@oss.cyber.gouv.fr>, Robert Waite <rowait@microsoft.com>, 
+	Roberto Sassu <roberto.sassu@huawei.com>, Scott Shell <scottsh@microsoft.com>, 
+	Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, 
+	kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, 
+	linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org, 
+	linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
-Subject: Re: [RFC PATCH v1 1/2] fs: Add O_DENY_WRITE
-MIME-Version: 1.0
 
-On 2025-08-22, Micka=EBl Sala=FCn <mic@digikod.net> wrote:
-> Add a new O_DENY_WRITE flag usable at open time and on opened file (e.g.
-> passed file descriptors).  This changes the state of the opened file by
-> making it read-only until it is closed.  The main use case is for script
-> interpreters to get the guarantee that script' content cannot be altered
-> while being read and interpreted.  This is useful for generic distros
-> that may not have a write-xor-execute policy.  See commit a5874fde3c08
-> ("exec: Add a new AT_EXECVE_CHECK flag to execveat(2)")
->=20
-> Both execve(2) and the IOCTL to enable fsverity can already set this
-> property on files with deny_write_access().  This new O_DENY_WRITE make
-> it widely available.  This is similar to what other OSs may provide
-> e.g., opening a file with only FILE_SHARE_READ on Windows.
->=20
-> Cc: Al Viro <viro@zeniv.linux.org.uk>
-> Cc: Andy Lutomirski <luto@amacapital.net>
-> Cc: Christian Brauner <brauner@kernel.org>
-> Cc: Jeff Xu <jeffxu@chromium.org>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Paul Moore <paul@paul-moore.com>
-> Cc: Serge Hallyn <serge@hallyn.com>
-> Reported-by: Robert Waite <rowait@microsoft.com>
-> Signed-off-by: Micka=EBl Sala=FCn <mic@digikod.net>
-> Link: https://lore.kernel.org/r/20250822170800.2116980-2-mic@digikod.net
-> ---
->  fs/fcntl.c                       | 26 ++++++++++++++++++++++++--
->  fs/file_table.c                  |  2 ++
->  fs/namei.c                       |  6 ++++++
->  include/linux/fcntl.h            |  2 +-
->  include/uapi/asm-generic/fcntl.h |  4 ++++
->  5 files changed, 37 insertions(+), 3 deletions(-)
->=20
-> diff --git a/fs/fcntl.c b/fs/fcntl.c
-> index 5598e4d57422..0c80c0fbc706 100644
-> --- a/fs/fcntl.c
-> +++ b/fs/fcntl.c
-> @@ -34,7 +34,8 @@
-> =20
->  #include "internal.h"
-> =20
-> -#define SETFL_MASK (O_APPEND | O_NONBLOCK | O_NDELAY | O_DIRECT | O_NOAT=
-IME)
-> +#define SETFL_MASK (O_APPEND | O_NONBLOCK | O_NDELAY | O_DIRECT | O_NOAT=
-IME | \
-> +	O_DENY_WRITE)
-> =20
->  static int setfl(int fd, struct file * filp, unsigned int arg)
->  {
-> @@ -80,8 +81,29 @@ static int setfl(int fd, struct file * filp, unsigned =
-int arg)
->  			error =3D 0;
->  	}
->  	spin_lock(&filp->f_lock);
-> +
-> +	if (arg & O_DENY_WRITE) {
-> +		/* Only regular files. */
-> +		if (!S_ISREG(inode->i_mode)) {
-> +			error =3D -EINVAL;
-> +			goto unlock;
-> +		}
-> +
-> +		/* Only sets once. */
-> +		if (!(filp->f_flags & O_DENY_WRITE)) {
-> +			error =3D exe_file_deny_write_access(filp);
-> +			if (error)
-> +				goto unlock;
-> +		}
-> +	} else {
-> +		if (filp->f_flags & O_DENY_WRITE)
-> +			exe_file_allow_write_access(filp);
-> +	}
+On Tue, Aug 26, 2025 at 10:47=E2=80=AFAM Micka=C3=ABl Sala=C3=BCn <mic@digi=
+kod.net> wrote:
+>
+> On Tue, Aug 26, 2025 at 08:30:41AM -0400, Theodore Ts'o wrote:
+> > Is there a single, unified design and requirements document that
+> > describes the threat model, and what you are trying to achieve with
+> > AT_EXECVE_CHECK and O_DENY_WRITE?  I've been looking at the cover
+> > letters for AT_EXECVE_CHECK and O_DENY_WRITE, and the documentation
+> > that has landed for AT_EXECVE_CHECK and it really doesn't describe
+> > what *are* the checks that AT_EXECVE_CHECK is trying to achieve:
+> >
+> >    "The AT_EXECVE_CHECK execveat(2) flag, and the
+> >    SECBIT_EXEC_RESTRICT_FILE and SECBIT_EXEC_DENY_INTERACTIVE
+> >    securebits are intended for script interpreters and dynamic linkers
+> >    to enforce a consistent execution security policy handled by the
+> >    kernel."
+>
+> From the documentation:
+>
+>   Passing the AT_EXECVE_CHECK flag to execveat(2) only performs a check
+>   on a regular file and returns 0 if execution of this file would be
+>   allowed, ignoring the file format and then the related interpreter
+>   dependencies (e.g. ELF libraries, script=E2=80=99s shebang).
+>
+> >
+> > Um, what security policy?
+>
+> Whether the file is allowed to be executed.  This includes file
+> permission, mount point option, ACL, LSM policies...
 
-I appreciate the goal of making this something that can be cleared
-(presumably for interpreters that mmap(MAP_PRIVATE) their scripts), but
-making a security-related flag this easy to clear seems like a footgun
-(any library function could mask O_DENY_WRITE or forget to copy the old
-flag values).
+This needs *waaaaay* more detail for any sort of useful evaluation.
+Is an actual credible security policy rolling dice?  Asking ChatGPT?
+Looking at security labels?  Does it care who can write to the file,
+or who owns the file, or what the file's hash is, or what filesystem
+it's on, or where it came from?  Does it dynamically inspect the
+contents?  Is it controlled by an unprivileged process?
 
-> +
->  	filp->f_flags =3D (arg & SETFL_MASK) | (filp->f_flags & ~SETFL_MASK);
->  	filp->f_iocb_flags =3D iocb_flags(filp);
-> +
-> +unlock:
->  	spin_unlock(&filp->f_lock);
-> =20
->   out:
-> @@ -1158,7 +1180,7 @@ static int __init fcntl_init(void)
->  	 * Exceptions: O_NONBLOCK is a two bit define on parisc; O_NDELAY
->  	 * is defined as O_NONBLOCK on some platforms and not on others.
->  	 */
-> -	BUILD_BUG_ON(20 - 1 /* for O_RDONLY being 0 */ !=3D
-> +	BUILD_BUG_ON(21 - 1 /* for O_RDONLY being 0 */ !=3D
->  		HWEIGHT32(
->  			(VALID_OPEN_FLAGS & ~(O_NONBLOCK | O_NDELAY)) |
->  			__FMODE_EXEC));
-> diff --git a/fs/file_table.c b/fs/file_table.c
-> index 81c72576e548..6ba896b6a53f 100644
-> --- a/fs/file_table.c
-> +++ b/fs/file_table.c
-> @@ -460,6 +460,8 @@ static void __fput(struct file *file)
->  	locks_remove_file(file);
-> =20
->  	security_file_release(file);
-> +	if (unlikely(file->f_flags & O_DENY_WRITE))
-> +		exe_file_allow_write_access(file);
->  	if (unlikely(file->f_flags & FASYNC)) {
->  		if (file->f_op->fasync)
->  			file->f_op->fasync(-1, file, 0);
-> diff --git a/fs/namei.c b/fs/namei.c
-> index cd43ff89fbaa..366530bf937d 100644
-> --- a/fs/namei.c
-> +++ b/fs/namei.c
-> @@ -3885,6 +3885,12 @@ static int do_open(struct nameidata *nd,
->  	error =3D may_open(idmap, &nd->path, acc_mode, open_flag);
->  	if (!error && !(file->f_mode & FMODE_OPENED))
->  		error =3D vfs_open(&nd->path, file);
-> +	if (!error && (open_flag & O_DENY_WRITE)) {
-> +		if (S_ISREG(file_inode(file)->i_mode))
-> +			error =3D exe_file_deny_write_access(file);
-> +		else
-> +			error =3D -EINVAL;
-> +	}
->  	if (!error)
->  		error =3D security_file_post_open(file, op->acc_mode);
->  	if (!error && do_truncate)
-> diff --git a/include/linux/fcntl.h b/include/linux/fcntl.h
-> index a332e79b3207..dad14101686f 100644
-> --- a/include/linux/fcntl.h
-> +++ b/include/linux/fcntl.h
-> @@ -10,7 +10,7 @@
->  	(O_RDONLY | O_WRONLY | O_RDWR | O_CREAT | O_EXCL | O_NOCTTY | O_TRUNC |=
- \
->  	 O_APPEND | O_NDELAY | O_NONBLOCK | __O_SYNC | O_DSYNC | \
->  	 FASYNC	| O_DIRECT | O_LARGEFILE | O_DIRECTORY | O_NOFOLLOW | \
-> -	 O_NOATIME | O_CLOEXEC | O_PATH | __O_TMPFILE)
-> +	 O_NOATIME | O_CLOEXEC | O_PATH | __O_TMPFILE | O_DENY_WRITE)
+I can easily come up with security policies for which DENYWRITE is
+completely useless.  I can come up with convoluted and
+not-really-credible policies where DENYWRITE is important, but I'm
+honestly not sure that those policies are actually useful.  I'm
+honestly a bit concerned that AT_EXECVE_CHECK is fundamentally busted
+because it should have been parametrized by *what format is expected*
+-- it might be possible to bypass a policy by executing a perfectly
+fine Python script using bash, for example.
 
-I don't like this patch for the same reasons Christian has already said,
-but in addition -- you cannot just add new open(2) flags like this.
+I genuinely have not come up with a security policy that I believe
+makes sense that needs AT_EXECVE_CHECK and DENYWRITE.  I'm not saying
+that such a policy does not exist -- I'm saying that I have not
+thought of such a thing after a few minutes of thought and reading
+these threads.
 
-Unlike openat2(2), classic open(2) does not verify invalid flag bits, so
-any new flag must be designed so that old kernels will return an error
-for that flag combination, which ensures that:
 
- * No old programs set those bits inadvertently, which lets us avoid
-   breaking userspace in some really fun and hard-to-debug ways.
- * For security-related bits, that new programs running on old kernels
-   do not think they are getting a security property that they aren't
-   actually getting.
+> > And then on top of it, why can't you do these checks by modifying the
+> > script interpreters?
+>
+> The script interpreter requires modification to use AT_EXECVE_CHECK.
+>
+> There is no other way for user space to reliably check executability of
+> files (taking into account all enforced security
+> policies/configurations).
+>
 
-O_TMPFILE's bitflag soup is an example of how you can resolve this issue
-for open(2), but I would suggest that authors of new O_* flags seriously
-consider making their flags openat2(2)-only unless it's trivial to get
-the above behaviour.
+As mentioned above, even AT_EXECVE_CHECK does not obviously accomplish
+this goal.  If it were genuinely useful, I would much, much prefer a
+totally different API: a *syscall* that takes, as input, a file
+descriptor of something that an interpreter wants to execute and a
+whole lot of context as to what that interpreter wants to do with it.
+And I admit I'm *still* not convinced.
 
->  /* List of all valid flags for the how->resolve argument: */
->  #define VALID_RESOLVE_FLAGS \
-> diff --git a/include/uapi/asm-generic/fcntl.h b/include/uapi/asm-generic/=
-fcntl.h
-> index 613475285643..facd9136f5af 100644
-> --- a/include/uapi/asm-generic/fcntl.h
-> +++ b/include/uapi/asm-generic/fcntl.h
-> @@ -91,6 +91,10 @@
->  /* a horrid kludge trying to make sure that this will fail on old kernel=
-s */
->  #define O_TMPFILE (__O_TMPFILE | O_DIRECTORY)
-> =20
-> +#ifndef O_DENY_WRITE
-> +#define O_DENY_WRITE	040000000
-> +#endif
-> +
->  #ifndef O_NDELAY
->  #define O_NDELAY	O_NONBLOCK
->  #endif
-
---=20
-Aleksa Sarai
-Senior Software Engineer (Containers)
-SUSE Linux GmbH
-https://www.cyphar.com/
-
---psrvdihhhcwoejuq
-Content-Type: application/pgp-signature; name="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iJEEABYKADkWIQS2TklVsp+j1GPyqQYol/rSt+lEbwUCaK7eEhsUgAAAAAAEAA5t
-YW51MiwyLjUrMS4xMSwyLDIACgkQKJf60rfpRG9V3AEA5oOWpgL+FjTae5hN5S0u
-NsO3eAJnHacwgGQQEQNbJY0A+wWEmDH7pIvldv0TNbUu37QH46/cRLEB3/OX44QK
-JV8I
-=c4ff
------END PGP SIGNATURE-----
-
---psrvdihhhcwoejuq--
+Seriously, consider all the unending recent attacks on LLMs an
+inspiration.  The implications of viewing an image, downscaling the
+image, possibly interpreting the image as something containing text,
+possibly following instructions in a given language contained in the
+image, etc are all wildly different.  A mechanism for asking for
+general permission to "consume this image" is COMPLETELY MISSING THE
+POINT.  (Never mind that the current crop of LLMs seem entirely
+incapable of constraining their own use of some piece of input, but
+that's a different issue and is besides the point here.)
