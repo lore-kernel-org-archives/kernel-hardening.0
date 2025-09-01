@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-21998-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-21999-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 1EB2DCA0FF0
-	for <kernel-hardening@archiver.kernel.org>; Mon,  1 Sep 2025 16:01:49 +0000 (UTC)
-Received: (qmail 1587 invoked by uid 550); 1 Sep 2025 16:01:39 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id 75EA9CA0FFF
+	for <kernel-hardening@archiver.kernel.org>; Mon,  1 Sep 2025 16:25:42 +0000 (UTC)
+Received: (qmail 5404 invoked by uid 550); 1 Sep 2025 16:25:34 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,48 +12,48 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 1547 invoked from network); 1 Sep 2025 16:01:39 -0000
+Received: (qmail 5344 invoked from network); 1 Sep 2025 16:25:33 -0000
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1756742488;
-	bh=fRGtPoXNXozo7EUo/+X+0CRDT4KEoSMrhbUl6FXLK04=;
+	s=k20201202; t=1756743923;
+	bh=Xy9c0RnED3HT39yD+fhi1E7AHRKldhfJxdRE7gKyi/E=;
 	h=References:In-Reply-To:From:Date:Subject:To:Cc:From;
-	b=GT9XLlILxbzJQKfZrcncv5FDmb5xqXm7lWoVNtxQxqSnrU226V7KsM+H4vLScYY1c
-	 zDGYrWFQTMh4ugpctY6Bv6RnrKv60oTJOwcRX75wJIwxuTy6raFhsWBBfZX3bJuinj
-	 d1fx/1HZsgoS1bagdzfR7ra/lFmxZRQMbRXC8FiDNRfA+qXUvhAXVZwVlAGHE4c+5Z
-	 1Y4J1MxU3Vg0Su1HxCL4z4wQt1pzQNiW3J0hlc/stH8fbUMewCr+gx88yqG95Q970W
-	 tzYu9cantZryBxbFwAt9HnQPxF2HqfmEmiIDITAIuoolltbu4BH20iM9MGlzq81cgV
-	 dHiypGhT3AWeQ==
-X-Forwarded-Encrypted: i=1; AJvYcCVcMhPv/n43mK6y5/CLYaD2h4W5bYPhfiQth3kWnbkMSQehjaUo2QbdB9sk88suZzHHGYXfeA8h6YZWsb9wmz7S@lists.openwall.com
-X-Gm-Message-State: AOJu0YxvGNE6E2zTQGTwVY6pTs5GkNw3Rr6k+4UwVWCtTvqZLnQoBGJI
-	06NGVoss5J6KjNGy6pmye3cVFXDO8RP9ypVvM9kIUq14Q1RCE/JrRjm+ECunuanZyoGDV8iSni6
-	50D/7sMY4N9KXr/potjVBVQM1NGu6nHv8ak3tH4Mf
-X-Google-Smtp-Source: AGHT+IHnj6OIwdQiXJlgVo5UF3VJeh7L4asptxGZmWwqZWC31UpjffLFt4qPv8DDjEOzi1qlSKdOs+b3QNOSTgcuUzg=
-X-Received: by 2002:a05:6512:448e:b0:55f:4485:9620 with SMTP id
- 2adb3069b0e04-55f709bf748mr1461445e87.51.1756742486920; Mon, 01 Sep 2025
- 09:01:26 -0700 (PDT)
+	b=Z7IU2/FsWPS2YWB0kzeYM2ObtiwET9Kra0CYZYw06ild8oKNLCkxWc7Vfsm9bVuQe
+	 4ZzPUt4sqB2bDQ+SI3eAssF/kmXIB0Y93UTATCsPHb5bGk1BvbNvXgMO3iYCBTXLLs
+	 8c7e+7i1hw/nfIVNVge3CR/QjSNdpGWvLuaCuXYIbWk6PLSrrLq6JyYopyxuqgCZrN
+	 Zmkgq+utnmXu+vCfB1DRCRZ1kVm7edWVi9ifrqSx0PAq/TsjN6omcEtXW6BUWSBlAz
+	 vfW8gEZO7B/KKnMedjJbfDn/aXGDweWBmAuE1REQj04J8I9H9uv0be/+OS0n+iCF1Y
+	 2JunIyl9GjxiQ==
+X-Forwarded-Encrypted: i=1; AJvYcCXtAIcvNKROt1uQXO9UtPpQeMtNHhWqB+elR0PuC7mgfJNIw9gkIt+OSDltwGrA6oEDvs1nTwZjirPxuWkLtgB1@lists.openwall.com
+X-Gm-Message-State: AOJu0YwSgsoNzOXUMIpDda36AGR7xoVEDOWtWKuGbbPLF9eiHAZkTH0W
+	0pCmlKsHxlfm8xUam8Y5b2Kta6BdcNKyWhM0W5Gf0cxkax4Tlf3KX0QgMlbl/0grNgGAIA/KA2w
+	Ww9lOF4F6bJQfssQjPpPWIf2Jb+zzBZFpi4eDTlGp
+X-Google-Smtp-Source: AGHT+IHQaKnUNWLNFQYNtSQSa47g2pu7CpYY6T/b9pUgP8BH0aybd+qYJdHgPCMppjygHDMCLF/KHVs2OD16WVL33oA=
+X-Received: by 2002:a05:651c:1543:b0:336:e1c4:6c6f with SMTP id
+ 38308e7fff4ca-336e1c47336mr14179671fa.19.1756743920925; Mon, 01 Sep 2025
+ 09:25:20 -0700 (PDT)
 MIME-Version: 1.0
 References: <20250822170800.2116980-1-mic@digikod.net> <20250826-skorpion-magma-141496988fdc@brauner>
  <20250826.aig5aiShunga@digikod.net> <2025-08-27-obscene-great-toy-diary-X1gVRV@cyphar.com>
- <CALCETrWHKga33bvzUHnd-mRQUeNXTtXSS8Y8+40d5bxv-CqBhw@mail.gmail.com>
- <aLDDk4x7QBKxLmoi@mail.hallyn.com> <CAG48ez0p1B9nmG3ZyNRywaSYTtEULSpbxueia912nVpg2Q7WYA@mail.gmail.com>
-In-Reply-To: <CAG48ez0p1B9nmG3ZyNRywaSYTtEULSpbxueia912nVpg2Q7WYA@mail.gmail.com>
+ <54e27d05bae55749a975bc7cbe109b237b2b1323.camel@huaweicloud.com>
+In-Reply-To: <54e27d05bae55749a975bc7cbe109b237b2b1323.camel@huaweicloud.com>
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 1 Sep 2025 09:01:15 -0700
-X-Gmail-Original-Message-ID: <CALCETrUM7LAzm-pXwgTVACvO7uvaUZ0B7j=6Vy0BrDkngpu=yg@mail.gmail.com>
-X-Gm-Features: Ac12FXwKS6-FHwq3nvpTeXOsn_tseUs4dZWGKJnLf2Z-xopwBmsE6DWor8ej0K0
-Message-ID: <CALCETrUM7LAzm-pXwgTVACvO7uvaUZ0B7j=6Vy0BrDkngpu=yg@mail.gmail.com>
+Date: Mon, 1 Sep 2025 09:25:09 -0700
+X-Gmail-Original-Message-ID: <CALCETrUtJmWxKYSi6QQAGpQR_ETNfoBidCu_VEq8Lx9iJAOyEw@mail.gmail.com>
+X-Gm-Features: Ac12FXxyw6xiBo675X_GNr-mU7ryRcDYbQiEmCEhhXrRzSi1-YYVHnkbnMyWAA0
+Message-ID: <CALCETrUtJmWxKYSi6QQAGpQR_ETNfoBidCu_VEq8Lx9iJAOyEw@mail.gmail.com>
 Subject: Re: [RFC PATCH v1 0/2] Add O_DENY_WRITE (complement AT_EXECVE_CHECK)
-To: Jann Horn <jannh@google.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, Andy Lutomirski <luto@kernel.org>, Aleksa Sarai <cyphar@cyphar.com>, 
-	=?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, 
+To: Roberto Sassu <roberto.sassu@huaweicloud.com>
+Cc: Aleksa Sarai <cyphar@cyphar.com>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, 
 	Christian Brauner <brauner@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, 
 	Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, 
-	Arnd Bergmann <arnd@arndb.de>, Christian Heimes <christian@python.org>, Dmitry Vyukov <dvyukov@google.com>, 
+	Serge Hallyn <serge@hallyn.com>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, 
+	Christian Heimes <christian@python.org>, Dmitry Vyukov <dvyukov@google.com>, 
 	Elliott Hughes <enh@google.com>, Fan Wu <wufan@linux.microsoft.com>, 
-	Florian Weimer <fweimer@redhat.com>, Jeff Xu <jeffxu@google.com>, Jonathan Corbet <corbet@lwn.net>, 
-	Jordan R Abrahams <ajordanr@google.com>, Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, 
-	Luca Boccassi <bluca@debian.org>, Matt Bobrowski <mattbobrowski@google.com>, 
-	Miklos Szeredi <mszeredi@redhat.com>, Mimi Zohar <zohar@linux.ibm.com>, 
+	Florian Weimer <fweimer@redhat.com>, Jann Horn <jannh@google.com>, Jeff Xu <jeffxu@google.com>, 
+	Jonathan Corbet <corbet@lwn.net>, Jordan R Abrahams <ajordanr@google.com>, 
+	Lakshmi Ramasubramanian <nramas@linux.microsoft.com>, Luca Boccassi <bluca@debian.org>, 
+	Matt Bobrowski <mattbobrowski@google.com>, Miklos Szeredi <mszeredi@redhat.com>, 
+	Mimi Zohar <zohar@linux.ibm.com>, 
 	Nicolas Bouchinet <nicolas.bouchinet@oss.cyber.gouv.fr>, Robert Waite <rowait@microsoft.com>, 
 	Roberto Sassu <roberto.sassu@huawei.com>, Scott Shell <scottsh@microsoft.com>, 
 	Steve Dower <steve.dower@python.org>, Steve Grubb <sgrubb@redhat.com>, 
@@ -63,107 +63,57 @@ Cc: "Serge E. Hallyn" <serge@hallyn.com>, Andy Lutomirski <luto@kernel.org>, Ale
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-On Mon, Sep 1, 2025 at 4:06=E2=80=AFAM Jann Horn <jannh@google.com> wrote:
->
-> On Thu, Aug 28, 2025 at 11:01=E2=80=AFPM Serge E. Hallyn <serge@hallyn.co=
-m> wrote:
-> > On Wed, Aug 27, 2025 at 05:32:02PM -0700, Andy Lutomirski wrote:
-> > > On Wed, Aug 27, 2025 at 5:14=E2=80=AFPM Aleksa Sarai <cyphar@cyphar.c=
-om> wrote:
-> > > >
-> > > > On 2025-08-26, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> wrote:
-> > > > > On Tue, Aug 26, 2025 at 11:07:03AM +0200, Christian Brauner wrote=
-:
-> > > > > > Nothing has changed in that regard and I'm not interested in st=
-uffing
-> > > > > > the VFS APIs full of special-purpose behavior to work around th=
-e fact
-> > > > > > that this is work that needs to be done in userspace. Change th=
-e apps,
-> > > > > > stop pushing more and more cruft into the VFS that has no busin=
-ess
-> > > > > > there.
-> > > > >
-> > > > > It would be interesting to know how to patch user space to get th=
-e same
-> > > > > guarantees...  Do you think I would propose a kernel patch otherw=
-ise?
-> > > >
-> > > > You could mmap the script file with MAP_PRIVATE. This is the *actua=
-l*
-> > > > protection the kernel uses against overwriting binaries (yes, ETXTB=
-SY is
-> > > > nice but IIRC there are ways to get around it anyway).
-> > >
-> > > Wait, really?  MAP_PRIVATE prevents writes to the mapping from
-> > > affecting the file, but I don't think that writes to the file will
-> > > break the MAP_PRIVATE CoW if it's not already broken.
-> > >
-> > > IPython says:
-> > >
-> > > In [1]: import mmap, tempfile
-> > >
-> > > In [2]: f =3D tempfile.TemporaryFile()
-> > >
-> > > In [3]: f.write(b'initial contents')
-> > > Out[3]: 16
-> > >
-> > > In [4]: f.flush()
-> > >
-> > > In [5]: map =3D mmap.mmap(f.fileno(), f.tell(), flags=3Dmmap.MAP_PRIV=
-ATE,
-> > > prot=3Dmmap.PROT_READ)
-> > >
-> > > In [6]: map[:]
-> > > Out[6]: b'initial contents'
-> > >
-> > > In [7]: f.seek(0)
-> > > Out[7]: 0
-> > >
-> > > In [8]: f.write(b'changed')
-> > > Out[8]: 7
-> > >
-> > > In [9]: f.flush()
-> > >
-> > > In [10]: map[:]
-> > > Out[10]: b'changed contents'
-> >
-> > That was surprising to me, however, if I split the reader
-> > and writer into different processes, so
->
-> Testing this in python is a terrible idea because it obfuscates the
-> actual syscalls from you.
->
-> > P1:
-> > f =3D open("/tmp/3", "w")
-> > f.write('initial contents')
-> > f.flush()
-> >
-> > P2:
-> > import mmap
-> > f =3D open("/tmp/3", "r")
-> > map =3D mmap.mmap(f.fileno(), f.tell(), flags=3Dmmap.MAP_PRIVATE, prot=
-=3Dmmap.PROT_READ)
-> >
-> > Back to P1:
-> > f.seek(0)
-> > f.write('changed')
-> >
-> > Back to P2:
-> > map[:]
-> >
-> > Then P2 gives me:
-> >
-> > b'initial contents'
->
-> Because when you executed `f.write('changed')`, Python internally
-> buffered the write. "changed" is never actually written into the file
-> in your example. If you add a `f.flush()` in P1 after this, running
-> `map[:]` in P2 again will show you the new data.
->
+Can you clarify this a bit for those of us who are not well-versed in
+exactly what "measurement" does?
 
-These days, one can type in Python, ask an LLM to translate to C, and
-get almost-correct output :)  Or one can use os.write(), which is
-exactly what I should have done.
+On Mon, Sep 1, 2025 at 2:42=E2=80=AFAM Roberto Sassu
+<roberto.sassu@huaweicloud.com> wrote:
+> > Now, in cases where you have IMA or something and you only permit signe=
+d
+> > binaries to execute, you could argue there is a different race here (an
+> > attacker creates a malicious script, runs it, and then replaces it with
+> > a valid script's contents and metadata after the fact to get
+> > AT_EXECVE_CHECK to permit the execution). However, I'm not sure that
+>
+> Uhm, let's consider measurement, I'm more familiar with.
+>
+> I think the race you wanted to express was that the attacker replaces
+> the good script, verified with AT_EXECVE_CHECK, with the bad script
+> after the IMA verification but before the interpreter reads it.
+>
+> Fortunately, IMA is able to cope with this situation, since this race
+> can happen for any file open, where of course a file can be not read-
+> locked.
 
---Andy
+I assume you mean that this has nothing specifically to do with
+scripts, as IMA tries to protect ordinary (non-"execute" file access)
+as well.  Am I right?
+
+>
+> If the attacker tries to concurrently open the script for write in this
+> race window, IMA will report this event (called violation) in the
+> measurement list, and during remote attestation it will be clear that
+> the interpreter did not read what was measured.
+>
+> We just need to run the violation check for the BPRM_CHECK hook too
+> (then, probably for us the O_DENY_WRITE flag or alternative solution
+> would not be needed, for measurement).
+
+This seems consistent with my interpretation above, but ...
+
+>
+> Please, let us know when you apply patches like 2a010c412853 ("fs:
+> don't block i_writecount during exec"). We had a discussion [1], but
+> probably I missed when it was decided to be applied (I saw now it was
+> in the same thread, but didn't get that at the time). We would have
+> needed to update our code accordingly. In the future, we will try to
+> clarify better our expectations from the VFS.
+
+... I didn't follow this.
+
+Suppose there's some valid contents of /bin/sleep.  I execute
+/bin/sleep 1m.  While it's running, I modify /bin/sleep (by opening it
+for write, not by replacing it), and the kernel in question doesn't do
+ETXTBSY.  Then the sleep process reads (and executes) the modified
+contents.  Wouldn't a subsequent attestation fail?  Why is ETXTBSY
+needed?
