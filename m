@@ -1,10 +1,10 @@
-Return-Path: <kernel-hardening-return-22006-kernel-hardening=archiver.kernel.org@lists.openwall.com>
+Return-Path: <kernel-hardening-return-22007-kernel-hardening=archiver.kernel.org@lists.openwall.com>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.lore.kernel.org (Postfix) with SMTP id 44253CD4F4A
-	for <kernel-hardening@archiver.kernel.org>; Mon, 18 May 2026 23:53:08 +0000 (UTC)
-Received: (qmail 5735 invoked by uid 550); 18 May 2026 23:52:56 -0000
+	by smtp.lore.kernel.org (Postfix) with SMTP id A68C6CD4F5B
+	for <kernel-hardening@archiver.kernel.org>; Tue, 19 May 2026 16:59:16 +0000 (UTC)
+Received: (qmail 5627 invoked by uid 550); 19 May 2026 16:48:05 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
@@ -12,208 +12,118 @@ List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 7842 invoked from network); 18 May 2026 23:14:12 -0000
-ARC-Seal: i=1; a=rsa-sha256; t=1779146044; cv=none;
+Received: (qmail 5444 invoked from network); 19 May 2026 16:48:05 -0000
+ARC-Seal: i=1; a=rsa-sha256; t=1779209275; cv=none;
         d=google.com; s=arc-20240605;
-        b=OmkeolMN0nbJDSzeoduP0zFWRiK/JrEALbAhds0dgZ8dT/SI0bSxo68zikNSMI8dza
-         QqRyg34529mlGyISIR+4S2Cp78qy1D5F8+sYKX5bLy9t+TdDy1rB91sr1VxkFRDyTFfU
-         hemYnHfaNtsgiz57C8HYv/LLJ1L1uvmNboGhIUsCHDr1qEJZ6pkY0oOaI/X5HEcWtW8b
-         2rRNo/2S86nY689kGlxONzOCh2kJ7qKdSGfWZIC3PuD+Oz9esJASviNWKA4PwUpcsmHw
-         vwyYSKhOqEUeQhZUkw/4CjY9+lalV6KjnxS6UW42l0PFCX646gVzYqIwK/uLQ8g9fZPr
-         qbgw==
+        b=VTAk/MHajuf7SMnmEfkXu2zuL17NdiGYoijxgZC6D+CEyq3K7wdzvnmTSiI4PjEndp
+         1cK4j46O19ReInAOsUH8bWX2bAERQqKm8L3t+tGE83Ok0CBbqwTunb6TcZIjHlFqq3gX
+         WsbpNLdhabxxzSi66JBDqpk8CrdJH2GsbVokEkWiA9rt8UudmbaCPMBxF8ONJTwAlzJm
+         qAON8GRSvENemsmSKqE6PtUKSu9sviHd9XPfyBKlFHuxLYCtjKLHDePYQ8Vf8L1ocPkS
+         kQqJi38ClOiUf5R2MGNkAPpcuq4b4m2E9P5x2C9mUOY5MRRmUyIPLVR+Pd7lTmZlqPCl
+         sZ4w==
 ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
-        h=cc:to:subject:message-id:date:from:mime-version:dkim-signature;
-        bh=IKm5QKQR8VUeuWe4WzzPmriV1yZ8lMI2aWg9ysnRnEw=;
-        fh=TzFRz6gxzkRmDL/yCLmRxubrbpuut7zSPLS8Mjk3xnY=;
-        b=AfdcaqBDOy5omuetZBUuR3zpXJebpBfPhjAxYcdoGAMx/zL7gFR/YR3q3beTJMzA6M
-         A+iEni5R0R0wtnT39E33wCcaXvMBwFK9y4sVm5NISpyfDjQTyQTl12R/R0oBf3TEy+hc
-         uzuz/h3npNM6uP/w188PAfbvQc44F3bkiAHPHk1lTbGFAHIgZWUd35d3A076MK5bULD6
-         OX1cg1REqAk1ralv/hCA14gzPTuXupnOUEy1y8bIOBIDmPgVFHFaLswlBdMZ8l7Nk7LH
-         8oI876XECPIoa0WWpCPRuy+9WAvDhwxqQaxsB9gcBu5AzgBOY/0SpAFaWbS5TJvLjVEN
-         +q5Q==;
+        h=content-transfer-encoding:cc:to:subject:message-id:date:from
+         :in-reply-to:references:mime-version:dkim-signature;
+        bh=ViKPE/zs4gsJozSFsoDM9rzZ64VredtJAzBJtyzJDD8=;
+        fh=PWoUb6p5A4cs2U1azubJdfos7iX3OPdpbzgFgj62v1A=;
+        b=WSeZoryK0xQYZDuOU+FkS1odRXopkA4weHdnqgvbwfqlN+KELFA8Dp2MBv9//T6uod
+         Q3fB8vd8sevBAIr4/GUdIjSBU3rgTXXx601xN1shhL1Ujr3AUnBEEPdTI4ukoauUBk01
+         Ohfqf2Fud6rfKR3VU+ezW8OgSqlxeRd51MQrUNnsVS3szp53zckfpdEkCiDeL5GvvyMm
+         +GI0Vp58kRRcIz5fvnp/8MOHas3QmOzwJizPSI/dHILsx7iVd3p8n0At/BvnlFMx/IaT
+         au1ftJyOMAycXSYh+ymOFCmbRmtWlq8TIQBndUf1HFEQoHA0O5TKP8XkE1EIlv2gds55
+         UCvw==;
         darn=lists.openwall.com
 ARC-Authentication-Results: i=1; mx.google.com; arc=none
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20251104; t=1779146044; x=1779750844; darn=lists.openwall.com;
-        h=cc:to:subject:message-id:date:from:mime-version:from:to:cc:subject
-         :date:message-id:reply-to;
-        bh=IKm5QKQR8VUeuWe4WzzPmriV1yZ8lMI2aWg9ysnRnEw=;
-        b=hVenw/uVhvNiN/iFulX5U5zwC3ZfTtinarV49Yw7bsIIUW3IfajRYUxWiidx3h+DW+
-         ly7ZzvUmKnP9oSQSulM9d2j53ni6D6uOZ4cnHF5XaMmca9XNJdKqFDu/+d5pFjATKBiN
-         RL9cwKQm0cirqTiSn8pKTxg2XAbmShfMn9qXm8adzizP6h3aWRhVYpfoMYriLkTUN/sG
-         Kv2Cw89FCT0zjF4Kd2wFf3w18paPRGUB/FUwXqodByZSj1ROpz/Va69QSycy/peVOBat
-         emBeXmiFYMUVF3XFi8Ly07YvollemkpWWdEYphsZBJQC4uTV1s7TYx1XZU/bAVFdZ46N
-         yiCQ==
+        d=google.com; s=20251104; t=1779209275; x=1779814075; darn=lists.openwall.com;
+        h=content-transfer-encoding:cc:to:subject:message-id:date:from
+         :in-reply-to:references:mime-version:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=ViKPE/zs4gsJozSFsoDM9rzZ64VredtJAzBJtyzJDD8=;
+        b=kphK1wbLfVLcc8SqQHZXq6LQrdvAU6CayxUSDQzkwqVFu4oZ6MMxwpc+Urv+ujn1Ab
+         VN1JnlXjzNrJ3VdjXZSsVPBTrJob+hd8SAayIVN768ApaVrULDUmiInL8alDRlY4HSap
+         r6XkKUOPfF9lpMY9vkoUA20IMrUkc0RzOHvXwN5Re8bwsB0qFHOZsCAPfecD19AX4I1B
+         +gKgSLyg6MT7keHe8jdV6kZQPPiA/3ZqQTR2/3vRneiOgfw8Jf1N7whWTikr+4VVFJnG
+         lrfCo+sgdkwHWsjD47pMlyJ11OhhwbZbTEILL8M2MekJ6/Ujf9GcDGuiwM1kUC1gPWEf
+         77zw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20251104; t=1779146044; x=1779750844;
-        h=cc:to:subject:message-id:date:from:mime-version:x-gm-gg
-         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
-        bh=IKm5QKQR8VUeuWe4WzzPmriV1yZ8lMI2aWg9ysnRnEw=;
-        b=lJRIYhqi7ohIVCeNtekmRuvBJMqid/9yV4aVGIrelFtad4OawU0gNS5vQwwnWWL/1x
-         PwkKv+dEjjJGkMcIvXzKyR2vfmg57Ko8xMjYYmA+1h+WoJVMbGqa1NQPXUUZqL4vlzvH
-         7MyVYm9CSJkonlqsKRT8a7b9WGVRMrl4WsRtB/7c3pMdyRMUsEJb8GYXAoCbvjHlUn9h
-         YjUWPaFPqZa15KxNQBXyTxNeR6V/p5T8Rooa9L1tgmZJ8ab4ogXbTGUC4eg3oMcFlKRj
-         8/m03tr4gyhGOvBiOXhBTHBGFYI4j1Vsj9r5a5yWVlWC2/A8lt1tLpzIvr49otWtpG5k
-         erUQ==
-X-Forwarded-Encrypted: i=1; AFNElJ+2n8ZnbQiXBtZ1XJ1Cdg9CKd8NfsA54NV5jmb1Ao/La4+CKOfTS+cdQk7SJvjwB9Wc0p6CmnxvK9BbOBnj6BPJ@lists.openwall.com
-X-Gm-Message-State: AOJu0YyHjRY8I4o56zotueewX3A6ibapLyHQgrcA3sS7HmMRrkTCnmUx
-	Rggl3GjTJTI17TJEmQSCVWDGcpcHkvqXxp5sTHJMkJQ+3Fj8gFLE8kjAn+aZL0RSb6HumDWWqLE
-	5nvYNhOavDge5/EL/oiiEphXDq6Ixsvlk8QWrhF4=
-X-Gm-Gg: Acq92OEzSfWZZ5RAGcZaxm6mxzeF4uhhKpAdFd8HJZqhDHCMH+8sqt8mLbR1+NL+pd6
-	wm0IBuFrHG2MBRBujHG4IbHsq7w7P7Zcq5z7zjWc9fqbh1rvyHAcsnhqkA6HkRY1LYfj/5Gwyjy
-	TPfl3B8j1Z2Ab/BjlLlUmwVmZyggzgOkXrWCPVBoap8PGdvoKj4FPcgi6YFtXJLQHXfnMj4nCbo
-	KEARgSgw7IGiDP7iAhuqogKO32oXj2STtOH3Q66yy1M1RaYV9nPL54cvM77UFHwIWhGRJc2XnK5
-	40SVWkg94fz80/XHWMNf
-X-Received: by 2002:a05:6402:a0cb:b0:676:e619:2be0 with SMTP id
- 4fb4d7f45d1cf-683b4b8f9e3mr6404463a12.8.1779146044056; Mon, 18 May 2026
- 16:14:04 -0700 (PDT)
+        d=1e100.net; s=20251104; t=1779209275; x=1779814075;
+        h=content-transfer-encoding:cc:to:subject:message-id:date:from
+         :in-reply-to:references:mime-version:x-gm-gg:x-gm-message-state:from
+         :to:cc:subject:date:message-id:reply-to;
+        bh=ViKPE/zs4gsJozSFsoDM9rzZ64VredtJAzBJtyzJDD8=;
+        b=eFx7jtgRTNbgJI1EX5njD2RH2lNeD5Z16vIEShvsPIjDNDCGqwpgWmB5BzJF1Zy0JM
+         f0cRFi/thPk9eX7VsOwHhaWCQoXeW5Xmv2RQPjrPFfh1kNh/pBNTuw/BrWKoPuBH7uZF
+         y92uIrVcnVpRd6WpKmMh1Hb75e5PcyL5RrFnZ1E4Q1PyVt6WLaBCwi5FsyfcuX6jbhLn
+         z3+Kg+dsv9IE0iPz45OeJqnQ1F5g6FCQh4y4CRHLlZcUxvUBl522G35+bI+yNkc6xsYW
+         pvd7KfSmHx62v64wTXH1bwvzMtjSHLgM84p3jo68uPylGgQ/hygJhu99g09XGYS0Tuih
+         61Rg==
+X-Forwarded-Encrypted: i=1; AFNElJ+Zg9hVZ17fZTe3Y07V0lQGr8Lgev5qmbfqdj4K8yamOjFXSkK3xKqDkDW9Hp/N3o5mGI2m/r1/gw1XojrE68tC@lists.openwall.com
+X-Gm-Message-State: AOJu0YzlMSZgzW48n2gOWgXKZZQCSYECg8TTO/AX3G2pNZyvI9YWm+EP
+	Iooe9xRVG8E6HLcoUxHIFRCxqWHrZiDaYCY8o+opah958XlbSdaaufMWsEfwzhEosrb8vOrLce5
+	RSeaLdG8FcK5ucaHYX0ejpYT7X/VGXkocBr6SBZTiVTnGe8ldtKD2Gyc8
+X-Gm-Gg: Acq92OHZD/66G9pQek1lcuiN+nn8bhh8LoZEP5iYGtDY1ayH3yfxMbynq0cExvOKFS3
+	RWRHiaNqj1FOZ2LcA2rO4w58a2HFE8H72xYYnvw/SIPoPWDnINXGcD6/YlZ2o0ZJHoAVV12fowe
+	TK+QBw7QbLeDUvuPO9fM9bw9kt1qvcdilp2YISBvip64N2f+/sl5kW9Ze80kjr6m7lh+IMomTh8
+	gt/2/b6oVKx0p/5AVMvEXjlrXFYD+hZcIW7eCQ6WdohLo/EGf8UjNLrzvmbWJFBW5aN80v6VzLg
+	e7Ija7NKuyMGad4BUwotIEYHRJu1NMbAALNb8yO0ybtn0Inv
+X-Received: by 2002:a05:7022:41a3:b0:12c:2ed4:6314 with SMTP id
+ a92af1059eb24-13557dcef85mr326451c88.1.1779209273823; Tue, 19 May 2026
+ 09:47:53 -0700 (PDT)
 MIME-Version: 1.0
-From: Ahmad Hasan <ahmaaaaadbntaaaaa@gmail.com>
-Date: Tue, 19 May 2026 02:13:52 +0300
-X-Gm-Features: AVHnY4Kcw5tfKaz7bxQUfTVohvsHtO1JypTsC2D_N4_NdgHolnz-i1HFCs2vz9c
-Message-ID: <CAAmtCfPiwDmyycoON5bTjhaT9s0yPd1wWHvT+=PEd+J4OW1+gA@mail.gmail.com>
-Subject: TID v2.0: kernel module for cache-line zeroization against
+References: <F78521DA-08DC-424E-BBE1-231BC900CEE0@gmail.com>
+In-Reply-To: <F78521DA-08DC-424E-BBE1-231BC900CEE0@gmail.com>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 19 May 2026 18:47:15 +0200
+X-Gm-Features: AVHnY4LvG4Du5d39_T67NOwKnozMptM-y7xFRUTkKn7VXkYMQfWRo6DTkXiA7Lg
+Message-ID: <CAG48ez0KsuR5z4RDgxWPUoS8e_MJzF74RgFDJayohG48A_N0PQ@mail.gmail.com>
+Subject: Re: [RFC] TID v2.0: kernel module for cache-line zeroization against
  Flush+Reload (CLFLUSHOPT + LFENCE + REP STOSQ)
-To: linux-kernel@vger.kernel.org
-Cc: linux-kselftest@vger.kernel.org, linux-api@vger.kernel.org, 
-	linux-mm@kvack.org, linux-crypto@vger.kernel.org, 
-	kernel-hardening@lists.openwall.com, linux-hardening@vger.kernel.org, 
-	linux-security-module@vger.kernel.org
-Content-Type: multipart/alternative; boundary="000000000000f5a75806521fb7ab"
-
---000000000000f5a75806521fb7ab
+To: Ahmed Hassan <ahmaaaaadbntaaaaa@gmail.com>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, 
+	linux-hardening@vger.kernel.org, kernel-hardening@lists.openwall.com, 
+	linux-crypto@vger.kernel.org, linux-mm@kvack.org, linux-api@vger.kernel.org, 
+	linux-kselftest@vger.kernel.org
 Content-Type: text/plain; charset="UTF-8"
-
-Hi kernel developers,
-
-I am sharing TID (The Instant Destroyer) v2.0, a Linux kernel module
-written in C that addresses a specific gap in existing security
-libraries: none of them (libsodium, OpenSSL, glibc memzero_explicit)
-flush CPU cache lines after memory zeroization.
-
-
-== Problem ==
-
-Standard zeroization functions (explicit_bzero, sodium_memzero,
-OPENSSL_cleanse) prevent the compiler from eliding the wipe, but do
-not evict CPU cache lines (L1/L2/L3). This leaves residual key
-material measurable via Flush+Reload (Yarom & Falkner, 2014) after
-data use ends.
-
-
-== Approach: PROTECT+ZERO Protocol ==
-
-TID combines three instructions in a single kernel module:
-
-Phase 1 - PROTECT (before data use):
-  LFENCE <- close speculative execution window
-  MFENCE <- ensure all prior writes are complete
-
-Phase 2 - ZERO (after data use):
-  LFENCE <- close speculation window
-  REP STOSQ <- compiler-resistant wipe
-  CLFLUSHOPT <- evict all cache lines (L1/L2/L3)
-  MFENCE <- ensure eviction is complete
-  LFENCE <- close the far-side window
-
-This follows directly the Intel Spectre Mitigation Guide (2018) and
-AMD Speculative Execution Software Techniques (2018).
-
-
-== Benchmark Results (AMD EPYC 9B14, Linux 6.14.11) ==
-
-Without TID : attacker measures ~78 cycles (Cache HIT)
-With TID v2 : attacker measures ~286 cycles (Cache MISS)
-Ratio : 3.7x latency increase -- attack defeated
-
-Physical lower bound confirmed:
-  LFENCE (~40ns) + REP STOSQ (~50ns) + CLFLUSHOPT (~150ns)
-  + MFENCE (~40ns) + LFENCE (~40ns) = ~320ns
-  (measured: 290-372ns)
-
-
-== What Distinguishes TID ==
-
-No major security library implements CLFLUSHOPT post-wipe eviction.
-TID is the only known kernel-module-level implementation of the
-PROTECT+ZERO protocol.
-
-
-== Known Limitations ==
-
-- A 372ns window during data use remains (physical lower bound);
-  v3.0 target via Intel CAT integration
-- Requires same-machine attacker model (shared memory)
-- Does not protect against cold-boot attacks
-- Not a replacement for disk encryption
-
-
-== Project Details ==
-
-License : AGPL-3.0
-Hardware : AMD EPYC 9B14 (Zen 4), x86_64
-Kernel : Linux 6.14.11
-DOI : https://doi.org/10.5281/zenodo.17585929
-GitHub : https://github.com/ahmaaaaadbntaaaaa-byte/The-Instant-Destroyer
-
-Comments and technical criticism are welcome.
-
-Regards,
-Ahmad Qasim Mohammad Hassan
-Independent Hardware Security Researcher
-ORCID: 0009-0001-4360-0802
-
---000000000000f5a75806521fb7ab
-Content-Type: text/html; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-<div dir=3D"rtl">Hi kernel developers,<div><br></div><div>I am sharing TID =
-(The Instant Destroyer) v2.0, a Linux kernel module</div><div>written in C =
-that addresses a specific gap in existing security</div><div>libraries: non=
-e of them (libsodium, OpenSSL, glibc memzero_explicit)</div><div>flush CPU =
-cache lines after memory zeroization.</div><div><br></div><div><br></div><d=
-iv>=3D=3D Problem =3D=3D</div><div><br></div><div>Standard zeroization func=
-tions (explicit_bzero, sodium_memzero,</div><div>OPENSSL_cleanse) prevent t=
-he compiler from eliding the wipe, but do</div><div>not evict CPU cache lin=
-es (L1/L2/L3). This leaves residual key</div><div>material measurable via F=
-lush+Reload (Yarom &amp; Falkner, 2014) after</div><div>data use ends.</div=
-><div><br></div><div><br></div><div>=3D=3D Approach: PROTECT+ZERO Protocol =
-=3D=3D</div><div><br></div><div>TID combines three instructions in a single=
- kernel module:</div><div><br></div><div>Phase 1 - PROTECT (before data use=
-):</div><div>=C2=A0 LFENCE     &lt;- close speculative execution window</di=
-v><div>=C2=A0 MFENCE     &lt;- ensure all prior writes are complete</div><d=
-iv><br></div><div>Phase 2 - ZERO (after data use):</div><div>=C2=A0 LFENCE =
-    &lt;- close speculation window</div><div>=C2=A0 REP STOSQ  &lt;- compil=
-er-resistant wipe</div><div>=C2=A0 CLFLUSHOPT &lt;- evict all cache lines (=
-L1/L2/L3)</div><div>=C2=A0 MFENCE     &lt;- ensure eviction is complete</di=
-v><div>=C2=A0 LFENCE     &lt;- close the far-side window</div><div><br></di=
-v><div>This follows directly the Intel Spectre Mitigation Guide (2018) and<=
-/div><div>AMD Speculative Execution Software Techniques (2018).</div><div><=
-br></div><div><br></div><div>=3D=3D Benchmark Results (AMD EPYC 9B14, Linux=
- 6.14.11) =3D=3D</div><div><br></div><div>Without TID : attacker measures ~=
-78 cycles  (Cache HIT)</div><div>With TID v2 : attacker measures ~286 cycle=
-s (Cache MISS)</div><div>Ratio       : 3.7x latency increase -- attack defe=
-ated</div><div><br></div><div>Physical lower bound confirmed:</div><div>=C2=
-=A0 LFENCE (~40ns) + REP STOSQ (~50ns) + CLFLUSHOPT (~150ns)</div><div>=C2=
-=A0 + MFENCE (~40ns) + LFENCE (~40ns) =3D ~320ns</div><div>=C2=A0 (measured=
-: 290-372ns)</div><div><br></div><div><br></div><div>=3D=3D What Distinguis=
-hes TID =3D=3D</div><div><br></div><div>No major security library implement=
-s CLFLUSHOPT post-wipe eviction.</div><div>TID is the only known kernel-mod=
-ule-level implementation of the</div><div>PROTECT+ZERO protocol.</div><div>=
-<br></div><div><br></div><div>=3D=3D Known Limitations =3D=3D</div><div><br=
-></div><div>- A 372ns window during data use remains (physical lower bound)=
-;</div><div>=C2=A0 v3.0 target via Intel CAT integration</div><div>- Requir=
-es same-machine attacker model (shared memory)</div><div>- Does not protect=
- against cold-boot attacks</div><div>- Not a replacement for disk encryptio=
-n</div><div><br></div><div><br></div><div>=3D=3D Project Details =3D=3D</di=
-v><div><br></div><div>License  : AGPL-3.0</div><div>Hardware : AMD EPYC 9B1=
-4 (Zen 4), x86_64</div><div>Kernel   : Linux 6.14.11</div><div>DOI      : <=
-a href=3D"https://doi.org/10.5281/zenodo.17585929">https://doi.org/10.5281/=
-zenodo.17585929</a></div><div>GitHub   : <a href=3D"https://github.com/ahma=
-aaaadbntaaaaa-byte/The-Instant-Destroyer">https://github.com/ahmaaaaadbntaa=
-aaa-byte/The-Instant-Destroyer</a></div><div><br></div><div>Comments and te=
-chnical criticism are welcome.</div><div><br></div><div>Regards,</div><div>=
-Ahmad Qasim Mohammad Hassan</div><div>Independent Hardware Security Researc=
-her</div><div>ORCID: 0009-0001-4360-0802</div></div>
+On Mon, May 18, 2026 at 11:47=E2=80=AFPM Ahmed Hassan
+<ahmaaaaadbntaaaaa@gmail.com> wrote:
+>
+> Hi kernel developers,
+>
+> I am sharing TID (The Instant Destroyer) v2.0, a Linux kernel module
+> written in C that addresses a specific gap in existing security
+> libraries: none of them (libsodium, OpenSSL, glibc memzero_explicit)
+> flush CPU cache lines after memory zeroization.
+>
+>
+> =3D=3D Problem =3D=3D
+>
+> Standard zeroization functions (explicit_bzero, sodium_memzero,
+> OPENSSL_cleanse) prevent the compiler from eliding the wipe, but do
+> not evict CPU cache lines (L1/L2/L3). This leaves residual key
+> material measurable via Flush+Reload (Yarom & Falkner, 2014) after
+> data use ends.
 
---000000000000f5a75806521fb7ab--
+The thing you're talking about isn't really related to the
+Flush+Reload side channel attack, right? You're just talking about
+flushing cache lines.
+
+In what threat model would this be an issue? Normally, the goal of
+memory zeroing is to ensure that sensitive data is wiped before an
+attacker has a chance to physically pull out the RAM from a machine
+and plug it into another device that can reveal RAM contents, or
+before an attacker gains physical control of a locked device and can
+connect malicious peripherals to it, or such.
+
+So for this to be an actual security problem, the device would have to
+keep running in a sufficiently high power state that data caches are
+not discarded, and at the same time not perform enough memory accesses
+to cause this memory to be discarded...
+
+Assuming that this is an actual problem, why are you using a kernel
+module for this? At least on x86, CLFLUSH is unprivileged, so crypto
+libraries should be able to just use that directly. (There is the
+caveat of what happens when the kernel migrates pages or kills a
+process, but that's a larger problem.)
