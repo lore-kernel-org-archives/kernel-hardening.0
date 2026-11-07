@@ -1,161 +1,80 @@
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.subspace.kernel.org (Postfix) with SMTP id 3E1DC606A32D
-	for <kernel-hardening@archiver.kernel.org>; Sat,  7 Nov 2026 01:30:45 +0000 (UTC)
-Received: (qmail 7659 invoked by uid 550); 7 Nov 2026 01:28:48 -0000
+	by smtp.subspace.kernel.org (Postfix) with SMTP id F0E78606A32D
+	for <kernel-hardening@archiver.kernel.org>; Sat,  7 Nov 2026 12:05:14 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (1024-bit key) header.d=linuxfoundation.org header.i=@linuxfoundation.org header.a=rsa-sha256 header.s=korg header.b=FntdjZ0d
+Received: (qmail 24503 invoked by uid 550); 7 Nov 2026 12:05:04 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
 List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 9582 invoked from network); 6 Nov 2026 19:25:43 -0000
-Date: Fri, 6 Nov 2026 14:25:19 -0500
-From: hackman@yuhu.biz
-To: Nakashima Seiichi <s-nakashima@kjb.biglobe.ne.jp>
-Cc: Greg KH <gregkh@linuxfoundation.org>,
+Received: (qmail 24458 invoked from network); 7 Nov 2026 12:05:04 -0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linuxfoundation.org;
+	s=korg; t=1794053093;
+	bh=pcEn2PfNJ1rcvL6/N+cQBhnEAS4/g/yd+2X4qbZ5yvo=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=FntdjZ0dxfEkDp8XBxO+LlgBAd5XnkLTPW3d6BwzW9wjr25edkBIbA39LY1Izn+IZ
+	 lolnA9LPRnuP5AqyBJICC4CVeUwf8/z9UeCmzkmEtchIazjUSw1zJWQIdGmbnf3IpN
+	 DUPddx+gfH0iivaHcgEWYPxSpiLtarveUeQZ/tg8=
+Date: Sat, 7 Nov 2026 07:04:50 -0500
+From: Greg KH <gregkh@linuxfoundation.org>
+To: Boris Lukashev <blukashev@sempervictus.com>
+Cc: Nakashima Seiichi <s-nakashima@kjb.biglobe.ne.jp>,
 	kernel-hardening@lists.openwall.com, mic@digikod.net,
 	paul@paul-moore.com
-Message-ID: <20b68774-8985-40cd-bf99-5174d6475356@yuhu.biz>
-In-Reply-To: <1cd0f5e304584ab9d0a595a5d35b5649dc232fb2.camel@kjb.biglobe.ne.jp>
-References: <ca90b945049ac3c27f3e1d9b8181137feb892436.camel@kjb.biglobe.ne.jp> <2026110611-tassel-bubble-dc09@gregkh> <1cd0f5e304584ab9d0a595a5d35b5649dc232fb2.camel@kjb.biglobe.ne.jp>
 Subject: Re: [RFC idea] Kernel API Firewall (kaf): subsystem-level attack
  surface reduction for the post-AI-CVE era
+Message-ID: <2026110719-zipping-silliness-2443@gregkh>
+References: <ca90b945049ac3c27f3e1d9b8181137feb892436.camel@kjb.biglobe.ne.jp>
+ <2026110611-tassel-bubble-dc09@gregkh>
+ <1cd0f5e304584ab9d0a595a5d35b5649dc232fb2.camel@kjb.biglobe.ne.jp>
+ <CAFUG7CciO_ZUMdjcOCfOtoi+YEni2+a-9QkcsCj1nox0NqHj0A@mail.gmail.com>
 X-Archived-By: <archiver.kernel.org>
 MIME-Version: 1.0
-Content-Type: multipart/alternative; 
-	boundary="----=_Part_36_132160978.1793993119145"
-X-Correlation-ID: <20b68774-8985-40cd-bf99-5174d6475356@yuhu.biz>
-X-Virus-Scanned: ClamAV using ClamSMTP
-X-Spam-Status: No, score=-0.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,HTML_MESSAGE,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=4.0.1
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAFUG7CciO_ZUMdjcOCfOtoi+YEni2+a-9QkcsCj1nox0NqHj0A@mail.gmail.com>
+X-Spam-Status: No, score=-2.8 required=3.0 tests=BAYES_20,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
+	autolearn_force=no version=4.0.1
 X-Spam-Checker-Version: SpamAssassin 4.0.1 (2024-03-26) on
 	aws-us-west-2-korg-listserv-alma10-1
 
-------=_Part_36_132160978.1793993119145
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+On Fri, Nov 06, 2026 at 04:00:48PM -0500, Boris Lukashev wrote:
+> @Greg KH:  there is no practical choice for using anything but what's
+> prescribed by the vendor and contractually supported in the commercial
+> world (further complicated by binary blobs/device trees/intellectual
+> property concerns/etc). You cant ask the hotel to change the kiosk
+> distribution to a safer one in order to check you in despite them having
+> your PII and payment data running through it any more than the rest of us
+> despite your undeniable awareness of the threat involved. It would be far
+> more realistic and practical for the Linux Foundation to assign its
+> seasoned talent to work on downstream distributions of economic relevance
+> to its member entities than to swap out the OS' in the clustered engine of
+> today's economy.
 
-The users can also use the livepatch kernel infrastructure for rapid patchi=
-ng.
-A lot of these issues are solved with small and not very complex patches, t=
-hat do come quite fast with the release of the CVEs. Converting a patch to =
-a live patch is not that hard these days.
+So, it's not enough that the kernel developers and stable maintainers
+provide a free feed of 75 fixes a day in a tested and released kernel,
+and 55 documented CVE fixes a day, they then are required to, for free,
+take those patches and integrate them into for-profit company's kernels
+for them because that for-profit company doesn't want to pay for that
+effort to meet the contractual requirements that their customers pay for
+them to meet?
 
-So the users(admins) actually have more than they need to protect them self=
-.
-On the other hand, if they want to directly disable certain kernel subsyste=
-ms, they can build their custom kernel by basing it on the distro kernel th=
-ey currently use.
-So my argument here is that these knobs that you want to add to the kernel =
-are already there. Just there is no runtime configuration for all of them, =
-but there is build configuration for them.
+If you take the "pure numbers" point of view, that means that we should
+do this only for Debian and Yocto as those distros hold the huge
+majority of all of the server and embedded systems numbers in the world,
+everything else is just a tiny percent.  Oh wait, the LF already does
+this for you, for Yocto, and Debian is also free and up to date with all
+of these security issues for you to rely on.
 
-Marian
+So again, why not hold the companies that you feel are worth paying for
+this service, responsible for meeting their own self-defined
+contractural requirements?  Given that the community is giving all of
+this to them for free, it's odd that anyone would ask for us to do more
+work than that, don't you agree?
 
-Nov 6, 2026 2:07:59=E2=80=AFp.m. Nakashima Seiichi <s-nakashima@kjb.biglobe=
-.ne.jp>:
-
->=20
->>=20
->> Pick a better distro.=C2=A0 Seriously, if the distro you are paying for
->> isn't
->> keeping it up to date and secure, what are you paying them for?=C2=A0
->> Seems
->> like an odd choice to stick with them given you have a contract
->> saying
->> they need to abide by it...
->>=20
->> good luck!
->>=20
->> greg k-h
->=20
->=20
-> Thank you for your comment. Given the high volume of vulnerability-
-> related issues lately, I simply shared some ideas in the hope that they
-> might help with improvements.
-
-------=_Part_36_132160978.1793993119145
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
-<html>
- <head>
-  <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D=
-1.0">
- </head>
- <body>
-  <span dir=3D"ltr" style=3D"margin-top:0; margin-bottom:0;">The users can =
-also use the livepatch kernel infrastructure for rapid patching. </span>
-  <br>
-  <span dir=3D"ltr" style=3D"margin-top:0; margin-bottom:0;">A lot of these=
- issues are solved with small and not very complex patches, that do come qu=
-ite fast with the release of the CVEs. Converting a patch to a live patch i=
-s not that hard these days. </span>
-  <br>
-  <br>
-  <span dir=3D"ltr" style=3D"margin-top:0; margin-bottom:0;">So the users(a=
-dmins) actually have more than they need to protect them self.</span>
-  <br>
-  <span dir=3D"ltr" style=3D"margin-top:0; margin-bottom:0;">On the other h=
-and, if they want to directly disable certain kernel subsystems, they can b=
-uild their custom kernel by basing it on the distro kernel they currently u=
-se. </span>
-  <br>
-  <span dir=3D"ltr" style=3D"margin-top:0; margin-bottom:0;">So my argument=
- here is that these knobs that you want to add to the kernel are already th=
-ere. Just there is no runtime configuration for all of them, but there is b=
-uild configuration for them. </span>
-  <br>
-  <br>
-  <span dir=3D"ltr" style=3D"margin-top:0; margin-bottom:0;">Marian</span>
-  <br>
-  <div class=3D"fairemail_quote">
-   <div dir=3D"ltr">
-    <p>Nov 6, 2026 2:07:59=E2=80=AFp.m. Nakashima Seiichi &lt;s-nakashima@k=
-jb.biglobe.ne.jp&gt;:</p>
-   </div>
-   <blockquote style=3D"margin:0;border-left:3px solid #ccc; padding-left:1=
-0px;" type=3D"cite">
-    <div>
-     <br>
-     <blockquote style=3D"margin:0;border-left:3px solid #ccc; padding-left=
-:10px;" type=3D"cite">
-      <br>
-      Pick a better distro.&nbsp; Seriously, if the distro you are paying f=
-or
-      <br>
-      isn't
-      <br>
-      keeping it up to date and secure, what are you paying them for?&nbsp;
-      <br>
-      Seems
-      <br>
-      like an odd choice to stick with them given you have a contract
-      <br>
-      saying
-      <br>
-      they need to abide by it...
-      <br>
-      <br>
-      good luck!
-      <br>
-      <br>
-      greg k-h
-      <br>
-     </blockquote>
-     <br>
-     <br>
-     Thank you for your comment. Given the high volume of vulnerability-
-     <br>
-     related issues lately, I simply shared some ideas in the hope that the=
-y
-     <br>
-     might help with improvements.
-     <br>
-    </div>
-   </blockquote>
-  </div>
- </body>
-</html>
-------=_Part_36_132160978.1793993119145--
+greg k-h
