@@ -1,37 +1,38 @@
 Received: from second.openwall.net (second.openwall.net [193.110.157.125])
-	by smtp.subspace.kernel.org (Postfix) with SMTP id A650C606A326
-	for <kernel-hardening@archiver.kernel.org>; Sat,  7 Nov 2026 21:15:53 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with SMTP id 48581606A31C
+	for <kernel-hardening@archiver.kernel.org>; Mon,  9 Nov 2026 20:46:45 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key, unprotected) header.d=kjb.biglobe.ne.jp header.i=@kjb.biglobe.ne.jp header.a=rsa-sha256 header.s=default-1th84yt82rvi header.b=b2bNcLQj
-Received: (qmail 17941 invoked by uid 550); 7 Nov 2026 21:15:40 -0000
+	dkim=pass (2048-bit key, unprotected) header.d=kjb.biglobe.ne.jp header.i=@kjb.biglobe.ne.jp header.a=rsa-sha256 header.s=default-1th84yt82rvi header.b=W/5PVn+4
+Received: (qmail 11341 invoked by uid 550); 9 Nov 2026 20:46:32 -0000
 Mailing-List: contact kernel-hardening-help@lists.openwall.com; run by ezmlm
 Precedence: bulk
 List-Post: <mailto:kernel-hardening@lists.openwall.com>
 List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
 List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-Received: (qmail 17873 invoked from network); 7 Nov 2026 21:15:39 -0000
-Message-ID: <42f1d45c2cd4c3000dc809cd311b948fe7e520b1.camel@kjb.biglobe.ne.jp>
-Subject: [RFC v2] Kernel API Firewall (kaf): emergency CVE mitigation via
- loadable policy modules
+Received: (qmail 11291 invoked from network); 9 Nov 2026 20:46:31 -0000
+Message-ID: <fdf1ae20595a58302267f886dee1b9b69fdde7c0.camel@kjb.biglobe.ne.jp>
+Subject: [RFC v2+] Kernel API Firewall (kaf): emergency CVE mitigation via
+ loadable policy modules (with pre-disclosure defense appendix)
 From: Nakashima Seiichi <s-nakashima@kjb.biglobe.ne.jp>
 To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, paul@paul-moore.com, mic@digikod.net
-Date: Sun, 08 Nov 2026 06:15:28 +0900
+Cc: keescook@chromium.org, paul@paul-moore.com, mic@digikod.net, 
+	linux-security-module@vger.kernel.org
+Date: Tue, 10 Nov 2026 05:46:20 +0900
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 User-Agent: Evolution 3.52.3-0ubuntu1.1 
 X-Archived-By: <archiver.kernel.org>
 MIME-Version: 1.0
 X-Biglobe-Sender: s-nakashima@kjb.biglobe.ne.jp
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kjb.biglobe.ne.jp; s=default-1th84yt82rvi; t=1794086129;
- bh=MqH9ADiDzqKqtXCzsgLoAkUXM2knDGC5r7VSLylX9GM=;
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kjb.biglobe.ne.jp; s=default-1th84yt82rvi; t=1794257180;
+ bh=3yVsGFxRFoCPyyi5eWjuFBzqzuVf47LuNporb1xN8zo=;
  h=Subject:From:To:Cc:Date;
- b=b2bNcLQjZoEOH0tvSNVWpoBHaa/UtC5JL5l3izS0nsyFh2nFo7cYtKhmehCTPaN5D+Q+DQGM
- bEKZ3oTRJ8ect49jqa33RGgR8z8zFHu5StsYRLg5p2g+mYTKRZPgE0FBEuj8boOtbPrY6uC5Vs
- YEUGt3ju4o/rzEgvdvvD/jbrRH+prIb3Qw3g0jrBSVhKfIaPCxm4nJj6vyu6YHFzV8yCWknoDS
- ReoBvKGVaL2pJCn7WLLMphhrpeZdptigLbVO9vEVOq7tcsdUSiAoMOQH2beSJ3nWCpT5WFxvNs
- qdPzLxB2d4p90uOOBP6cxVjHfSjUDNSsoY4e7NHbWNfQFezQ==
+ b=W/5PVn+4tQ6VdWXrvGRh1Jhub4mVACVRo5Vv+JYveCoF5F1vD6+JNzxTgOsPOTQmJ626gmGt
+ GV1Uq5ItXBhRVi+z1w8VHWdvVPtK7lccRVdtc7eAj6aM0iX8toqbFISsnlrfgHNupagGk5svCg
+ FzdVJTMkFE1rewZqNZ2tG2Ghoq2cqQhpcC8dfcmzmtz+ZIOezJlv38MBNIOvyuD1BVAfXpIDRn
+ FBQtqS1DdkZERzFkoc9hQUvR5JT0ekC/FHGVqlQGVOJ2M+x/KsbMsUOqyWdNEPLrsOeAvzrkNy
+ Xl81l7qu+FZlkgWCBYO4fppzmiIbYY4H1w1b0zf/eGIfngUw==
 X-Spam-Status: No, score=-5.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
 	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no
@@ -43,10 +44,10 @@ Hi all,
 
 Thank you to Paul Moore and others who responded to the initial RFC.
 Based on that feedback, I have refined the scope and design direction.
-This v2 focuses specifically on kaf as an *emergency mitigation
+This v2+ focuses specifically on kaf as an *emergency mitigation
 mechanism* rather than a general-purpose security boundary.
 
-(Note: This RFC was drafted with assistance from Sakana AI's Namazu
+(Note: This RFC was drafted with assistance from=20
 assistant.  Technical details are sketches for discussion, not
 implementation proposals.  I am not a kernel developer and seek
 design direction from those who are.)
@@ -193,7 +194,60 @@ may be supported through a Linux Foundation / OpenSSF fund model
 and integration with distro vendors' existing support channels.
 This is outside the scope of the kernel technical discussion.
 
+10. Appendix: pre-disclosure defense
+
+The following appendix was added in the v2+ revision to address
+the pre-disclosure window: the period between a vulnerability
+being reported to a vendor and public CVE assignment.
+
+The pre-disclosure problem
+
+  During pre-disclosure, the vendor knows about the vulnerability
+  but cannot yet ship a patch without revealing the issue.
+  Attackers with early knowledge (e.g., from reverse-engineering
+  vendor pre-releases) may begin exploiting the vulnerability
+  before any public fix exists.  Current mechanisms offer no
+  kernel-level mitigation during this window.
+
+How kaf could help
+
+  - Generic policy modules:
+    Instead of CVE-specific policies, vendors could ship
+    *vulnerability-class* policies (e.g., "restrict all new
+    io_uring opcodes introduced in the last 6 months") that
+    reduce attack surface without naming a specific bug.
+  - Silent deployment:
+    kaf policies can be loaded without public announcement,
+    and their presence is only visible to administrators via
+    audit logs and /sys/kernel/security/kaf/.
+  - Gradual tightening:
+    As more information about the vulnerability becomes
+    available, the policy can be refined from a broad class-level
+    block to a precise path-level block without rebooting.
+
+Risks and mitigations
+
+  Risk: Overly broad policies break legitimate workloads
+    Mitigation: Audit-only mode: policies log but do not block,
+    allowing workload impact assessment before enforcement
+
+  Risk: Policy itself reveals the vulnerability
+    Mitigation: Generic class-level policies do not name specific
+    functions or CVEs
+
+  Risk: Administrators disable kaf due to performance concerns
+    Mitigation: Zero-overhead inactive stubs and per-policy
+    performance counters
+
+Integration with embargoed disclosure
+
+  kaf policies could be prepared in advance by distro security
+  teams during embargo and held in a "pending" state.  At the
+  moment of public disclosure, the policy is activated with a
+  single command, reducing the effective exposure window from
+  hours or days to minutes.
+
 Thanks for reading.  I am looking forward to your feedback on
 the design direction and open questions above.
 
-Nakashima Seiichi
+Nakashima Seiichi, Sakana AI's Namazu
